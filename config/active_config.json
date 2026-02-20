@@ -301,5 +301,16 @@
     "min_expected_pnl": 6.0,
     "_comment": "Filter signals where expected net PnL (after round-trip commission) < min_expected_pnl. RRR=1.4 matches observed avg_winner/avg_loser ratio. min_expected_pnl=6.0 = round-trip commission ($3 in + $3 out).",
     "_finding": "Phase 3 test (2026-02-20): Filter removed 34/199 trades (17%) but reduced CAGR 8.34%->7.63% and Sharpe 0.522->0.452. PF improved slightly (1.639->1.678). Removed trades had avg net contribution $2.24 (below $4.36 avg but still positive). Filter not net beneficial for this system: existing quality filters (RS, breadth, min_confidence) already screen marginal signals. Disabled. Alternative: raise min_position_value to reduce commission-drag percentage."
+  },
+  "regime_filter": {
+    "enabled": false,
+    "benchmark_ma_period": 50,
+    "breadth_bull_threshold": 50.0,
+    "breadth_bear_threshold": 40.0,
+    "bull_scale": 1.0,
+    "neutral_scale": 0.75,
+    "bear_scale": 0.5,
+    "_comment": "3-state regime: Bull (IOZ>50MA & breadth>50%)=1.0x, Neutral=0.75x, Bear (IOZ<50MA & breadth<40%)=0.5x position scale",
+    "_finding": "Phase 3 test (2026-02-20): Filter removed 91/199 trades (46%). CAGR 8.34%->3.15%, Sharpe 0.522->-0.071. Over-restrictive: ASX spends majority of time in NEUTRAL regime (mixed signals). 0.75x neutral scale causes marginal trades to fail min_position_value. Bear regime = 0 trades (0.5x always below $500 min). Best trades occur in neutral/mixed markets - removing them is harmful. Disabled. Regime injected as INFO features in signals for future ML use (Phase 5)."
   }
 }

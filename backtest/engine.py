@@ -479,23 +479,61 @@ class BacktestEngine:
                     f"TRAIL EXIT {_ticker}: pnl=${_net_pnl:.2f}, equity=${equity:.2f}"
                 )
 
-        # --- Market regime filter (Phase2): skip new entries in bear markets ---
-        regime_allows_entries = True
-        bench_df = data.get(self.benchmark_ticker)
-        if bench_df is not None and today in bench_df.index:
-            bench_close = bench_df.loc[:today, "close"]
-            if len(bench_close) >= 200:
-                bench_200ma = bench_close.rolling(window=200).mean().iloc[-1]
-                if not pd.isna(bench_200ma) and bench_close.iloc[-1] < bench_200ma:
-                    regime_allows_entries = False
-                    logger.info(
-                        f"REGIME FILTER: {self.benchmark_ticker} close "
-                        f"${bench_close.iloc[-1]:.2f} < 200-day MA "
-                        f"${bench_200ma:.2f} — skipping new entries on {today.date()}"
-                    )
+        # --- Phase 3: Simple Regime Filter (3-state: Bull/Neutral/Bear) ---
+        # Uses IOZ.AX MA slope + market breadth pct_above_200ma to scale position sizes.
+        # Bull  (both signals positive): full position size (scale=1.0)
+        # Neutral (mixed signals):       reduced position size (scale=0.75)
+        # Bear  (both signals negative): half position size (scale=0.5)
+        _rf_cfg = self.config.get("regime_filter", {})
+        _rf_enabled = _rf_cfg.get("enabled", False)
+        regime = "neutral"   # default when regime_filter disabled or data unavailable
+        regime_scale = 1.0   # default: full size
+        if _rf_enabled:
+            _rf_ma = _rf_cfg.get("benchmark_ma_period", 50)
+            _rf_bull_thresh = _rf_cfg.get("breadth_bull_threshold", 50.0)
+            _rf_bear_thresh = _rf_cfg.get("breadth_bear_threshold", 40.0)
+            _rf_bull_scale = _rf_cfg.get("bull_scale", 1.0)
+            _rf_neutral_scale = _rf_cfg.get("neutral_scale", 0.75)
+            _rf_bear_scale = _rf_cfg.get("bear_scale", 0.5)
+            # Signal 1: IOZ.AX above/below MA (trend direction)
+            _bench_df = data.get(self.benchmark_ticker)
+            _bench_above_ma = None
+            if _bench_df is not None and today in _bench_df.index:
+                _bench_close = _bench_df.loc[:today, "close"]
+                if len(_bench_close) >= _rf_ma:
+                    _bench_ma = _bench_close.rolling(window=_rf_ma).mean().iloc[-1]
+                    if not pd.isna(_bench_ma):
+                        _bench_above_ma = bool(_bench_close.iloc[-1] >= _bench_ma)
+            # Signal 2: Market breadth — % stocks above 200-day MA
+            _breadth_pct200 = None
+            if breadth_series is not None and today in breadth_series.index:
+                _brow = breadth_series.loc[today]
+                _raw = _brow.get("pct_above_200ma", None)
+                if _raw is not None and not pd.isna(_raw):
+                    _breadth_pct200 = float(_raw)
+            # Classify regime using both signals
+            if _bench_above_ma is not None and _breadth_pct200 is not None:
+                if _bench_above_ma and _breadth_pct200 >= _rf_bull_thresh:
+                    regime, regime_scale = "bull", _rf_bull_scale
+                elif not _bench_above_ma and _breadth_pct200 < _rf_bear_thresh:
+                    regime, regime_scale = "bear", _rf_bear_scale
+                else:
+                    regime, regime_scale = "neutral", _rf_neutral_scale
+            elif _bench_above_ma is not None:
+                # Only MA signal available (no breadth data)
+                if _bench_above_ma:
+                    regime, regime_scale = "bull", _rf_bull_scale
+                else:
+                    regime, regime_scale = "bear", _rf_bear_scale
+            _b200_str = f"{_breadth_pct200:.1f}%" if _breadth_pct200 is not None else "N/A"
+            logger.debug(
+                f"REGIME {today.date()}: {regime.upper()} "
+                f"(IOZ_above_{_rf_ma}MA={_bench_above_ma}, "
+                f"breadth200={_b200_str}, scale={regime_scale:.2f})"
+            )
 
         # --- Generate new entry signals ---
-        if day_idx > 0 and len(open_positions) < self.max_positions and regime_allows_entries:
+        if day_idx > 0 and len(open_positions) < self.max_positions:  # regime_scale applied in sizing
             yesterday = trading_dates[day_idx - 1]
             # Build data windows up to yesterday for signal generation
             signal_data = {}
@@ -522,6 +560,8 @@ class BacktestEngine:
                         _sig.features["breadth_thrust"] = float(_brd.get("breadth_thrust", 0))
                         _sig.features["breadth_momentum"] = float(_brd.get("breadth_momentum", 0)) if not pd.isna(_brd.get("breadth_momentum", 0)) else 0.0
                         _sig.features["breadth_net_new_highs_pct"] = float(_brd.get("net_new_highs_pct", 0))
+                        _sig.features["regime"] = regime
+                        _sig.features["regime_scale"] = regime_scale
 
                 # Phase 7C: Apply breadth-based confidence modifiers
                 for _sig in signals:
@@ -646,7 +686,7 @@ class BacktestEngine:
                         price=fill_price,
                         equity_history=equity_history,
                     )
-                    risk_budget = equity * _risk_pct
+                    risk_budget = equity * _risk_pct * regime_scale  # Phase 3: regime scaling
                     shares = int(risk_budget / risk_per_share)
 
                     if shares <= 0:

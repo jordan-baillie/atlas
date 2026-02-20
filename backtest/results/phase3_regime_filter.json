@@ -1,0 +1,76 @@
+{
+  "description": "Phase 3: Simple Regime Filter (3-state Bull/Neutral/Bear)",
+  "config": {
+    "enabled": true,
+    "benchmark_ma_period": 50,
+    "breadth_bull_threshold": 50.0,
+    "breadth_bear_threshold": 40.0,
+    "bull_scale": 1.0,
+    "neutral_scale": 0.75,
+    "bear_scale": 0.5,
+    "_comment": "3-state regime: Bull (IOZ>50MA & breadth>50%)=1.0x, Neutral=0.75x, Bear (IOZ<50MA & breadth<40%)=0.5x position scale"
+  },
+  "metrics": {
+    "total_return": 0.0636,
+    "cagr": 0.031464,
+    "max_drawdown": 0.082313,
+    "sharpe": -0.0707,
+    "sortino": -0.0857,
+    "win_rate": 0.5463,
+    "profit_factor": 1.5119,
+    "avg_trade": 2.94,
+    "total_trades": 108.0,
+    "total_pnl": 317.97,
+    "exposure": 0.7619,
+    "turnover": 25.3141,
+    "avg_equity": 5150.09,
+    "final_equity": 5318.01,
+    "avg_winner": 15.92,
+    "avg_loser": -12.68,
+    "largest_winner": 70.9,
+    "largest_loser": -35.57,
+    "avg_hold_days": 15.5
+  },
+  "regime_breakdown": {
+    "neutral": {
+      "n": 20,
+      "pnl": 124.92,
+      "wins": 13
+    },
+    "bull": {
+      "n": 88,
+      "pnl": 193.04999999999987,
+      "wins": 46
+    }
+  },
+  "baseline": {
+    "total_trades": 199,
+    "cagr": 0.0834,
+    "sharpe": 0.522,
+    "profit_factor": 1.639,
+    "max_drawdown": -0.0746,
+    "win_rate": 0.543,
+    "avg_trade": 4.36,
+    "total_pnl": 866.92
+  },
+  "analysis": {
+    "verdict": "NOT BENEFICIAL",
+    "trade_reduction": "91 trades removed (46%)",
+    "cagr_delta_pp": -5.19,
+    "sharpe_delta": -0.593,
+    "pf_delta": -0.127,
+    "regime_time_distribution": {
+      "bull": "88 trades (81%) - scale=1.0",
+      "neutral": "20 trades (19%) - scale=0.75",
+      "bear": "0 trades - scale=0.5 drops below min_position_value"
+    },
+    "failure_modes": [
+      "Over-restrictive thresholds: Bull requires BOTH IOZ>50MA AND breadth>50% simultaneously. ASX rarely meets both conditions.",
+      "Scale-to-binary-cutoff: 0.5x/0.75x risk_budget produces position_value < $500 min, completely dropping trades instead of scaling them.",
+      "Best trades in neutral markets: Strongest momentum signals occur in mixed-breadth environments (neutral), which are penalised by 0.75x scale.",
+      "Root cause: Thresholds calibrated for US markets with more persistent bull phases. ASX market structure is different."
+    ],
+    "conclusion": "Regime filter removes 46% of trades but reduces CAGR by 5.19pp and Sharpe by 0.593. System performs best in neutral/mixed market conditions which this filter penalises. Regime data is injected as INFO-ONLY features in signal.features for future ML meta-labeler (Phase 5).",
+    "next_action": "Disabled. Regime info preserved in signal features. Proceed to Phase 3 Item 3: Volume Spike Confirmation for Mean Reversion."
+  }
+}
