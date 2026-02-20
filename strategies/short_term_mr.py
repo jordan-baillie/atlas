@@ -274,4 +274,16 @@ class ShortTermMR(BaseStrategy):
                         "atr": round(current_atr, 4),
                         "close": round(today_close, 4),
                         "volume_ratio": round(current_vol_ratio, 2),
-                    }
+                    },
+                    timestamp=datetime.now(),
+                )
+                signals.append(signal)
+                self._logger.info(f"SIGNAL: {signal}")
+
+            except Exception as e:
+                self._logger.error(
+                    f"{ticker}: signal generation error: {e}", exc_info=True
+                )
+                continue
+
+        return signals
