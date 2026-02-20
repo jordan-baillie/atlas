@@ -211,14 +211,24 @@ class MeanReversion(BaseStrategy):
 
                 confidence = min(1.0, 0.6 + 0.2 * rsi_bonus + 0.2 * zscore_bonus)
 
-                # Phase 7A: Volume information (recorded in features, no confidence change)
-                # For mean reversion, high volume on dip = capitulation signal
+                # Phase 3: Volume Spike Confirmation — activate the vol_surge_boost/dry_penalty
+                # High volume on dip = capitulation = stronger reversal conviction
+                # Low volume on dip = weak selling = less reliable setup
+                _vol_conf_adj = 0.0
                 if current_vol_ratio >= self.vol_surge_threshold:
-                    vol_note = f"Volume surge {current_vol_ratio:.1f}x avg (capitulation). "
-                elif current_vol_ratio < 0.6:
-                    vol_note = f"Volume low {current_vol_ratio:.1f}x avg (weak dip). "
+                    _vol_conf_adj = self.vol_surge_boost
+                    vol_note = f"Volume surge {current_vol_ratio:.1f}x avg (capitulation +conf). "
+                elif current_vol_ratio < self.vol_min_ratio:
+                    _vol_conf_adj = -self.vol_dry_penalty
+                    vol_note = f"Volume low {current_vol_ratio:.1f}x avg (weak dip -conf). "
                 else:
                     vol_note = f"Volume {current_vol_ratio:.1f}x avg. "
+                if _vol_conf_adj != 0.0:
+                    confidence = min(1.0, max(0.0, confidence + _vol_conf_adj))
+                    self._logger.debug(
+                        f"{ticker}: vol_adj={_vol_conf_adj:+.2f} (rvol={current_vol_ratio:.1f}x) "
+                        f"→ conf={confidence:.3f}"
+                    )
 
                 # Rationale
                 rationale = (

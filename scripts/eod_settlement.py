@@ -64,8 +64,8 @@ def fetch_closing_prices(tickers):
         if cache_path.exists():
             try:
                 df = pd.read_parquet(cache_path)
-                if not df.empty and "Close" in df.columns:
-                    prices[ticker] = float(df["Close"].iloc[-1])
+                if not df.empty and "close" in df.columns:
+                    prices[ticker] = float(df["close"].iloc[-1])
             except Exception as e:
                 log.warning(f"Failed to read price for {ticker}: {e}")
 
@@ -296,4 +296,11 @@ def main():
         "halted": portfolio.halted,
         "report_path": str(report_path)
     }
-    summary_path = PROJECT / "logs" / f"eod_summary_{trade_date}
+    summary_path = PROJECT / "logs" / f"eod_summary_{trade_date}.json"
+    with open(summary_path, 'w') as f:
+        json.dump(summary, f, indent=2)
+    log.info(f"EOD summary saved: {summary_path}")
+
+
+if __name__ == "__main__":
+    main()
