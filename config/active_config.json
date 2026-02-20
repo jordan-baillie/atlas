@@ -294,5 +294,12 @@
       "drawdown_multiplier": 0.5,
       "description": "Reduces sizing during equity drawdowns"
     }
+  },
+  "fee_aware_filter": {
+    "enabled": false,
+    "reward_risk_ratio": 1.4,
+    "min_expected_pnl": 6.0,
+    "_comment": "Filter signals where expected net PnL (after round-trip commission) < min_expected_pnl. RRR=1.4 matches observed avg_winner/avg_loser ratio. min_expected_pnl=6.0 = round-trip commission ($3 in + $3 out).",
+    "_finding": "Phase 3 test (2026-02-20): Filter removed 34/199 trades (17%) but reduced CAGR 8.34%->7.63% and Sharpe 0.522->0.452. PF improved slightly (1.639->1.678). Removed trades had avg net contribution $2.24 (below $4.36 avg but still positive). Filter not net beneficial for this system: existing quality filters (RS, breadth, min_confidence) already screen marginal signals. Disabled. Alternative: raise min_position_value to reduce commission-drag percentage."
   }
 }

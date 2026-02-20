@@ -129,6 +129,12 @@ class BacktestEngine:
         # Phase1-Fix5: Minimum confidence threshold
         self.min_confidence = self.risk_config.get("min_confidence", 0.0)
 
+        # Fee-Aware Signal Filter config
+        _faf = config.get("fee_aware_filter", {})
+        self.fee_aware_enabled = _faf.get("enabled", False)
+        self.fee_aware_rrr = _faf.get("reward_risk_ratio", 1.5)  # default reward:risk if no TP
+        self.fee_aware_min_pnl = _faf.get("min_expected_pnl", 0.0)  # min expected net PnL
+
         # Benchmark
         self.benchmark_ticker = config.get("universe", {}).get(
             "benchmark_ticker", "IOZ.AX"
@@ -668,6 +674,30 @@ class BacktestEngine:
                         position_value = shares * fill_price
                         # Re-check minimum after adjustment
                         if position_value < self.min_position_value:
+                            continue
+
+                    # --- Fee-Aware Signal Filter ---
+                    # Filter out signals where expected net PnL (after round-trip commission)
+                    # is below the configured minimum threshold.
+                    if self.fee_aware_enabled:
+                        _rt_commission = 2.0 * self._calc_commission(position_value)
+                        _risk_amt = (fill_price - adjusted_stop) * shares
+                        if signal.take_profit and signal.take_profit > signal.entry_price:
+                            _adj_tp = signal.take_profit * price_ratio
+                            _reward_amt = max(0.0, (_adj_tp - fill_price) * shares)
+                        else:
+                            _reward_amt = _risk_amt * self.fee_aware_rrr
+                        _conf = signal.confidence
+                        _exp_gross = _conf * _reward_amt - (1.0 - _conf) * _risk_amt
+                        _exp_net = _exp_gross - _rt_commission
+                        if _exp_net < self.fee_aware_min_pnl:
+                            logger.debug(
+                                f"SKIP {ticker} (fee_aware): exp_net=${_exp_net:.2f} "
+                                f"< min=${self.fee_aware_min_pnl:.2f} "
+                                f"(rt_comm=${_rt_commission:.2f}, conf={_conf:.2f}, "
+                                f"reward=${_reward_amt:.2f}, risk=${_risk_amt:.2f}) "
+                                f"[{signal.strategy}]"
+                            )
                             continue
 
                     # Entry commission
