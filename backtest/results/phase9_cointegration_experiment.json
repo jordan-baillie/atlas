@@ -1,0 +1,73 @@
+{
+  "phase": "Phase 9: Cointegration Signal Filter",
+  "date": "2026-02-18",
+  "status": "COMPLETED - DISABLED (net negative impact)",
+  "hypothesis": "Using cointegration analysis as a signal filter for mean reversion would improve signal quality by confirming that oversold stocks have statistically validated mean-reverting pair relationships",
+  "implementation": {
+    "files_created": [
+      "utils/cointegration.py"
+    ],
+    "files_modified": [
+      "strategies/mean_reversion.py",
+      "config/active_config.json"
+    ],
+    "approach": "Boost-only filter: when a mean-reversion candidate has cointegrated pairs with confirming spread z-scores, boost confidence by 0.08. No penalty for contradiction.",
+    "pair_discovery": {
+      "method": "Engle-Granger cointegration test with Spearman pre-filter",
+      "candidates_scanned": 17205,
+      "correlation_prefilter": ">= 0.70 (positive only)",
+      "pairs_passing_correlation": 2375,
+      "final_pairs": 67,
+      "p_value_threshold": 0.01,
+      "half_life_range": "5-60 days",
+      "max_hurst": 0.45,
+      "unique_tickers_covered": 77
+    }
+  },
+  "results": {
+    "baseline": {
+      "trades": 58,
+      "win_rate": "60.3%",
+      "cagr": "3.09%",
+      "max_drawdown": "1.31%",
+      "profit_factor": 2.27,
+      "pnl": 312.45
+    },
+    "with_cointegration": {
+      "trades": 60,
+      "win_rate": "60.0%",
+      "cagr": "2.81%",
+      "max_drawdown": "1.48%",
+      "profit_factor": 1.99,
+      "pnl": 283.23
+    },
+    "delta": {
+      "trades": "+2",
+      "win_rate": "-0.3%",
+      "cagr": "-0.29%",
+      "max_drawdown": "+0.17%",
+      "profit_factor": "-0.28",
+      "pnl": "-$29.22"
+    }
+  },
+  "bugs_found_and_fixed": [
+    "Bug 1: abs(correlation) allowed negative correlations to pass - fixed to positive-only >= 0.70",
+    "Bug 2: p-value 0.05 too loose - tightened to 0.01",
+    "Bug 3: Contradiction penalty fired on near-zero spreads - set penalty to 0.0 (boost-only)"
+  ],
+  "root_cause_of_failure": [
+    "Low pair coverage: only 77/159 tickers have cointegrated pairs",
+    "Sparse signal overlap: only 4 of ~12 typical MR trade tickers have pair coverage",
+    "Average 0.5 pairs checked per MR trade - most signals have zero pairs to validate",
+    "Marginal boost pushes 2 borderline MR signals over 0.75 confidence threshold",
+    "Extra trades crowd out higher-quality TF trades (max 5 position constraint)",
+    "Net effect: TF lost $14.23 in PnL from position slot crowding"
+  ],
+  "future_considerations": [
+    "Revisit if universe grows significantly (more pair candidates)",
+    "Consider penalty-only mode (block trades that lack pair confirmation)",
+    "Useful if capital grows enough for dedicated pairs positions",
+    "Infrastructure (utils/cointegration.py) preserved for future use"
+  ],
+  "decision": "Filter disabled in config. Code retained. v8.2 baseline remains optimal."
+}

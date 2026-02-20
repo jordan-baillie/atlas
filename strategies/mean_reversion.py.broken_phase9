@@ -1,0 +1,297 @@
+"""
+Atlas-ASX Mean Reversion Strategy (Phase 9 - Cointegration Filter)
+==================================================================
+Generates long signals when a stock is statistically oversold,
+expecting a reversion to the mean.
+
+Phase 9 Addition: Cointegration-based signal filter that boosts
+confidence when pair spread confirms the mean-reversion signal,
+and penalizes when the dislocation appears idiosyncratic.
+
+Entry Conditions:
+    - RSI < rsi_oversold (default 30)
+    - Z-score < zscore_entry (default -2.0)
+
+Stop Loss:
+    - Entry price - atr_stop_mult * ATR(atr_period)
+
+Take Profit:
+    - Entry price + profit_target_atr_mult * ATR(atr_period)
+
+Exit Conditions:
+    - Price reverts to 20-day moving average
+    - Take profit hit
+    - Time-based exit after max_hold_days
+
+Config Section: strategies.mean_reversion
+
+Usage:
+    from strategies.mean_reversion import MeanReversion
+"""
+
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
+
+import numpy as np
+import pandas as pd
+
+from strategies.base import BaseStrategy, Signal
+from utils.helpers import calc_atr, calc_rsi, calc_zscore, calc_position_size, calc_volume_ratio
+from utils.earnings import is_near_earnings
+
+logger = logging.getLogger(__name__)
+
+
+class MeanReversion(BaseStrategy):
+    """Mean reversion strategy: buy oversold stocks expecting reversion to mean."""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        strat_cfg = config.get("strategies", {}).get("mean_reversion", {})
+        self.rsi_period = strat_cfg.get("rsi_period", 14)
+        self.rsi_oversold = strat_cfg.get("rsi_oversold", 30)
+        self.zscore_lookback = strat_cfg.get("zscore_lookback", 20)
+        self.zscore_entry = strat_cfg.get("zscore_entry", -2.0)
+        self.atr_period = strat_cfg.get("atr_period", 14)
+        self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 2.0)
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 1.5)
+        self.max_hold_days = strat_cfg.get("max_hold_days", 5)
+        # Phase 7A: Volume confirmation parameters
+        vol_cfg = strat_cfg.get("volume", {})
+        self.vol_lookback = vol_cfg.get("lookback", 20)
+        self.vol_min_ratio = vol_cfg.get("min_ratio", 0.5)
+        self.vol_surge_threshold = vol_cfg.get("surge_threshold", 2.0)
+        self.vol_surge_boost = vol_cfg.get("surge_boost", 0.1)
+        self.vol_dry_penalty = vol_cfg.get("dry_penalty", 0.15)
+        # Phase 7A: Earnings blackout parameters
+        earnings_cfg = strat_cfg.get("earnings_blackout", {})
+        self.earnings_blackout_enabled = earnings_cfg.get("enabled", True)
+        self.earnings_blackout_before = earnings_cfg.get("days_before", 5)
+        self.earnings_blackout_after = earnings_cfg.get("days_after", 1)
+
+        # Phase 9: Cointegration filter parameters
+        coint_cfg = strat_cfg.get("cointegration_filter", {})
+        self.coint_enabled = coint_cfg.get("enabled", False)
+        self.coint_confirm_boost = coint_cfg.get("confirm_boost", 0.08)
+        self.coint_contradict_penalty = coint_cfg.get("contradict_penalty", 0.06)
+        self.coint_zscore_confirm = coint_cfg.get("zscore_confirm_threshold", 1.5)
+        self.coint_max_pairs = coint_cfg.get("max_pairs_per_ticker", 3)
+        self.coint_zscore_lookback = coint_cfg.get("zscore_lookback", 60)
+        self.ticker_pairs: Dict[str, List[Dict[str, Any]]] = {}
+
+        # Phase 9: Load cointegrated pair universe
+        if self.coint_enabled:
+            self._init_cointegration(config, coint_cfg)
+
+        self._logger.info(
+            f"MeanReversion initialized: rsi_oversold={self.rsi_oversold}, "
+            f"zscore_entry={self.zscore_entry}, profit_target={self.profit_target_atr_mult}x ATR, "
+            f"vol_surge={self.vol_surge_threshold}x, "
+            f"earnings_blackout={'ON' if self.earnings_blackout_enabled else 'OFF'}, "
+            f"coint_filter={'ON' if self.coint_enabled else 'OFF'}"
+        )
+
+    def _init_cointegration(self, config: Dict[str, Any], coint_cfg: Dict[str, Any]):
+        """Initialize cointegration pair universe. Graceful degradation on failure."""
+        try:
+            from utils.cointegration import load_or_build_pair_universe
+
+            # Build prices dict from cached parquet files
+            data_cfg = config.get("data", {})
+            cache_dir = Path(data_cfg.get("cache_dir", "data/cache"))
+            if not cache_dir.is_absolute():
+                # Resolve relative to project root
+                project_root = Path(__file__).resolve().parent.parent
+                cache_dir = project_root / cache_dir
+
+            prices_dict = {}
+            for pf in cache_dir.glob("*.parquet"):
+                try:
+                    ticker = pf.stem.replace("_", ".")  # e.g. BHP_AX -> BHP.AX
+                    df = pd.read_parquet(pf)
+                    if len(df) >= 120 and "close" in df.columns:
+                        prices_dict[ticker] = df["close"]
+                except Exception:
+                    continue
+
+            if len(prices_dict) < 10:
+                self._logger.warning(
+                    f"Cointegration: only {len(prices_dict)} tickers loaded, "
+                    "disabling filter (need >= 10)"
+                )
+                self.coint_enabled = False
+                return
+
+            self._logger.info(
+                f"Cointegration: loaded {len(prices_dict)} price series for pair scan"
+            )
+
+            # Build pair universe with coint parameters from config
+            project_root = Path(__file__).resolve().parent.parent
+            pairs = load_or_build_pair_universe(
+                data_dir=str(project_root),
+                prices_dict=prices_dict,
+                cache_file="data/cache/cointegrated_pairs.json",
+                max_age_days=coint_cfg.get("cache_max_age_days", 7),
+                significance=coint_cfg.get("coint_pvalue", 0.05),
+                min_correlation=coint_cfg.get("min_correlation", 0.65),
+                min_half_life=coint_cfg.get("min_half_life", 5),
+                max_half_life=coint_cfg.get("max_half_life", 60),
+                max_hurst=coint_cfg.get("max_hurst", 0.45),
+            )
+
+            # Build lookup: ticker -> list of pair info dicts
+            self.ticker_pairs = {}
+            for pair in pairs:
+                ta = pair["ticker_a"]
+                tb = pair["ticker_b"]
+                # Add pair info for both tickers
+                if ta not in self.ticker_pairs:
+                    self.ticker_pairs[ta] = []
+                self.ticker_pairs[ta].append({
+                    "partner": tb,
+                    "role": "a",  # this ticker is ticker_a in the pair
+                    "hedge_ratio": pair["hedge_ratio"],
+                    "pvalue": pair["pvalue"],
+                    "half_life": pair["half_life"],
+                })
+                if tb not in self.ticker_pairs:
+                    self.ticker_pairs[tb] = []
+                self.ticker_pairs[tb].append({
+                    "partner": ta,
+                    "role": "b",  # this ticker is ticker_b in the pair
+                    "hedge_ratio": pair["hedge_ratio"],
+                    "pvalue": pair["pvalue"],
+                    "half_life": pair["half_life"],
+                })
+
+            # Sort each ticker's pairs by pvalue (best first) and limit
+            for ticker in self.ticker_pairs:
+                self.ticker_pairs[ticker].sort(key=lambda x: x["pvalue"])
+                self.ticker_pairs[ticker] = self.ticker_pairs[ticker][:self.coint_max_pairs]
+
+            self._logger.info(
+                f"Cointegration: {len(pairs)} pairs found, "
+                f"{len(self.ticker_pairs)} tickers have pair coverage"
+            )
+
+        except Exception as e:
+            self._logger.warning(
+                f"Cointegration initialization failed: {e}. "
+                "Disabling cointegration filter.",
+                exc_info=True,
+            )
+            self.coint_enabled = False
+            self.ticker_pairs = {}
+
+    def _apply_cointegration_filter(
+        self,
+        ticker: str,
+        data: Dict[str, pd.DataFrame],
+        confidence: float,
+    ) -> tuple:
+        """Apply cointegration filter to adjust confidence.
+
+        Returns:
+            (adjusted_confidence, coint_adjustment, coint_pairs_checked, coint_rationale)
+        """
+        if not self.coint_enabled or ticker not in self.ticker_pairs:
+            return confidence, 0.0, 0, ""
+
+        try:
+            from utils.cointegration import get_pair_zscore
+        except ImportError:
+            return confidence, 0.0, 0, ""
+
+        adjustments = []
+        rationale_parts = []
+        pairs_checked = 0
+
+        for pair_info in self.ticker_pairs[ticker]:
+            partner = pair_info["partner"]
+            partner_df = data.get(partner)
+
+            if partner_df is None or partner_df.empty:
+                continue
+
+            if "close" not in partner_df.columns:
+                continue
+
+            ticker_df = data.get(ticker)
+            if ticker_df is None or ticker_df.empty:
+                continue
+
+            try:
+                # Determine which is ticker_a and ticker_b for the spread
+                role = pair_info["role"]
+                hedge_ratio = pair_info["hedge_ratio"]
+
+                if role == "a":
+                    # This ticker is ticker_a: spread = a - hr * b
+                    prices_a = ticker_df["close"]
+                    prices_b = partner_df["close"]
+                else:
+                    # This ticker is ticker_b: spread = partner - hr * this
+                    prices_a = partner_df["close"]
+                    prices_b = ticker_df["close"]
+
+                pair_zscore = get_pair_zscore(
+                    prices_a, prices_b, hedge_ratio,
+                    lookback=self.coint_zscore_lookback,
+                )
+
+                if pair_zscore.empty or pd.isna(pair_zscore.iloc[-1]):
+                    continue
+
+                current_pz = pair_zscore.iloc[-1]
+                pairs_checked += 1
+
+                # Direction matching logic:
+                # Mean reversion generates LONG signals (buy oversold stocks)
+                # If ticker is ticker_a: spread = a - hr * b
+                #   Negative z-score means a is cheap relative to b -> CONFIRMS long
+                # If ticker is ticker_b: spread = a - hr * b
+                #   Positive z-score means b is cheap relative to a -> CONFIRMS long
+
+                if role == "a":
+                    confirms_long = current_pz < -self.coint_zscore_confirm
+                else:
+                    confirms_long = current_pz > self.coint_zscore_confirm
+
+                if confirms_long:
+                    adjustments.append(self.coint_confirm_boost)
+                    rationale_parts.append(
+                        f"{partner}(z={current_pz:.2f},CONFIRMS)"
+                    )
+                elif abs(current_pz) < 0.5:
+                    # Spread is near zero - dislocation is idiosyncratic
+                    adjustments.append(-self.coint_contradict_penalty)
+                    rationale_parts.append(
+                        f"{partner}(z={current_pz:.2f},WEAK)"
+                    )
+                else:
+                    # Spread is moderately extreme but doesn't confirm - neutral
+                    rationale_parts.append(
+                        f"{partner}(z={current_pz:.2f},neutral)"
+                    )
+
+            except Exception as e:
+                self._logger.debug(
+                    f"Cointegration check failed for {ticker}/{partner}: {e}"
+                )
+                continue
+
+        if not adjustments:
+            return confidence, 0.0, pairs_checked, ""
+
+        # Average the adjustments
+        avg_adjustment = sum(adjustments) / len(adjustments)
+        adjusted_confidence = np.clip(confidence + avg_adjustment, 0.0, 1.0)
+
+        coint_rationale = (
+            f"Coint({pairs_checked} pairs: {', '.join(rationale_parts)})"
+        )
+
+        return adjusted_confidence, avg_adjustment, pairs_checked, coint_rationale

@@ -1,0 +1,38 @@
+{
+  "config_version": "v9.2_reoptimized_moomoo_fees",
+  "fees": {
+    "commission_per_trade": 3.0,
+    "commission_pct": 0.0003,
+    "slippage_pct": 0.001,
+    "flat_fee_threshold": 10000.0,
+    "min_position_value": 500.0,
+    "_broker": "moomoo_au"
+  },
+  "metrics": {
+    "total_return": 0.2343,
+    "cagr": 0.1115,
+    "max_drawdown": 0.0707,
+    "sharpe": 0.6806,
+    "sortino": 0.9389,
+    "win_rate": 0.4948,
+    "profit_factor": 1.4059,
+    "avg_trade": 4.08,
+    "total_trades": 287,
+    "total_pnl": 1170.24,
+    "exposure": 0.9306,
+    "final_equity": 6171.45,
+    "avg_winner": 28.54,
+    "avg_loser": -19.88,
+    "avg_hold_days": 13.8
+  },
+  "comparison_vs_old_fees": {
+    "old_fees": "$5 flat + 0.08%",
+    "new_fees": "$3 flat + 0.03% (moomoo AU)",
+    "cagr_change": "+11.15% vs +11.21% (-0.06%)",
+    "sharpe_change": "0.6806 vs 0.6734 (+0.0072)",
+    "pf_change": "1.4059 vs 1.3034 (+0.1025)",
+    "pnl_change": "$1,170 vs $1,026 (+$144)",
+    "maxdd_change": "7.07% vs 7.76% (-0.69%)",
+    "trades_change": "287 vs 308 (-21)"
+  }
+}

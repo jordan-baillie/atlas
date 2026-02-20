@@ -1,0 +1,180 @@
+{
+  "default": {
+    "trades": 13,
+    "pnl": -15.98,
+    "cagr": -0.001607,
+    "win_rate": 0.3846,
+    "profit_factor": 0.9056,
+    "max_dd": 0.020835,
+    "sharpe": -2.5654,
+    "overrides": {}
+  },
+  "relaxed_pullback_45": {
+    "trades": 110,
+    "pnl": -175.24,
+    "cagr": -0.017766,
+    "win_rate": 0.3545,
+    "profit_factor": 0.8056,
+    "max_dd": 0.064108,
+    "sharpe": -1.2707,
+    "overrides": {
+      "daily_rsi_max": 45
+    }
+  },
+  "relaxed_pullback_50": {
+    "trades": 231,
+    "pnl": -326.46,
+    "cagr": -0.03582,
+    "win_rate": 0.4069,
+    "profit_factor": 0.8355,
+    "max_dd": 0.122151,
+    "sharpe": -1.0471,
+    "overrides": {
+      "daily_rsi_max": 50
+    }
+  },
+  "relaxed_weekly_45": {
+    "trades": 25,
+    "pnl": -33.37,
+    "cagr": -0.003361,
+    "win_rate": 0.36,
+    "profit_factor": 0.8654,
+    "max_dd": 0.022781,
+    "sharpe": -2.2458,
+    "overrides": {
+      "weekly_rsi_min": 45
+    }
+  },
+  "relaxed_both": {
+    "trades": 166,
+    "pnl": -60.89,
+    "cagr": -0.00614,
+    "win_rate": 0.3735,
+    "profit_factor": 0.9527,
+    "max_dd": 0.061735,
+    "sharpe": -0.8535,
+    "overrides": {
+      "daily_rsi_max": 45,
+      "weekly_rsi_min": 45
+    }
+  },
+  "no_macd": {
+    "trades": 27,
+    "pnl": -91.36,
+    "cagr": -0.009223,
+    "win_rate": 0.3333,
+    "profit_factor": 0.6862,
+    "max_dd": 0.03013,
+    "sharpe": -2.3857,
+    "overrides": {
+      "use_macd_filter": false
+    }
+  },
+  "wide_sma_5pct": {
+    "trades": 46,
+    "pnl": 3.49,
+    "cagr": 0.00035,
+    "win_rate": 0.4783,
+    "profit_factor": 1.0099,
+    "max_dd": 0.03224,
+    "sharpe": -1.7146,
+    "overrides": {
+      "pullback_sma_pct": 0.05
+    }
+  },
+  "wide_sma_no_macd": {
+    "trades": 69,
+    "pnl": 6.53,
+    "cagr": 0.000655,
+    "win_rate": 0.4493,
+    "profit_factor": 1.0125,
+    "max_dd": 0.028784,
+    "sharpe": -1.3254,
+    "overrides": {
+      "pullback_sma_pct": 0.05,
+      "use_macd_filter": false
+    }
+  },
+  "tight_stop_1.5": {
+    "trades": 14,
+    "pnl": -64.8,
+    "cagr": -0.006532,
+    "win_rate": 0.3571,
+    "profit_factor": 0.7795,
+    "max_dd": 0.046331,
+    "sharpe": -1.701,
+    "overrides": {
+      "atr_stop_mult": 1.5,
+      "trailing_stop_atr_mult": 2.0
+    }
+  },
+  "loose_stop_3.5": {
+    "trades": 3,
+    "pnl": 36.05,
+    "cagr": 0.003615,
+    "win_rate": 0.6667,
+    "profit_factor": 3.5352,
+    "max_dd": 0.004058,
+    "sharpe": -7.5607,
+    "overrides": {
+      "atr_stop_mult": 3.5,
+      "trailing_stop_atr_mult": 4.0
+    }
+  },
+  "long_hold_25": {
+    "trades": 13,
+    "pnl": 66.42,
+    "cagr": 0.006655,
+    "win_rate": 0.3077,
+    "profit_factor": 1.3644,
+    "max_dd": 0.025535,
+    "sharpe": -1.758,
+    "overrides": {
+      "max_hold_days": 25
+    }
+  },
+  "aggressive": {
+    "trades": 314,
+    "pnl": -327.14,
+    "cagr": -0.035894,
+    "win_rate": 0.3949,
+    "profit_factor": 0.8808,
+    "max_dd": 0.118526,
+    "sharpe": -0.8877,
+    "overrides": {
+      "daily_rsi_max": 50,
+      "weekly_rsi_min": 45,
+      "pullback_sma_pct": 0.05,
+      "use_macd_filter": false
+    }
+  },
+  "balanced": {
+    "trades": 208,
+    "pnl": 26.07,
+    "cagr": -0.000175,
+    "win_rate": 0.4327,
+    "profit_factor": 1.0168,
+    "max_dd": 0.047318,
+    "sharpe": -0.6033,
+    "overrides": {
+      "daily_rsi_max": 45,
+      "weekly_rsi_min": 48,
+      "pullback_sma_pct": 0.04,
+      "use_macd_filter": false
+    }
+  },
+  "quality": {
+    "trades": 0,
+    "pnl": 0,
+    "cagr": 0.0,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "max_dd": 0.0,
+    "sharpe": 0.0,
+    "overrides": {
+      "daily_rsi_max": 35,
+      "weekly_rsi_min": 55,
+      "atr_stop_mult": 2.0
+    }
+  }
+}

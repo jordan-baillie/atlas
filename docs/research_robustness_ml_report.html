@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Atlas-ASX Deep Research Report: Parameter Robustness & ML Enhancements</title>
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; color: #333; line-height: 1.6; }
+h1 { color: #1a237e; border-bottom: 3px solid #1a237e; padding-bottom: 10px; }
+h2 { color: #283593; border-bottom: 2px solid #3949ab; padding-bottom: 8px; margin-top: 40px; }
+h3 { color: #3949ab; margin-top: 25px; }
+h4 { color: #5c6bc0; margin-top: 15px; }
+.exec-summary { background: #e8eaf6; padding: 20px; border-radius: 8px; border-left: 4px solid #1a237e; margin: 20px 0; }
+.card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 15px 0; border-left: 4px solid #3949ab; }
+.card.critical { border-left-color: #c62828; }
+.card.high { border-left-color: #e65100; }
+.card.medium { border-left-color: #f9a825; }
+.card.low { border-left-color: #2e7d32; }
+.ptag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; color: white; margin-right: 8px; }
+.ptag-critical { background: #c62828; }
+.ptag-high { background: #e65100; }
+.ptag-medium { background: #f9a825; color: #333; }
+.ptag-low { background: #2e7d32; }
+.ctag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; font-weight: bold; background: #546e7a; color: white; margin-right: 8px; }
+table { width: 100%; border-collapse: collapse; margin: 15px 0; background: white; }
+th { background: #283593; color: white; padding: 10px; text-align: left; }
+td { padding: 8px 10px; border-bottom: 1px solid #e0e0e0; }
+tr:nth-child(even) { background: #f5f5f5; }
+code { background: #e8eaf6; padding: 2px 6px; border-radius: 3px; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.9em; }
+pre { background: #263238; color: #eeffff; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Fira Code', 'Courier New', monospace; font-size: 0.85em; }
+.warn { background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #e65100; margin: 15px 0; }
+.info { background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #1565c0; margin: 15px 0; }
+.ok { background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 4px solid #2e7d32; margin: 15px 0; }
+.formula { background: #fce4ec; padding: 10px 15px; border-radius: 8px; font-family: 'Times New Roman', serif; font-size: 1.05em; margin: 10px 0; }
+.toc { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 20px 0; }
+.toc ul { list-style-type: none; padding-left: 20px; }
+.toc li { margin: 5px 0; }
+.toc a { color: #283593; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+.ref { font-size: 0.85em; color: #666; margin: 3px 0; }
+</style>
+</head>
+<body>
+
+<h1>Atlas-ASX Deep Research Report: Parameter Robustness &amp; ML Enhancements for Systematic Trading</h1>
+
+<p><b>Date:</b> 19 February 2026 | <b>Prepared for:</b> Atlas-ASX Trading System | <b>Classification:</b> Internal Research</p>
+
+<div class="exec-summary">
+<h3>Executive Summary</h3>
+<p>This report addresses four critical problems in the Atlas-ASX systematic trading system operating on ~185 ASX mid-cap tickers with $5K capital:</p>
+<ol>
+<li><b>Parameter Fragility (P1):</b> +/-15% perturbation drops CAGR from 11.2% to 2.67% mean (76% degradation), with 2/10 trials going negative</li>
+<li><b>In-Sample/OOS Gap (P2):</b> IS CAGR 17.09% drops to OOS 2.20% (87% degradation), OOS profit factor &lt; 1.0</li>
+<li><b>Walk-Forward Inconsistency (P3):</b> Only 59% (13/22) windows profitable</li>
+<li><b>Limited Trade Count (P4):</b> ~287 trades over 2 years constrains statistical validation</li>
+</ol>
+<p><b>Key Findings:</b> The system suffers from classic backtest overfitting. The most impactful interventions are:</p>
+<ol>
+<li><b>Parameter plateau detection</b> using PSO-based plateau scoring (directly fixes P1)</li>
+<li><b>Objective function smoothing</b> over parameter neighborhoods (fixes P1, helps P2)</li>
+<li><b>Combinatorial Purged Cross-Validation (CPCV)</b> replacing standard walk-forward (fixes P2, P3)</li>
+<li><b>Deflated Sharpe Ratio</b> for honest strategy evaluation (fixes P2, P4)</li>
+<li><b>Meta-labeling</b> to filter when to take signals (fixes P2, P3)</li>
+</ol>
+<p>ML enhancements should be pursued cautiously given the small sample size (~287 trades). Meta-labeling and simple gradient boosting signal combination are the most practical options. Deep learning (TFT, attention) is NOT recommended at this scale.</p>
+</div>
+
+<div class="toc">
+<h3>Table of Contents</h3>
+<ul>
+<li><b>PART 1: Parameter Robustness &amp; Anti-Overfitting</b>
+<ul>
+<li><a href="#s11">1.1 Parameter Plateau Detection (PSO-Based)</a></li>
+<li><a href="#s12">1.2 Objective Function Smoothing / Gaussian Averaging</a></li>
+<li><a href="#s13">1.3 GT-Score: Composite Robust Objective Function</a></li>
+<li><a href="#s14">1.4 Combinatorial Purged Cross-Validation (CPCV)</a></li>
+<li><a href="#s15">1.5 Anchored Walk-Forward Optimization</a></li>
+<li><a href="#s16">1.6 Deflated Sharpe Ratio &amp; Multiple Testing Corrections</a></li>
+<li><a href="#s17">1.7 Regularization &amp; Complexity Penalties (SIP)</a></li>
+<li><a href="#s18">1.8 Minimum Description Length / Information Criteria</a></li>
+</ul>
+</li>
+<li><b>PART 2: Machine Learning Enhancements</b>
+<ul>
+<li><a href="#s21">2.1 ML-Based Signal Combination (Gradient Boosting)</a></li>
+<li><a href="#s22">2.2 Meta-Labeling (Lopez de Prado)</a></li>
+<li><a href="#s23">2.3 Feature Importance (SHAP / Permutation)</a></li>
+<li><a href="#s24">2.4 Online Learning / Adaptive Models</a></li>
+<li><a href="#s25">2.5 Temporal Fusion Transformers</a></li>
+<li><a href="#s26">2.6 Practical Concerns: Small Datasets &amp; ML Overfitting</a></li>
+</ul>
+</li>
+<li><b><a href="#s3">PART 3: Prioritized Implementation Roadmap</a></b></li>
+</ul>
+</div>
+
+<hr>
+
+<h2>PART 1: Parameter Robustness &amp; Anti-Overfitting</h2>
+
+<a name="s11"></a>
+<h3>1.1 Parameter Plateau Detection (PSO-Based)</h3>
+
+<div class="card critical">
+<p><span class="ptag ptag-critical">CRITICAL</span> <span class="ctag">Medium Complexity</span></p>
+
+<h4>What</h4>
+<p>Parameter plateau detection identifies broad, stable regions in parameter space where performance remains consistent under small perturbations, as opposed to sharp "parameter islands" that indicate overfitting. Wu et al. (2024) developed a <b>plateau score algorithm</b> combined with Particle Swarm Optimization (PSO) for efficient search in high-dimensional parameter spaces.</p>
+
+<p>A <b>parameter plateau</b> is a continuous block of parameter combinations with performance comparable to nearby ranges. The plateau score quantifies robustness: higher scores = broader plateau = more robust. Traditional optimization finds the single best point (sharp peak); plateau-seeking finds the best <em>region</em>.</p>
+
+<p>Three approaches exist:</p>
+<ol>
+<li><b>PSO with Plateau Score (Wu et al. 2024)</b>: For each candidate, evaluate neighbors in a defined radius; compute plateau score = fraction of neighbors meeting threshold x mean neighbor performance / base</li>
+<li><b>Heatmap Visualization</b>: For 2-3 param dimensions, plot performance heatmaps to visually identify flat regions vs sharp peaks</li>
+<li><b>Sensitivity Analysis</b>: Perturb each parameter individually, measure degradation. High-sensitivity params indicate fragile dimensions.</li>
+</ol>
+
+<h4>Why It Helps</h4>
+<p>Directly addresses <b>Problem 1 (Parameter Fragility)</b>. The Atlas-ASX +/-15% perturbation causing 76% CAGR degradation is textbook parameter island behavior. Selecting high plateau-score parameters ensures the entire neighborhood performs similarly.</p>
+
+<h4>Expected Impact</h4>
+<table>
+<tr><th>Metric</th><th>Current</th><th>Expected</th></tr>
+<tr><td>Perturbation CAGR retention</td><td>24% (2.67/11.2)</td><td>65-85%</td></tr>
+<tr><td>Negative perturbation trials</td><td>2/10</td><td>0-1/10</td></tr>
+<tr><td>Peak CAGR trade-off</td><td>11.2%</td><td>7-9% (sacrifice for stability)</td></tr>
+<tr><td>IS-to-OOS gap</td><td>87%</td><td>40-60%</td></tr>
+</table>
+
+<h4>Python Implementation</h4>
+<pre>
+import numpy as np
+
+def compute_plateau_score(params, param_ranges, backtest_fn,
+                          radius_pct=0.15, n_samples=20, threshold_pct=0.50):
+    base_metric = backtest_fn(params)
+    if base_metric &lt;= 0:
+        return 0.0
+    rng = np.random.RandomState(42)
+    neighbor_metrics = []
+    for _ in range(n_samples):
+        perturbed = {}
+        for key, val in params.items():
+            lo, hi = param_ranges[key]
+            factor = rng.uniform(1 - radius_pct, 1 + radius_pct)
+            new_val = np.clip(val * factor, lo, hi)
+            if isinstance(val, int): new_val = int(round(new_val))
+            perturbed[key] = new_val
+        neighbor_metrics.append(backtest_fn(perturbed))
+    threshold = base_metric * threshold_pct
+    stable_frac = sum(1 for m in neighbor_metrics if m &gt;= threshold) / n_samples
+    mean_ratio = np.mean(neighbor_metrics) / base_metric
+    return stable_frac * mean_ratio
+
+# Modified optimization objective:
+def robust_plateau_objective(trial):
+    params = sample_params(trial)
+    base_cagr = run_backtest(params)
+    plateau = compute_plateau_score(params, PARAM_RANGES, run_backtest)
+    return 0.4 * base_cagr + 0.6 * plateau * base_cagr
+</pre>
+
+<h4>Atlas-ASX Integration</h4>
+<p>The existing <code>scripts/bayesian_reoptimize.py</code> already includes perturbation-aware objective (40% base + 30% perturbed CAGR). Enhancement path:</p>
+<ol>
+<li>Increase perturbation samples from 2 to 10-20 per trial</li>
+<li>Add formal plateau score calculation</li>
+<li>Shift objective: 30% base CAGR + 50% plateau score + 20% Sharpe</li>
+<li>Extend to 100+ trials (overnight run)</li>
+</ol>
+
+<h4>Key References</h4>
+<ul>
+<li class="ref">Wu, J.M.T., Lin, W.Y., Huang, K.W., Wu, M.E. (2024). "On the design of searching algorithm for parameter plateau in quantitative trading strategies using particle swarm optimization." <em>Knowledge-Based Systems</em>, 293, 111630.</li>
+<li class="ref">Robot Wealth (2023). "Finding Robust Parameters for Trading Strategies." robotwealth.com</li>
+<li class="ref">Harbourfront Technologies (2023). "Robust Optimization For Trading Strategies." harbourfronts.com</li>
+</ul>
+</div>
+
+<h2>PART 1: Parameter Robustness &amp; Anti-Overfitting</h2>
+
+<a name="s11"></a>
+<h3>1.1 Parameter Plateau Detection (PSO-Based)</h3>
+
+<div class="card critical">
+<p><span class="ptag ptag-critical">CRITICAL</span> <span class="ctag">Medium Complexity</span></p>
+
+<h4>What</h4>
+<p>Parameter plateau detection identifies broad, stable regions in parameter space where performance remains consistent under small perturbations, as opposed to sharp "parameter islands" that indicate overfitting. Wu et al. (2024) developed a <b>plateau score algorithm</b> that quantifies the extent of stability around each parameter combination, combined with Particle Swarm Optimization (PSO) for efficient search in high-dimensional spaces.</p>
+
+<p>A <b>parameter plateau</b> is defined as a continuous block of parameter combinations with performance comparable to nearby ranges. The plateau score measures how robust a parameter set is &mdash; higher scores indicate broader, more stable performance regions. Traditional brute-force optimization finds the single best point (often a sharp peak/island); plateau-seeking optimization finds the best <em>region</em>.</p>
+
+<p>Three approaches to finding plateaus exist in the literature:</p>
+<ol>
+<li><b>PSO with Plateau Score (Wu et al. 2024)</b>: Use PSO to explore parameter space; for each candidate, evaluate neighbors in a defined radius and compute a plateau score = fraction of neighbors meeting performance threshold &times; mean neighbor performance / base performance</li>
+<li><b>Heatmap Visualization</b>: For low-dimensional spaces (2-3 params), plot performance heatmaps and visually identify flat regions vs sharp peaks. Robot Wealth recommends this as a first diagnostic step.</li>
+<li><b>Sensitivity Analysis</b>: Perturb each parameter individually and measure performance degradation. Parameters with high sensitivity indicate fragile dimensions (already partially implemented in Atlas-ASX <code>param_stability_report.py</code>).</li>
+</ol>
+
+<h4>Why It Helps</h4>
+<p>Directly addresses <b>Problem 1 (Parameter Fragility)</b>. The Atlas-ASX system's &plusmn;15% perturbation causing 76% CAGR degradation is the textbook symptom of sitting on a parameter island. By selecting parameters with high plateau scores instead of maximum backtest performance, the system would naturally become robust to perturbation because the entire neighborhood of the selected parameters performs similarly.</p>
+
+<h4>Expected Impact</h4>
+<table>
+<tr><th>Metric</th><th>Current</th><th>Expected with Plateau Detection</th></tr>
+<tr><td>Perturbation CAGR retention</td><td>24% (2.67/11.2)</td><td>65-85%</td></tr>
+<tr><td>Negative perturbation trials</td><td>2/10</td><td>0-1/10</td></tr>
+<tr><td>Peak CAGR trade-off</td><td>11.2%</td><td>7-9% (sacrifice for stability)</td></tr>
+<tr><td>IS-to-OOS gap</td><td>87%</td><td>40-60%</td></tr>
+</table>
+
+<h4>Python Implementation</h4>
+<pre>
+import numpy as np
+
+def compute_plateau_score(params, param_ranges, backtest_fn,
+                          radius_pct=0.15, n_samples=20, threshold_pct=0.50):
+    """Compute plateau score for a parameter set.
+    Higher score = broader plateau = more robust parameters.
+    """
+    base_metric = backtest_fn(params)  # e.g., CAGR or composite
+    if base_metric &lt;= 0:
+        return 0.0
+
+    rng = np.random.RandomState(42)
+    neighbor_metrics = []
+
+    for _ in range(n_samples):
+        perturbed = {}
+        for key, val in params.items():
+            lo, hi = param_ranges[key]
+            factor = rng.uniform(1 - radius_pct, 1 + radius_pct)
+            new_val = np.clip(val * factor, lo, hi)
+            if isinstance(val, int):
+                new_val = int(round(new_val))
+            perturbed[key] = new_val
+        neighbor_metrics.append(backtest_fn(perturbed))
+
+    # Plateau score components:
+    threshold = base_metric * threshold_pct
+    stable_frac = sum(1 for m in neighbor_metrics if m &gt;= threshold) / n_samples
+    mean_ratio = np.mean(neighbor_metrics) / base_metric
+    plateau_score = stable_frac * mean_ratio
+    return plateau_score
+
+# Modify optimization objective:
+def robust_plateau_objective(trial):
+    params = sample_params(trial)
+    base_cagr = run_backtest(params)
+    plateau = compute_plateau_score(params, PARAM_RANGES, run_backtest)
+    # Favor plateau stability over peak performance
+    return 0.4 * base_cagr + 0.6 * plateau * base_cagr
+</pre>
+
+<h4>Atlas-ASX Integration</h4>
+<p>The existing <code>scripts/bayesian_reoptimize.py</code> already includes a perturbation-aware objective (40% base CAGR + 30% mean perturbed CAGR). Enhancement path:</p>
+<ol>
+<li>Increase perturbation samples from 2 to 10-20 per trial</li>
+<li>Add formal plateau score calculation</li>
+<li>Shift objective weight toward plateau: 30% base CAGR + 50% plateau score + 20% Sharpe</li>
+<li>Extend to 100+ trials (overnight run)</li>
+</ol>
+
+<h4>Key References</h4>
+<ul>
+<li class="ref">Wu, J.M.T., Lin, W.Y., Huang, K.W., Wu, M.E. (2024). "On the design of searching algorithm for parameter plateau in quantitative trading strategies using particle swarm optimization." <em>Knowledge-Based Systems</em>, 293, 111630.</li>
+<li class="ref">Robot Wealth (2023). "Finding Robust Parameters for Trading Strategies." <a href="https://robotwealth.com/finding-robust-parameters-for-trading-strategies/">Link</a></li>
+<li class="ref">Harbourfront Technologies (2023). "Robust Optimization For Trading Strategies." <a href="https://harbourfronts.com/robust-optimization-trading-strategies/">Link</a></li>
+</ul>
+</div>
+
+<a name="s12"></a>
+<h3>1.2 Objective Function Smoothing / Gaussian Averaging</h3>
+
+<div class="card critical">
+<p><span class="ptag ptag-critical">CRITICAL</span> <span class="ctag">Low Complexity</span></p>
+
+<h4>What</h4>
+<p>Instead of optimizing the raw objective function (CAGR, Sharpe, etc.) at each parameter point, smooth the objective by averaging over a Gaussian-weighted neighborhood around each point. This is fundamentally different from the Atlas-ASX v9.3 approach (which averaged the <em>final parameters</em> between v9.1 and v9.2) &mdash; here we average the <em>objective function values</em> across nearby parameter values before optimization.</p>
+
+<p>The smoothed objective at parameter vector &theta; is:</p>
+<div class="formula">
+f&#x0302;(&theta;) = &Sigma;<sub>i</sub> w<sub>i</sub> &middot; f(&theta; + &epsilon;<sub>i</sub>) / &Sigma;<sub>i</sub> w<sub>i</sub><br>
+where w<sub>i</sub> = exp(-||&epsilon;<sub>i</sub>||&sup2; / 2&sigma;&sup2;) and &epsilon;<sub>i</sub> are perturbation vectors
+</div>
+
+<p>This creates a "landscape" where sharp peaks are flattened and broad plateaus are preserved. Optimization on the smoothed landscape naturally selects plateau centers.</p>
+
+<h4>Why It Helps</h4>
+<p>Directly addresses <b>Problem 1 (Parameter Fragility)</b> and <b>Problem 2 (IS/OOS gap)</b>. Sharp peaks in the raw objective correspond to overfitting; smoothing removes them. The Atlas-ASX v9.3 blend failed because parameter averaging doesn't smooth the landscape &mdash; it just picks an arbitrary midpoint between two peaks.</p>
+
+<h4>Expected Impact</h4>
+<table>
+<tr><th>Metric</th><th>Current</th><th>Expected with Smoothing</th></tr>
+<tr><td>Perturbation CAGR retention</td><td>24%</td><td>60-80%</td></tr>
+<tr><td>IS-to-OOS gap</td><td>87%</td><td>40-55%</td></tr>
+<tr><td>Peak CAGR trade-off</td><td>11.2%</td><td>6-8%</td></tr>
+</table>
+
+<h4>Python Implementation</h4>
+<pre>
+import numpy as np
+
+def gaussian_smoothed_objective(params, param_ranges, backtest_fn,
+                                 sigma_pct=0.10, n_samples=15):
+    """Compute Gaussian-smoothed objective at params."""
+    rng = np.random.RandomState(42)
+    weights, values = [], []
+
+    # Include the center point
+    center_val = backtest_fn(params)
+    weights.append(1.0)  # max weight at center
+    values.append(center_val)
+
+    for _ in range(n_samples):
+        perturbed = {}

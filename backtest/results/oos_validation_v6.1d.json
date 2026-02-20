@@ -1,0 +1,51 @@
+{
+  "config": "v6.1d_phase7c_asymmetric",
+  "split_date": "2025-03-22",
+  "full": {
+    "total_return": 0.0667,
+    "cagr": 0.032986,
+    "max_drawdown": 0.010043,
+    "sharpe": -0.3531,
+    "sortino": -0.5241,
+    "win_rate": 0.6226,
+    "profit_factor": 2.7198,
+    "avg_trade": 6.29,
+    "total_trades": 53,
+    "total_pnl": 333.62,
+    "exposure": 0.6151,
+    "turnover": 11.0965,
+    "avg_equity": 5218.15,
+    "final_equity": 5333.64,
+    "avg_winner": 15.99,
+    "avg_loser": -9.7,
+    "largest_winner": 48.36,
+    "largest_loser": -21.57,
+    "avg_hold_days": 13.5
+  },
+  "in_sample": {
+    "trades": 28,
+    "wr": 71.42857142857143,
+    "pnl": 268.35999999999996,
+    "pf": 3.8218717139852787,
+    "avg_win": 18.173000000000002,
+    "avg_loss": 11.887500000000001,
+    "tf": 14,
+    "mr": 14,
+    "tf_wr": 71.42857142857143,
+    "mr_wr": 71.42857142857143
+  },
+  "out_of_sample": {
+    "trades": 25,
+    "wr": 52.0,
+    "pnl": 65.26,
+    "pf": 1.6599251693801196,
+    "avg_win": 12.62692307692308,
+    "avg_loss": 8.240833333333333,
+    "tf": 12,
+    "mr": 13,
+    "tf_wr": 41.66666666666667,
+    "mr_wr": 61.53846153846154
+  },
+  "trades_is": 28,
+  "trades_oos": 25
+}

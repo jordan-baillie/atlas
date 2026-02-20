@@ -1,0 +1,35 @@
+{
+  "timestamp": "20260218_061240",
+  "config_version": "v8.5_phase_mtf_momentum",
+  "tickers_count": 159,
+  "metrics": {
+    "total_return": 0.0,
+    "cagr": 0.0,
+    "max_drawdown": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "avg_trade": 0.0,
+    "total_trades": 0,
+    "total_pnl": 0,
+    "exposure": 0.0,
+    "turnover": 0.0,
+    "avg_equity": 5000.0,
+    "final_equity": 5000.0,
+    "avg_winner": 0.0,
+    "avg_loser": 0.0,
+    "largest_winner": 0.0,
+    "largest_loser": 0.0,
+    "avg_hold_days": 0.0
+  },
+  "benchmark_metrics": {
+    "cagr": 0.084635,
+    "max_drawdown": 0.141197,
+    "sharpe": 0.4045,
+    "sortino": 0.5121,
+    "total_return": 0.1771,
+    "final_equity": 5885.43
+  },
+  "total_trades": 0
+}

@@ -1,0 +1,34 @@
+{
+  "test": "earnings_blackout_comparison",
+  "timestamp": "2026-02-18T11:45:14.125619",
+  "universe_size": 185,
+  "results": {
+    "A": {
+      "cagr": 8.4336,
+      "sharpe": 0.3979,
+      "win_rate": 48.11,
+      "profit_factor": 1.1238,
+      "max_drawdown": 9.407,
+      "total_trades": 503,
+      "time_s": 386.1372139453888
+    },
+    "B": {
+      "cagr": 8.4336,
+      "sharpe": 0.3979,
+      "win_rate": 48.11,
+      "profit_factor": 1.1238,
+      "max_drawdown": 9.407,
+      "total_trades": 503,
+      "time_s": 374.57543992996216
+    },
+    "C": {
+      "cagr": 8.4336,
+      "sharpe": 0.3979,
+      "win_rate": 48.11,
+      "profit_factor": 1.1238,
+      "max_drawdown": 9.407,
+      "total_trades": 503,
+      "time_s": 366.77487778663635
+    }
+  }
+}

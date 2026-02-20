@@ -1,0 +1,162 @@
+{
+  "baseline": {
+    "trades": 247,
+    "pnl": 640.39,
+    "cagr": 6.53,
+    "pf": 1.21,
+    "dd": 11.3
+  },
+  "combined": [
+    {
+      "name": "default_2pct",
+      "params": {
+        "gap_threshold": -0.02,
+        "ibs_confirm": 0.3,
+        "rsi14_max": 50,
+        "vol_surge_threshold": 1.5,
+        "atr_stop_mult": 2.5,
+        "sma_exit_period": 5,
+        "ibs_exit_threshold": 0.8,
+        "max_hold_days": 7
+      },
+      "total_trades": 248,
+      "pnl": 576.56,
+      "cagr": 5.92,
+      "win_rate": 48.8,
+      "profit_factor": 1.19,
+      "max_dd": 11.3,
+      "sharpe": 0.241,
+      "avg_trade": 2.32,
+      "per_strategy": {
+        "bb_squeeze": 174,
+        "mean_reversion": 33,
+        "trend_following": 34,
+        "opening_gap": 7
+      }
+    },
+    {
+      "name": "wide_gap_1.5pct",
+      "params": {
+        "gap_threshold": -0.015,
+        "ibs_confirm": 0.3,
+        "rsi14_max": 50,
+        "vol_surge_threshold": 1.5,
+        "atr_stop_mult": 2.5,
+        "sma_exit_period": 5,
+        "ibs_exit_threshold": 0.8,
+        "max_hold_days": 7
+      },
+      "total_trades": 251,
+      "pnl": 654.26,
+      "cagr": 6.66,
+      "win_rate": 49.8,
+      "profit_factor": 1.22,
+      "max_dd": 11.4,
+      "sharpe": 0.316,
+      "avg_trade": 2.61,
+      "per_strategy": {
+        "opening_gap": 8,
+        "bb_squeeze": 175,
+        "mean_reversion": 36,
+        "trend_following": 32
+      }
+    },
+    {
+      "name": "wide_no_vol",
+      "params": {
+        "gap_threshold": -0.015,
+        "ibs_confirm": 0.3,
+        "rsi14_max": 50,
+        "vol_surge_threshold": 0.0,
+        "atr_stop_mult": 2.5,
+        "sma_exit_period": 5,
+        "ibs_exit_threshold": 0.8,
+        "max_hold_days": 7
+      },
+      "total_trades": 252,
+      "pnl": 651.61,
+      "cagr": 6.64,
+      "win_rate": 49.6,
+      "profit_factor": 1.22,
+      "max_dd": 11.4,
+      "sharpe": 0.313,
+      "avg_trade": 2.59,
+      "per_strategy": {
+        "opening_gap": 9,
+        "bb_squeeze": 175,
+        "mean_reversion": 36,
+        "trend_following": 32
+      }
+    },
+    {
+      "name": "wide_long_hold",
+      "params": {
+        "gap_threshold": -0.015,
+        "ibs_confirm": 0.3,
+        "rsi14_max": 50,
+        "vol_surge_threshold": 1.5,
+        "atr_stop_mult": 2.5,
+        "sma_exit_period": 5,
+        "ibs_exit_threshold": 0.8,
+        "max_hold_days": 10
+      },
+      "total_trades": 241,
+      "pnl": 416.88,
+      "cagr": 4.11,
+      "win_rate": 49.4,
+      "profit_factor": 1.14,
+      "max_dd": 13.4,
+      "sharpe": 0.056,
+      "avg_trade": 1.73,
+      "per_strategy": {
+        "opening_gap": 7,
+        "bb_squeeze": 171,
+        "mean_reversion": 31,
+        "trend_following": 32
+      }
+    },
+    {
+      "name": "wide_relax_all",
+      "params": {
+        "gap_threshold": -0.015,
+        "ibs_confirm": 0.4,
+        "rsi14_max": 55,
+        "vol_surge_threshold": 0.0,
+        "atr_stop_mult": 2.5,
+        "sma_exit_period": 5,
+        "ibs_exit_threshold": 0.8,
+        "max_hold_days": 10
+      },
+      "total_trades": 245,
+      "pnl": 415.53,
+      "cagr": 4.09,
+      "win_rate": 49.0,
+      "profit_factor": 1.14,
+      "max_dd": 13.5,
+      "sharpe": 0.054,
+      "avg_trade": 1.7,
+      "per_strategy": {
+        "opening_gap": 13,
+        "bb_squeeze": 171,
+        "mean_reversion": 29,
+        "trend_following": 32
+      }
+    }
+  ],
+  "analysis": {
+    "conclusion": "MARGINAL - high standalone quality but extremely low trade frequency",
+    "standalone_best": "wide_gap: 12 trades, +$77.41, PF=4.13, WR=75%, DD=0.5%",
+    "combined_best": "wide_gap_1.5pct: 251 trades, +$654.26, 6.66% CAGR, PF=1.22 (vs baseline 247 trades, $640.39, 6.53%)",
+    "marginal_gain": "+$13.87 PnL, +0.13% CAGR, +4 trades vs baseline",
+    "recommendation": "CONDITIONAL ACCEPT - enable with wide_gap config (gap_threshold=-0.015) as it is slightly net-positive and does not hurt existing performance. However, the strategy adds minimal value (~8 trades, +$14) and is NOT a meaningful trade frequency booster.",
+    "key_findings": [
+      "Tight stops (1.5x ATR) DESTROY this strategy (PF=0.63) - opposite of BB Squeeze finding",
+      "Wider gaps (2-3%) produce fewer but higher quality trades",
+      "Very deep gaps (5%) are too rare on ASX (0 trades)",
+      "Volume filter is not critical - removing it adds 1-2 trades without quality loss",
+      "IBS threshold barely matters (0.2-0.4 all similar)",
+      "Longer hold periods (10 days) HURT combined performance significantly",
+      "Only 7-13 OG trades in combined mode across backtest period"
+    ]
+  }
+}

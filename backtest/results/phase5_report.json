@@ -1,0 +1,49 @@
+{
+  "phase": 5,
+  "date": "2026-02-16T05:17:33.885779",
+  "title": "Out-of-Sample Validation & Optimization Limits",
+  "findings": {
+    "oos_validation": {
+      "status": "PASSED",
+      "is_cagr": "+3.19%",
+      "oos_cagr": "+1.71%",
+      "oos_max_dd": "1.19%",
+      "oos_sharpe_0rf": "1.085",
+      "oos_trades": 20,
+      "oos_pnl": "$79.51",
+      "conclusion": "System is NOT overfit - profitable out-of-sample"
+    },
+    "sharpe_investigation": {
+      "reported_sharpe": -0.421,
+      "sharpe_0rf": 1.705,
+      "sharpe_active_days": 2.281,
+      "flat_days_pct": "43.7%",
+      "conclusion": "Negative Sharpe caused by 44% flat days + 4% risk-free rate penalty. System actually has excellent risk-adjusted returns."
+    },
+    "signal_exit_profit_filter": {
+      "status": "REVERTED",
+      "result": "Counterproductive - blocking losing signal exits caused trades to hit stops instead",
+      "phase4_pnl": "$322.19",
+      "with_filter_pnl": "$307.12",
+      "conclusion": "TF signal exits correctly identify reversals and cut losses early"
+    },
+    "position_sizing_sweep": {
+      "status": "CURRENT IS OPTIMAL",
+      "tested": "0.5% to 1.5% risk, 5-8 positions",
+      "best_risk_adjusted": "0.5% risk / 5 positions",
+      "sensitivity": "System extremely sensitive - 0.75% risk causes DD to jump from 1.19% to 12.15%",
+      "conclusion": "Conservative sizing is a feature, not a limitation"
+    }
+  },
+  "final_config": "config_v4.0_phase4.json (unchanged)",
+  "final_metrics": {
+    "cagr": "+3.19%",
+    "max_dd": "1.19%",
+    "sharpe_0rf": "1.70",
+    "win_rate": "61.7%",
+    "profit_factor": "2.77",
+    "total_trades": 47,
+    "net_pnl": "$322.19",
+    "return_per_dd": "2.7x"
+  }
+}

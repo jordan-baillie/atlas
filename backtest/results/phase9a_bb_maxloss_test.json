@@ -1,0 +1,977 @@
+{
+  "timestamp": "2026-02-19T04:03:27.288454",
+  "tests": [
+    {
+      "label": "BASELINE (current config)",
+      "metrics": {
+        "total_trades": 318,
+        "total_pnl": 1325.56,
+        "avg_trade": 4.17,
+        "win_rate_pct": 47.8,
+        "profit_factor": 1.3978,
+        "sharpe": 0.9086,
+        "sortino": 1.278,
+        "cagr_pct": 13.8482,
+        "max_drawdown_pct": 7.0666,
+        "final_equity": 6472.66,
+        "runtime_s": 348.1
+      },
+      "bb_analysis": {
+        "count": 71,
+        "total_pnl": 595.29,
+        "avg_pnl": 8.38,
+        "win_rate": 42.3,
+        "losses_count": 41,
+        "avg_loss": -34.02,
+        "worst_loss": -116.72,
+        "big_losses_gt35": 15,
+        "big_losses_total": -794.74,
+        "exit_reasons": {
+          "stop_hit": 34,
+          "time_exit": 28,
+          "signal_exit": 8,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 0,
+        "strategies": {}
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 37,
+          "pnl": 91.38
+        },
+        "mean_reversion": {
+          "count": 103,
+          "pnl": 116.72
+        },
+        "bb_squeeze": {
+          "count": 71,
+          "pnl": 595.29
+        },
+        "trend_following": {
+          "count": 107,
+          "pnl": 522.17
+        }
+      },
+      "config_changes": "none"
+    },
+    {
+      "label": "BB trail=2.5x ATR",
+      "metrics": {
+        "total_trades": 316,
+        "total_pnl": 1106.92,
+        "avg_trade": 3.5,
+        "win_rate_pct": 47.15,
+        "profit_factor": 1.3192,
+        "sharpe": 0.7392,
+        "sortino": 1.0382,
+        "cagr_pct": 11.9042,
+        "max_drawdown_pct": 7.0666,
+        "final_equity": 6254.53,
+        "runtime_s": 351.1
+      },
+      "bb_analysis": {
+        "count": 72,
+        "total_pnl": 491.39,
+        "avg_pnl": 6.82,
+        "win_rate": 40.3,
+        "losses_count": 43,
+        "avg_loss": -34.06,
+        "worst_loss": -116.72,
+        "big_losses_gt35": 16,
+        "big_losses_total": -851.21,
+        "exit_reasons": {
+          "stop_hit": 35,
+          "time_exit": 26,
+          "signal_exit": 8,
+          "trailing_stop": 2,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 0,
+        "strategies": {}
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 38,
+          "pnl": 113.52
+        },
+        "mean_reversion": {
+          "count": 103,
+          "pnl": 78.52
+        },
+        "bb_squeeze": {
+          "count": 72,
+          "pnl": 491.39
+        },
+        "trend_following": {
+          "count": 103,
+          "pnl": 423.49
+        }
+      },
+      "config_changes": "bb_squeeze.trailing_stop_atr_mult=2.5"
+    },
+    {
+      "label": "BB trail=2.0x ATR",
+      "metrics": {
+        "total_trades": 310,
+        "total_pnl": 1230.68,
+        "avg_trade": 3.97,
+        "win_rate_pct": 46.45,
+        "profit_factor": 1.3702,
+        "sharpe": 0.7547,
+        "sortino": 1.0779,
+        "cagr_pct": 12.0591,
+        "max_drawdown_pct": 7.6553,
+        "final_equity": 6271.78,
+        "runtime_s": 364.8
+      },
+      "bb_analysis": {
+        "count": 74,
+        "total_pnl": 694.92,
+        "avg_pnl": 9.39,
+        "win_rate": 39.2,
+        "losses_count": 45,
+        "avg_loss": -32.58,
+        "worst_loss": -115.89,
+        "big_losses_gt35": 15,
+        "big_losses_total": -759.4,
+        "exit_reasons": {
+          "trailing_stop": 8,
+          "stop_hit": 35,
+          "signal_exit": 7,
+          "time_exit": 23,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 0,
+        "strategies": {}
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 37,
+          "pnl": 101.46
+        },
+        "mean_reversion": {
+          "count": 101,
+          "pnl": 145.36
+        },
+        "bb_squeeze": {
+          "count": 74,
+          "pnl": 694.92
+        },
+        "trend_following": {
+          "count": 98,
+          "pnl": 288.94
+        }
+      },
+      "config_changes": "bb_squeeze.trailing_stop_atr_mult=2.0"
+    },
+    {
+      "label": "BB trail=1.5x ATR",
+      "metrics": {
+        "total_trades": 323,
+        "total_pnl": 1242.87,
+        "avg_trade": 3.85,
+        "win_rate_pct": 47.37,
+        "profit_factor": 1.3582,
+        "sharpe": 0.8437,
+        "sortino": 1.1925,
+        "cagr_pct": 13.1499,
+        "max_drawdown_pct": 7.0522,
+        "final_equity": 6393.88,
+        "runtime_s": 351.2
+      },
+      "bb_analysis": {
+        "count": 76,
+        "total_pnl": 665.98,
+        "avg_pnl": 8.76,
+        "win_rate": 42.1,
+        "losses_count": 44,
+        "avg_loss": -33.79,
+        "worst_loss": -115.89,
+        "big_losses_gt35": 17,
+        "big_losses_total": -868.16,
+        "exit_reasons": {
+          "trailing_stop": 16,
+          "stop_hit": 33,
+          "signal_exit": 6,
+          "time_exit": 21
+        }
+      },
+      "maxloss_exits": {
+        "count": 0,
+        "strategies": {}
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 39,
+          "pnl": 116.66
+        },
+        "mean_reversion": {
+          "count": 108,
+          "pnl": 134.86
+        },
+        "bb_squeeze": {
+          "count": 76,
+          "pnl": 665.98
+        },
+        "trend_following": {
+          "count": 100,
+          "pnl": 325.37
+        }
+      },
+      "config_changes": "bb_squeeze.trailing_stop_atr_mult=1.5"
+    },
+    {
+      "label": "Max loss cap=$45",
+      "metrics": {
+        "total_trades": 306,
+        "total_pnl": 1318.75,
+        "avg_trade": 4.31,
+        "win_rate_pct": 48.04,
+        "profit_factor": 1.4038,
+        "sharpe": 0.8333,
+        "sortino": 1.1325,
+        "cagr_pct": 12.7796,
+        "max_drawdown_pct": 9.2677,
+        "final_equity": 6352.29,
+        "runtime_s": 354.2
+      },
+      "bb_analysis": {
+        "count": 69,
+        "total_pnl": 812.81,
+        "avg_pnl": 11.78,
+        "win_rate": 43.5,
+        "losses_count": 39,
+        "avg_loss": -33.65,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 15,
+        "big_losses_total": -786.06,
+        "exit_reasons": {
+          "max_loss_cap": 6,
+          "time_exit": 29,
+          "signal_exit": 8,
+          "stop_hit": 25,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 8,
+        "total_loss": -616.03,
+        "avg_loss": -77.0,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 6,
+            "total_loss": -338.3
+          },
+          "trend_following": {
+            "count": 1,
+            "total_loss": -205.1
+          },
+          "mean_reversion": {
+            "count": 1,
+            "total_loss": -72.63
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 37,
+          "pnl": 156.19
+        },
+        "mean_reversion": {
+          "count": 100,
+          "pnl": 264.89
+        },
+        "bb_squeeze": {
+          "count": 69,
+          "pnl": 812.81
+        },
+        "trend_following": {
+          "count": 100,
+          "pnl": 84.86
+        }
+      },
+      "config_changes": "risk.max_loss_per_trade=45.0"
+    },
+    {
+      "label": "Max loss cap=$40",
+      "metrics": {
+        "total_trades": 307,
+        "total_pnl": 1349.55,
+        "avg_trade": 4.4,
+        "win_rate_pct": 48.21,
+        "profit_factor": 1.417,
+        "sharpe": 0.8587,
+        "sortino": 1.1711,
+        "cagr_pct": 13.0555,
+        "max_drawdown_pct": 9.2677,
+        "final_equity": 6383.26,
+        "runtime_s": 361.7
+      },
+      "bb_analysis": {
+        "count": 69,
+        "total_pnl": 855.85,
+        "avg_pnl": 12.4,
+        "win_rate": 43.5,
+        "losses_count": 39,
+        "avg_loss": -32.51,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 15,
+        "big_losses_total": -741.46,
+        "exit_reasons": {
+          "max_loss_cap": 9,
+          "time_exit": 29,
+          "signal_exit": 8,
+          "stop_hit": 22,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 12,
+        "total_loss": -781.71,
+        "avg_loss": -65.14,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 9,
+            "total_loss": -458.22
+          },
+          "trend_following": {
+            "count": 2,
+            "total_loss": -250.86
+          },
+          "mean_reversion": {
+            "count": 1,
+            "total_loss": -72.63
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 38,
+          "pnl": 157.02
+        },
+        "mean_reversion": {
+          "count": 100,
+          "pnl": 266.03
+        },
+        "bb_squeeze": {
+          "count": 69,
+          "pnl": 855.85
+        },
+        "trend_following": {
+          "count": 100,
+          "pnl": 70.65
+        }
+      },
+      "config_changes": "risk.max_loss_per_trade=40.0"
+    },
+    {
+      "label": "Max loss cap=$35",
+      "metrics": {
+        "total_trades": 302,
+        "total_pnl": 1097.94,
+        "avg_trade": 3.64,
+        "win_rate_pct": 48.68,
+        "profit_factor": 1.3418,
+        "sharpe": 0.7633,
+        "sortino": 1.0411,
+        "cagr_pct": 11.861,
+        "max_drawdown_pct": 10.0829,
+        "final_equity": 6249.73,
+        "runtime_s": 364.6
+      },
+      "bb_analysis": {
+        "count": 68,
+        "total_pnl": 685.04,
+        "avg_pnl": 10.07,
+        "win_rate": 42.6,
+        "losses_count": 39,
+        "avg_loss": -32.11,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 16,
+        "big_losses_total": -755.6,
+        "exit_reasons": {
+          "max_loss_cap": 13,
+          "time_exit": 28,
+          "signal_exit": 8,
+          "stop_hit": 18,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 22,
+        "total_loss": -1151.26,
+        "avg_loss": -52.33,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 13,
+            "total_loss": -612.77
+          },
+          "trend_following": {
+            "count": 5,
+            "total_loss": -358.78
+          },
+          "opening_gap": {
+            "count": 2,
+            "total_loss": -73.41
+          },
+          "mean_reversion": {
+            "count": 2,
+            "total_loss": -106.3
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 37,
+          "pnl": 209.95
+        },
+        "mean_reversion": {
+          "count": 100,
+          "pnl": 149.51
+        },
+        "bb_squeeze": {
+          "count": 68,
+          "pnl": 685.04
+        },
+        "trend_following": {
+          "count": 97,
+          "pnl": 53.44
+        }
+      },
+      "config_changes": "risk.max_loss_per_trade=35.0"
+    },
+    {
+      "label": "Max loss cap=$30",
+      "metrics": {
+        "total_trades": 291,
+        "total_pnl": 988.37,
+        "avg_trade": 3.4,
+        "win_rate_pct": 49.14,
+        "profit_factor": 1.3,
+        "sharpe": 0.6769,
+        "sortino": 0.9016,
+        "cagr_pct": 10.8353,
+        "max_drawdown_pct": 10.3663,
+        "final_equity": 6136.18,
+        "runtime_s": 382.1
+      },
+      "bb_analysis": {
+        "count": 71,
+        "total_pnl": 775.53,
+        "avg_pnl": 10.92,
+        "win_rate": 40.8,
+        "losses_count": 42,
+        "avg_loss": -31.68,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 16,
+        "big_losses_total": -733.93,
+        "exit_reasons": {
+          "max_loss_cap": 18,
+          "time_exit": 29,
+          "signal_exit": 8,
+          "stop_hit": 15,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 37,
+        "total_loss": -1653.61,
+        "avg_loss": -44.69,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 18,
+            "total_loss": -762.4
+          },
+          "mean_reversion": {
+            "count": 6,
+            "total_loss": -262.08
+          },
+          "trend_following": {
+            "count": 10,
+            "total_loss": -525.23
+          },
+          "opening_gap": {
+            "count": 3,
+            "total_loss": -103.9
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 34,
+          "pnl": 164.84
+        },
+        "mean_reversion": {
+          "count": 92,
+          "pnl": -49.02
+        },
+        "bb_squeeze": {
+          "count": 71,
+          "pnl": 775.53
+        },
+        "trend_following": {
+          "count": 94,
+          "pnl": 97.02
+        }
+      },
+      "config_changes": "risk.max_loss_per_trade=30.0"
+    },
+    {
+      "label": "COMBO: trail=2.5x + cap=$40",
+      "metrics": {
+        "total_trades": 302,
+        "total_pnl": 1056.59,
+        "avg_trade": 3.5,
+        "win_rate_pct": 47.68,
+        "profit_factor": 1.3124,
+        "sharpe": 0.728,
+        "sortino": 0.9912,
+        "cagr_pct": 11.4877,
+        "max_drawdown_pct": 9.2677,
+        "final_equity": 6208.28,
+        "runtime_s": 369.8
+      },
+      "bb_analysis": {
+        "count": 73,
+        "total_pnl": 762.44,
+        "avg_pnl": 10.44,
+        "win_rate": 41.1,
+        "losses_count": 43,
+        "avg_loss": -32.17,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 16,
+        "big_losses_total": -783.46,
+        "exit_reasons": {
+          "max_loss_cap": 9,
+          "time_exit": 29,
+          "signal_exit": 8,
+          "stop_hit": 24,
+          "trailing_stop": 2,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 11,
+        "total_loss": -734.12,
+        "avg_loss": -66.74,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 9,
+            "total_loss": -458.19
+          },
+          "trend_following": {
+            "count": 1,
+            "total_loss": -205.1
+          },
+          "mean_reversion": {
+            "count": 1,
+            "total_loss": -70.83
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 35,
+          "pnl": 143.61
+        },
+        "mean_reversion": {
+          "count": 99,
+          "pnl": 62.32
+        },
+        "bb_squeeze": {
+          "count": 73,
+          "pnl": 762.44
+        },
+        "trend_following": {
+          "count": 95,
+          "pnl": 88.22
+        }
+      },
+      "config_changes": "trail=2.5, cap=40.0"
+    },
+    {
+      "label": "COMBO: trail=2.5x + cap=$35",
+      "metrics": {
+        "total_trades": 302,
+        "total_pnl": 1098.88,
+        "avg_trade": 3.64,
+        "win_rate_pct": 48.01,
+        "profit_factor": 1.3292,
+        "sharpe": 0.7587,
+        "sortino": 1.0432,
+        "cagr_pct": 11.8714,
+        "max_drawdown_pct": 10.0829,
+        "final_equity": 6250.88,
+        "runtime_s": 349.5
+      },
+      "bb_analysis": {
+        "count": 74,
+        "total_pnl": 742.06,
+        "avg_pnl": 10.03,
+        "win_rate": 40.5,
+        "losses_count": 44,
+        "avg_loss": -32.0,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 17,
+        "big_losses_total": -808.24,
+        "exit_reasons": {
+          "max_loss_cap": 14,
+          "time_exit": 29,
+          "signal_exit": 8,
+          "stop_hit": 20,
+          "trailing_stop": 2,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 20,
+        "total_loss": -1079.83,
+        "avg_loss": -53.99,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 14,
+            "total_loss": -654.78
+          },
+          "trend_following": {
+            "count": 3,
+            "total_loss": -279.87
+          },
+          "mean_reversion": {
+            "count": 2,
+            "total_loss": -108.41
+          },
+          "opening_gap": {
+            "count": 1,
+            "total_loss": -36.77
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 35,
+          "pnl": 175.47
+        },
+        "mean_reversion": {
+          "count": 101,
+          "pnl": 94.33
+        },
+        "bb_squeeze": {
+          "count": 74,
+          "pnl": 742.06
+        },
+        "trend_following": {
+          "count": 92,
+          "pnl": 87.02
+        }
+      },
+      "config_changes": "trail=2.5, cap=35.0"
+    },
+    {
+      "label": "COMBO: trail=2.0x + cap=$40",
+      "metrics": {
+        "total_trades": 300,
+        "total_pnl": 1232.18,
+        "avg_trade": 4.11,
+        "win_rate_pct": 48.67,
+        "profit_factor": 1.3693,
+        "sharpe": 0.7756,
+        "sortino": 1.0558,
+        "cagr_pct": 12.0702,
+        "max_drawdown_pct": 9.2693,
+        "final_equity": 6273.01,
+        "runtime_s": 360.0
+      },
+      "bb_analysis": {
+        "count": 74,
+        "total_pnl": 732.94,
+        "avg_pnl": 9.9,
+        "win_rate": 40.5,
+        "losses_count": 44,
+        "avg_loss": -32.77,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 16,
+        "big_losses_total": -782.02,
+        "exit_reasons": {
+          "max_loss_cap": 9,
+          "trailing_stop": 8,
+          "signal_exit": 7,
+          "stop_hit": 24,
+          "time_exit": 25,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 12,
+        "total_loss": -781.85,
+        "avg_loss": -65.15,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 9,
+            "total_loss": -457.35
+          },
+          "trend_following": {
+            "count": 2,
+            "total_loss": -254.57
+          },
+          "mean_reversion": {
+            "count": 1,
+            "total_loss": -69.93
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 35,
+          "pnl": 174.92
+        },
+        "mean_reversion": {
+          "count": 97,
+          "pnl": 159.83
+        },
+        "bb_squeeze": {
+          "count": 74,
+          "pnl": 732.94
+        },
+        "trend_following": {
+          "count": 94,
+          "pnl": 164.49
+        }
+      },
+      "config_changes": "trail=2.0, cap=40.0"
+    },
+    {
+      "label": "COMBO: trail=2.0x + cap=$35",
+      "metrics": {
+        "total_trades": 288,
+        "total_pnl": 1117.4,
+        "avg_trade": 3.88,
+        "win_rate_pct": 48.61,
+        "profit_factor": 1.3346,
+        "sharpe": 0.6875,
+        "sortino": 0.8902,
+        "cagr_pct": 11.1611,
+        "max_drawdown_pct": 10.0884,
+        "final_equity": 6172.13,
+        "runtime_s": 364.7
+      },
+      "bb_analysis": {
+        "count": 74,
+        "total_pnl": 582.53,
+        "avg_pnl": 7.87,
+        "win_rate": 39.2,
+        "losses_count": 45,
+        "avg_loss": -34.42,
+        "worst_loss": -125.66,
+        "big_losses_gt35": 18,
+        "big_losses_total": -906.7,
+        "exit_reasons": {
+          "max_loss_cap": 16,
+          "trailing_stop": 8,
+          "signal_exit": 7,
+          "stop_hit": 18,
+          "time_exit": 24,
+          "backtest_end": 1
+        }
+      },
+      "maxloss_exits": {
+        "count": 24,
+        "total_loss": -1324.96,
+        "avg_loss": -55.21,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 16,
+            "total_loss": -817.3
+          },
+          "trend_following": {
+            "count": 5,
+            "total_loss": -365.1
+          },
+          "mean_reversion": {
+            "count": 2,
+            "total_loss": -106.07
+          },
+          "opening_gap": {
+            "count": 1,
+            "total_loss": -36.49
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 34,
+          "pnl": 194.33
+        },
+        "mean_reversion": {
+          "count": 92,
+          "pnl": 210.41
+        },
+        "bb_squeeze": {
+          "count": 74,
+          "pnl": 582.53
+        },
+        "trend_following": {
+          "count": 88,
+          "pnl": 130.13
+        }
+      },
+      "config_changes": "trail=2.0, cap=35.0"
+    },
+    {
+      "label": "COMBO: trail=1.5x + cap=$40",
+      "metrics": {
+        "total_trades": 314,
+        "total_pnl": 1158.11,
+        "avg_trade": 3.69,
+        "win_rate_pct": 47.77,
+        "profit_factor": 1.3315,
+        "sharpe": 0.8067,
+        "sortino": 1.1002,
+        "cagr_pct": 12.3495,
+        "max_drawdown_pct": 9.2558,
+        "final_equity": 6304.17,
+        "runtime_s": 410.9
+      },
+      "bb_analysis": {
+        "count": 74,
+        "total_pnl": 734.54,
+        "avg_pnl": 9.93,
+        "win_rate": 41.9,
+        "losses_count": 43,
+        "avg_loss": -32.12,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 16,
+        "big_losses_total": -772.4,
+        "exit_reasons": {
+          "trailing_stop": 16,
+          "max_loss_cap": 8,
+          "signal_exit": 6,
+          "stop_hit": 24,
+          "time_exit": 20
+        }
+      },
+      "maxloss_exits": {
+        "count": 12,
+        "total_loss": -794.32,
+        "avg_loss": -66.19,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 8,
+            "total_loss": -411.37
+          },
+          "trend_following": {
+            "count": 2,
+            "total_loss": -254.8
+          },
+          "mean_reversion": {
+            "count": 2,
+            "total_loss": -128.15
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 37,
+          "pnl": 158.84
+        },
+        "mean_reversion": {
+          "count": 107,
+          "pnl": 95.49
+        },
+        "bb_squeeze": {
+          "count": 74,
+          "pnl": 734.54
+        },
+        "trend_following": {
+          "count": 96,
+          "pnl": 169.24
+        }
+      },
+      "config_changes": "trail=1.5, cap=40.0"
+    },
+    {
+      "label": "COMBO: trail=1.5x + cap=$35",
+      "metrics": {
+        "total_trades": 299,
+        "total_pnl": 977.89,
+        "avg_trade": 3.27,
+        "win_rate_pct": 48.49,
+        "profit_factor": 1.2859,
+        "sharpe": 0.6759,
+        "sortino": 0.9096,
+        "cagr_pct": 10.7643,
+        "max_drawdown_pct": 10.0878,
+        "final_equity": 6128.36,
+        "runtime_s": 383.8
+      },
+      "bb_analysis": {
+        "count": 73,
+        "total_pnl": 657.82,
+        "avg_pnl": 9.01,
+        "win_rate": 39.7,
+        "losses_count": 44,
+        "avg_loss": -31.87,
+        "worst_loss": -71.54,
+        "big_losses_gt35": 17,
+        "big_losses_total": -784.02,
+        "exit_reasons": {
+          "trailing_stop": 16,
+          "max_loss_cap": 14,
+          "signal_exit": 6,
+          "stop_hit": 18,
+          "time_exit": 19
+        }
+      },
+      "maxloss_exits": {
+        "count": 23,
+        "total_loss": -1206.92,
+        "avg_loss": -52.47,
+        "strategies": {
+          "bb_squeeze": {
+            "count": 14,
+            "total_loss": -645.57
+          },
+          "trend_following": {
+            "count": 5,
+            "total_loss": -360.49
+          },
+          "mean_reversion": {
+            "count": 3,
+            "total_loss": -164.09
+          },
+          "opening_gap": {
+            "count": 1,
+            "total_loss": -36.77
+          }
+        }
+      },
+      "strategy_pnl": {
+        "opening_gap": {
+          "count": 34,
+          "pnl": 193.3
+        },
+        "mean_reversion": {
+          "count": 100,
+          "pnl": -8.97
+        },
+        "bb_squeeze": {
+          "count": 73,
+          "pnl": 657.82
+        },
+        "trend_following": {
+          "count": 92,
+          "pnl": 135.74
+        }
+      },
+      "config_changes": "trail=1.5, cap=35.0"
+    }
+  ],
+  "best_sharpe": "BASELINE (current config)",
+  "best_cagr": "BASELINE (current config)"
+}

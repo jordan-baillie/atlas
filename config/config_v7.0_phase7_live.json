@@ -1,0 +1,141 @@
+{
+  "version": "v7.0_phase7_live",
+  "project": "Atlas-ASX",
+  "description": "Phase 7C: Market breadth confidence modifiers (pct_above_50ma thresholds 48/58%)",
+  "universe": {
+    "method": "top_liquid",
+    "top_n": 100,
+    "min_median_daily_value": 1000000,
+    "min_price": 1.0,
+    "min_market_cap": 500000000,
+    "exclusions": [],
+    "benchmark_ticker": "IOZ.AX"
+  },
+  "risk": {
+    "starting_equity": 5000,
+    "max_risk_per_trade_pct": 0.005,
+    "max_open_positions": 5,
+    "max_sector_concentration": 2,
+    "max_daily_drawdown_pct": 0.02,
+    "require_stop_loss": true,
+    "require_planned_exit": true,
+    "min_confidence": 0.75
+  },
+  "trading": {
+    "mode": "paper",
+    "holding_period_min": 2,
+    "holding_period_max": 20,
+    "data_frequency": "daily",
+    "order_type": "market_on_open",
+    "approval_required": true
+  },
+  "fees": {
+    "commission_per_trade": 5.0,
+    "commission_pct": 0.0008,
+    "slippage_pct": 0.001,
+    "flat_fee_threshold": 2000.0,
+    "min_position_value": 500.0
+  },
+  "strategies": {
+    "momentum_breakout": {
+      "enabled": false,
+      "lookback_days": 20,
+      "volume_confirmation_mult": 1.5,
+      "atr_period": 14,
+      "atr_stop_mult": 3.0,
+      "trailing_stop_atr_mult": 3.5,
+      "max_hold_days": 15
+    },
+    "mean_reversion": {
+      "enabled": true,
+      "rsi_period": 14,
+      "rsi_oversold": 35,
+      "zscore_lookback": 20,
+      "zscore_entry": -2.0,
+      "atr_period": 14,
+      "atr_stop_mult": 3.0,
+      "profit_target_atr_mult": 1.5,
+      "max_hold_days": 10,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 0.5,
+        "surge_threshold": 2.0,
+        "surge_boost": 0.1,
+        "dry_penalty": 0.05
+      },
+      "earnings_blackout": {
+        "enabled": true,
+        "days_before": 5,
+        "days_after": 1
+      },
+      "breadth": {
+        "enabled": true,
+        "metric": "pct_above_50ma",
+        "low_threshold": 48.0,
+        "high_threshold": 58.0,
+        "low_boost": 0.015,
+        "high_penalty": 0.015
+      },
+      "relative_strength": {
+        "enabled": false,
+        "metric": "rs_percentile",
+        "low_threshold": 25.0,
+        "high_threshold": 50.0,
+        "low_penalty": 0.0,
+        "high_boost": 0.0
+      }
+    },
+    "trend_following": {
+      "enabled": true,
+      "fast_ma": 10,
+      "slow_ma": 30,
+      "pullback_pct": 0.02,
+      "atr_period": 14,
+      "atr_stop_mult": 3.5,
+      "trailing_stop_atr_mult": 4.0,
+      "max_hold_days": 20,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 0.5,
+        "boost_threshold": 1.5,
+        "boost_amount": 0.1,
+        "penalty_amount": 0.05
+      },
+      "breadth": {
+        "enabled": true,
+        "metric": "pct_above_50ma",
+        "low_threshold": 48.0,
+        "high_threshold": 58.0,
+        "low_boost": 0.03,
+        "high_penalty": 0.03
+      },
+      "relative_strength": {
+        "enabled": true,
+        "metric": "rs_percentile",
+        "low_threshold": 50.0,
+        "high_threshold": 60.0,
+        "low_penalty": 0.05,
+        "high_boost": 0.0
+      }
+    }
+  },
+  "backtest": {
+    "train_window_days": 252,
+    "test_window_days": 63,
+    "step_days": 21,
+    "min_history_days": 60
+  },
+  "data": {
+    "source": "yfinance",
+    "history_years": 3,
+    "cache_dir": "data/cache",
+    "raw_dir": "data/raw",
+    "processed_dir": "data/processed"
+  },
+  "annealing": {
+    "max_changes_per_cycle": 2,
+    "min_oos_sharpe_improvement": 0.05,
+    "max_drawdown_increase_pct": 0.01,
+    "changelog_file": "journal/changelog.json"
+  }
+}

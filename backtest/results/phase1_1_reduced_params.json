@@ -1,0 +1,515 @@
+{
+  "timestamp": "2026-02-19T11:22:36.891636",
+  "phase": "1.1_reduced_params",
+  "n_tickers": 185,
+  "n_optimizable_params": 8,
+  "n_fixed_params": 13,
+  "fixed_params": {
+    "mean_reversion": {
+      "atr_stop_mult": 2.5,
+      "profit_target_atr_mult": 1.5,
+      "max_hold_days": 7
+    },
+    "bb_squeeze": {
+      "atr_stop_mult": 1.0,
+      "trailing_stop_atr_mult": 3.0,
+      "momentum_period": 30,
+      "max_hold_days": 20
+    },
+    "trend_following": {
+      "atr_stop_mult": 3.5,
+      "pullback_pct": 0.02,
+      "max_hold_days": 25
+    },
+    "opening_gap": {
+      "atr_stop_mult": 2.0,
+      "ibs_confirm": 0.2,
+      "max_hold_days": 15
+    }
+  },
+  "baseline_combined": {
+    "trades": 196,
+    "cagr": 0.083129,
+    "sharpe": 0.5151,
+    "max_dd": 0.0746,
+    "pf": 1.6081,
+    "wr": 0.5153,
+    "total_pnl": 843.75
+  },
+  "mean_reversion": {
+    "strategy": "mean_reversion",
+    "baseline": {
+      "trades": 101,
+      "cagr": 0.05131,
+      "sharpe": 0.3968,
+      "max_dd": 0.013526,
+      "pf": 2.0458,
+      "wr": 0.5941,
+      "total_pnl": 466.68
+    },
+    "baseline_score": 5.2696,
+    "optimized": {
+      "trades": 101,
+      "cagr": 0.05131,
+      "sharpe": 0.3968,
+      "max_dd": 0.013526,
+      "pf": 2.0458,
+      "wr": 0.5941,
+      "total_pnl": 466.68
+    },
+    "optimized_score": 5.2696,
+    "best_params": {
+      "rsi_oversold": 35,
+      "zscore_entry": -2.0
+    },
+    "iterations": 9,
+    "improved": false,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 20,
+        "trades": 2,
+        "sharpe": -4.0881,
+        "pf": Infinity,
+        "cagr": 0.007109,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 25,
+        "trades": 12,
+        "sharpe": -2.1319,
+        "pf": 3.2385,
+        "cagr": 0.013938,
+        "score": -0.375
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 30,
+        "trades": 31,
+        "sharpe": -1.564,
+        "pf": 1.6942,
+        "cagr": 0.015822,
+        "score": -0.8417
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 40,
+        "trades": 185,
+        "sharpe": 0.1963,
+        "pf": 1.4516,
+        "cagr": 0.048476,
+        "score": 4.0278
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 45,
+        "trades": 235,
+        "sharpe": -0.2474,
+        "pf": 1.1304,
+        "cagr": 0.024555,
+        "score": 1.4307
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -3.0,
+        "trades": 11,
+        "sharpe": -1.9426,
+        "pf": 4.4444,
+        "cagr": 0.014613,
+        "score": 1.2037
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -2.5,
+        "trades": 26,
+        "sharpe": -1.2151,
+        "pf": 2.0454,
+        "cagr": 0.018471,
+        "score": 0.4123
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -1.5,
+        "trades": 196,
+        "sharpe": 0.0273,
+        "pf": 1.2654,
+        "cagr": 0.04033,
+        "score": 3.0184
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -1.0,
+        "trades": 332,
+        "sharpe": 0.16,
+        "pf": 1.199,
+        "cagr": 0.048612,
+        "score": 3.543
+      }
+    ]
+  },
+  "trend_following": {
+    "strategy": "trend_following",
+    "baseline": {
+      "trades": 83,
+      "cagr": 0.057788,
+      "sharpe": 0.2567,
+      "max_dd": 0.073779,
+      "pf": 1.9429,
+      "wr": 0.4699,
+      "total_pnl": 599.63
+    },
+    "baseline_score": 4.6079,
+    "optimized": {
+      "trades": 83,
+      "cagr": 0.057788,
+      "sharpe": 0.2567,
+      "max_dd": 0.073779,
+      "pf": 1.9429,
+      "wr": 0.4699,
+      "total_pnl": 599.63
+    },
+    "optimized_score": 4.6079,
+    "best_params": {
+      "fast_ma": 20,
+      "slow_ma": 50
+    },
+    "iterations": 7,
+    "improved": false,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 5,
+        "trades": 46,
+        "sharpe": -0.6053,
+        "pf": 0.8751,
+        "cagr": -0.005983,
+        "score": -1.6036
+      },
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 10,
+        "trades": 86,
+        "sharpe": 0.1915,
+        "pf": 1.7744,
+        "cagr": 0.052961,
+        "score": 4.0163
+      },
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 15,
+        "trades": 82,
+        "sharpe": 0.2471,
+        "pf": 1.9444,
+        "cagr": 0.057671,
+        "score": 4.4984
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 20,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 30,
+        "trades": 7,
+        "sharpe": -3.8666,
+        "pf": 1.1609,
+        "cagr": 0.000761,
+        "score": -6.6527
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 40,
+        "trades": 40,
+        "sharpe": -0.8296,
+        "pf": 1.6607,
+        "cagr": 0.015671,
+        "score": 0.5532
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 60,
+        "trades": 79,
+        "sharpe": 0.1588,
+        "pf": 1.7648,
+        "cagr": 0.050189,
+        "score": 3.7757
+      }
+    ]
+  },
+  "bb_squeeze": {
+    "strategy": "bb_squeeze",
+    "baseline": {
+      "trades": 0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "max_dd": 0.0,
+      "pf": 0.0,
+      "wr": 0.0,
+      "total_pnl": 0
+    },
+    "baseline_score": -999,
+    "optimized": {
+      "trades": 0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "max_dd": 0.0,
+      "pf": 0.0,
+      "wr": 0.0,
+      "total_pnl": 0
+    },
+    "optimized_score": -999,
+    "best_params": {
+      "bb_std": 3.0,
+      "kc_atr_mult": 2.0
+    },
+    "iterations": 6,
+    "improved": false,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 1.5,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 2.0,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 2.5,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 1.0,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 1.5,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 2.5,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      }
+    ]
+  },
+  "opening_gap": {
+    "strategy": "opening_gap",
+    "baseline": {
+      "trades": 0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "max_dd": 0.0,
+      "pf": 0.0,
+      "wr": 0.0,
+      "total_pnl": 0
+    },
+    "baseline_score": -999,
+    "optimized": {
+      "trades": 0,
+      "cagr": 0.0,
+      "sharpe": 0.0,
+      "max_dd": 0.0,
+      "pf": 0.0,
+      "wr": 0.0,
+      "total_pnl": 0
+    },
+    "optimized_score": -999,
+    "best_params": {
+      "gap_threshold": -0.01,
+      "rsi14_max": 40
+    },
+    "iterations": 8,
+    "improved": false,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.03,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.025,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.02,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.015,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 30,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 50,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 60,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 70,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      }
+    ]
+  },
+  "final_combined": {
+    "trades": 196,
+    "cagr": 0.083129,
+    "sharpe": 0.5151,
+    "max_dd": 0.0746,
+    "pf": 1.6081,
+    "wr": 0.5153,
+    "total_pnl": 843.75
+  },
+  "perturbation": {
+    "n_trials": 30,
+    "range": 0.15,
+    "base_cagr": 0.083129,
+    "mean_cagr": 0.06355046666666668,
+    "min_cagr": 0.033316,
+    "max_cagr": 0.081958,
+    "std_cagr": 0.012582876013941416,
+    "retention": 0.7644801052179947,
+    "mean_sharpe": 0.3037266666666667,
+    "all_cagrs": [
+      0.062088,
+      0.065661,
+      0.075311,
+      0.073999,
+      0.059279,
+      0.068775,
+      0.069539,
+      0.068456,
+      0.071965,
+      0.033316,
+      0.058978,
+      0.081958,
+      0.069182,
+      0.062319,
+      0.057527,
+      0.066635,
+      0.055409,
+      0.068804,
+      0.062443,
+      0.035576,
+      0.080839,
+      0.035301,
+      0.056415,
+      0.068537,
+      0.064148,
+      0.079231,
+      0.067492,
+      0.045339,
+      0.060702,
+      0.08129
+    ]
+  }
+}

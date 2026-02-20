@@ -1,0 +1,37 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Data cache
+data/cache/
+
+# Logs
+logs/
+
+# Agent Zero project metadata
+.a0proj/
+
+# Backtest Optuna DBs
+backtest/results/*.db
+
+# Dashboard server log
+dashboard/server.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.bak
+
+# Pickle files (large binary)
+*.pkl

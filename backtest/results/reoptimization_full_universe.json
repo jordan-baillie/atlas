@@ -1,0 +1,1770 @@
+{
+  "timestamp": "2026-02-18T14:11:45.877361",
+  "n_tickers": 185,
+  "baseline_combined": {
+    "trades": 405,
+    "cagr": 0.00194,
+    "sharpe": -0.2607,
+    "max_dd": 0.134693,
+    "pf": 0.9879,
+    "wr": 0.442,
+    "total_pnl": -57.54
+  },
+  "mean_reversion": {
+    "strategy": "mean_reversion",
+    "baseline": {
+      "trades": 176,
+      "cagr": 0.036644,
+      "sharpe": -0.0498,
+      "max_dd": 0.0246,
+      "pf": 1.3271,
+      "wr": 0.5398,
+      "total_pnl": 311.33
+    },
+    "baseline_score": 4.3541,
+    "optimized": {
+      "trades": 94,
+      "cagr": 0.039928,
+      "sharpe": 0.0063,
+      "max_dd": 0.014195,
+      "pf": 1.8016,
+      "wr": 0.5745,
+      "total_pnl": 346.17
+    },
+    "optimized_score": 4.8537,
+    "best_params": {
+      "rsi_oversold": 35,
+      "zscore_entry": -2.0,
+      "atr_stop_mult": 2.5,
+      "profit_target_atr_mult": 1.5,
+      "max_hold_days": 7
+    },
+    "iterations": 42,
+    "improved": true,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 20,
+        "trades": 2,
+        "sharpe": -4.0975,
+        "pf": Infinity,
+        "cagr": 0.006935,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 25,
+        "trades": 12,
+        "sharpe": -2.1808,
+        "pf": 3.0035,
+        "cagr": 0.013293,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 30,
+        "trades": 31,
+        "sharpe": -1.6764,
+        "pf": 1.5606,
+        "cagr": 0.014114,
+        "score": -2.057
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 35,
+        "trades": 94,
+        "sharpe": 0.0063,
+        "pf": 1.8016,
+        "cagr": 0.039928,
+        "score": 4.8537
+      },
+      {
+        "pass": 1,
+        "param": "rsi_oversold",
+        "value": 45,
+        "trades": 225,
+        "sharpe": -0.4393,
+        "pf": 1.0532,
+        "cagr": 0.014337,
+        "score": 1.7217
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -3.0,
+        "trades": 11,
+        "sharpe": -1.995,
+        "pf": 4.1204,
+        "cagr": 0.01379,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -2.5,
+        "trades": 26,
+        "sharpe": -1.3006,
+        "pf": 1.8932,
+        "cagr": 0.016861,
+        "score": -0.4533
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -1.5,
+        "trades": 190,
+        "sharpe": -0.1446,
+        "pf": 1.2193,
+        "cagr": 0.032288,
+        "score": 3.6704
+      },
+      {
+        "pass": 1,
+        "param": "zscore_entry",
+        "value": -1.0,
+        "trades": 298,
+        "sharpe": -0.304,
+        "pf": 1.0565,
+        "cagr": 0.019932,
+        "score": 2.3074
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 220,
+        "sharpe": 0.1331,
+        "pf": 1.1694,
+        "cagr": 0.046297,
+        "score": 4.6572
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 31,
+        "sharpe": -1.1481,
+        "pf": 3.11,
+        "cagr": 0.022011,
+        "score": 1.8904
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.5,
+        "trades": 10,
+        "sharpe": -2.9137,
+        "pf": 6.3877,
+        "cagr": 0.011413,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 4.0,
+        "trades": 7,
+        "sharpe": -4.0993,
+        "pf": 15.0681,
+        "cagr": 0.008881,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "profit_target_atr_mult",
+        "value": 1.0,
+        "trades": 92,
+        "sharpe": -0.1772,
+        "pf": 1.757,
+        "cagr": 0.035138,
+        "score": 4.1145
+      },
+      {
+        "pass": 1,
+        "param": "profit_target_atr_mult",
+        "value": 2.0,
+        "trades": 94,
+        "sharpe": -0.0569,
+        "pf": 1.7589,
+        "cagr": 0.038195,
+        "score": 4.5307
+      },
+      {
+        "pass": 1,
+        "param": "profit_target_atr_mult",
+        "value": 2.5,
+        "trades": 93,
+        "sharpe": -0.1181,
+        "pf": 1.7554,
+        "cagr": 0.036545,
+        "score": 4.2898
+      },
+      {
+        "pass": 1,
+        "param": "profit_target_atr_mult",
+        "value": 3.0,
+        "trades": 93,
+        "sharpe": -0.058,
+        "pf": 1.7554,
+        "cagr": 0.038188,
+        "score": 4.5358
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 90,
+        "sharpe": -0.5649,
+        "pf": 1.4931,
+        "cagr": 0.025749,
+        "score": 2.0888
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 86,
+        "sharpe": -0.6624,
+        "pf": 1.1775,
+        "cagr": 0.016387,
+        "score": 0.8766
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 90,
+        "sharpe": -0.2464,
+        "pf": 1.356,
+        "cagr": 0.029849,
+        "score": 3.0293
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 20,
+        "trades": 92,
+        "sharpe": -0.1591,
+        "pf": 1.4111,
+        "cagr": 0.03295,
+        "score": 3.4776
+      },
+      {
+        "pass": 2,
+        "param": "rsi_oversold",
+        "value": 20,
+        "trades": 2,
+        "sharpe": -4.0975,
+        "pf": Infinity,
+        "cagr": 0.006935,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "rsi_oversold",
+        "value": 25,
+        "trades": 12,
+        "sharpe": -2.1808,
+        "pf": 3.0035,
+        "cagr": 0.013293,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "rsi_oversold",
+        "value": 30,
+        "trades": 31,
+        "sharpe": -1.6764,
+        "pf": 1.5606,
+        "cagr": 0.014114,
+        "score": -2.057
+      },
+      {
+        "pass": 2,
+        "param": "rsi_oversold",
+        "value": 40,
+        "trades": 176,
+        "sharpe": -0.0498,
+        "pf": 1.3271,
+        "cagr": 0.036644,
+        "score": 4.3541
+      },
+      {
+        "pass": 2,
+        "param": "rsi_oversold",
+        "value": 45,
+        "trades": 225,
+        "sharpe": -0.4393,
+        "pf": 1.0532,
+        "cagr": 0.014337,
+        "score": 1.7217
+      },
+      {
+        "pass": 2,
+        "param": "zscore_entry",
+        "value": -3.0,
+        "trades": 11,
+        "sharpe": -1.995,
+        "pf": 4.1204,
+        "cagr": 0.01379,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "zscore_entry",
+        "value": -2.5,
+        "trades": 26,
+        "sharpe": -1.3006,
+        "pf": 1.8932,
+        "cagr": 0.016861,
+        "score": -0.4533
+      },
+      {
+        "pass": 2,
+        "param": "zscore_entry",
+        "value": -1.5,
+        "trades": 190,
+        "sharpe": -0.1446,
+        "pf": 1.2193,
+        "cagr": 0.032288,
+        "score": 3.6704
+      },
+      {
+        "pass": 2,
+        "param": "zscore_entry",
+        "value": -1.0,
+        "trades": 298,
+        "sharpe": -0.304,
+        "pf": 1.0565,
+        "cagr": 0.019932,
+        "score": 2.3074
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 220,
+        "sharpe": 0.1331,
+        "pf": 1.1694,
+        "cagr": 0.046297,
+        "score": 4.6572
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 31,
+        "sharpe": -1.1481,
+        "pf": 3.11,
+        "cagr": 0.022011,
+        "score": 1.8904
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.5,
+        "trades": 10,
+        "sharpe": -2.9137,
+        "pf": 6.3877,
+        "cagr": 0.011413,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 4.0,
+        "trades": 7,
+        "sharpe": -4.0993,
+        "pf": 15.0681,
+        "cagr": 0.008881,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "profit_target_atr_mult",
+        "value": 1.0,
+        "trades": 92,
+        "sharpe": -0.1772,
+        "pf": 1.757,
+        "cagr": 0.035138,
+        "score": 4.1145
+      },
+      {
+        "pass": 2,
+        "param": "profit_target_atr_mult",
+        "value": 2.0,
+        "trades": 94,
+        "sharpe": -0.0569,
+        "pf": 1.7589,
+        "cagr": 0.038195,
+        "score": 4.5307
+      },
+      {
+        "pass": 2,
+        "param": "profit_target_atr_mult",
+        "value": 2.5,
+        "trades": 93,
+        "sharpe": -0.1181,
+        "pf": 1.7554,
+        "cagr": 0.036545,
+        "score": 4.2898
+      },
+      {
+        "pass": 2,
+        "param": "profit_target_atr_mult",
+        "value": 3.0,
+        "trades": 93,
+        "sharpe": -0.058,
+        "pf": 1.7554,
+        "cagr": 0.038188,
+        "score": 4.5358
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 90,
+        "sharpe": -0.5649,
+        "pf": 1.4931,
+        "cagr": 0.025749,
+        "score": 2.0888
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 86,
+        "sharpe": -0.6624,
+        "pf": 1.1775,
+        "cagr": 0.016387,
+        "score": 0.8766
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 90,
+        "sharpe": -0.2464,
+        "pf": 1.356,
+        "cagr": 0.029849,
+        "score": 3.0293
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 20,
+        "trades": 92,
+        "sharpe": -0.1591,
+        "pf": 1.4111,
+        "cagr": 0.03295,
+        "score": 3.4776
+      }
+    ]
+  },
+  "bb_squeeze": {
+    "strategy": "bb_squeeze",
+    "baseline": {
+      "trades": 281,
+      "cagr": -0.028613,
+      "sharpe": -0.5074,
+      "max_dd": 0.17068,
+      "pf": 0.9335,
+      "wr": 0.4199,
+      "total_pnl": -282.25
+    },
+    "baseline_score": -2.4536,
+    "optimized": {
+      "trades": 90,
+      "cagr": 0.105281,
+      "sharpe": 0.7298,
+      "max_dd": 0.077166,
+      "pf": 1.6593,
+      "wr": 0.4667,
+      "total_pnl": 1092.92
+    },
+    "optimized_score": 8.3358,
+    "best_params": {
+      "bb_std": 3.0,
+      "kc_atr_mult": 2.0,
+      "momentum_period": 30,
+      "atr_stop_mult": 1.0,
+      "trailing_stop_atr_mult": 3.0,
+      "max_hold_days": 20
+    },
+    "iterations": 42,
+    "improved": true,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 1.5,
+        "trades": 311,
+        "sharpe": -0.5343,
+        "pf": 0.919,
+        "cagr": -0.044854,
+        "score": -3.3753
+      },
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 2.0,
+        "trades": 317,
+        "sharpe": -0.4042,
+        "pf": 0.9545,
+        "cagr": -0.020907,
+        "score": -2.4003
+      },
+      {
+        "pass": 1,
+        "param": "bb_std",
+        "value": 3.0,
+        "trades": 233,
+        "sharpe": 0.3554,
+        "pf": 1.236,
+        "cagr": 0.072415,
+        "score": 5.6076
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 1.0,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 1.5,
+        "trades": 16,
+        "sharpe": -1.0848,
+        "pf": 1.2544,
+        "cagr": 0.009034,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "kc_atr_mult",
+        "value": 2.0,
+        "trades": 98,
+        "sharpe": 0.6688,
+        "pf": 1.5682,
+        "cagr": 0.086603,
+        "score": 7.5718
+      },
+      {
+        "pass": 1,
+        "param": "momentum_period",
+        "value": 10,
+        "trades": 203,
+        "sharpe": -0.5084,
+        "pf": 0.9223,
+        "cagr": -0.018053,
+        "score": -1.5622
+      },
+      {
+        "pass": 1,
+        "param": "momentum_period",
+        "value": 15,
+        "trades": 151,
+        "sharpe": -0.0419,
+        "pf": 1.1161,
+        "cagr": 0.03194,
+        "score": 2.1289
+      },
+      {
+        "pass": 1,
+        "param": "momentum_period",
+        "value": 20,
+        "trades": 107,
+        "sharpe": -0.0292,
+        "pf": 1.1918,
+        "cagr": 0.035129,
+        "score": 2.8955
+      },
+      {
+        "pass": 1,
+        "param": "momentum_period",
+        "value": 40,
+        "trades": 121,
+        "sharpe": -0.2767,
+        "pf": 1.0787,
+        "cagr": 0.016156,
+        "score": 1.1758
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 1.5,
+        "trades": 75,
+        "sharpe": -0.3056,
+        "pf": 1.3002,
+        "cagr": 0.026409,
+        "score": 2.2234
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 47,
+        "sharpe": -3.0663,
+        "pf": 0.498,
+        "cagr": -0.024751,
+        "score": -9.7598
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 25,
+        "sharpe": -4.0273,
+        "pf": 0.5769,
+        "cagr": -0.008442,
+        "score": -11.4217
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 13,
+        "sharpe": -6.1977,
+        "pf": 0.6565,
+        "cagr": -0.00362,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "trailing_stop_atr_mult",
+        "value": 1.5,
+        "trades": 98,
+        "sharpe": 0.529,
+        "pf": 1.4984,
+        "cagr": 0.075913,
+        "score": 6.655
+      },
+      {
+        "pass": 1,
+        "param": "trailing_stop_atr_mult",
+        "value": 2.5,
+        "trades": 98,
+        "sharpe": 0.6688,
+        "pf": 1.5682,
+        "cagr": 0.086603,
+        "score": 7.5718
+      },
+      {
+        "pass": 1,
+        "param": "trailing_stop_atr_mult",
+        "value": 3.0,
+        "trades": 98,
+        "sharpe": 0.6688,
+        "pf": 1.5682,
+        "cagr": 0.086603,
+        "score": 7.5718
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 103,
+        "sharpe": -0.0881,
+        "pf": 1.2405,
+        "cagr": 0.033302,
+        "score": 3.6027
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 96,
+        "sharpe": 0.5235,
+        "pf": 1.5059,
+        "cagr": 0.081085,
+        "score": 6.6757
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 20,
+        "trades": 91,
+        "sharpe": 0.647,
+        "pf": 1.5758,
+        "cagr": 0.096332,
+        "score": 7.6121
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 25,
+        "trades": 86,
+        "sharpe": 0.2103,
+        "pf": 1.3136,
+        "cagr": 0.055712,
+        "score": 4.0903
+      },
+      {
+        "pass": 2,
+        "param": "bb_std",
+        "value": 1.5,
+        "trades": 254,
+        "sharpe": 0.4491,
+        "pf": 1.2044,
+        "cagr": 0.10035,
+        "score": 5.9384
+      },
+      {
+        "pass": 2,
+        "param": "bb_std",
+        "value": 2.0,
+        "trades": 225,
+        "sharpe": -0.3154,
+        "pf": 0.9663,
+        "cagr": -0.009023,
+        "score": -1.7446
+      },
+      {
+        "pass": 2,
+        "param": "bb_std",
+        "value": 2.5,
+        "trades": 194,
+        "sharpe": 0.5441,
+        "pf": 1.2814,
+        "cagr": 0.102712,
+        "score": 6.6276
+      },
+      {
+        "pass": 2,
+        "param": "kc_atr_mult",
+        "value": 1.0,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "kc_atr_mult",
+        "value": 1.5,
+        "trades": 16,
+        "sharpe": -0.316,
+        "pf": 1.8083,
+        "cagr": 0.028195,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "kc_atr_mult",
+        "value": 2.5,
+        "trades": 197,
+        "sharpe": 0.1499,
+        "pf": 1.1521,
+        "cagr": 0.051491,
+        "score": 2.7392
+      },
+      {
+        "pass": 2,
+        "param": "momentum_period",
+        "value": 10,
+        "trades": 178,
+        "sharpe": -0.0866,
+        "pf": 1.0306,
+        "cagr": 0.02367,
+        "score": 1.3243
+      },
+      {
+        "pass": 2,
+        "param": "momentum_period",
+        "value": 15,
+        "trades": 136,
+        "sharpe": 0.0888,
+        "pf": 1.1594,
+        "cagr": 0.044088,
+        "score": 2.9074
+      },
+      {
+        "pass": 2,
+        "param": "momentum_period",
+        "value": 20,
+        "trades": 96,
+        "sharpe": 0.0204,
+        "pf": 1.1908,
+        "cagr": 0.037364,
+        "score": 2.1863
+      },
+      {
+        "pass": 2,
+        "param": "momentum_period",
+        "value": 40,
+        "trades": 112,
+        "sharpe": 0.1859,
+        "pf": 1.2565,
+        "cagr": 0.053338,
+        "score": 4.289
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 1.5,
+        "trades": 71,
+        "sharpe": -0.1342,
+        "pf": 1.3099,
+        "cagr": 0.031705,
+        "score": 2.5468
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 46,
+        "sharpe": -1.6271,
+        "pf": 0.8196,
+        "cagr": -0.009793,
+        "score": -4.4674
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 25,
+        "sharpe": -2.694,
+        "pf": 0.722,
+        "cagr": -0.006372,
+        "score": -7.2207
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 12,
+        "sharpe": -5.7011,
+        "pf": 0.3361,
+        "cagr": -0.008094,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "trailing_stop_atr_mult",
+        "value": 1.5,
+        "trades": 93,
+        "sharpe": 0.6148,
+        "pf": 1.563,
+        "cagr": 0.092712,
+        "score": 7.3718
+      },
+      {
+        "pass": 2,
+        "param": "trailing_stop_atr_mult",
+        "value": 2.5,
+        "trades": 91,
+        "sharpe": 0.7081,
+        "pf": 1.6351,
+        "cagr": 0.103028,
+        "score": 8.168
+      },
+      {
+        "pass": 2,
+        "param": "trailing_stop_atr_mult",
+        "value": 3.0,
+        "trades": 90,
+        "sharpe": 0.7298,
+        "pf": 1.6593,
+        "cagr": 0.105281,
+        "score": 8.3358
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 103,
+        "sharpe": -0.0881,
+        "pf": 1.2405,
+        "cagr": 0.033302,
+        "score": 3.6027
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 98,
+        "sharpe": 0.6688,
+        "pf": 1.5682,
+        "cagr": 0.086603,
+        "score": 7.5718
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 96,
+        "sharpe": 0.5538,
+        "pf": 1.528,
+        "cagr": 0.083734,
+        "score": 6.9156
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 25,
+        "trades": 84,
+        "sharpe": 0.3353,
+        "pf": 1.4044,
+        "cagr": 0.067862,
+        "score": 5.2105
+      }
+    ]
+  },
+  "trend_following": {
+    "strategy": "trend_following",
+    "baseline": {
+      "trades": 28,
+      "cagr": 0.022349,
+      "sharpe": -0.933,
+      "max_dd": 0.015571,
+      "pf": 2.9294,
+      "wr": 0.6071,
+      "total_pnl": 224.85
+    },
+    "baseline_score": 2.005,
+    "optimized": {
+      "trades": 82,
+      "cagr": 0.055829,
+      "sharpe": 0.2333,
+      "max_dd": 0.074138,
+      "pf": 1.9187,
+      "wr": 0.4634,
+      "total_pnl": 578.43
+    },
+    "optimized_score": 5.1665,
+    "best_params": {
+      "fast_ma": 20,
+      "slow_ma": 50,
+      "pullback_pct": 0.02,
+      "atr_stop_mult": 3.5,
+      "max_hold_days": 25
+    },
+    "iterations": 38,
+    "improved": true,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 5,
+        "trades": 31,
+        "sharpe": -1.0714,
+        "pf": 2.1,
+        "cagr": 0.017562,
+        "score": 0.3188
+      },
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 15,
+        "trades": 24,
+        "sharpe": -1.4061,
+        "pf": 2.9029,
+        "cagr": 0.017639,
+        "score": 0.3812
+      },
+      {
+        "pass": 1,
+        "param": "fast_ma",
+        "value": 20,
+        "trades": 7,
+        "sharpe": -4.0322,
+        "pf": 1.2095,
+        "cagr": 0.000799,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 20,
+        "trades": 5,
+        "sharpe": -5.6199,
+        "pf": 0.3399,
+        "cagr": -0.004497,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 40,
+        "trades": 55,
+        "sharpe": -0.2331,
+        "pf": 1.8683,
+        "cagr": 0.024045,
+        "score": 2.7098
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 50,
+        "trades": 87,
+        "sharpe": 0.1135,
+        "pf": 1.7718,
+        "cagr": 0.045779,
+        "score": 4.498
+      },
+      {
+        "pass": 1,
+        "param": "slow_ma",
+        "value": 60,
+        "trades": 80,
+        "sharpe": -0.1342,
+        "pf": 1.424,
+        "cagr": 0.02846,
+        "score": 2.5904
+      },
+      {
+        "pass": 1,
+        "param": "pullback_pct",
+        "value": 0.01,
+        "trades": 116,
+        "sharpe": -0.1641,
+        "pf": 1.2992,
+        "cagr": 0.025639,
+        "score": 2.7579
+      },
+      {
+        "pass": 1,
+        "param": "pullback_pct",
+        "value": 0.03,
+        "trades": 16,
+        "sharpe": -2.7388,
+        "pf": 0.6283,
+        "cagr": -0.007386,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "pullback_pct",
+        "value": 0.04,
+        "trades": 13,
+        "sharpe": -0.1703,
+        "pf": 7.6723,
+        "cagr": 0.0358,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "pullback_pct",
+        "value": 0.05,
+        "trades": 2,
+        "sharpe": -0.458,
+        "pf": 254.7797,
+        "cagr": 0.029656,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 315,
+        "sharpe": -0.725,
+        "pf": 0.8499,
+        "cagr": -0.055796,
+        "score": -4.006
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 284,
+        "sharpe": -0.686,
+        "pf": 0.8913,
+        "cagr": -0.038184,
+        "score": -3.1372
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 165,
+        "sharpe": -0.4071,
+        "pf": 1.026,
+        "cagr": 0.001392,
+        "score": 0.4005
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 4.0,
+        "trades": 15,
+        "sharpe": -0.3705,
+        "pf": 2.2646,
+        "cagr": 0.009436,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 88,
+        "sharpe": 0.034,
+        "pf": 1.9443,
+        "cagr": 0.04037,
+        "score": 4.3701
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 79,
+        "sharpe": -0.0412,
+        "pf": 1.6707,
+        "cagr": 0.035292,
+        "score": 3.6085
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 25,
+        "trades": 84,
+        "sharpe": 0.1749,
+        "pf": 1.7731,
+        "cagr": 0.051493,
+        "score": 4.6183
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 30,
+        "trades": 65,
+        "sharpe": 0.0284,
+        "pf": 1.703,
+        "cagr": 0.038115,
+        "score": 3.0839
+      },
+      {
+        "pass": 2,
+        "param": "fast_ma",
+        "value": 5,
+        "trades": 45,
+        "sharpe": -0.62,
+        "pf": 0.8588,
+        "cagr": -0.006798,
+        "score": -1.8661
+      },
+      {
+        "pass": 2,
+        "param": "fast_ma",
+        "value": 15,
+        "trades": 80,
+        "sharpe": 0.1931,
+        "pf": 1.8637,
+        "cagr": 0.053009,
+        "score": 4.6812
+      },
+      {
+        "pass": 2,
+        "param": "fast_ma",
+        "value": 20,
+        "trades": 82,
+        "sharpe": 0.2333,
+        "pf": 1.9187,
+        "cagr": 0.055829,
+        "score": 5.1665
+      },
+      {
+        "pass": 2,
+        "param": "slow_ma",
+        "value": 20,
+        "trades": 0,
+        "sharpe": 0.0,
+        "pf": 0.0,
+        "cagr": 0.0,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "slow_ma",
+        "value": 30,
+        "trades": 7,
+        "sharpe": -3.8914,
+        "pf": 1.0779,
+        "cagr": 0.000381,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "slow_ma",
+        "value": 40,
+        "trades": 40,
+        "sharpe": -0.898,
+        "pf": 1.5512,
+        "cagr": 0.013616,
+        "score": 0.0228
+      },
+      {
+        "pass": 2,
+        "param": "slow_ma",
+        "value": 60,
+        "trades": 78,
+        "sharpe": 0.1247,
+        "pf": 1.7098,
+        "cagr": 0.047274,
+        "score": 4.1079
+      },
+      {
+        "pass": 2,
+        "param": "pullback_pct",
+        "value": 0.01,
+        "trades": 113,
+        "sharpe": 0.1015,
+        "pf": 1.5178,
+        "cagr": 0.0454,
+        "score": 4.0101
+      },
+      {
+        "pass": 2,
+        "param": "pullback_pct",
+        "value": 0.03,
+        "trades": 33,
+        "sharpe": -0.2143,
+        "pf": 2.2142,
+        "cagr": 0.032406,
+        "score": 3.2248
+      },
+      {
+        "pass": 2,
+        "param": "pullback_pct",
+        "value": 0.04,
+        "trades": 14,
+        "sharpe": 0.1253,
+        "pf": 7.6214,
+        "cagr": 0.043292,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "pullback_pct",
+        "value": 0.05,
+        "trades": 3,
+        "sharpe": 0.0959,
+        "pf": 519.3614,
+        "cagr": 0.042344,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.0,
+        "trades": 267,
+        "sharpe": 0.0078,
+        "pf": 1.075,
+        "cagr": 0.032978,
+        "score": 2.8476
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 247,
+        "sharpe": -0.2827,
+        "pf": 0.9952,
+        "cagr": 0.003802,
+        "score": 0.7648
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 163,
+        "sharpe": -0.1974,
+        "pf": 1.1074,
+        "cagr": 0.017563,
+        "score": 1.6956
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 4.0,
+        "trades": 11,
+        "sharpe": -1.4284,
+        "pf": 1.7128,
+        "cagr": 0.004769,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 83,
+        "sharpe": 0.0262,
+        "pf": 2.1132,
+        "cagr": 0.04045,
+        "score": 4.9832
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 77,
+        "sharpe": -0.2132,
+        "pf": 1.6068,
+        "cagr": 0.030724,
+        "score": 3.3042
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 20,
+        "trades": 84,
+        "sharpe": 0.1893,
+        "pf": 1.96,
+        "cagr": 0.050684,
+        "score": 5.1406
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 30,
+        "trades": 73,
+        "sharpe": 0.1999,
+        "pf": 2.1097,
+        "cagr": 0.055833,
+        "score": 4.886
+      }
+    ]
+  },
+  "opening_gap": {
+    "strategy": "opening_gap",
+    "baseline": {
+      "trades": 44,
+      "cagr": -0.002467,
+      "sharpe": -2.4586,
+      "max_dd": 0.017957,
+      "pf": 0.9089,
+      "wr": 0.5227,
+      "total_pnl": -24.51
+    },
+    "baseline_score": -5.7895,
+    "optimized": {
+      "trades": 38,
+      "cagr": 0.01796,
+      "sharpe": -1.1253,
+      "max_dd": 0.014765,
+      "pf": 2.0648,
+      "wr": 0.6316,
+      "total_pnl": 180.36
+    },
+    "optimized_score": 0.449,
+    "best_params": {
+      "gap_threshold": -0.01,
+      "ibs_confirm": 0.2,
+      "rsi14_max": 40,
+      "atr_stop_mult": 2.0,
+      "max_hold_days": 15
+    },
+    "iterations": 40,
+    "improved": true,
+    "sweep_log": [
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.03,
+        "trades": 25,
+        "sharpe": -2.9003,
+        "pf": 0.8742,
+        "cagr": -0.002101,
+        "score": -7.0312
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.025,
+        "trades": 28,
+        "sharpe": -3.0764,
+        "pf": 0.7695,
+        "cagr": -0.004644,
+        "score": -7.7297
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.02,
+        "trades": 37,
+        "sharpe": -2.7999,
+        "pf": 0.7193,
+        "cagr": -0.006739,
+        "score": -7.2286
+      },
+      {
+        "pass": 1,
+        "param": "gap_threshold",
+        "value": -0.01,
+        "trades": 63,
+        "sharpe": -2.2549,
+        "pf": 0.8628,
+        "cagr": -0.005363,
+        "score": -4.9923
+      },
+      {
+        "pass": 1,
+        "param": "ibs_confirm",
+        "value": 0.15,
+        "trades": 48,
+        "sharpe": -2.081,
+        "pf": 1.126,
+        "cagr": 0.003371,
+        "score": -4.0318
+      },
+      {
+        "pass": 1,
+        "param": "ibs_confirm",
+        "value": 0.2,
+        "trades": 54,
+        "sharpe": -1.9204,
+        "pf": 1.1658,
+        "cagr": 0.004771,
+        "score": -3.0058
+      },
+      {
+        "pass": 1,
+        "param": "ibs_confirm",
+        "value": 0.4,
+        "trades": 68,
+        "sharpe": -2.2727,
+        "pf": 0.828,
+        "cagr": -0.007076,
+        "score": -5.1654
+      },
+      {
+        "pass": 1,
+        "param": "ibs_confirm",
+        "value": 0.5,
+        "trades": 74,
+        "sharpe": -1.9674,
+        "pf": 0.9051,
+        "cagr": -0.004212,
+        "score": -4.0384
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 30,
+        "trades": 13,
+        "sharpe": -3.736,
+        "pf": 1.0158,
+        "cagr": 0.000129,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 40,
+        "trades": 38,
+        "sharpe": -2.101,
+        "pf": 1.3045,
+        "cagr": 0.005724,
+        "score": -3.7884
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 60,
+        "trades": 74,
+        "sharpe": -1.6822,
+        "pf": 0.9832,
+        "cagr": -0.000795,
+        "score": -3.0465
+      },
+      {
+        "pass": 1,
+        "param": "rsi14_max",
+        "value": 70,
+        "trades": 79,
+        "sharpe": -1.8447,
+        "pf": 0.8737,
+        "cagr": -0.006786,
+        "score": -4.0562
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 1.5,
+        "trades": 143,
+        "sharpe": -1.3975,
+        "pf": 0.6839,
+        "cagr": -0.044342,
+        "score": -4.9403
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 17,
+        "sharpe": -2.6652,
+        "pf": 2.4194,
+        "cagr": 0.008573,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 7,
+        "sharpe": -3.7517,
+        "pf": 3.516,
+        "cagr": 0.007094,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "atr_stop_mult",
+        "value": 3.5,
+        "trades": 4,
+        "sharpe": -8.9335,
+        "pf": 0.4033,
+        "cagr": -0.001422,
+        "score": -999
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 3,
+        "trades": 53,
+        "sharpe": -2.1584,
+        "pf": 1.1465,
+        "cagr": 0.003696,
+        "score": -3.9226
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 54,
+        "sharpe": -1.8581,
+        "pf": 1.2521,
+        "cagr": 0.006699,
+        "score": -2.6788
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 54,
+        "sharpe": -1.8498,
+        "pf": 1.2262,
+        "cagr": 0.006198,
+        "score": -2.6684
+      },
+      {
+        "pass": 1,
+        "param": "max_hold_days",
+        "value": 15,
+        "trades": 55,
+        "sharpe": -1.058,
+        "pf": 1.4417,
+        "cagr": 0.016524,
+        "score": 0.3516
+      },
+      {
+        "pass": 2,
+        "param": "gap_threshold",
+        "value": -0.03,
+        "trades": 25,
+        "sharpe": -2.9274,
+        "pf": 0.9679,
+        "cagr": -0.000486,
+        "score": -6.912
+      },
+      {
+        "pass": 2,
+        "param": "gap_threshold",
+        "value": -0.025,
+        "trades": 29,
+        "sharpe": -3.0006,
+        "pf": 0.8641,
+        "cagr": -0.002439,
+        "score": -7.3309
+      },
+      {
+        "pass": 2,
+        "param": "gap_threshold",
+        "value": -0.02,
+        "trades": 34,
+        "sharpe": -2.7891,
+        "pf": 0.8604,
+        "cagr": -0.002779,
+        "score": -6.759
+      },
+      {
+        "pass": 2,
+        "param": "gap_threshold",
+        "value": -0.015,
+        "trades": 41,
+        "sharpe": -2.2048,
+        "pf": 1.2015,
+        "cagr": 0.004325,
+        "score": -4.3117
+      },
+      {
+        "pass": 2,
+        "param": "ibs_confirm",
+        "value": 0.15,
+        "trades": 48,
+        "sharpe": -1.1831,
+        "pf": 1.6267,
+        "cagr": 0.015584,
+        "score": -0.2766
+      },
+      {
+        "pass": 2,
+        "param": "ibs_confirm",
+        "value": 0.3,
+        "trades": 63,
+        "sharpe": -1.4697,
+        "pf": 1.1726,
+        "cagr": 0.006443,
+        "score": -1.8281
+      },
+      {
+        "pass": 2,
+        "param": "ibs_confirm",
+        "value": 0.4,
+        "trades": 68,
+        "sharpe": -1.5086,
+        "pf": 1.1207,
+        "cagr": 0.004751,
+        "score": -2.0825
+      },
+      {
+        "pass": 2,
+        "param": "ibs_confirm",
+        "value": 0.5,
+        "trades": 76,
+        "sharpe": -1.2591,
+        "pf": 1.116,
+        "cagr": 0.008393,
+        "score": -1.1953
+      },
+      {
+        "pass": 2,
+        "param": "rsi14_max",
+        "value": 30,
+        "trades": 13,
+        "sharpe": -3.7024,
+        "pf": 1.0515,
+        "cagr": 0.000409,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "rsi14_max",
+        "value": 40,
+        "trades": 38,
+        "sharpe": -1.1253,
+        "pf": 2.0648,
+        "cagr": 0.01796,
+        "score": 0.449
+      },
+      {
+        "pass": 2,
+        "param": "rsi14_max",
+        "value": 60,
+        "trades": 76,
+        "sharpe": -1.1115,
+        "pf": 1.1513,
+        "cagr": 0.010462,
+        "score": -0.7166
+      },
+      {
+        "pass": 2,
+        "param": "rsi14_max",
+        "value": 70,
+        "trades": 79,
+        "sharpe": -1.2267,
+        "pf": 1.1206,
+        "cagr": 0.006127,
+        "score": -1.4057
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 1.5,
+        "trades": 113,
+        "sharpe": -0.7551,
+        "pf": 1.0349,
+        "cagr": 0.00345,
+        "score": 0.073
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 2.5,
+        "trades": 13,
+        "sharpe": -1.5694,
+        "pf": 11.8877,
+        "cagr": 0.018721,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.0,
+        "trades": 5,
+        "sharpe": -2.4027,
+        "pf": Infinity,
+        "cagr": 0.01458,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "atr_stop_mult",
+        "value": 3.5,
+        "trades": 3,
+        "sharpe": -4.4903,
+        "pf": Infinity,
+        "cagr": 0.006885,
+        "score": -999
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 3,
+        "trades": 38,
+        "sharpe": -1.8901,
+        "pf": 1.7244,
+        "cagr": 0.010466,
+        "score": -2.5354
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 5,
+        "trades": 38,
+        "sharpe": -1.9462,
+        "pf": 1.5345,
+        "cagr": 0.008587,
+        "score": -2.9652
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 7,
+        "trades": 38,
+        "sharpe": -2.101,
+        "pf": 1.3045,
+        "cagr": 0.005724,
+        "score": -3.7884
+      },
+      {
+        "pass": 2,
+        "param": "max_hold_days",
+        "value": 10,
+        "trades": 38,
+        "sharpe": -2.0169,
+        "pf": 1.4096,
+        "cagr": 0.007136,
+        "score": -3.3665
+      }
+    ]
+  }
+}

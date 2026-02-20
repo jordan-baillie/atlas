@@ -1,0 +1,273 @@
+"""
+Atlas-ASX Volatility Contraction Breakout (BB Squeeze) Strategy
+================================================================
+Generates long signals when Bollinger Bands contract inside Keltner
+Channels (squeeze) and then expand back outside (squeeze fires),
+confirmed by positive momentum via linear regression slope.
+
+Entry Conditions (ALL must be true):
+    - Squeeze was ON (BBs inside KCs) on the previous bar
+    - Squeeze FIRES on current bar (BBs expand outside KCs)
+    - Linear regression slope of close over momentum_period bars is positive
+    - Standard position/risk limits
+
+Exit Conditions (any triggers exit):
+    1. Stop hit: price drops below entry - atr_stop_mult * ATR
+    2. Trailing stop: price drops below highest_close - trailing_stop_atr_mult * ATR
+    3. Signal exit: momentum slope turns negative
+    4. Time exit: held longer than max_hold_days
+
+Config Section: strategies.bb_squeeze
+"""
+
+import logging
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+import pandas as pd
+
+from strategies.base import BaseStrategy, Signal
+from utils.helpers import calc_atr, calc_position_size, calc_volume_ratio
+
+logger = logging.getLogger(__name__)
+
+
+class BBSqueeze(BaseStrategy):
+    """Volatility contraction breakout: enter when BB squeeze fires with positive momentum."""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        strat_cfg = config.get("strategies", {}).get("bb_squeeze", {})
+        self.bb_period = strat_cfg.get("bb_period", 20)
+        self.bb_std = strat_cfg.get("bb_std", 2.0)
+        self.kc_period = strat_cfg.get("kc_period", 20)
+        self.kc_atr_mult = strat_cfg.get("kc_atr_mult", 1.5)
+        self.momentum_period = strat_cfg.get("momentum_period", 20)
+        self.atr_period = strat_cfg.get("atr_period", 14)
+        self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 2.0)
+        self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 2.5)
+        self.max_hold_days = strat_cfg.get("max_hold_days", 20)
+        self.vol_surge_threshold = strat_cfg.get("vol_surge_threshold", 1.5)
+        self.earnings_blackout = strat_cfg.get("earnings_blackout", {})
+
+    @property
+    def name(self) -> str:
+        return "bb_squeeze"
+
+    def generate_signals(
+        self,
+        data: Dict[str, pd.DataFrame],
+        equity: float,
+        existing_positions: List[Dict[str, Any]],
+    ) -> List[Signal]:
+        """Generate BB squeeze entry signals."""
+        signals = []
+        held = self._get_held_tickers(existing_positions)
+        n_pos = self._count_positions(existing_positions)
+
+        min_rows = max(self.bb_period, self.kc_period, self.momentum_period, self.atr_period) + 10
+
+        for ticker, df in data.items():
+            if ticker in held:
+                continue
+            if not self._can_open_position(existing_positions):
+                break
+            if not self._has_sufficient_data(df, min_rows):
+                continue
+
+            try:
+                close = df["close"].values
+                high = df["high"].values
+                low = df["low"].values
+                volume = df["volume"].values
+
+                # Bollinger Bands
+                bb_ma = pd.Series(close).rolling(self.bb_period).mean().values
+                bb_std_val = pd.Series(close).rolling(self.bb_period).std().values
+                bb_upper = bb_ma + self.bb_std * bb_std_val
+                bb_lower = bb_ma - self.bb_std * bb_std_val
+
+                # Keltner Channels
+                kc_ma = pd.Series(close).ewm(span=self.kc_period, adjust=False).mean().values
+                atr = calc_atr(high, low, close, self.kc_period)
+                kc_upper = kc_ma + self.kc_atr_mult * atr
+                kc_lower = kc_ma - self.kc_atr_mult * atr
+
+                # Squeeze detection
+                squeeze_on = (bb_lower > kc_lower) & (bb_upper < kc_upper)
+
+                # Current and previous bar
+                curr = len(close) - 1
+                prev = curr - 1
+
+                if prev < self.momentum_period:
+                    continue
+
+                # Squeeze must fire: was ON, now OFF
+                if not (squeeze_on[prev] and not squeeze_on[curr]):
+                    continue
+
+                # Momentum check: linear regression slope must be positive
+                mom_slice = close[curr - self.momentum_period + 1: curr + 1]
+                if len(mom_slice) < self.momentum_period:
+                    continue
+                slope = np.polyfit(range(len(mom_slice)), mom_slice, 1)[0]
+                if slope <= 0:
+                    continue
+
+                # ATR for stops
+                atr_val = calc_atr(high, low, close, self.atr_period)
+                current_atr = atr_val[curr]
+                if np.isnan(current_atr) or current_atr <= 0:
+                    continue
+
+                entry_price = close[curr]
+                stop_price = entry_price - self.atr_stop_mult * current_atr
+
+                # Confidence calculation
+                confidence = 0.55
+
+                # Squeeze duration bonus (longer squeeze = more energy)
+                sq_count = 0
+                for i in range(prev, max(prev - 20, 0), -1):
+                    if squeeze_on[i]:
+                        sq_count += 1
+                    else:
+                        break
+                confidence += min(sq_count / 20.0 * 0.15, 0.15)
+
+                # Momentum strength bonus
+                norm_slope = slope / entry_price if entry_price > 0 else 0
+                confidence += min(abs(norm_slope) * 100, 0.15)
+
+                # Volume surge bonus
+                vol_ratio = calc_volume_ratio(volume, 20)
+                if vol_ratio[curr] > self.vol_surge_threshold:
+                    confidence += 0.10
+
+                # BB expansion bonus
+                bb_width_curr = (bb_upper[curr] - bb_lower[curr]) / bb_ma[curr] if bb_ma[curr] > 0 else 0
+                bb_width_prev = (bb_upper[prev] - bb_lower[prev]) / bb_ma[prev] if bb_ma[prev] > 0 else 0
+                if bb_width_curr > bb_width_prev:
+                    expansion = (bb_width_curr - bb_width_prev) / bb_width_prev if bb_width_prev > 0 else 0
+                    confidence += min(expansion * 0.5, 0.10)
+
+                confidence = min(confidence, 0.95)
+
+                # Position sizing
+                shares = calc_position_size(equity, entry_price, stop_price,
+                                           self.config.get("risk", {}))
+                if shares <= 0:
+                    continue
+
+                rationale = (
+                    f"BBSqueeze: squeeze fired after {sq_count} bars, "
+                    f"slope={slope:.4f}, vol_ratio={vol_ratio[curr]:.2f}"
+                )
+
+                signals.append(Signal(
+                    ticker=ticker,
+                    strategy="bb_squeeze",
+                    direction="long",
+                    confidence=confidence,
+                    entry_price=entry_price,
+                    stop_price=stop_price,
+                    shares=shares,
+                    rationale=rationale,
+                    date=df.index[-1],
+                ))
+
+            except Exception as e:
+                logger.debug(f"BBSqueeze error for {ticker}: {e}")
+                continue
+
+        signals.sort(key=lambda s: s.confidence, reverse=True)
+        return signals
+
+    def check_exits(
+        self,
+        data: Dict[str, pd.DataFrame],
+        existing_positions: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Check exit conditions for BB squeeze positions."""
+        exits = []
+
+        for pos in existing_positions:
+            if pos.get("strategy") != "bb_squeeze":
+                continue
+
+            ticker = pos.get("ticker", "")
+            if ticker not in data:
+                continue
+
+            df = data[ticker]
+            if len(df) < self.momentum_period + 5:
+                continue
+
+            try:
+                close = df["close"].values
+                high = df["high"].values
+                low = df["low"].values
+                current_price = close[-1]
+                entry_price = pos.get("entry_price", current_price)
+                entry_date = pos.get("entry_date")
+                highest_price = pos.get("highest_price", entry_price)
+
+                # Update highest price for trailing stop
+                if current_price > highest_price:
+                    highest_price = current_price
+                    pos["highest_price"] = highest_price
+
+                # ATR for stops
+                atr_vals = calc_atr(high, low, close, self.atr_period)
+                current_atr = atr_vals[-1]
+                if np.isnan(current_atr) or current_atr <= 0:
+                    current_atr = entry_price * 0.02  # fallback 2%
+
+                exit_reason = None
+
+                # 1. Stop loss
+                stop_price = entry_price - self.atr_stop_mult * current_atr
+                if current_price <= stop_price:
+                    exit_reason = f"Stop loss: {current_price:.4f} <= {stop_price:.4f}"
+
+                # 2. Trailing stop
+                if exit_reason is None:
+                    trail_stop = highest_price - self.trailing_stop_atr_mult * current_atr
+                    if current_price <= trail_stop and current_price > entry_price:
+                        exit_reason = f"Trailing stop: {current_price:.4f} <= {trail_stop:.4f}"
+
+                # 3. Signal exit: momentum slope turns negative
+                if exit_reason is None:
+                    mom_slice = close[-self.momentum_period:]
+                    if len(mom_slice) >= self.momentum_period:
+                        slope = np.polyfit(range(len(mom_slice)), mom_slice, 1)[0]
+                        if slope < 0:
+                            exit_reason = f"Momentum reversal: slope={slope:.6f}"
+
+                # 4. Time exit
+                if exit_reason is None and entry_date is not None:
+                    if hasattr(entry_date, "date"):
+                        entry_dt = entry_date
+                    else:
+                        entry_dt = pd.Timestamp(entry_date)
+                    current_dt = df.index[-1]
+                    days_held = (current_dt - entry_dt).days
+                    if days_held >= self.max_hold_days:
+                        exit_reason = f"Time exit: {days_held} >= {self.max_hold_days} days"
+
+                if exit_reason is not None:
+                    exits.append({
+                        "ticker": ticker,
+                        "strategy": "bb_squeeze",
+                        "exit_price": current_price,
+                        "exit_reason": exit_reason,
+                        "exit_date": df.index[-1],
+                    })
+
+            except Exception as e:
+                logger.debug(f"BBSqueeze exit check error for {ticker}: {e}")
+                continue
+
+        return exits

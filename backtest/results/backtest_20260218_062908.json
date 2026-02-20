@@ -1,0 +1,35 @@
+{
+  "timestamp": "20260218_062908",
+  "config_version": "sweep_mtf_default",
+  "tickers_count": 159,
+  "metrics": {
+    "total_return": -0.0032,
+    "cagr": -0.001607,
+    "max_drawdown": 0.020835,
+    "sharpe": -2.5654,
+    "sortino": -3.2153,
+    "win_rate": 0.3846,
+    "profit_factor": 0.9056,
+    "avg_trade": -1.23,
+    "total_trades": 13,
+    "total_pnl": -15.98,
+    "exposure": 0.2063,
+    "turnover": 3.445,
+    "avg_equity": 4981.8,
+    "final_equity": 4984.02,
+    "avg_winner": 30.66,
+    "avg_loser": -21.16,
+    "largest_winner": 49.92,
+    "largest_loser": -72.36,
+    "avg_hold_days": 12.5
+  },
+  "benchmark_metrics": {
+    "cagr": 0.084635,
+    "max_drawdown": 0.141197,
+    "sharpe": 0.4045,
+    "sortino": 0.5121,
+    "total_return": 0.1771,
+    "final_equity": 5885.43
+  },
+  "total_trades": 13
+}

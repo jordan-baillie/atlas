@@ -1,0 +1,54 @@
+[
+  {
+    "type": "entry",
+    "ticker": "LYC.AX",
+    "strategy": "trend_following",
+    "date": "2026-02-18",
+    "signal_price": 15.050000190734863,
+    "fill_price": 15.0651,
+    "shares": 4,
+    "commission": 5.0,
+    "total_cost": 65.2604,
+    "slippage": 0.0151,
+    "recorded_at": "2026-02-19T00:14:45.447364"
+  },
+  {
+    "type": "entry",
+    "ticker": "BSL.AX",
+    "strategy": "trend_following",
+    "date": "2026-02-18",
+    "signal_price": 28.0,
+    "fill_price": 28.028,
+    "shares": 5,
+    "commission": 5.0,
+    "total_cost": 145.14,
+    "slippage": 0.028,
+    "recorded_at": "2026-02-19T00:14:45.448577"
+  },
+  {
+    "type": "entry",
+    "ticker": "PDN.AX",
+    "strategy": "trend_following",
+    "date": "2026-02-18",
+    "signal_price": 11.880000114440918,
+    "fill_price": 11.8919,
+    "shares": 6,
+    "commission": 5.0,
+    "total_cost": 76.3514,
+    "slippage": 0.0119,
+    "recorded_at": "2026-02-19T00:14:45.449555"
+  },
+  {
+    "type": "entry",
+    "ticker": "WHC.AX",
+    "strategy": "trend_following",
+    "date": "2026-02-18",
+    "signal_price": 8.510000228881836,
+    "fill_price": 8.5185,
+    "shares": 14,
+    "commission": 5.0,
+    "total_cost": 124.25899999999999,
+    "slippage": 0.0085,
+    "recorded_at": "2026-02-19T00:14:45.450659"
+  }
+]

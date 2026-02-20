@@ -1,0 +1,37 @@
+{
+  "version": "v7.0_phase7_live",
+  "metrics": {
+    "total_trades": 53,
+    "win_rate": 0.623,
+    "profit_factor": 2.72,
+    "total_pnl": 333.62,
+    "cagr": 0.033,
+    "max_drawdown": 0.01,
+    "sharpe_ratio": 0,
+    "total_return": 0.0667
+  },
+  "is_metrics": {
+    "trades": 28,
+    "win_rate": 71.4,
+    "pf": 3.82,
+    "pnl": 268.36
+  },
+  "oos_metrics": {
+    "trades": 25,
+    "win_rate": 52.0,
+    "pf": 1.66,
+    "pnl": 65.26
+  },
+  "strategy_breakdown": {
+    "trend_following": {
+      "trades": 26,
+      "win_rate": 57.7,
+      "pnl": 188.26
+    },
+    "mean_reversion": {
+      "trades": 27,
+      "win_rate": 66.7,
+      "pnl": 145.36
+    }
+  }
+}

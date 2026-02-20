@@ -1,0 +1,1448 @@
+{
+  "metadata": {
+    "built_at": "2026-02-16T14:54:55.610355",
+    "config_version": "v8.0_phase8BCD",
+    "candidates_evaluated": 210,
+    "final_count": 159,
+    "filters": {
+      "min_price": 1.0,
+      "min_median_daily_value": 1000000,
+      "top_n": 200
+    }
+  },
+  "tickers": [
+    "BHP.AX",
+    "CBA.AX",
+    "RIO.AX",
+    "CSL.AX",
+    "NST.AX",
+    "ANZ.AX",
+    "NAB.AX",
+    "WBC.AX",
+    "FMG.AX",
+    "MQG.AX",
+    "LYC.AX",
+    "JHX.AX",
+    "PLS.AX",
+    "WES.AX",
+    "WDS.AX",
+    "GMG.AX",
+    "EVN.AX",
+    "TLS.AX",
+    "XRO.AX",
+    "ALL.AX",
+    "S32.AX",
+    "WTC.AX",
+    "WOW.AX",
+    "MIN.AX",
+    "BSL.AX",
+    "STO.AX",
+    "BXB.AX",
+    "QBE.AX",
+    "TCL.AX",
+    "PME.AX",
+    "COL.AX",
+    "REA.AX",
+    "SUN.AX",
+    "QAN.AX",
+    "CPU.AX",
+    "ORI.AX",
+    "CAR.AX",
+    "JBH.AX",
+    "SCG.AX",
+    "RMD.AX",
+    "IAG.AX",
+    "PDN.AX",
+    "NSR.AX",
+    "LTR.AX",
+    "ASX.AX",
+    "SGP.AX",
+    "ORG.AX",
+    "AMC.AX",
+    "WHC.AX",
+    "SFR.AX",
+    "TWE.AX",
+    "TNE.AX",
+    "SHL.AX",
+    "COH.AX",
+    "IGO.AX",
+    "WAF.AX",
+    "ALQ.AX",
+    "CMM.AX",
+    "CHC.AX",
+    "PRU.AX",
+    "MPL.AX",
+    "NXT.AX",
+    "APA.AX",
+    "MGR.AX",
+    "TLX.AX",
+    "GPT.AX",
+    "QUB.AX",
+    "VCX.AX",
+    "SEK.AX",
+    "HUB.AX",
+    "ILU.AX",
+    "AGL.AX",
+    "DXS.AX",
+    "WOR.AX",
+    "RRL.AX",
+    "RHC.AX",
+    "APE.AX",
+    "TLC.AX",
+    "FLT.AX",
+    "BEN.AX",
+    "BGL.AX",
+    "AZJ.AX",
+    "VUL.AX",
+    "PNI.AX",
+    "SDF.AX",
+    "AUB.AX",
+    "FPH.AX",
+    "BOE.AX",
+    "SGM.AX",
+    "NWL.AX",
+    "CWY.AX",
+    "EDV.AX",
+    "A2M.AX",
+    "HVN.AX",
+    "DMP.AX",
+    "WEB.AX",
+    "VNT.AX",
+    "AMP.AX",
+    "BOQ.AX",
+    "TPW.AX",
+    "CGF.AX",
+    "MSB.AX",
+    "BRG.AX",
+    "BPT.AX",
+    "MP1.AX",
+    "ARB.AX",
+    "REH.AX",
+    "ANN.AX",
+    "GNC.AX",
+    "NHC.AX",
+    "HMC.AX",
+    "TPG.AX",
+    "DOW.AX",
+    "IEL.AX",
+    "GQG.AX",
+    "GDG.AX",
+    "APX.AX",
+    "VEA.AX",
+    "NWS.AX",
+    "NCK.AX",
+    "ORA.AX",
+    "LLC.AX",
+    "KAR.AX",
+    "PMV.AX",
+    "IFL.AX",
+    "MND.AX",
+    "NEU.AX",
+    "SUL.AX",
+    "IRE.AX",
+    "NWH.AX",
+    "LOV.AX",
+    "SDR.AX",
+    "SLC.AX",
+    "BAP.AX",
+    "ELD.AX",
+    "NHF.AX",
+    "ING.AX",
+    "HDN.AX",
+    "PXA.AX",
+    "CQR.AX",
+    "CLW.AX",
+    "NEC.AX",
+    "DRR.AX",
+    "CIP.AX",
+    "NUF.AX",
+    "PPT.AX",
+    "BWP.AX",
+    "AIA.AX",
+    "EBO.AX",
+    "DDR.AX",
+    "SSM.AX",
+    "BGA.AX",
+    "CNI.AX",
+    "ARF.AX",
+    "EVT.AX",
+    "NAN.AX",
+    "AD8.AX",
+    "KGN.AX",
+    "GOZ.AX"
+  ],
+  "details": [
+    {
+      "ticker": "BHP.AX",
+      "last_close": 51.130001068115234,
+      "median_daily_value": 365387492.7993908,
+      "avg_daily_value": 404681807.9308997,
+      "avg_volume": 8694683.45,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CBA.AX",
+      "last_close": 176.1999969482422,
+      "median_daily_value": 256772927.43262482,
+      "avg_daily_value": 290637013.0369301,
+      "avg_volume": 1857529.25,
+      "trading_days": 758
+    },
+    {
+      "ticker": "RIO.AX",
+      "last_close": 169.74000549316406,
+      "median_daily_value": 176502880.93649292,
+      "avg_daily_value": 205082642.9193788,
+      "avg_volume": 1404403.1333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CSL.AX",
+      "last_close": 150.00999450683594,
+      "median_daily_value": 167549961.65940857,
+      "avg_daily_value": 184646115.3460106,
+      "avg_volume": 1058283.25,
+      "trading_days": 758
+    },
+    {
+      "ticker": "NST.AX",
+      "last_close": 28.3700008392334,
+      "median_daily_value": 154581623.70885468,
+      "avg_daily_value": 167472161.67944878,
+      "avg_volume": 6257918.366666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ANZ.AX",
+      "last_close": 40.88999938964844,
+      "median_daily_value": 145666231.36813736,
+      "avg_daily_value": 164427738.2111821,
+      "avg_volume": 4516158.283333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "NAB.AX",
+      "last_close": 46.0099983215332,
+      "median_daily_value": 142265738.6815567,
+      "avg_daily_value": 154359978.48719725,
+      "avg_volume": 3662551.3833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WBC.AX",
+      "last_close": 40.52000045776367,
+      "median_daily_value": 137395198.33934975,
+      "avg_daily_value": 149142998.19131032,
+      "avg_volume": 3864738.85,
+      "trading_days": 758
+    },
+    {
+      "ticker": "FMG.AX",
+      "last_close": 21.209999084472656,
+      "median_daily_value": 150992605.34306145,
+      "avg_daily_value": 146401979.07886174,
+      "avg_volume": 6696491.316666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MQG.AX",
+      "last_close": 216.1699981689453,
+      "median_daily_value": 123955885.85591888,
+      "avg_daily_value": 144429012.67913616,
+      "avg_volume": 710696.6666666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "LYC.AX",
+      "last_close": 15.970000267028809,
+      "median_daily_value": 99030660.64557648,
+      "avg_daily_value": 131848732.45508733,
+      "avg_volume": 9027159.15,
+      "trading_days": 758
+    },
+    {
+      "ticker": "JHX.AX",
+      "last_close": 36.540000915527344,
+      "median_daily_value": 62936742.71764755,
+      "avg_daily_value": 129263658.73941578,
+      "avg_volume": 4257961.9,
+      "trading_days": 758
+    },
+    {
+      "ticker": "PLS.AX",
+      "last_close": 4.230000019073486,
+      "median_daily_value": 112441839.69088936,
+      "avg_daily_value": 125370626.38341507,
+      "avg_volume": 29079299.5,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WES.AX",
+      "last_close": 87.69000244140625,
+      "median_daily_value": 98535815.53403854,
+      "avg_daily_value": 104127619.19401295,
+      "avg_volume": 1267356.8166666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WDS.AX",
+      "last_close": 25.780000686645508,
+      "median_daily_value": 98122222.3300724,
+      "avg_daily_value": 103595237.95688842,
+      "avg_volume": 4230437.85,
+      "trading_days": 758
+    },
+    {
+      "ticker": "GMG.AX",
+      "last_close": 31.020000457763672,
+      "median_daily_value": 93361205.7505455,
+      "avg_daily_value": 101180821.26468125,
+      "avg_volume": 3366147.4166666665,
+      "trading_days": 758
+    },
+    {
+      "ticker": "EVN.AX",
+      "last_close": 15.4399995803833,
+      "median_daily_value": 76833839.54816628,
+      "avg_daily_value": 88241141.82105966,
+      "avg_volume": 6721732.283333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TLS.AX",
+      "last_close": 4.940000057220459,
+      "median_daily_value": 82339166.57267165,
+      "avg_daily_value": 85226824.85248134,
+      "avg_volume": 17531737.616666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "XRO.AX",
+      "last_close": 73.48999786376953,
+      "median_daily_value": 68515514.84836578,
+      "avg_daily_value": 81002573.04606667,
+      "avg_volume": 795542.4,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ALL.AX",
+      "last_close": 48.439998626708984,
+      "median_daily_value": 71720648.4692173,
+      "avg_daily_value": 79707105.30216248,
+      "avg_volume": 1422667.0833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "S32.AX",
+      "last_close": 4.420000076293945,
+      "median_daily_value": 71312554.65512753,
+      "avg_daily_value": 77049970.48747674,
+      "avg_volume": 20155419.433333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WTC.AX",
+      "last_close": 42.619998931884766,
+      "median_daily_value": 63558557.680503845,
+      "avg_daily_value": 74587577.51052621,
+      "avg_volume": 1218161.4,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WOW.AX",
+      "last_close": 31.940000534057617,
+      "median_daily_value": 69854575.32846642,
+      "avg_daily_value": 73342368.16569878,
+      "avg_volume": 2456341.0,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MIN.AX",
+      "last_close": 52.20000076293945,
+      "median_daily_value": 67330691.59670639,
+      "avg_daily_value": 71519257.56735064,
+      "avg_volume": 1320611.5166666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BSL.AX",
+      "last_close": 29.15999984741211,
+      "median_daily_value": 46770679.2714386,
+      "avg_daily_value": 67673225.09824029,
+      "avg_volume": 2674576.85,
+      "trading_days": 758
+    },
+    {
+      "ticker": "STO.AX",
+      "last_close": 6.699999809265137,
+      "median_daily_value": 54226232.91852188,
+      "avg_daily_value": 64424777.48069917,
+      "avg_volume": 9973900.366666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BXB.AX",
+      "last_close": 23.299999237060547,
+      "median_daily_value": 55076368.29633427,
+      "avg_daily_value": 62925403.94104726,
+      "avg_volume": 2730476.0833333335,
+      "trading_days": 758
+    },
+    {
+      "ticker": "QBE.AX",
+      "last_close": 19.479999542236328,
+      "median_daily_value": 52560469.05381489,
+      "avg_daily_value": 59976285.207688555,
+      "avg_volume": 3056857.3666666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TCL.AX",
+      "last_close": 14.0,
+      "median_daily_value": 51962899.32314205,
+      "avg_daily_value": 59824621.47418659,
+      "avg_volume": 4165121.7,
+      "trading_days": 758
+    },
+    {
+      "ticker": "PME.AX",
+      "last_close": 118.22000122070312,
+      "median_daily_value": 46890388.76596069,
+      "avg_daily_value": 52754012.724852495,
+      "avg_volume": 270785.15,
+      "trading_days": 758
+    },
+    {
+      "ticker": "COL.AX",
+      "last_close": 22.049999237060547,
+      "median_daily_value": 48818304.37277222,
+      "avg_daily_value": 50321429.01963161,
+      "avg_volume": 2327178.45,
+      "trading_days": 758
+    },
+    {
+      "ticker": "REA.AX",
+      "last_close": 158.08999633789062,
+      "median_daily_value": 43535399.123291016,
+      "avg_daily_value": 50251295.592659,
+      "avg_volume": 271851.3,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SUN.AX",
+      "last_close": 15.9399995803833,
+      "median_daily_value": 47580247.399663925,
+      "avg_daily_value": 49797188.13611336,
+      "avg_volume": 2881724.216666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "QAN.AX",
+      "last_close": 10.359999656677246,
+      "median_daily_value": 39629937.4261179,
+      "avg_daily_value": 42532021.54267844,
+      "avg_volume": 4223480.083333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CPU.AX",
+      "last_close": 30.170000076293945,
+      "median_daily_value": 36035550.8335762,
+      "avg_daily_value": 42487107.577568024,
+      "avg_volume": 1254823.7333333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ORI.AX",
+      "last_close": 25.799999237060547,
+      "median_daily_value": 34696813.728824615,
+      "avg_daily_value": 42298519.53782136,
+      "avg_volume": 1715094.8333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CAR.AX",
+      "last_close": 25.06999969482422,
+      "median_daily_value": 35538854.39683533,
+      "avg_daily_value": 41889735.31830864,
+      "avg_volume": 1401582.2,
+      "trading_days": 758
+    },
+    {
+      "ticker": "JBH.AX",
+      "last_close": 76.68000030517578,
+      "median_daily_value": 34278933.49090958,
+      "avg_daily_value": 41575078.93701973,
+      "avg_volume": 460717.5,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SCG.AX",
+      "last_close": 3.7899999618530273,
+      "median_daily_value": 41247493.34075403,
+      "avg_daily_value": 41350874.11038513,
+      "avg_volume": 10099659.716666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "RMD.AX",
+      "last_close": 34.16999816894531,
+      "median_daily_value": 33183442.964532852,
+      "avg_daily_value": 40228591.112399735,
+      "avg_volume": 1070467.3166666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "IAG.AX",
+      "last_close": 6.869999885559082,
+      "median_daily_value": 34083218.11612272,
+      "avg_daily_value": 40153708.54756422,
+      "avg_volume": 5239268.15,
+      "trading_days": 758
+    },
+    {
+      "ticker": "PDN.AX",
+      "last_close": 11.680000305175781,
+      "median_daily_value": 30490885.11878395,
+      "avg_daily_value": 39953854.374736324,
+      "avg_volume": 3738541.4166666665,
+      "trading_days": 758
+    },
+    {
+      "ticker": "NSR.AX",
+      "last_close": 2.75,
+      "median_daily_value": 26788184.13322878,
+      "avg_daily_value": 38516940.957592174,
+      "avg_volume": 14079151.133333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "LTR.AX",
+      "last_close": 1.6549999713897705,
+      "median_daily_value": 34589935.3137939,
+      "avg_daily_value": 38132340.48911048,
+      "avg_volume": 22766468.7,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ASX.AX",
+      "last_close": 54.7599983215332,
+      "median_daily_value": 32188826.08856201,
+      "avg_daily_value": 36957717.98974126,
+      "avg_volume": 676702.6833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SGP.AX",
+      "last_close": 5.170000076293945,
+      "median_daily_value": 33509053.120944977,
+      "avg_daily_value": 36833422.15633811,
+      "avg_volume": 6487379.566666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ORG.AX",
+      "last_close": 12.079999923706055,
+      "median_daily_value": 31500774.285181046,
+      "avg_daily_value": 36450197.2817849,
+      "avg_volume": 3179225.15,
+      "trading_days": 758
+    },
+    {
+      "ticker": "AMC.AX",
+      "last_close": 70.05999755859375,
+      "median_daily_value": 27621882.571201324,
+      "avg_daily_value": 35662600.12255713,
+      "avg_volume": 549443.3166666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WHC.AX",
+      "last_close": 8.600000381469727,
+      "median_daily_value": 33570734.5695591,
+      "avg_daily_value": 35525660.44049285,
+      "avg_volume": 4351000.35,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SFR.AX",
+      "last_close": 18.8799991607666,
+      "median_daily_value": 30569838.93424225,
+      "avg_daily_value": 35000919.27923479,
+      "avg_volume": 1919779.9833333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TWE.AX",
+      "last_close": 5.239999771118164,
+      "median_daily_value": 27059661.377073526,
+      "avg_daily_value": 34939459.78987923,
+      "avg_volume": 6569068.183333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TNE.AX",
+      "last_close": 20.170000076293945,
+      "median_daily_value": 28347178.98507881,
+      "avg_daily_value": 34669933.800243445,
+      "avg_volume": 1279162.55,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SHL.AX",
+      "last_close": 21.200000762939453,
+      "median_daily_value": 31544005.29761505,
+      "avg_daily_value": 34633146.31400979,
+      "avg_volume": 1521232.8666666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "COH.AX",
+      "last_close": 199.22000122070312,
+      "median_daily_value": 29594670.877075195,
+      "avg_daily_value": 32338696.327249654,
+      "avg_volume": 123217.45,
+      "trading_days": 758
+    },
+    {
+      "ticker": "IGO.AX",
+      "last_close": 8.380000114440918,
+      "median_daily_value": 28256731.422207355,
+      "avg_daily_value": 31652894.39316507,
+      "avg_volume": 4014901.216666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WAF.AX",
+      "last_close": 3.509999990463257,
+      "median_daily_value": 21865999.8444165,
+      "avg_daily_value": 31158051.275429923,
+      "avg_volume": 9993640.916666666,
+      "trading_days": 757
+    },
+    {
+      "ticker": "ALQ.AX",
+      "last_close": 24.020000457763672,
+      "median_daily_value": 26526133.483917236,
+      "avg_daily_value": 29278579.957186572,
+      "avg_volume": 1282758.3833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CMM.AX",
+      "last_close": 13.25,
+      "median_daily_value": 24781241.37694931,
+      "avg_daily_value": 29144234.19295691,
+      "avg_volume": 2051797.1833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CHC.AX",
+      "last_close": 22.280000686645508,
+      "median_daily_value": 24632106.335123062,
+      "avg_daily_value": 29110030.29356979,
+      "avg_volume": 1196081.75,
+      "trading_days": 758
+    },
+    {
+      "ticker": "PRU.AX",
+      "last_close": 5.710000038146973,
+      "median_daily_value": 24081882.46172905,
+      "avg_daily_value": 28848731.506079175,
+      "avg_volume": 5092605.866666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MPL.AX",
+      "last_close": 4.480000019073486,
+      "median_daily_value": 25594094.639217854,
+      "avg_daily_value": 28440495.787518844,
+      "avg_volume": 6077665.4,
+      "trading_days": 758
+    },
+    {
+      "ticker": "NXT.AX",
+      "last_close": 14.020000457763672,
+      "median_daily_value": 23099626.068201065,
+      "avg_daily_value": 28182131.16168302,
+      "avg_volume": 2137947.85,
+      "trading_days": 758
+    },
+    {
+      "ticker": "APA.AX",
+      "last_close": 9.069999694824219,
+      "median_daily_value": 24139659.91823578,
+      "avg_daily_value": 27621094.318894226,
+      "avg_volume": 3050228.1166666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MGR.AX",
+      "last_close": 1.9049999713897705,
+      "median_daily_value": 26080300.275838375,
+      "avg_daily_value": 27458093.627562735,
+      "avg_volume": 13391532.85,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TLX.AX",
+      "last_close": 8.760000228881836,
+      "median_daily_value": 22813373.95803547,
+      "avg_daily_value": 26339863.65345877,
+      "avg_volume": 2270472.7333333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "GPT.AX",
+      "last_close": 5.03000020980835,
+      "median_daily_value": 25186094.802066803,
+      "avg_daily_value": 26242810.939474758,
+      "avg_volume": 4848698.283333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "QUB.AX",
+      "last_close": 4.849999904632568,
+      "median_daily_value": 20881708.102574825,
+      "avg_daily_value": 26242274.62778972,
+      "avg_volume": 5501737.7,
+      "trading_days": 758
+    },
+    {
+      "ticker": "VCX.AX",
+      "last_close": 2.569999933242798,
+      "median_daily_value": 23331585.040085793,
+      "avg_daily_value": 26056210.43172676,
+      "avg_volume": 10331003.733333332,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SEK.AX",
+      "last_close": 15.84000015258789,
+      "median_daily_value": 20379991.7807045,
+      "avg_daily_value": 24952103.784405645,
+      "avg_volume": 1148704.0,
+      "trading_days": 758
+    },
+    {
+      "ticker": "HUB.AX",
+      "last_close": 76.56999969482422,
+      "median_daily_value": 22640935.224609375,
+      "avg_daily_value": 24565618.76907374,
+      "avg_volume": 257974.45,
+      "trading_days": 758
+    },
+    {
+      "ticker": "ILU.AX",
+      "last_close": 5.400000095367432,
+      "median_daily_value": 21388174.388701916,
+      "avg_daily_value": 24435801.206809107,
+      "avg_volume": 4063759.3833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "AGL.AX",
+      "last_close": 10.420000076293945,
+      "median_daily_value": 18648041.34393835,
+      "avg_daily_value": 23613039.452175822,
+      "avg_volume": 2539607.9166666665,
+      "trading_days": 758
+    },
+    {
+      "ticker": "DXS.AX",
+      "last_close": 6.210000038146973,
+      "median_daily_value": 19509672.7040205,
+      "avg_daily_value": 22764766.309979524,
+      "avg_volume": 3288088.6,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WOR.AX",
+      "last_close": 13.029999732971191,
+      "median_daily_value": 19964186.807909966,
+      "avg_daily_value": 21475304.54551393,
+      "avg_volume": 1644754.9333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "RRL.AX",
+      "last_close": 8.25,
+      "median_daily_value": 21570039.31341076,
+      "avg_daily_value": 21059619.18913396,
+      "avg_volume": 2775694.7666666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "RHC.AX",
+      "last_close": 36.93000030517578,
+      "median_daily_value": 15936759.248649597,
+      "avg_daily_value": 20544639.43903564,
+      "avg_volume": 578519.7333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "APE.AX",
+      "last_close": 24.670000076293945,
+      "median_daily_value": 14771032.719779968,
+      "avg_daily_value": 19526085.61385638,
+      "avg_volume": 739910.1333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TLC.AX",
+      "last_close": 5.139999866485596,
+      "median_daily_value": 17864322.702709913,
+      "avg_daily_value": 19449451.729696807,
+      "avg_volume": 3718440.466666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "FLT.AX",
+      "last_close": 14.050000190734863,
+      "median_daily_value": 14684763.864189148,
+      "avg_daily_value": 19069588.538181923,
+      "avg_volume": 1315111.6333333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BEN.AX",
+      "last_close": 11.449999809265137,
+      "median_daily_value": 14402599.55893612,
+      "avg_daily_value": 16992394.610984705,
+      "avg_volume": 1595765.7833333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BGL.AX",
+      "last_close": 1.774999976158142,
+      "median_daily_value": 13646878.853480697,
+      "avg_daily_value": 16936316.85493891,
+      "avg_volume": 10393680.016666668,
+      "trading_days": 757
+    },
+    {
+      "ticker": "AZJ.AX",
+      "last_close": 3.5899999141693115,
+      "median_daily_value": 14709514.457651973,
+      "avg_daily_value": 16863032.103512917,
+      "avg_volume": 4705353.6,
+      "trading_days": 758
+    },
+    {
+      "ticker": "VUL.AX",
+      "last_close": 3.509999990463257,
+      "median_daily_value": 15349290.629636288,
+      "avg_daily_value": 16187771.498093724,
+      "avg_volume": 3816240.533333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "PNI.AX",
+      "last_close": 16.309999465942383,
+      "median_daily_value": 12825429.445874214,
+      "avg_daily_value": 15853663.048424657,
+      "avg_volume": 921823.6666666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SDF.AX",
+      "last_close": 4.25,
+      "median_daily_value": 12239499.030232668,
+      "avg_daily_value": 15659282.286675842,
+      "avg_volume": 3121545.3666666667,
+      "trading_days": 758
+    },
+    {
+      "ticker": "AUB.AX",
+      "last_close": 24.469999313354492,
+      "median_daily_value": 10247605.545770645,
+      "avg_daily_value": 15249330.211322974,
+      "avg_volume": 503234.05,
+      "trading_days": 757
+    },
+    {
+      "ticker": "FPH.AX",
+      "last_close": 31.1200008392334,
+      "median_daily_value": 12704983.295379639,
+      "avg_daily_value": 14920956.628643258,
+      "avg_volume": 453601.98333333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BOE.AX",
+      "last_close": 1.6299999952316284,
+      "median_daily_value": 11945690.30791688,
+      "avg_daily_value": 14885326.167235894,
+      "avg_volume": 9336517.833333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "SGM.AX",
+      "last_close": 21.1200008392334,
+      "median_daily_value": 12740984.42641449,
+      "avg_daily_value": 14490177.790012805,
+      "avg_volume": 767058.65,
+      "trading_days": 758
+    },
+    {
+      "ticker": "NWL.AX",
+      "last_close": 21.3700008392334,
+      "median_daily_value": 12441794.466742516,
+      "avg_daily_value": 14401531.080866018,
+      "avg_volume": 562630.2833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CWY.AX",
+      "last_close": 2.369999885559082,
+      "median_daily_value": 11406435.202836514,
+      "avg_daily_value": 13488894.534055384,
+      "avg_volume": 5275455.2,
+      "trading_days": 758
+    },
+    {
+      "ticker": "EDV.AX",
+      "last_close": 3.8299999237060547,
+      "median_daily_value": 10201717.57707882,
+      "avg_daily_value": 13445289.365782984,
+      "avg_volume": 3605156.1,
+      "trading_days": 758
+    },
+    {
+      "ticker": "A2M.AX",
+      "last_close": 8.520000457763672,
+      "median_daily_value": 11436781.731744766,
+      "avg_daily_value": 13256275.582588498,
+      "avg_volume": 1483257.1833333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "HVN.AX",
+      "last_close": 6.199999809265137,
+      "median_daily_value": 11312491.042958021,
+      "avg_daily_value": 12470502.21789492,
+      "avg_volume": 1803905.7,
+      "trading_days": 758
+    },
+    {
+      "ticker": "DMP.AX",
+      "last_close": 21.440000534057617,
+      "median_daily_value": 10289757.537013054,
+      "avg_daily_value": 12358956.211376159,
+      "avg_volume": 558173.1,
+      "trading_days": 758
+    },
+    {
+      "ticker": "WEB.AX",
+      "last_close": 3.4800000190734863,
+      "median_daily_value": 7032036.564360619,
+      "avg_daily_value": 12221752.352985466,
+      "avg_volume": 2980851.783333333,
+      "trading_days": 758
+    },
+    {
+      "ticker": "VNT.AX",
+      "last_close": 5.25,
+      "median_daily_value": 10760651.407761335,
+      "avg_daily_value": 11810887.51342887,
+      "avg_volume": 2040851.3,
+      "trading_days": 758
+    },
+    {
+      "ticker": "AMP.AX",
+      "last_close": 1.3949999809265137,
+      "median_daily_value": 7421562.535684228,
+      "avg_daily_value": 11793346.084114913,
+      "avg_volume": 7303847.4,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BOQ.AX",
+      "last_close": 6.989999771118164,
+      "median_daily_value": 10600458.029065132,
+      "avg_daily_value": 11605021.359956987,
+      "avg_volume": 1756329.4666666666,
+      "trading_days": 758
+    },
+    {
+      "ticker": "TPW.AX",
+      "last_close": 7.599999904632568,
+      "median_daily_value": 8167588.687545776,
+      "avg_daily_value": 11593962.205364076,
+      "avg_volume": 953153.5833333334,
+      "trading_days": 758
+    },
+    {
+      "ticker": "CGF.AX",
+      "last_close": 8.489999771118164,
+      "median_daily_value": 9821475.868603706,
+      "avg_daily_value": 11437312.040311337,
+      "avg_volume": 1258721.9,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MSB.AX",
+      "last_close": 2.380000114440918,
+      "median_daily_value": 9473383.92007947,
+      "avg_daily_value": 11373378.771248976,
+      "avg_volume": 4287791.5,
+      "trading_days": 757
+    },
+    {
+      "ticker": "BRG.AX",
+      "last_close": 31.81999969482422,
+      "median_daily_value": 8568843.847162247,
+      "avg_daily_value": 11174948.265761947,
+      "avg_volume": 364335.5,
+      "trading_days": 758
+    },
+    {
+      "ticker": "BPT.AX",
+      "last_close": 1.0750000476837158,
+      "median_daily_value": 9591088.665057182,
+      "avg_daily_value": 10709928.109026972,
+      "avg_volume": 9227943.733333332,
+      "trading_days": 758
+    },
+    {
+      "ticker": "MP1.AX",
+      "last_close": 10.720000267028809,
+      "median_daily_value": 8211656.379500866,
+      "avg_daily_value": 10508099.661250861,
+      "avg_volume": 834996.1333333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "ARB.AX",
+      "last_close": 24.350000381469727,
+      "median_daily_value": 5623820.644231796,
+      "avg_daily_value": 9749218.22708699,
+      "avg_volume": 328497.61666666664,
+      "trading_days": 65
+    },
+    {
+      "ticker": "REH.AX",
+      "last_close": 14.539999961853027,
+      "median_daily_value": 7807420.360552788,
+      "avg_daily_value": 9610319.338525025,
+      "avg_volume": 732283.0833333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "ANN.AX",
+      "last_close": 31.280000686645508,
+      "median_daily_value": 8398625.516716003,
+      "avg_daily_value": 9540711.781299623,
+      "avg_volume": 277012.63333333336,
+      "trading_days": 65
+    },
+    {
+      "ticker": "GNC.AX",
+      "last_close": 5.670000076293945,
+      "median_daily_value": 7484587.158530474,
+      "avg_daily_value": 9274779.683437428,
+      "avg_volume": 1289586.5166666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NHC.AX",
+      "last_close": 4.71999979019165,
+      "median_daily_value": 8175001.849548817,
+      "avg_daily_value": 8798432.19834632,
+      "avg_volume": 2072488.9666666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "HMC.AX",
+      "last_close": 3.109999895095825,
+      "median_daily_value": 6843643.804256082,
+      "avg_daily_value": 8796220.46724176,
+      "avg_volume": 2346219.033333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "TPG.AX",
+      "last_close": 3.799999952316284,
+      "median_daily_value": 8089976.742916822,
+      "avg_daily_value": 8494459.09192129,
+      "avg_volume": 2220375.5166666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "DOW.AX",
+      "last_close": 7.690000057220459,
+      "median_daily_value": 7305766.17165494,
+      "avg_daily_value": 8245878.944498269,
+      "avg_volume": 1045068.3333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "IEL.AX",
+      "last_close": 4.840000152587891,
+      "median_daily_value": 6812009.567288876,
+      "avg_daily_value": 8241711.851013827,
+      "avg_volume": 1491115.3,
+      "trading_days": 65
+    },
+    {
+      "ticker": "GQG.AX",
+      "last_close": 1.7350000143051147,
+      "median_daily_value": 6187182.415099263,
+      "avg_daily_value": 8034117.260648112,
+      "avg_volume": 4763655.633333334,
+      "trading_days": 757
+    },
+    {
+      "ticker": "GDG.AX",
+      "last_close": 4.119999885559082,
+      "median_daily_value": 7398795.581291914,
+      "avg_daily_value": 7970002.605876676,
+      "avg_volume": 1414938.45,
+      "trading_days": 757
+    },
+    {
+      "ticker": "APX.AX",
+      "last_close": 1.399999976158142,
+      "median_daily_value": 2701208.444931507,
+      "avg_daily_value": 7890409.482640409,
+      "avg_volume": 5845322.833333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "VEA.AX",
+      "last_close": 1.7050000429153442,
+      "median_daily_value": 6596825.229976177,
+      "avg_daily_value": 7581280.817244623,
+      "avg_volume": 3775230.9166666665,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NWS.AX",
+      "last_close": 36.36000061035156,
+      "median_daily_value": 3914107.4270362854,
+      "avg_daily_value": 7336733.282526398,
+      "avg_volume": 171273.48333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NCK.AX",
+      "last_close": 18.479999542236328,
+      "median_daily_value": 6094533.807704926,
+      "avg_daily_value": 7265778.248415279,
+      "avg_volume": 317690.4,
+      "trading_days": 65
+    },
+    {
+      "ticker": "ORA.AX",
+      "last_close": 2.200000047683716,
+      "median_daily_value": 6723293.787958145,
+      "avg_daily_value": 7257965.92678627,
+      "avg_volume": 3350763.183333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "LLC.AX",
+      "last_close": 4.420000076293945,
+      "median_daily_value": 6537154.426044941,
+      "avg_daily_value": 7108850.742630307,
+      "avg_volume": 1428461.4166666667,
+      "trading_days": 65
+    },
+    {
+      "ticker": "KAR.AX",
+      "last_close": 1.524999976158142,
+      "median_daily_value": 6138381.550077438,
+      "avg_daily_value": 6880413.610652226,
+      "avg_volume": 4309278.516666667,
+      "trading_days": 65
+    },
+    {
+      "ticker": "PMV.AX",
+      "last_close": 13.569999694824219,
+      "median_daily_value": 5448423.369856358,
+      "avg_daily_value": 6760096.054418389,
+      "avg_volume": 464850.9,
+      "trading_days": 65
+    },
+    {
+      "ticker": "IFL.AX",
+      "last_close": 4.579999923706055,
+      "median_daily_value": 4807676.341112137,
+      "avg_daily_value": 6373114.828409267,
+      "avg_volume": 1385956.2166666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "MND.AX",
+      "last_close": 29.149999618530273,
+      "median_daily_value": 5397920.392803192,
+      "avg_daily_value": 6328051.847394626,
+      "avg_volume": 225218.23333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NEU.AX",
+      "last_close": 12.75,
+      "median_daily_value": 4980859.936732292,
+      "avg_daily_value": 6142193.06046346,
+      "avg_volume": 356870.4166666667,
+      "trading_days": 757
+    },
+    {
+      "ticker": "SUL.AX",
+      "last_close": 14.100000381469727,
+      "median_daily_value": 5204416.164494038,
+      "avg_daily_value": 5933759.277735472,
+      "avg_volume": 388185.75,
+      "trading_days": 65
+    },
+    {
+      "ticker": "IRE.AX",
+      "last_close": 7.019999980926514,
+      "median_daily_value": 4567689.390273094,
+      "avg_daily_value": 5540567.891493622,
+      "avg_volume": 659332.6166666667,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NWH.AX",
+      "last_close": 5.420000076293945,
+      "median_daily_value": 4611520.8631846905,
+      "avg_daily_value": 5525650.822968308,
+      "avg_volume": 1054996.7333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "LOV.AX",
+      "last_close": 28.3799991607666,
+      "median_daily_value": 5153815.574429512,
+      "avg_daily_value": 5490880.372325261,
+      "avg_volume": 178591.2,
+      "trading_days": 65
+    },
+    {
+      "ticker": "SDR.AX",
+      "last_close": 3.4600000381469727,
+      "median_daily_value": 4074029.784439802,
+      "avg_daily_value": 5295381.550087841,
+      "avg_volume": 985768.3166666667,
+      "trading_days": 757
+    },
+    {
+      "ticker": "SLC.AX",
+      "last_close": 2.3399999141693115,
+      "median_daily_value": 3489065.8126358986,
+      "avg_daily_value": 5218274.648804148,
+      "avg_volume": 2099147.6333333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "BAP.AX",
+      "last_close": 1.6799999475479126,
+      "median_daily_value": 3578044.5741844177,
+      "avg_daily_value": 5179488.463808004,
+      "avg_volume": 2548697.716666667,
+      "trading_days": 65
+    },
+    {
+      "ticker": "ELD.AX",
+      "last_close": 7.059999942779541,
+      "median_daily_value": 3852974.808320999,
+      "avg_daily_value": 4869345.29846255,
+      "avg_volume": 672743.8833333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NHF.AX",
+      "last_close": 6.380000114440918,
+      "median_daily_value": 4455861.910129786,
+      "avg_daily_value": 4869050.548833227,
+      "avg_volume": 714846.05,
+      "trading_days": 757
+    },
+    {
+      "ticker": "ING.AX",
+      "last_close": 2.3499999046325684,
+      "median_daily_value": 4029858.370814681,
+      "avg_daily_value": 4742883.570404069,
+      "avg_volume": 1912676.5,
+      "trading_days": 65
+    },
+    {
+      "ticker": "HDN.AX",
+      "last_close": 1.309999942779541,
+      "median_daily_value": 3590685.1547337174,
+      "avg_daily_value": 4635361.4114879705,
+      "avg_volume": 3455051.85,
+      "trading_days": 757
+    },
+    {
+      "ticker": "PXA.AX",
+      "last_close": 13.720000267028809,
+      "median_daily_value": 3793113.9038085938,
+      "avg_daily_value": 4419404.919196256,
+      "avg_volume": 317400.45,
+      "trading_days": 65
+    },
+    {
+      "ticker": "CQR.AX",
+      "last_close": 3.940000057220459,
+      "median_daily_value": 3924404.765441656,
+      "avg_daily_value": 4366462.267334159,
+      "avg_volume": 1089119.5,
+      "trading_days": 65
+    },
+    {
+      "ticker": "CLW.AX",
+      "last_close": 3.75,
+      "median_daily_value": 4095126.4409065247,
+      "avg_daily_value": 4239806.494293479,
+      "avg_volume": 1056193.3,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NEC.AX",
+      "last_close": 1.0950000286102295,
+      "median_daily_value": 3457409.392502904,
+      "avg_daily_value": 4175639.4391487143,
+      "avg_volume": 3686108.5166666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "DRR.AX",
+      "last_close": 4.21999979019165,
+      "median_daily_value": 3497354.1239550114,
+      "avg_daily_value": 4103793.1409394382,
+      "avg_volume": 979435.9833333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "CIP.AX",
+      "last_close": 3.2100000381469727,
+      "median_daily_value": 3673699.422600746,
+      "avg_daily_value": 4030115.3990883273,
+      "avg_volume": 1212525.0,
+      "trading_days": 65
+    },
+    {
+      "ticker": "NUF.AX",
+      "last_close": 1.9199999570846558,
+      "median_daily_value": 2171216.942286968,
+      "avg_daily_value": 3922523.857953892,
+      "avg_volume": 1737437.9333333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "PPT.AX",
+      "last_close": 16.989999771118164,
+      "median_daily_value": 3346376.626760483,
+      "avg_daily_value": 3918773.0762639684,
+      "avg_volume": 212277.71666666667,
+      "trading_days": 65
+    },
+    {
+      "ticker": "BWP.AX",
+      "last_close": 3.700000047683716,
+      "median_daily_value": 3205118.6597800255,
+      "avg_daily_value": 3771631.358187751,
+      "avg_volume": 976086.2,
+      "trading_days": 65
+    },
+    {
+      "ticker": "AIA.AX",
+      "last_close": 7.179999828338623,
+      "median_daily_value": 3151131.6703047752,
+      "avg_daily_value": 3277641.7049933514,
+      "avg_volume": 461546.76666666666,
+      "trading_days": 65
+    },
+    {
+      "ticker": "EBO.AX",
+      "last_close": 20.299999237060547,
+      "median_daily_value": 2131010.589756012,
+      "avg_daily_value": 3191651.679401652,
+      "avg_volume": 136251.73333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "DDR.AX",
+      "last_close": 9.699999809265137,
+      "median_daily_value": 2518702.5968265533,
+      "avg_daily_value": 3154256.7771850745,
+      "avg_volume": 310523.06666666665,
+      "trading_days": 757
+    },
+    {
+      "ticker": "SSM.AX",
+      "last_close": 2.200000047683716,
+      "median_daily_value": 2111820.824580431,
+      "avg_daily_value": 2919061.0602936666,
+      "avg_volume": 1312785.5333333334,
+      "trading_days": 65
+    },
+    {
+      "ticker": "BGA.AX",
+      "last_close": 6.010000228881836,
+      "median_daily_value": 2749824.8297662735,
+      "avg_daily_value": 2865700.1841691653,
+      "avg_volume": 475626.88333333336,
+      "trading_days": 65
+    },
+    {
+      "ticker": "CNI.AX",
+      "last_close": 1.934999942779541,
+      "median_daily_value": 2305129.401773095,
+      "avg_daily_value": 2833521.8448147057,
+      "avg_volume": 1358167.3666666667,
+      "trading_days": 757
+    },
+    {
+      "ticker": "ARF.AX",
+      "last_close": 3.5799999237060547,
+      "median_daily_value": 2315414.9301975965,
+      "avg_daily_value": 2528797.576999875,
+      "avg_volume": 709317.2,
+      "trading_days": 757
+    },
+    {
+      "ticker": "EVT.AX",
+      "last_close": 12.569999694824219,
+      "median_daily_value": 1650173.7937111855,
+      "avg_daily_value": 1991619.904888026,
+      "avg_volume": 152658.41666666666,
+      "trading_days": 757
+    },
+    {
+      "ticker": "NAN.AX",
+      "last_close": 3.569999933242798,
+      "median_daily_value": 1335174.1844351292,
+      "avg_daily_value": 1661184.7171658953,
+      "avg_volume": 412769.3333333333,
+      "trading_days": 65
+    },
+    {
+      "ticker": "AD8.AX",
+      "last_close": 3.680000066757202,
+      "median_daily_value": 1300706.3149328232,
+      "avg_daily_value": 1513947.73655624,
+      "avg_volume": 358831.36666666664,
+      "trading_days": 65
+    },
+    {
+      "ticker": "KGN.AX",
+      "last_close": 3.009999990463257,
+      "median_daily_value": 1489546.0950956345,
+      "avg_daily_value": 1495696.4105537494,
+      "avg_volume": 431829.5,
+      "trading_days": 65
+    },
+    {
+      "ticker": "GOZ.AX",
+      "last_close": 2.2200000286102295,
+      "median_daily_value": 1159569.657681346,
+      "avg_daily_value": 1287752.142708699,
+      "avg_volume": 530180.15,
+      "trading_days": 757
+    }
+  ]
+}

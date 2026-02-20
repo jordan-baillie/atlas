@@ -1,0 +1,89 @@
+{
+  "title": "Ex-Dividend Franking Credit Capture Strategy - Validation Report",
+  "timestamp": "2026-02-18T08:35:40.256433",
+  "strategy_config": {
+    "days_before_ex": 7,
+    "days_after_ex": 8,
+    "min_franking_pct": 75,
+    "min_grossed_up_yield": 1.2,
+    "rsi_max": 70,
+    "atr_stop_mult": 3.5,
+    "max_hold_days": 20
+  },
+  "event_analysis": {
+    "total_events": 458,
+    "unique_tickers": 116,
+    "period": "2023-06 to 2025-12",
+    "price_only": {
+      "win_rate": 0.33,
+      "avg_return": -1.864,
+      "total_pnl": -4214.11,
+      "pf": 0.48
+    },
+    "grossed_up": {
+      "win_rate": 0.515,
+      "avg_return": 0.261,
+      "total_pnl": 568.51,
+      "pf": 1.09
+    },
+    "income": {
+      "total_divs": 3350.83,
+      "total_franking": 1431.79
+    },
+    "completed_trades": {
+      "count": 331,
+      "wr": 0.713,
+      "avg_ret": 3.458
+    },
+    "stopped_trades": {
+      "count": 127,
+      "avg_pnl": -39.67
+    },
+    "franking_uplift_pct": 2.125
+  },
+  "portfolio_comparison": {
+    "test_universe": "30 tickers (top by volume)",
+    "baseline_4strat": {
+      "trades": 49,
+      "cagr": -0.020196,
+      "sharpe": -1.3363,
+      "max_dd": 0.051827,
+      "pf": 0.7359,
+      "by_strategy": {
+        "mean_reversion": 3,
+        "bb_squeeze": 40,
+        "opening_gap": 1,
+        "trend_following": 5
+      }
+    },
+    "combined_5strat": {
+      "trades": 52,
+      "cagr": -0.015126,
+      "sharpe": -1.2074,
+      "max_dd": 0.049854,
+      "pf": 0.7955,
+      "by_strategy": {
+        "mean_reversion": 3,
+        "bb_squeeze": 39,
+        "opening_gap": 1,
+        "dividend_capture": 3,
+        "trend_following": 6
+      }
+    },
+    "improvement": {
+      "cagr_delta": 0.51,
+      "sharpe_delta": 0.129,
+      "dd_delta": -0.2,
+      "extra_trades": 3
+    }
+  },
+  "verdict": {
+    "edge_exists": true,
+    "mechanism": "Franking credits convert negative price alpha into positive grossed-up returns",
+    "best_use": "Tax-efficient income layer in diversified portfolio",
+    "price_only_return": -1.864,
+    "grossed_up_return": 0.261,
+    "profit_factor_improvement": "0.48 -> 1.09",
+    "recommendation": "ENABLED as portfolio component - provides income diversification and franking credit tax benefits"
+  }
+}

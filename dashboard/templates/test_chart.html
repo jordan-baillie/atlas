@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>body{background:#0d1117;color:#e6edf3;font-family:sans-serif;} .wrap{height:300px;width:80%;margin:20px auto;}</style>
+</head>
+<body>
+<h2>Chart.js Test</h2>
+<div id="status">Loading...</div>
+<div class="wrap"><canvas id="testChart"></canvas></div>
+<script>
+try {
+  var ctx = document.getElementById('testChart').getContext('2d');
+
+  // Simulate the exact data format from API
+  var btData = [
+    {x: '2024-02-15', y: 5000},
+    {x: '2024-06-15', y: 5100},
+    {x: '2024-12-15', y: 5300},
+    {x: '2025-06-15', y: 5600},
+    {x: '2025-12-15', y: 6000},
+    {x: '2026-02-11', y: 6470}
+  ];
+
+  var labels = btData.map(function(p) { return p.x; });
+
+  var chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Backtest',
+        data: btData,
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {type: 'category', ticks: {color: '#8b949e'}},
+        y: {ticks: {color: '#8b949e'}}
+      }
+    }
+  });
+
+  document.getElementById('status').textContent = 'Chart rendered OK with ' + btData.length + ' points';
+  document.getElementById('status').style.color = '#3fb950';
+} catch(e) {
+  document.getElementById('status').textContent = 'ERROR: ' + e.message;
+  document.getElementById('status').style.color = '#f85149';
+}
+</script>
+</body>
+</html>
