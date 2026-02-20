@@ -1,0 +1,53 @@
+{
+  "arm_a": {
+    "total_return": 0.1728,
+    "cagr": 0.08339,
+    "max_drawdown": 0.0746,
+    "sharpe": 0.522,
+    "sortino": 0.6605,
+    "win_rate": 0.5427,
+    "profit_factor": 1.6385,
+    "avg_trade": 4.36,
+    "total_trades": 199,
+    "total_pnl": 866.92,
+    "exposure": 0.9048,
+    "turnover": 43.0611,
+    "avg_equity": 5430.6,
+    "final_equity": 5864.17,
+    "avg_winner": 20.6,
+    "avg_loser": -14.92,
+    "largest_winner": 305.13,
+    "largest_loser": -71.48,
+    "avg_hold_days": 15.1
+  },
+  "arm_b": {
+    "total_return": 0.1618,
+    "cagr": 0.078239,
+    "max_drawdown": 0.068311,
+    "sharpe": 0.4742,
+    "sortino": 0.5891,
+    "win_rate": 0.5294,
+    "profit_factor": 1.5895,
+    "avg_trade": 4.21,
+    "total_trades": 187,
+    "total_pnl": 787.31,
+    "exposure": 0.8948,
+    "turnover": 40.6987,
+    "avg_equity": 5447.51,
+    "final_equity": 5808.8,
+    "avg_winner": 21.44,
+    "avg_loser": -15.18,
+    "largest_winner": 378.67,
+    "largest_loser": -71.48,
+    "avg_hold_days": 15.2
+  },
+  "summary": {
+    "cagr_delta": -0.515,
+    "sharpe_delta": -0.048,
+    "pf_delta": -0.049,
+    "dd_delta": -0.629,
+    "wr_delta": -1.33,
+    "improvements_of_4": "1",
+    "verdict": "DISABLE drawdown scaling"
+  }
+}
