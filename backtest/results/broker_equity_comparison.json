@@ -1,0 +1,62 @@
+{
+  "run_date": "2026-02-21",
+  "description": "Broker vs equity level comparison: Moomoo $3/order vs Webull $1/order at $5K and $10K",
+  "scenarios": {
+    "A: $5K  + Moomoo $3/order [BASELINE]": {
+      "n_trades": 151,
+      "cagr": 2.0497,
+      "sharpe": -0.1853,
+      "profit_factor": 1.1396,
+      "max_drawdown": 8.842,
+      "win_rate": 41.72,
+      "total_commission": 906.0,
+      "commission_pct_equity": 18.12,
+      "avg_position_value": 593.5924072847681,
+      "net_profit_annual": 102.485,
+      "equity": 5000,
+      "broker_fee": 3.0
+    },
+    "B: $10K + Moomoo $3/order": {
+      "n_trades": 418,
+      "cagr": -2.5476,
+      "sharpe": -0.6433,
+      "profit_factor": 0.9206,
+      "max_drawdown": 11.1485,
+      "win_rate": 47.370000000000005,
+      "total_commission": 2508.0,
+      "commission_pct_equity": 25.080000000000002,
+      "avg_position_value": 728.5207177033489,
+      "net_profit_annual": -254.76,
+      "equity": 10000,
+      "broker_fee": 3.0
+    },
+    "C: $5K  + Webull $1/order": {
+      "n_trades": 183,
+      "cagr": 5.8202,
+      "sharpe": 0.2459,
+      "profit_factor": 1.4477,
+      "max_drawdown": 7.187799999999999,
+      "win_rate": 51.910000000000004,
+      "total_commission": 366.0,
+      "commission_pct_equity": 7.32,
+      "avg_position_value": 590.2679349726775,
+      "net_profit_annual": 291.01,
+      "equity": 5000,
+      "broker_fee": 1.0
+    },
+    "D: $10K + Webull $1/order [TARGET]": {
+      "n_trades": 437,
+      "cagr": 4.445,
+      "sharpe": 0.0911,
+      "profit_factor": 1.144,
+      "max_drawdown": 8.4004,
+      "win_rate": 49.89,
+      "total_commission": 874.0,
+      "commission_pct_equity": 8.74,
+      "avg_position_value": 774.7372416475968,
+      "net_profit_annual": 444.5,
+      "equity": 10000,
+      "broker_fee": 1.0
+    }
+  }
+}
