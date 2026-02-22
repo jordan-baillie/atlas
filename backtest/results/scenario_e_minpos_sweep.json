@@ -1,0 +1,57 @@
+{
+  "run_date": "2026-02-21",
+  "scenarios": {
+    "C: $5K  + Webull $1 + minpos $500  [PREV BEST]": {
+      "n_trades": 183,
+      "cagr": 5.8202,
+      "sharpe": 0.2459,
+      "profit_factor": 1.4477,
+      "max_drawdown": 7.187799999999999,
+      "win_rate": 51.910000000000004,
+      "total_commission": 366.0,
+      "commission_pct_equity": 7.32,
+      "net_profit_annual": 291.01,
+      "equity": 5000,
+      "min_position_value": 500.0
+    },
+    "D: $10K + Webull $1 + minpos $500": {
+      "n_trades": 437,
+      "cagr": 4.445,
+      "sharpe": 0.0911,
+      "profit_factor": 1.144,
+      "max_drawdown": 8.4004,
+      "win_rate": 49.89,
+      "total_commission": 874.0,
+      "commission_pct_equity": 8.74,
+      "net_profit_annual": 444.5,
+      "equity": 10000,
+      "min_position_value": 500.0
+    },
+    "E: $10K + Webull $1 + minpos $1000 [TARGET]": {
+      "n_trades": 208,
+      "cagr": 7.0142,
+      "sharpe": 0.3687,
+      "profit_factor": 1.459,
+      "max_drawdown": 7.6166,
+      "win_rate": 51.44,
+      "total_commission": 416.0,
+      "commission_pct_equity": 4.16,
+      "net_profit_annual": 701.42,
+      "equity": 10000,
+      "min_position_value": 1000.0
+    },
+    "F: $10K + Webull $1 + minpos $1500": {
+      "n_trades": 13,
+      "cagr": 1.5661,
+      "sharpe": -0.6535,
+      "profit_factor": 3.548,
+      "max_drawdown": 3.4013,
+      "win_rate": 76.92,
+      "total_commission": 26.0,
+      "commission_pct_equity": 0.26,
+      "net_profit_annual": 156.61,
+      "equity": 10000,
+      "min_position_value": 1500.0
+    }
+  }
+}

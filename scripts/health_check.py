@@ -90,8 +90,8 @@ def main():
     print(f"Config: {cfg.get('version', 'unknown')}")
 
     # Load recent data
-    print("Loading last 6 months of data...")
-    data = load_data_recent(months=6, min_rows=60)
+    print("Loading last 18 months of data...")
+    data = load_data_recent(months=18, min_rows=60)
     print(f"  {len(data)} tickers loaded")
 
     if len(data) < 10:
@@ -153,7 +153,7 @@ def main():
         'thresholds': THRESHOLDS,
         'flags': flags,
         'tickers_tested': len(data),
-        'data_window_months': 6,
+        'data_window_months': 18,
         'runtime_s': round(elapsed, 1),
     }
 

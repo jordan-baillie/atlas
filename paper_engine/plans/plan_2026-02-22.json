@@ -1,0 +1,134 @@
+{
+  "trade_date": "2026-02-22",
+  "generated_at": "2026-02-22T23:21:32.338407",
+  "status": "PENDING_APPROVAL",
+  "portfolio_snapshot": {
+    "equity": 4979.32,
+    "cash": 3621.425300000001,
+    "open_positions": 10,
+    "total_pnl": -20.68,
+    "total_pnl_pct": -0.41
+  },
+  "proposed_entries": [],
+  "rejected_entries": [],
+  "proposed_exits": [],
+  "risk_summary": {
+    "total_proposed_cost": 0,
+    "total_proposed_risk": 0,
+    "positions_after": 10,
+    "cash_after_entries": 3621.43,
+    "portfolio_exposure_pct": 27.27
+  },
+  "open_positions": [
+    {
+      "ticker": "WES.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 84.3242,
+      "current_price": 83.98999786376953,
+      "shares": 3,
+      "unrealized_pnl": -1.0,
+      "unrealized_pnl_pct": -0.4,
+      "stop_price": 78.1197
+    },
+    {
+      "ticker": "EVN.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 15.005,
+      "current_price": 15.050000190734863,
+      "shares": 8,
+      "unrealized_pnl": 0.36,
+      "unrealized_pnl_pct": 0.3,
+      "stop_price": 12.7237
+    },
+    {
+      "ticker": "S32.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 4.3694,
+      "current_price": 4.389999866485596,
+      "shares": 33,
+      "unrealized_pnl": 0.68,
+      "unrealized_pnl_pct": 0.47,
+      "stop_price": 3.8048
+    },
+    {
+      "ticker": "BSL.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 27.8779,
+      "current_price": 28.25,
+      "shares": 6,
+      "unrealized_pnl": 2.23,
+      "unrealized_pnl_pct": 1.33,
+      "stop_price": 24.9402
+    },
+    {
+      "ticker": "PDN.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 13.2432,
+      "current_price": 13.949999809265137,
+      "shares": 8,
+      "unrealized_pnl": 5.65,
+      "unrealized_pnl_pct": 5.34,
+      "stop_price": 10.8775
+    },
+    {
+      "ticker": "SFR.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 18.989,
+      "current_price": 18.84000015258789,
+      "shares": 7,
+      "unrealized_pnl": -1.04,
+      "unrealized_pnl_pct": -0.78,
+      "stop_price": 16.4015
+    },
+    {
+      "ticker": "WAF.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 3.6036,
+      "current_price": 3.569999933242798,
+      "shares": 32,
+      "unrealized_pnl": -1.08,
+      "unrealized_pnl_pct": -0.93,
+      "stop_price": 3.0199
+    },
+    {
+      "ticker": "BGL.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 1.7718,
+      "current_price": 1.8049999475479126,
+      "shares": 62,
+      "unrealized_pnl": 2.06,
+      "unrealized_pnl_pct": 1.87,
+      "stop_price": 1.4681
+    },
+    {
+      "ticker": "REH.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 13.8939,
+      "current_price": 13.9399995803833,
+      "shares": 11,
+      "unrealized_pnl": 0.51,
+      "unrealized_pnl_pct": 0.33,
+      "stop_price": 12.2957
+    },
+    {
+      "ticker": "APX.AX",
+      "strategy": "trend_following",
+      "entry_date": "2026-02-20",
+      "entry_price": 1.4314,
+      "current_price": 1.4600000381469727,
+      "shares": 33,
+      "unrealized_pnl": 0.94,
+      "unrealized_pnl_pct": 2.0,
+      "stop_price": 0.8603
+    }
+  ]
+}
