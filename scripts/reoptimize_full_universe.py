@@ -8,7 +8,7 @@ import sys, json, os, copy, time, logging
 from pathlib import Path
 from datetime import datetime
 
-PROJECT = Path('/a0/usr/projects/atlas-asx')
+PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 os.chdir(str(PROJECT))
 
@@ -258,4 +258,36 @@ if __name__ == '__main__':
         t0 = time.time()
         res, config = optimize_strategy(config, sn, data, results_tracker)
         elapsed = time.time() - t0
-        print(f'  Done {elapsed:.0f}s | {res["iterations"]} iters | score: {res["baseline_score"]} -> {res["optimized_score"]}
+        print(
+            f'  Done {elapsed:.0f}s | {res["iterations"]} iters | '
+            f'score: {res["baseline_score"]} -> {res["optimized_score"]}',
+            flush=True,
+        )
+
+    # Final combined run with optimized parameters
+    print(f'\n{"="*70}', flush=True)
+    print('FINAL COMBINED (optimized config)', flush=True)
+    print(f'{"="*70}', flush=True)
+    t0 = time.time()
+    final_combined = run_combined(config, data)
+    elapsed = time.time() - t0
+    print(
+        f'Final ({elapsed:.0f}s): trades={final_combined["trades"]} '
+        f'CAGR={final_combined["cagr"]*100:.2f}% '
+        f'Sharpe={final_combined["sharpe"]:.3f} PF={final_combined["pf"]:.3f} '
+        f'DD={final_combined["max_dd"]*100:.2f}%',
+        flush=True
+    )
+
+    # Persist artifacts and promote optimized config for downstream validation
+    results_tracker['final_combined'] = final_combined
+    results_tracker['finished_at'] = datetime.now().isoformat()
+    with open(RESULTS_FILE, 'w') as f:
+        json.dump(results_tracker, f, indent=2, default=str)
+
+    active_config_path = PROJECT / 'config' / 'active_config.json'
+    with open(active_config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print(f'Saved optimized config to {active_config_path}', flush=True)
+
+    print('\nReoptimization complete.', flush=True)

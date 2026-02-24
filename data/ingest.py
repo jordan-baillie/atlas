@@ -440,7 +440,8 @@ def cache_stats() -> Dict:
     """Return statistics about the cache.
 
     Returns:
-        Dict with keys: file_count, total_size_mb, oldest, newest, tickers.
+        Dict with keys: file_count, total_files, total_size_mb, oldest, newest, tickers.
+        `total_files` is a legacy alias kept for older callers.
     """
     files = list(CACHE_DIR.glob("*.parquet"))
     if not files:
@@ -453,6 +454,7 @@ def cache_stats() -> Dict:
 
     return {
         "file_count": len(files),
+        "total_files": len(files),
         "total_size_mb": round(sum(sizes) / (1024 * 1024), 2),
         "oldest": min(mtimes).isoformat(),
         "newest": max(mtimes).isoformat(),

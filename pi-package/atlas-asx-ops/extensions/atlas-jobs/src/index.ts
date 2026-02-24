@@ -1,5 +1,16 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
+import { spawn, type ChildProcess } from "node:child_process";
+import { join, resolve } from "node:path";
 import { ATLAS_JOB_CATALOG } from "./catalog";
 import {
   AtlasJobCancelSchema,
@@ -7,7 +18,7 @@ import {
   AtlasJobListRunsSchema,
   AtlasJobRunRequestSchema
 } from "./schemas";
-import type { AtlasJobRunRecord } from "./types";
+import type { AtlasJobName, AtlasJobRunRecord, AtlasJobSpec } from "./types";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -18,30 +29,483 @@ function makeRunId(job: string): string {
   return `${safe}_${Date.now()}`;
 }
 
-function stubRunRecord(
-  job: string,
-  args?: Record<string, unknown>,
-  dryRun?: boolean
-): AtlasJobRunRecord {
-  const spec = ATLAS_JOB_CATALOG.find((item) => item.name === job);
+const MAX_STD_TAIL_CHARS = 12_000;
+const RUNS_DIR_PARTS = [".pi", "atlas-runs"];
+const LOGS_DIR_NAME = "logs";
+const MANIFEST_EXT = ".json";
+
+const HEAVY_LOCK_JOBS = new Set<AtlasJobName>([
+  "reoptimize_full_universe",
+  "validate_oos",
+  "auto_reoptimize"
+]);
+
+type PrimitiveArg = string | number | boolean;
+type RunArgs = Record<string, PrimitiveArg>;
+
+interface ActiveRun {
+  child: ChildProcess;
+  timer?: ReturnType<typeof setTimeout>;
+  cancelRequested?: boolean;
+  cancelReason?: string;
+  timedOut?: boolean;
+  finalized?: boolean;
+}
+
+interface RunPaths {
+  runsDir: string;
+  logsDir: string;
+  locksDir: string;
+  manifestPath: string;
+  stdoutLogPath: string;
+  stderrLogPath: string;
+}
+
+interface LockInfo {
+  lockKey: string;
+  runId: string;
+  job: AtlasJobName;
+  createdAt: string;
+}
+
+function ensureDir(path: string): void {
+  mkdirSync(path, { recursive: true });
+}
+
+function getRunsBaseDir(cwd: string): string {
+  return resolve(cwd, ...RUNS_DIR_PARTS);
+}
+
+function buildRunPaths(cwd: string, runId: string): RunPaths {
+  const runsDir = getRunsBaseDir(cwd);
+  const logsDir = join(runsDir, LOGS_DIR_NAME);
+  const locksDir = join(runsDir, "locks");
+  ensureDir(runsDir);
+  ensureDir(logsDir);
+  ensureDir(locksDir);
   return {
-    runId: makeRunId(job),
-    job: job as AtlasJobRunRecord["job"],
-    status: "not_implemented",
-    requestedAt: nowIso(),
-    finishedAt: nowIso(),
-    args,
-    dryRun,
-    command: spec?.commandPreview,
-    artifacts: spec?.artifacts ?? [],
-    notImplemented: true,
-    error:
-      "atlas-jobs execution backend is a skeleton only. Implement process spawning + run state persistence next."
+    runsDir,
+    logsDir,
+    locksDir,
+    manifestPath: join(runsDir, `${runId}${MANIFEST_EXT}`),
+    stdoutLogPath: join(logsDir, `${runId}.stdout.log`),
+    stderrLogPath: join(logsDir, `${runId}.stderr.log`)
   };
+}
+
+function writeRunRecord(record: AtlasJobRunRecord): void {
+  if (!record.manifestPath) return;
+  const copy = { ...record };
+  writeFileSync(record.manifestPath, `${JSON.stringify(copy, null, 2)}\n`, "utf8");
+}
+
+function readJsonFile<T>(path: string): T | null {
+  try {
+    if (!existsSync(path)) return null;
+    const raw = readFileSync(path, "utf8");
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function readRunRecord(path: string): AtlasJobRunRecord | null {
+  return readJsonFile<AtlasJobRunRecord>(path);
+}
+
+function trimTail(existing: string | undefined, chunk: string, limit: number): string {
+  const combined = `${existing ?? ""}${chunk}`;
+  return combined.length <= limit ? combined : combined.slice(-limit);
+}
+
+function quoteArg(value: string): string {
+  if (!/[ \t"]/u.test(value)) return value;
+  return `"${value.replace(/"/g, '\\"')}"`;
+}
+
+function commandString(cmd: string, args: string[]): string {
+  return [cmd, ...args].map(quoteArg).join(" ");
+}
+
+function pythonExecutable(): string {
+  const envBin = process.env.ATLAS_PYTHON_BIN || process.env.PI_ATLAS_PYTHON_BIN;
+  return envBin && envBin.trim() ? envBin.trim() : "python";
+}
+
+function asArgsObject(value: unknown): RunArgs {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: RunArgs = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function consumeArg<T extends PrimitiveArg>(
+  args: RunArgs,
+  key: string
+): T | undefined {
+  if (!(key in args)) return undefined;
+  const value = args[key] as T;
+  delete args[key];
+  return value;
+}
+
+function assertNoExtraArgs(job: AtlasJobName, args: RunArgs): void {
+  const extra = Object.keys(args);
+  if (extra.length > 0) {
+    throw new Error(`Unsupported args for ${job}: ${extra.join(", ")}`);
+  }
+}
+
+function buildPythonScriptInvocation(scriptPath: string, scriptArgs: string[]) {
+  const cmd = pythonExecutable();
+  const args = [scriptPath, ...scriptArgs];
+  return { cmd, args, command: commandString(cmd, args) };
+}
+
+function buildCliInvocation(subcommand: string, params?: RunArgs) {
+  const args = { ...(params ?? {}) };
+  const cliArgs = ["scripts/cli.py", subcommand];
+  const date = consumeArg<string>(args, "date");
+  if (date !== undefined) {
+    cliArgs.push("--date", String(date));
+  }
+  const days = consumeArg<number | string>(args, "days");
+  if (days !== undefined) {
+    cliArgs.push("--days", String(days));
+  }
+  assertNoExtraArgs(subcommand as AtlasJobName, args);
+  return buildPythonScriptInvocation(cliArgs[0], cliArgs.slice(1));
+}
+
+function resolveJobCommand(job: AtlasJobName, rawArgs?: RunArgs) {
+  const args = { ...(rawArgs ?? {}) };
+  switch (job) {
+    case "health_check":
+      assertNoExtraArgs(job, args);
+      return buildPythonScriptInvocation("scripts/health_check.py", []);
+    case "reoptimize_full_universe":
+      assertNoExtraArgs(job, args);
+      return buildPythonScriptInvocation("scripts/reoptimize_full_universe.py", []);
+    case "validate_oos":
+      assertNoExtraArgs(job, args);
+      return buildPythonScriptInvocation("scripts/validate_oos.py", []);
+    case "auto_reoptimize":
+      assertNoExtraArgs(job, args);
+      return buildPythonScriptInvocation("scripts/auto_reoptimize.py", []);
+    case "daily_automation": {
+      const step = consumeArg<string>(args, "step");
+      assertNoExtraArgs(job, args);
+      const scriptArgs = ["scripts/daily_automation.py"];
+      if (step) {
+        scriptArgs.push("--step", String(step));
+      }
+      return buildPythonScriptInvocation(scriptArgs[0], scriptArgs.slice(1));
+    }
+    case "dashboard_generate_data":
+      assertNoExtraArgs(job, args);
+      return buildPythonScriptInvocation("dashboard/generate_data.py", []);
+    case "cli_ingest":
+      return buildCliInvocation("ingest", args);
+    case "cli_universe":
+      return buildCliInvocation("universe", args);
+    case "cli_backtest":
+      return buildCliInvocation("backtest", args);
+    case "cli_plan":
+      return buildCliInvocation("plan", args);
+    case "cli_approve":
+      return buildCliInvocation("approve", args);
+    case "cli_paper_run":
+      return buildCliInvocation("paper-run", args);
+    case "cli_status":
+      return buildCliInvocation("status", args);
+    case "cli_ledger":
+      return buildCliInvocation("ledger", args);
+    case "anneal_review":
+      return buildCliInvocation("review", args);
+    default: {
+      const exhaustive: never = job;
+      throw new Error(`Unsupported job: ${exhaustive}`);
+    }
+  }
+}
+
+function terminalStatus(status: AtlasJobRunRecord["status"]): boolean {
+  return status === "succeeded" || status === "failed" || status === "canceled";
+}
+
+function lockKeyForJob(job: AtlasJobName): string | undefined {
+  if (HEAVY_LOCK_JOBS.has(job)) return "heavy-backtest";
+  return undefined;
+}
+
+function lockFilePath(cwd: string, lockKey: string): string {
+  const runsDir = getRunsBaseDir(cwd);
+  ensureDir(join(runsDir, "locks"));
+  return join(runsDir, "locks", `${lockKey}.lock.json`);
+}
+
+function readLock(path: string): LockInfo | null {
+  return readJsonFile<LockInfo>(path);
+}
+
+function writeLock(path: string, info: LockInfo): void {
+  writeFileSync(path, `${JSON.stringify(info, null, 2)}\n`, "utf8");
+}
+
+function releaseLockForRecord(record: AtlasJobRunRecord): void {
+  if (!record.lockFilePath || !record.lockKey) return;
+  const current = readLock(record.lockFilePath);
+  if (current && current.runId === record.runId) {
+    try {
+      rmSync(record.lockFilePath);
+    } catch {
+      // Ignore lock cleanup failures.
+    }
+  }
+}
+
+function acquireLock(
+  cwd: string,
+  job: AtlasJobName,
+  runId: string
+): { ok: true; lockKey: string; lockFilePath: string } | { ok: false; message: string } {
+  const lockKey = lockKeyForJob(job);
+  if (!lockKey) {
+    return {
+      ok: true,
+      lockKey: "",
+      lockFilePath: ""
+    };
+  }
+
+  const path = lockFilePath(cwd, lockKey);
+  const existing = readLock(path);
+  if (existing && existing.runId !== runId) {
+    const existingManifest = readRunRecord(
+      join(getRunsBaseDir(cwd), `${existing.runId}${MANIFEST_EXT}`)
+    );
+    if (existingManifest && !terminalStatus(existingManifest.status)) {
+      return {
+        ok: false,
+        message:
+          `Lock '${lockKey}' is held by ${existing.job} (${existing.runId}) ` +
+          `with status ${existingManifest.status}.`
+      };
+    }
+    try {
+      rmSync(path);
+    } catch {
+      // ignore stale lock cleanup failure; write may fail and surface error
+    }
+  }
+
+  writeLock(path, {
+    lockKey,
+    runId,
+    job,
+    createdAt: nowIso()
+  });
+
+  return { ok: true, lockKey, lockFilePath: path };
+}
+
+function loadRunsFromDisk(cwd: string): AtlasJobRunRecord[] {
+  const runsDir = getRunsBaseDir(cwd);
+  if (!existsSync(runsDir)) return [];
+  let files: string[] = [];
+  try {
+    files = readdirSync(runsDir);
+  } catch {
+    return [];
+  }
+  const out: AtlasJobRunRecord[] = [];
+  for (const file of files) {
+    if (!file.endsWith(MANIFEST_EXT)) continue;
+    const rec = readRunRecord(join(runsDir, file));
+    if (rec) out.push(rec);
+  }
+  return out;
+}
+
+function summarizeRecordText(record: AtlasJobRunRecord): string {
+  const parts = [`${record.runId}`, `${record.job}`, `${record.status}`];
+  if (record.exitCode !== undefined) parts.push(`exit=${record.exitCode}`);
+  if (record.pid !== undefined) parts.push(`pid=${record.pid}`);
+  return parts.join(" | ");
+}
+
+function killProcessTree(child: ChildProcess): Promise<void> {
+  const pid = child.pid;
+  if (!pid) return Promise.resolve();
+  if (process.platform === "win32") {
+    return new Promise((resolvePromise) => {
+      const killer = spawn("taskkill", ["/PID", String(pid), "/T", "/F"], {
+        windowsHide: true
+      });
+      killer.once("exit", () => resolvePromise());
+      killer.once("error", () => {
+        try {
+          child.kill();
+        } catch {
+          // ignore
+        }
+        resolvePromise();
+      });
+    });
+  }
+  return new Promise((resolvePromise) => {
+    try {
+      child.kill("SIGTERM");
+    } catch {
+      // ignore
+    }
+    resolvePromise();
+  });
 }
 
 export default function atlasJobsExtension(pi: ExtensionAPI) {
   const runStore = new Map<string, AtlasJobRunRecord>();
+  const activeRuns = new Map<string, ActiveRun>();
+
+  function upsertRecord(record: AtlasJobRunRecord): void {
+    runStore.set(record.runId, record);
+    writeRunRecord(record);
+  }
+
+  function finalizeRun(
+    runId: string,
+    patch: Partial<AtlasJobRunRecord>
+  ): AtlasJobRunRecord | null {
+    const current = runStore.get(runId) ?? null;
+    if (!current) return null;
+    if (terminalStatus(current.status)) return current;
+    const active = activeRuns.get(runId);
+    if (active?.finalized) return current;
+
+    const next: AtlasJobRunRecord = {
+      ...current,
+      ...patch,
+      finishedAt: patch.finishedAt ?? current.finishedAt ?? nowIso()
+    };
+    upsertRecord(next);
+
+    if (active?.timer) {
+      clearTimeout(active.timer);
+    }
+    if (active) {
+      active.finalized = true;
+    }
+    activeRuns.delete(runId);
+    releaseLockForRecord(next);
+    return next;
+  }
+
+  function startJobProcess(
+    spec: AtlasJobSpec,
+    record: AtlasJobRunRecord,
+    cmd: string,
+    args: string[]
+  ): AtlasJobRunRecord {
+    const child = spawn(cmd, args, {
+      cwd: record.cwd,
+      windowsHide: true
+    });
+
+    const active: ActiveRun = { child };
+    activeRuns.set(record.runId, active);
+
+    record.status = "running";
+    record.startedAt = nowIso();
+    if (child.pid) {
+      record.pid = child.pid;
+    }
+    upsertRecord(record);
+
+    child.stdout?.on("data", (chunk: Buffer | string) => {
+      const text = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk);
+      if (record.stdoutLogPath) {
+        try {
+          appendFileSync(record.stdoutLogPath, text, "utf8");
+        } catch {
+          // ignore log append failures; manifest still updates
+        }
+      }
+      record.stdoutTail = trimTail(record.stdoutTail, text, MAX_STD_TAIL_CHARS);
+      upsertRecord(record);
+    });
+
+    child.stderr?.on("data", (chunk: Buffer | string) => {
+      const text = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk);
+      if (record.stderrLogPath) {
+        try {
+          appendFileSync(record.stderrLogPath, text, "utf8");
+        } catch {
+          // ignore log append failures
+        }
+      }
+      record.stderrTail = trimTail(record.stderrTail, text, MAX_STD_TAIL_CHARS);
+      upsertRecord(record);
+    });
+
+    child.once("error", (error) => {
+      const a = activeRuns.get(record.runId);
+      const canceled = a?.cancelRequested;
+      const timedOut = a?.timedOut;
+      finalizeRun(record.runId, {
+        status: canceled ? "canceled" : "failed",
+        error:
+          canceled
+            ? `Canceled before spawn completed${a?.cancelReason ? `: ${a.cancelReason}` : ""}`
+            : timedOut
+              ? `Timed out: ${error.message}`
+              : error.message
+      });
+    });
+
+    child.once("exit", (code, signal) => {
+      const a = activeRuns.get(record.runId);
+      const canceled = !!a?.cancelRequested;
+      const timedOut = !!a?.timedOut;
+
+      let status: AtlasJobRunRecord["status"];
+      if (canceled) status = "canceled";
+      else if (code === 0) status = "succeeded";
+      else status = "failed";
+
+      const error =
+        canceled
+          ? `Canceled${a?.cancelReason ? `: ${a.cancelReason}` : ""}`
+          : timedOut
+            ? `Timed out after ${record.timeoutSec ?? "unknown"}s`
+            : code === 0
+              ? undefined
+              : `Process exited with code ${code ?? "null"}${signal ? ` (signal: ${signal})` : ""}`;
+
+      finalizeRun(record.runId, {
+        status,
+        exitCode: code ?? undefined,
+        signal,
+        error
+      });
+    });
+
+    const timeoutSec =
+      record.timeoutSec ?? spec.estimatedRuntimeSec ?? 3600;
+    active.timer = setTimeout(() => {
+      const a = activeRuns.get(record.runId);
+      if (!a || a.finalized) return;
+      a.timedOut = true;
+      a.cancelRequested = true;
+      a.cancelReason = `timeout ${timeoutSec}s`;
+      void killProcessTree(a.child);
+    }, Math.max(1, timeoutSec) * 1000);
+
+    return record;
+  }
 
   pi.registerTool({
     name: "atlas_jobs_list_catalog",
@@ -68,23 +532,139 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
     name: "atlas_jobs_run",
     label: "Atlas Run Job",
     description:
-      "Start an Atlas-ASX job by logical name (health check, reoptimize, validate, CLI commands). Skeleton currently validates inputs and returns a stub run record.",
+      "Start an Atlas-ASX job by logical name (health check, reoptimize, validate, CLI commands). Writes a persistent run manifest under .pi/atlas-runs and returns immediately after spawn.",
     parameters: AtlasJobRunRequestSchema,
     async execute(_toolCallId, params) {
-      const record = stubRunRecord(
-        params.job,
-        (params.args as Record<string, unknown> | undefined) ?? undefined,
-        params.dryRun
-      );
-      if (params.cwd) {
-        record.cwd = params.cwd;
+      const spec = ATLAS_JOB_CATALOG.find((item) => item.name === params.job);
+      if (!spec) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Unknown Atlas job: ${String(params.job)}`
+            }
+          ],
+          details: { ok: false, error: "unknown_job", job: params.job }
+        };
       }
-      runStore.set(record.runId, record);
+
+      const cwd = resolve(params.cwd ?? process.cwd());
+      const argsObj = asArgsObject(params.args);
+      let invocation;
+      try {
+        invocation = resolveJobCommand(params.job, argsObj);
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to build command for ${params.job}: ${(error as Error).message}`
+            }
+          ],
+          details: {
+            ok: false,
+            error: (error as Error).message,
+            job: params.job
+          }
+        };
+      }
+
+      const runId = makeRunId(params.job);
+      const paths = buildRunPaths(cwd, runId);
+
+      const lockResult = acquireLock(cwd, params.job, runId);
+      if (!lockResult.ok) {
+        const blockedRecord: AtlasJobRunRecord = {
+          runId,
+          job: params.job,
+          status: "failed",
+          requestedAt: nowIso(),
+          finishedAt: nowIso(),
+          cwd,
+          args: Object.keys(argsObj).length > 0 ? argsObj : undefined,
+          dryRun: !!params.dryRun,
+          command: invocation.command,
+          error: lockResult.message,
+          artifacts: spec.artifacts,
+          manifestPath: paths.manifestPath,
+          stdoutLogPath: paths.stdoutLogPath,
+          stderrLogPath: paths.stderrLogPath
+        };
+        upsertRecord(blockedRecord);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Blocked by lock: ${lockResult.message}`
+            }
+          ],
+          details: blockedRecord
+        };
+      }
+
+      const lockKey = lockResult.lockKey || undefined;
+      const lockFile = lockResult.lockFilePath || undefined;
+      const record: AtlasJobRunRecord = {
+        runId,
+        job: params.job,
+        status: params.dryRun ? "succeeded" : "queued",
+        requestedAt: nowIso(),
+        cwd,
+        args: Object.keys(argsObj).length > 0 ? argsObj : undefined,
+        dryRun: !!params.dryRun,
+        idempotencyKey: params.idempotencyKey,
+        timeoutSec: params.timeoutSec ?? spec.estimatedRuntimeSec ?? 3600,
+        command: invocation.command,
+        artifacts: spec.artifacts,
+        manifestPath: paths.manifestPath,
+        stdoutLogPath: paths.stdoutLogPath,
+        stderrLogPath: paths.stderrLogPath,
+        lockKey,
+        lockFilePath: lockFile
+      };
+
+      upsertRecord(record);
+
+      if (params.dryRun) {
+        record.startedAt = nowIso();
+        record.finishedAt = record.startedAt;
+        record.exitCode = 0;
+        upsertRecord(record);
+        releaseLockForRecord(record);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Dry run prepared ${record.runId}: ${record.command}`
+            }
+          ],
+          details: record
+        };
+      }
+
+      try {
+        startJobProcess(spec, record, invocation.cmd, invocation.args);
+      } catch (error) {
+        const failed = finalizeRun(record.runId, {
+          status: "failed",
+          error: `Spawn failed: ${(error as Error).message}`
+        }) ?? record;
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Failed to start ${failed.job}: ${failed.error}`
+            }
+          ],
+          details: failed
+        };
+      }
+
       return {
         content: [
           {
             type: "text",
-            text: `Created stub run ${record.runId} for ${record.job}. Execution backend not implemented yet.`
+            text: `Started ${summarizeRecordText(record)}.`
           }
         ],
         details: record
@@ -96,16 +676,25 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
     name: "atlas_jobs_get",
     label: "Atlas Get Run",
     description:
-      "Fetch a previously created Atlas job run record by run ID from the in-memory skeleton store.",
+      "Fetch a previously created Atlas job run record by run ID from memory or .pi/atlas-runs manifest files.",
     parameters: AtlasJobGetSchema,
     async execute(_toolCallId, params) {
-      const record = runStore.get(params.runId);
+      let record = runStore.get(params.runId);
+      if (!record) {
+        const fromDisk = readRunRecord(
+          join(getRunsBaseDir(process.cwd()), `${params.runId}${MANIFEST_EXT}`)
+        );
+        if (fromDisk) {
+          runStore.set(fromDisk.runId, fromDisk);
+          record = fromDisk;
+        }
+      }
       if (!record) {
         return {
           content: [
             {
               type: "text",
-              text: `Run ${params.runId} not found in atlas-jobs skeleton store.`
+              text: `Run ${params.runId} not found.`
             }
           ],
           details: {
@@ -139,10 +728,15 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
     name: "atlas_jobs_list_runs",
     label: "Atlas List Runs",
     description:
-      "List recent Atlas job runs from the skeleton in-memory store, optionally filtered by job or status.",
+      "List recent Atlas job runs from .pi/atlas-runs manifests, optionally filtered by job or status.",
     parameters: AtlasJobListRunsSchema,
     async execute(_toolCallId, params) {
       const limit = params.limit ?? 20;
+      const cwd = process.cwd();
+      const diskRuns = loadRunsFromDisk(cwd);
+      for (const rec of diskRuns) {
+        runStore.set(rec.runId, rec);
+      }
       let runs = Array.from(runStore.values()).sort((a, b) =>
         b.requestedAt.localeCompare(a.requestedAt)
       );
@@ -158,7 +752,7 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
         content: [
           {
             type: "text",
-            text: `Returned ${runs.length} Atlas run record(s) from skeleton store.`
+            text: `Returned ${runs.length} Atlas run record(s).`
           }
         ],
         details: {
@@ -173,10 +767,19 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
     name: "atlas_jobs_cancel",
     label: "Atlas Cancel Run",
     description:
-      "Cancel a queued/running Atlas job. Skeleton marks a stored run as canceled; no process management yet.",
+      "Cancel a queued/running Atlas job. Attempts to terminate the tracked child process and marks the run canceled when it exits.",
     parameters: AtlasJobCancelSchema,
     async execute(_toolCallId, params) {
-      const record = runStore.get(params.runId);
+      let record = runStore.get(params.runId);
+      if (!record) {
+        const fromDisk = readRunRecord(
+          join(getRunsBaseDir(process.cwd()), `${params.runId}${MANIFEST_EXT}`)
+        );
+        if (fromDisk) {
+          record = fromDisk;
+          runStore.set(fromDisk.runId, fromDisk);
+        }
+      }
       if (!record) {
         return {
           content: [
@@ -192,23 +795,47 @@ export default function atlasJobsExtension(pi: ExtensionAPI) {
         };
       }
 
-      record.status = "canceled";
-      record.finishedAt = nowIso();
-      if (params.reason) {
-        record.error = `Canceled: ${params.reason}`;
+      const active = activeRuns.get(params.runId);
+      if (!active) {
+        if (!terminalStatus(record.status)) {
+          record.status = "canceled";
+          record.finishedAt = nowIso();
+          record.error = `Canceled (no active child attached)${params.reason ? `: ${params.reason}` : ""}`;
+          upsertRecord(record);
+          releaseLockForRecord(record);
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Run ${params.runId} had no tracked child process. Manifest status set to ${record.status}.`
+            }
+          ],
+          details: {
+            canceled: true,
+            record
+          }
+        };
       }
-      runStore.set(record.runId, record);
+
+      active.cancelRequested = true;
+      active.cancelReason = params.reason;
+      if (!record.error || terminalStatus(record.status)) {
+        record.error = `Cancellation requested${params.reason ? `: ${params.reason}` : ""}`;
+      }
+      upsertRecord(record);
+      await killProcessTree(active.child);
 
       return {
         content: [
           {
             type: "text",
-            text: `Run ${params.runId} marked canceled in skeleton store.`
+            text: `Cancellation requested for ${params.runId}.`
           }
         ],
         details: {
           canceled: true,
-          record
+          record: runStore.get(params.runId) ?? record
         }
       };
     }

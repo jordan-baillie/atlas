@@ -13,7 +13,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, '/a0/usr/projects/atlas-asx')
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from backtest.engine import BacktestEngine
 from strategies.mean_reversion import MeanReversion
@@ -24,9 +25,9 @@ from strategies.opening_gap import OpeningGap
 # ============================================================
 # CONSTANTS
 # ============================================================
-DATA_DIR = Path('/a0/usr/projects/atlas-asx/data/cache')
-CONFIG_PATH = Path('/a0/usr/projects/atlas-asx/config/active_config.json')
-OUTPUT_PATH = Path('/a0/usr/projects/atlas-asx/backtest/results/v92_oos_validation.json')
+DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
+CONFIG_PATH = PROJECT_ROOT / 'config' / 'active_config.json'
+OUTPUT_PATH = PROJECT_ROOT / 'backtest' / 'results' / 'v92_oos_validation.json'
 SPLIT_DATE = '2025-06-01'
 WARMUP_DATE = '2025-03-01'  # 3-month overlap for indicator warmup
 MIN_ROWS = 60
@@ -227,9 +228,9 @@ def analyze_walk_forward_windows(result):
 def main():
     overall_start = time.time()
     results = {
-        'validation_type': 'v9.2_out_of_sample_validation',
+        'validation_type': 'v9.2_oos_validation',
         'timestamp': datetime.datetime.now().isoformat(),
-        'config_version': 'v9.2_reoptimized',
+        'config_version': 'unknown',
         'split_date': SPLIT_DATE,
         'warmup_date': WARMUP_DATE,
         'n_perturbation_trials': N_PERTURBATION_TRIALS,
@@ -250,4 +251,176 @@ def main():
     print(f"Config: {cfg.get('version', 'unknown')}")
     print(f"Split date: {SPLIT_DATE}")
     print(f"Warmup date for OOS: {WARMUP_DATE}")
-    print(f"Perturbation trials: {N_PERTURBATION_TRIALS}
+    print(f"Perturbation trials: {N_PERTURBATION_TRIALS}")
+
+    results['config_version'] = cfg.get('version', 'unknown')
+
+    # Filter to minimally viable series once
+    data_all = {k: v for k, v in data_all.items() if len(v) >= MIN_ROWS}
+
+    # ----------------------------------------------------------
+    # Test 1: Time-period split (IS / OOS / Full)
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print("TEST 1: Time-Period Split (IS vs OOS)")
+    print("-" * 70)
+
+    split_ts = pd.Timestamp(SPLIT_DATE)
+    warmup_ts = pd.Timestamp(WARMUP_DATE)
+    data_is = {
+        k: v[v.index < split_ts] for k, v in data_all.items()
+        if len(v[v.index < split_ts]) >= MIN_ROWS
+    }
+    data_oos = {
+        k: v[v.index >= warmup_ts] for k, v in data_all.items()
+        if len(v[v.index >= warmup_ts]) >= MIN_ROWS
+    }
+
+    print(f"In-sample tickers: {len(data_is)} | OOS tickers (warmup incl.): {len(data_oos)}")
+
+    result_is, t_is = run_backtest(cfg, data_is, label='IS')
+    result_oos, t_oos = run_backtest(cfg, data_oos, label='OOS')
+    result_full, t_full = run_backtest(cfg, data_all, label='FULL')
+
+    m_is = extract_metrics(result_is)
+    m_oos = extract_metrics(result_oos)
+    m_full = extract_metrics(result_full)
+
+    degradation = {}
+    for key in ('cagr_pct', 'sharpe', 'profit_factor', 'win_rate_pct'):
+        full_val = m_is.get(key, 0)  # degradation from IS to OOS
+        oos_val = m_oos.get(key, 0)
+        if full_val and abs(full_val) > 1e-9:
+            degradation[key] = round(((oos_val - full_val) / abs(full_val)) * 100, 2)
+        else:
+            degradation[key] = None
+
+    results['test1_time_period_split'] = {
+        'in_sample': m_is,
+        'out_of_sample': m_oos,
+        'degradation_pct': degradation,
+        'full_metrics': m_full,
+        'runtime_s': round(t_is + t_oos + t_full, 1),
+    }
+
+    # ----------------------------------------------------------
+    # Test 2: Parameter perturbation robustness
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print("TEST 2: Parameter Perturbation / Robustness")
+    print("-" * 70)
+    random.seed(RANDOM_SEED)
+
+    perturb_trials = []
+    for i in range(N_PERTURBATION_TRIALS):
+        seed = RANDOM_SEED + i
+        cfg_perturbed, perturbation_log = perturb_params(cfg, seed)
+        result_p, elapsed_p = run_backtest(cfg_perturbed, data_all, label=f'PERTURB-{i+1}')
+        m_p = extract_metrics(result_p)
+        m_p['trial'] = i + 1
+        m_p['seed'] = seed
+        m_p['runtime_s'] = round(elapsed_p, 1)
+        m_p['perturbation_log'] = perturbation_log
+        perturb_trials.append(m_p)
+
+    def summarize_numeric(field):
+        vals = [t[field] for t in perturb_trials if isinstance(t.get(field), (int, float))]
+        if not vals:
+            return {'mean': None, 'std': None, 'min': None, 'max': None}
+        return {
+            'mean': round(float(np.mean(vals)), 4),
+            'std': round(float(np.std(vals)), 4),
+            'min': round(float(np.min(vals)), 4),
+            'max': round(float(np.max(vals)), 4),
+        }
+
+    perturb_summary = {
+        'cagr_pct': summarize_numeric('cagr_pct'),
+        'sharpe': summarize_numeric('sharpe'),
+        'profit_factor': summarize_numeric('profit_factor'),
+        'max_drawdown_pct': summarize_numeric('max_drawdown_pct'),
+        'total_trades': summarize_numeric('total_trades'),
+    }
+    collapse_count = sum(1 for t in perturb_trials if (t.get('cagr_pct') or 0) < 0)
+    robust = (
+        (perturb_summary['cagr_pct']['mean'] or 0) > 0
+        and collapse_count < max(3, int(N_PERTURBATION_TRIALS * 0.3))
+    )
+
+    results['test2_perturbation'] = {
+        'summary': perturb_summary,
+        'trials': perturb_trials,
+        'collapse_count': collapse_count,
+        'robust': robust,
+    }
+
+    # ----------------------------------------------------------
+    # Test 3: Walk-forward consistency
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print("TEST 3: Walk-Forward Window Consistency")
+    print("-" * 70)
+    window_analysis = analyze_walk_forward_windows(result_full)
+    results['test3_walkforward_consistency'] = {
+        'full_metrics': m_full,
+        'window_analysis': window_analysis,
+        'runtime_s': round(t_full, 1),
+    }
+
+    # ----------------------------------------------------------
+    # Summary verdicts
+    # ----------------------------------------------------------
+    oos_cagr = m_oos.get('cagr_pct', 0) or 0
+    oos_sharpe = m_oos.get('sharpe', 0) or 0
+    oos_pf = m_oos.get('profit_factor', 0) or 0
+    cagr_deg = degradation.get('cagr_pct')
+    test1_fail = (
+        (cagr_deg is not None and cagr_deg < -50)
+        or oos_sharpe < 0
+        or oos_pf < 1.0
+    )
+    test1_verdict = 'FAIL - significant OOS degradation' if test1_fail else 'PASS'
+    test2_verdict = 'PASS' if robust else 'FAIL - perturbation instability'
+
+    win_rate_windows = None
+    if isinstance(window_analysis, dict):
+        win_rate_windows = window_analysis.get('win_rate_windows_pct')
+    test3_pass = isinstance(win_rate_windows, (int, float)) and win_rate_windows >= 50
+    test3_verdict = 'PASS - majority profitable' if test3_pass else 'FAIL - inconsistent windows'
+
+    verdicts = [test1_verdict.startswith('PASS'), test2_verdict.startswith('PASS'), test3_verdict.startswith('PASS')]
+    if all(verdicts):
+        overall = 'PASS'
+    elif any(verdicts):
+        overall = 'MIXED - review individual tests'
+    else:
+        overall = 'FAIL - validation did not pass'
+
+    total_runtime_s = round(time.time() - overall_start, 1)
+    results['summary'] = {
+        'test1_verdict': test1_verdict,
+        'test2_verdict': test2_verdict,
+        'test3_verdict': test3_verdict,
+        'overall_verdict': overall,
+        'total_runtime_s': total_runtime_s,
+        'total_runtime_min': round(total_runtime_s / 60, 1),
+    }
+
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(OUTPUT_PATH, 'w') as f:
+        json.dump(results, f, indent=2, default=str)
+
+    print("\n" + "=" * 70)
+    print("VALIDATION SUMMARY")
+    print("=" * 70)
+    print(f"Test1: {test1_verdict}")
+    print(f"Test2: {test2_verdict}")
+    print(f"Test3: {test3_verdict}")
+    print(f"Overall: {overall}")
+    print(f"Saved: {OUTPUT_PATH}")
+    print(f"Runtime: {total_runtime_s:.1f}s ({total_runtime_s/60:.1f} min)")
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

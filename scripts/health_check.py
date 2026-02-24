@@ -10,7 +10,8 @@ import sys, json, time
 from pathlib import Path
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/a0/usr/projects/atlas-asx')
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 import pandas as pd
 from backtest.engine import BacktestEngine
 from strategies.mean_reversion import MeanReversion
@@ -18,9 +19,9 @@ from strategies.trend_following import TrendFollowing
 from strategies.bb_squeeze import BBSqueeze
 from strategies.opening_gap import OpeningGap
 
-DATA_DIR = Path('/a0/usr/projects/atlas-asx/data/cache')
-CONFIG_DIR = Path('/a0/usr/projects/atlas-asx/config')
-LOGS_DIR = Path('/a0/usr/projects/atlas-asx/logs')
+DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
+CONFIG_DIR = PROJECT_ROOT / 'config'
+LOGS_DIR = PROJECT_ROOT / 'logs'
 
 # Baseline metrics from v9.3 robust blend (full-period)
 # Update these when a new config is promoted to active

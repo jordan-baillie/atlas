@@ -22,13 +22,20 @@ BRISBANE = ZoneInfo("Australia/Brisbane")
 from pathlib import Path
 
 # Setup
-PROJECT = Path("/a0/usr/projects/atlas-asx")
+PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
-os.chdir(PROJECT)
+os.chdir(str(PROJECT))
+
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
 # Logging
 log_dir = PROJECT / "logs"
-log_dir.mkdir(exist_ok=True)
+log_dir.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -111,9 +118,9 @@ def step_generate_plan():
         return False
 
 def step_execute_approved():
-    """Step 3: Auto-approve and execute today's plan (paper trading mode)."""
+    """Step 3: Execute today's approved plan (paper trading mode)."""
     log.info("=" * 60)
-    log.info("STEP 3: Auto-approving and executing trades")
+    log.info("STEP 3: Executing approved trades")
     log.info("=" * 60)
 
     try:
@@ -124,6 +131,7 @@ def step_execute_approved():
         config = load_config(str(PROJECT / "config" / "active_config.json"))
         portfolio = PaperPortfolio(config)
         planner = TradePlanGenerator(portfolio, config)
+        approval_required = config.get("trading", {}).get("approval_required", True)
 
         # Find today's plan
         today = datetime.now(BRISBANE).strftime("%Y-%m-%d")
@@ -138,10 +146,12 @@ def step_execute_approved():
             log.info("Plan already executed today")
             return True
 
-        # Auto-approve if pending
         if status == "PENDING_APPROVAL":
+            if approval_required:
+                log.info("Plan is pending approval and trading.approval_required=true; skipping execution")
+                return True
             plan = planner.approve_plan(today)
-            log.info(f"Plan auto-approved at {plan['approved_at']}")
+            log.info(f"Plan auto-approved at {plan['approved_at']} (approval_required=false)")
 
         if plan.get("status") != "APPROVED":
             log.info(f"Plan status is {plan.get('status')} - cannot execute")
@@ -254,7 +264,7 @@ def main():
     log.info(f"\n{'=' * 60}")
     log.info("AUTOMATION SUMMARY")
     for k, v in results.items():
-        status = "✅ SUCCESS" if v else "❌ FAILED"
+        status = "SUCCESS" if v else "FAILED"
         log.info(f"  {k}: {status}")
     log.info(f"{'=' * 60}")
     
@@ -264,3 +274,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

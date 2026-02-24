@@ -14,7 +14,7 @@ import sys, json, subprocess, shutil, logging
 from pathlib import Path
 from datetime import datetime
 
-PROJECT = Path('/a0/usr/projects/atlas-asx')
+PROJECT = Path(__file__).resolve().parent.parent
 SCRIPTS = PROJECT / 'scripts'
 CONFIG_DIR = PROJECT / 'config'
 RESULTS_DIR = PROJECT / 'backtest' / 'results'

@@ -1,6 +1,6 @@
 ---
 name: atlas-daily
-description: Run Atlas-ASX daily paper-trading operations with explicit approval gates: data refresh, plan generation, risk summary, plan approval, execution, and dashboard refresh. Use for daily operational runs and incident response on daily automation failures.
+description: "Run Atlas-ASX daily paper-trading operations with explicit approval gates: data refresh, plan generation, risk summary, plan approval, execution, and dashboard refresh. Use for daily operational runs and incident response on daily automation failures."
 ---
 
 # Atlas Daily

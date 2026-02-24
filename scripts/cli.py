@@ -11,6 +11,16 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+LOGS_DIR = PROJECT_ROOT / "logs"
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Windows terminals may default to cp1252 and choke on Unicode plan formatting.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
 
 import pandas as pd
 import numpy as np
@@ -38,7 +48,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(PROJECT_ROOT / "logs" / "atlas.log", mode="a"),
+        logging.FileHandler(LOGS_DIR / "atlas.log", mode="a"),
     ],
 )
 logger = logging.getLogger("atlas")
@@ -111,7 +121,8 @@ def cmd_ingest(args):
     stats = cache_stats()
     print("\nIngestion complete")
     print("  Tickers downloaded: %d" % len(results))
-    print("  Cache: %d files, %.1f MB" % (stats.get("total_files", 0), stats.get("total_size_mb", 0)))
+    file_count = stats.get("file_count", stats.get("total_files", 0))
+    print("  Cache: %d files, %.1f MB" % (file_count, stats.get("total_size_mb", 0)))
 
 
 def cmd_universe(args):
@@ -312,7 +323,8 @@ def cmd_status(args):
                 format_aud(p["unrealized_pnl"]), p["stop_price"]))
     stats = cache_stats()
     print("\nDATA:")
-    print("   Cache: %d files, %.1f MB" % (stats.get("total_files", 0), stats.get("total_size_mb", 0)))
+    file_count = stats.get("file_count", stats.get("total_files", 0))
+    print("   Cache: %d files, %.1f MB" % (file_count, stats.get("total_size_mb", 0)))
     try:
         uni = get_universe_tickers()
         print("   Universe: %d tickers" % len(uni))
@@ -360,7 +372,7 @@ def main():
     if not args.command:
         parser.print_help()
         return
-    (PROJECT_ROOT / "logs").mkdir(parents=True, exist_ok=True)
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
     commands = {
         "ingest": cmd_ingest, "universe": cmd_universe, "backtest": cmd_backtest,
         "plan": cmd_plan, "approve": cmd_approve, "paper-run": cmd_paper_run,

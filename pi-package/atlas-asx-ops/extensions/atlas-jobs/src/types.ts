@@ -66,10 +66,19 @@ export interface AtlasJobRunRecord {
   command?: string;
   args?: Record<string, unknown>;
   dryRun?: boolean;
+  idempotencyKey?: string;
+  timeoutSec?: number;
   exitCode?: number;
+  pid?: number;
+  signal?: string | null;
   stdoutTail?: string;
   stderrTail?: string;
   error?: string;
   artifacts?: AtlasJobArtifact[];
   notImplemented?: boolean;
+  manifestPath?: string;
+  stdoutLogPath?: string;
+  stderrLogPath?: string;
+  lockKey?: string;
+  lockFilePath?: string;
 }
