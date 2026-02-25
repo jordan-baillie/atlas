@@ -181,12 +181,13 @@ tr:hover{background:rgba(88,166,255,0.04)}
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <div><span class="logo">Atlas-ASX</span><div class="logo-sub">Paper Trading Dashboard</div></div>
+      <div><span class="logo">Atlas-ASX</span><div class="logo-sub" id="dashboard-mode">Paper Trading Dashboard</div></div>
       <span class="badge badge-version" id="config-version"></span>
+      <span class="badge" id="broker-badge" style="display:none"></span>
     </div>
     <div class="header-right">
       <span id="last-updated"></span>
-      <span class="pulse"></span>
+      <span class="pulse" id="connection-pulse"></span>
     </div>
   </div>
 
@@ -479,6 +480,27 @@ function renderHeader(d) {
   var tsRaw = d.generated_at || d.timestamp || '';
   var ts = new Date(tsRaw.replace(/\s*(AEST|AEDT|UTC|GMT).*$/, ''));
   document.getElementById('last-updated').innerHTML = 'Updated ' + ts.toLocaleTimeString() + ' <span style="color:var(--text-dim)">(' + relativeTime(tsRaw) + ')</span>';
+
+  // Broker mode indicator
+  var broker = d.broker || {};
+  var brokerBadge = document.getElementById('broker-badge');
+  var modeLabel = document.getElementById('dashboard-mode');
+  if (broker.is_live) {
+    modeLabel.textContent = 'LIVE Trading Dashboard';
+    modeLabel.style.color = 'var(--red)';
+    brokerBadge.textContent = '🔴 LIVE — ' + (broker.name || 'moomoo').toUpperCase();
+    brokerBadge.className = 'badge badge-rejected';
+    brokerBadge.style.display = 'inline-block';
+    document.getElementById('connection-pulse').style.background = 'var(--red)';
+  } else if (broker.name === 'moomoo') {
+    modeLabel.textContent = 'Moomoo Simulate Dashboard';
+    brokerBadge.textContent = 'MOOMOO SIM';
+    brokerBadge.className = 'badge badge-pending';
+    brokerBadge.style.display = 'inline-block';
+  } else {
+    modeLabel.textContent = 'Paper Trading Dashboard';
+    brokerBadge.style.display = 'none';
+  }
 }
 
 // ── Render: Status Bar ──

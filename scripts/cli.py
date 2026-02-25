@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Atlas-ASX CLI - Main entry point for all operations."""
+"""Atlas CLI - Main entry point for all operations."""
 
 import sys
 import os
@@ -25,10 +25,14 @@ for _stream in (sys.stdout, sys.stderr):
 import pandas as pd
 import numpy as np
 
+from markets import get_market, list_markets as list_registered_markets
 from utils.config import get_active_config, save_config_version, list_versions
-from utils.helpers import format_aud, format_pct
-from data.ingest import download_ticker, download_universe, get_asx200_tickers, cache_stats
+from utils.helpers import format_aud, format_pct, format_currency
+from data.ingest import download_ticker, download_universe, get_market_tickers, cache_stats
 from universe.builder import build_universe, load_universe, get_universe_tickers
+
+# Default market (can be overridden by --market flag)
+DEFAULT_MARKET = "asx"
 from strategies.momentum_breakout import MomentumBreakout
 from strategies.mean_reversion import MeanReversion
 from strategies.sector_rotation import SectorRotation
@@ -55,12 +59,17 @@ logger = logging.getLogger("atlas")
 
 
 def load_data(tickers, config):
-    """Load OHLCV data for tickers from cache."""
-    cache_dir = PROJECT_ROOT / config["data"]["cache_dir"]
+    """Load OHLCV data for tickers from cache (per-market or legacy)."""
+    market_id = config.get("market", DEFAULT_MARKET)
+    base_cache = PROJECT_ROOT / config["data"]["cache_dir"]
+    market_cache = base_cache / market_id
     data = {}
     for ticker in tickers:
         fname = ticker.replace(".", "_") + ".parquet"
-        path = cache_dir / fname
+        # Try per-market cache first, then legacy flat cache
+        path = market_cache / fname
+        if not path.exists():
+            path = base_cache / fname
         if path.exists():
             data[ticker] = pd.read_parquet(path)
         else:
@@ -98,12 +107,13 @@ def get_strategies(config):
     return strats
 
 
-def get_tickers():
-    """Get universe tickers or fallback."""
+def get_tickers(market_id: str = None):
+    """Get universe tickers or fallback to market profile."""
+    market_id = market_id or DEFAULT_MARKET
     try:
-        return get_universe_tickers()
+        return get_universe_tickers(market_id)
     except Exception:
-        return get_asx200_tickers()[:20]
+        return get_market_tickers(market_id)[:20]
 
 
 # ===================================================================
@@ -111,22 +121,24 @@ def get_tickers():
 # ===================================================================
 
 def cmd_ingest(args):
-    config = get_active_config()
-    tickers = get_tickers()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    tickers = get_tickers(market_id)
     years = config["data"]["history_years"]
     end = datetime.now()
     start = end - timedelta(days=years * 365)
-    logger.info("Downloading %d tickers from %s to %s", len(tickers), start.date(), end.date())
-    results = download_universe(tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
-    stats = cache_stats()
-    print("\nIngestion complete")
+    logger.info("Downloading %d tickers for %s from %s to %s", len(tickers), market_id, start.date(), end.date())
+    results = download_universe(tickers, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"), market_id=market_id)
+    stats = cache_stats(market_id)
+    print("\nIngestion complete [%s]" % market_id)
     print("  Tickers downloaded: %d" % len(results))
     file_count = stats.get("file_count", stats.get("total_files", 0))
     print("  Cache: %d files, %.1f MB" % (file_count, stats.get("total_size_mb", 0)))
 
 
 def cmd_universe(args):
-    config = get_active_config()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
     print("Building universe with filters:")
     print("  Method: %s" % config["universe"]["method"])
     print("  Top N: %d" % config["universe"]["top_n"])
@@ -141,8 +153,9 @@ def cmd_universe(args):
 
 
 def cmd_backtest(args):
-    config = get_active_config()
-    tickers = get_tickers()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    tickers = get_tickers(market_id)
     data = load_data(tickers, config)
     if not data:
         print("ERROR: No data available. Run 'ingest' first.")
@@ -153,7 +166,7 @@ def cmd_backtest(args):
     print("  Step: %d days" % config["backtest"]["step_days"])
     print()
     strategies = get_strategies(config)
-    engine = BacktestEngine(config)
+    engine = BacktestEngine(config, market_id=market_id)
     result = engine.run_walkforward(data, strategies)
     metrics = result.metrics if hasattr(result, "metrics") else result.get("metrics", {})
     trades = result.trades if hasattr(result, "trades") else result.get("trades", [])
@@ -189,15 +202,16 @@ def cmd_backtest(args):
 
 
 def cmd_plan(args):
-    config = get_active_config()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
-    tickers = get_tickers()
+    tickers = get_tickers(market_id)
     data = load_data(tickers, config)
     if not data:
         print("ERROR: No data available. Run 'ingest' first.")
         return
     prices = get_latest_prices(data)
-    portfolio = PaperPortfolio(config)
+    portfolio = PaperPortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     decision_journal = DecisionJournal()
     halted, dd = portfolio.check_daily_drawdown(prices)
@@ -229,9 +243,10 @@ def cmd_plan(args):
 
 
 def cmd_paper_run(args):
-    config = get_active_config()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
-    portfolio = PaperPortfolio(config)
+    portfolio = PaperPortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     ledger = TradeLedger()
     mistake_log = MistakeLog()
@@ -242,7 +257,7 @@ def cmd_paper_run(args):
     if plan["status"] != "APPROVED":
         print("Plan status is '%s'. Need APPROVED to execute." % plan["status"])
         return
-    tickers = get_tickers()
+    tickers = get_tickers(market_id)
     data = load_data(tickers, config)
     prices = get_latest_prices(data)
     print("\nExecuting approved plan for %s..." % trade_date)
@@ -286,9 +301,10 @@ def cmd_paper_run(args):
 
 
 def cmd_approve(args):
-    config = get_active_config()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
-    portfolio = PaperPortfolio(config)
+    portfolio = PaperPortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.approve_plan(trade_date)
     if plan:
@@ -298,14 +314,16 @@ def cmd_approve(args):
 
 
 def cmd_status(args):
-    config = get_active_config()
-    tickers = get_tickers()
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    tickers = get_tickers(market_id)
     data = load_data(tickers, config) if tickers else {}
     prices = get_latest_prices(data) if data else {}
-    portfolio = PaperPortfolio(config)
+    portfolio = PaperPortfolio(config, market_id=market_id)
     summary = portfolio.portfolio_summary(prices)
+    market = get_market(market_id)
     print("\n" + "=" * 50)
-    print("  ATLAS-ASX STATUS")
+    print("  ATLAS STATUS [%s]" % market.display_name)
     print("=" * 50)
     print("\nConfig: %s" % config["version"])
     print("Date: %s" % datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -321,12 +339,12 @@ def cmd_status(args):
             print("   %s  entry=$%.2f  now=$%.2f  PnL=%s  stop=$%.2f" % (
                 p["ticker"].ljust(8), p["entry_price"], p["current_price"],
                 format_aud(p["unrealized_pnl"]), p["stop_price"]))
-    stats = cache_stats()
+    stats = cache_stats(market_id)
     print("\nDATA:")
     file_count = stats.get("file_count", stats.get("total_files", 0))
     print("   Cache: %d files, %.1f MB" % (file_count, stats.get("total_size_mb", 0)))
     try:
-        uni = get_universe_tickers()
+        uni = get_universe_tickers(market_id)
         print("   Universe: %d tickers" % len(uni))
     except Exception:
         print("   Universe: Not built yet")
@@ -352,8 +370,349 @@ def cmd_review(args):
     run_annealing_cycle()
 
 
+def cmd_markets(args):
+    """List all available markets."""
+    print("\n" + "=" * 50)
+    print("  AVAILABLE MARKETS")
+    print("=" * 50)
+    for mid in list_registered_markets():
+        m = get_market(mid)
+        print(f"\n  {m.market_id:10s}  {m.display_name}")
+        print(f"             Country:    {m.country}")
+        print(f"             Currency:   {m.currency}")
+        print(f"             Benchmark:  {m.benchmark_ticker}")
+        print(f"             Tickers:    {len(m.get_universe_tickers())}")
+        print(f"             Suffix:     '{m.yfinance_suffix}' (yfinance)")
+    print()
+
+
+# ===================================================================
+# BROKER-AWARE COMMANDS
+# ===================================================================
+
+def _get_broker(market_id: str = None):
+    """Get configured broker instance."""
+    market_id = market_id or DEFAULT_MARKET
+    config = get_active_config(market_id)
+    from brokers.registry import get_broker
+    broker = get_broker(market_id, config)
+    broker.connect()
+    return broker
+
+
+def cmd_broker_status(args):
+    """Show broker connection and account status."""
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    broker_name = config.get("trading", {}).get("broker", "paper")
+    mode = config.get("trading", {}).get("mode", "paper")
+
+    print("\n" + "=" * 55)
+    print("  BROKER STATUS")
+    print("=" * 55)
+    print("\n  Config:")
+    print("    Broker:     %s" % broker_name)
+    print("    Mode:       %s" % mode)
+
+    if broker_name == "moomoo":
+        moomoo_cfg = config.get("moomoo", {})
+        print("    OpenD:      %s:%s" % (moomoo_cfg.get("opend_host"), moomoo_cfg.get("opend_port")))
+        print("    Firm:       %s" % moomoo_cfg.get("security_firm"))
+        print("    TrdEnv:     %s" % moomoo_cfg.get("trd_env"))
+
+    try:
+        broker = _get_broker(market_id)
+        print("\n  Connection:   ✅ %s" % broker)
+
+        info = broker.get_account_info()
+        print("\n  Account:")
+        print("    Equity:     %s" % format_aud(info.equity))
+        print("    Cash:       %s" % format_aud(info.cash))
+        print("    Mkt Value:  %s" % format_aud(info.market_value))
+        print("    Buy Power:  %s" % format_aud(info.buying_power))
+        print("    PnL:        %s (%.1f%%)" % (format_aud(info.total_pnl), info.total_pnl_pct))
+        print("    Positions:  %d" % info.num_positions)
+        print("    Currency:   %s" % info.currency)
+        if info.halted:
+            print("    ⚠️  HALTED:  %s" % info.halt_reason)
+
+        positions = broker.get_positions()
+        if positions:
+            print("\n  Positions:")
+            for p in positions:
+                pnl_str = "%+.2f" % p.unrealized_pnl
+                print("    %s  %d @ $%.2f  now $%.2f  PnL %s" % (
+                    p.ticker.ljust(8), p.shares, p.entry_price,
+                    p.current_price, pnl_str))
+
+        broker.disconnect()
+    except Exception as e:
+        print("\n  Connection:   ❌ Failed: %s" % e)
+
+
+def cmd_live_run(args):
+    """Execute approved plan via live broker with safety gates."""
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    mode = config.get("trading", {}).get("mode", "paper")
+    broker_name = config.get("trading", {}).get("broker", "paper")
+
+    if broker_name == "paper":
+        print("ERROR: trading.broker is 'paper'. Set to 'moomoo' for live execution.")
+        return
+    if mode not in ("live", "paper"):
+        print("ERROR: trading.mode must be 'live' or 'paper'")
+        return
+
+    trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
+
+    # Load plan
+    portfolio = PaperPortfolio(config, market_id=market_id)
+    plan_gen = TradePlanGenerator(portfolio, config)
+    plan = plan_gen.load_plan(trade_date)
+    if not plan:
+        print("ERROR: No plan found for %s. Run 'plan' first." % trade_date)
+        return
+    if plan["status"] != "APPROVED":
+        print("Plan status is '%s'. Need APPROVED to execute." % plan["status"])
+        return
+
+    safety = config.get("trading", {}).get("live_safety", {})
+
+    # Safety gate 1: dry run preview
+    print("\n" + "=" * 55)
+    print("  LIVE EXECUTION PREVIEW — %s" % trade_date)
+    print("  Broker: %s | Mode: %s" % (broker_name, mode))
+    print("=" * 55)
+
+    entries = plan.get("proposed_entries", [])
+    exits = plan.get("proposed_exits", [])
+    print("\n  Exits:   %d" % len(exits))
+    for ex in exits:
+        print("    SELL %s — %s" % (ex.get("ticker"), ex.get("reason", "planned")))
+    print("  Entries: %d" % len(entries))
+    for e in entries:
+        value = e["entry_price"] * e["position_size"]
+        print("    BUY  %s  %d @ $%.2f = $%.2f  [%s]" % (
+            e["ticker"], e["position_size"], e["entry_price"],
+            value, e["strategy"]))
+
+    # Safety gate 2: max daily orders
+    max_orders = safety.get("max_daily_orders", 10)
+    total_orders = len(entries) + len(exits)
+    if total_orders > max_orders:
+        print("\n⚠️  %d orders exceeds max_daily_orders (%d). Aborting." % (total_orders, max_orders))
+        return
+
+    # Safety gate 3: require double approval for live
+    if mode == "live" and safety.get("require_double_approval", True):
+        print("\n⚠️  LIVE MODE — This will place REAL orders with REAL money.")
+        confirm = input("  Type 'EXECUTE' to confirm: ").strip()
+        if confirm != "EXECUTE":
+            print("  Aborted.")
+            return
+
+    # Connect broker and execute
+    from brokers.registry import get_broker
+    broker = get_broker(market_id, config)
+    if not broker.connect():
+        print("ERROR: Failed to connect to broker")
+        return
+
+    try:
+        print("\nExecuting via %s..." % broker.name)
+        ledger = TradeLedger()
+        mistake_log = MistakeLog()
+
+        # Get real prices if broker supports it
+        all_tickers = [e.get("ticker") for e in entries] + [ex.get("ticker") for ex in exits]
+        all_tickers = [t for t in all_tickers if t]
+        broker_prices = broker.get_prices(all_tickers)
+
+        # Execute exits first
+        for exit_rec in exits:
+            ticker = exit_rec.get("ticker")
+            if not ticker:
+                continue
+            price = broker_prices.get(ticker, exit_rec.get("entry_price", 0))
+            reason = exit_rec.get("reason", "planned_exit")
+
+            if broker.is_live:
+                # Live: place sell order via broker
+                pos_info = next((p for p in broker.get_positions() if p.ticker == ticker), None)
+                if not pos_info:
+                    print("  ⚠️  No position for %s — skipping exit" % ticker)
+                    continue
+                result = broker.sell(ticker, pos_info.shares, price)
+                print("  EXIT %s: %s (order_id=%s)" % (ticker, result.status.value, result.order_id))
+            else:
+                # Paper broker: direct execution
+                result = broker.sell(ticker, 0, price, remark=reason, trade_date=trade_date)
+                if result.success:
+                    ledger.record_exit(result.raw)
+                    print("  EXIT %s: PnL %s" % (ticker, format_aud(result.raw.get("pnl", 0))))
+
+        # Execute entries
+        for entry in entries:
+            ticker = entry.get("ticker")
+            if not ticker:
+                continue
+            price = broker_prices.get(ticker, entry["entry_price"])
+
+            if broker.is_live:
+                # Live: place buy order via broker
+                result = broker.buy(
+                    ticker, entry["position_size"], price,
+                    remark="atlas_%s_%s" % (entry["strategy"], trade_date),
+                )
+                print("  ENTRY %s: %s %d @ $%.2f (order_id=%s)" % (
+                    ticker, result.status.value, entry["position_size"],
+                    price, result.order_id))
+            else:
+                # Paper broker: direct execution
+                result = broker.place_order(
+                    ticker, side=__import__('broker.base', fromlist=['OrderSide']).OrderSide.BUY,
+                    qty=entry["position_size"], price=price,
+                    strategy=entry["strategy"], stop_price=entry["stop_price"],
+                    take_profit=entry.get("take_profit"), confidence=entry["confidence"],
+                    rationale=entry["rationale"], sector=entry.get("sector", "Unknown"),
+                    trade_date=trade_date,
+                )
+                if result.success:
+                    ledger.record_entry(result.raw)
+                    print("  ENTRY %s: %d @ %s" % (ticker, result.filled_qty,
+                          format_aud(result.fill_price)))
+
+        # Post-execution account check
+        info = broker.get_account_info()
+        print("\n  Post-execution:")
+        print("    Equity: %s" % format_aud(info.equity))
+        print("    Cash:   %s" % format_aud(info.cash))
+        print("    PnL:    %s (%.1f%%)" % (format_aud(info.total_pnl), info.total_pnl_pct))
+
+    finally:
+        broker.disconnect()
+
+
+def cmd_orders(args):
+    """Show open orders from broker."""
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    broker = _get_broker(market_id)
+    try:
+        orders = broker.get_open_orders()
+        print("\n" + "=" * 55)
+        print("  OPEN ORDERS")
+        print("=" * 55)
+        if not orders:
+            print("\n  No open orders.")
+            return
+        for o in orders:
+            print("  %s  %s %s  %d @ $%.2f  filled=%d  status=%s" % (
+                o.order_id[:12], o.side.value, o.ticker,
+                o.requested_qty, o.requested_price,
+                o.filled_qty, o.status.value))
+    finally:
+        broker.disconnect()
+
+
+def cmd_setup_secrets(args):
+    """Interactive secure credential setup."""
+    from brokers.secrets import setup_secrets_interactive
+    setup_secrets_interactive()
+
+
+def cmd_halt(args):
+    """Emergency: cancel all open orders."""
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    broker = _get_broker(market_id)
+    try:
+        print("\n⚠️  EMERGENCY HALT — Cancelling all open orders...")
+        if broker.is_live:
+            confirm = input("  Type 'HALT' to confirm: ").strip()
+            if confirm != "HALT":
+                print("  Aborted.")
+                return
+        results = broker.cancel_all_orders()
+        for r in results:
+            print("  %s: %s" % (r.status.value, r.message))
+        print("\n  Done. Verify with 'atlas orders'.")
+    finally:
+        broker.disconnect()
+
+
+def cmd_sync(args):
+    """Reconcile Atlas paper state with live broker positions."""
+    market_id = getattr(args, "market", DEFAULT_MARKET)
+    config = get_active_config(market_id)
+    from brokers.registry import get_broker
+    broker = get_broker(market_id, config)
+    if not broker.connect():
+        print("ERROR: Failed to connect to broker")
+        return
+
+    try:
+        # Get broker truth
+        broker_positions = broker.get_positions()
+        broker_info = broker.get_account_info()
+
+        # Get Atlas paper state
+        paper = PaperPortfolio(config, market_id=market_id)
+        tickers = [p.ticker for p in paper.positions]
+        paper_summary = paper.portfolio_summary()
+
+        print("\n" + "=" * 55)
+        print("  POSITION RECONCILIATION")
+        print("=" * 55)
+
+        print("\n  Atlas Paper State:")
+        print("    Equity:    %s" % format_aud(paper_summary["equity"]))
+        print("    Cash:      %s" % format_aud(paper_summary["cash"]))
+        print("    Positions: %d" % paper_summary["num_open"])
+
+        print("\n  Broker State:")
+        print("    Equity:    %s" % format_aud(broker_info.equity))
+        print("    Cash:      %s" % format_aud(broker_info.cash))
+        print("    Positions: %d" % broker_info.num_positions)
+
+        # Compare positions
+        atlas_tickers = {p.ticker for p in paper.positions}
+        broker_tickers = {p.ticker for p in broker_positions}
+
+        only_atlas = atlas_tickers - broker_tickers
+        only_broker = broker_tickers - atlas_tickers
+        common = atlas_tickers & broker_tickers
+
+        if only_atlas:
+            print("\n  ⚠️  In Atlas but NOT in broker:")
+            for t in sorted(only_atlas):
+                print("    %s" % t)
+        if only_broker:
+            print("\n  ⚠️  In broker but NOT in Atlas:")
+            for t in sorted(only_broker):
+                print("    %s" % t)
+        if common:
+            print("\n  ✅ Matching positions:")
+            for t in sorted(common):
+                ap = next(p for p in paper.positions if p.ticker == t)
+                bp = next(p for p in broker_positions if p.ticker == t)
+                match = "✅" if ap.shares == bp.shares else "⚠️  QTY MISMATCH"
+                print("    %s  atlas=%d  broker=%d  %s" % (t, ap.shares, bp.shares, match))
+
+        if not only_atlas and not only_broker:
+            print("\n  ✅ All positions reconciled.")
+
+    finally:
+        broker.disconnect()
+
+
 def main():
-    parser = argparse.ArgumentParser(prog="atlas", description="Atlas-ASX Daily Swing Trading Lab")
+    parser = argparse.ArgumentParser(prog="atlas", description="Atlas Multi-Market Swing Trading Lab")
+    # Global --market flag
+    parser.add_argument(
+        "-m", "--market", type=str, default=DEFAULT_MARKET,
+        help="Market to operate on (default: %(default)s). Available: " +
+             ", ".join(list_registered_markets()),
+    )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     subparsers.add_parser("ingest", help="Download/update market data")
     subparsers.add_parser("universe", help="Build trading universe")
@@ -368,6 +727,15 @@ def main():
     p = subparsers.add_parser("ledger", help="Show trade ledger")
     p.add_argument("--days", type=int, default=30)
     subparsers.add_parser("review", help="Run self-annealing review")
+    subparsers.add_parser("markets", help="List available markets")
+    # Broker-aware commands
+    subparsers.add_parser("broker", help="Show broker connection & account status")
+    p = subparsers.add_parser("live-run", help="Execute approved plan via live broker")
+    p.add_argument("--date", type=str, default=None)
+    subparsers.add_parser("orders", help="Show open orders from broker")
+    subparsers.add_parser("halt", help="Emergency: cancel all open orders")
+    subparsers.add_parser("sync", help="Reconcile Atlas state with broker positions")
+    subparsers.add_parser("setup-secrets", help="Securely configure broker credentials")
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -377,6 +745,10 @@ def main():
         "ingest": cmd_ingest, "universe": cmd_universe, "backtest": cmd_backtest,
         "plan": cmd_plan, "approve": cmd_approve, "paper-run": cmd_paper_run,
         "status": cmd_status, "ledger": cmd_ledger, "review": cmd_review,
+        "markets": cmd_markets,
+        "broker": cmd_broker_status, "live-run": cmd_live_run,
+        "orders": cmd_orders, "halt": cmd_halt, "sync": cmd_sync,
+        "setup-secrets": cmd_setup_secrets,
     }
     cmd_func = commands.get(args.command)
     if cmd_func:

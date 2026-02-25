@@ -1,0 +1,335 @@
+{
+  "version": "v9.2_reoptimized_moomoo_fees",
+  "project": "Atlas",
+  "description": "Phase 8B: Universe 159, 8C: Sector rotation (min_conf=0.80), 8D: Dynamic position sizing. Phase 9 cointegration filter tested but disabled (net negative impact).",
+  "universe": {
+    "method": "top_liquid",
+    "top_n": 200,
+    "min_median_daily_value": 1000000,
+    "min_price": 1.0,
+    "min_market_cap": 300000000,
+    "exclusions": [],
+    "benchmark_ticker": "IOZ.AX"
+  },
+  "risk": {
+    "starting_equity": 5000,
+    "max_risk_per_trade_pct": 0.005,
+    "max_open_positions": 10,
+    "max_sector_concentration": 2,
+    "max_daily_drawdown_pct": 0.02,
+    "require_stop_loss": true,
+    "require_planned_exit": true,
+    "min_confidence": 0.75,
+    "trailing_stop": {
+      "enabled": false,
+      "activation_pct": 0.02,
+      "atr_multiplier": 1.5,
+      "_note": "Tested 2026-02-18: HURTS full-universe performance. Best on top-25 large-caps only. See backtest/results/trailing_stop_validation.json"
+    }
+  },
+  "trading": {
+    "mode": "paper",
+    "broker": "paper",
+    "holding_period_min": 2,
+    "holding_period_max": 20,
+    "data_frequency": "daily",
+    "order_type": "market_on_open",
+    "approval_required": true,
+    "live_safety": {
+      "require_double_approval": true,
+      "max_order_value": 2000,
+      "max_daily_orders": 10,
+      "dry_run_first": true
+    }
+  },
+  "moomoo": {
+    "opend_host": "127.0.0.1",
+    "opend_port": 11111,
+    "security_firm": "FUTUAU",
+    "trd_market": "AU",
+    "trd_env": "SIMULATE",
+    "currency": "AUD",
+    "order_type": "NORMAL",
+    "time_in_force": "DAY",
+    "_credentials": "Managed via ~/.atlas-secrets.json or env vars. Run: atlas setup-secrets"
+  },
+  "fees": {
+    "commission_per_trade": 3.0,
+    "commission_pct": 0.0003,
+    "slippage_pct": 0.001,
+    "flat_fee_threshold": 10000.0,
+    "min_position_value": 500.0,
+    "_broker": "moomoo_au",
+    "_fee_notes": "Moomoo AU: Commission 0.01% (min $1/order) + Platform Fee 0.02% (min $2/order) = 0.03% total (min $3/order). GST inclusive. All Atlas positions under $10K so effectively $3 flat per trade."
+  },
+  "strategies": {
+    "momentum_breakout": {
+      "enabled": false,
+      "lookback_days": 20,
+      "volume_confirmation_mult": 1.5,
+      "atr_period": 14,
+      "atr_stop_mult": 3.0,
+      "trailing_stop_atr_mult": 3.5,
+      "max_hold_days": 15
+    },
+    "mean_reversion": {
+      "enabled": true,
+      "rsi_period": 14,
+      "rsi_oversold": 35,
+      "zscore_lookback": 20,
+      "zscore_entry": -2.0,
+      "atr_period": 14,
+      "atr_stop_mult": 2.5,
+      "profit_target_atr_mult": 1.5,
+      "max_hold_days": 7,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 0.5,
+        "surge_threshold": 1.5,
+        "surge_boost": 0.0,
+        "dry_penalty": 0.0
+      },
+      "earnings_blackout": {
+        "enabled": true,
+        "days_before": 5,
+        "days_after": 1
+      },
+      "breadth": {
+        "enabled": true,
+        "metric": "pct_above_50ma",
+        "low_threshold": 48.0,
+        "high_threshold": 58.0,
+        "low_boost": 0.015,
+        "high_penalty": 0.015
+      },
+      "relative_strength": {
+        "enabled": false,
+        "metric": "rs_percentile",
+        "low_threshold": 25.0,
+        "high_threshold": 50.0,
+        "low_penalty": 0.0,
+        "high_boost": 0.0
+      },
+      "cointegration_filter": {
+        "enabled": false,
+        "confirm_boost": 0.1,
+        "contradict_penalty": 0.0,
+        "zscore_confirm_threshold": 1.5,
+        "max_pairs_per_ticker": 3,
+        "min_correlation": 0.7,
+        "coint_pvalue": 0.01,
+        "min_half_life": 5,
+        "max_half_life": 60,
+        "max_hurst": 0.4,
+        "zscore_lookback": 60,
+        "cache_max_age_days": 7
+      }
+    },
+    "trend_following": {
+      "enabled": true,
+      "fast_ma": 20,
+      "slow_ma": 50,
+      "pullback_pct": 0.02,
+      "atr_period": 14,
+      "atr_stop_mult": 3.5,
+      "trailing_stop_atr_mult": 4.0,
+      "max_hold_days": 25,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 0.5,
+        "boost_threshold": 1.5,
+        "boost_amount": 0.1,
+        "penalty_amount": 0.05
+      },
+      "breadth": {
+        "enabled": true,
+        "metric": "pct_above_50ma",
+        "low_threshold": 48.0,
+        "high_threshold": 58.0,
+        "low_boost": 0.03,
+        "high_penalty": 0.03
+      },
+      "relative_strength": {
+        "enabled": true,
+        "metric": "rs_percentile",
+        "low_threshold": 50.0,
+        "high_threshold": 60.0,
+        "low_penalty": 0.05,
+        "high_boost": 0.0
+      }
+    },
+    "sector_rotation": {
+      "enabled": false,
+      "sector_momentum_period": 60,
+      "top_sectors": 3,
+      "bottom_sectors": 2,
+      "rebalance_days": 20,
+      "atr_period": 14,
+      "atr_stop_mult": 3.0,
+      "trailing_stop_atr_mult": 3.5,
+      "max_hold_days": 25,
+      "min_sector_stocks": 3,
+      "stock_selection": "rs_rank",
+      "stocks_per_sector": 2,
+      "breadth": {
+        "enabled": true,
+        "metric": "pct_above_50ma",
+        "low_threshold": 48.0,
+        "high_threshold": 58.0,
+        "low_boost": 0.02,
+        "high_penalty": 0.02
+      },
+      "min_confidence": 0.8
+    },
+    "short_term_mr": {
+      "enabled": false,
+      "rsi_period": 2,
+      "rsi_oversold": 10,
+      "ibs_oversold": 0.2,
+      "sma_period": 5,
+      "atr_period": 14,
+      "atr_stop_mult": 1.5,
+      "profit_target_atr_mult": 1.0,
+      "max_hold_days": 5,
+      "rsi_overbought_exit": 70,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 0.5,
+        "surge_threshold": 2.0,
+        "surge_boost": 0.1
+      },
+      "earnings_blackout": {
+        "enabled": true,
+        "days_before": 5,
+        "days_after": 1
+      }
+    },
+    "bb_squeeze": {
+      "enabled": false,
+      "bb_period": 20,
+      "bb_std": 3.0,
+      "kc_period": 20,
+      "kc_atr_mult": 2.0,
+      "momentum_period": 30,
+      "atr_period": 14,
+      "atr_stop_mult": 1.0,
+      "trailing_stop_atr_mult": 3.0,
+      "max_hold_days": 20,
+      "vol_surge_threshold": 1.5,
+      "earnings_blackout": {
+        "enabled": true,
+        "days_before": 5,
+        "days_after": 1
+      }
+    },
+    "opening_gap": {
+      "enabled": true,
+      "gap_threshold": -0.01,
+      "ibs_confirm": 0.35,
+      "rsi14_max": 25,
+      "vol_surge_threshold": 1.2,
+      "atr_period": 14,
+      "atr_stop_mult": 2.0,
+      "sma_exit_period": 5,
+      "ibs_exit_threshold": 0.8,
+      "max_hold_days": 15
+    },
+    "mtf_momentum": {
+      "enabled": false,
+      "weekly_sma_period": 20,
+      "weekly_rsi_period": 14,
+      "weekly_rsi_min": 50,
+      "daily_rsi_period": 14,
+      "daily_rsi_max": 40,
+      "daily_sma_period": 20,
+      "pullback_sma_pct": 0.03,
+      "atr_period": 14,
+      "atr_stop_mult": 2.5,
+      "trailing_stop_atr_mult": 3.0,
+      "max_hold_days": 15,
+      "use_macd_filter": true,
+      "vol_min_ratio": 0.5
+    },
+    "dividend_capture": {
+      "enabled": false,
+      "days_before_ex": 10,
+      "days_after_ex": 5,
+      "min_franking_pct": 75,
+      "min_grossed_up_yield": 1.2,
+      "require_uptrend": false,
+      "rsi_max": 70,
+      "sma_trend_period": 50,
+      "atr_period": 14,
+      "atr_stop_mult": 3.5,
+      "max_hold_days": 20
+    }
+  },
+  "backtest": {
+    "train_window_days": 252,
+    "test_window_days": 63,
+    "step_days": 21,
+    "min_history_days": 60
+  },
+  "data": {
+    "source": "yfinance",
+    "history_years": 3,
+    "cache_dir": "data/cache",
+    "raw_dir": "data/raw",
+    "processed_dir": "data/processed"
+  },
+  "annealing": {
+    "max_changes_per_cycle": 2,
+    "min_oos_sharpe_improvement": 0.05,
+    "max_drawdown_increase_pct": 0.01,
+    "changelog_file": "journal/changelog.json"
+  },
+  "dynamic_sizing": {
+    "enabled": false,
+    "method": "confidence_scaled",
+    "description": "Scales position size based on signal confidence and volatility regime",
+    "base_risk_pct": 0.005,
+    "min_risk_pct": 0.003,
+    "max_risk_pct": 0.008,
+    "confidence_scaling": {
+      "enabled": true,
+      "min_confidence": 0.75,
+      "max_confidence": 0.95,
+      "description": "Linear scale: conf 0.75->0.3% risk, conf 0.95->0.8% risk"
+    },
+    "volatility_scaling": {
+      "enabled": true,
+      "metric": "atr_pct",
+      "low_vol_threshold": 0.02,
+      "high_vol_threshold": 0.05,
+      "low_vol_mult": 1.2,
+      "high_vol_mult": 0.7,
+      "description": "Adjusts size based on stock volatility relative to price"
+    },
+    "equity_curve_scaling": {
+      "enabled": true,
+      "lookback_trades": 10,
+      "drawdown_threshold": 0.03,
+      "drawdown_multiplier": 0.5,
+      "description": "Reduces sizing during equity drawdowns"
+    }
+  },
+  "fee_aware_filter": {
+    "enabled": false,
+    "reward_risk_ratio": 1.4,
+    "min_expected_pnl": 6.0,
+    "_comment": "Filter signals where expected net PnL (after round-trip commission) < min_expected_pnl. RRR=1.4 matches observed avg_winner/avg_loser ratio. min_expected_pnl=6.0 = round-trip commission ($3 in + $3 out).",
+    "_finding": "Phase 3 test (2026-02-20): Filter removed 34/199 trades (17%) but reduced CAGR 8.34%->7.63% and Sharpe 0.522->0.452. PF improved slightly (1.639->1.678). Removed trades had avg net contribution $2.24 (below $4.36 avg but still positive). Filter not net beneficial for this system: existing quality filters (RS, breadth, min_confidence) already screen marginal signals. Disabled. Alternative: raise min_position_value to reduce commission-drag percentage."
+  },
+  "regime_filter": {
+    "enabled": false,
+    "benchmark_ma_period": 50,
+    "breadth_bull_threshold": 50.0,
+    "breadth_bear_threshold": 40.0,
+    "bull_scale": 1.0,
+    "neutral_scale": 0.75,
+    "bear_scale": 0.5,
+    "_comment": "3-state regime: Bull (IOZ>50MA & breadth>50%)=1.0x, Neutral=0.75x, Bear (IOZ<50MA & breadth<40%)=0.5x position scale",
+    "_finding": "Phase 3 test (2026-02-20): Filter removed 91/199 trades (46%). CAGR 8.34%->3.15%, Sharpe 0.522->-0.071. Over-restrictive: ASX spends majority of time in NEUTRAL regime (mixed signals). 0.75x neutral scale causes marginal trades to fail min_position_value. Bear regime = 0 trades (0.5x always below $500 min). Best trades occur in neutral/mixed markets - removing them is harmful. Disabled. Regime injected as INFO features in signals for future ML use (Phase 5)."
+  },
+  "market": "asx"
+}

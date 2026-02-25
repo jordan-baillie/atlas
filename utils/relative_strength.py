@@ -1,4 +1,4 @@
-"""Relative Strength Ranking for Atlas-ASX.
+"""Relative Strength Ranking for Atlas.
 
 Phase 7B: Compute relative strength metrics ranking each stock's
 performance against the full universe. Helps identify which trends

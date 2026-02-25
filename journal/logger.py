@@ -65,6 +65,7 @@ class DecisionJournal:
             "confidence": signal.confidence,
             "rationale": signal.rationale,
             "features": getattr(signal, "features", {}),
+            "market_id": getattr(signal, "market_id", ""),
             "action": action,
             "action_reason": reason,
             "config_version": config_version,

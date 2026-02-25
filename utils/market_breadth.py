@@ -1,4 +1,4 @@
-"""Market Breadth Indicators for Atlas-ASX.
+"""Market Breadth Indicators for Atlas.
 
 Phase 7C: Compute market-wide breadth metrics from universe OHLCV data.
 These indicators measure overall market health and participation.

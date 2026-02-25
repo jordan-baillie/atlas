@@ -1,17 +1,18 @@
-"""Atlas-ASX Earnings Calendar Utility
+"""Atlas Earnings Calendar Utility
 =====================================
-Fetches and caches earnings dates for ASX tickers to support
+Fetches and caches earnings dates for tickers to support
 earnings blackout windows in trading strategies.
 
 Two tiers of data:
   1. Precise dates  - from yfinance earnings_dates / calendar
   2. Estimated dates - derived from income_stmt FY-end + fixed offset
-                       (covers historical periods yfinance won't return)
 
 Blackout windows:
   Precise   : ±(days_before, days_after) around the known date (default 5/1)
   Estimated : wider window (default 20 before / 15 after) to cover
-              the realistic ASX reporting range (~30-65 days post FY-end)
+              the realistic reporting range
+
+Works with any market supported by yfinance.
 
 Usage:
     from utils.earnings import is_near_earnings, get_next_earnings_date
@@ -30,7 +31,7 @@ import yfinance as yf
 logger = logging.getLogger(__name__)
 
 # Cache directory
-_CACHE_DIR = Path("/a0/usr/projects/atlas-asx/data/cache/earnings")
+_CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "cache" / "earnings"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # In-memory cache

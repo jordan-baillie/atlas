@@ -1,5 +1,5 @@
 """
-Atlas-ASX Short-Term Mean Reversion Strategy
+Atlas Short-Term Mean Reversion Strategy
 =============================================
 Generates long signals when a stock shows extreme short-term oversold
 conditions using RSI(2) and Internal Bar Strength (IBS), expecting

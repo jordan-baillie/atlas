@@ -1,0 +1,20 @@
+{
+  "name": "atlas-pi-ops",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Pi package for Atlas research, validation, and paper-trading operations.",
+  "keywords": ["pi-package", "atlas", "trading", "automation"],
+  "scripts": {
+    "build": "echo 'No build step (Pi loads TS via jiti)'",
+    "check": "echo 'Add tsc/eslint later when implementation solidifies'"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@sinclair/typebox": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions/*/src/index.ts"],
+    "skills": ["./skills"]
+  }
+}

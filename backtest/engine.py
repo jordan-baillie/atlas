@@ -1,5 +1,5 @@
 """
-Atlas-ASX Walk-Forward Backtesting Engine
+Atlas Walk-Forward Backtesting Engine
 ==========================================
 Simulates strategy execution over historical data using walk-forward
 analysis to avoid look-ahead bias.
@@ -60,7 +60,7 @@ class BacktestResult:
         """Return a human-readable summary of backtest results."""
         lines = [
             "=" * 60,
-            "ATLAS-ASX BACKTEST RESULTS",
+            "ATLAS BACKTEST RESULTS",
             "=" * 60,
             f"Total Trades:    {self.metrics.get('total_trades', 0)}",
             f"Total P&L:       ${self.metrics.get('total_pnl', 0):,.2f}",
@@ -74,7 +74,7 @@ class BacktestResult:
             f"Exposure:        {self.metrics.get('exposure', 0)*100:.1f}%",
             f"Final Equity:    ${self.metrics.get('final_equity', 0):,.2f}",
             "-" * 60,
-            "BENCHMARK (Buy & Hold IOZ.AX)",
+            "BENCHMARK (Buy & Hold)",
             "-" * 60,
             f"CAGR:            {self.benchmark_metrics.get('cagr', 0)*100:.2f}%",
             f"Max Drawdown:    {self.benchmark_metrics.get('max_drawdown', 0)*100:.2f}%",
@@ -86,10 +86,11 @@ class BacktestResult:
 
 
 class BacktestEngine:
-    """Walk-forward backtesting engine for Atlas-ASX strategies."""
+    """Walk-forward backtesting engine for Atlas strategies."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], market_id: Optional[str] = None):
         self.config = config
+        self.market_id = market_id or config.get("market", "asx")
         self.risk_config = config.get("risk", {})
         self.fees_config = config.get("fees", {})
         self.backtest_config = config.get("backtest", {})
@@ -135,10 +136,21 @@ class BacktestEngine:
         self.fee_aware_rrr = _faf.get("reward_risk_ratio", 1.5)  # default reward:risk if no TP
         self.fee_aware_min_pnl = _faf.get("min_expected_pnl", 0.0)  # min expected net PnL
 
-        # Benchmark
-        self.benchmark_ticker = config.get("universe", {}).get(
-            "benchmark_ticker", "IOZ.AX"
-        )
+        # Benchmark — use config value, fall back to market profile
+        self.benchmark_ticker = config.get("universe", {}).get("benchmark_ticker")
+        if not self.benchmark_ticker:
+            try:
+                from markets import get_market
+                self.benchmark_ticker = get_market(self.market_id).benchmark_ticker
+            except (ImportError, KeyError):
+                self.benchmark_ticker = "IOZ.AX"
+
+        # Risk-free rate from market profile
+        try:
+            from markets import get_market
+            self._risk_free_rate = get_market(self.market_id).risk_free_rate
+        except (ImportError, KeyError):
+            self._risk_free_rate = 0.04
 
         logger.info(
             f"BacktestEngine initialized: train={self.train_window}, "
@@ -480,7 +492,7 @@ class BacktestEngine:
                 )
 
         # --- Phase 3: Simple Regime Filter (3-state: Bull/Neutral/Bear) ---
-        # Uses IOZ.AX MA slope + market breadth pct_above_200ma to scale position sizes.
+        # Uses benchmark MA slope + market breadth pct_above_200ma to scale position sizes.
         # Bull  (both signals positive): full position size (scale=1.0)
         # Neutral (mixed signals):       reduced position size (scale=0.75)
         # Bear  (both signals negative): half position size (scale=0.5)
@@ -495,7 +507,7 @@ class BacktestEngine:
             _rf_bull_scale = _rf_cfg.get("bull_scale", 1.0)
             _rf_neutral_scale = _rf_cfg.get("neutral_scale", 0.75)
             _rf_bear_scale = _rf_cfg.get("bear_scale", 0.5)
-            # Signal 1: IOZ.AX above/below MA (trend direction)
+            # Signal 1: Benchmark above/below MA (trend direction)
             _bench_df = data.get(self.benchmark_ticker)
             _bench_above_ma = None
             if _bench_df is not None and today in _bench_df.index:
@@ -1129,6 +1141,7 @@ class BacktestEngine:
             equity_curve=equity_curve,
             trades=all_trades,
             positions_log=all_trades,
+            rf=self._risk_free_rate,
         )
 
         # Phase1-Fix1: Calculate benchmark metrics (loads data independently)

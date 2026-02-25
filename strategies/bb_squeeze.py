@@ -1,5 +1,5 @@
 """
-Atlas-ASX Volatility Contraction Breakout (BB Squeeze) Strategy
+Atlas Volatility Contraction Breakout (BB Squeeze) Strategy
 ================================================================
 Generates long signals when Bollinger Bands contract inside Keltner
 Channels (squeeze) and then expand back outside (squeeze fires),

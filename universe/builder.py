@@ -1,14 +1,19 @@
 """
-Atlas-ASX Universe Builder
+Atlas Universe Builder
 ===========================
-Filter and rank ASX tickers to build a tradeable universe based on
+Filter and rank tickers to build a tradeable universe based on
 liquidity, price, and market cap criteria from the active configuration.
+Supports multiple markets (ASX, S&P 500, etc.).
 
 Usage:
     from universe.builder import build_universe
+    from utils.config import get_active_config
 
-    config = get_active_config()
+    config = get_active_config("asx")
     universe = build_universe(config)
+
+    config_us = get_active_config("sp500")
+    universe_us = build_universe(config_us)
 """
 
 import json
@@ -22,13 +27,16 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from data.ingest import download_ticker, get_asx200_tickers
+from data.ingest import download_ticker, get_market_tickers
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+
+# Default market
+DEFAULT_MARKET = "asx"
 
 
 def _get_market_cap(ticker: str, retries: int = 2) -> Optional[float]:
@@ -41,7 +49,7 @@ def _get_market_cap(ticker: str, retries: int = 2) -> Optional[float]:
         retries: Number of retry attempts on failure.
 
     Returns:
-        Market cap in AUD, or None if unavailable.
+        Market cap in local currency, or None if unavailable.
     """
     for attempt in range(retries + 1):
         try:
@@ -113,6 +121,14 @@ def _compute_daily_value_stats(
     }
 
 
+def _market_processed_dir(market_id: Optional[str] = None) -> Path:
+    """Return the processed data directory for a market."""
+    market_id = (market_id or DEFAULT_MARKET).lower().strip()
+    d = PROCESSED_DIR / market_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def build_universe(
     config: Dict[str, Any],
     candidate_tickers: Optional[List[str]] = None,
@@ -122,24 +138,25 @@ def build_universe(
     """Build a filtered and ranked tradeable universe.
 
     Process:
-        1. Start with candidate tickers (default: ASX 200 list)
+        1. Start with candidate tickers (default: from market profile)
         2. Download recent price/volume data for each
         3. Filter by minimum price, median daily value, and market cap
         4. Rank by average daily traded value (descending)
         5. Take top N tickers
         6. Apply exclusions from config
-        7. Save results to data/processed/universe.json
+        7. Save results to data/processed/{market_id}/universe.json
 
     Args:
         config: Configuration dictionary (from get_active_config()).
         candidate_tickers: Override list of tickers to evaluate.
-                           Defaults to get_asx200_tickers().
+                           Defaults to market profile's universe.
         save: Whether to save results to JSON (default True).
         verbose: Whether to print progress (default True).
 
     Returns:
         List of ticker symbols that passed all filters.
     """
+    market_id = config.get("market", DEFAULT_MARKET)
     uni_cfg = config.get("universe", {})
     top_n = uni_cfg.get("top_n", 100)
     min_median_dv = uni_cfg.get("min_median_daily_value", 1_000_000)
@@ -148,7 +165,7 @@ def build_universe(
     exclusions = [e.upper() for e in uni_cfg.get("exclusions", [])]
 
     if candidate_tickers is None:
-        candidate_tickers = get_asx200_tickers()
+        candidate_tickers = get_market_tickers(market_id)
 
     total = len(candidate_tickers)
     if verbose:
@@ -162,9 +179,16 @@ def build_universe(
     stats = []
     failed = []
 
+    # Get market profile for suffix stripping
+    try:
+        from markets import get_market
+        _market = get_market(market_id)
+    except (ImportError, KeyError):
+        _market = None
+
     for i, ticker in enumerate(candidate_tickers, 1):
         ticker_upper = ticker.upper()
-        base = ticker_upper.replace(".AX", "")
+        base = _market.strip_suffix(ticker_upper) if _market else ticker_upper.split(".")[0]
 
         # Skip excluded tickers early
         if base in exclusions or ticker_upper in exclusions:
@@ -276,7 +300,7 @@ def build_universe(
                            "avg_daily_value", "market_cap"]].to_dict(orient="records"),
         }
 
-        output_path = PROCESSED_DIR / "universe.json"
+        output_path = _market_processed_dir(market_id) / "universe.json"
         with open(output_path, "w") as f:
             json.dump(result, f, indent=2, default=str)
 
@@ -287,8 +311,11 @@ def build_universe(
     return universe_tickers
 
 
-def load_universe() -> Dict[str, Any]:
+def load_universe(market_id: Optional[str] = None) -> Dict[str, Any]:
     """Load the most recently built universe from disk.
+
+    Args:
+        market_id: Market identifier. Defaults to 'asx'.
 
     Returns:
         Dict with 'metadata', 'tickers', and 'details' keys.
@@ -296,11 +323,17 @@ def load_universe() -> Dict[str, Any]:
     Raises:
         FileNotFoundError: If universe.json does not exist.
     """
-    path = PROCESSED_DIR / "universe.json"
+    market_id = market_id or DEFAULT_MARKET
+    path = _market_processed_dir(market_id) / "universe.json"
     if not path.exists():
-        raise FileNotFoundError(
-            f"Universe file not found: {path}. Run build_universe() first."
-        )
+        # Legacy fallback
+        legacy = PROCESSED_DIR / "universe.json"
+        if legacy.exists() and market_id == DEFAULT_MARKET:
+            path = legacy
+        else:
+            raise FileNotFoundError(
+                f"Universe file not found: {path}. Run build_universe() first."
+            )
 
     with open(path, "r") as f:
         data = json.load(f)
@@ -312,13 +345,16 @@ def load_universe() -> Dict[str, Any]:
     return data
 
 
-def get_universe_tickers() -> List[str]:
+def get_universe_tickers(market_id: Optional[str] = None) -> List[str]:
     """Convenience function to get just the ticker list from saved universe.
+
+    Args:
+        market_id: Market identifier. Defaults to 'asx'.
 
     Returns:
         List of ticker strings.
     """
-    return load_universe()["tickers"]
+    return load_universe(market_id)["tickers"]
 
 
 if __name__ == "__main__":

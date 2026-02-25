@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Performance Health Check for Atlas-ASX Trading System.
+"""Performance Health Check for Atlas Trading System.
 
 Runs a quick backtest on last 6 months of data, compares to stored baseline,
 and flags degradation. Exits 0 (healthy) or 1 (degraded).
@@ -91,7 +91,7 @@ def parse_args():
         '--config-path',
         type=str,
         default=None,
-        help='Config JSON path (default: config/active_config.json)',
+        help='Config JSON path (default: config/active/asx.json)',
     )
     parser.add_argument(
         '--report-path',
@@ -114,9 +114,9 @@ def main():
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     default_report_path = LOGS_DIR / f'health_check_{today}.json'
     report_path = resolve_path(args.report_path, default_report_path)
-    cfg_path = resolve_path(args.config_path, CONFIG_DIR / 'active_config.json')
+    cfg_path = resolve_path(args.config_path, CONFIG_DIR / 'active' / 'asx.json')
 
-    print(f"=== Atlas-ASX Health Check ({today}) ===")
+    print(f"=== Atlas Health Check ({today}) ===")
     print(f"Baseline: CAGR={BASELINE['cagr']:.2f}% Sh={BASELINE['sharpe']:.4f} PF={BASELINE['profit_factor']:.4f}")
 
     # Load config

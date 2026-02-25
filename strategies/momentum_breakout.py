@@ -1,5 +1,5 @@
 """
-Atlas-ASX Momentum Breakout Strategy (Phase 8A)
+Atlas Momentum Breakout Strategy (Phase 8A)
 ================================================
 Generates long signals when price breaks above N-day high
 with trend alignment confirmation.

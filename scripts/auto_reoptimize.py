@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Automated Reoptimization Pipeline for Atlas-ASX.
+"""Automated Reoptimization Pipeline for Atlas.
 
 Orchestrates:
 1. Run health_check.py to assess current performance
 2. If degraded, trigger reoptimize_full_universe.py
 3. Run validate_oos.py on new config
-4. Compare new vs old; if new is better on BOTH full and OOS, update active_config.json
+4. Compare new vs old; if new is better on BOTH full and OOS, update config/active/asx.json
 5. Backup old config with timestamp
 
 Usage: python3 scripts/auto_reoptimize.py
@@ -70,10 +70,10 @@ def load_health_report():
     return None
 
 def backup_config():
-    """Backup current active_config.json with timestamp."""
-    src = CONFIG_DIR / 'active_config.json'
+    """Backup current active config with timestamp."""
+    src = CONFIG_DIR / 'active' / 'asx.json'
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    dst = CONFIG_DIR / f'active_config_backup_{ts}.json'
+    dst = CONFIG_DIR / f'backup_asx_{ts}.json'
     shutil.copy2(src, dst)
     logging.info(f"Config backed up: {dst}")
     return dst
@@ -184,9 +184,9 @@ def main():
 
     if compare_configs(old_metrics, new_metrics):
         logging.info("NEW config is BETTER on both full and OOS periods.")
-        shutil.copy2(candidate_config, CONFIG_DIR / 'active_config.json')
+        shutil.copy2(candidate_config, CONFIG_DIR / 'active' / 'asx.json')
         shutil.copy2(candidate_validation, RESULTS_DIR / 'v92_oos_validation.json')
-        logging.info("Promoted candidate config to active_config.json.")
+        logging.info("Promoted candidate config to config/active/asx.json.")
         logging.info("Promoted candidate validation report to v92_oos_validation.json.")
     else:
         logging.warning("NEW config is NOT better on both dimensions.")

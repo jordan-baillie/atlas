@@ -1,4 +1,4 @@
-"""Atlas-ASX Ex-Dividend Franking Credit Capture Strategy
+"""Atlas Ex-Dividend Franking Credit Capture Strategy
 ========================================================
 Exploits the unique Australian dividend imputation (franking credit)
 system. Fully franked dividends carry a 30% tax credit making the total

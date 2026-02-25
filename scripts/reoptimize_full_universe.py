@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Atlas-ASX Full-Universe Re-Optimization (Coordinate Descent)
+"""Atlas Full-Universe Re-Optimization (Coordinate Descent)
 
 Key change from original: optimizes on ALL 185 tickers (>=100 rows)
 instead of just top 25 by volume.
@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument(
         '--promote-active',
         action='store_true',
-        help='Also overwrite config/active_config.json with the optimized config (default: false).',
+        help='Also overwrite config/active/asx.json with the optimized config (default: false).',
     )
     return parser.parse_args()
 
@@ -285,7 +285,7 @@ if __name__ == '__main__':
 
     # Save pre-optimization config backup
     backup_config_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(PROJECT / 'config' / 'active_config.json', backup_config_path)
+    shutil.copy2(PROJECT / 'config' / 'active' / 'asx.json', backup_config_path)
     print(f'Saved pre-optimization config backup to {backup_config_path}', flush=True)
 
     # Run baseline combined
@@ -302,7 +302,7 @@ if __name__ == '__main__':
         'baseline_combined': bl,
         'results_path': str(RESULTS_FILE),
         'backup_config_path': str(backup_config_path),
-        'active_config_path': str(PROJECT / 'config' / 'active_config.json'),
+        'active_config_path': str(PROJECT / 'config' / 'active' / 'asx.json'),
         'candidate_config_path': str(candidate_config_path),
         'active_config_overwritten': False,
     }
@@ -350,7 +350,7 @@ if __name__ == '__main__':
     print(f'Saved optimized candidate config to {candidate_config_path}', flush=True)
 
     if args.promote_active:
-        active_config_path = PROJECT / 'config' / 'active_config.json'
+        active_config_path = PROJECT / 'config' / 'active' / 'asx.json'
         with open(active_config_path, 'w') as f:
             json.dump(config, f, indent=2)
         print(f'Promoted optimized config to {active_config_path}', flush=True)

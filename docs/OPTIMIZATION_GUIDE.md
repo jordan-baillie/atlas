@@ -1,4 +1,4 @@
-# Atlas-ASX Optimization & Validation Guide
+# Atlas Optimization & Validation Guide
 
 ## Version History
 | Version | Date | CAGR | Sharpe | PF | MaxDD | Notes |

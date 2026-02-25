@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Atlas-ASX v9.2 Out-of-Sample Validation Script
+"""Atlas v9.2 Out-of-Sample Validation Script
 
 Three validation tests:
   1. Time-Period Split (IS vs OOS at 2025-06-01)
@@ -26,7 +26,7 @@ from strategies.opening_gap import OpeningGap
 # CONSTANTS
 # ============================================================
 DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / 'config' / 'active_config.json'
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / 'config' / 'active' / 'asx.json'
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / 'backtest' / 'results' / 'v92_oos_validation.json'
 SPLIT_DATE = '2025-06-01'
 WARMUP_DATE = '2025-03-01'  # 3-month overlap for indicator warmup
@@ -102,7 +102,7 @@ def parse_args():
         '--config-path',
         type=str,
         default=None,
-        help='Config JSON to validate (default: config/active_config.json)',
+        help='Config JSON to validate (default: config/active/asx.json)',
     )
     parser.add_argument(
         '--output-path',

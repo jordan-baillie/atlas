@@ -1,5 +1,5 @@
 """
-Atlas-ASX Opening Gap Reversal Strategy
+Atlas Opening Gap Reversal Strategy
 ========================================
 Captures mean reversion after overnight gap-downs using daily OHLCV data.
 When a stock gaps down significantly at open (today's open << yesterday's

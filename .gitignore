@@ -5,23 +5,27 @@ __pycache__/
 *.pyo
 *.egg-info/
 
-# Data cache
+# Data cache (large, rebuilt by ingest)
 data/cache/
 
 # Logs
 logs/
 
-# Agent Zero project metadata
-.a0proj/
-
-# Pi local package settings + job manifests/logs
+# Pi local settings
 .pi/
 
 # Backtest Optuna DBs
 backtest/results/*.db
 
-# Dashboard server log
-dashboard/server.log
+# Dashboard generated data (rebuilt by generate_data.py)
+dashboard/data/
+
+# Broker credentials — NEVER commit
+.env
+.env.*
+!.env.example
+*.secrets.json
+*-secrets.json
 
 # OS files
 .DS_Store
@@ -33,8 +37,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Backup files
+# Backup / temp files
 *.bak
-
-# Pickle files (large binary)
 *.pkl

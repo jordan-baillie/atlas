@@ -1,5 +1,5 @@
 """
-Atlas-ASX Multi-Timeframe Momentum Strategy
+Atlas Multi-Timeframe Momentum Strategy
 =============================================
 Identifies stocks in strong weekly uptrends that are pulling back on the
 daily timeframe, providing high-probability entries in the direction of

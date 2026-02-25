@@ -100,8 +100,9 @@ class PaperPortfolio:
 
     STATE_FILE = "paper_engine/portfolio_state.json"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, market_id: str = None):
         self.config = config
+        self.market_id = market_id or config.get("market", "asx")
         self.starting_equity = config["risk"]["starting_equity"]
         self.max_risk_per_trade = config["risk"]["max_risk_per_trade_pct"]
         self.max_positions = config["risk"]["max_open_positions"]
@@ -125,7 +126,16 @@ class PaperPortfolio:
         self._load_state()
 
     def _state_path(self) -> Path:
-        return PROJECT_ROOT / self.STATE_FILE
+        """Per-market state file. Falls back to legacy path for ASX only."""
+        per_market = PROJECT_ROOT / "paper_engine" / "state" / f"{self.market_id}.json"
+        if per_market.exists():
+            return per_market
+        # Only fall back to legacy for the default market (asx)
+        if self.market_id == "asx":
+            legacy = PROJECT_ROOT / self.STATE_FILE
+            if legacy.exists():
+                return legacy
+        return per_market
 
     def _load_state(self):
         path = self._state_path()
@@ -145,7 +155,10 @@ class PaperPortfolio:
                 logger.warning(f"Failed to load state: {e}. Starting fresh.")
 
     def save_state(self):
+        # Always save to per-market path going forward
+        save_path = PROJECT_ROOT / "paper_engine" / "state" / f"{self.market_id}.json"
         state = {
+            "market_id": self.market_id,
             "cash": self.cash,
             "positions": [p.to_dict() for p in self.positions],
             "closed_trades": self.closed_trades,
@@ -155,8 +168,8 @@ class PaperPortfolio:
             "halt_reason": self.halt_reason,
             "last_saved": datetime.now().isoformat(),
         }
-        self._state_path().parent.mkdir(parents=True, exist_ok=True)
-        with open(self._state_path(), "w") as f:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, "w") as f:
             json.dump(state, f, indent=2)
 
     def equity(self, prices: dict[str, float] = None) -> float:

@@ -1,5 +1,5 @@
 """
-Atlas-ASX Mean Reversion Strategy (Phase 7A)
+Atlas Mean Reversion Strategy (Phase 7A)
 ==================================
 Generates long signals when a stock is statistically oversold,
 expecting a reversion to the mean.

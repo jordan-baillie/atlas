@@ -252,8 +252,7 @@ def apply_changes(config: dict, changes: dict) -> dict:
 
 def run_annealing_cycle():
     """Execute one full self-annealing cycle."""
-    print("
-" + "═" * 60)
+    print("\n" + "═" * 60)
     print("  SELF-ANNEALING REVIEW CYCLE")
     print("═" * 60)
 
@@ -261,8 +260,7 @@ def run_annealing_cycle():
     anneal_config = config.get("annealing", {})
 
     # ── Step 1: Review ────────────────────────────────────────
-    print("
-📊 STEP 1: REVIEW")
+    print("\n📊 STEP 1: REVIEW")
 
     ledger = TradeLedger()
     mistake_log = MistakeLog()
@@ -285,8 +283,7 @@ def run_annealing_cycle():
                   f"{format_aud(cat['total_impact'])}")
 
     # ── Step 2: Hypothesis ────────────────────────────────────
-    print(f"
-🔬 STEP 2: HYPOTHESIS")
+    print("\n🔬 STEP 2: HYPOTHESIS")
 
     hypotheses = generate_hypotheses(config, mistakes, perf)
 
@@ -303,8 +300,7 @@ def run_annealing_cycle():
                 print(f"     Change: {path} = {val}")
 
     # ── Step 3: Experiment ────────────────────────────────────
-    print(f"
-🧪 STEP 3: EXPERIMENT")
+    print("\n🧪 STEP 3: EXPERIMENT")
 
     data = load_data_for_backtest(config)
     if not data:
@@ -345,8 +341,7 @@ def run_annealing_cycle():
         })
 
     # ── Step 4: Promote or Reject ─────────────────────────────
-    print(f"
-📋 STEP 4: PROMOTE / REJECT")
+    print("\n📋 STEP 4: PROMOTE / REJECT")
 
     min_sharpe_improvement = anneal_config.get("min_oos_sharpe_improvement", 0.05)
     max_dd_increase = anneal_config.get("max_drawdown_increase_pct", 0.01)
@@ -410,8 +405,7 @@ def run_annealing_cycle():
             })
 
     # ── Step 5: Version and Save ──────────────────────────────
-    print(f"
-💾 STEP 5: VERSIONING")
+    print("\n💾 STEP 5: VERSIONING")
 
     if promoted_changes:
         new_config = apply_changes(config, promoted_changes)
@@ -429,8 +423,7 @@ def run_annealing_cycle():
     save_changelog(changelog)
     print(f"   Changelog updated: {len(changelog_entries)} entries added")
 
-    print(f"
-✅ Annealing cycle complete.")
+    print("\n✅ Annealing cycle complete.")
     return {
         "hypotheses": hypotheses,
         "results": results,

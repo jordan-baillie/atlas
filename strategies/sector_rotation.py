@@ -1,5 +1,5 @@
 """
-Atlas-ASX Sector Rotation Strategy (Phase 8D)
+Atlas Sector Rotation Strategy (Phase 8D)
 =============================================
 Top-down strategy that selects sectors by momentum, then buys
 the strongest stocks within those sectors.

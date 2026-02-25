@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Generate dashboard-data.json for Atlas-ASX static dashboard.
+"""Generate dashboard-data.json for Atlas static dashboard.
 
 Replicates the exact JSON format produced by the Flask /api/data endpoint
 so the static dashboard.html can consume it without changes.
+
+Supports --market flag for multi-market dashboards (default: asx).
 """
 
 import json
@@ -16,8 +18,8 @@ from pathlib import Path
 
 import pandas as pd
 
-PROJECT_ROOT = Path("/a0/usr/projects/atlas-asx")
-OUTPUT = Path("/a0/webui/dashboard-data.json")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT = PROJECT_ROOT / "dashboard" / "data" / "dashboard-data.json"
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +54,7 @@ def parse_metric_number(val):
 # ---------------------------------------------------------------------------
 
 def get_config():
-    return safe_json(PROJECT_ROOT / "config" / "active_config.json", {})
+    return safe_json(PROJECT_ROOT / "config" / "active" / "asx.json", {})
 
 
 def get_portfolio(config):
@@ -350,7 +352,7 @@ def generate():
     result = {
         "timestamp": datetime.now(BRISBANE).isoformat(),
         "config_version": config.get("version", "unknown"),
-        "project": config.get("project", "Atlas-ASX"),
+        "project": config.get("project", "Atlas"),
         "description": config.get("description", ""),
         "portfolio": {
             "equity": equity,
@@ -377,6 +379,13 @@ def generate():
         "risk_monitor": risk_monitor,
         "backtest": bt_metrics,
         "backtest_metrics": backtest_metrics,
+        "broker": {
+            "name": config.get("trading", {}).get("broker", "paper"),
+            "mode": config.get("trading", {}).get("mode", "paper"),
+            "is_live": config.get("trading", {}).get("mode") == "live",
+            # Only expose non-sensitive broker info to dashboard
+            # NO host/port/passwords/env var names
+        },
     }
 
     # ---- Write output ----

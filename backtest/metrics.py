@@ -1,5 +1,5 @@
 """
-Atlas-ASX Backtest Metrics
+Atlas Backtest Metrics
 ===========================
 Performance metrics for evaluating trading strategy backtests.
 
@@ -22,7 +22,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Default risk-free rate for AUD (RBA cash rate proxy)
+# Default risk-free rate (overridden by market profile in practice)
 DEFAULT_RF = 0.04
 
 

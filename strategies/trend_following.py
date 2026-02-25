@@ -1,5 +1,5 @@
 """
-Atlas-ASX Trend Following Strategy (Phase 7A)
+Atlas Trend Following Strategy (Phase 7A)
 ====================================
 Generates long signals when price pulls back within an established uptrend.
 

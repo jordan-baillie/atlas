@@ -1,5 +1,5 @@
 """
-Atlas-ASX Common Helper Functions
+Atlas Common Helper Functions
 ==================================
 Utility functions for date parsing, formatting, technical indicators,
 and position sizing used across the trading lab.
@@ -73,8 +73,33 @@ def today() -> pd.Timestamp:
 # Formatting
 # ---------------------------------------------------------------------------
 
+_CURRENCY_SYMBOLS = {
+    "AUD": "A$", "USD": "$", "GBP": "£", "EUR": "€",
+    "JPY": "¥", "HKD": "HK$", "SGD": "S$", "CAD": "C$",
+}
+
+
+def format_currency(amount: float, currency: str = "AUD", decimals: int = 2) -> str:
+    """Format a number in any supported currency.
+
+    Args:
+        amount: Monetary amount.
+        currency: ISO 4217 currency code (default 'AUD').
+        decimals: Decimal places (default 2).
+
+    Returns:
+        Formatted string, e.g. '$1,234.50', '£500.00', '-A$500.00'.
+    """
+    symbol = _CURRENCY_SYMBOLS.get(currency.upper(), f"{currency} ")
+    if amount < 0:
+        return f"-{symbol}{abs(amount):,.{decimals}f}"
+    return f"{symbol}{amount:,.{decimals}f}"
+
+
 def format_aud(amount: float, decimals: int = 2) -> str:
     """Format a number as Australian dollars.
+
+    Backward-compatible alias for format_currency(amount, 'AUD').
 
     Args:
         amount: Dollar amount.
@@ -89,6 +114,7 @@ def format_aud(amount: float, decimals: int = 2) -> str:
         >>> format_aud(-500)
         '-$500.00'
     """
+    # Keep original format (no A$ prefix) for backward compat
     if amount < 0:
         return f"-${abs(amount):,.{decimals}f}"
     return f"${amount:,.{decimals}f}"

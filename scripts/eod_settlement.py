@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Atlas-ASX End-of-Day Settlement.
+"""Atlas End-of-Day Settlement.
 
 Runs after ASX market close to:
 1. Refresh closing prices for all held positions
@@ -25,7 +25,7 @@ from pathlib import Path
 BRISBANE = ZoneInfo("Australia/Brisbane")
 
 # Setup
-PROJECT = Path("/a0/usr/projects/atlas-asx")
+PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 os.chdir(PROJECT)
 
@@ -43,8 +43,8 @@ logging.basicConfig(
 log = logging.getLogger("eod")
 
 
-def load_config():
-    config_path = PROJECT / "config" / "active_config.json"
+def load_config(market_id="asx"):
+    config_path = PROJECT / "config" / "active" / f"{market_id}.json"
     with open(config_path) as f:
         return json.load(f)
 
@@ -249,7 +249,7 @@ def save_eod_report(report, trade_date):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Atlas-ASX End-of-Day Settlement")
+    parser = argparse.ArgumentParser(description="Atlas End-of-Day Settlement")
     parser.add_argument("--dry-run", action="store_true", help="Preview without executing exits")
     args = parser.parse_args()
 

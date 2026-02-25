@@ -1,16 +1,19 @@
-"""Atlas-ASX Dividend Calendar Utility
+"""Atlas Dividend Calendar Utility
 =====================================
 Fetches and caches ex-dividend dates, amounts, and estimated franking
-percentages for ASX tickers. Supports the DividendCapture strategy.
+percentages for tickers. Supports the DividendCapture strategy.
 
 Franking credits are unique to the Australian tax system. Companies pay
 tax at 30%, and fully franked dividends carry a tax credit equal to
 30/70 of the cash dividend. This means a $0.70 cash dividend has a
 grossed-up value of $1.00 ($0.70 cash + $0.30 franking credit).
 
+For non-AU markets, franking is not applicable and estimate_franking_pct
+returns 0.0. The grossed-up yield equals the raw yield.
+
 Since yfinance doesn't provide franking percentages, we use sector-based
-heuristics. Most large ASX companies (banks, miners, industrials) pay
-fully franked dividends. REITs and some infrastructure stocks pay
+heuristics for ASX. Most large ASX companies (banks, miners, industrials)
+pay fully franked dividends. REITs and some infrastructure stocks pay
 unfranked or partially franked.
 
 Usage:
@@ -30,7 +33,7 @@ import yfinance as yf
 logger = logging.getLogger(__name__)
 
 # Cache directory for dividend data
-_CACHE_DIR = Path("/a0/usr/projects/atlas-asx/data/cache/dividends")
+_CACHE_DIR = Path(__file__).resolve().parent.parent / "data" / "cache" / "dividends"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # In-memory cache to avoid repeated disk reads within a single run
@@ -305,7 +308,7 @@ def get_sector_for_ticker(ticker: str) -> str:
     Returns:
         Sector string or empty string if unknown.
     """
-    sector_map_path = Path("/a0/usr/projects/atlas-asx/data/processed/sector_map.json")
+    sector_map_path = Path(__file__).resolve().parent.parent / "data" / "processed" / "sector_map.json"
     try:
         if sector_map_path.exists():
             with open(sector_map_path, "r") as f:
