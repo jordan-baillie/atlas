@@ -167,6 +167,63 @@ def get_latest_plan():
     return safe_json(files[0], None) if files else None
 
 
+def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
+    """Sync broker fills into paper state for allocation tracking.
+
+    Compares broker positions (filtered to this market) with paper state.
+    Any broker position whose ticker is in the approved plan but NOT in
+    paper state is a new fill — record it immediately.
+
+    Called on every dashboard refresh so fills show up within minutes.
+    """
+    from paper_engine.engine import PaperPortfolio
+
+    portfolio = PaperPortfolio(config, market_id=market_id)
+    paper_tickers = {p.ticker for p in portfolio.positions}
+
+    # Load latest plan to find Atlas-managed entries
+    plan = get_latest_plan()
+    if not plan:
+        return
+    plan_entries = {e["ticker"]: e for e in plan.get("proposed_entries", [])}
+
+    synced = 0
+    for bp in broker_positions:
+        ticker = bp.get("ticker", "")
+        if ticker in paper_tickers:
+            continue  # already tracked
+        if ticker not in plan_entries:
+            continue  # not an Atlas-managed position (manual hold)
+
+        entry = plan_entries[ticker]
+        fill_price = bp.get("entry_price", 0)
+        shares = int(bp.get("shares", 0))
+        if fill_price <= 0 or shares <= 0:
+            continue
+
+        trade_date = plan.get("trade_date", datetime.now(BRISBANE).strftime("%Y-%m-%d"))
+
+        class _Sig:
+            def __init__(self):
+                self.ticker = ticker
+                self.strategy = entry.get("strategy", "unknown")
+                self.entry_price = fill_price
+                self.stop_price = entry.get("stop_price", 0)
+                self.take_profit = entry.get("take_profit")
+                self.position_size = shares
+                self.confidence = entry.get("confidence", 0)
+                self.rationale = entry.get("rationale", "")
+                self.sector = entry.get("sector", "Unknown")
+
+        portfolio.execute_entry(_Sig(), fill_price, trade_date)
+        synced += 1
+        logger.info("Fill sync [%s]: %s %dx @ $%.2f → paper state",
+                     market_id, ticker, shares, fill_price)
+
+    if synced:
+        logger.info("Synced %d new fills for %s", synced, market_id)
+
+
 def get_live_prices(tickers):
     """Fetch live intraday prices via yfinance.
 
@@ -327,6 +384,51 @@ def parse_tasks():
     return tasks
 
 
+def _get_benchmark_curve(ticker: str, eq_curve: list, starting_equity: float) -> list:
+    """Build a benchmark equity curve scaled to the same starting equity.
+
+    Uses cached parquet data so no extra API calls needed.
+    The benchmark is scaled so that on the first equity curve date,
+    its value equals starting_equity — making visual comparison fair.
+    """
+    if not eq_curve:
+        return []
+
+    start_date = eq_curve[0]["date"]
+
+    # Load benchmark from cache
+    for subdir in ["sp500", "asx", ""]:
+        cache = PROJECT_ROOT / "data" / "cache" / subdir if subdir else PROJECT_ROOT / "data" / "cache"
+        fp = cache / (ticker.replace(".", "_") + ".parquet")
+        if fp.exists():
+            try:
+                df = pd.read_parquet(fp)
+
+                # Find the base price on or just before the start date
+                on_or_before = df[df.index <= start_date]
+                if len(on_or_before) == 0:
+                    continue
+                base_price = float(on_or_before["close"].iloc[-1])
+
+                # Include data from start date onward (use on_or_before's
+                # last row as the anchor point even if it's the day before)
+                from_date = str(on_or_before.index[-1].date())
+                df = df[df.index >= from_date]
+                if len(df) == 0:
+                    continue
+
+                benchmark = []
+                for idx, row in df.iterrows():
+                    d = str(idx.date())
+                    scaled = round(float(row["close"]) / base_price * starting_equity, 2)
+                    benchmark.append({"date": d, "equity": scaled})
+
+                return benchmark
+            except Exception:
+                continue
+    return []
+
+
 def generate_market(market_id: str, broker_cache: dict | None = None):
     """Generate dashboard data for a single market.
 
@@ -366,6 +468,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
             broker_acct, broker_positions, broker_ok, _orders = get_live_broker_data(config)
 
     if broker_ok and broker_acct:
+        # Sync any new broker fills into paper state immediately
+        sync_broker_fills(market_id, broker_positions, config)
+        # Reload portfolio after sync (may have new positions)
+        portfolio = get_portfolio(config)
+
         # Live mode: use broker for real-time positions/prices,
         # but equity/cash from paper state (tracks per-market allocation).
         positions = broker_positions
@@ -502,35 +609,25 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     wins = sum(1 for t in closed if t.get("pnl", 0) > 0)
     win_rate = round(wins / len(closed) * 100, 1) if closed else 0
 
-    # Equity curve (live paper trading)
-    # Equity curve — use persistent live curve file when in live mode
-    live_curve_path = PROJECT_ROOT / "logs" / "live_equity_curve.json"
+    # ── Equity curve (per-market, persistent) ─────────────────
+    curve_path = PROJECT_ROOT / "logs" / f"equity_curve_{market_id}.json"
+    eq_curve = safe_json(curve_path, [])
+    if not isinstance(eq_curve, list):
+        eq_curve = []
 
-    if broker_ok:
-        # Live mode: maintain a persistent equity curve file
-        eq_curve = safe_json(live_curve_path, [])
-        if not isinstance(eq_curve, list):
-            eq_curve = []
-    else:
-        eq_hist = portfolio.get("equity_history", [])
-        eq_curve = [{"date": e.get("date", ""), "equity": e.get("equity", seq)}
-                    for e in eq_hist] if eq_hist else []
-
-    # Append today's mark-to-market if not already present
     today_str = now.strftime("%Y-%m-%d")
     if not eq_curve or eq_curve[-1].get("date") != today_str:
         eq_curve.append({"date": today_str, "equity": round(equity, 2)})
-    elif eq_curve and eq_curve[-1].get("date") == today_str:
-        # Update today's equity with latest value
+    else:
         eq_curve[-1]["equity"] = round(equity, 2)
 
-    # Persist live curve
-    if broker_ok:
-        with open(live_curve_path, "w") as f:
-            json.dump(eq_curve, f, indent=2)
+    # Persist
+    with open(curve_path, "w") as f:
+        json.dump(eq_curve, f, indent=2)
 
-    # Backtest data
-    backtest = get_backtest_data()
+    # ── Benchmark (SPY for sp500, IOZ.AX for asx) ──────────
+    benchmark_ticker = config.get("universe", {}).get("benchmark_ticker", "SPY")
+    benchmark_curve = _get_benchmark_curve(benchmark_ticker, eq_curve, seq)
 
     # Risk
     risk_cfg = config.get("risk", {})
@@ -586,11 +683,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         },
         "strategy_summary": strat_summary,
         "equity_curve": eq_curve,
-        "backtest": {
-            "equity_curve": backtest["equity_curve"],
-            "metrics": backtest.get("metrics", {}),
-            "report_metrics": backtest.get("report_metrics", {}),
-        },
+        "benchmark_curve": benchmark_curve,
+        "benchmark_ticker": benchmark_ticker,
         "plan": plan_data,
         "closed_trades": closed,
         "risk": {
@@ -712,7 +806,8 @@ def generate():
         },
         "strategy_summary": list(combined_strats.values()),
         "equity_curve": primary_data.get("equity_curve", []),
-        "backtest": primary_data.get("backtest", {}),
+        "benchmark_curve": primary_data.get("benchmark_curve", []),
+        "benchmark_ticker": primary_data.get("benchmark_ticker", "SPY"),
         "plan": primary_data.get("plan"),
         "closed_trades": all_closed,
         "risk": primary_data.get("risk", {}),
