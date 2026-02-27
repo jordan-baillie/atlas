@@ -365,6 +365,39 @@ tr:hover td { background: rgba(59, 130, 246, 0.03); }
 .strat-momentum_breakout { background: var(--orange-dim); color: var(--orange); }
 .strat-manual { background: rgba(77,90,110,0.15); color: var(--text-tertiary); }
 
+/* ── Research pipeline ── */
+.research-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.research-stat {
+  flex: 1; min-width: 100px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-align: center;
+}
+.research-stat-value { font-family: var(--mono); font-size: 22px; font-weight: 700; line-height: 1.2; }
+.research-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-top: 2px; }
+.research-sub { margin-top: 16px; }
+.research-sub-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; }
+.research-badge {
+  display: inline-flex; align-items: center; padding: 2px 8px;
+  border-radius: var(--radius-xs); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.badge-pass { background: var(--green-dim); color: var(--green); }
+.badge-fail { background: var(--red-dim); color: var(--red); }
+.badge-partial { background: var(--amber-dim); color: var(--amber); }
+.badge-queued { background: rgba(77,90,110,0.15); color: var(--text-tertiary); }
+.badge-deferred { background: var(--amber-dim); color: var(--amber); }
+.badge-promoted { background: var(--green-dim); color: var(--green-bright); }
+.badge-running { background: var(--blue-dim); color: var(--blue); }
+.queue-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 6px; background: var(--surface); }
+.queue-bar > div { height: 100%; transition: width 0.3s ease; }
+.queue-bar .bar-pass { background: var(--green); }
+.queue-bar .bar-fail { background: var(--red); }
+.queue-bar .bar-defer { background: var(--amber); }
+.queue-bar .bar-queued { background: var(--text-tertiary); opacity: 0.4; }
+.coverage-cell { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 1px; }
+
 /* ── P&L Breakdown ── */
 .pnl-grid {
   display: grid;
@@ -758,6 +791,15 @@ tr:hover td { background: rgba(59, 130, 246, 0.03); }
       <span class="chevron down" id="chev-tasks">▾</span>
     </div>
     <div class="section-body" id="body-tasks"></div>
+  </div>
+
+  <!-- Research Pipeline -->
+  <div class="section" id="sec-research" style="animation-delay:0.58s">
+    <div class="section-head" onclick="toggle('research')">
+      <div class="section-title">Research Pipeline <span class="section-count" id="research-count">0</span></div>
+      <span class="chevron down" id="chev-research">▾</span>
+    </div>
+    <div class="section-body" id="body-research"></div>
   </div>
 
   <!-- Closed Trades -->
@@ -1549,6 +1591,133 @@ function render(d) {
   else { th2 += '<div class="task-empty">Nothing completed yet</div>'; }
   th2 += '</div></div>';
   document.getElementById('body-tasks').innerHTML = th2;
+
+  // ── Research Pipeline ──
+  var res = d.research || {};
+  var rq = res.queue || {};
+  var rs = res.statistics || {};
+  var ri = res.cumulative_impact || {};
+  var rResults = res.recent_results || [];
+  var rCoverage = res.strategy_coverage || [];
+  var rItems = (rq.items || []);
+  var rTotal = rq.total || 0;
+  var rCompleted = rq.completed || 0;
+
+  document.getElementById('research-count').textContent = rTotal > 0 ? rCompleted + '/' + rTotal : '0';
+
+  if (rTotal > 0) {
+    var rh = '';
+
+    // Stats bar
+    var nPass = 0, nFail = 0, nDefer = 0, nQueued = 0;
+    rItems.forEach(function(e) {
+      if (e.status === 'passed' || e.status === 'promoted') nPass++;
+      else if (e.status === 'failed') nFail++;
+      else if (e.status === 'deferred') nDefer++;
+      else nQueued++;
+    });
+
+    rh += '<div class="research-stats">';
+    rh += '<div class="research-stat"><div class="research-stat-value" style="color:var(--text)">' + rs.total_experiments + '</div><div class="research-stat-label">Experiments Run</div></div>';
+    rh += '<div class="research-stat"><div class="research-stat-value" style="color:var(--green)">' + rs.passed + '</div><div class="research-stat-label">Passed</div></div>';
+    rh += '<div class="research-stat"><div class="research-stat-value" style="color:var(--red)">' + rs.failed + '</div><div class="research-stat-label">Failed</div></div>';
+    rh += '<div class="research-stat"><div class="research-stat-value" style="color:var(--green-bright)">' + rs.promoted + '</div><div class="research-stat-label">Promoted</div></div>';
+    rh += '<div class="research-stat"><div class="research-stat-value" style="color:var(--text-secondary)">' + (rs.pass_rate_pct || 0) + '%</div><div class="research-stat-label">Pass Rate</div></div>';
+    rh += '</div>';
+
+    // Progress bar
+    if (rTotal > 0) {
+      var pctPass = (nPass / rTotal * 100).toFixed(1);
+      var pctFail = (nFail / rTotal * 100).toFixed(1);
+      var pctDefer = (nDefer / rTotal * 100).toFixed(1);
+      var pctQueued = (nQueued / rTotal * 100).toFixed(1);
+      rh += '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-tertiary);margin-bottom:2px">';
+      rh += '<span>Queue Progress</span><span>' + rCompleted + ' / ' + rTotal + ' completed</span></div>';
+      rh += '<div class="queue-bar">';
+      rh += '<div class="bar-pass" style="width:' + pctPass + '%"></div>';
+      rh += '<div class="bar-fail" style="width:' + pctFail + '%"></div>';
+      rh += '<div class="bar-defer" style="width:' + pctDefer + '%"></div>';
+      rh += '<div class="bar-queued" style="width:' + pctQueued + '%"></div>';
+      rh += '</div>';
+      rh += '<div style="display:flex;gap:12px;font-size:10px;color:var(--text-tertiary);margin-top:4px">';
+      rh += '<span>●<span style="color:var(--green)"> pass ' + nPass + '</span></span>';
+      rh += '<span>●<span style="color:var(--red)"> fail ' + nFail + '</span></span>';
+      rh += '<span>●<span style="color:var(--amber)"> defer ' + nDefer + '</span></span>';
+      rh += '<span>●<span style="color:var(--text-tertiary)"> queued ' + nQueued + '</span></span>';
+      rh += '</div>';
+    }
+
+    // Recent results table
+    if (rResults.length > 0) {
+      rh += '<div class="research-sub"><div class="research-sub-title">Recent Experiment Results</div>';
+      rh += '<table id="tbl-research"><thead><tr>';
+      rh += '<th>Experiment</th><th>Strategy</th><th>Market</th><th>Verdict</th>';
+      rh += '<th>Trades</th><th>Sharpe</th><th>CAGR</th><th>DD</th><th>WR</th><th>When</th>';
+      rh += '</tr></thead><tbody>';
+      rResults.forEach(function(r) {
+        var km = r.key_metrics || {};
+        var verdictClass = r.verdict === 'pass' ? 'badge-pass' : r.verdict === 'fail' ? 'badge-fail' : 'badge-partial';
+        rh += '<tr>';
+        rh += '<td style="font-family:var(--mono);font-size:11px">' + esc(r.experiment_id) + '</td>';
+        rh += '<td>' + strat(r.strategy) + '</td>';
+        rh += '<td style="font-size:11px;color:var(--text-secondary)">' + (r.market || '').toUpperCase() + '</td>';
+        rh += '<td><span class="research-badge ' + verdictClass + '">' + esc(r.verdict) + '</span></td>';
+        rh += '<td class="mono">' + (km.total_trades || '-') + '</td>';
+        rh += '<td class="mono ' + cls(km.sharpe || 0) + '">' + (km.sharpe != null ? (km.sharpe).toFixed(2) : '-') + '</td>';
+        rh += '<td class="mono ' + cls(km.cagr_pct || 0) + '">' + (km.cagr_pct != null ? (km.cagr_pct).toFixed(1) + '%' : '-') + '</td>';
+        rh += '<td class="mono" style="color:var(--red)">' + (km.max_drawdown_pct != null ? (km.max_drawdown_pct).toFixed(1) + '%' : '-') + '</td>';
+        rh += '<td class="mono">' + (km.win_rate_pct != null ? (km.win_rate_pct).toFixed(0) + '%' : '-') + '</td>';
+        rh += '<td style="font-size:11px;color:var(--text-tertiary)">' + ago(r.timestamp) + '</td>';
+        rh += '</tr>';
+      });
+      rh += '</tbody></table></div>';
+    }
+
+    // Experiment queue
+    rh += '<div class="research-sub"><div class="research-sub-title">Experiment Queue</div>';
+    rh += '<table id="tbl-queue"><thead><tr>';
+    rh += '<th>ID</th><th>Title</th><th>Priority</th><th>Category</th><th>Market</th><th>Status</th><th>ETA</th>';
+    rh += '</tr></thead><tbody>';
+    rItems.forEach(function(e) {
+      var sc = 'badge-queued';
+      if (e.status === 'passed' || e.status === 'promoted') sc = 'badge-pass';
+      else if (e.status === 'failed') sc = 'badge-fail';
+      else if (e.status === 'deferred') sc = 'badge-deferred';
+      else if (e.status === 'running' || e.status === 'claimed') sc = 'badge-running';
+      var priColor = e.priority === 'P1' ? 'var(--red)' : e.priority === 'P2' ? 'var(--amber)' : e.priority === 'P3' ? 'var(--blue)' : 'var(--text-tertiary)';
+      rh += '<tr' + (e.status === 'queued' ? '' : ' style="opacity:0.65"') + '>';
+      rh += '<td style="font-family:var(--mono);font-size:10px">' + esc(e.id) + '</td>';
+      rh += '<td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title) + '</td>';
+      rh += '<td style="font-weight:700;color:' + priColor + ';font-size:11px">' + esc(e.priority) + '</td>';
+      rh += '<td style="font-size:11px;color:var(--text-secondary)">' + esc(e.category) + '</td>';
+      rh += '<td style="font-size:11px;color:var(--text-secondary)">' + (e.market || '').toUpperCase() + '</td>';
+      rh += '<td><span class="research-badge ' + sc + '">' + esc(e.status) + '</span></td>';
+      rh += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (e.estimated_runtime_min > 0 ? '~' + e.estimated_runtime_min + 'm' : '-') + '</td>';
+      rh += '</tr>';
+    });
+    rh += '</tbody></table></div>';
+
+    // Strategy coverage
+    if (rCoverage.length > 0) {
+      rh += '<div class="research-sub"><div class="research-sub-title">Strategy Coverage</div>';
+      rh += '<table id="tbl-coverage"><thead><tr>';
+      rh += '<th>Strategy</th><th>Market</th><th>Last Tested</th><th>Last Verdict</th><th>Experiment</th>';
+      rh += '</tr></thead><tbody>';
+      rCoverage.forEach(function(c) {
+        var vc = c.verdict === 'pass' ? 'badge-pass' : c.verdict === 'fail' ? 'badge-fail' : 'badge-partial';
+        rh += '<tr>';
+        rh += '<td>' + strat(c.strategy) + '</td>';
+        rh += '<td style="font-size:11px;color:var(--text-secondary)">' + (c.market || '').toUpperCase() + '</td>';
+        rh += '<td style="font-size:11px;color:var(--text-tertiary)">' + ago(c.last_tested) + '</td>';
+        rh += '<td><span class="research-badge ' + vc + '">' + esc(c.verdict) + '</span></td>';
+        rh += '<td style="font-family:var(--mono);font-size:10px;color:var(--text-secondary)">' + esc(c.experiment_id) + '</td>';
+        rh += '</tr>';
+      });
+      rh += '</tbody></table></div>';
+    }
+
+    document.getElementById('body-research').innerHTML = rh;
+  }
 
   // Closed trades
   var closed = d.closed_trades || [];
