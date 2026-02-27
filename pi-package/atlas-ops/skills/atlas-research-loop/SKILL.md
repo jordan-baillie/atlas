@@ -282,15 +282,19 @@ Run **3-5 searches** covering:
 4. **6-12 experiments** — enough to thoroughly explore the theme, not so many it takes weeks
 5. **Clear acceptance criteria** — every experiment has measurable pass/fail thresholds
 
-### Theme Selection Priority
+### Theme Selection — Profit First
 
-Pick themes based on what would most improve the live trading system:
+Every wave must directly target making the live trading system more profitable.
+Pick themes that either find new profitable strategies or optimise existing ones:
 
-1. **Fix identified bottlenecks** (e.g., position allocation was Wave 1's key finding)
-2. **Improve risk-adjusted returns** (better Sharpe, lower DD)
-3. **Add diversification** (new signal sources that don't compete with existing)
-4. **Reduce drawdowns** (regime detection, adaptive exposure)
-5. **Improve entry/exit timing** (reduce adverse excursion, increase favorable)
+1. **New strategies from web research** — find published backtested strategies with Sharpe > 0.5, implement and test them
+2. **Optimise existing strategy params** — re-tune for higher Sharpe/CAGR (especially if >30 days since last optimisation)
+3. **Unlock portfolio capacity** — position allocation, per-strategy pools, signal priority (enables more strategies = more profit)
+4. **Better exits** — adaptive stops, trailing stops, profit targets that capture more per trade
+5. **New signal sources** — uncorrelated entry signals that add returns without competing for positions
+
+Do NOT pick themes like 'diagnostics', 'monitoring', 'infrastructure', or 'data quality'.
+Every experiment must have acceptance criteria tied to profitability metrics (Sharpe, CAGR, PF, win rate).
 
 ### Seeding Experiments
 
