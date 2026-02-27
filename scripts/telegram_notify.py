@@ -62,6 +62,30 @@ def main():
         from utils.telegram import send_message
         ok = send_message("🔬 Research cron: queue empty — nothing to run. Seed new experiments to resume.")
 
+    elif cmd == "research-wave-planned":
+        from utils.telegram import send_message
+        # Read the latest wave brief for summary
+        waves_dir = PROJECT_ROOT / "research" / "waves"
+        brief_files = sorted(waves_dir.glob("wave_*_brief.json"), reverse=True)
+        msg = "🔬 <b>New Research Wave Planned</b>\n\n"
+        if brief_files:
+            import json as _json
+            brief = _json.load(open(brief_files[0]))
+            wave_num = brief.get("wave_number", "?")
+            theme = brief.get("theme", "not set")
+            n_exp = len(brief.get("experiments", []))
+            msg += f"Wave {wave_num}: <b>{theme}</b>\n"
+            msg += f"Experiments: {n_exp}\n"
+            rationale = brief.get("theme_rationale", "")
+            if rationale:
+                msg += f"\n<i>{rationale[:200]}</i>\n"
+            web_findings = brief.get("web_research_findings", [])
+            if web_findings:
+                msg += f"\nWeb research: {len(web_findings)} sources consulted"
+        else:
+            msg += "Brief file not found."
+        ok = send_message(msg)
+
     elif cmd == "test":
         ok = send_startup()
 

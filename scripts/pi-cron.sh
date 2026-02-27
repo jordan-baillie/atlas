@@ -60,13 +60,50 @@ print(sum(1 for e in q if e.get('status') == 'queued'))
 " 2>/dev/null || echo "0")
 
         if [ "$QUEUED_COUNT" = "0" ]; then
-            echo "$(date -Iseconds) Research queue empty — no experiments to run" >> "$LOG_DIR/pi-cron.log"
-            notify research-idle "" 2>/dev/null || true
-            exit 0
-        fi
+            echo "$(date -Iseconds) Research queue empty — planning next wave" >> "$LOG_DIR/pi-cron.log"
 
-        echo "$(date -Iseconds) Research queue has $QUEUED_COUNT experiments" >> "$LOG_DIR/pi-cron.log"
-        PROMPT="Run one full atlas-research-loop cycle: read current state (journal, health check, queue — $QUEUED_COUNT experiments queued), execute queued experiments via research_runner.py --run-all --agent-id ${AGENT_ID}, evaluate results, and send promotion requests for any passing experiments. Summarize all outcomes at the end."
+            # Generate the wave brief (analyzes journal, config, gaps)
+            cd "$PROJECT"
+            python3 scripts/wave_planner.py --generate >> "$LOG_DIR/pi-cron.log" 2>&1
+
+            # Find the brief file
+            WAVE_BRIEF=$(ls -t research/waves/wave_*_brief.json 2>/dev/null | head -1)
+            WAVE_NUM=$(echo "$WAVE_BRIEF" | grep -oP 'wave_\K\d+' || echo "next")
+
+            PROMPT="You are planning Research Wave ${WAVE_NUM} for the Atlas trading system.
+
+A wave brief has been generated at ${WAVE_BRIEF} — read it first to understand previous findings, patterns, and gaps.
+
+Your task:
+1. READ the wave brief to understand what was tested, what passed/failed, and key learnings
+2. SEARCH the web (use brave-search) for relevant quantitative trading research. Run 3-5 searches covering:
+   - The specific patterns/gaps identified in the brief (e.g. position allocation, regime filters)
+   - Recent academic or practitioner research on systematic swing trading
+   - Backtested strategy ideas from quantified strategies / alpha architect / quantpedia
+3. DESIGN a themed wave: pick ONE central theme based on findings + web research. Examples:
+   - 'Position sizing and allocation optimization'
+   - 'Regime detection and adaptive exposure'
+   - 'Entry timing refinement'
+   - 'Risk management and stop-loss optimization'
+4. CREATE 6-12 experiments that explore different aspects of the theme. Use research/models.py to seed them:
+   - Each experiment should have clear hypothesis, acceptance criteria, and method
+   - Use dependency chains where experiments build on each other (solo → optimize → combined → OOS)
+   - Set appropriate priorities (P2 for high-impact, P3 for standard, P4 for exploratory)
+5. UPDATE the wave brief file with theme, rationale, web research findings, and experiment list
+6. VERIFY the queue has been seeded by running: python3 scripts/wave_planner.py --status
+7. Send a summary via: python3 scripts/telegram_notify.py research-wave-planned
+
+IMPORTANT:
+- The theme should address the BIGGEST bottleneck or opportunity found in previous research
+- Every experiment must have measurable acceptance criteria
+- Do NOT re-test ideas that already failed unless you have a genuinely new approach
+- Maximum 12 experiments per wave to keep scope manageable"
+
+            LOGFILE="$LOG_DIR/wave_plan_${TIMESTAMP}.log"
+        else
+            echo "$(date -Iseconds) Research queue has $QUEUED_COUNT experiments" >> "$LOG_DIR/pi-cron.log"
+            PROMPT="Run one full atlas-research-loop cycle: read current state (journal, health check, queue — $QUEUED_COUNT experiments queued), execute queued experiments via research_runner.py --run-all --agent-id ${AGENT_ID}, evaluate results, and send promotion requests for any passing experiments. Summarize all outcomes at the end."
+        fi
 
         # Lock file check — prevent concurrent research sessions
         if [ -f "$RESEARCH_LOCK" ]; then

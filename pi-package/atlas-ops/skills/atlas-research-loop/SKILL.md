@@ -247,6 +247,86 @@ After promotion, if paper trading shows degradation within 5 trading days:
 Kill any experiment exceeding 4 hours. Total session should complete in 2-6 hours
 depending on number of queued experiments and their complexity.
 
+---
+
+## 🌊 WAVE PLANNING — Designing the Next Research Wave
+
+This mode is triggered when the experiment queue is empty. The cron generates a
+wave brief at `research/waves/wave_N_brief.json` and gives you a planning prompt.
+
+### Web Research with Brave Search
+
+Use the brave-search skill to research ideas. Run from the skill directory:
+
+```bash
+# Search for strategy research
+/root/.pi/agent/skills/pi-skills/brave-search/search.js "quantitative swing trading position sizing research" -n 5 --content
+
+# Search for specific topics from previous findings
+/root/.pi/agent/skills/pi-skills/brave-search/search.js "regime detection stock trading volatility filter backtest" -n 5
+
+# Get content from a specific article
+/root/.pi/agent/skills/pi-skills/brave-search/content.js https://example.com/article
+```
+
+Run **3-5 searches** covering:
+1. The specific patterns/gaps identified in the wave brief
+2. Recent quantitative trading research (quantifiedstrategies.com, quantpedia.com, alphaarchitect.com)
+3. Academic papers or practitioner blogs on the wave theme
+
+### Wave Design Principles
+
+1. **One central theme** — every experiment in the wave relates to a single research question
+2. **Progressive depth** — start with quick feasibility tests, then optimize, then validate
+3. **Build on learnings** — reference specific findings from previous waves
+4. **6-12 experiments** — enough to thoroughly explore the theme, not so many it takes weeks
+5. **Clear acceptance criteria** — every experiment has measurable pass/fail thresholds
+
+### Theme Selection Priority
+
+Pick themes based on what would most improve the live trading system:
+
+1. **Fix identified bottlenecks** (e.g., position allocation was Wave 1's key finding)
+2. **Improve risk-adjusted returns** (better Sharpe, lower DD)
+3. **Add diversification** (new signal sources that don't compete with existing)
+4. **Reduce drawdowns** (regime detection, adaptive exposure)
+5. **Improve entry/exit timing** (reduce adverse excursion, increase favorable)
+
+### Seeding Experiments
+
+Use the research models to create queue entries:
+
+```python
+import sys; sys.path.insert(0, '/root/atlas')
+from research.models import (
+    QueueEntry, ExperimentType, Priority,
+    append_to_queue, generate_experiment_id,
+)
+
+entry = QueueEntry(
+    id="wave2_theme_test1",
+    title="Test: <description>",
+    category="<theme_category>",
+    market="sp500",
+    hypothesis="<clear hypothesis>",
+    method=ExperimentType.SINGLE_STRATEGY_TEST,
+    acceptance_criteria={"min_sharpe": 0.3, "min_trades": 15},
+    estimated_runtime_min=30,
+    priority=Priority.P2_HIGH,
+    strategy_name="<strategy>",
+    param_grid={"param1": [1, 2, 3], "param2": [0.5, 1.0]},
+)
+append_to_queue(entry)
+```
+
+### After Seeding
+
+1. Update the wave brief file with theme, rationale, web findings, and experiment list
+2. Run `python3 scripts/wave_planner.py --status` to verify
+3. Send notification: `python3 scripts/telegram_notify.py research-wave-planned`
+
+---
+
 ## Do NOT:
 - Re-test failed ideas without NEW rationale
 - Skip OOS validation before promotion
