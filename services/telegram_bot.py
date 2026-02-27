@@ -49,7 +49,7 @@ logger = logging.getLogger("atlas.telegram_bot")
 # Configuration
 # ═══════════════════════════════════════════════════════════════
 
-DEFAULT_MARKET = os.environ.get("ATLAS_MARKET", "asx")
+DEFAULT_MARKET = os.environ.get("ATLAS_MARKET", "sp500")
 SECRETS_PATH = Path.home() / ".atlas-secrets.json"
 
 
@@ -186,28 +186,27 @@ def approval_keyboard(trade_date: str, market_id: str = "asx") -> InlineKeyboard
 # ═══════════════════════════════════════════════════════════════
 
 def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
-    """Approve plan, execute via live executor or paper engine, return result text.
+    """Approve plan and execute via live broker. Returns result text.
 
     This runs in a thread (blocking broker I/O).
     """
     config = get_active_config(market_id)
 
-    # Approve the plan (plan files are shared, approval is just a status flag)
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    # Approve the plan using LivePortfolio
+    from brokers.live_portfolio import LivePortfolio
+    portfolio = LivePortfolio(config, market_id=market_id)
+    if not portfolio.connect():
+        # Fallback to paper portfolio just for plan approval (file-based)
+        portfolio = PaperPortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.approve_plan(trade_date)
+    if isinstance(portfolio, LivePortfolio):
+        portfolio.disconnect()
     if not plan:
         return "❌ No plan found for %s" % trade_date
 
-    broker_name = config.get("trading", {}).get("broker", "paper")
-
-    # 2. Execute based on mode
-    if broker_name != "paper" and config.get("trading", {}).get("live_enabled", False):
-        # Live execution — broker is the sole source of truth
-        return _execute_live(plan, trade_date, config, market_id)
-    else:
-        # Paper execution
-        return _execute_paper(plan, trade_date, config, market_id)
+    # Always execute live — broker is the sole source of truth
+    return _execute_live(plan, trade_date, config, market_id)
 
 
 def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
@@ -254,62 +253,6 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
         live_pf.record_equity(trade_date)
     finally:
         executor.disconnect()
-
-    # ── Sync paper portfolio state with broker fills ──────────
-    # Paper state tracks our dedicated allocation ($X for this market).
-    # Only sync entries that actually FILLED (fill_price > 0).
-    # Pending limit orders (WAITING_SUBMIT) should not be recorded yet —
-    # they'll be synced by EOD settlement after they fill.
-    try:
-        paper_pf = PaperPortfolio(config, market_id=market_id)
-        synced = 0
-
-        for entry_result in report.get("entries", []):
-            if not entry_result.get("success"):
-                continue
-            fill_px = entry_result.get("fill_price", 0)
-            if fill_px <= 0:
-                # Order submitted but not filled yet — skip paper sync
-                logger.info("Paper sync: %s pending (no fill yet), will sync on fill",
-                            entry_result.get("ticker"))
-                continue
-
-            plan_entry = next(
-                (e for e in plan.get("proposed_entries", [])
-                 if e["ticker"] == entry_result.get("ticker")),
-                None,
-            )
-            if plan_entry:
-                class _Sig:
-                    def __init__(self, d, fp):
-                        self.ticker = d["ticker"]
-                        self.strategy = d["strategy"]
-                        self.entry_price = fp
-                        self.stop_price = d["stop_price"]
-                        self.take_profit = d.get("take_profit")
-                        self.position_size = entry_result.get("qty", d["position_size"])
-                        self.confidence = d.get("confidence", 0)
-                        self.rationale = d.get("rationale", "")
-                        self.sector = d.get("sector", "Unknown")
-
-                paper_pf.execute_entry(_Sig(plan_entry, fill_px), fill_px, trade_date)
-                synced += 1
-
-        for exit_result in report.get("exits", []):
-            if not exit_result.get("success"):
-                continue
-            fill_px = exit_result.get("fill_price", 0)
-            if fill_px <= 0:
-                continue
-            ticker = exit_result.get("ticker", "")
-            reason = exit_result.get("reason", "signal_exit")
-            paper_pf.execute_exit(ticker, fill_px, trade_date, reason)
-            synced += 1
-
-        logger.info("Paper state synced: %d fills recorded, %d positions, $%.2f cash",
-                     synced, len(paper_pf.positions), paper_pf.cash)
-    except Exception as e:
-        logger.error("Paper state sync failed (non-fatal): %s", e)
 
     # Format result
     n_entries = report.get("successful_entries", 0)
@@ -364,7 +307,7 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
 
 
 def _execute_paper(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
-    """Execute plan through paper engine."""
+    """DEPRECATED: Execute plan through paper engine. Not called in live-only mode."""
     import pandas as pd
     from paper_engine.engine import PaperPortfolio
     from markets.registry import get_market
@@ -467,7 +410,10 @@ async def cmd_plan(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     trade_date = datetime.now().strftime("%Y-%m-%d")
     config = get_active_config(DEFAULT_MARKET)
-    portfolio = PaperPortfolio(config, market_id=DEFAULT_MARKET)
+    # Use LivePortfolio for plan loading (just needs TradePlanGenerator for file access)
+    from brokers.live_portfolio import LivePortfolio
+    portfolio = LivePortfolio(config, market_id=DEFAULT_MARKET)
+    portfolio.connect()
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.load_plan(trade_date)
 
@@ -556,6 +502,7 @@ async def handle_approval_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
     if action == "reject":
         # Mark rejected — update the message
         config = get_active_config(market_id)
+        # Just need TradePlanGenerator for plan file access — PaperPortfolio is fine here
         portfolio = PaperPortfolio(config, market_id=market_id)
         plan_gen = TradePlanGenerator(portfolio, config)
         plan = plan_gen.load_plan(trade_date)

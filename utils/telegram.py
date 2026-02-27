@@ -162,19 +162,21 @@ def _fetch_cached_prices(tickers: list[str]) -> dict[str, float]:
     return prices
 
 
-def _build_portfolio_snapshot(market_id: str = "asx") -> Optional[str]:
-    """Build an HTML portfolio snapshot block with live prices from cache.
+def _build_portfolio_snapshot(market_id: str = "sp500") -> Optional[str]:
+    """Build an HTML portfolio snapshot block with live prices from broker.
 
     Returns None if portfolio can't be loaded.
     """
     try:
         from utils.config import get_active_config
-        from paper_engine.engine import PaperPortfolio
+        from brokers.live_portfolio import LivePortfolio
         from utils.helpers import format_currency
         from markets.registry import get_market
 
         config = get_active_config(market_id)
-        pp = PaperPortfolio(config, market_id=market_id)
+        pp = LivePortfolio(config, market_id=market_id)
+        if not pp.connect():
+            return None
         market = get_market(market_id)
         currency = market.currency
 
@@ -356,5 +358,165 @@ def send_startup() -> bool:
         f"Alerts are active. You'll receive:\n"
         f"  📊 Pre-market plan summaries\n"
         f"  📈 Post-close settlement reports\n"
+        f"  🔬 Research experiment results\n"
         f"  🚨 Error alerts for failed runs"
     )
+
+
+# ---------------------------------------------------------------------------
+# Research notifications
+# ---------------------------------------------------------------------------
+
+def send_research_started(experiment_id: str, hypothesis: str,
+                          market: str, estimated_min: int = 0) -> bool:
+    """Notify that a research experiment has started."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    eta = f" — ETA ~{estimated_min}min" if estimated_min else ""
+    msg = (
+        f"🔬 <b>Research: Experiment Started</b>\n"
+        f"<i>{now}</i>\n\n"
+        f"<b>ID:</b> <code>{_esc(experiment_id)}</code>\n"
+        f"<b>Market:</b> {_esc(market.upper())}\n"
+        f"<b>Hypothesis:</b> {_esc(hypothesis[:200])}{eta}"
+    )
+    return send_message(msg, silent=True)
+
+
+def send_research_result(experiment_id: str, strategy: str,
+                         market: str, verdict: str,
+                         key_metrics: dict = None,
+                         delta: dict = None) -> bool:
+    """Notify experiment completion with pass/fail and key metrics."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    icon = {"pass": "✅", "fail": "❌", "partial": "⚠️"}.get(verdict, "❓")
+
+    lines = [
+        f"📊 <b>Research Result: {icon} {_esc(verdict.upper())}</b>",
+        f"<i>{now}</i>",
+        "",
+        f"<b>ID:</b> <code>{_esc(experiment_id)}</code>",
+        f"<b>Strategy:</b> {_esc(strategy or 'N/A')}",
+        f"<b>Market:</b> {_esc(market.upper())}",
+    ]
+
+    if key_metrics:
+        lines.append("")
+        lines.append("<b>Key Metrics:</b>")
+        for k, v in key_metrics.items():
+            if isinstance(v, float):
+                lines.append(f"  {_esc(k)}: {v:.4f}")
+            else:
+                lines.append(f"  {_esc(k)}: {v}")
+
+    if delta:
+        lines.append("")
+        lines.append("<b>Delta vs Baseline:</b>")
+        for k, v in delta.items():
+            if isinstance(v, (int, float)):
+                sign = "+" if v > 0 else ""
+                lines.append(f"  {_esc(k)}: {sign}{v:.4f}")
+
+    return send_message("\n".join(lines))
+
+
+def send_research_promotion_request(experiment_id: str, market: str,
+                                     comparisons: dict,
+                                     oos_details: dict = None) -> bool:
+    """Send a rich promotion request with before/after metrics."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    lines = [
+        f"🏆 <b>Research: Promotion Request</b>",
+        f"<i>{now}</i>",
+        "",
+        f"<b>Experiment:</b> <code>{_esc(experiment_id)}</code>",
+        f"<b>Market:</b> {_esc(market.upper())}",
+        "",
+        "<b>Before → After:</b>",
+    ]
+
+    for metric, data in comparisons.items():
+        b = data.get('baseline', 0)
+        c = data.get('candidate', 0)
+        d = data.get('delta', 0)
+        arrow = "↑" if d > 0 else "↓" if d < 0 else "→"
+        icon = "🟢" if d > 0 else "🔴" if d < 0 else "⚪"
+        lines.append(f"  {icon} {_esc(metric)}: {b:.4f} → {c:.4f} ({d:+.4f} {arrow})")
+
+    if oos_details:
+        lines.extend([
+            "",
+            "<b>OOS Validation:</b>",
+            f"  Test 1 (Time Split): {_esc(str(oos_details.get('test1', '?')))}",
+            f"  Test 2 (Perturbation): {_esc(str(oos_details.get('test2', '?')))}",
+            f"  Test 3 (Walk-Forward): {_esc(str(oos_details.get('test3', '?')))}",
+        ])
+
+    lines.extend([
+        "",
+        "Reply <b>APPROVE</b> or <b>REJECT</b>.",
+    ])
+
+    return send_message("\n".join(lines))
+
+
+def send_research_weekly_digest(experiments_run: int, passed: int,
+                                 failed: int, promoted: int,
+                                 cumulative_sharpe_delta: float = 0,
+                                 next_queue: list = None) -> bool:
+    """Send a weekly research summary digest."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    lines = [
+        f"📅 <b>Weekly Research Digest</b>",
+        f"<i>{now}</i>",
+        "",
+        f"<b>Experiments:</b> {experiments_run} run",
+        f"  ✅ Passed: {passed}",
+        f"  ❌ Failed: {failed}",
+        f"  🏆 Promoted: {promoted}",
+    ]
+
+    if cumulative_sharpe_delta != 0:
+        sign = "+" if cumulative_sharpe_delta > 0 else ""
+        lines.append(f"\n<b>Cumulative Sharpe Δ:</b> {sign}{cumulative_sharpe_delta:.4f}")
+
+    if next_queue:
+        lines.append("\n<b>Next in Queue:</b>")
+        for item in next_queue[:5]:
+            lines.append(f"  • [{item.get('priority', '?')}] {_esc(item.get('title', '?')[:60])}")
+
+    return send_message("\n".join(lines))
+
+
+def send_research_complete(market_id: str = "sp500") -> bool:
+    """Send research session completion summary."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    # Try to read journal for today's results
+    journal_summary = ""
+    try:
+        journal_path = PROJECT_ROOT / "research" / "journal.json"
+        if journal_path.exists():
+            with open(journal_path) as f:
+                journal = json.load(f)
+            today = datetime.now().strftime("%Y-%m-%d")
+            today_entries = [e for e in journal if e.get("timestamp", "").startswith(today)]
+            if today_entries:
+                passed = sum(1 for e in today_entries if e.get("verdict") == "pass")
+                failed = sum(1 for e in today_entries if e.get("verdict") == "fail")
+                promoted = sum(1 for e in today_entries if e.get("promoted"))
+                journal_summary = (
+                    f"\n<b>Today's Results:</b>\n"
+                    f"  Experiments: {len(today_entries)}\n"
+                    f"  ✅ Passed: {passed} | ❌ Failed: {failed} | 🏆 Promoted: {promoted}"
+                )
+    except Exception:
+        pass
+
+    msg = (
+        f"🔬 <b>Research Session Complete [{market_id.upper()}]</b>\n"
+        f"<i>{now}</i>"
+        f"{journal_summary}"
+    )
+    return send_message(msg)

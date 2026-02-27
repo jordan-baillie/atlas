@@ -468,9 +468,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
             broker_acct, broker_positions, broker_ok, _orders = get_live_broker_data(config)
 
     if broker_ok and broker_acct:
-        # Sync any new broker fills into paper state immediately
-        sync_broker_fills(market_id, broker_positions, config)
-        # Reload portfolio after sync (may have new positions)
+        # Broker is the source of truth — no paper sync needed
         portfolio = get_portfolio(config)
 
         # Live mode: use broker for real-time positions/prices,
@@ -714,6 +712,113 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     return result
 
 
+def generate_research_data() -> dict:
+    """Generate research section data for the dashboard.
+
+    Includes: queue status, recent results, cumulative impact,
+    strategy coverage matrix, and next scheduled session.
+    """
+    research_dir = PROJECT_ROOT / "research"
+    queue_path = research_dir / "queue.json"
+    journal_path = research_dir / "journal.json"
+    experiments_dir = research_dir / "experiments"
+
+    # Queue
+    queue = safe_json(queue_path, [])
+    queued = [e for e in queue if e.get("status") == "queued"]
+    running = [e for e in queue if e.get("status") in ("claimed", "running")]
+    completed = [e for e in queue if e.get("status") in ("passed", "failed", "partial", "promoted", "rejected")]
+
+    # Journal
+    journal = safe_json(journal_path, [])
+
+    # Recent results (last 10)
+    recent_results = []
+    for entry in journal[-10:]:
+        recent_results.append({
+            "experiment_id": entry.get("experiment_id", "?"),
+            "timestamp": entry.get("timestamp", ""),
+            "market": entry.get("market", "?"),
+            "strategy": entry.get("strategy", "N/A"),
+            "category": entry.get("category", "?"),
+            "verdict": entry.get("verdict", "?"),
+            "key_metrics": entry.get("key_metrics", {}),
+            "delta_vs_baseline": entry.get("delta_vs_baseline", {}),
+            "promoted": entry.get("promoted", False),
+            "learnings": entry.get("learnings", []),
+        })
+
+    # Cumulative impact from promoted experiments
+    promoted_entries = [e for e in journal if e.get("promoted")]
+    cumulative_sharpe_delta = sum(
+        e.get("delta_vs_baseline", {}).get("sharpe", 0)
+        for e in promoted_entries
+    )
+
+    # Strategy coverage matrix
+    all_strategies = set()
+    all_markets = set()
+    coverage = {}  # {strategy: {market: {last_tested, verdict, experiment_id}}}
+    for entry in journal:
+        strat = entry.get("strategy")
+        market = entry.get("market")
+        if strat and market:
+            all_strategies.add(strat)
+            all_markets.add(market)
+            key = f"{strat}:{market}"
+            coverage[key] = {
+                "strategy": strat,
+                "market": market,
+                "last_tested": entry.get("timestamp", ""),
+                "verdict": entry.get("verdict", "?"),
+                "experiment_id": entry.get("experiment_id", "?"),
+            }
+
+    # Experiment statistics
+    total_experiments = len(journal)
+    passed_count = sum(1 for e in journal if e.get("verdict") == "pass")
+    failed_count = sum(1 for e in journal if e.get("verdict") == "fail")
+    partial_count = sum(1 for e in journal if e.get("verdict") == "partial")
+    promoted_count = len(promoted_entries)
+
+    return {
+        "queue": {
+            "total": len(queue),
+            "queued": len(queued),
+            "running": len(running),
+            "completed": len(completed),
+            "items": [
+                {
+                    "id": e.get("id", "?"),
+                    "title": e.get("title", "?"),
+                    "priority": e.get("priority", "?"),
+                    "category": e.get("category", "?"),
+                    "market": e.get("market", "?"),
+                    "status": e.get("status", "?"),
+                    "estimated_runtime_min": e.get("estimated_runtime_min", 0),
+                }
+                for e in queue
+            ],
+        },
+        "recent_results": recent_results,
+        "statistics": {
+            "total_experiments": total_experiments,
+            "passed": passed_count,
+            "failed": failed_count,
+            "partial": partial_count,
+            "promoted": promoted_count,
+            "pass_rate_pct": round(passed_count / total_experiments * 100, 1) if total_experiments else 0,
+        },
+        "cumulative_impact": {
+            "sharpe_delta": round(cumulative_sharpe_delta, 4),
+            "promotions": promoted_count,
+        },
+        "strategy_coverage": list(coverage.values()),
+        "strategies_tested": sorted(all_strategies),
+        "markets_tested": sorted(all_markets),
+    }
+
+
 def generate():
     """Generate multi-market dashboard data.
 
@@ -782,6 +887,9 @@ def generate():
     now = datetime.now(BRISBANE)
     broker_acct_data = broker_cache["acct"] if broker_cache else None
 
+    # ── Research data ──────────────────────────────────────────
+    research_data = generate_research_data()
+
     result = {
         "timestamp": now.isoformat(),
         "project": "Atlas",
@@ -812,6 +920,7 @@ def generate():
         "closed_trades": all_closed,
         "risk": primary_data.get("risk", {}),
         "tasks": primary_data.get("tasks", {}),
+        "research": research_data,
     }
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

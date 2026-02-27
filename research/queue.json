@@ -1,0 +1,999 @@
+[
+  {
+    "id": "wave1_moment_solo",
+    "title": "Solo backtest: Momentum Breakout on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Momentum breakout captures trend initiation events that the existing trend_following strategy misses. TF waits for MA crossover (lagging); breakout enters at the point of N-day high breach (leading). Expects moderate trade count (30-80), higher avg win, lower win rate than MR.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 10,
+      "min_win_rate": 35.0,
+      "min_profit_factor": 0.7,
+      "description": "Solo viability check: strategy generates 10+ trades, WR > 35%, PF > 0.7. Optimization will tune for profitability. Updated: removed positive_pnl requirement (untuned defaults rarely profitable)."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P2",
+    "status": "passed",
+    "strategy_name": "momentum_breakout",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T05:41:44.394500+00:00",
+    "created_at": "2026-02-27T05:29:01.019164+00:00",
+    "updated_at": "2026-02-27T05:42:44.052837+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "momentum_breakout",
+      "trend",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "Strategy enters on N-day high breakout with trend MA alignment. Key params: lookback_days, atr_stop_mult, trailing_stop_atr_mult."
+  },
+  {
+    "id": "wave1_moment_opt",
+    "title": "Optimize: Momentum Breakout on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on Momentum Breakout params will improve solo performance significantly.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "sharpe_improvement_vs_solo": 0.1,
+      "min_trades": 15,
+      "min_profit_factor": 1.1,
+      "description": "Optimization should lift Sharpe by 0.1+ vs untuned solo, maintain 15+ trades."
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P2",
+    "status": "passed",
+    "strategy_name": "momentum_breakout",
+    "params_override": {
+      "param_grid": {
+        "lookback_days": [
+          10,
+          15,
+          20,
+          30
+        ],
+        "atr_stop_mult": [
+          2.0,
+          2.5,
+          3.0,
+          3.5
+        ],
+        "trailing_stop_atr_mult": [
+          2.0,
+          2.5,
+          3.0,
+          3.5
+        ],
+        "max_hold_days": [
+          10,
+          15,
+          20,
+          25
+        ],
+        "trend_ma_period": [
+          50,
+          100,
+          150,
+          200
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T06:46:03.480670+00:00",
+    "created_at": "2026-02-27T05:29:01.019187+00:00",
+    "updated_at": "2026-02-27T07:44:21.231404+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "momentum_breakout",
+      "trend",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave1_moment_solo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_moment_comb",
+    "title": "Combined test: Momentum Breakout + active portfolio on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Adding optimized Momentum Breakout to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 1.04,
+      "max_combined_dd": 6.39,
+      "min_combined_trades": 425,
+      "min_strategy_trades": 10,
+      "positive_delta_sharpe": true,
+      "description": "Combined portfolio must maintain Sharpe >= 1.04, DD <= 6.4%, strategy contributes 10+ trades. OG currently drags portfolio solo but helps via diversification \u2014 breakout may do similar or better."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P2",
+    "status": "failed",
+    "strategy_name": "momentum_breakout",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T07:44:30.601677+00:00",
+    "created_at": "2026-02-27T05:29:01.019201+00:00",
+    "updated_at": "2026-02-27T07:52:57.770719+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "momentum_breakout",
+      "trend",
+      "combined"
+    ],
+    "depends_on": [
+      "wave1_moment_opt"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_moment_oos",
+    "title": "OOS validation: portfolio with Momentum Breakout on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "The portfolio with Momentum Breakout passes all 3 OOS validation tests (time split, perturbation, walk-forward).",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "time_split_oos_is_sharpe_ratio": 0.5,
+      "perturbation_zero_negative_cagr_pct": 80.0,
+      "walkforward_profitable_window_pct": 70.0,
+      "walkforward_worst_window_return": -5.0,
+      "description": "Standard 3-test OOS: time split ratio>0.5, <20% negative perturbation, >70% profitable windows, worst window >-5%."
+    },
+    "estimated_runtime_min": 90,
+    "priority": "P2",
+    "status": "deferred",
+    "strategy_name": "momentum_breakout",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019207+00:00",
+    "updated_at": "2026-02-27T07:53:03.361492+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "momentum_breakout",
+      "trend",
+      "oos",
+      "validation"
+    ],
+    "depends_on": [
+      "wave1_moment_comb"
+    ],
+    "notes": "\n[auto-deferred] Dependency failed: ['wave1_moment_comb']"
+  },
+  {
+    "id": "wave1_short__solo",
+    "title": "Solo backtest: Short-Term Mean Reversion on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Short-term MR (RSI(2)/IBS) captures rapid 1-5 day reversals that the existing mean_reversion (RSI(14)/z-score) strategy misses. Different timeframe = different signals = diversification benefit. Connors research shows RSI(2)<10 has 70-75% win rate on SP500. Key risk: signal overlap with existing MR \u2014 need <30% overlap for value.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 10,
+      "min_win_rate": 35.0,
+      "min_profit_factor": 0.7,
+      "description": "Solo viability check: strategy generates 10+ trades, WR > 35%, PF > 0.7. Optimization will tune for profitability. Updated: removed positive_pnl requirement (untuned defaults rarely profitable)."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P2",
+    "status": "passed",
+    "strategy_name": "short_term_mr",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T05:42:47.392283+00:00",
+    "created_at": "2026-02-27T05:29:01.019215+00:00",
+    "updated_at": "2026-02-27T05:47:06.950200+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "short_term_mr",
+      "mean_reversion",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "RSI(2) was rejected during coord descent optimization as too noisy, but short_term_mr has IBS confirmation + SMA(5) filter which may clean up signals."
+  },
+  {
+    "id": "wave1_short__opt",
+    "title": "Optimize: Short-Term Mean Reversion on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on Short-Term Mean Reversion params will improve solo performance significantly.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "sharpe_improvement_vs_solo": 0.1,
+      "min_trades": 15,
+      "min_profit_factor": 1.1,
+      "description": "Optimization should lift Sharpe by 0.1+ vs untuned solo, maintain 15+ trades."
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P2",
+    "status": "passed",
+    "strategy_name": "short_term_mr",
+    "params_override": {
+      "param_grid": {
+        "rsi_oversold": [
+          5,
+          10,
+          15
+        ],
+        "ibs_oversold": [
+          0.15,
+          0.25
+        ],
+        "atr_stop_mult": [
+          1.0,
+          1.5,
+          2.0
+        ],
+        "max_hold_days": [
+          3,
+          5,
+          7
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T08:53:51.950988+00:00",
+    "created_at": "2026-02-27T05:29:01.019220+00:00",
+    "updated_at": "2026-02-27T10:06:32.713582+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "short_term_mr",
+      "mean_reversion",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave1_short__solo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_short__comb",
+    "title": "Combined test: Short-Term Mean Reversion + active portfolio on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Adding optimized Short-Term Mean Reversion to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 1.04,
+      "max_combined_dd": 6.39,
+      "min_combined_trades": 425,
+      "min_strategy_trades": 10,
+      "positive_delta_sharpe": true,
+      "description": "Combined portfolio must maintain Sharpe >= 1.04, DD <= 6.4%, strategy contributes 10+ trades. Critical: measure signal overlap with existing mean_reversion. If overlap >30%, diversification value is too low."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P2",
+    "status": "failed",
+    "strategy_name": "short_term_mr",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T10:37:28.080388+00:00",
+    "created_at": "2026-02-27T05:29:01.019230+00:00",
+    "updated_at": "2026-02-27T10:52:06.310562+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "short_term_mr",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [
+      "wave1_short__opt"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_short__oos",
+    "title": "OOS validation: portfolio with Short-Term Mean Reversion on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "The portfolio with Short-Term Mean Reversion passes all 3 OOS validation tests (time split, perturbation, walk-forward).",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "time_split_oos_is_sharpe_ratio": 0.5,
+      "perturbation_zero_negative_cagr_pct": 80.0,
+      "walkforward_profitable_window_pct": 70.0,
+      "walkforward_worst_window_return": -5.0,
+      "description": "Standard 3-test OOS: time split ratio>0.5, <20% negative perturbation, >70% profitable windows, worst window >-5%."
+    },
+    "estimated_runtime_min": 90,
+    "priority": "P2",
+    "status": "deferred",
+    "strategy_name": "short_term_mr",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019233+00:00",
+    "updated_at": "2026-02-27T10:52:23.389724+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "short_term_mr",
+      "mean_reversion",
+      "oos",
+      "validation"
+    ],
+    "depends_on": [
+      "wave1_short__comb"
+    ],
+    "notes": "\n[auto-deferred] Dependency failed: ['wave1_short__comb']"
+  },
+  {
+    "id": "wave1_sector_solo",
+    "title": "Solo backtest: Sector Rotation on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Sector rotation provides a top-down signal that is uncorrelated with the bottom-up technical strategies (MR, TF, OG). It selects the strongest sectors by momentum then buys the strongest stocks within those sectors. 204 SP500 tickers mapped across 11 GICS sectors. Risk: longer holding periods and lower trade frequency may limit impact.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 10,
+      "min_win_rate": 35.0,
+      "min_profit_factor": 0.7,
+      "description": "Solo viability check: strategy generates 10+ trades, WR > 35%, PF > 0.7. Optimization will tune for profitability. Updated: removed positive_pnl requirement (untuned defaults rarely profitable)."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "sector_rotation",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019243+00:00",
+    "updated_at": "2026-02-27T05:29:01.019244+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "sector_rotation",
+      "macro",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "Requires sector_map.json (204 tickers, 11 sectors confirmed). Rebalances every N days \u2014 structurally different from signal-per-bar strategies."
+  },
+  {
+    "id": "wave1_sector_opt",
+    "title": "Optimize: Sector Rotation on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on Sector Rotation params will improve solo performance significantly.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "sharpe_improvement_vs_solo": 0.1,
+      "min_trades": 15,
+      "min_profit_factor": 1.1,
+      "description": "Optimization should lift Sharpe by 0.1+ vs untuned solo, maintain 15+ trades."
+    },
+    "estimated_runtime_min": 45,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "sector_rotation",
+    "params_override": {
+      "param_grid": {
+        "sector_momentum_period": [
+          40,
+          60,
+          90
+        ],
+        "top_sectors": [
+          2,
+          3,
+          4
+        ],
+        "rebalance_days": [
+          10,
+          15,
+          20,
+          30
+        ],
+        "atr_stop_mult": [
+          2.0,
+          2.5,
+          3.0
+        ],
+        "max_hold_days": [
+          15,
+          20,
+          25,
+          30
+        ],
+        "stocks_per_sector": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019247+00:00",
+    "updated_at": "2026-02-27T05:29:01.019248+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "sector_rotation",
+      "macro",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave1_sector_solo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_sector_comb",
+    "title": "Combined test: Sector Rotation + active portfolio on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Adding optimized Sector Rotation to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 1.04,
+      "max_combined_dd": 6.39,
+      "min_combined_trades": 425,
+      "min_strategy_trades": 10,
+      "positive_delta_sharpe": true,
+      "description": "Combined portfolio must maintain Sharpe >= 1.04, DD <= 6.4%, strategy contributes 10+ trades. Sector rotation is fundamentally different signal source. Even modest solo performance may improve portfolio via decorrelation."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "sector_rotation",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019252+00:00",
+    "updated_at": "2026-02-27T05:29:01.019253+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "sector_rotation",
+      "macro",
+      "combined"
+    ],
+    "depends_on": [
+      "wave1_sector_opt"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_sector_oos",
+    "title": "OOS validation: portfolio with Sector Rotation on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "The portfolio with Sector Rotation passes all 3 OOS validation tests (time split, perturbation, walk-forward).",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "time_split_oos_is_sharpe_ratio": 0.5,
+      "perturbation_zero_negative_cagr_pct": 80.0,
+      "walkforward_profitable_window_pct": 70.0,
+      "walkforward_worst_window_return": -5.0,
+      "description": "Standard 3-test OOS: time split ratio>0.5, <20% negative perturbation, >70% profitable windows, worst window >-5%."
+    },
+    "estimated_runtime_min": 90,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "sector_rotation",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019255+00:00",
+    "updated_at": "2026-02-27T05:29:01.019256+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "sector_rotation",
+      "macro",
+      "oos",
+      "validation"
+    ],
+    "depends_on": [
+      "wave1_sector_comb"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_mtf_mo_solo",
+    "title": "Solo backtest: Multi-Timeframe Momentum on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends. This is similar in spirit to trend_following but uses a different timeframe for trend confirmation (weekly SMA vs daily MA crossover). Key question: signal overlap with trend_following. If >60% overlap, the strategy adds complexity without diversification.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 10,
+      "min_win_rate": 35.0,
+      "min_profit_factor": 0.7,
+      "description": "Solo viability check: strategy generates 10+ trades, WR > 35%, PF > 0.7. Optimization will tune for profitability. Updated: removed positive_pnl requirement (untuned defaults rarely profitable)."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mtf_momentum",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019261+00:00",
+    "updated_at": "2026-02-27T05:29:01.019262+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "mtf_momentum",
+      "trend",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "Requires weekly data aggregation from daily bars. Uses weekly SMA + RSI for trend, daily RSI + SMA proximity for entry."
+  },
+  {
+    "id": "wave1_mtf_mo_opt",
+    "title": "Optimize: Multi-Timeframe Momentum on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on Multi-Timeframe Momentum params will improve solo performance significantly.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "sharpe_improvement_vs_solo": 0.1,
+      "min_trades": 15,
+      "min_profit_factor": 1.1,
+      "description": "Optimization should lift Sharpe by 0.1+ vs untuned solo, maintain 15+ trades."
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mtf_momentum",
+    "params_override": {
+      "param_grid": {
+        "weekly_sma_period": [
+          10,
+          15,
+          20
+        ],
+        "weekly_rsi_min": [
+          40,
+          50,
+          60
+        ],
+        "daily_rsi_max": [
+          30,
+          35,
+          40,
+          45
+        ],
+        "pullback_sma_pct": [
+          0.02,
+          0.03,
+          0.05
+        ],
+        "atr_stop_mult": [
+          2.0,
+          2.5,
+          3.0
+        ],
+        "max_hold_days": [
+          10,
+          15,
+          20
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019264+00:00",
+    "updated_at": "2026-02-27T05:29:01.019268+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "mtf_momentum",
+      "trend",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave1_mtf_mo_solo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_mtf_mo_comb",
+    "title": "Combined test: Multi-Timeframe Momentum + active portfolio on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Adding optimized Multi-Timeframe Momentum to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 1.04,
+      "max_combined_dd": 6.39,
+      "min_combined_trades": 425,
+      "min_strategy_trades": 10,
+      "positive_delta_sharpe": true,
+      "description": "Combined portfolio must maintain Sharpe >= 1.04, DD <= 6.4%, strategy contributes 10+ trades. Must measure signal overlap with trend_following. >60% overlap = reject for complexity without benefit."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mtf_momentum",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019272+00:00",
+    "updated_at": "2026-02-27T05:29:01.019273+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "mtf_momentum",
+      "trend",
+      "combined"
+    ],
+    "depends_on": [
+      "wave1_mtf_mo_opt"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_mtf_mo_oos",
+    "title": "OOS validation: portfolio with Multi-Timeframe Momentum on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "The portfolio with Multi-Timeframe Momentum passes all 3 OOS validation tests (time split, perturbation, walk-forward).",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "time_split_oos_is_sharpe_ratio": 0.5,
+      "perturbation_zero_negative_cagr_pct": 80.0,
+      "walkforward_profitable_window_pct": 70.0,
+      "walkforward_worst_window_return": -5.0,
+      "description": "Standard 3-test OOS: time split ratio>0.5, <20% negative perturbation, >70% profitable windows, worst window >-5%."
+    },
+    "estimated_runtime_min": 90,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mtf_momentum",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019275+00:00",
+    "updated_at": "2026-02-27T05:29:01.019276+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "mtf_momentum",
+      "trend",
+      "oos",
+      "validation"
+    ],
+    "depends_on": [
+      "wave1_mtf_mo_comb"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_bb_squ_solo",
+    "title": "Solo backtest: BB Squeeze (Volatility Breakout) on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "BB Squeeze (Bollinger Band inside Keltner Channel) identifies periods of low volatility that precede explosive moves. When the squeeze fires (BBs expand outside KCs) with positive momentum, it signals a high-probability directional move. This is a volatility regime strategy \u2014 fundamentally different from trend/MR/gap signals.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 10,
+      "min_win_rate": 35.0,
+      "min_profit_factor": 0.7,
+      "description": "Solo viability check: strategy generates 10+ trades, WR > 35%, PF > 0.7. Optimization will tune for profitability. Updated: removed positive_pnl requirement (untuned defaults rarely profitable)."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "bb_squeeze",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019281+00:00",
+    "updated_at": "2026-02-27T05:29:01.019282+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "bb_squeeze",
+      "volatility",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "Uses BB width vs KC width for squeeze detection, linear regression slope for momentum confirmation."
+  },
+  {
+    "id": "wave1_bb_squ_opt",
+    "title": "Optimize: BB Squeeze (Volatility Breakout) on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on BB Squeeze (Volatility Breakout) params will improve solo performance significantly.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "sharpe_improvement_vs_solo": 0.1,
+      "min_trades": 15,
+      "min_profit_factor": 1.1,
+      "description": "Optimization should lift Sharpe by 0.1+ vs untuned solo, maintain 15+ trades."
+    },
+    "estimated_runtime_min": 45,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "bb_squeeze",
+    "params_override": {
+      "param_grid": {
+        "bb_period": [
+          15,
+          20,
+          25
+        ],
+        "bb_std": [
+          1.5,
+          2.0,
+          2.5
+        ],
+        "kc_atr_mult": [
+          1.0,
+          1.5,
+          2.0
+        ],
+        "momentum_period": [
+          10,
+          15,
+          20
+        ],
+        "atr_stop_mult": [
+          1.5,
+          2.0,
+          2.5
+        ],
+        "max_hold_days": [
+          10,
+          15,
+          20,
+          25
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019284+00:00",
+    "updated_at": "2026-02-27T05:29:01.019286+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "bb_squeeze",
+      "volatility",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave1_bb_squ_solo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_bb_squ_comb",
+    "title": "Combined test: BB Squeeze (Volatility Breakout) + active portfolio on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "Adding optimized BB Squeeze (Volatility Breakout) to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 1.04,
+      "max_combined_dd": 6.39,
+      "min_combined_trades": 425,
+      "min_strategy_trades": 10,
+      "positive_delta_sharpe": true,
+      "description": "Combined portfolio must maintain Sharpe >= 1.04, DD <= 6.4%, strategy contributes 10+ trades. Volatility regime signal is orthogonal to trend/MR \u2014 high potential for decorrelation benefit."
+    },
+    "estimated_runtime_min": 5,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "bb_squeeze",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019292+00:00",
+    "updated_at": "2026-02-27T05:29:01.019293+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "bb_squeeze",
+      "volatility",
+      "combined"
+    ],
+    "depends_on": [
+      "wave1_bb_squ_opt"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_bb_squ_oos",
+    "title": "OOS validation: portfolio with BB Squeeze (Volatility Breakout) on SP500",
+    "category": "dormant",
+    "market": "sp500",
+    "hypothesis": "The portfolio with BB Squeeze (Volatility Breakout) passes all 3 OOS validation tests (time split, perturbation, walk-forward).",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "time_split_oos_is_sharpe_ratio": 0.5,
+      "perturbation_zero_negative_cagr_pct": 80.0,
+      "walkforward_profitable_window_pct": 70.0,
+      "walkforward_worst_window_return": -5.0,
+      "description": "Standard 3-test OOS: time split ratio>0.5, <20% negative perturbation, >70% profitable windows, worst window >-5%."
+    },
+    "estimated_runtime_min": 90,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "bb_squeeze",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019299+00:00",
+    "updated_at": "2026-02-27T05:29:01.019300+00:00",
+    "tags": [
+      "wave1",
+      "dormant",
+      "bb_squeeze",
+      "volatility",
+      "oos",
+      "validation"
+    ],
+    "depends_on": [
+      "wave1_bb_squ_comb"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "wave1_asx_reopt",
+    "title": "Re-optimize ASX with SMA-200, IBS, RSI period features",
+    "category": "param_drift",
+    "market": "asx",
+    "hypothesis": "The SMA-200 filter, IBS confirmation, and configurable RSI period were added during SP500 optimization but never tested on ASX. These features may improve ASX performance, particularly: SMA-200 filtering out downtrend entries, IBS improving mean reversion entry quality, and RSI period tuning finding a better signal frequency for the smaller ASX universe.",
+    "method": "reoptimization",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.05,
+      "max_dd_increase": 1.0,
+      "min_trades": 250,
+      "description": "Sharpe improvement >= 0.05 OR DD reduction >= 1pp without Sharpe degradation. Min 250 trades."
+    },
+    "estimated_runtime_min": 120,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019307+00:00",
+    "updated_at": "2026-02-27T05:29:01.019308+00:00",
+    "tags": [
+      "wave1",
+      "reoptimization",
+      "asx",
+      "features"
+    ],
+    "depends_on": [],
+    "notes": "SMA-200 was too aggressive on SP500 (reduced trades to insignificant levels). May behave differently on smaller ASX universe. IBS filter already proven on SP500 opening_gap \u2014 test on ASX mean_reversion."
+  },
+  {
+    "id": "wave1_vix_filter",
+    "title": "VIX regime filter for SP500 strategies",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Reducing exposure during high-VIX periods (VIX > 25-30) improves risk-adjusted returns by avoiding entries during market panic. Alternative: only allow mean_reversion entries during high VIX (buy the panic). Williams VIX Fix (already in helpers.py) can be used as stock-level proxy if index VIX data unavailable.",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_cagr_drop": 2.0,
+      "min_trades": 200,
+      "description": "Sharpe improvement >= 0.03 without CAGR dropping > 2pp. Min 200 trades."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019311+00:00",
+    "updated_at": "2026-02-27T05:29:01.019312+00:00",
+    "tags": [
+      "wave1",
+      "filter",
+      "vix",
+      "regime",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Requires VIX (^VIX) data ingestion \u2014 check if already in SP500 cache. If not, add to data pipeline first. Williams VIX Fix (calc_wvf in helpers.py) is a stock-level proxy that doesn't need index data. Test variants: (a) skip entries VIX>25, (b) skip VIX>30, (c) halve position VIX>20, (d) tighten stops VIX>25, (e) only MR entries when VIX>25."
+  },
+  {
+    "id": "wave1_vol_filter",
+    "title": "Volume regime filter across active SP500 strategies",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Only entering trades when daily volume exceeds the N-day average improves signal quality by filtering out low-liquidity, low-conviction price moves. Higher volume on entry day = more institutional participation = higher probability of follow-through.",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "win_rate_improvement": 2.0,
+      "sharpe_improvement": 0.02,
+      "min_trades": 200,
+      "description": "Win rate improvement >= 2pp OR Sharpe improvement >= 0.02. Min 200 trades to avoid over-filtering."
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P4",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019315+00:00",
+    "updated_at": "2026-02-27T05:29:01.019316+00:00",
+    "tags": [
+      "wave1",
+      "filter",
+      "volume",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Test variants: (a) vol > 1.0x 20-day avg, (b) vol > 1.5x 20-day avg, (c) vol > 2.0x 20-day avg, (d) vol > 50-day avg. WARNING: aggressive volume filters reduced trades to insignificant levels during SMA-200 testing. Monitor trade count carefully."
+  },
+  {
+    "id": "wave1_cross_mkt",
+    "title": "Cross-market correlation signals: ASX \u2194 SP500",
+    "category": "cross_market",
+    "market": "sp500",
+    "hypothesis": "SP500 overnight moves predict ASX opening direction (ASX opens ~14h after US close), and ASX session moves predict SP500 opening direction (US opens ~7h after ASX close). If correlation > 0.3, a cross-market filter could skip entries when the other market had a large adverse move.",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "min_correlation": 0.3,
+      "p_value_max": 0.05,
+      "sharpe_improvement": 0.03,
+      "description": "Statistically significant correlation (p < 0.05) AND Sharpe improvement >= 0.03 when used as filter."
+    },
+    "estimated_runtime_min": 45,
+    "priority": "P5",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-02-27T05:29:01.019318+00:00",
+    "updated_at": "2026-02-27T05:29:01.019319+00:00",
+    "tags": [
+      "wave1",
+      "cross_market",
+      "correlation",
+      "exploratory"
+    ],
+    "depends_on": [],
+    "notes": "This is exploratory \u2014 may not yield actionable results. Data alignment: must handle AEST/ET timezone differences and date line. ASX daily data in data/cache/asx/, SP500 in data/cache/sp500/. Use SPY as SP500 proxy, STW.AX or XJO as ASX proxy."
+  }
+]

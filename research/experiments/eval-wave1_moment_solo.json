@@ -1,0 +1,30 @@
+{
+  "experiment_id": "wave1_moment_solo",
+  "strategy": "momentum_breakout",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T05:41:45.572259+00:00",
+  "solo": {
+    "total_trades": 342,
+    "cagr_pct": -2.553,
+    "sharpe": -0.9931,
+    "sortino": -1.3454,
+    "max_drawdown_pct": 11.205,
+    "win_rate_pct": 48.54,
+    "profit_factor": 0.9577,
+    "total_pnl": -72.15,
+    "avg_trade": -0.21,
+    "final_equity": 3806.04,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 342,
+        "total_pnl": -72.15,
+        "win_rate_pct": 48.5
+      }
+    }
+  },
+  "runtime_s": 59.2
+}

@@ -1,0 +1,30 @@
+{
+  "experiment_id": "wave1_short__solo",
+  "strategy": "short_term_mr",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T05:42:48.633385+00:00",
+  "solo": {
+    "total_trades": 946,
+    "cagr_pct": -1.6731,
+    "sharpe": -0.4471,
+    "sortino": -0.6316,
+    "max_drawdown_pct": 18.2159,
+    "win_rate_pct": 58.56,
+    "profit_factor": 0.9609,
+    "total_pnl": -186.87,
+    "avg_trade": -0.2,
+    "final_equity": 3872.37,
+    "strategy_breakdown": {
+      "short_term_mr": {
+        "trades": 946,
+        "total_pnl": -186.87,
+        "win_rate_pct": 58.6
+      }
+    }
+  },
+  "runtime_s": 259.0
+}

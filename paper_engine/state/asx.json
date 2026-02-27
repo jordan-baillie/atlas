@@ -31,7 +31,7 @@
       "sector": "Materials",
       "entry_value": 120.04,
       "mae": -0.0009996820314452995,
-      "mfe": 0.08097296323588746,
+      "mfe": 0.09296898490704916,
       "stop_order_id": ""
     },
     {
@@ -47,7 +47,7 @@
       "sector": "Materials",
       "entry_value": 144.19,
       "mae": -0.0010070556327723868,
-      "mfe": 0.0481988199080091,
+      "mfe": 0.05277610304219541,
       "stop_order_id": ""
     },
     {
@@ -127,7 +127,7 @@
       "sector": "Information Technology",
       "entry_value": 47.24,
       "mae": -0.07433278770174946,
-      "mfe": 0.18066232864360696,
+      "mfe": 0.2679894210007398,
       "stop_order_id": ""
     }
   ],
@@ -194,10 +194,17 @@
       "cash": 3621.425300000001,
       "positions_value": 1403.88,
       "num_positions": 10
+    },
+    {
+      "date": "2026-02-27",
+      "equity": 5012.02,
+      "cash": 3894.367100000001,
+      "positions_value": 1117.65,
+      "num_positions": 8
     }
   ],
   "daily_high_water": 5025.31,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-02-27T09:07:31.813917"
+  "last_saved": "2026-02-27T16:00:38.508603"
 }

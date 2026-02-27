@@ -22,6 +22,7 @@ from utils.telegram import (
     send_postclose_summary,
     send_error,
     send_startup,
+    send_research_complete,
 )
 
 
@@ -52,6 +53,10 @@ def main():
         mode = sys.argv[2] if len(sys.argv) > 2 else "unknown"
         logfile = sys.argv[3] if len(sys.argv) > 3 else None
         ok = send_error(mode, f"Cron run '{mode}' exited with non-zero status.", logfile)
+
+    elif cmd == "research-complete":
+        market_id = sys.argv[2] if len(sys.argv) > 2 else "sp500"
+        ok = send_research_complete(market_id=market_id)
 
     elif cmd == "test":
         ok = send_startup()

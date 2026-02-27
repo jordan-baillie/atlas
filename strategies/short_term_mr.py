@@ -287,3 +287,117 @@ class ShortTermMR(BaseStrategy):
                 continue
 
         return signals
+
+    def check_exits(
+        self,
+        data: Dict[str, pd.DataFrame],
+        positions: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Check open short-term MR positions for exit conditions.
+
+        Exit conditions (priority order):
+            1. Hard stop: price drops below stop_price
+            2. Take profit: price reaches take_profit level
+            3. RSI overbought exit: RSI(2) > rsi_overbought_exit (bounce achieved)
+            4. SMA crossover exit: close > SMA(sma_period) (trend restored)
+            5. Time exit: position held longer than max_hold_days
+        """
+        exits: List[Dict[str, Any]] = []
+
+        for pos in positions:
+            if pos.get("strategy") != self.name:
+                continue
+
+            ticker = pos["ticker"]
+            df = data.get(ticker)
+
+            if df is None or df.empty:
+                self._logger.warning(f"{ticker}: no data for exit check")
+                continue
+
+            try:
+                close = df["close"]
+                today_close = close.iloc[-1]
+                today_date = df.index[-1]
+
+                entry_date = pd.Timestamp(pos["entry_date"])
+                entry_price = pos["entry_price"]
+                stop_price = pos.get("stop_price", 0)
+                take_profit = pos.get("take_profit")
+
+                days_held = (today_date - entry_date).days
+
+                # Calculate RSI(2) and SMA for exit checks
+                rsi = calc_rsi(close, period=self.rsi_period)
+                sma = close.rolling(window=self.sma_period).mean()
+                current_rsi = rsi.iloc[-1] if not rsi.empty else 50
+                current_sma = sma.iloc[-1] if not sma.empty else today_close
+
+                # 1. Hard stop hit
+                if today_close <= stop_price:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "stop_hit",
+                        "exit_price": today_close,
+                        "details": (
+                            f"{ticker} hit hard stop at ${stop_price:.2f}. "
+                            f"Close=${today_close:.2f}, held {days_held} days."
+                        ),
+                    })
+                # 2. Take profit hit
+                elif take_profit is not None and today_close >= take_profit:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "take_profit",
+                        "exit_price": today_close,
+                        "details": (
+                            f"{ticker} hit take profit at ${take_profit:.2f}. "
+                            f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                            f"held {days_held} days."
+                        ),
+                    })
+                # 3. RSI overbought exit (bounce achieved)
+                elif not pd.isna(current_rsi) and current_rsi > self.rsi_overbought_exit:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "signal_exit",
+                        "exit_price": today_close,
+                        "details": (
+                            f"{ticker} RSI({self.rsi_period})={current_rsi:.1f} > "
+                            f"{self.rsi_overbought_exit} (overbought bounce). "
+                            f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                            f"held {days_held} days."
+                        ),
+                    })
+                # 4. SMA crossover exit (trend restored)
+                elif not pd.isna(current_sma) and today_close > current_sma and entry_price < current_sma:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "signal_exit",
+                        "exit_price": today_close,
+                        "details": (
+                            f"{ticker} crossed above SMA({self.sma_period})=${current_sma:.2f}. "
+                            f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                            f"held {days_held} days."
+                        ),
+                    })
+                # 5. Time exit
+                elif days_held >= self.max_hold_days:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "time_exit",
+                        "exit_price": today_close,
+                        "details": (
+                            f"{ticker} time exit after {days_held} days "
+                            f"(max={self.max_hold_days}). Close=${today_close:.2f}, "
+                            f"entry=${entry_price:.2f}."
+                        ),
+                    })
+
+            except Exception as e:
+                self._logger.error(
+                    f"{ticker}: exit check error: {e}", exc_info=True
+                )
+                continue
+
+        return exits

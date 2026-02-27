@@ -1,0 +1,108 @@
+{
+  "experiment_id": "wave1_short__comb",
+  "strategy": "short_term_mr",
+  "market": "sp500",
+  "mode": "combined",
+  "params_override": {
+    "rsi_oversold": 5,
+    "ibs_oversold": 0.15,
+    "atr_stop_mult": 1.5,
+    "max_hold_days": 7
+  },
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T10:37:29.675049+00:00",
+  "baseline": {
+    "total_trades": 443,
+    "cagr_pct": 10.0547,
+    "sharpe": 0.5875,
+    "sortino": 0.8508,
+    "max_drawdown_pct": 6.5642,
+    "win_rate_pct": 57.56,
+    "profit_factor": 1.3848,
+    "total_pnl": 881.6,
+    "avg_trade": 1.99,
+    "final_equity": 4808.73,
+    "strategy_breakdown": {
+      "mean_reversion": {
+        "trades": 297,
+        "total_pnl": 449.36,
+        "win_rate_pct": 59.9
+      },
+      "trend_following": {
+        "trades": 124,
+        "total_pnl": 410.58,
+        "win_rate_pct": 51.6
+      },
+      "opening_gap": {
+        "trades": 22,
+        "total_pnl": 21.66,
+        "win_rate_pct": 59.1
+      }
+    }
+  },
+  "combined": {
+    "total_trades": 666,
+    "cagr_pct": 7.6901,
+    "sharpe": 0.3023,
+    "sortino": 0.4447,
+    "max_drawdown_pct": 8.0621,
+    "win_rate_pct": 59.46,
+    "profit_factor": 1.1922,
+    "total_pnl": 685.0,
+    "avg_trade": 1.03,
+    "final_equity": 4612.12,
+    "strategy_breakdown": {
+      "short_term_mr": {
+        "trades": 255,
+        "total_pnl": -85.19,
+        "win_rate_pct": 62.4
+      },
+      "mean_reversion": {
+        "trades": 275,
+        "total_pnl": 501.4,
+        "win_rate_pct": 61.1
+      },
+      "trend_following": {
+        "trades": 116,
+        "total_pnl": 237.62,
+        "win_rate_pct": 49.1
+      },
+      "opening_gap": {
+        "trades": 20,
+        "total_pnl": 31.17,
+        "win_rate_pct": 60.0
+      }
+    }
+  },
+  "delta": {
+    "cagr_pct": -2.3646,
+    "sharpe": -0.2852,
+    "sortino": -0.4061,
+    "max_drawdown_pct": 1.4979,
+    "win_rate_pct": 1.9,
+    "profit_factor": -0.1926,
+    "total_pnl": -196.6,
+    "total_trades": 223
+  },
+  "solo": {
+    "total_trades": 697,
+    "cagr_pct": 7.6477,
+    "sharpe": 0.2711,
+    "sortino": 0.4051,
+    "max_drawdown_pct": 10.0603,
+    "win_rate_pct": 63.13,
+    "profit_factor": 1.1739,
+    "total_pnl": 623.8,
+    "avg_trade": 0.89,
+    "final_equity": 4608.63,
+    "strategy_breakdown": {
+      "short_term_mr": {
+        "trades": 697,
+        "total_pnl": 623.8,
+        "win_rate_pct": 63.1
+      }
+    }
+  },
+  "runtime_s": 820.8
+}

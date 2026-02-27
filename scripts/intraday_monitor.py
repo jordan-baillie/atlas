@@ -364,12 +364,15 @@ def main():
     log.info(f"{'='*50}")
     log.info(f"Intraday monitor: {market_id} @ {now.strftime('%Y-%m-%d %H:%M')} {tz_label}")
 
-    # ── Load portfolio ────────────────────────────────────────
+    # ── Load portfolio from live broker ─────────────────────────
     from utils.config import get_active_config
-    from paper_engine.engine import PaperPortfolio
+    from brokers.live_portfolio import LivePortfolio
 
     config = get_active_config(market_id)
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio = LivePortfolio(config, market_id=market_id)
+    if not portfolio.connect():
+        log.error("Broker connection failed — cannot monitor positions")
+        return
 
     if not portfolio.positions:
         log.info("No open positions — nothing to monitor.")

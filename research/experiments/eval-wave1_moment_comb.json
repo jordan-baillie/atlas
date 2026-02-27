@@ -1,0 +1,104 @@
+{
+  "experiment_id": "wave1_moment_comb",
+  "strategy": "momentum_breakout",
+  "market": "sp500",
+  "mode": "combined",
+  "params_override": {
+    "lookback_days": 10,
+    "atr_stop_mult": 2.0,
+    "trailing_stop_atr_mult": 3.5,
+    "max_hold_days": 15,
+    "trend_ma_period": 150
+  },
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T07:44:32.288087+00:00",
+  "baseline": {
+    "total_trades": 443,
+    "cagr_pct": 10.0547,
+    "sharpe": 0.5875,
+    "sortino": 0.8508,
+    "max_drawdown_pct": 6.5642,
+    "win_rate_pct": 57.56,
+    "profit_factor": 1.3848,
+    "total_pnl": 881.6,
+    "avg_trade": 1.99,
+    "final_equity": 4808.73,
+    "strategy_breakdown": {
+      "mean_reversion": {
+        "trades": 297,
+        "total_pnl": 449.36,
+        "win_rate_pct": 59.9
+      },
+      "trend_following": {
+        "trades": 124,
+        "total_pnl": 410.58,
+        "win_rate_pct": 51.6
+      },
+      "opening_gap": {
+        "trades": 22,
+        "total_pnl": 21.66,
+        "win_rate_pct": 59.1
+      }
+    }
+  },
+  "combined": {
+    "total_trades": 487,
+    "cagr_pct": 1.8968,
+    "sharpe": -0.1623,
+    "sortino": -0.1985,
+    "max_drawdown_pct": 16.4879,
+    "win_rate_pct": 51.54,
+    "profit_factor": 1.1295,
+    "total_pnl": 464.58,
+    "avg_trade": 0.95,
+    "final_equity": 4147.1,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 449,
+        "total_pnl": 245.69,
+        "win_rate_pct": 50.1
+      },
+      "mean_reversion": {
+        "trades": 33,
+        "total_pnl": 123.42,
+        "win_rate_pct": 66.7
+      },
+      "trend_following": {
+        "trades": 5,
+        "total_pnl": 95.47,
+        "win_rate_pct": 80.0
+      }
+    }
+  },
+  "delta": {
+    "cagr_pct": -8.1579,
+    "sharpe": -0.7498,
+    "sortino": -1.0493,
+    "max_drawdown_pct": 9.9237,
+    "win_rate_pct": -6.02,
+    "profit_factor": -0.2553,
+    "total_pnl": -417.02,
+    "total_trades": 44
+  },
+  "solo": {
+    "total_trades": 460,
+    "cagr_pct": 8.047,
+    "sharpe": 0.2995,
+    "sortino": 0.3673,
+    "max_drawdown_pct": 12.6722,
+    "win_rate_pct": 52.39,
+    "profit_factor": 1.2945,
+    "total_pnl": 997.01,
+    "avg_trade": 2.17,
+    "final_equity": 4641.55,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 460,
+        "total_pnl": 997.01,
+        "win_rate_pct": 52.4
+      }
+    }
+  },
+  "runtime_s": 425.1
+}

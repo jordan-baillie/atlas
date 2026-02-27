@@ -295,30 +295,14 @@ def main():
         print(f"Not a trading day ({now.strftime('%A')}). No settlement needed.")
         return
 
-    # Load config and portfolio
+    # Load config and portfolio from live broker
     config = load_config(market_id=market_id) if 'market_id' in load_config.__code__.co_varnames else load_config()
-    from paper_engine.engine import PaperPortfolio
-    portfolio = PaperPortfolio(config, market_id=market_id)
-
-    # Reconcile broker-side stop fills before checking anything
-    if config.get("trading", {}).get("mode") == "live" and config.get("trading", {}).get("live_enabled"):
-        try:
-            from brokers.live_executor import LiveExecutor
-            executor = LiveExecutor(config)
-            if executor.connect():
-                recon = executor.reconcile_stops(portfolio)
-                synced = recon.get("synced", [])
-                if synced:
-                    log.info(f"Reconciled {len(synced)} broker stop fills before settlement:")
-                    for s in synced:
-                        log.info(f"  {s['ticker']}: filled at ${s['fill_price']:.2f}, PnL ${s['pnl']:+.2f}")
-                else:
-                    log.info("Reconciliation: paper and broker in sync")
-                executor.disconnect()
-            else:
-                log.warning("Could not connect to broker for reconciliation — proceeding with paper-only settlement")
-        except Exception as e:
-            log.warning(f"Broker reconciliation failed: {e} — proceeding with paper-only settlement")
+    from brokers.live_portfolio import LivePortfolio
+    portfolio = LivePortfolio(config, market_id=market_id)
+    if not portfolio.connect():
+        log.error("Could not connect to broker. Aborting EOD settlement.")
+        print("ERROR: Broker connection failed. Settlement aborted.")
+        return
 
     if not portfolio.positions:
         log.info("No open positions. Recording equity and updating dashboard.")

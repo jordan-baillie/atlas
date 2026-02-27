@@ -32,7 +32,7 @@ from data.ingest import download_ticker, download_universe, get_market_tickers, 
 from universe.builder import build_universe, load_universe, get_universe_tickers
 
 # Default market (can be overridden by --market flag)
-DEFAULT_MARKET = "asx"
+DEFAULT_MARKET = "sp500"
 from strategies.momentum_breakout import MomentumBreakout
 from strategies.mean_reversion import MeanReversion
 from strategies.sector_rotation import SectorRotation
@@ -44,6 +44,7 @@ from strategies.mtf_momentum import MTFMomentum
 from strategies.dividend_capture import DividendCapture
 from backtest.engine import BacktestEngine
 from paper_engine.engine import PaperPortfolio, TradePlanGenerator
+from brokers.live_portfolio import LivePortfolio
 from journal.logger import DecisionJournal, TradeLedger, MistakeLog, WeeklySummary
 from utils.signal_enrichment import enrich_signals
 
@@ -114,6 +115,26 @@ def get_tickers(market_id: str = None):
         return get_universe_tickers(market_id)
     except Exception:
         return get_market_tickers(market_id)[:20]
+
+
+# ===================================================================
+# Portfolio helper — always returns a LivePortfolio connected to the
+# broker.  Falls back to PaperPortfolio only for backtesting contexts.
+# ===================================================================
+
+def _get_portfolio(config: dict, market_id: str):
+    """Get the live broker portfolio.  This is the single source of truth."""
+    lp = LivePortfolio(config, market_id=market_id)
+    if lp.connect():
+        return lp
+    logger.warning("Broker connect failed for %s — falling back to paper state", market_id)
+    return PaperPortfolio(config, market_id=market_id)
+
+
+def _disconnect_portfolio(portfolio):
+    """Disconnect if it's a LivePortfolio."""
+    if isinstance(portfolio, LivePortfolio):
+        portfolio.disconnect()
 
 
 # ===================================================================
@@ -212,26 +233,18 @@ def cmd_plan(args):
         return
     prices = get_latest_prices(data)
 
-    # Always use paper portfolio for plan generation — it tracks our
-    # dedicated allocation (e.g. $4k for SP500) separately from the
-    # full broker account balance.  Live execution happens at approval
-    # time via LiveExecutor / Telegram bot.
-    is_live = (config.get("trading", {}).get("broker", "paper") != "paper"
-               and config.get("trading", {}).get("live_enabled", False))
-    portfolio = PaperPortfolio(config, market_id=market_id)
-    if is_live:
-        print("LIVE MODE: Planning against $%.2f allocation (%d positions tracked)" %
-              (portfolio.equity(prices), len(portfolio.positions)))
-        print("  Execution via %s broker on approval." %
-              config.get("trading", {}).get("broker", "paper"))
+    # Use live broker portfolio as source of truth
+    portfolio = _get_portfolio(config, market_id)
+    broker_name = config.get("trading", {}).get("broker", "paper")
+    print("LIVE MODE: Planning against $%.2f equity (%d positions) via %s" %
+          (portfolio.equity(prices), len(portfolio.positions), broker_name))
 
     plan_gen = TradePlanGenerator(portfolio, config)
     decision_journal = DecisionJournal()
     halted, dd = portfolio.check_daily_drawdown(prices)
     if halted:
         print("TRADING HALTED: Daily drawdown %.2f%% >= %.2f%%" % (dd * 100, config["risk"]["max_daily_drawdown_pct"] * 100))
-        if is_live:
-            portfolio.disconnect()
+        _disconnect_portfolio(portfolio)
         return
     strategies = get_strategies(config)
     all_signals = []
@@ -255,78 +268,29 @@ def cmd_plan(args):
     plan = plan_gen.generate_plan(all_signals, exit_recommendations, prices, trade_date)
     print(plan_gen.format_plan_text(plan))
     print("\nPlan saved to paper_engine/plans/plan_%s.json" % trade_date)
+    _disconnect_portfolio(portfolio)
 
 
 
 def cmd_paper_run(args):
-    market_id = getattr(args, "market", DEFAULT_MARKET)
-    config = get_active_config(market_id)
-    trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
-    portfolio = PaperPortfolio(config, market_id=market_id)
-    plan_gen = TradePlanGenerator(portfolio, config)
-    ledger = TradeLedger()
-    mistake_log = MistakeLog()
-    plan = plan_gen.load_plan(trade_date)
-    if not plan:
-        print("ERROR: No plan found for %s. Run 'plan' first." % trade_date)
-        return
-    if plan["status"] != "APPROVED":
-        print("Plan status is '%s'. Need APPROVED to execute." % plan["status"])
-        return
-    tickers = get_tickers(market_id)
-    data = load_data(tickers, config)
-    prices = get_latest_prices(data)
-    print("\nExecuting approved plan for %s..." % trade_date)
-    for exit_rec in plan.get("proposed_exits", []):
-        ticker = exit_rec.get("ticker")
-        if ticker and ticker in prices:
-            result = portfolio.execute_exit(ticker, prices[ticker], trade_date, exit_rec.get("reason", "planned_exit"))
-            if result:
-                ledger.record_exit(result)
-                print("  EXIT %s: PnL %s (%.1f%%)" % (ticker, format_aud(result["pnl"]), result["pnl_pct"]))
-                if result["pnl"] < 0:
-                    categories = mistake_log.auto_categorize(result)
-                    for cat in categories:
-                        mistake_log.record_mistake(result, cat["category"], cat["description"], cat["impact"])
-    for entry in plan.get("proposed_entries", []):
-        ticker = entry.get("ticker")
-        if ticker and ticker in prices:
-            class SignalProxy:
-                pass
-            sig = SignalProxy()
-            sig.ticker = ticker
-            sig.strategy = entry["strategy"]
-            sig.entry_price = entry["entry_price"]
-            sig.stop_price = entry["stop_price"]
-            sig.take_profit = entry.get("take_profit")
-            sig.position_size = entry["position_size"]
-            sig.confidence = entry["confidence"]
-            sig.rationale = entry["rationale"]
-            sig.sector = entry.get("sector", "Unknown")
-            result = portfolio.execute_entry(sig, prices[ticker], trade_date)
-            ledger.record_entry(result)
-            print("  ENTRY %s: %d@%s cost=%s" % (ticker, result["shares"], format_aud(result["fill_price"]), format_aud(result["total_cost"])))
-    portfolio.update_positions(prices)
-    portfolio.record_equity(trade_date, prices)
-    summary = portfolio.portfolio_summary(prices)
-    print("\nPortfolio after execution:")
-    print("   Equity: %s" % format_aud(summary["equity"]))
-    print("   Cash: %s" % format_aud(summary["cash"]))
-    print("   PnL: %s (%.1f%%)" % (format_aud(summary["total_pnl"]), summary["total_pnl_pct"]))
-    print("   Open positions: %d" % summary["num_open"])
+    """DEPRECATED: Paper execution removed. Use live_run or Telegram approval."""
+    print("ERROR: Paper execution is deprecated. All trading uses the live broker.")
+    print("  Use 'live_run' command or approve via Telegram bot instead.")
+    return
 
 
 def cmd_approve(args):
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio = _get_portfolio(config, market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.approve_plan(trade_date)
     if plan:
         print("Plan for %s APPROVED" % trade_date)
     else:
         print("No plan found for %s" % trade_date)
+    _disconnect_portfolio(portfolio)
 
 
 def cmd_status(args):
@@ -335,11 +299,13 @@ def cmd_status(args):
     tickers = get_tickers(market_id)
     data = load_data(tickers, config) if tickers else {}
     prices = get_latest_prices(data) if data else {}
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio = _get_portfolio(config, market_id)
     summary = portfolio.portfolio_summary(prices)
     market = get_market(market_id)
+    is_live = isinstance(portfolio, LivePortfolio)
+    mode_label = "LIVE" if is_live else "PAPER (broker offline)"
     print("\n" + "=" * 50)
-    print("  ATLAS STATUS [%s]" % market.display_name)
+    print("  ATLAS STATUS [%s] — %s" % (market.display_name, mode_label))
     print("=" * 50)
     print("\nConfig: %s" % config["version"])
     print("Date: %s" % datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -364,6 +330,7 @@ def cmd_status(args):
         print("   Universe: %d tickers" % len(uni))
     except Exception:
         print("   Universe: Not built yet")
+    _disconnect_portfolio(portfolio)
 
 
 def cmd_ledger(args):
@@ -483,14 +450,16 @@ def cmd_live_run(args):
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
 
     # Load plan
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio = _get_portfolio(config, market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.load_plan(trade_date)
     if not plan:
         print("ERROR: No plan found for %s. Run 'plan' first." % trade_date)
+        _disconnect_portfolio(portfolio)
         return
     if plan["status"] != "APPROVED":
         print("Plan status is '%s'. Need APPROVED to execute." % plan["status"])
+        _disconnect_portfolio(portfolio)
         return
 
     safety = config.get("trading", {}).get("live_safety", {})
@@ -889,51 +858,26 @@ def cmd_sync(args):
         broker_positions = broker.get_positions()
         broker_info = broker.get_account_info()
 
-        # Get Atlas paper state
-        paper = PaperPortfolio(config, market_id=market_id)
-        tickers = [p.ticker for p in paper.positions]
-        paper_summary = paper.portfolio_summary()
-
         print("\n" + "=" * 55)
-        print("  POSITION RECONCILIATION")
+        print("  BROKER POSITION REPORT")
         print("=" * 55)
-
-        print("\n  Atlas Paper State:")
-        print("    Equity:    %s" % format_aud(paper_summary["equity"]))
-        print("    Cash:      %s" % format_aud(paper_summary["cash"]))
-        print("    Positions: %d" % paper_summary["num_open"])
 
         print("\n  Broker State:")
         print("    Equity:    %s" % format_aud(broker_info.equity))
         print("    Cash:      %s" % format_aud(broker_info.cash))
         print("    Positions: %d" % broker_info.num_positions)
 
-        # Compare positions
-        atlas_tickers = {p.ticker for p in paper.positions}
-        broker_tickers = {p.ticker for p in broker_positions}
-
-        only_atlas = atlas_tickers - broker_tickers
-        only_broker = broker_tickers - atlas_tickers
-        common = atlas_tickers & broker_tickers
-
-        if only_atlas:
-            print("\n  ⚠️  In Atlas but NOT in broker:")
-            for t in sorted(only_atlas):
-                print("    %s" % t)
-        if only_broker:
-            print("\n  ⚠️  In broker but NOT in Atlas:")
-            for t in sorted(only_broker):
-                print("    %s" % t)
-        if common:
-            print("\n  ✅ Matching positions:")
-            for t in sorted(common):
-                ap = next(p for p in paper.positions if p.ticker == t)
-                bp = next(p for p in broker_positions if p.ticker == t)
-                match = "✅" if ap.shares == bp.shares else "⚠️  QTY MISMATCH"
-                print("    %s  atlas=%d  broker=%d  %s" % (t, ap.shares, bp.shares, match))
-
-        if not only_atlas and not only_broker:
-            print("\n  ✅ All positions reconciled.")
+        if broker_positions:
+            print("\n  Open Positions:")
+            for bp in broker_positions:
+                ticker = bp.ticker if hasattr(bp, 'ticker') else bp.get('ticker', '?')
+                shares = bp.shares if hasattr(bp, 'shares') else bp.get('shares', 0)
+                price = bp.current_price if hasattr(bp, 'current_price') else bp.get('current_price', 0)
+                pnl = bp.unrealized_pnl if hasattr(bp, 'unrealized_pnl') else bp.get('unrealized_pnl', 0)
+                print("    %s  %d shares @ $%.2f  PnL=%s" % (
+                    str(ticker).ljust(8), shares, price, format_aud(pnl)))
+        else:
+            print("\n  No open positions.")
 
     finally:
         broker.disconnect()
@@ -995,6 +939,11 @@ def cmd_schedule(args):
         print(f"30 {intra_hours} * * {s['weekdays']} cd /root/atlas && python3 scripts/intraday_monitor.py -m {mid} >> logs/intraday_{mid}.log 2>&1")
         print(f"{pcm} {pch} * * {s['weekdays']} /root/atlas/scripts/pi-cron.sh postclose {mid}")
         print()
+
+    # Research cron — runs during quiet window when both markets are closed
+    print(f"# --- Research (quiet window: 09:00-17:00 AEST, both markets closed) ---")
+    print(f"00 09 * * 1-5 /root/atlas/scripts/pi-cron.sh research sp500 atlas-research")
+    print()
 
 
 def main():
