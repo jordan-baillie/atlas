@@ -213,8 +213,8 @@ def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
 def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
     """Execute plan through LiveExecutor against the real broker.
 
-    The broker owns positions — no paper engine sync.
-    Closed-trade records are saved to LivePortfolio's local state file.
+    After live execution, also updates the paper portfolio state so the
+    $X allocation tracking stays in sync with actual broker fills.
     """
     from brokers.live_executor import LiveExecutor
     from brokers.live_portfolio import LivePortfolio
@@ -237,7 +237,6 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
         for exit_result in report.get("exits", []):
             if exit_result.get("success"):
                 ticker = exit_result.get("ticker", "")
-                # Find the pre-execution position for this ticker
                 pre_pos = next((p for p in live_pf.positions if p.ticker == ticker), None)
                 trade_record = {
                     "ticker": ticker,
@@ -252,10 +251,52 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
                 }
                 live_pf.record_closed_trade(trade_record)
 
-        # Record equity snapshot
         live_pf.record_equity(trade_date)
     finally:
         executor.disconnect()
+
+    # ── Sync paper portfolio state with broker fills ──────────
+    # Paper state tracks our dedicated allocation ($X for this market).
+    # After live execution, mirror successful fills into paper state
+    # so plan generation uses correct positions/cash next time.
+    try:
+        paper_pf = PaperPortfolio(config, market_id=market_id)
+
+        for entry_result in report.get("entries", []):
+            if entry_result.get("success"):
+                # Find the matching plan entry for metadata
+                plan_entry = next(
+                    (e for e in plan.get("proposed_entries", [])
+                     if e["ticker"] == entry_result.get("ticker")),
+                    None,
+                )
+                if plan_entry:
+                    class _Sig:
+                        def __init__(self, d, fill_price):
+                            self.ticker = d["ticker"]
+                            self.strategy = d["strategy"]
+                            self.entry_price = fill_price
+                            self.stop_price = d["stop_price"]
+                            self.take_profit = d.get("take_profit")
+                            self.position_size = entry_result.get("qty", d["position_size"])
+                            self.confidence = d.get("confidence", 0)
+                            self.rationale = d.get("rationale", "")
+                            self.sector = d.get("sector", "Unknown")
+
+                    fill_px = entry_result.get("fill_price", entry_result.get("price", plan_entry["entry_price"]))
+                    paper_pf.execute_entry(_Sig(plan_entry, fill_px), fill_px, trade_date)
+
+        for exit_result in report.get("exits", []):
+            if exit_result.get("success"):
+                ticker = exit_result.get("ticker", "")
+                fill_px = exit_result.get("fill_price", exit_result.get("price", 0))
+                reason = exit_result.get("reason", "signal_exit")
+                paper_pf.execute_exit(ticker, fill_px, trade_date, reason)
+
+        logger.info("Paper state synced: %d positions, $%.2f cash",
+                     len(paper_pf.positions), paper_pf.cash)
+    except Exception as e:
+        logger.error("Paper state sync failed (non-fatal): %s", e)
 
     # Format result
     n_entries = report.get("successful_entries", 0)

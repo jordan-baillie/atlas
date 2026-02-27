@@ -212,21 +212,18 @@ def cmd_plan(args):
         return
     prices = get_latest_prices(data)
 
-    # Use broker-backed portfolio in live mode, paper otherwise
+    # Always use paper portfolio for plan generation — it tracks our
+    # dedicated allocation (e.g. $4k for SP500) separately from the
+    # full broker account balance.  Live execution happens at approval
+    # time via LiveExecutor / Telegram bot.
     is_live = (config.get("trading", {}).get("broker", "paper") != "paper"
                and config.get("trading", {}).get("live_enabled", False))
+    portfolio = PaperPortfolio(config, market_id=market_id)
     if is_live:
-        from brokers.live_portfolio import LivePortfolio
-        portfolio = LivePortfolio(config, market_id=market_id)
-        if not portfolio.connect():
-            print("ERROR: Cannot connect to broker. Falling back to paper portfolio.")
-            portfolio = PaperPortfolio(config, market_id=market_id)
-            is_live = False
-        else:
-            print("LIVE MODE: Plan based on broker positions (%d pos, $%.2f cash)" %
-                  (len(portfolio.positions), portfolio.cash))
-    else:
-        portfolio = PaperPortfolio(config, market_id=market_id)
+        print("LIVE MODE: Planning against $%.2f allocation (%d positions tracked)" %
+              (portfolio.equity(prices), len(portfolio.positions)))
+        print("  Execution via %s broker on approval." %
+              config.get("trading", {}).get("broker", "paper"))
 
     plan_gen = TradePlanGenerator(portfolio, config)
     decision_journal = DecisionJournal()
@@ -259,8 +256,6 @@ def cmd_plan(args):
     print(plan_gen.format_plan_text(plan))
     print("\nPlan saved to paper_engine/plans/plan_%s.json" % trade_date)
 
-    if is_live:
-        portfolio.disconnect()
 
 
 def cmd_paper_run(args):

@@ -28,8 +28,9 @@
     }
   },
   "trading": {
-    "mode": "paper",
-    "broker": "paper",
+    "mode": "live",
+    "broker": "moomoo",
+    "live_enabled": true,
     "holding_period_min": 2,
     "holding_period_max": 20,
     "data_frequency": "daily",
@@ -39,7 +40,7 @@
       "require_double_approval": true,
       "max_order_value": 5000,
       "max_daily_orders": 10,
-      "dry_run_first": true
+      "dry_run_first": false
     }
   },
   "fees": {

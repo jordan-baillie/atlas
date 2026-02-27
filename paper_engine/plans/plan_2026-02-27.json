@@ -1,7 +1,7 @@
 {
   "trade_date": "2026-02-27",
-  "generated_at": "2026-02-27T14:04:17.209348",
-  "status": "APPROVED",
+  "generated_at": "2026-02-27T14:15:17.691318",
+  "status": "PENDING_APPROVAL",
   "portfolio_snapshot": {
     "equity": 4000.0,
     "cash": 4000,
@@ -91,6 +91,5 @@
     "cash_after_entries": 3567.14,
     "portfolio_exposure_pct": 10.82
   },
-  "open_positions": [],
-  "approved_at": "2026-02-27T14:09:06.301438"
+  "open_positions": []
 }

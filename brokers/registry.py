@@ -51,7 +51,7 @@ def get_broker(market_id: str, config: Dict[str, Any]) -> BrokerAdapter:
     if broker_name == "paper" or not live_enabled:
         return _make_paper_broker(market_id, config)
 
-    if broker_name == "moomoo" and market_id == "asx":
+    if broker_name == "moomoo" and market_id in ("asx", "sp500"):
         return _make_moomoo_broker(config, live=live_enabled)
 
     logger.warning(
