@@ -1,11 +1,18 @@
 {
   "market_id": "sp500",
   "mode": "live",
-  "starting_equity": 4000,
   "closed_trades": [],
-  "equity_history": [],
+  "equity_history": [
+    {
+      "date": "2026-02-27",
+      "equity": 7358.22,
+      "cash": 4972.35,
+      "positions_value": 2385.87,
+      "num_positions": 1
+    }
+  ],
   "daily_high_water": 4000,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-02-27T14:15:00"
+  "last_saved": "2026-02-27T14:18:12.233143"
 }

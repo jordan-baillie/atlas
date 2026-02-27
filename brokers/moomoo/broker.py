@@ -96,6 +96,7 @@ class MomooBroker(BrokerAdapter):
         self._port = moomoo_cfg.get("opend_port", 11111)
         self._security_firm = moomoo_cfg.get("security_firm", "FUTUAU")
         self._currency = moomoo_cfg.get("currency", "AUD")
+        self._trd_market = moomoo_cfg.get("trd_market", "AU")
         self._default_order_type = moomoo_cfg.get("order_type", "NORMAL")
         self._tif = moomoo_cfg.get("time_in_force", "DAY")
         # Secret key name is hardcoded — never stored in config
@@ -113,6 +114,11 @@ class MomooBroker(BrokerAdapter):
     @property
     def is_live(self) -> bool:
         return self._live
+
+    @property
+    def market_id(self) -> str:
+        """Atlas market_id derived from moomoo trd_market config."""
+        return {"AU": "asx", "US": "sp500", "HK": "hk"}.get(self._trd_market, "asx")
 
     @property
     def trd_env(self):
@@ -301,7 +307,7 @@ class MomooBroker(BrokerAdapter):
     ) -> OrderResult:
         self._require_connected()
 
-        moomoo_code = mapper.to_moomoo(ticker)
+        moomoo_code = mapper.to_moomoo(ticker, self.market_id)
         moomoo_side = _map_side(side)
         moomoo_type = _map_order_type(order_type)
         tif = getattr(ft.TimeInForce, self._tif, ft.TimeInForce.DAY)
@@ -480,7 +486,7 @@ class MomooBroker(BrokerAdapter):
         if not self._quote_ctx:
             return {}
 
-        moomoo_codes = mapper.to_moomoo_list(tickers)
+        moomoo_codes = mapper.to_moomoo_list(tickers, self.market_id)
 
         # Moomoo supports up to 400 per request
         prices = {}
@@ -729,7 +735,7 @@ class MomooBroker(BrokerAdapter):
         """
         self._require_connected()
 
-        moomoo_code = mapper.to_moomoo(ticker)
+        moomoo_code = mapper.to_moomoo(ticker, self.market_id)
         try:
             ret, data = self._trd_ctx.acctradinginfo_query(
                 order_type=ft.OrderType.NORMAL,

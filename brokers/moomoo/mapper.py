@@ -1,52 +1,79 @@
-"""Ticker mapping between Atlas (.AX) and Moomoo (AU.) formats.
+"""Ticker mapping between Atlas and Moomoo formats.
 
-Atlas uses yfinance format:  BHP.AX, CBA.AX, IOZ.AX
-Moomoo uses market prefix:   AU.BHP, AU.CBA, AU.IOZ
+Atlas uses yfinance format:
+  ASX:   BHP.AX, CBA.AX, IOZ.AX
+  SP500: AAPL, MSFT, ON  (plain symbols, no suffix)
+
+Moomoo uses market prefix:
+  ASX:   AU.BHP, AU.CBA, AU.IOZ
+  US:    US.AAPL, US.MSFT, US.ON
 
 All conversion happens at the broker boundary — Atlas internals
-never see AU. format.
+never see AU./US. format.
 """
 
+# Market ID → Moomoo prefix
+_MARKET_PREFIX = {
+    "asx": "AU",
+    "sp500": "US",
+}
 
-def to_moomoo(ticker: str) -> str:
-    """Convert Atlas .AX ticker to Moomoo AU. format.
+# Moomoo prefix → yfinance suffix (empty string = no suffix)
+_PREFIX_SUFFIX = {
+    "AU": ".AX",
+    "US": "",
+    "HK": ".HK",
+}
 
-    >>> to_moomoo('BHP.AX')
+
+def to_moomoo(ticker: str, market_id: str = "asx") -> str:
+    """Convert Atlas ticker to Moomoo format.
+
+    >>> to_moomoo('BHP.AX', 'asx')
     'AU.BHP'
-    >>> to_moomoo('AU.BHP')
-    'AU.BHP'
+    >>> to_moomoo('AAPL', 'sp500')
+    'US.AAPL'
+    >>> to_moomoo('US.AAPL', 'sp500')
+    'US.AAPL'
     """
-    if ticker.startswith("AU."):
+    prefix = _MARKET_PREFIX.get(market_id, "AU")
+
+    # Already in Moomoo format
+    if ticker.startswith(f"{prefix}."):
         return ticker
-    code = ticker.replace(".AX", "").upper()
-    return f"AU.{code}"
+
+    # Strip yfinance suffix if present
+    suffix = _PREFIX_SUFFIX.get(prefix, "")
+    if suffix and ticker.endswith(suffix):
+        code = ticker[: -len(suffix)].upper()
+    else:
+        code = ticker.upper()
+
+    return f"{prefix}.{code}"
 
 
 def to_atlas(moomoo_code: str) -> str:
-    """Convert Moomoo AU. ticker to Atlas .AX format.
-
-    Only converts AU. prefix tickers. Other markets (US., HK.) are
-    passed through unchanged since Atlas only manages ASX positions.
+    """Convert Moomoo ticker to Atlas/yfinance format.
 
     >>> to_atlas('AU.BHP')
     'BHP.AX'
+    >>> to_atlas('US.AAPL')
+    'AAPL'
     >>> to_atlas('BHP.AX')
     'BHP.AX'
-    >>> to_atlas('US.XOP')
-    'US.XOP'
     """
-    if moomoo_code.endswith(".AX"):
-        return moomoo_code
-    if moomoo_code.startswith("AU."):
-        code = moomoo_code[3:].upper()
-        return f"{code}.AX"
-    # Non-AU tickers (US., HK.) pass through unchanged
+    for prefix, suffix in _PREFIX_SUFFIX.items():
+        if moomoo_code.startswith(f"{prefix}."):
+            code = moomoo_code[len(prefix) + 1:].upper()
+            return f"{code}{suffix}"
+
+    # Already in Atlas format or unknown — pass through
     return moomoo_code
 
 
-def to_moomoo_list(tickers: list[str]) -> list[str]:
+def to_moomoo_list(tickers: list[str], market_id: str = "asx") -> list[str]:
     """Convert list of Atlas tickers to Moomoo format."""
-    return [to_moomoo(t) for t in tickers]
+    return [to_moomoo(t, market_id) for t in tickers]
 
 
 def to_atlas_list(moomoo_codes: list[str]) -> list[str]:
