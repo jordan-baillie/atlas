@@ -329,13 +329,20 @@ class LiveExecutor:
             self._daily_order_count += 1
             return result
 
-        # Live execution
+        # Live execution — use MARKET order when configured for market_on_open
+        # or when market is closed (price would be stale for LIMIT)
+        cfg_order_type = self.config.get("trading", {}).get("order_type", "limit")
+        if cfg_order_type in ("market_on_open", "market"):
+            entry_order_type = OrderType.MARKET
+        else:
+            entry_order_type = OrderType.LIMIT
+
         order_result = self._broker.place_order(
             ticker=ticker,
             side=OrderSide.BUY,
             qty=qty,
             price=price,
-            order_type=OrderType.LIMIT,
+            order_type=entry_order_type,
             remark=f"atlas_entry_{trade_date}",
         )
 
@@ -418,13 +425,19 @@ class LiveExecutor:
             self._daily_order_count += 1
             return result
 
-        # Live execution
+        # Live execution — match entry order type from config
+        cfg_order_type = self.config.get("trading", {}).get("order_type", "limit")
+        if cfg_order_type in ("market_on_open", "market"):
+            exit_order_type = OrderType.MARKET
+        else:
+            exit_order_type = OrderType.LIMIT
+
         order_result = self._broker.place_order(
             ticker=ticker,
             side=OrderSide.SELL,
             qty=qty,
             price=price,
-            order_type=OrderType.LIMIT,
+            order_type=exit_order_type,
             remark=f"atlas_exit_{reason}_{trade_date}",
         )
 
