@@ -14,7 +14,8 @@ os.chdir(str(PROJECT))
 
 import pandas as pd
 import numpy as np
-logging.basicConfig(level=logging.WARNING)
+from utils.logging_config import setup_logging
+setup_logging("reoptimize_full", level=logging.WARNING)
 
 from utils.config import get_active_config
 from strategies.mean_reversion import MeanReversion
@@ -82,10 +83,10 @@ def default_candidate_path():
 
 def default_backup_path():
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return PROJECT / 'config' / f'active_config_pre_reopt_{ts}.json'
+    return PROJECT / 'config' / 'versions' / f'active_config_pre_reopt_{ts}.json'
 
 def load_full_universe():
-    cache_dir = PROJECT / 'data' / 'cache'
+    cache_dir = PROJECT / 'data' / 'cache' / 'asx'
     data_dict = {}
     for pf in sorted(cache_dir.glob('*.parquet')):
         if pf.stem == 'IOZ_AX':
@@ -100,8 +101,8 @@ def load_full_universe():
             df.index = pd.to_datetime(df.index)
             if len(df) >= 100:
                 data_dict[ticker] = df
-        except:
-            pass
+        except Exception as e:
+            logging.getLogger(__name__).debug("Skip %s: %s", ticker, e)
     return data_dict
 
 def run_single(config, strat_name, data):

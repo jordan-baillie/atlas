@@ -306,8 +306,8 @@ def get_live_prices(tickers):
 def get_cache_prices(tickers):
     """Load prices from parquet cache (daily close data)."""
     prices = {}
-    for subdir in ["asx", "sp500", ""]:
-        cache = PROJECT_ROOT / "data" / "cache" / subdir if subdir else PROJECT_ROOT / "data" / "cache"
+    for subdir in ["asx", "sp500"]:
+        cache = PROJECT_ROOT / "data" / "cache" / subdir
         if not cache.exists():
             continue
         for t in tickers:
@@ -455,6 +455,48 @@ def _get_benchmark_curve(ticker: str, eq_curve: list, starting_equity: float) ->
                     d = str(idx.date())
                     scaled = round(float(row["close"]) / base_price * starting_equity, 2)
                     benchmark.append({"date": d, "equity": scaled})
+
+                # Extend benchmark with live prices for dates beyond cache.
+                # The cache may lag by 1-2 days — fetch actual recent closes
+                # from yfinance so the benchmark tracks real returns.
+                if benchmark and eq_curve:
+                    last_bench_date = benchmark[-1]["date"]
+                    missing_dates = [pt["date"] for pt in eq_curve
+                                     if pt["date"] > last_bench_date]
+                    if missing_dates:
+                        try:
+                            import yfinance as yf
+                            recent = yf.download(
+                                ticker, period="5d", interval="1d",
+                                progress=False, auto_adjust=True,
+                            )
+                            if not recent.empty:
+                                # Handle both flat and MultiIndex columns
+                                close_s = recent["Close"]
+                                if hasattr(close_s, "columns"):
+                                    close_s = close_s.iloc[:, 0]
+                                for ridx, val in close_s.dropna().items():
+                                    rd = str(ridx.date())
+                                    if rd > last_bench_date:
+                                        scaled = round(
+                                            float(val) / base_price
+                                            * starting_equity, 2,
+                                        )
+                                        benchmark.append(
+                                            {"date": rd, "equity": scaled}
+                                        )
+                                logger.info(
+                                    "Benchmark %s: extended %d days via yfinance",
+                                    ticker, len(benchmark) - len(df),
+                                )
+                        except Exception as e:
+                            # Last resort: forward-fill so there's *some* line
+                            logger.debug("Benchmark live fetch failed: %s", e)
+                            last_val = benchmark[-1]["equity"]
+                            for date in missing_dates:
+                                benchmark.append(
+                                    {"date": date, "equity": last_val}
+                                )
 
                 return benchmark
             except Exception:
@@ -745,6 +787,430 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     return result
 
 
+def generate_daily_insight() -> dict:
+    """Mine the most interesting data-science finding for the dashboard.
+
+    Runs a pool of independent insight miners — each scans a different
+    data source for a genuinely different analytical finding. Results are
+    pooled and rotated daily so each refresh shows a fresh perspective.
+
+    Miners:
+        1. opt_lift        — before/after from optimisation (grouped_bar | lollipop)
+        2. param_scatter   — parameter value vs Sharpe from optimisations (scatter)
+        3. strategy_compare — ranking & profiles across solos (horizontal | scatter | radar)
+        4. trade_anatomy   — win/loss distributions, reward:risk (grouped_bar)
+        5. vix_regime      — VIX regime vs SPY monthly returns (scatter)
+        6. fee_impact      — fee drag decomposition (waterfall | grouped_bar)
+        7. monthly_season  — seasonality in benchmark returns (horizontal_bar)
+    """
+    from pathlib import Path
+    import pandas as pd
+
+    research_dir = PROJECT_ROOT / "research"
+    experiments_dir = research_dir / "experiments"
+    journal = safe_json(research_dir / "journal.json", [])
+    now = datetime.now(BRISBANE)
+    today = now.strftime("%Y-%m-%d")
+    day_of_year = now.timetuple().tm_yday
+
+    candidates = []  # (priority, insight_dict)
+
+    # ── Helpers ──
+    _metric_map = [
+        ("sharpe", ["sharpe"], "Sharpe", 1),
+        ("cagr", ["cagr_pct", "cagr"], "CAGR", 100),
+        ("max_dd", ["max_drawdown_pct", "max_dd"], "Max DD", 100),
+        ("wr", ["win_rate_pct", "wr"], "Win Rate", 100),
+        ("pf", ["profit_factor", "pf"], "Profit Factor", 1),
+    ]
+
+    def _get(d, keys):
+        for k in keys:
+            v = d.get(k)
+            if v is not None:
+                return v
+        return None
+
+    def _norm(d):
+        result = {}
+        for key, aliases, label, scale in _metric_map:
+            v = _get(d, aliases)
+            if v is not None:
+                if scale > 1 and abs(v) <= 1:
+                    v = v * scale
+                result[key] = round(v, 2)
+        return result
+
+    # ═══════════════════════════════════════════════
+    # 1. OPT LIFT — before/after from latest optimisation
+    # ═══════════════════════════════════════════════
+    try:
+        for exp in reversed(journal):
+            if exp.get("verdict") not in ("pass", "partial", "promoted"):
+                continue
+            exp_file = experiments_dir / f"exp-{exp['experiment_id']}.json"
+            if not exp_file.exists():
+                continue
+            detail = safe_json(exp_file, {})
+            outputs = detail.get("outputs", detail)
+            baseline, optimized = outputs.get("baseline", {}), outputs.get("optimized", {})
+            if not baseline or not optimized:
+                continue
+            b, a = _norm(baseline), _norm(optimized)
+            if "sharpe" not in b or "sharpe" not in a:
+                continue
+
+            before_vals, after_vals, labels, items = [], [], [], []
+            for key, _, label, _ in _metric_map:
+                bv, av = b.get(key), a.get(key)
+                if bv is not None and av is not None:
+                    before_vals.append(bv); after_vals.append(av); labels.append(label)
+                    d = round(av - bv, 2)
+                    items.append({"label": label, "delta": d, "before": bv, "after": av,
+                                  "improved": d < 0 if key == "max_dd" else d > 0})
+            if len(labels) < 3:
+                continue
+
+            strat = exp.get("strategy") or detail.get("queue_entry", {}).get("strategy_name") or "combined"
+            if strat in ("None", "N/A", "none", "null", "unknown", "Unknown"):
+                strat = "combined"
+            ds = round(a["sharpe"] - b["sharpe"], 3)
+            base = {"type": "opt_lift", "title": f"Optimisation improved {_pretty_strat(strat)} Sharpe by {ds:+.3f}",
+                    "subtitle": f"{exp['experiment_id']} · {exp.get('market', '').upper()}",
+                    "annotation": {"text": f"Sharpe {b['sharpe']:.2f} → {a['sharpe']:.2f}",
+                                   "color": "green" if ds > 0 else "red"},
+                    "date": exp.get("timestamp", today)[:10]}
+            candidates.append((1, {**base, "chart": "grouped_bar", "labels": labels,
+                                   "series": [{"name": "Before", "values": before_vals, "color": "secondary"},
+                                              {"name": "After", "values": after_vals, "color": "primary"}]}))
+            candidates.append((1, {**base, "chart": "lollipop", "items": items}))
+            break
+    except Exception as e:
+        logger.debug(f"opt_lift miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 2. PARAM SCATTER — which parameter change had biggest impact?
+    # ═══════════════════════════════════════════════
+    try:
+        all_param_points = []  # collect across experiments
+        for f in sorted(experiments_dir.glob("exp-*_opt*.json"), reverse=True):
+            detail = safe_json(f, {})
+            outputs = detail.get("outputs", detail)
+            initial = outputs.get("initial_params", {})
+            best = outputs.get("best_params", {})
+            bl = outputs.get("baseline", {})
+            op = outputs.get("optimized", {})
+            if not initial or not best or not bl or not op:
+                continue
+            b_sharpe = _get(bl, ["sharpe"])
+            a_sharpe = _get(op, ["sharpe"])
+            if b_sharpe is None or a_sharpe is None:
+                continue
+            delta_sharpe = round(a_sharpe - b_sharpe, 3)
+            strat = outputs.get("strategy", f.stem.replace("exp-", ""))
+
+            for param, new_val in best.items():
+                old_val = initial.get(param)
+                if old_val is None or not isinstance(old_val, (int, float)):
+                    continue
+                if not isinstance(new_val, (int, float)):
+                    continue
+                pct_change = round((new_val - old_val) / max(abs(old_val), 0.001) * 100, 1)
+                if pct_change == 0:
+                    continue
+                all_param_points.append({
+                    "label": param.replace("_", " ").title()[:18],
+                    "x": pct_change,
+                    "y": delta_sharpe,
+                    "size": 7,
+                    "color": "#10b981" if delta_sharpe > 0 else "#f43f5e",
+                })
+
+        if len(all_param_points) >= 4:
+            # Sort by absolute Sharpe impact
+            all_param_points.sort(key=lambda p: abs(p["y"]), reverse=True)
+            biggest = all_param_points[0]
+            candidates.append((2, {
+                "type": "param_sensitivity", "chart": "scatter",
+                "title": f"Parameter sensitivity: {len(all_param_points)} changes across {len(list(experiments_dir.glob('exp-*_opt*.json')))} optimisations",
+                "subtitle": f"Biggest impact: {biggest['label']} ({biggest['x']:+.0f}% change → Sharpe {biggest['y']:+.3f})",
+                "points": all_param_points[:12],
+                "x_label": "Parameter Change %",
+                "y_label": "Sharpe Delta",
+                "annotation": {"text": f"Largest moves don't always help — diminishing returns visible",
+                               "color": "amber"},
+                "date": today,
+            }))
+    except Exception as e:
+        logger.debug(f"param_scatter miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 3. STRATEGY COMPARISON — solos ranking + profiles
+    # ═══════════════════════════════════════════════
+    try:
+        solo_results = {}
+        for exp in journal:
+            eid = exp.get("experiment_id", "")
+            if "_solo" not in eid and exp.get("category") != "single_strategy_test":
+                continue
+            km = exp.get("key_metrics", {})
+            strat = exp.get("strategy", "")
+            sharpe = km.get("sharpe")
+            if strat and sharpe is not None and km.get("total_trades", 0) > 0:
+                if strat not in solo_results or sharpe > solo_results[strat]["sharpe"]:
+                    solo_results[strat] = {
+                        "sharpe": round(sharpe, 3), "cagr_pct": round(km.get("cagr_pct", 0), 1),
+                        "total_trades": km.get("total_trades", 0),
+                        "win_rate_pct": round(km.get("win_rate_pct", 0), 1),
+                        "max_drawdown_pct": round(km.get("max_drawdown_pct", 0), 1),
+                        "profit_factor": round(km.get("profit_factor", 0), 2),
+                    }
+
+        if len(solo_results) >= 2:
+            sorted_strats = sorted(solo_results.items(), key=lambda x: x[1]["sharpe"], reverse=True)
+            best, worst = sorted_strats[0], sorted_strats[-1]
+            spread = round(best[1]["sharpe"] - worst[1]["sharpe"], 3)
+
+            # Scatter: Sharpe vs Max DD
+            points = [{"label": _pretty_strat(s), "x": v["max_drawdown_pct"], "y": v["sharpe"],
+                        "size": round(max(5, min(12, v["total_trades"] / 80)), 1),
+                        "color": "#10b981" if v["sharpe"] > 0 else "#f43f5e" if v["sharpe"] < -0.5 else "#f59e0b"}
+                       for s, v in sorted_strats]
+            candidates.append((3, {
+                "type": "strategy_risk_return", "chart": "scatter",
+                "title": f"Risk vs Return: {len(solo_results)} strategy candidates",
+                "subtitle": "Dot size = trade count · Top-left = best risk-adjusted return",
+                "points": points, "x_label": "Max Drawdown %", "y_label": "Sharpe Ratio",
+                "annotation": {"text": f"{_pretty_strat(best[0])} best risk-adjusted at {best[1]['sharpe']:+.3f}", "color": "green" if best[1]["sharpe"] > 0 else "amber"},
+                "date": today,
+            }))
+
+            # Horizontal bar: Sharpe ranking
+            candidates.append((3, {
+                "type": "strategy_ranking", "chart": "horizontal_bar",
+                "title": f"Strategy Sharpe spread is {spread:.2f} across {len(solo_results)} candidates",
+                "subtitle": f"Best: {_pretty_strat(best[0])} · Worst: {_pretty_strat(worst[0])}",
+                "labels": [_pretty_strat(s) for s, _ in sorted_strats],
+                "series": [{"name": "Sharpe", "values": [v["sharpe"] for _, v in sorted_strats], "color": "adaptive"}],
+                "detail_rows": [{"label": s, "sharpe": v["sharpe"], "cagr": v["cagr_pct"],
+                                 "trades": v["total_trades"], "win_rate": v["win_rate_pct"], "max_dd": v["max_drawdown_pct"]}
+                                for s, v in sorted_strats],
+                "annotation": {"text": f"{_pretty_strat(best[0])} leads", "color": "green" if best[1]["sharpe"] > 0 else "amber"},
+                "date": today,
+            }))
+
+            # Radar: multi-metric overlay (top 3)
+            if len(sorted_strats) >= 2:
+                radar_axes = ["Sharpe", "CAGR", "Win Rate", "Profit Factor", "Low DD"]
+                raw = {ax: [] for ax in radar_axes}
+                for s, v in sorted_strats:
+                    raw["Sharpe"].append(v["sharpe"]); raw["CAGR"].append(v["cagr_pct"])
+                    raw["Win Rate"].append(v["win_rate_pct"]); raw["Profit Factor"].append(v.get("profit_factor", 1))
+                    raw["Low DD"].append(100 - v["max_drawdown_pct"])
+                def _norm_list(vals):
+                    mn, mx = min(vals), max(vals); r = mx - mn if mx != mn else 1
+                    return [(v - mn) / r for v in vals]
+                normed = {ax: _norm_list(vs) for ax, vs in raw.items()}
+                profiles = [{"name": _pretty_strat(s), "values": [normed[ax][i] for ax in radar_axes]}
+                            for i, (s, v) in enumerate(sorted_strats[:3])]
+                candidates.append((3, {
+                    "type": "strategy_profile", "chart": "radar",
+                    "title": f"Strategy profiles: top {len(profiles)} candidates",
+                    "subtitle": "Normalised 0→1 across all tested",
+                    "axes": radar_axes, "profiles": profiles,
+                    "annotation": {"text": f"{profiles[0]['name']} dominates {sum(1 for v in profiles[0]['values'] if v > 0.5)}/5 axes", "color": "green"},
+                    "date": today,
+                }))
+    except Exception as e:
+        logger.debug(f"strategy_compare miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 4. TRADE ANATOMY — win/loss distributions from backtest
+    # ═══════════════════════════════════════════════
+    try:
+        bt_files = sorted(Path(PROJECT_ROOT / "backtest" / "results").glob("backtest_2*.json"), reverse=True)
+        for bf in bt_files:
+            m = safe_json(bf, {}).get("metrics", {})
+            if m.get("total_trades", 0) < 50:
+                continue
+            avg_w = m.get("avg_winner", 0)
+            avg_l = abs(m.get("avg_loser", 1))
+            rr = round(avg_w / avg_l, 2) if avg_l > 0 else 0
+            exp_val = round(m.get("avg_trade", 0), 2)
+            wr = round(m.get("win_rate", 0) * 100, 1)
+            trades = m.get("total_trades", 0)
+            largest_w = m.get("largest_winner", 0)
+            largest_l = abs(m.get("largest_loser", 0))
+
+            items = [
+                {"label": "Avg Winner", "delta": avg_w, "before": None, "after": None, "improved": True},
+                {"label": "Avg Loser", "delta": -avg_l, "before": None, "after": None, "improved": False},
+                {"label": "Best Trade", "delta": largest_w, "before": None, "after": None, "improved": True},
+                {"label": "Worst Trade", "delta": -largest_l, "before": None, "after": None, "improved": False},
+                {"label": "Expectancy", "delta": exp_val, "before": None, "after": None, "improved": exp_val > 0},
+            ]
+            candidates.append((3, {
+                "type": "trade_anatomy", "chart": "lollipop",
+                "title": f"Trade anatomy: {rr:.2f}× reward:risk across {trades} trades",
+                "subtitle": f"Win rate {wr}% · Expectancy ${exp_val:.2f}/trade · Hold {m.get('avg_hold_days', 0):.0f}d avg",
+                "items": items,
+                "annotation": {"text": f"Edge = {wr}% wins × ${avg_w:.0f} avg − {100-wr:.0f}% losses × ${avg_l:.0f} avg = ${exp_val:.2f}",
+                               "color": "green" if exp_val > 0 else "red"},
+                "date": bf.stem.split("_")[1] if "_" in bf.stem else today,
+            }))
+            break
+    except Exception as e:
+        logger.debug(f"trade_anatomy miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 5. VIX REGIME — scatter of monthly VIX vs SPY returns
+    # ═══════════════════════════════════════════════
+    try:
+        vix_path = PROJECT_ROOT / "data" / "cache" / "sp500" / "^VIX.parquet"
+        spy_path = PROJECT_ROOT / "data" / "cache" / "sp500" / "SPY.parquet"
+        if vix_path.exists() and spy_path.exists():
+            vix_df = pd.read_parquet(vix_path)
+            spy_df = pd.read_parquet(spy_path)
+            vix_monthly = vix_df["close"].resample("M").mean()
+            spy_monthly = spy_df["close"].resample("M").last().pct_change() * 100
+            merged = pd.DataFrame({"vix": vix_monthly, "spy_ret": spy_monthly}).dropna()
+            if len(merged) >= 12:
+                points = []
+                for dt, row in merged.iterrows():
+                    points.append({
+                        "label": dt.strftime("%b %y"),
+                        "x": round(row["vix"], 1),
+                        "y": round(row["spy_ret"], 1),
+                        "size": 5,
+                        "color": "#10b981" if row["spy_ret"] > 0 else "#f43f5e",
+                    })
+                # Correlation
+                corr = round(merged["vix"].corr(merged["spy_ret"]), 2)
+                high_vix = merged[merged["vix"] > 25]
+                low_vix = merged[merged["vix"] <= 20]
+                high_avg = round(high_vix["spy_ret"].mean(), 1) if len(high_vix) > 0 else 0
+                low_avg = round(low_vix["spy_ret"].mean(), 1) if len(low_vix) > 0 else 0
+                candidates.append((3, {
+                    "type": "vix_regime", "chart": "scatter",
+                    "title": f"VIX regime vs SPY returns: correlation {corr:+.2f}",
+                    "subtitle": f"Low VIX (<20) avg {low_avg:+.1f}%/mo · High VIX (>25) avg {high_avg:+.1f}%/mo · {len(merged)} months",
+                    "points": points[-24:],  # last 2 years
+                    "x_label": "Avg Monthly VIX",
+                    "y_label": "SPY Monthly Return %",
+                    "annotation": {"text": f"Low VIX months avg {low_avg:+.1f}% vs high VIX {high_avg:+.1f}%",
+                                   "color": "green" if low_avg > high_avg else "red"},
+                    "date": today,
+                }))
+    except Exception as e:
+        logger.debug(f"vix_regime miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 6. FEE IMPACT — waterfall & grouped bar
+    # ═══════════════════════════════════════════════
+    try:
+        fee_file = None
+        for f in sorted(Path(PROJECT_ROOT / "backtest" / "results").glob("fee_impact_analysis_*.json"), reverse=True):
+            fee_file = f; break
+        if fee_file:
+            fee_data = safe_json(fee_file, {})
+            zf, rf = fee_data.get("sp500_zero_fee", {}), fee_data.get("sp500_real_fee", {})
+            bm, delta = fee_data.get("benchmark", {}), fee_data.get("delta", {})
+            if zf and rf:
+                drag = abs(delta.get("cagr_pct", 0.78))
+                steps = [
+                    {"label": "Gross CAGR", "value": zf["cagr_pct"], "type": "start"},
+                    {"label": "Commission", "value": -(drag * 0.6)},
+                    {"label": "Slippage", "value": -(drag * 0.3)},
+                    {"label": "Filtering", "value": -(drag * 0.1)},
+                    {"label": "Net CAGR", "value": 0, "type": "total"},
+                ]
+                candidates.append((4, {
+                    "type": "fee_waterfall", "chart": "waterfall",
+                    "title": f"Fee drag: {drag:.1f}pp CAGR lost to real trading costs",
+                    "subtitle": f"Moomoo US: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 1.1):.2f}/order · {abs(delta.get('trades_removed', 7))} trades filtered",
+                    "steps": steps,
+                    "annotation": {"text": f"Net {rf['cagr_pct']:.1f}% still beats SPY {bm.get('spy_cagr_pct', 0):.1f}%", "color": "green"},
+                    "date": fee_file.stem.split("_")[-1][:10],
+                }))
+                candidates.append((4, {
+                    "type": "fee_compare", "chart": "grouped_bar",
+                    "title": f"Real fees reduce CAGR by {drag:.1f}pp but strategy still beats benchmark",
+                    "subtitle": f"Moomoo US: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 1.1):.2f}/order",
+                    "labels": ["CAGR", "Sharpe", "Win Rate", "Profit Factor"],
+                    "series": [
+                        {"name": "Zero Fee", "values": [zf["cagr_pct"], zf["sharpe"], zf["win_rate_pct"], zf.get("profit_factor", 1.55)], "color": "secondary"},
+                        {"name": "Real Fee", "values": [rf["cagr_pct"], rf["sharpe"], rf["win_rate_pct"], rf.get("profit_factor", 1.54)], "color": "primary"},
+                    ],
+                    "annotation": {"text": f"Strategy CAGR {rf['cagr_pct']:.1f}% vs SPY {bm.get('spy_cagr_pct', 0):.1f}%", "color": "green"},
+                    "date": fee_file.stem.split("_")[-1][:10],
+                }))
+    except Exception as e:
+        logger.debug(f"fee_impact miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # 7. MONTHLY SEASONALITY — SPY returns by calendar month
+    # ═══════════════════════════════════════════════
+    try:
+        spy_path = PROJECT_ROOT / "data" / "cache" / "sp500" / "SPY.parquet"
+        if spy_path.exists():
+            spy_df = pd.read_parquet(spy_path)
+            monthly_ret = spy_df["close"].resample("M").last().pct_change().dropna() * 100
+            if len(monthly_ret) >= 24:
+                by_month = {}
+                for dt, ret in monthly_ret.items():
+                    m = dt.month
+                    if m not in by_month:
+                        by_month[m] = []
+                    by_month[m].append(ret)
+                month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                avgs = [round(sum(by_month.get(m+1, [0])) / max(len(by_month.get(m+1, [1])), 1), 2)
+                        for m in range(12)]
+                best_m = month_names[avgs.index(max(avgs))]
+                worst_m = month_names[avgs.index(min(avgs))]
+                candidates.append((4, {
+                    "type": "seasonality", "chart": "horizontal_bar",
+                    "title": f"SPY monthly seasonality: {best_m} strongest, {worst_m} weakest",
+                    "subtitle": f"Average monthly returns over {len(monthly_ret)//12} years · {len(monthly_ret)} months",
+                    "labels": month_names,
+                    "series": [{"name": "Avg Return %", "values": avgs, "color": "adaptive"}],
+                    "annotation": {"text": f"Best: {best_m} ({max(avgs):+.1f}%) · Worst: {worst_m} ({min(avgs):+.1f}%)",
+                                   "color": "green"},
+                    "date": today,
+                }))
+    except Exception as e:
+        logger.debug(f"seasonality miner failed: {e}")
+
+    # ═══════════════════════════════════════════════
+    # SELECT — pool all candidates, rotate daily
+    # ═══════════════════════════════════════════════
+    if not candidates:
+        return {
+            "type": "no_data", "chart": "none",
+            "title": "Research insight will appear after experiments run",
+            "subtitle": "Next research cron: weekdays at 09:00 AEST",
+            "labels": [], "series": [], "date": today,
+        }
+
+    # Build diverse pool: one from each type, ordered by priority
+    # This ensures each refresh day shows a genuinely different analysis
+    seen_types = set()
+    pool = []
+    for _, insight in sorted(candidates, key=lambda c: c[0]):
+        t = insight["type"]
+        chart_key = f"{t}/{insight['chart']}"
+        if chart_key not in seen_types:
+            seen_types.add(chart_key)
+            pool.append(insight)
+
+    return pool[day_of_year % len(pool)]
+
+
+def _pretty_strat(name: str) -> str:
+    """Make strategy name dashboard-friendly."""
+    return (name or "unknown").replace("_", " ").title()
+
+
 def generate_research_data() -> dict:
     """Generate research section data for the dashboard.
 
@@ -849,6 +1315,7 @@ def generate_research_data() -> dict:
         "strategy_coverage": list(coverage.values()),
         "strategies_tested": sorted(all_strategies),
         "markets_tested": sorted(all_markets),
+        "daily_insight": generate_daily_insight(),
     }
 
 

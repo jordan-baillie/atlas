@@ -112,26 +112,14 @@ def _load_cache(ticker: str, market_id: Optional[str] = None) -> Optional[pd.Dat
             return df
         except Exception as e:
             logger.warning(f"Cache read error for {ticker}: {e}")
-    # Fallback: check legacy (non-market-namespaced) cache
-    if market_id:
-        legacy_path = CACHE_DIR / f"{ticker.replace('.', '_').upper()}.parquet"
-        if _cache_is_fresh(legacy_path):
-            try:
-                df = pd.read_parquet(legacy_path)
-                logger.debug(f"Legacy cache hit for {ticker}: {len(df)} rows")
-                return df
-            except Exception:
-                pass
     return None
 
 
 def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) -> None:
     """Save DataFrame to parquet cache.
 
-    Writes to the market-namespaced path (e.g. data/cache/asx/) AND the
-    legacy root path (data/cache/) so that all readers — dashboard,
-    backtest engine, telegram — see fresh data regardless of which path
-    convention they use.
+    Writes to the market-namespaced path only (e.g. data/cache/asx/).
+    All readers search subdirs — no root-level duplicates needed.
     """
     if df.empty:
         return
@@ -141,15 +129,6 @@ def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) 
         logger.debug(f"Cached {ticker}: {len(df)} rows -> {path}")
     except Exception as e:
         logger.warning(f"Cache write error for {ticker}: {e}")
-
-    # Also write to legacy root cache so dashboard/backtest/telegram can find it
-    if market_id:
-        legacy_path = CACHE_DIR / f"{ticker.replace('.', '_').upper()}.parquet"
-        if legacy_path != path:
-            try:
-                df.to_parquet(legacy_path, engine="pyarrow")
-            except Exception:
-                pass  # best-effort
 
 
 # ---------------------------------------------------------------------------

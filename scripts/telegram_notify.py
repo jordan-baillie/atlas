@@ -46,7 +46,7 @@ def main():
         ok = send_plan_for_approval(plan_path=plan_path, market_id=market_id)
 
     elif cmd == "postclose-ok":
-        market_id = sys.argv[2] if len(sys.argv) > 2 else "asx"
+        market_id = sys.argv[2] if len(sys.argv) > 2 else "sp500"
         ok = send_postclose_summary(market_id=market_id)
 
     elif cmd == "error":

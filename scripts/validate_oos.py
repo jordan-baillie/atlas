@@ -70,10 +70,13 @@ OPTIMIZED_PARAMS = {
 }
 
 
-def load_data():
-    """Load all parquet data files."""
+def load_data(market='asx'):
+    """Load all parquet data files for the given market."""
+    data_dir = DATA_DIR / market if market else DATA_DIR
+    if not data_dir.exists():
+        data_dir = DATA_DIR  # fallback to legacy flat layout
     data_dict = {}
-    for pf in sorted(DATA_DIR.glob('*.parquet')):
+    for pf in sorted(data_dir.glob('*.parquet')):
         if pf.stem == 'IOZ_AX':
             continue
         ticker = pf.stem.replace('_AX', '.AX')
@@ -271,14 +274,15 @@ def main():
     # ----------------------------------------------------------
     # Load data
     # ----------------------------------------------------------
-    print("=" * 70)
-    print("ATLAS-ASX v9.2 OUT-OF-SAMPLE VALIDATION")
-    print("=" * 70)
-    print(f"\nLoading data from {DATA_DIR}...")
-    data_all = load_data()
-    print(f"Loaded {len(data_all)} tickers")
-
     cfg = load_config(config_path)
+    market = cfg.get('market', 'asx')
+
+    print("=" * 70)
+    print(f"ATLAS {market.upper()} OUT-OF-SAMPLE VALIDATION")
+    print("=" * 70)
+    print(f"\nLoading data from {DATA_DIR / market}...")
+    data_all = load_data(market=market)
+    print(f"Loaded {len(data_all)} tickers")
     print(f"Config: {cfg.get('version', 'unknown')}")
     print(f"Config path: {config_path}")
     print(f"Split date: {SPLIT_DATE}")

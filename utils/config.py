@@ -229,7 +229,8 @@ ACTIVE_CONFIG_PATH = ACTIVE_DIR / f"{DEFAULT_MARKET}.json"
 
 if __name__ == "__main__":
     # Quick self-test
-    logging.basicConfig(level=logging.INFO)
+    from utils.logging_config import setup_logging
+    setup_logging("config_test", telegram_errors=False)
     print("=== Config Module Self-Test ===")
 
     cfg = get_active_config()

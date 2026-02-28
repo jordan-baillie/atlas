@@ -50,8 +50,8 @@ from research.models import (
     generate_experiment_id,
 )
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from utils.logging_config import setup_logging
+logger = setup_logging("research_runner")
 
 MAX_RUNTIME_S = 4 * 3600  # 4 hour budget per experiment
 
@@ -529,6 +529,11 @@ def _run_filter_test(entry: dict) -> dict:
     # Portfolio-wide mode: test filter on all active strategies
     solo = strategy is not None
 
+    # Detect engine-level params (vix_filter, regime_filter, etc.)
+    # These go on the top-level config, not per-strategy
+    _ENGINE_LEVEL_PARAMS = {'vix_filter', 'regime_filter', 'fee_aware_filter'}
+    is_engine_param = filter_param in _ENGINE_LEVEL_PARAMS
+
     if variants:
         # Multi-variant mode: test several values of the filter
         results = []
@@ -537,6 +542,10 @@ def _run_filter_test(entry: dict) -> dict:
             value = var['value']
             if solo:
                 cfg = make_config_with_strategy(config, strategy, {filter_param: value}, solo=True)
+            elif is_engine_param:
+                # Engine-level param: set on top-level config
+                cfg = copy.deepcopy(config)
+                cfg[filter_param] = value
             else:
                 cfg = copy.deepcopy(config)
                 for s_name, s_cfg in cfg.get('strategies', {}).items():
@@ -578,6 +587,11 @@ def _run_filter_test(entry: dict) -> dict:
                                                  {filter_param: filter_off_value}, solo=True)
             cfg_on = make_config_with_strategy(config, strategy,
                                                 {filter_param: filter_on_value}, solo=True)
+        elif is_engine_param:
+            cfg_off = copy.deepcopy(config)
+            cfg_off[filter_param] = filter_off_value
+            cfg_on = copy.deepcopy(config)
+            cfg_on[filter_param] = filter_on_value
         else:
             cfg_off = copy.deepcopy(config)
             cfg_on = copy.deepcopy(config)
@@ -870,6 +884,31 @@ def _evaluate_result(result: dict, criteria: dict) -> tuple:
             else:
                 failures.append(f'{criterion}: {actual:.4f} > {threshold}')
 
+    # Auto-check: warn if edge is not statistically significant (p >= 0.05)
+    edge_p = None
+    for loc in ('solo', 'combined', 'best_metrics', 'optimized'):
+        sub = result.get(loc, {})
+        if isinstance(sub, dict) and 'edge_p_value' in sub:
+            edge_p = sub['edge_p_value']
+            break
+    if edge_p is None:
+        edge_p = metrics.get('edge_p_value')
+
+    if edge_p is not None and edge_p >= 0.05:
+        failures.append(f'edge_p_value: {edge_p:.4f} >= 0.05 (edge not statistically significant)')
+
+    # Auto-check: warn if Monte Carlo says trade sequencing is fragile
+    mc_fragile = None
+    for loc in ('solo', 'combined', 'best_metrics', 'optimized'):
+        sub = result.get(loc, {})
+        if isinstance(sub, dict) and 'mc_fragile' in sub:
+            mc_fragile = sub['mc_fragile']
+            break
+    if mc_fragile is None:
+        mc_fragile = metrics.get('mc_fragile')
+    if mc_fragile:
+        failures.append('mc_fragile: True (p95 MC drawdown > 2× actual — trade sequence dependent)')
+
     if not failures:
         return ('pass', f'All {len(passes)} criteria met: {"; ".join(passes)}')
     elif passes:
@@ -930,6 +969,7 @@ def main():
     if args.run_all:
         # Run all queued experiments
         count = 0
+        code_errors = []
         while count < args.max_experiments:
             entry = get_next_queued(args.market)
             if not entry:
@@ -944,8 +984,26 @@ def main():
             result = run_experiment(entry, args.agent_id, args.dry_run)
             verdict = result.get('verdict', 'unknown')
             logger.info(f"[{count+1}] {entry['id']}: {entry.get('title', '?')} → {verdict}")
+
+            # Track code errors (TypeError, AttributeError, etc.) vs research failures
+            error_msg = result.get('metadata', {}).get('error', '') or result.get('verdict_rationale', '')
+            if verdict == 'fail' and any(exc in error_msg for exc in (
+                'TypeError', 'AttributeError', 'NameError', 'SyntaxError',
+                'KeyError', 'IndexError', 'takes', 'positional argument',
+                'has no attribute', 'is not defined', 'unexpected keyword',
+            )):
+                code_errors.append({'id': entry['id'], 'error': error_msg})
+
             count += 1
         logger.info(f"Completed {count} experiments")
+
+        # Exit non-zero if code errors occurred (triggers auto-recovery → pi agent)
+        if code_errors:
+            logger.error(f"CODE ERRORS in {len(code_errors)} experiment(s) — triggering auto-recovery:")
+            for ce in code_errors:
+                logger.error(f"  {ce['id']}: {ce['error'][:200]}")
+            return 2  # Distinct exit code: code error (vs 1 = operational error)
+
         return 0
 
     # Default: run next queued experiment

@@ -359,7 +359,8 @@ def get_universe_tickers(market_id: Optional[str] = None) -> List[str]:
 
 if __name__ == "__main__":
     import sys
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    from utils.logging_config import setup_logging
+    setup_logging("universe_builder", telegram_errors=False)
 
     # Import config
     sys.path.insert(0, str(PROJECT_ROOT))

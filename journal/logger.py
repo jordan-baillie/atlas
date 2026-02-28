@@ -44,7 +44,7 @@ class DecisionJournal:
             json.dump(self.entries, f, indent=2, default=str)
 
     def record_signal(self, signal, action: str, reason: str = "",
-                      config_version: str = ""):
+                      config_version: str = "", market_id: str = ""):
         """Record a signal decision.
 
         Args:
@@ -52,6 +52,7 @@ class DecisionJournal:
             action: 'accepted', 'rejected', 'filtered'
             reason: Why this action was taken
             config_version: Current config version
+            market_id: Market identifier (e.g., 'sp500', 'asx')
         """
         entry = {
             "timestamp": datetime.now().isoformat(),
@@ -62,10 +63,13 @@ class DecisionJournal:
             "stop_price": signal.stop_price,
             "take_profit": signal.take_profit,
             "position_size": signal.position_size,
+            "position_value": round(signal.entry_price * signal.position_size, 2),
+            "risk_amount": round(abs(signal.entry_price - signal.stop_price) * signal.position_size, 2),
             "confidence": signal.confidence,
             "rationale": signal.rationale,
             "features": getattr(signal, "features", {}),
-            "market_id": getattr(signal, "market_id", ""),
+            "sector": getattr(signal, "sector", "Unknown"),
+            "market_id": market_id or getattr(signal, "market_id", ""),
             "action": action,
             "action_reason": reason,
             "config_version": config_version,

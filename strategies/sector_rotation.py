@@ -21,15 +21,29 @@ from utils.helpers import calc_atr, calc_position_size
 
 logger = logging.getLogger(__name__)
 
-SECTOR_MAP_PATH = Path(__file__).parent.parent / "data" / "processed" / "sector_map.json"
+DATA_DIR = Path(__file__).parent.parent / "data" / "processed"
 
 
-def load_sector_map(path: Path = SECTOR_MAP_PATH) -> Dict[str, str]:
-    if not path.exists():
-        logger.warning(f"Sector map not found at {path}")
-        return {}
-    with open(path) as fh:
-        return json.load(fh)
+def load_sector_map(market_id: str = None) -> Dict[str, str]:
+    """Load sector map, trying market-specific file first, then generic fallback."""
+    if market_id:
+        market_path = DATA_DIR / f"sector_map_{market_id}.json"
+        if market_path.exists():
+            with open(market_path) as fh:
+                sm = json.load(fh)
+                logger.info(f"Loaded sector map for {market_id}: {len(sm)} tickers")
+                return sm
+
+    # Fallback to generic (legacy ASX map)
+    generic_path = DATA_DIR / "sector_map.json"
+    if generic_path.exists():
+        with open(generic_path) as fh:
+            sm = json.load(fh)
+            logger.info(f"Loaded generic sector map: {len(sm)} tickers")
+            return sm
+
+    logger.warning(f"No sector map found for market={market_id}")
+    return {}
 
 
 class SectorRotation(BaseStrategy):
@@ -48,7 +62,8 @@ class SectorRotation(BaseStrategy):
         self.max_hold_days = strat_cfg.get("max_hold_days", 25)
         self.min_sector_stocks = strat_cfg.get("min_sector_stocks", 3)
         self.stocks_per_sector = strat_cfg.get("stocks_per_sector", 2)
-        self.sector_map = load_sector_map()
+        market_id = config.get("market") or config.get("market_id") or config.get("universe", {}).get("market_id")
+        self.sector_map = load_sector_map(market_id)
         self._logger.info(
             f"SectorRotation init: momentum={self.sector_momentum_period}, "
             f"top={self.top_sectors}, bottom={self.bottom_sectors}, "

@@ -96,17 +96,17 @@ class MTFMomentum(BaseStrategy):
         return weekly
 
     def generate_signals(
-        self, data: Dict[str, pd.DataFrame], portfolio: Dict[str, Any]
+        self,
+        data: Dict[str, pd.DataFrame],
+        equity: float,
+        existing_positions: List[Dict[str, Any]],
     ) -> List[Signal]:
         """Generate MTF momentum signals.
 
-        Currently disabled - returns empty list.
-        Full implementation requires weekly trend confirmation
+        Full implementation: weekly trend confirmation
         with daily pullback entry logic.
         """
         signals: List[Signal] = []
-        if not self._enabled:
-            return signals
 
         for ticker, df in data.items():
             try:
@@ -156,7 +156,7 @@ class MTFMomentum(BaseStrategy):
                 take_profit = entry_price + 3.0 * current_atr
 
                 pos = calc_position_size(
-                    capital=portfolio.get("cash", 0),
+                    capital=equity,
                     entry_price=entry_price,
                     stop_price=stop_price,
                     risk_pct=self._risk_per_trade,

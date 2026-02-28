@@ -378,6 +378,11 @@ class PaperPortfolio:
                 "unrealized_pnl": p.unrealized_pnl(price),
                 "unrealized_pnl_pct": p.unrealized_pnl_pct(price),
                 "stop_price": p.stop_price,
+                "take_profit": p.take_profit,
+                "sector": p.sector,
+                "mae_pct": round(p.mae * 100, 2),
+                "mfe_pct": round(p.mfe * 100, 2),
+                "holding_days": p.holding_days(datetime.now().strftime("%Y-%m-%d")),
             })
 
         return {
@@ -413,57 +418,41 @@ class TradePlanGenerator:
         max_positions = self.config.get("risk", {}).get("max_open_positions", 5)
         available_slots = max_positions - len(self.portfolio.positions)
         for signal in signals:
-            # Cap entries at available position slots
-            if len(proposed_entries) >= available_slots:
-                entry = {
-                    "ticker": signal.ticker,
-                    "strategy": signal.strategy,
-                    "entry_price": signal.entry_price,
-                    "stop_price": signal.stop_price,
-                    "take_profit": signal.take_profit,
-                    "position_size": signal.position_size,
-                    "risk_amount": round(abs(signal.entry_price - signal.stop_price) * signal.position_size, 2),
-                    "confidence": signal.confidence,
-                    "rationale": signal.rationale,
-                    "rejection_reason": f"Max positions ({max_positions}) would be exceeded",
-                }
-                rejected_entries.append(entry)
-                continue
-
-            # Filter by minimum confidence threshold
-            if signal.confidence < min_confidence:
-                entry = {
-                    "ticker": signal.ticker,
-                    "strategy": signal.strategy,
-                    "entry_price": signal.entry_price,
-                    "stop_price": signal.stop_price,
-                    "take_profit": signal.take_profit,
-                    "position_size": signal.position_size,
-                    "risk_amount": round(abs(signal.entry_price - signal.stop_price) * signal.position_size, 2),
-                    "confidence": signal.confidence,
-                    "rationale": signal.rationale,
-                    "rejection_reason": f"Confidence {signal.confidence:.3f} below threshold {min_confidence}",
-                }
-                rejected_entries.append(entry)
-                continue
-
-            passed, reason = self.portfolio.check_risk_limits(signal)
-            entry = {
+            # Build a rich entry dict with all signal data for future analysis
+            base_entry = {
                 "ticker": signal.ticker,
                 "strategy": signal.strategy,
                 "entry_price": signal.entry_price,
                 "stop_price": signal.stop_price,
                 "take_profit": signal.take_profit,
                 "position_size": signal.position_size,
+                "position_value": round(signal.entry_price * signal.position_size, 2),
                 "risk_amount": round(abs(signal.entry_price - signal.stop_price) * signal.position_size, 2),
                 "confidence": signal.confidence,
                 "rationale": signal.rationale,
+                "features": getattr(signal, "features", {}),
+                "sector": getattr(signal, "sector", "Unknown"),
+                "market_id": getattr(signal, "market_id", self.config.get("market", "")),
             }
+
+            # Cap entries at available position slots
+            if len(proposed_entries) >= available_slots:
+                base_entry["rejection_reason"] = f"Max positions ({max_positions}) would be exceeded"
+                rejected_entries.append(base_entry)
+                continue
+
+            # Filter by minimum confidence threshold
+            if signal.confidence < min_confidence:
+                base_entry["rejection_reason"] = f"Confidence {signal.confidence:.3f} below threshold {min_confidence}"
+                rejected_entries.append(base_entry)
+                continue
+
+            passed, reason = self.portfolio.check_risk_limits(signal)
             if passed:
-                proposed_entries.append(entry)
+                proposed_entries.append(base_entry)
             else:
-                entry["rejection_reason"] = reason
-                rejected_entries.append(entry)
+                base_entry["rejection_reason"] = reason
+                rejected_entries.append(base_entry)
 
         # Portfolio state after proposed trades
         proposed_cost = sum(e["entry_price"] * e["position_size"] for e in proposed_entries)
@@ -472,9 +461,12 @@ class TradePlanGenerator:
         current_eq = self.portfolio.equity(prices)
         summary = self.portfolio.portfolio_summary(prices)
 
+        market_id = self.config.get("market", "")
         plan = {
             "trade_date": trade_date,
             "generated_at": datetime.now().isoformat(),
+            "market_id": market_id,
+            "config_version": self.config.get("version", ""),
             "status": "PENDING_APPROVAL",
             "portfolio_snapshot": {
                 "equity": current_eq,
@@ -486,9 +478,11 @@ class TradePlanGenerator:
             "proposed_entries": proposed_entries,
             "rejected_entries": rejected_entries,
             "proposed_exits": exit_recommendations,
+            "total_signals_generated": len(signals),
             "risk_summary": {
                 "total_proposed_cost": round(proposed_cost, 2),
                 "total_proposed_risk": round(proposed_risk, 2),
+                "risk_pct_of_equity": round(proposed_risk / current_eq * 100, 2) if current_eq > 0 else 0,
                 "positions_after": len(self.portfolio.positions) + len(proposed_entries) - len(exit_recommendations),
                 "cash_after_entries": round(self.portfolio.cash - proposed_cost, 2),
                 "portfolio_exposure_pct": round((current_eq - self.portfolio.cash + proposed_cost) / current_eq * 100, 2) if current_eq > 0 else 0,

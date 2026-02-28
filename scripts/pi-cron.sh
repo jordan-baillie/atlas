@@ -155,8 +155,15 @@ LOCKEOF
         fi
         exit 0
         ;;
+    recover)
+        # Manual recovery trigger: pi-cron.sh recover <mode-to-recover> [market]
+        RECOVER_MODE="${2:?Usage: $0 recover <premarket|postclose|research> [market]}"
+        RECOVER_MARKET="${3:-sp500}"
+        echo "$(date -Iseconds) Manual recovery triggered for $RECOVER_MODE" >> "$LOG_DIR/pi-cron.log"
+        exec "$SCRIPT_DIR/auto_recover.sh" "$RECOVER_MODE" "$RECOVER_MARKET" "" 1
+        ;;
     *)
-        echo "Usage: $0 {premarket|postclose|research|research-status} [market] [agent-id]"
+        echo "Usage: $0 {premarket|postclose|research|research-status|recover} [market] [agent-id]"
         exit 1
         ;;
 esac
@@ -182,10 +189,23 @@ fi
 EXIT_CODE=$?
 echo "$(date -Iseconds) pi-cron $MODE finished (exit=$EXIT_CODE)" >> "$LOG_DIR/pi-cron.log"
 
+# --- Post-check: detect code errors in logs even if agent exited 0 ---
+# The pi agent may exit 0 even when research_runner had code errors,
+# because the agent "successfully" ran the command (it just reported errors).
+# Check the actual research log for code-level errors.
+if [ $EXIT_CODE -eq 0 ] && [ "$MODE" = "research" ]; then
+    RESEARCH_LOG=$(ls -t "$LOG_DIR"/research_run_*.log 2>/dev/null | head -1)
+    if [ -n "$RESEARCH_LOG" ] && grep -qE "CODE ERRORS in [0-9]+ experiment|takes [0-9]+ positional argument|has no attribute|is not defined|unexpected keyword|TypeError:|AttributeError:|NameError:|SyntaxError:" "$RESEARCH_LOG" 2>/dev/null; then
+        echo "$(date -Iseconds) Code errors detected in research log despite agent exit 0" >> "$LOG_DIR/pi-cron.log"
+        EXIT_CODE=2
+        LOGFILE="$RESEARCH_LOG"  # Point auto-recovery at the actual error log
+    fi
+fi
+
 # --- Dashboard refresh (always, regardless of pi exit) ---
 python3 dashboard/generate_data.py >> "$LOG_DIR/dashboard-refresh.log" 2>&1 || true
 
-# --- Telegram alerts ---
+# --- Telegram alerts + auto-recovery ---
 if [ $EXIT_CODE -eq 0 ]; then
     case "$MODE" in
         premarket)
@@ -198,7 +218,16 @@ if [ $EXIT_CODE -eq 0 ]; then
         research)   notify research-complete "$MARKET" ;;
     esac
 else
+    # Send error alert first (immediate notification)
     notify error "$MODE" "$LOGFILE"
+
+    # Spawn auto-recovery agent (background, won't block cron)
+    # Recovery handles its own Telegram updates and retries.
+    echo "$(date -Iseconds) Spawning auto-recovery for $MODE" >> "$LOG_DIR/pi-cron.log"
+    nohup "$SCRIPT_DIR/auto_recover.sh" "$MODE" "$MARKET" "$LOGFILE" 1 \
+        >> "$LOG_DIR/auto_recover.log" 2>&1 &
+    RECOVER_PID=$!
+    echo "$(date -Iseconds) Recovery PID=$RECOVER_PID" >> "$LOG_DIR/pi-cron.log"
 fi
 
 exit $EXIT_CODE

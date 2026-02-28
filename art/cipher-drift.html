@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cipher Drift — Generative Art</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --anthropic-dark: #141413;
+            --anthropic-light: #faf9f5;
+            --anthropic-mid-gray: #b0aea5;
+            --anthropic-light-gray: #e8e6dc;
+            --anthropic-orange: #d97757;
+            --anthropic-blue: #6a9bcc;
+            --anthropic-green: #788c5d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--anthropic-light) 0%, #f5f3ee 100%);
+            min-height: 100vh;
+            color: var(--anthropic-dark);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(20, 20, 19, 0.1);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar h1 {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--anthropic-dark);
+            margin-bottom: 8px;
+        }
+
+        .sidebar .subtitle {
+            color: var(--anthropic-mid-gray);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.4;
+        }
+
+        .control-section { margin-bottom: 32px; }
+
+        .control-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--anthropic-dark);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-section h3::before {
+            content: '•';
+            color: var(--anthropic-orange);
+            font-weight: bold;
+        }
+
+        .seed-input {
+            width: 100%;
+            background: var(--anthropic-light);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--anthropic-light-gray);
+            text-align: center;
+        }
+
+        .seed-input:focus {
+            outline: none;
+            border-color: var(--anthropic-orange);
+            box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.1);
+            background: white;
+        }
+
+        .seed-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .regen-button { margin-bottom: 0; }
+
+        .control-group { margin-bottom: 20px; }
+
+        .control-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--anthropic-dark);
+            margin-bottom: 8px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: var(--anthropic-light-gray);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--anthropic-orange);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: #c86641;
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--anthropic-orange);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .value-display {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--anthropic-mid-gray);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .color-group { margin-bottom: 16px; }
+
+        .color-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--anthropic-mid-gray);
+            margin-bottom: 4px;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-picker-container input[type="color"] {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+
+        .color-value {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--anthropic-mid-gray);
+        }
+
+        .button {
+            background: var(--anthropic-orange);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .button:hover {
+            background: #c86641;
+            transform: translateY(-1px);
+        }
+
+        .button:active { transform: translateY(0); }
+
+        .button.secondary { background: var(--anthropic-blue); }
+        .button.secondary:hover { background: #5a8bb8; }
+
+        .button.tertiary { background: var(--anthropic-green); }
+        .button.tertiary:hover { background: #6b7b52; }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .button-row .button { flex: 1; }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #canvas-container {
+            width: 100%;
+            max-width: 1000px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(20, 20, 19, 0.1);
+            background: #0d1117;
+        }
+
+        #canvas-container canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--anthropic-mid-gray);
+            min-height: 400px;
+        }
+
+        @media (max-width: 600px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Control Sidebar -->
+        <div class="sidebar">
+            <h1>Cipher Drift</h1>
+            <div class="subtitle">Numbers adrift in invisible currents — ambient numerical presence for dashboard landscapes</div>
+
+            <!-- Seed Section (FIXED) -->
+            <div class="control-section">
+                <h3>Seed</h3>
+                <input type="number" id="seed-input" class="seed-input" value="42" onchange="updateSeed()">
+                <div class="seed-controls">
+                    <button class="button secondary" onclick="previousSeed()">← Prev</button>
+                    <button class="button secondary" onclick="nextSeed()">Next →</button>
+                </div>
+                <button class="button tertiary regen-button" onclick="randomSeedAndUpdate()">↻ Random</button>
+            </div>
+
+            <!-- Parameters Section (VARIABLE) -->
+            <div class="control-section">
+                <h3>Parameters</h3>
+
+                <div class="control-group">
+                    <label>Number Count</label>
+                    <div class="slider-container">
+                        <input type="range" id="numberCount" min="50" max="800" step="50" value="350" oninput="updateParam('numberCount', this.value)">
+                        <span class="value-display" id="numberCount-value">350</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Drift Speed</label>
+                    <div class="slider-container">
+                        <input type="range" id="driftSpeed" min="0.1" max="2.0" step="0.1" value="0.5" oninput="updateParam('driftSpeed', this.value)">
+                        <span class="value-display" id="driftSpeed-value">0.5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Flow Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="noiseScale" min="0.001" max="0.010" step="0.001" value="0.003" oninput="updateParam('noiseScale', this.value)">
+                        <span class="value-display" id="noiseScale-value">0.003</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Trail Persistence</label>
+                    <div class="slider-container">
+                        <input type="range" id="trailPersistence" min="1" max="100" step="1" value="50" oninput="updateParam('trailPersistence', this.value)">
+                        <span class="value-display" id="trailPersistence-value">50</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Number Size</label>
+                    <div class="slider-container">
+                        <input type="range" id="numberSize" min="8" max="48" step="2" value="24" oninput="updateParam('numberSize', this.value)">
+                        <span class="value-display" id="numberSize-value">24</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Opacity</label>
+                    <div class="slider-container">
+                        <input type="range" id="opacity" min="5" max="80" step="5" value="40" oninput="updateParam('opacity', this.value)">
+                        <span class="value-display" id="opacity-value">40</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors Section -->
+            <div class="control-section">
+                <h3>Colors</h3>
+
+                <div class="color-group">
+                    <label>Background</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="bgColor" value="#0d1117" onchange="updateBgColor(this.value)">
+                        <span class="color-value" id="bgColor-value">#0d1117</span>
+                    </div>
+                </div>
+
+                <div class="color-group">
+                    <label>Primary (Gold)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color1" value="#c8a84e" onchange="updateColor(0, this.value)">
+                        <span class="color-value" id="color1-value">#c8a84e</span>
+                    </div>
+                </div>
+
+                <div class="color-group">
+                    <label>Secondary (Steel)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color2" value="#6a8fa7" onchange="updateColor(1, this.value)">
+                        <span class="color-value" id="color2-value">#6a8fa7</span>
+                    </div>
+                </div>
+
+                <div class="color-group">
+                    <label>Accent (Amber)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color3" value="#d97757" onchange="updateColor(2, this.value)">
+                        <span class="color-value" id="color3-value">#d97757</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Section (FIXED) -->
+            <div class="control-section">
+                <h3>Actions</h3>
+                <div class="button-row">
+                    <button class="button" onclick="resetParameters()">Reset</button>
+                    <button class="button secondary" onclick="downloadImage()">↓ PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="canvas-area">
+            <div id="canvas-container">
+                <div class="loading">Initializing cipher drift...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CIPHER DRIFT — Numbers adrift in invisible currents
+        // ═══════════════════════════════════════════════════════════════════
+
+        let params = {
+            seed: 42,
+            numberCount: 350,
+            noiseScale: 0.003,
+            driftSpeed: 0.5,
+            trailPersistence: 50,
+            numberSize: 24,
+            opacity: 40,
+            colorPalette: ['#c8a84e', '#6a8fa7', '#d97757'],
+            bgColor: '#0d1117'
+        };
+
+        let defaultParams = JSON.parse(JSON.stringify(params));
+        let particles = [];
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UTILITIES
+        // ═══════════════════════════════════════════════════════════════════
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 13, g: 17, b: 23 };
+        }
+
+        function getFlowAngle(px, py, layer, time) {
+            return noise(
+                px * params.noiseScale + layer * 1000,
+                py * params.noiseScale,
+                time * 0.0003
+            ) * TWO_PI * 2;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // P5.JS SKETCH
+        // ═══════════════════════════════════════════════════════════════════
+
+        function setup() {
+            let canvas = createCanvas(1200, 1200);
+            canvas.parent('canvas-container');
+            textFont('Courier New');
+            textStyle(BOLD);
+            textAlign(CENTER, CENTER);
+            initializeSystem();
+            document.querySelector('.loading').style.display = 'none';
+        }
+
+        function initializeSystem() {
+            randomSeed(params.seed);
+            noiseSeed(params.seed);
+
+            let bg = hexToRgb(params.bgColor);
+            background(bg.r, bg.g, bg.b);
+
+            particles = [];
+            for (let i = 0; i < params.numberCount; i++) {
+                particles.push(new NumberParticle(true));
+            }
+        }
+
+        function draw() {
+            // Trail fade: map persistence 1–100 → alpha 35–3
+            let fadeAlpha = map(params.trailPersistence, 1, 100, 35, 3);
+            let bg = hexToRgb(params.bgColor);
+            noStroke();
+            fill(bg.r, bg.g, bg.b, fadeAlpha);
+            rect(0, 0, width, height);
+
+            let time = frameCount;
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update(time);
+                particles[i].display();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NUMBER PARTICLE
+        // ═══════════════════════════════════════════════════════════════════
+
+        class NumberParticle {
+            constructor(stagger) {
+                this.x = random(width);
+                this.y = random(height);
+                this.digit = floor(random(10));
+                this.assignLayer();
+                this.maxAge = random(300, 700);
+                this.age = stagger ? floor(random(this.maxAge)) : 0;
+                this.displayAngle = random(TWO_PI);
+            }
+
+            assignLayer() {
+                let r = random();
+                if (r < 0.5) {
+                    // Far — small, slow, dim (50% of particles)
+                    this.layer = 0;
+                    this.sizeFactor = 0.35;
+                    this.speedFactor = 0.25;
+                    this.opacityFactor = 0.3;
+                } else if (r < 0.8) {
+                    // Mid — moderate (30% of particles)
+                    this.layer = 1;
+                    this.sizeFactor = 0.6;
+                    this.speedFactor = 0.5;
+                    this.opacityFactor = 0.55;
+                } else {
+                    // Near — large, fast, bright (20% of particles)
+                    this.layer = 2;
+                    this.sizeFactor = 1.0;
+                    this.speedFactor = 1.0;
+                    this.opacityFactor = 0.85;
+                }
+            }
+
+            update(time) {
+                let flowAngle = getFlowAngle(this.x, this.y, this.layer, time);
+
+                // Smooth rotation towards flow direction
+                let diff = flowAngle - this.displayAngle;
+                while (diff > PI) diff -= TWO_PI;
+                while (diff < -PI) diff += TWO_PI;
+                this.displayAngle += diff * 0.08;
+
+                let speed = params.driftSpeed * this.speedFactor;
+                this.x += cos(flowAngle) * speed;
+                this.y += sin(flowAngle) * speed;
+
+                this.age++;
+
+                // Wrap around with margin
+                let m = 40;
+                if (this.x < -m) this.x += width + m * 2;
+                if (this.x > width + m) this.x -= width + m * 2;
+                if (this.y < -m) this.y += height + m * 2;
+                if (this.y > height + m) this.y -= height + m * 2;
+
+                if (this.age > this.maxAge) this.respawn();
+            }
+
+            respawn() {
+                let edge = floor(random(4));
+                if (edge === 0) { this.x = -20; this.y = random(height); }
+                else if (edge === 1) { this.x = width + 20; this.y = random(height); }
+                else if (edge === 2) { this.x = random(width); this.y = -20; }
+                else { this.x = random(width); this.y = height + 20; }
+
+                this.digit = floor(random(10));
+                this.age = 0;
+                this.maxAge = random(300, 700);
+            }
+
+            display() {
+                let sz = params.numberSize * this.sizeFactor;
+                if (sz < 4) return;
+
+                // Smoothstep lifecycle fade
+                let lifeFade = 1;
+                if (this.age < 40) lifeFade = this.age / 40;
+                if (this.age > this.maxAge - 50) lifeFade = (this.maxAge - this.age) / 50;
+                lifeFade = constrain(lifeFade, 0, 1);
+                lifeFade = lifeFade * lifeFade * (3 - 2 * lifeFade);
+
+                let alpha = (params.opacity / 100 * 255) * this.opacityFactor * lifeFade;
+                if (alpha < 1) return;
+
+                let colorIdx = (this.digit + this.layer) % params.colorPalette.length;
+                let col = hexToRgb(params.colorPalette[colorIdx]);
+
+                push();
+                translate(this.x, this.y);
+                rotate(this.displayAngle * 0.3);
+
+                // Subtle glow on near-layer digits
+                if (this.layer === 2 && lifeFade > 0.5) {
+                    fill(col.r, col.g, col.b, alpha * 0.12);
+                    textSize(sz * 1.8);
+                    text(str(this.digit), 0, 0);
+                }
+
+                fill(col.r, col.g, col.b, alpha);
+                textSize(sz);
+                text(str(this.digit), 0, 0);
+
+                pop();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UI HANDLERS
+        // ═══════════════════════════════════════════════════════════════════
+
+        function updateParam(paramName, value) {
+            params[paramName] = parseFloat(value);
+            document.getElementById(paramName + '-value').textContent = value;
+
+            if (paramName === 'numberCount') {
+                initializeSystem();
+            }
+        }
+
+        function updateColor(index, value) {
+            params.colorPalette[index] = value;
+            document.getElementById('color' + (index + 1) + '-value').textContent = value;
+        }
+
+        function updateBgColor(value) {
+            params.bgColor = value;
+            document.getElementById('bgColor-value').textContent = value;
+            initializeSystem();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // SEED CONTROLS (FIXED)
+        // ═══════════════════════════════════════════════════════════════════
+
+        function updateSeedDisplay() {
+            document.getElementById('seed-input').value = params.seed;
+        }
+
+        function updateSeed() {
+            let input = document.getElementById('seed-input');
+            let newSeed = parseInt(input.value);
+            if (newSeed && newSeed > 0) {
+                params.seed = newSeed;
+                initializeSystem();
+            } else {
+                updateSeedDisplay();
+            }
+        }
+
+        function previousSeed() {
+            params.seed = Math.max(1, params.seed - 1);
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function nextSeed() {
+            params.seed = params.seed + 1;
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function randomSeedAndUpdate() {
+            params.seed = Math.floor(Math.random() * 999999) + 1;
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function resetParameters() {
+            params = JSON.parse(JSON.stringify(defaultParams));
+
+            // Update sliders
+            var sliders = ['numberCount', 'driftSpeed', 'noiseScale', 'trailPersistence', 'numberSize', 'opacity'];
+            for (var i = 0; i < sliders.length; i++) {
+                var p = sliders[i];
+                document.getElementById(p).value = params[p];
+                document.getElementById(p + '-value').textContent = params[p];
+            }
+
+            // Update color pickers
+            document.getElementById('bgColor').value = params.bgColor;
+            document.getElementById('bgColor-value').textContent = params.bgColor;
+            for (var j = 0; j < params.colorPalette.length; j++) {
+                document.getElementById('color' + (j + 1)).value = params.colorPalette[j];
+                document.getElementById('color' + (j + 1) + '-value').textContent = params.colorPalette[j];
+            }
+
+            updateSeedDisplay();
+            initializeSystem();
+        }
+
+        function downloadImage() {
+            saveCanvas('cipher-drift-' + params.seed, 'png');
+        }
+
+        window.addEventListener('load', function() {
+            updateSeedDisplay();
+        });
+    </script>
+</body>
+</html>

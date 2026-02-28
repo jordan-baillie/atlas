@@ -29,18 +29,8 @@ PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 os.chdir(PROJECT)
 
-# Logging
-log_dir = PROJECT / "logs"
-log_dir.mkdir(exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(log_dir / "eod_settlement.log"),
-        logging.StreamHandler()
-    ]
-)
-log = logging.getLogger("eod")
+from utils.logging_config import setup_logging
+log = setup_logging("eod_settlement", extra_log_file="eod_settlement")
 
 
 def load_config(market_id="asx"):
@@ -72,8 +62,14 @@ def fetch_closing_prices(tickers):
 
     for ticker in tickers:
         cache_key = ticker.replace(".", "_")
-        cache_path = PROJECT / "data" / "cache" / f"{cache_key}.parquet"
-        if cache_path.exists():
+        # Search market subdirs (asx/ sp500/) — no root-level parquets
+        cache_path = None
+        for subdir in ["asx", "sp500"]:
+            candidate = PROJECT / "data" / "cache" / subdir / f"{cache_key}.parquet"
+            if candidate.exists():
+                cache_path = candidate
+                break
+        if cache_path and cache_path.exists():
             try:
                 df = pd.read_parquet(cache_path)
                 if not df.empty and "close" in df.columns:
@@ -360,19 +356,64 @@ def main():
     print(report)
     print(f"\nFull report saved to: {report_path}")
 
-    # Summary stats for automation
+    # Summary stats for automation and future analysis
+    eq = portfolio.equity(prices)
+    prev_equity = portfolio.starting_equity
+    if portfolio.equity_history and len(portfolio.equity_history) > 1:
+        prev_equity = portfolio.equity_history[-2].get("equity", portfolio.starting_equity)
+    elif portfolio.equity_history:
+        prev_equity = portfolio.equity_history[-1].get("equity", portfolio.starting_equity)
+    daily_pnl = round(eq - prev_equity, 2)
+    total_pnl = round(eq - portfolio.starting_equity, 2)
+
+    # Per-position snapshot
+    position_snapshot = []
+    for pos in portfolio.positions:
+        if pos.ticker in prices:
+            p = prices[pos.ticker]
+            position_snapshot.append({
+                "ticker": pos.ticker,
+                "strategy": pos.strategy,
+                "entry_date": pos.entry_date,
+                "entry_price": pos.entry_price,
+                "close_price": p,
+                "shares": pos.shares,
+                "unrealized_pnl": pos.unrealized_pnl(p),
+                "unrealized_pnl_pct": pos.unrealized_pnl_pct(p),
+                "stop_price": pos.stop_price,
+                "take_profit": pos.take_profit,
+                "mae_pct": round(pos.mae * 100, 2),
+                "mfe_pct": round(pos.mfe * 100, 2),
+                "holding_days": pos.holding_days(trade_date),
+                "sector": pos.sector,
+            })
+
+    # Today's closed trades
+    today_closed = [t for t in portfolio.closed_trades if t.get("exit_date") == trade_date]
+    realized_today = round(sum(t.get("pnl", 0) for t in today_closed), 2)
+
     summary = {
         "trade_date": trade_date,
-        "equity": portfolio.equity(prices),
+        "market_id": market_id,
+        "equity": eq,
+        "cash": portfolio.cash,
+        "daily_pnl": daily_pnl,
+        "daily_pnl_pct": round(daily_pnl / prev_equity * 100, 2) if prev_equity > 0 else 0,
+        "total_pnl": total_pnl,
+        "total_pnl_pct": round(total_pnl / portfolio.starting_equity * 100, 2) if portfolio.starting_equity > 0 else 0,
         "positions": len(portfolio.positions),
+        "position_details": position_snapshot,
         "stop_exits": len(stop_exits),
         "tp_exits": len(tp_exits),
+        "signal_exits": len([t for t in today_closed if t.get("exit_reason") == "signal_exit"]),
+        "realized_pnl_today": realized_today,
+        "closed_trades_today": today_closed,
         "halted": portfolio.halted,
-        "report_path": str(report_path)
+        "report_path": str(report_path),
     }
     summary_path = PROJECT / "logs" / f"eod_summary_{trade_date}.json"
     with open(summary_path, 'w') as f:
-        json.dump(summary, f, indent=2)
+        json.dump(summary, f, indent=2, default=str)
     log.info(f"EOD summary saved: {summary_path}")
 
 

@@ -24,14 +24,8 @@ def setup_logging():
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     today = datetime.now().strftime('%Y-%m-%d')
     log_file = LOGS_DIR / f'auto_reoptimize_{today}.log'
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout),
-        ]
-    )
+    from utils.logging_config import setup_logging
+    setup_logging("auto_reoptimize", extra_log_file=f"auto_reoptimize_{today}")
     return log_file
 
 def run_script(script_name, timeout=3600, extra_args=None):

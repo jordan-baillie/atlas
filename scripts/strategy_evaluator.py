@@ -48,7 +48,8 @@ from strategies.sector_rotation import SectorRotation
 from strategies.mtf_momentum import MTFMomentum
 from strategies.dividend_capture import DividendCapture
 
-logging.basicConfig(level=logging.WARNING)
+from utils.logging_config import setup_logging
+setup_logging("strategy_evaluator", level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -99,15 +100,17 @@ def load_market_data(market_id: str) -> dict:
     """Load all cached ticker data for a market."""
     try:
         from markets import get_market
-        benchmark = get_market(market_id).benchmark_ticker
-        yf_suffix = get_market(market_id).yfinance_suffix
+        market = get_market(market_id)
+        benchmark = market.benchmark_ticker
+        yf_suffix = market.yfinance_suffix
+        valid_universe = set(market.get_formatted_tickers())
+        valid_universe.add(benchmark)
     except (ImportError, KeyError):
         benchmark = 'IOZ.AX' if market_id == 'asx' else 'SPY'
         yf_suffix = '.AX' if market_id == 'asx' else ''
+        valid_universe = None
 
-    market_cache = PROJECT / 'data' / 'cache' / market_id
-    flat_cache = PROJECT / 'data' / 'cache'
-    cache_dir = market_cache if market_cache.exists() else flat_cache
+    cache_dir = PROJECT / 'data' / 'cache' / market_id
 
     data_dict = {}
     for pf in sorted(cache_dir.glob('*.parquet')):
@@ -123,6 +126,10 @@ def load_market_data(market_id: str) -> dict:
             ticker = stem
 
         if ticker == benchmark:
+            continue
+
+        # Skip tickers not in the market's universe (stale cache files)
+        if valid_universe is not None and ticker not in valid_universe:
             continue
 
         try:
@@ -200,6 +207,20 @@ def run_backtest(cfg: dict, data: dict, strategy_names: list = None) -> dict:
         'total_pnl': round(m.get('total_pnl', 0), 2),
         'avg_trade': round(m.get('avg_trade', 0), 2),
         'final_equity': round(m.get('final_equity', 0), 2),
+        # R-multiple metrics (from calc_all_metrics)
+        'expectancy_r': round(m.get('expectancy_r', 0), 4),
+        'avg_r': round(m.get('avg_r', 0), 4),
+        'r_count': m.get('r_count', 0),
+        # Statistical edge
+        'edge_p_value': m.get('edge_p_value', 1.0),
+        'edge_significant': m.get('edge_significant', False),
+        # Risk metrics (VaR, CVaR, Calmar)
+        'var_95_pct': round(m.get('var_95', 0) * 100, 3),
+        'cvar_95_pct': round(m.get('cvar_95', 0) * 100, 3),
+        'calmar': round(m.get('calmar', 0), 4),
+        # Monte Carlo drawdown
+        'mc_p95_drawdown_pct': round(m.get('mc_p95_drawdown', 0) * 100, 2),
+        'mc_fragile': m.get('mc_fragile', False),
     }
 
     # Per-strategy breakdown if available

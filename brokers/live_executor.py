@@ -302,6 +302,9 @@ class LiveExecutor:
         ticker = entry.get("ticker", "")
         price = entry.get("entry_price", 0)
         qty = entry.get("position_size", 0)
+        strategy = entry.get("strategy", "")
+        confidence = entry.get("confidence", 0)
+        stop_price = entry.get("stop_price", 0)
 
         # Pre-flight check
         errors = preflight_check_order(
@@ -321,6 +324,10 @@ class LiveExecutor:
         if self.is_dry_run:
             result = {
                 "ticker": ticker, "side": "BUY", "qty": qty, "price": price,
+                "strategy": strategy, "confidence": confidence,
+                "stop_price": stop_price,
+                "position_value": round(price * qty, 2),
+                "risk_amount": round(abs(price - stop_price) * qty, 2),
                 "success": True, "dry_run": True,
                 "message": "DRY RUN — order would be placed",
             }
@@ -336,11 +343,15 @@ class LiveExecutor:
             qty=qty,
             price=round(price, 2),
             order_type=OrderType.LIMIT,
-            remark=f"atlas_entry_{trade_date}",
+            remark=f"atlas_{strategy}_{trade_date}"[:64],
         )
 
         result = {
             "ticker": ticker, "side": "BUY", "qty": qty, "price": price,
+            "strategy": strategy, "confidence": confidence,
+            "stop_price": stop_price,
+            "position_value": round(price * qty, 2),
+            "risk_amount": round(abs(price - stop_price) * qty, 2),
             "success": order_result.success,
             "order_id": order_result.order_id,
             "status": order_result.status.value,

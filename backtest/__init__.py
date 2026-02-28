@@ -10,6 +10,11 @@ from backtest.metrics import (
     calc_exposure,
     calc_turnover,
     calc_all_metrics,
+    calc_var,
+    calc_cvar,
+    calc_calmar,
+    calc_strategy_correlation,
+    calc_monte_carlo_drawdown,
 )
 
 __all__ = [
@@ -25,4 +30,9 @@ __all__ = [
     "calc_exposure",
     "calc_turnover",
     "calc_all_metrics",
+    "calc_var",
+    "calc_cvar",
+    "calc_calmar",
+    "calc_strategy_correlation",
+    "calc_monte_carlo_drawdown",
 ]

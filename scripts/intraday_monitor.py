@@ -40,15 +40,8 @@ LOG_DIR.mkdir(exist_ok=True)
 ALERT_STATE_DIR = PROJECT / "logs" / "intraday"
 ALERT_STATE_DIR.mkdir(parents=True, exist_ok=True)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_DIR / "intraday_monitor.log"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("intraday")
+from utils.logging_config import setup_logging
+log = setup_logging("intraday_monitor", extra_log_file="intraday_monitor")
 
 # ── Thresholds ────────────────────────────────────────────────
 

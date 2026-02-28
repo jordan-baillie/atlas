@@ -28,8 +28,9 @@
     }
   },
   "trading": {
-    "mode": "paper",
-    "broker": "paper",
+    "mode": "live",
+    "broker": "moomoo",
+    "live_enabled": true,
     "holding_period_min": 2,
     "holding_period_max": 20,
     "data_frequency": "daily",
@@ -37,9 +38,11 @@
     "approval_required": true,
     "live_safety": {
       "require_double_approval": true,
-      "max_order_value": 2000,
-      "max_daily_orders": 10,
-      "dry_run_first": true
+      "max_order_value": 750,
+      "max_daily_orders": 5,
+      "max_portfolio_value": 5000,
+      "dry_run_first": false,
+      "_note": "To enable live: set broker=moomoo, live_enabled=true, dry_run_first=false. REQUIRES OpenD running."
     }
   },
   "moomoo": {
@@ -47,7 +50,7 @@
     "opend_port": 11111,
     "security_firm": "FUTUAU",
     "trd_market": "AU",
-    "trd_env": "SIMULATE",
+    "trd_env": "REAL",
     "currency": "AUD",
     "order_type": "NORMAL",
     "time_in_force": "DAY",
@@ -60,7 +63,8 @@
     "flat_fee_threshold": 10000.0,
     "min_position_value": 500.0,
     "_broker": "moomoo_au",
-    "_fee_notes": "Moomoo AU: Commission 0.01% (min $1/order) + Platform Fee 0.02% (min $2/order) = 0.03% total (min $3/order). GST inclusive. All Atlas positions under $10K so effectively $3 flat per trade."
+    "_fee_notes": "Moomoo AU: Commission 0.01% (min $1/order) + Platform Fee 0.02% (min $2/order) = 0.03% total (min $3/order). GST inclusive. All Atlas positions under $10K so effectively $3 flat per trade.",
+    "_actual_fee_analysis_2026_02_26": "Real data from 7 filled orders (90 days): avg $1.36/order (AU: $3.00 flat incl GST, US: avg $1.11 platform + $0.11 settlement + $0.03 activity). Config $3.00 is conservative by 54.6% — keeps backtest pessimistic which is preferred."
   },
   "strategies": {
     "momentum_breakout": {
@@ -75,13 +79,13 @@
     "mean_reversion": {
       "enabled": true,
       "rsi_period": 14,
-      "rsi_oversold": 35,
+      "rsi_oversold": 40,
       "zscore_lookback": 20,
       "zscore_entry": -2.0,
       "atr_period": 14,
-      "atr_stop_mult": 2.5,
-      "profit_target_atr_mult": 1.5,
-      "max_hold_days": 7,
+      "atr_stop_mult": 2.0,
+      "profit_target_atr_mult": 3.0,
+      "max_hold_days": 20,
       "volume": {
         "lookback": 20,
         "min_ratio": 0.5,
@@ -128,12 +132,12 @@
     "trend_following": {
       "enabled": true,
       "fast_ma": 20,
-      "slow_ma": 50,
+      "slow_ma": 30,
       "pullback_pct": 0.02,
       "atr_period": 14,
-      "atr_stop_mult": 3.5,
+      "atr_stop_mult": 2.0,
       "trailing_stop_atr_mult": 4.0,
-      "max_hold_days": 25,
+      "max_hold_days": 30,
       "volume": {
         "lookback": 20,
         "min_ratio": 0.5,
@@ -212,8 +216,8 @@
       "kc_atr_mult": 2.0,
       "momentum_period": 30,
       "atr_period": 14,
-      "atr_stop_mult": 1.0,
-      "trailing_stop_atr_mult": 3.0,
+      "atr_stop_mult": 1.5,
+      "trailing_stop_atr_mult": 2.5,
       "max_hold_days": 20,
       "vol_surge_threshold": 1.5,
       "earnings_blackout": {
@@ -224,15 +228,15 @@
     },
     "opening_gap": {
       "enabled": true,
-      "gap_threshold": -0.01,
-      "ibs_confirm": 0.35,
-      "rsi14_max": 25,
+      "gap_threshold": -0.025,
+      "ibs_confirm": 0.5,
+      "rsi14_max": 40,
       "vol_surge_threshold": 1.2,
       "atr_period": 14,
       "atr_stop_mult": 2.0,
       "sma_exit_period": 5,
       "ibs_exit_threshold": 0.8,
-      "max_hold_days": 15
+      "max_hold_days": 3
     },
     "mtf_momentum": {
       "enabled": false,

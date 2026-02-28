@@ -60,6 +60,8 @@ class MeanReversion(BaseStrategy):
         self.vol_surge_threshold = vol_cfg.get("surge_threshold", 2.0)
         self.vol_surge_boost = vol_cfg.get("surge_boost", 0.1)
         self.vol_dry_penalty = vol_cfg.get("dry_penalty", 0.15)
+        # Hard volume entry gate: skip entry if volume < threshold * avg (0 = disabled)
+        self.volume_entry_min = strat_cfg.get("volume_entry_min", 0.0)
         # Phase 7A: Earnings blackout parameters
         earnings_cfg = strat_cfg.get("earnings_blackout", {})
         self.earnings_blackout_enabled = earnings_cfg.get("enabled", True)
@@ -188,7 +190,14 @@ class MeanReversion(BaseStrategy):
                 if pd.isna(current_vol_ratio):
                     current_vol_ratio = 1.0  # Neutral if no data
 
-                # Phase 7A: Volume noted for confidence adjustment (no hard filter)
+                # Hard volume gate: skip entry if volume below threshold
+                if self.volume_entry_min > 0 and current_vol_ratio < self.volume_entry_min:
+                    self._logger.debug(
+                        f"{ticker}: volume {current_vol_ratio:.2f}x < {self.volume_entry_min}x min, skipping"
+                    )
+                    continue
+
+                # Phase 7A: Volume noted for confidence adjustment
 
                 # Calculate ATR
                 atr = calc_atr(high, low, close, period=self.atr_period)

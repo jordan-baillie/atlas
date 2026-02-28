@@ -48,8 +48,8 @@ from research.models import (
     ExperimentStatus, EXPERIMENTS_DIR,
 )
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
-logger = logging.getLogger(__name__)
+from utils.logging_config import setup_logging
+logger = setup_logging("research_promote")
 
 CANDIDATES_DIR = PROJECT / 'config' / 'candidates'
 MAX_PROMOTIONS_PER_WEEK = 1
@@ -417,9 +417,9 @@ def watchdog_check(market_id: str, days: int = ROLLBACK_WATCH_DAYS) -> dict:
 
 def send_promotion_request(experiment_id: str, market_id: str,
                            validation_result: dict) -> bool:
-    """Send a Telegram message with promotion details."""
+    """Send a Telegram message with Approve/Reject inline buttons."""
     try:
-        from utils.telegram import send_message
+        from utils.telegram import send_message, _esc
     except ImportError:
         logger.warning("Telegram module not available")
         return False
@@ -427,11 +427,22 @@ def send_promotion_request(experiment_id: str, market_id: str,
     regression = validation_result.get('regression_details', {})
     comparisons = regression.get('comparisons', {})
 
+    # Metrics where lower is better
+    _LOWER_IS_BETTER = {'max_drawdown', 'max_drawdown_pct', 'max_dd', 'drawdown'}
+    _PCT_METRICS = {'cagr', 'cagr_pct', 'max_drawdown', 'max_drawdown_pct', 'max_dd',
+                    'win_rate', 'win_rate_pct', 'drawdown', 'total_return'}
+    _LABELS = {
+        'sharpe': 'Sharpe', 'cagr': 'CAGR', 'cagr_pct': 'CAGR',
+        'max_drawdown': 'Max DD', 'max_drawdown_pct': 'Max DD', 'max_dd': 'Max DD',
+        'profit_factor': 'Profit Factor', 'win_rate': 'Win Rate', 'win_rate_pct': 'Win Rate',
+        'sortino': 'Sortino', 'total_return': 'Total Return',
+    }
+
     lines = [
         "🔬 <b>Research Promotion Request</b>",
         "",
-        f"Experiment: <code>{experiment_id}</code>",
-        f"Market: {market_id.upper()}",
+        f"Experiment: <code>{_esc(experiment_id)}</code>",
+        f"Market: {_esc(market_id.upper())}",
         "",
         "<b>Before → After:</b>",
     ]
@@ -440,28 +451,51 @@ def send_promotion_request(experiment_id: str, market_id: str,
         b = data.get('baseline', 0)
         c = data.get('candidate', 0)
         delta = data.get('delta', 0)
+        inverted = metric in _LOWER_IS_BETTER
+        is_pct = metric in _PCT_METRICS
+        label = _LABELS.get(metric, metric)
+
+        improved = (delta < 0) if inverted else (delta > 0)
+        worsened = (delta > 0) if inverted else (delta < 0)
+        icon = "🟢" if improved else "🔴" if worsened else "⚪"
         arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
-        lines.append(f"  {metric}: {b:.3f} → {c:.3f} ({delta:+.3f} {arrow})")
+
+        if is_pct:
+            lines.append(f"  {icon} {_esc(label)}: {b*100:.1f}% → {c*100:.1f}% ({delta*100:+.1f}pp {arrow})")
+        else:
+            lines.append(f"  {icon} {_esc(label)}: {b:.3f} → {c:.3f} ({delta:+.3f} {arrow})")
 
     oos = validation_result.get('oos_details', {})
     if oos:
-        lines.extend([
-            "",
-            "<b>OOS Validation:</b>",
-            f"  Test 1 (Time Split): {oos.get('test1', '?')}",
-            f"  Test 2 (Perturbation): {oos.get('test2', '?')}",
-            f"  Test 3 (Walk-Forward): {oos.get('test3', '?')}",
-        ])
+        oos_tests = [
+            ("Test 1 (Time Split)", oos.get('test1')),
+            ("Test 2 (Perturbation)", oos.get('test2')),
+            ("Test 3 (Walk-Forward)", oos.get('test3')),
+        ]
+        has_any = any(v and str(v) not in ('?', 'N/A', 'None', '') for _, v in oos_tests)
+        if has_any:
+            lines.extend(["", "<b>OOS Validation:</b>"])
+            for name, val in oos_tests:
+                val_str = str(val) if val else ''
+                if val_str in ('?', 'N/A', 'None', ''):
+                    continue
+                verdict_icon = "✅" if "PASS" in val_str.upper() else "❌" if "FAIL" in val_str.upper() else "⏭️"
+                lines.append(f"  {verdict_icon} {name}: {_esc(val_str)}")
 
     lines.extend([
         "",
         f"Rate limit: {validation_result.get('recent_promotions', 0)}/{MAX_PROMOTIONS_PER_WEEK} this week",
-        "",
-        "Reply <b>APPROVE</b> or <b>REJECT</b> to this message.",
     ])
 
+    keyboard = {
+        "inline_keyboard": [[
+            {"text": "✅ Approve & Promote", "callback_data": f"research:{experiment_id}:approve:{market_id}"},
+            {"text": "❌ Reject", "callback_data": f"research:{experiment_id}:reject:{market_id}"},
+        ]]
+    }
+
     msg = "\n".join(lines)
-    return send_message(msg, parse_mode="HTML")
+    return send_message(msg, parse_mode="HTML", reply_markup=keyboard)
 
 
 # ---------------------------------------------------------------------------

@@ -48,15 +48,8 @@ from brokers.live_portfolio import LivePortfolio
 from journal.logger import DecisionJournal, TradeLedger, MistakeLog, WeeklySummary
 from utils.signal_enrichment import enrich_signals
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(LOGS_DIR / "atlas.log", mode="a"),
-    ],
-)
-logger = logging.getLogger("atlas")
+from utils.logging_config import setup_logging
+logger = setup_logging("cli")
 
 
 def load_data(tickers, config):
@@ -255,7 +248,7 @@ def cmd_plan(args):
             signals = strat.generate_signals(data, portfolio.equity(prices), existing_positions)
             for sig in signals:
                 all_signals.append(sig)
-                decision_journal.record_signal(sig, "proposed", config_version=config["version"])
+                decision_journal.record_signal(sig, "proposed", config_version=config["version"], market_id=market_id)
             exits = strat.check_exits(data, existing_positions)
             exit_recommendations.extend(exits)
         except Exception as e:
@@ -266,6 +259,31 @@ def cmd_plan(args):
     logger.info("%d signals after enrichment", len(all_signals))
     all_signals.sort(key=lambda s: s.confidence, reverse=True)
     plan = plan_gen.generate_plan(all_signals, exit_recommendations, prices, trade_date)
+
+    # Record rejected entries to decision journal for signal quality analysis
+    for rej in plan.get("rejected_entries", []):
+        # Build a lightweight signal-like object for the journal
+        class _RejSig:
+            pass
+        rs = _RejSig()
+        rs.ticker = rej["ticker"]
+        rs.strategy = rej["strategy"]
+        rs.entry_price = rej["entry_price"]
+        rs.stop_price = rej["stop_price"]
+        rs.take_profit = rej.get("take_profit")
+        rs.position_size = rej["position_size"]
+        rs.confidence = rej["confidence"]
+        rs.rationale = rej.get("rationale", "")
+        rs.features = rej.get("features", {})
+        rs.sector = rej.get("sector", "Unknown")
+        rs.market_id = market_id
+        decision_journal.record_signal(
+            rs, "rejected",
+            reason=rej.get("rejection_reason", ""),
+            config_version=config["version"],
+            market_id=market_id,
+        )
+
     print(plan_gen.format_plan_text(plan))
     print("\nPlan saved to paper_engine/plans/plan_%s.json" % trade_date)
     _disconnect_portfolio(portfolio)

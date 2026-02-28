@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Substrate — Generative Art Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --anthropic-dark: #141413;
+            --anthropic-light: #faf9f5;
+            --anthropic-mid-gray: #b0aea5;
+            --anthropic-light-gray: #e8e6dc;
+            --anthropic-orange: #d97757;
+            --anthropic-blue: #6a9bcc;
+            --anthropic-green: #788c5d;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--anthropic-light) 0%, #f5f3ee 100%);
+            min-height: 100vh;
+            color: var(--anthropic-dark);
+        }
+        .container { display: flex; min-height: 100vh; padding: 20px; gap: 20px; }
+        .sidebar {
+            width: 320px; flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 24px; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(20, 20, 19, 0.1);
+            overflow-y: auto; overflow-x: hidden;
+        }
+        .sidebar h1 {
+            font-family: 'Lora', serif; font-size: 24px;
+            font-weight: 500; color: var(--anthropic-dark); margin-bottom: 8px;
+        }
+        .sidebar .subtitle {
+            color: var(--anthropic-mid-gray); font-size: 14px;
+            margin-bottom: 32px; line-height: 1.4;
+        }
+        .control-section { margin-bottom: 32px; }
+        .control-section h3 {
+            font-size: 16px; font-weight: 600; color: var(--anthropic-dark);
+            margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+        }
+        .control-section h3::before { content: '•'; color: var(--anthropic-orange); font-weight: bold; }
+        .seed-input {
+            width: 100%; background: var(--anthropic-light); padding: 12px;
+            border-radius: 8px; font-family: 'Courier New', monospace;
+            font-size: 14px; margin-bottom: 12px;
+            border: 1px solid var(--anthropic-light-gray); text-align: center;
+        }
+        .seed-input:focus {
+            outline: none; border-color: var(--anthropic-orange);
+            box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.1); background: white;
+        }
+        .seed-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .control-group { margin-bottom: 20px; }
+        .control-group label {
+            display: block; font-size: 14px; font-weight: 500;
+            color: var(--anthropic-dark); margin-bottom: 8px;
+        }
+        .slider-container { display: flex; align-items: center; gap: 12px; }
+        .slider-container input[type="range"] {
+            flex: 1; height: 4px; background: var(--anthropic-light-gray);
+            border-radius: 2px; outline: none; -webkit-appearance: none;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 16px; height: 16px;
+            background: var(--anthropic-orange); border-radius: 50%;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1); background: #c86641;
+        }
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px; height: 16px; background: var(--anthropic-orange);
+            border-radius: 50%; border: none; cursor: pointer;
+        }
+        .value-display {
+            font-family: 'Courier New', monospace; font-size: 12px;
+            color: var(--anthropic-mid-gray); min-width: 60px; text-align: right;
+        }
+        .color-group { margin-bottom: 16px; }
+        .color-group label { display: block; font-size: 12px; color: var(--anthropic-mid-gray); margin-bottom: 4px; }
+        .color-picker-container { display: flex; align-items: center; gap: 8px; }
+        .color-picker-container input[type="color"] {
+            width: 32px; height: 32px; border: none; border-radius: 6px;
+            cursor: pointer; background: none; padding: 0;
+        }
+        .color-value { font-family: 'Courier New', monospace; font-size: 12px; color: var(--anthropic-mid-gray); }
+        .button {
+            background: var(--anthropic-orange); color: white; border: none;
+            padding: 10px 16px; border-radius: 6px; font-size: 14px;
+            font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%;
+        }
+        .button:hover { background: #c86641; transform: translateY(-1px); }
+        .button:active { transform: translateY(0); }
+        .button.secondary { background: var(--anthropic-blue); }
+        .button.secondary:hover { background: #5a8bb8; }
+        .button.tertiary { background: var(--anthropic-green); }
+        .button.tertiary:hover { background: #6b7b52; }
+        .button-row { display: flex; gap: 8px; }
+        .button-row .button { flex: 1; }
+        .canvas-area {
+            flex: 1; display: flex; align-items: center;
+            justify-content: center; min-width: 0;
+        }
+        #canvas-container {
+            width: 100%; max-width: 1000px; border-radius: 12px;
+            overflow: hidden; box-shadow: 0 20px 40px rgba(20, 20, 19, 0.1);
+            background: #07090e;
+        }
+        #canvas-container canvas { display: block; width: 100% !important; height: auto !important; }
+        .loading {
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: var(--anthropic-mid-gray); padding: 100px;
+        }
+        @media (max-width: 600px) {
+            .container { flex-direction: column; }
+            .sidebar { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h1>Signal Substrate</h1>
+            <div class="subtitle">Data as the universal lingua franca — the invisible flows that decide what happens and what doesn't.</div>
+
+            <!-- Seed Section (FIXED) -->
+            <div class="control-section">
+                <h3>Seed</h3>
+                <input type="number" id="seed-input" class="seed-input" value="42" onchange="updateSeed()">
+                <div class="seed-controls">
+                    <button class="button secondary" onclick="previousSeed()">← Prev</button>
+                    <button class="button secondary" onclick="nextSeed()">Next →</button>
+                </div>
+                <button class="button tertiary regen-button" onclick="randomSeedAndUpdate()">↻ Random</button>
+            </div>
+
+            <!-- Parameters Section (CUSTOM) -->
+            <div class="control-section">
+                <h3>Parameters</h3>
+
+                <div class="control-group">
+                    <label>Stream Count</label>
+                    <div class="slider-container">
+                        <input type="range" id="streamCount" min="400" max="3000" step="100" value="1500" oninput="updateParam('streamCount', this.value)">
+                        <span class="value-display" id="streamCount-value">1500</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Flow Scale</label>
+                    <div class="slider-container">
+                        <input type="range" id="flowScale" min="0.001" max="0.008" step="0.0005" value="0.003" oninput="updateParam('flowScale', this.value)">
+                        <span class="value-display" id="flowScale-value">0.003</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Stream Velocity</label>
+                    <div class="slider-container">
+                        <input type="range" id="velocity" min="0.3" max="3.0" step="0.1" value="1.2" oninput="updateParam('velocity', this.value)">
+                        <span class="value-display" id="velocity-value">1.2</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Nexus Intensity</label>
+                    <div class="slider-container">
+                        <input type="range" id="nexusIntensity" min="0" max="1.0" step="0.05" value="0.6" oninput="updateParam('nexusIntensity', this.value)">
+                        <span class="value-display" id="nexusIntensity-value">0.60</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Lattice Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="latticeDensity" min="0" max="1.0" step="0.05" value="0.25" oninput="updateParam('latticeDensity', this.value)">
+                        <span class="value-display" id="latticeDensity-value">0.25</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Connection Range</label>
+                    <div class="slider-container">
+                        <input type="range" id="connectionRange" min="0" max="60" step="5" value="30" oninput="updateParam('connectionRange', this.value)">
+                        <span class="value-display" id="connectionRange-value">30</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Trail Persistence</label>
+                    <div class="slider-container">
+                        <input type="range" id="trailPersist" min="0.005" max="0.04" step="0.001" value="0.015" oninput="updateParam('trailPersist', this.value)">
+                        <span class="value-display" id="trailPersist-value">0.015</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Pulse Frequency</label>
+                    <div class="slider-container">
+                        <input type="range" id="pulseFreq" min="0" max="0.05" step="0.005" value="0.02" oninput="updateParam('pulseFreq', this.value)">
+                        <span class="value-display" id="pulseFreq-value">0.020</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors Section -->
+            <div class="control-section">
+                <h3>Signal Palette</h3>
+                <div class="color-group">
+                    <label>Foundation (Blue)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color0" value="#3b82f6" onchange="updateColor(0, this.value)">
+                        <span class="color-value" id="color0-value">#3b82f6</span>
+                    </div>
+                </div>
+                <div class="color-group">
+                    <label>Living Signal (Green)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color1" value="#10b981" onchange="updateColor(1, this.value)">
+                        <span class="color-value" id="color1-value">#10b981</span>
+                    </div>
+                </div>
+                <div class="color-group">
+                    <label>Anomaly (Violet)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color2" value="#8b5cf6" onchange="updateColor(2, this.value)">
+                        <span class="color-value" id="color2-value">#8b5cf6</span>
+                    </div>
+                </div>
+                <div class="color-group">
+                    <label>Clarity (Cyan)</label>
+                    <div class="color-picker-container">
+                        <input type="color" id="color3" value="#06b6d4" onchange="updateColor(3, this.value)">
+                        <span class="color-value" id="color3-value">#06b6d4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Section (FIXED) -->
+            <div class="control-section">
+                <h3>Actions</h3>
+                <div class="button-row" style="margin-bottom:8px">
+                    <button class="button" onclick="resetParameters()">Reset</button>
+                    <button class="button secondary" onclick="downloadPNG()">Download PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-area">
+            <div id="canvas-container">
+                <div class="loading">Initializing signal substrate...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════════════════════════════════
+    // SIGNAL SUBSTRATE — Algorithmic expression of data as universal code
+    // ═══════════════════════════════════════════════════════════════════
+
+    let params = {
+        seed: 42,
+        streamCount: 1500,
+        flowScale: 0.003,
+        velocity: 1.2,
+        nexusIntensity: 0.6,
+        latticeDensity: 0.25,
+        connectionRange: 30,
+        trailPersist: 0.015,
+        pulseFreq: 0.02,
+        palette: [
+            [59, 130, 246],   // blue — foundational data
+            [16, 185, 129],   // green — living signals
+            [139, 92, 246],   // violet — anomalies
+            [6, 182, 212],    // cyan — clarity moments
+        ]
+    };
+
+    let defaultParams = JSON.parse(JSON.stringify(params));
+
+    // ═══════════════════════════════════════════════════════════════════
+    // CORE ENGINE
+    // ═══════════════════════════════════════════════════════════════════
+
+    let particles = [];
+    let nexusPoints = [];
+    let grid = null;
+    let time = 0;
+
+    // Signal classes: determines behavior
+    const SIGNAL_ARTERIAL = 0;  // fast, bright, main highways
+    const SIGNAL_CAPILLARY = 1; // slow, subtle, drift
+    const SIGNAL_PULSE = 2;     // burst particles from nexus events
+
+    class DataParticle {
+        constructor() {
+            this.reset();
+        }
+
+        reset() {
+            let r = random();
+            if (r < 0.35) {
+                this.signalClass = SIGNAL_ARTERIAL;
+                this.speed = params.velocity * (0.6 + random() * 0.8);
+                this.baseAlpha = 0.025 + random() * 0.045;
+                this.lineW = 0.6 + random() * 1.4;
+            } else if (r < 0.85) {
+                this.signalClass = SIGNAL_CAPILLARY;
+                this.speed = params.velocity * (0.15 + random() * 0.35);
+                this.baseAlpha = 0.01 + random() * 0.025;
+                this.lineW = 0.3 + random() * 0.7;
+            } else {
+                this.signalClass = SIGNAL_PULSE;
+                this.speed = params.velocity * (0.8 + random() * 1.2);
+                this.baseAlpha = 0.04 + random() * 0.06;
+                this.lineW = 0.8 + random() * 1.8;
+            }
+
+            // Color assignment weighted by signal class
+            if (this.signalClass === SIGNAL_ARTERIAL) {
+                this.ci = random() < 0.55 ? 0 : (random() < 0.6 ? 1 : 3);
+            } else if (this.signalClass === SIGNAL_CAPILLARY) {
+                this.ci = random() < 0.4 ? 0 : (random() < 0.5 ? 1 : 2);
+            } else {
+                this.ci = random() < 0.3 ? 3 : (random() < 0.6 ? 1 : 2);
+            }
+
+            this.x = random() * width;
+            this.y = random() * height;
+            this.px = this.x;
+            this.py = this.y;
+            this.life = 200 + floor(random() * 600);
+            this.maxLife = this.life;
+            this.phase = random() * TWO_PI;
+        }
+
+        update() {
+            this.px = this.x;
+            this.py = this.y;
+
+            // Multi-octave flow field
+            let s = params.flowScale;
+            let t = time;
+            let angle =
+                noise(this.x * s * 1.0, this.y * s * 1.0, t * 0.3) * TWO_PI * 2.5 +
+                noise(this.x * s * 2.3, this.y * s * 2.3, t * 0.15) * PI * 0.8 +
+                sin(this.x * s * 0.4 + t * 0.07) * cos(this.y * s * 0.3 - t * 0.05) * 0.6;
+
+            // Nexus attraction — data converges at insight points
+            if (params.nexusIntensity > 0) {
+                for (let i = 0; i < nexusPoints.length; i++) {
+                    let nx = nexusPoints[i];
+                    let dx = nx.x - this.x;
+                    let dy = nx.y - this.y;
+                    let dist = sqrt(dx * dx + dy * dy);
+                    if (dist < nx.radius && dist > 5) {
+                        let pull = params.nexusIntensity * nx.strength * (1 - dist / nx.radius);
+                        let pullAngle = atan2(dy, dx);
+                        // Spiral inward — not direct approach
+                        angle = lerp(angle, pullAngle + HALF_PI * 0.3, pull * 0.15);
+                        // Speed boost near nexus
+                        this.speed *= (1 + pull * 0.3);
+                    }
+                }
+            }
+
+            let vx = cos(angle) * this.speed;
+            let vy = sin(angle) * this.speed;
+
+            this.x += vx;
+            this.y += vy;
+            this.life--;
+
+            // Reset speed to base each frame (nexus boost is per-frame)
+            let r = random();
+            if (this.signalClass === SIGNAL_ARTERIAL) {
+                this.speed = params.velocity * (0.6 + r * 0.8);
+            } else if (this.signalClass === SIGNAL_CAPILLARY) {
+                this.speed = params.velocity * (0.15 + r * 0.35);
+            } else {
+                this.speed = params.velocity * (0.8 + r * 1.2);
+            }
+        }
+
+        display() {
+            // Lifecycle envelope
+            let lt = 1 - this.life / this.maxLife;
+            let env = lt < 0.05 ? lt / 0.05 : lt > 0.9 ? (1 - lt) / 0.1 : 1;
+            let alpha = this.baseAlpha * env;
+
+            if (alpha < 0.002) return;
+
+            let c = params.palette[this.ci];
+            stroke(c[0], c[1], c[2], alpha * 255);
+            strokeWeight(this.lineW);
+            line(this.px, this.py, this.x, this.y);
+        }
+
+        isDead() {
+            return this.life <= 0 ||
+                   this.x < -80 || this.x > width + 80 ||
+                   this.y < -80 || this.y > height + 80;
+        }
+    }
+
+    class NexusPoint {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.radius = 80 + random() * 180;
+            this.strength = 0.3 + random() * 0.7;
+            this.pulsePhase = random() * TWO_PI;
+            this.pulseSpeed = 0.01 + random() * 0.02;
+            this.baseRadius = this.radius;
+        }
+
+        update() {
+            this.pulsePhase += this.pulseSpeed;
+            this.radius = this.baseRadius * (0.85 + sin(this.pulsePhase) * 0.15);
+        }
+
+        display() {
+            if (params.nexusIntensity <= 0) return;
+            let pulseAlpha = (0.008 + sin(this.pulsePhase) * 0.006) * params.nexusIntensity;
+            // Soft radial glow
+            noStroke();
+            for (let r = this.radius; r > 2; r -= this.radius * 0.15) {
+                let a = pulseAlpha * (1 - r / this.radius) * 255;
+                fill(params.palette[3][0], params.palette[3][1], params.palette[3][2], a);
+                ellipse(this.x, this.y, r * 2, r * 2);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SPATIAL GRID FOR CONNECTION LINES
+    // ═══════════════════════════════════════════════════════════════════
+
+    class SpatialGrid {
+        constructor(cellSize) {
+            this.cellSize = cellSize;
+            this.cols = ceil(width / cellSize);
+            this.rows = ceil(height / cellSize);
+            this.cells = new Array(this.cols * this.rows);
+        }
+
+        clear() {
+            for (let i = 0; i < this.cells.length; i++) {
+                this.cells[i] = null;
+            }
+        }
+
+        insert(p) {
+            let col = floor(p.x / this.cellSize);
+            let row = floor(p.y / this.cellSize);
+            if (col < 0 || col >= this.cols || row < 0 || row >= this.rows) return;
+            let idx = row * this.cols + col;
+            if (!this.cells[idx]) this.cells[idx] = [];
+            this.cells[idx].push(p);
+        }
+
+        getNeighbors(p, range) {
+            let results = [];
+            let colMin = floor((p.x - range) / this.cellSize);
+            let colMax = floor((p.x + range) / this.cellSize);
+            let rowMin = floor((p.y - range) / this.cellSize);
+            let rowMax = floor((p.y + range) / this.cellSize);
+
+            colMin = max(0, colMin); colMax = min(this.cols - 1, colMax);
+            rowMin = max(0, rowMin); rowMax = min(this.rows - 1, rowMax);
+
+            for (let r = rowMin; r <= rowMax; r++) {
+                for (let c = colMin; c <= colMax; c++) {
+                    let cell = this.cells[r * this.cols + c];
+                    if (cell) {
+                        for (let i = 0; i < cell.length; i++) {
+                            results.push(cell[i]);
+                        }
+                    }
+                }
+            }
+            return results;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // P5.JS LIFECYCLE
+    // ═══════════════════════════════════════════════════════════════════
+
+    function setup() {
+        let canvas = createCanvas(1200, 1200);
+        canvas.parent('canvas-container');
+        colorMode(RGB, 255, 255, 255, 255);
+        initializeSystem();
+        document.querySelector('.loading').style.display = 'none';
+    }
+
+    function initializeSystem() {
+        randomSeed(params.seed);
+        noiseSeed(params.seed);
+        time = 0;
+
+        // Create nexus points — data convergence zones
+        nexusPoints = [];
+        let nexusCount = 3 + floor(random() * 5);
+        for (let i = 0; i < nexusCount; i++) {
+            nexusPoints.push(new NexusPoint(
+                width * 0.15 + random() * width * 0.7,
+                height * 0.15 + random() * height * 0.7
+            ));
+        }
+
+        // Create particles
+        particles = [];
+        for (let i = 0; i < params.streamCount; i++) {
+            particles.push(new DataParticle());
+        }
+
+        // Spatial grid
+        grid = new SpatialGrid(max(params.connectionRange, 20));
+
+        background(7, 9, 14);
+    }
+
+    function draw() {
+        // Trail persistence — fade toward the void
+        noStroke();
+        fill(7, 9, 14, params.trailPersist * 255);
+        rect(0, 0, width, height);
+
+        time += 0.008;
+
+        // Draw lattice grid (quantization layer)
+        if (params.latticeDensity > 0) {
+            drawLattice();
+        }
+
+        // Update and draw nexus points
+        for (let n of nexusPoints) {
+            n.update();
+            n.display();
+        }
+
+        // Populate spatial grid for connections
+        if (params.connectionRange > 0) {
+            grid = new SpatialGrid(max(params.connectionRange, 20));
+            for (let p of particles) {
+                grid.insert(p);
+            }
+        }
+
+        // Draw connections between nearby arterial particles
+        if (params.connectionRange > 5) {
+            drawConnections();
+        }
+
+        // Update and draw particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.update();
+            p.display();
+
+            if (p.isDead()) {
+                p.reset();
+            }
+        }
+
+        // Pulse waves from nexus points
+        if (params.pulseFreq > 0) {
+            drawPulseWaves();
+        }
+    }
+
+    function drawLattice() {
+        let spacing = 40;
+        let alpha = params.latticeDensity * 8;
+        stroke(30, 40, 55, alpha);
+        strokeWeight(0.5);
+
+        // Vertical lines
+        for (let x = 0; x < width; x += spacing) {
+            let offsetX = sin(x * 0.01 + time * 0.5) * 3;
+            line(x + offsetX, 0, x + offsetX, height);
+        }
+        // Horizontal lines
+        for (let y = 0; y < height; y += spacing) {
+            let offsetY = cos(y * 0.01 + time * 0.3) * 3;
+            line(0, y + offsetY, width, y + offsetY);
+        }
+
+        // Node dots at intersections
+        let dotAlpha = params.latticeDensity * 18;
+        noStroke();
+        fill(50, 65, 85, dotAlpha);
+        for (let x = 0; x < width; x += spacing) {
+            for (let y = 0; y < height; y += spacing) {
+                let n = noise(x * 0.02, y * 0.02, time * 0.2);
+                if (n > 0.45) {
+                    let r = 1 + n * 1.5;
+                    ellipse(x + sin(x * 0.01 + time * 0.5) * 3,
+                            y + cos(y * 0.01 + time * 0.3) * 3, r, r);
+                }
+            }
+        }
+    }
+
+    function drawConnections() {
+        let range = params.connectionRange;
+        let rangeSq = range * range;
+        // Only check a subset per frame for performance
+        let step = max(1, floor(particles.length / 300));
+
+        for (let i = 0; i < particles.length; i += step) {
+            let p = particles[i];
+            if (p.signalClass !== SIGNAL_ARTERIAL) continue;
+            let env = 1 - abs(1 - p.life / p.maxLife * 2);
+            if (env < 0.1) continue;
+
+            let neighbors = grid.getNeighbors(p, range);
+            for (let j = 0; j < neighbors.length; j++) {
+                let q = neighbors[j];
+                if (q === p) continue;
+                if (q.signalClass !== SIGNAL_ARTERIAL) continue;
+
+                let dx = p.x - q.x;
+                let dy = p.y - q.y;
+                let dSq = dx * dx + dy * dy;
+                if (dSq < rangeSq && dSq > 25) {
+                    let d = sqrt(dSq);
+                    let alpha = (1 - d / range) * 0.03 * env;
+                    let c = params.palette[p.ci];
+                    stroke(c[0], c[1], c[2], alpha * 255);
+                    strokeWeight(0.4);
+                    line(p.x, p.y, q.x, q.y);
+                }
+            }
+        }
+    }
+
+    function drawPulseWaves() {
+        let freq = params.pulseFreq;
+        noFill();
+        for (let n of nexusPoints) {
+            let phase = (time * 60 * freq + n.pulsePhase) % TWO_PI;
+            let waveR = (phase / TWO_PI) * n.baseRadius * 2.5;
+            let alpha = (1 - phase / TWO_PI) * 0.025 * params.nexusIntensity;
+            if (alpha > 0.001) {
+                let c = params.palette[3]; // cyan for pulse waves
+                stroke(c[0], c[1], c[2], alpha * 255);
+                strokeWeight(0.8);
+                ellipse(n.x, n.y, waveR * 2, waveR * 2);
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // UI CONTROL HANDLERS
+    // ═══════════════════════════════════════════════════════════════════
+
+    function updateParam(name, value) {
+        value = parseFloat(value);
+        params[name] = value;
+
+        let display = document.getElementById(name + '-value');
+        if (display) {
+            if (name === 'flowScale' || name === 'trailPersist' || name === 'pulseFreq') {
+                display.textContent = value.toFixed(3);
+            } else if (name === 'nexusIntensity' || name === 'latticeDensity') {
+                display.textContent = value.toFixed(2);
+            } else {
+                display.textContent = value;
+            }
+        }
+
+        // Reinitialize for particle count change
+        if (name === 'streamCount') {
+            initializeSystem();
+        }
+    }
+
+    function updateColor(index, hexValue) {
+        let r = parseInt(hexValue.substr(1, 2), 16);
+        let g = parseInt(hexValue.substr(3, 2), 16);
+        let b = parseInt(hexValue.substr(5, 2), 16);
+        params.palette[index] = [r, g, b];
+
+        let display = document.getElementById('color' + index + '-value');
+        if (display) display.textContent = hexValue;
+    }
+
+    function downloadPNG() {
+        saveCanvas('signal-substrate-seed-' + params.seed, 'png');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // SEED CONTROLS (FIXED)
+    // ═══════════════════════════════════════════════════════════════════
+
+    function updateSeedDisplay() {
+        document.getElementById('seed-input').value = params.seed;
+    }
+
+    function updateSeed() {
+        let input = document.getElementById('seed-input');
+        let newSeed = parseInt(input.value);
+        if (newSeed && newSeed > 0) {
+            params.seed = newSeed;
+            initializeSystem();
+        } else {
+            updateSeedDisplay();
+        }
+    }
+
+    function previousSeed() {
+        params.seed = Math.max(1, params.seed - 1);
+        updateSeedDisplay();
+        initializeSystem();
+    }
+
+    function nextSeed() {
+        params.seed = params.seed + 1;
+        updateSeedDisplay();
+        initializeSystem();
+    }
+
+    function randomSeedAndUpdate() {
+        params.seed = Math.floor(Math.random() * 999999) + 1;
+        updateSeedDisplay();
+        initializeSystem();
+    }
+
+    function resetParameters() {
+        params = JSON.parse(JSON.stringify(defaultParams));
+
+        // Update all UI elements
+        ['streamCount', 'flowScale', 'velocity', 'nexusIntensity',
+         'latticeDensity', 'connectionRange', 'trailPersist', 'pulseFreq'].forEach(function(name) {
+            let el = document.getElementById(name);
+            if (el) el.value = params[name];
+            updateParam(name, params[name]);
+        });
+
+        // Update colors
+        let hexColors = ['#3b82f6', '#10b981', '#8b5cf6', '#06b6d4'];
+        for (let i = 0; i < 4; i++) {
+            document.getElementById('color' + i).value = hexColors[i];
+            document.getElementById('color' + i + '-value').textContent = hexColors[i];
+        }
+
+        updateSeedDisplay();
+        initializeSystem();
+    }
+
+    window.addEventListener('load', function() {
+        updateSeedDisplay();
+    });
+    </script>
+</body>
+</html>

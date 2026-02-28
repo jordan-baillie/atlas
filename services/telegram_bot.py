@@ -232,21 +232,49 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
     try:
         report = executor.execute_plan(plan, trade_date)
 
-        # Record closed trades from successful exits
+        # Record closed trades from successful exits with full metrics
         for exit_result in report.get("exits", []):
             if exit_result.get("success"):
                 ticker = exit_result.get("ticker", "")
                 pre_pos = next((p for p in live_pf.positions if p.ticker == ticker), None)
+                exit_price = exit_result.get("fill_price", exit_result.get("price", 0))
+                entry_price = pre_pos.entry_price if pre_pos else 0
+                shares = exit_result.get("qty", pre_pos.shares if pre_pos else 0)
+                entry_value = round(entry_price * shares, 2)
+                exit_value = round(exit_price * shares, 2)
+                # Approximate commissions from config
+                comm_flat = config.get("fees", {}).get("commission_per_trade", 1.10)
+                comm_pct = config.get("fees", {}).get("commission_pct", 0.0)
+                entry_comm = round(max(comm_flat, entry_value * comm_pct), 2)
+                exit_comm = round(max(comm_flat, exit_value * comm_pct), 2)
+                pnl = round(exit_value - entry_value - entry_comm - exit_comm, 2)
+                pnl_pct = round(pnl / entry_value * 100, 2) if entry_value > 0 else 0
+                holding = pre_pos.holding_days(trade_date) if pre_pos else 0
                 trade_record = {
                     "ticker": ticker,
                     "strategy": pre_pos.strategy if pre_pos else "unknown",
                     "entry_date": pre_pos.entry_date if pre_pos else "unknown",
                     "exit_date": trade_date,
-                    "entry_price": pre_pos.entry_price if pre_pos else 0,
-                    "exit_price": exit_result.get("fill_price", exit_result.get("price", 0)),
-                    "shares": exit_result.get("qty", 0),
+                    "entry_price": entry_price,
+                    "exit_price": exit_price,
+                    "shares": shares,
+                    "entry_value": entry_value,
+                    "exit_value": exit_value,
+                    "entry_commission": entry_comm,
+                    "exit_commission": exit_comm,
+                    "pnl": pnl,
+                    "pnl_pct": pnl_pct,
+                    "mae": round(pre_pos.mae * 100, 2) if pre_pos else 0,
+                    "mfe": round(pre_pos.mfe * 100, 2) if pre_pos else 0,
+                    "holding_days": holding,
                     "exit_reason": exit_result.get("reason", "signal_exit"),
+                    "confidence": pre_pos.confidence if pre_pos else 0,
+                    "sector": pre_pos.sector if pre_pos else "Unknown",
+                    "stop_price": pre_pos.stop_price if pre_pos else 0,
+                    "take_profit": pre_pos.take_profit if pre_pos else None,
+                    "market_id": market_id,
                     "dry_run": exit_result.get("dry_run", False),
+                    "order_id": exit_result.get("order_id", ""),
                 }
                 live_pf.record_closed_trade(trade_record)
 
@@ -540,6 +568,102 @@ async def handle_approval_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
 
 
 # ═══════════════════════════════════════════════════════════════
+# Research promotion callback handler
+# ═══════════════════════════════════════════════════════════════
+
+def _do_promote(experiment_id: str, market_id: str) -> str:
+    """Execute promotion in a thread (blocking I/O)."""
+    from scripts.research_promote import promote_candidate, validate_candidate
+
+    # Quick validation sanity check (skip OOS — already done before request was sent)
+    candidate_path = PROJECT_ROOT / 'config' / 'candidates' / f'{market_id}_{experiment_id}.json'
+    if not candidate_path.exists():
+        return f"❌ <b>Candidate config not found</b>\n<code>{candidate_path.name}</code>"
+
+    result = promote_candidate(experiment_id, market_id, candidate_path)
+    if result.get('success'):
+        return (
+            f"✅ <b>Promoted!</b>\n\n"
+            f"Experiment: <code>{_esc(experiment_id)}</code>\n"
+            f"Market: {_esc(market_id.upper())}\n"
+            f"Version: <code>{_esc(str(result.get('version_path', '?')))}</code>\n\n"
+            f"Active config updated. Watchdog will monitor for 5 days."
+        )
+    else:
+        return f"❌ <b>Promotion failed</b>\n\n{_esc(result.get('error', 'Unknown error'))}"
+
+
+def _do_reject_research(experiment_id: str, market_id: str) -> str:
+    """Execute rejection in a thread."""
+    from scripts.research_promote import reject_candidate
+    result = reject_candidate(experiment_id, market_id, reason="Rejected via Telegram button")
+    if result.get('success'):
+        return f"❌ <b>Rejected</b>\n\nExperiment <code>{_esc(experiment_id)}</code> archived."
+    else:
+        return f"⚠️ Rejection processing error: {_esc(str(result))}"
+
+
+async def handle_research_promotion_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle Approve / Reject button presses for research promotion requests.
+
+    Callback data format: research:{experiment_id}:{action}:{market}
+    """
+    query = update.callback_query
+    await query.answer()
+
+    if not _authorized(query.message.chat_id):
+        await query.edit_message_reply_markup(reply_markup=None)
+        return
+
+    data = query.data  # e.g. "research:wave1_asx_reopt:approve:asx"
+    parts = data.split(":")
+    if len(parts) < 4 or parts[0] != "research":
+        return
+
+    experiment_id = parts[1]
+    action = parts[2]
+    market_id = parts[3]
+
+    if action == "reject":
+        await query.edit_message_text(
+            query.message.text_html + "\n\n⏳ <b>Rejecting…</b>",
+            parse_mode="HTML",
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            result_text = await loop.run_in_executor(
+                None,
+                partial(_do_reject_research, experiment_id, market_id),
+            )
+        except Exception as e:
+            logger.error("Research rejection failed: %s", e, exc_info=True)
+            result_text = f"❌ <b>Rejection failed</b>\n\n<pre>{_esc(traceback.format_exc()[-500:])}</pre>"
+
+        await query.edit_message_text(
+            query.message.text_html.replace("⏳ <b>Rejecting…</b>", result_text),
+            parse_mode="HTML",
+        )
+        return
+
+    if action == "approve":
+        await query.edit_message_text(
+            query.message.text_html + "\n\n⏳ <b>Promoting…</b>",
+            parse_mode="HTML",
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            result_text = await loop.run_in_executor(
+                None,
+                partial(_do_promote, experiment_id, market_id),
+            )
+        except Exception as e:
+            logger.error("Research promotion failed: %s", e, exc_info=True)
+            result_text = f"❌ <b>Promotion failed</b>\n\n<pre>{_esc(traceback.format_exc()[-500:])}</pre>"
+
+        await query.message.reply_text(result_text, parse_mode="HTML")
+
+
+# ═══════════════════════════════════════════════════════════════
 # External API — called by cron/scripts to send plan for approval
 # ═══════════════════════════════════════════════════════════════
 
@@ -630,14 +754,8 @@ def send_plan_for_approval(
 # ═══════════════════════════════════════════════════════════════
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler(PROJECT_ROOT / "logs" / "telegram_bot.log"),
-        ],
-    )
+    from utils.logging_config import setup_logging
+    setup_logging("telegram_bot", extra_log_file="telegram_bot", telegram_errors=False)
 
     try:
         token, chat_id = _load_credentials()
@@ -655,10 +773,16 @@ def main():
     app.add_handler(CommandHandler("halt", cmd_halt))
     app.add_handler(CommandHandler("unhalt", cmd_unhalt))
 
-    # Callback handler for inline buttons (with optional :market suffix)
+    # Callback handler for plan inline buttons (with optional :market suffix)
     app.add_handler(CallbackQueryHandler(
         handle_approval_callback,
         pattern=r"^plan:\d{4}-\d{2}-\d{2}:(approve|reject)(:\w+)?$",
+    ))
+
+    # Callback handler for research promotion inline buttons
+    app.add_handler(CallbackQueryHandler(
+        handle_research_promotion_callback,
+        pattern=r"^research:.+:(approve|reject):\w+$",
     ))
 
     logger.info("Bot polling started. Commands: /status /plan /halt /unhalt")

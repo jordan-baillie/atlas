@@ -421,7 +421,8 @@ def calc_position_size(equity: float, risk_pct: float,
 
 if __name__ == "__main__":
     # Self-test
-    logging.basicConfig(level=logging.INFO)
+    from utils.logging_config import setup_logging
+    setup_logging("helpers_test", telegram_errors=False)
     print("=== Helpers Module Self-Test ===")
 
     # Date parsing

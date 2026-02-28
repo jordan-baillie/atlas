@@ -1,0 +1,23 @@
+{
+  "experiment_id": "wave1_sector_solo",
+  "strategy": "sector_rotation",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T23:02:05.489966+00:00",
+  "solo": {
+    "total_trades": 0,
+    "cagr_pct": 0.0,
+    "sharpe": 0.0,
+    "sortino": 0.0,
+    "max_drawdown_pct": 0.0,
+    "win_rate_pct": 0.0,
+    "profit_factor": 0.0,
+    "total_pnl": 0,
+    "avg_trade": 0.0,
+    "final_equity": 4000.0
+  },
+  "runtime_s": 44.2
+}

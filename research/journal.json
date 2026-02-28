@@ -248,5 +248,381 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_solo",
+    "timestamp": "2026-02-27T23:02:48.444488+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Sector rotation provides a top-down signal that is uncorrelated with the bottom-up technical strategies (MR, TF, OG). It selects the strongest sectors by momentum then buys the strongest stocks within those sectors. 204 SP500 tickers mapped across 11 GICS sectors. Risk: longer holding periods and lower trade frequency may limit impact.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0,
+      "avg_trade": 0.0,
+      "final_equity": 4000.0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 44.2,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_bb_squ_solo",
+    "timestamp": "2026-02-27T23:06:16.597791+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "bb_squeeze",
+    "hypothesis": "BB Squeeze (Bollinger Band inside Keltner Channel) identifies periods of low volatility that precede explosive moves. When the squeeze fires (BBs expand outside KCs) with positive momentum, it signals a high-probability directional move. This is a volatility regime strategy \u2014 fundamentally different from trend/MR/gap signals.",
+    "verdict": "pass",
+    "key_metrics": {
+      "total_trades": 322,
+      "cagr_pct": -12.267,
+      "sharpe": -1.6772,
+      "sortino": -2.11,
+      "max_drawdown_pct": 27.3524,
+      "win_rate_pct": 45.03,
+      "profit_factor": 0.7419,
+      "total_pnl": -773.84,
+      "avg_trade": -2.4,
+      "final_equity": 3110.43,
+      "strategy_breakdown": {
+        "bb_squeeze": {
+          "trades": 322,
+          "total_pnl": -773.84,
+          "win_rate_pct": 45.0
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 197.1,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_bb_squ_opt",
+    "timestamp": "2026-02-28T00:37:09.976947+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "bb_squeeze",
+    "hypothesis": "Coordinate descent on BB Squeeze (Volatility Breakout) params will improve solo performance significantly.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 348,
+      "cagr_pct": -0.3742,
+      "sharpe": -0.3791,
+      "sortino": -0.4433,
+      "max_drawdown_pct": 16.5521,
+      "win_rate_pct": 48.28,
+      "profit_factor": 1.0364,
+      "total_pnl": 113.2,
+      "avg_trade": 0.33,
+      "final_equity": 3971.28,
+      "strategy_breakdown": {
+        "bb_squeeze": {
+          "trades": 348,
+          "total_pnl": 113.2,
+          "win_rate_pct": 48.3
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_asx_reopt",
+    "timestamp": "2026-02-28T02:16:04.822524+00:00",
+    "market": "asx",
+    "category": "param_drift",
+    "strategy": null,
+    "hypothesis": "The SMA-200 filter, IBS confirmation, and configurable RSI period were added during SP500 optimization but never tested on ASX. These features may improve ASX performance, particularly: SMA-200 filtering out downtrend entries, IBS improving mean reversion entry quality, and RSI period tuning finding a better signal frequency for the smaller ASX universe.",
+    "verdict": "partial",
+    "key_metrics": {
+      "trades": 318,
+      "cagr": 0.113204,
+      "sharpe": 0.6033,
+      "max_dd": 0.071013,
+      "pf": 1.3668,
+      "wr": 0.5409,
+      "total_pnl": 1307.53
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_vix_filter",
+    "timestamp": "2026-02-28T02:16:06.037706+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": null,
+    "hypothesis": "Reducing exposure during high-VIX periods (VIX > 25-30) improves risk-adjusted returns by avoiding entries during market panic. Alternative: only allow mean_reversion entries during high VIX (buy the panic). Williams VIX Fix (already in helpers.py) can be used as stock-level proxy if index VIX data unavailable.",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_vol_filter",
+    "timestamp": "2026-02-28T02:16:06.796802+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": null,
+    "hypothesis": "Only entering trades when daily volume exceeds the N-day average improves signal quality by filtering out low-liquidity, low-conviction price moves. Higher volume on entry day = more institutional participation = higher probability of follow-through.",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_cross_mkt",
+    "timestamp": "2026-02-28T02:16:07.584685+00:00",
+    "market": "sp500",
+    "category": "cross_market",
+    "strategy": null,
+    "hypothesis": "SP500 overnight moves predict ASX opening direction (ASX opens ~14h after US close), and ASX session moves predict SP500 opening direction (US opens ~7h after ASX close). If correlation > 0.3, a cross-market filter could skip entries when the other market had a large adverse move.",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_solo",
+    "timestamp": "2026-02-28T02:18:00.528987+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Sector rotation provides a top-down signal uncorrelated with bottom-up technical strategies",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "sharpe": 0,
+      "cagr_pct": 0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Sector rotation generated 0 trades across entire backtest period",
+      "Strategy signal logic likely incompatible with walk-forward engine",
+      "May need rebalance-aware backtest support (it rebalances every N days, not signal-per-bar)",
+      "Requires code-level debugging before retesting"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_mtf_mo_solo",
+    "timestamp": "2026-02-28T02:18:00.530393+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends for diversification vs trend_following",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "MTF Momentum has code bug: generate_signals() takes 3 positional arguments but 4 were given",
+      "Strategy needs API signature fix before retesting",
+      "Likely needs to accept the new market_breadth parameter added to generate_signals()"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_bb_squ_solo",
+    "timestamp": "2026-02-28T02:18:00.531707+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "bb_squeeze",
+    "hypothesis": "BB Squeeze identifies low-volatility periods that precede explosive directional moves",
+    "verdict": "pass",
+    "key_metrics": {
+      "total_trades": 322,
+      "sharpe": -1.68,
+      "cagr_pct": -12.27,
+      "max_dd_pct": 27.35,
+      "win_rate_pct": 45.0,
+      "profit_factor": 0.74
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "BB Squeeze is viable: 322 trades, 45% WR, PF 0.74 with default params",
+      "Clearly unprofitable untuned (Sharpe -1.68, CAGR -12.3%) but signal generates enough trades",
+      "Passed to optimization phase"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_bb_squ_opt",
+    "timestamp": "2026-02-28T02:18:00.532819+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "bb_squeeze",
+    "hypothesis": "Coordinate descent on BB Squeeze params will make it profitable",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 348,
+      "sharpe": -0.38,
+      "cagr_pct": -0.37,
+      "max_dd_pct": 16.55,
+      "win_rate_pct": 48.3,
+      "profit_factor": 1.04
+    },
+    "delta_vs_baseline": {
+      "sharpe": 1.3,
+      "profit_factor": 0.3
+    },
+    "learnings": [
+      "BB Squeeze improved dramatically: Sharpe -1.68 \u2192 -0.38, PF 0.74 \u2192 1.04",
+      "Best params: bb_period=25, bb_std=1.5 (both changed from defaults)",
+      "But PF 1.04 still below 1.1 threshold, Sharpe still negative",
+      "Near breakeven after optimization is not good enough for portfolio addition",
+      "BB Squeeze on SP500 with current implementation is likely not viable",
+      "PATTERN: All 3 dormant strategies tried so far are individually marginal after optimization"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_asx_reopt",
+    "timestamp": "2026-02-28T02:18:00.534095+00:00",
+    "market": "asx",
+    "category": "param_drift",
+    "strategy": "combined",
+    "hypothesis": "New features (SMA-200, IBS, RSI period) from SP500 work improve ASX performance",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.6,
+      "cagr_pct": 11.32,
+      "max_dd_pct": 7.1,
+      "profit_factor": 1.37,
+      "win_rate_pct": 54.1,
+      "trades": 318,
+      "total_pnl": 1307.53
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.17,
+      "cagr_pct": 2.22,
+      "max_drawdown_pct": -2.6,
+      "profit_factor": 0.12,
+      "total_pnl": 348.64
+    },
+    "learnings": [
+      "ASX reoptimization shows significant improvement across all metrics",
+      "Sharpe: 0.44 \u2192 0.60 (+0.17, well above 0.05 threshold)",
+      "CAGR: 9.1% \u2192 11.3% (+2.2pp)",
+      "Max DD: 9.7% \u2192 7.1% (-2.6pp, excellent risk reduction)",
+      "PF: 1.25 \u2192 1.37, WR: 53.6% \u2192 54.1%",
+      "Trade count: 345 \u2192 318 (slight reduction, still healthy)",
+      "Verdict was marked partial due to metric extraction bug, but manually this is a clear PASS",
+      "Candidate config at config/candidates/asx_wave1_asx_reopt.json \u2014 needs OOS validation"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_vix_filter",
+    "timestamp": "2026-02-28T02:18:00.535814+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "combined",
+    "hypothesis": "VIX regime filter improves risk-adjusted returns",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "VIX regime filter: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_vol_filter",
+    "timestamp": "2026-02-28T02:18:00.536896+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "combined",
+    "hypothesis": "Volume regime filter improves risk-adjusted returns",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Volume regime filter: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_cross_mkt",
+    "timestamp": "2026-02-28T02:18:00.537956+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "combined",
+    "hypothesis": "Cross-market correlation improves risk-adjusted returns",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Cross-market correlation: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_asx_reopt",
+    "timestamp": "2026-02-28T03:12:57.055193+00:00",
+    "market": "asx",
+    "category": "promotion",
+    "strategy": null,
+    "hypothesis": "Promoting experiment wave1_asx_reopt to active config",
+    "verdict": "promoted",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Promoted to /root/atlas/config/versions/asx_v9.3.json"
+    ],
+    "promoted": true,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
   }
 ]

@@ -55,7 +55,8 @@ def save_changelog(entries: list):
 
 def load_data_for_backtest(config: dict) -> dict:
     """Load cached data for backtesting."""
-    cache_dir = PROJECT_ROOT / config["data"]["cache_dir"]
+    market_id = config.get("market", "asx")
+    cache_dir = PROJECT_ROOT / config["data"]["cache_dir"] / market_id
     data = {}
     if cache_dir.exists():
         for f in cache_dir.iterdir():
@@ -433,5 +434,6 @@ def run_annealing_cycle():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from utils.logging_config import setup_logging
+    setup_logging("anneal")
     run_annealing_cycle()

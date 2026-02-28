@@ -36,7 +36,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from backtest.metrics import calc_all_metrics
+from backtest.metrics import calc_all_metrics, calc_r_multiple
 from data.ingest import download_ticker  # Phase1-Fix1: load benchmark independently
 from strategies.base import BaseStrategy, Signal
 from utils.market_breadth import MarketBreadth
@@ -73,6 +73,24 @@ class BacktestResult:
             f"Avg Trade:       ${self.metrics.get('avg_trade', 0):,.2f}",
             f"Exposure:        {self.metrics.get('exposure', 0)*100:.1f}%",
             f"Final Equity:    ${self.metrics.get('final_equity', 0):,.2f}",
+            f"Calmar Ratio:    {self.metrics.get('calmar', 0):.4f}",
+            "-" * 60,
+            "RISK METRICS",
+            "-" * 60,
+            f"VaR 95% (hist):  {self.metrics.get('var_95', 0)*100:.2f}%",
+            f"VaR 99% (hist):  {self.metrics.get('var_99', 0)*100:.2f}%",
+            f"CVaR 95% (ES):   {self.metrics.get('cvar_95', 0)*100:.2f}%",
+            f"VaR 95% (param): {self.metrics.get('var_95_parametric', 0)*100:.2f}%",
+            f"MC p95 Drawdown: {self.metrics.get('mc_p95_drawdown', 0)*100:.2f}%"
+            f"{'  ⚠ FRAGILE' if self.metrics.get('mc_fragile') else ''}",
+            "-" * 60,
+            "EDGE (R-Multiples)",
+            "-" * 60,
+            f"Expectancy (R):  {self.metrics.get('expectancy_r', 0):+.4f}",
+            f"Avg R:           {self.metrics.get('avg_r', 0):+.4f}",
+            f"R Count:         {self.metrics.get('r_count', 0)}",
+            f"Edge p-value:    {self.metrics.get('edge_p_value', 1.0):.4f}"
+            f"{'  ✓ significant' if self.metrics.get('edge_significant') else '  ✗ not significant'}",
             "-" * 60,
             "BENCHMARK (Buy & Hold)",
             "-" * 60,
@@ -82,6 +100,14 @@ class BacktestResult:
             f"Total Return:    {self.benchmark_metrics.get('total_return', 0)*100:.2f}%",
             "=" * 60,
         ]
+        # Strategy correlation warnings
+        corr = self.metrics.get("strategy_correlation", {})
+        pairs = corr.get("concentrated_pairs", [])
+        if pairs:
+            lines.append("⚠ CONCENTRATED RISK (|r| > 0.6):")
+            for a, b, r in pairs:
+                lines.append(f"  {a} ↔ {b}: r={r:+.3f}")
+            lines.append("=" * 60)
         return "\n".join(lines)
 
 
@@ -143,6 +169,20 @@ class BacktestEngine:
         self.fee_aware_enabled = _faf.get("enabled", False)
         self.fee_aware_rrr = _faf.get("reward_risk_ratio", 1.5)  # default reward:risk if no TP
         self.fee_aware_min_pnl = _faf.get("min_expected_pnl", 0.0)  # min expected net PnL
+
+        # VIX regime filter — skip entries when VIX is above threshold
+        _vix_cfg = config.get("vix_filter", {})
+        self.vix_filter_enabled = _vix_cfg.get("enabled", False)
+        self.vix_max_entry = _vix_cfg.get("max_entry", 30.0)  # skip entries when VIX > this
+
+        # FRED macro regime filter — skip entries during adverse macro conditions
+        # Uses yield curve slope (T10Y2Y), unemployment claims (ICSA), fed funds
+        # Requires fred_api_key in ~/.atlas-secrets.json
+        _fred_cfg = config.get("fred_filter", {})
+        self.fred_filter_enabled = _fred_cfg.get("enabled", False)
+        self.fred_yield_curve_min = _fred_cfg.get("yield_curve_min", None)  # e.g. -0.5 (skip if T10Y2Y < this)
+        self.fred_claims_max = _fred_cfg.get("claims_max", None)  # e.g. 300000 (skip if ICSA > this)
+        self._fred_data = {}  # populated lazily in _load_fred_data()
 
         # Benchmark — use config value, fall back to market profile
         self.benchmark_ticker = config.get("universe", {}).get("benchmark_ticker")
@@ -215,6 +255,7 @@ class BacktestEngine:
         breadth_series: Optional[pd.DataFrame] = None,
         rs_data: Optional[Dict[str, pd.DataFrame]] = None,
         equity_history: Optional[List[float]] = None,
+        vix_series: Optional[pd.Series] = None,
     ) -> float:
         """Simulate one trading day.
 
@@ -307,6 +348,7 @@ class BacktestEngine:
                         "confidence": pos.get("confidence", 0.0),
                         "features": pos.get("features", {}),
                     }
+                    trade["r_multiple"] = calc_r_multiple(trade)
                     closed_trades.append(trade)
 
                     # Update equity
@@ -389,6 +431,7 @@ class BacktestEngine:
                     "confidence": _pos.get("confidence", 0.0),
                     "features": _pos.get("features", {}),
                 }
+                _trade["r_multiple"] = calc_r_multiple(_trade)
                 closed_trades.append(_trade)
                 equity += _net_pnl
                 open_positions.pop(_pi)
@@ -492,6 +535,7 @@ class BacktestEngine:
                     "confidence": _pos.get("confidence", 0.0),
                     "features": _pos.get("features", {}),
                 }
+                _trade["r_multiple"] = calc_r_multiple(_trade)
                 closed_trades.append(_trade)
                 equity += _net_pnl
                 open_positions.pop(_pi)
@@ -555,6 +599,29 @@ class BacktestEngine:
         # --- Generate new entry signals ---
         if day_idx > 0 and len(open_positions) < self.max_positions:  # regime_scale applied in sizing
             yesterday = trading_dates[day_idx - 1]
+
+            # VIX regime filter: skip all entries when VIX is too high
+            vix_blocked = False
+            if vix_series is not None and yesterday in vix_series.index:
+                current_vix = float(vix_series.loc[yesterday])
+                if current_vix > self.vix_max_entry:
+                    vix_blocked = True
+
+            # FRED macro regime filter: skip entries during adverse macro
+            fred_blocked = False
+            if fred_yield_curve is not None and self.fred_yield_curve_min is not None:
+                # Use latest available value on or before yesterday
+                yc_mask = fred_yield_curve.index <= yesterday
+                if yc_mask.any():
+                    yc_val = float(fred_yield_curve.loc[yc_mask].iloc[-1])
+                    if yc_val < self.fred_yield_curve_min:
+                        fred_blocked = True
+            if fred_claims is not None and self.fred_claims_max is not None and not fred_blocked:
+                cl_mask = fred_claims.index <= yesterday
+                if cl_mask.any():
+                    cl_val = float(fred_claims.loc[cl_mask].iloc[-1])
+                    if cl_val > self.fred_claims_max:
+                        fred_blocked = True
             # Build data windows up to yesterday for signal generation
             signal_data = {}
             for ticker, df in data.items():
@@ -564,6 +631,8 @@ class BacktestEngine:
 
             for strategy in strategies:
                 if len(open_positions) >= self.max_positions:
+                    break
+                if vix_blocked or fred_blocked:
                     break
 
                 signals = strategy.generate_signals(
@@ -850,6 +919,7 @@ class BacktestEngine:
                 "confidence": pos.get("confidence", 0.0),
                 "features": pos.get("features", {}),
             }
+            trade["r_multiple"] = calc_r_multiple(trade)
             closed_trades.append(trade)
             equity += net_pnl
 
@@ -1002,6 +1072,43 @@ class BacktestEngine:
             logger.warning(f"Failed to compute RS: {e}. Continuing without RS.")
             rs_data = None
 
+        # VIX data for regime filtering
+        vix_series = None
+        if self.vix_filter_enabled:
+            try:
+                vix_df = download_ticker('^VIX', use_cache=True, market_id='sp500')
+                if vix_df is not None and not vix_df.empty:
+                    vix_series = vix_df['close']
+                    logger.info(f"VIX filter enabled: max_entry={self.vix_max_entry}, "
+                                f"VIX data {len(vix_series)} days")
+                else:
+                    logger.warning("VIX filter enabled but no VIX data — filter disabled")
+            except Exception as e:
+                logger.warning(f"VIX data load failed: {e} — filter disabled")
+
+        # FRED macro data for regime filtering
+        fred_yield_curve = None
+        fred_claims = None
+        if self.fred_filter_enabled:
+            try:
+                from data.fred import FREDClient
+                _fred = FREDClient()
+                if _fred.available:
+                    if self.fred_yield_curve_min is not None:
+                        fred_yield_curve = _fred.get_yield_curve_slope()
+                        if len(fred_yield_curve) > 0:
+                            logger.info(f"FRED yield curve filter: min={self.fred_yield_curve_min}, "
+                                        f"data {len(fred_yield_curve)} obs")
+                    if self.fred_claims_max is not None:
+                        fred_claims = _fred.get_unemployment_claims()
+                        if len(fred_claims) > 0:
+                            logger.info(f"FRED claims filter: max={self.fred_claims_max}, "
+                                        f"data {len(fred_claims)} obs")
+                else:
+                    logger.warning("FRED filter enabled but no API key configured")
+            except Exception as e:
+                logger.warning(f"FRED data load failed: {e} — filter disabled")
+
         # Walk-forward loop
         window_start = 0
         window_num = 0
@@ -1066,6 +1173,7 @@ class BacktestEngine:
                     breadth_series=breadth_series,
                     rs_data=rs_data,
                     equity_history=equity_history,
+                    vix_series=vix_series,
                 )
 
                 # Record daily equity (mark-to-market)

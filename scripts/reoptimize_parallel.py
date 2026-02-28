@@ -19,7 +19,8 @@ os.chdir(str(PROJECT))
 import pandas as pd
 import numpy as np
 
-logging.basicConfig(level=logging.WARNING)
+from utils.logging_config import setup_logging
+setup_logging("reoptimize_parallel", level=logging.WARNING)
 
 from utils.config import get_active_config
 from strategies.mean_reversion import MeanReversion
@@ -143,19 +144,20 @@ def load_full_universe(market_id: str = 'asx'):
       - ASX: file stem 'BHP_AX' -> ticker 'BHP.AX'
       - US/SP500: file stem 'AAPL' -> ticker 'AAPL' (no suffix)
     """
-    # Determine benchmark to skip
+    # Determine benchmark and valid universe to filter against
     try:
         from markets import get_market
-        benchmark = get_market(market_id).benchmark_ticker
-        yf_suffix = get_market(market_id).yfinance_suffix
+        market = get_market(market_id)
+        benchmark = market.benchmark_ticker
+        yf_suffix = market.yfinance_suffix
+        valid_universe = set(market.get_formatted_tickers())
+        valid_universe.add(benchmark)  # benchmark loaded separately, but don't warn on it
     except (ImportError, KeyError):
         benchmark = 'IOZ.AX' if market_id == 'asx' else 'SPY'
         yf_suffix = '.AX' if market_id == 'asx' else ''
+        valid_universe = None  # can't filter without market profile
 
-    # Try per-market cache first, then legacy flat cache
-    market_cache = PROJECT / 'data' / 'cache' / market_id
-    flat_cache = PROJECT / 'data' / 'cache'
-    cache_dir = market_cache if market_cache.exists() else flat_cache
+    cache_dir = PROJECT / 'data' / 'cache' / market_id
 
     data_dict = {}
     for pf in sorted(cache_dir.glob('*.parquet')):
@@ -175,6 +177,10 @@ def load_full_universe(market_id: str = 'asx'):
 
         # Skip benchmark
         if ticker == benchmark:
+            continue
+
+        # Skip tickers not in the market's universe (stale cache files)
+        if valid_universe is not None and ticker not in valid_universe:
             continue
 
         try:
@@ -438,7 +444,7 @@ def default_candidate_path():
 
 def default_backup_path():
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return PROJECT / 'config' / f'active_config_pre_reopt_{ts}.json'
+    return PROJECT / 'config' / 'versions' / f'active_config_pre_reopt_{ts}.json'
 
 
 if __name__ == '__main__':
@@ -452,8 +458,8 @@ if __name__ == '__main__':
     results_path = resolve_output_path(args.results_path, RESULTS_FILE)
 
     ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-    default_cand = PROJECT / 'config' / f'config_candidate_{market_id}_{ts}.json'
-    default_bak = PROJECT / 'config' / f'active_config_pre_reopt_{market_id}_{ts}.json'
+    default_cand = PROJECT / 'config' / 'candidates' / f'config_candidate_{market_id}_{ts}.json'
+    default_bak = PROJECT / 'config' / 'versions' / f'active_config_pre_reopt_{market_id}_{ts}.json'
     candidate_config_path = resolve_output_path(args.candidate_path, default_cand)
     backup_config_path = resolve_output_path(args.backup_path, default_bak)
 

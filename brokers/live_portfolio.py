@@ -234,6 +234,7 @@ class LivePortfolio:
         total_pnl = eq - self.starting_equity
         total_pnl_pct = round(total_pnl / self.starting_equity * 100, 2) if self.starting_equity else 0
 
+        today_str = datetime.now().strftime("%Y-%m-%d")
         open_positions = []
         for p in self.positions:
             price = prices.get(p.ticker, p.entry_price) if prices else p.entry_price
@@ -247,10 +248,15 @@ class LivePortfolio:
                 "unrealized_pnl": p.unrealized_pnl(price),
                 "unrealized_pnl_pct": p.unrealized_pnl_pct(price),
                 "stop_price": p.stop_price,
+                "take_profit": p.take_profit,
+                "sector": p.sector,
+                "mae_pct": round(p.mae * 100, 2),
+                "mfe_pct": round(p.mfe * 100, 2),
+                "holding_days": p.holding_days(today_str),
             })
 
         return {
-            "date": datetime.now().strftime("%Y-%m-%d"),
+            "date": today_str,
             "equity": eq,
             "cash": self.cash,
             "starting_equity": self.starting_equity,
@@ -274,14 +280,34 @@ class LivePortfolio:
         }
 
     def record_equity(self, trade_date: str, prices: dict[str, float] = None):
-        """Record daily equity snapshot."""
+        """Record daily equity snapshot with per-position breakdown."""
         eq = self.equity(prices)
+        # Per-position snapshot for future attribution analysis
+        position_details = []
+        for p in self.positions:
+            price = prices.get(p.ticker, p.entry_price) if prices else p.entry_price
+            position_details.append({
+                "ticker": p.ticker,
+                "strategy": p.strategy,
+                "shares": p.shares,
+                "entry_price": p.entry_price,
+                "current_price": price,
+                "unrealized_pnl": p.unrealized_pnl(price),
+                "mae": round(p.mae * 100, 2),
+                "mfe": round(p.mfe * 100, 2),
+                "holding_days": p.holding_days(trade_date),
+            })
+        # Realized P&L from all closed trades
+        total_realized = round(sum(t.get("pnl", 0) for t in self.closed_trades), 2)
         self.equity_history.append({
             "date": trade_date,
             "equity": eq,
             "cash": self.cash,
             "positions_value": round(eq - self.cash, 2),
             "num_positions": len(self.positions),
+            "total_realized_pnl": total_realized,
+            "total_closed_trades": len(self.closed_trades),
+            "positions": position_details,
         })
         self.save_state()
 

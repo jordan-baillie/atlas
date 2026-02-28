@@ -17,6 +17,9 @@ logs/
 # Backtest Optuna DBs
 backtest/results/*.db
 
+# Generated index (rebuilt by `python -m backtest.index build`)
+backtest/results/index.json
+
 # Dashboard generated data (rebuilt by generate_data.py)
 dashboard/data/
 

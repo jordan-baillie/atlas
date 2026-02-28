@@ -360,7 +360,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019243+00:00",
-    "updated_at": "2026-02-27T05:29:01.019244+00:00",
+    "updated_at": "2026-02-27T23:02:48.442808+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -369,7 +369,7 @@
       "solo"
     ],
     "depends_on": [],
-    "notes": "Requires sector_map.json (204 tickers, 11 sectors confirmed). Rebalances every N days \u2014 structurally different from signal-per-bar strategies."
+    "notes": "Requires sector_map.json (204 tickers, 11 sectors confirmed). Rebalances every N days \u2014 structurally different from signal-per-bar strategies. [Reset: sector_map fixed for SP500 2026-02-28]"
   },
   {
     "id": "wave1_sector_opt",
@@ -428,7 +428,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019247+00:00",
-    "updated_at": "2026-02-27T05:29:01.019248+00:00",
+    "updated_at": "2026-02-27T23:02:48.446212+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -439,7 +439,7 @@
     "depends_on": [
       "wave1_sector_solo"
     ],
-    "notes": ""
+    "notes": "\n[auto-deferred] Dependency failed: ['wave1_sector_solo'] [Reset: sector_map fixed for SP500 2026-02-28]"
   },
   {
     "id": "wave1_sector_comb",
@@ -465,7 +465,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019252+00:00",
-    "updated_at": "2026-02-27T05:29:01.019253+00:00",
+    "updated_at": "2026-02-27T23:02:59.445238+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -476,7 +476,7 @@
     "depends_on": [
       "wave1_sector_opt"
     ],
-    "notes": ""
+    "notes": "\n[auto-deferred] Dependency failed: ['wave1_sector_opt'] [Reset: sector_map fixed for SP500 2026-02-28]"
   },
   {
     "id": "wave1_sector_oos",
@@ -501,7 +501,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019255+00:00",
-    "updated_at": "2026-02-27T05:29:01.019256+00:00",
+    "updated_at": "2026-02-27T23:06:16.599854+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -513,7 +513,7 @@
     "depends_on": [
       "wave1_sector_comb"
     ],
-    "notes": ""
+    "notes": "\n[auto-deferred] Dependency failed: ['wave1_sector_comb'] [Reset: sector_map fixed for SP500 2026-02-28]"
   },
   {
     "id": "wave1_mtf_mo_solo",
@@ -537,7 +537,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019261+00:00",
-    "updated_at": "2026-02-27T05:29:01.019262+00:00",
+    "updated_at": "2026-02-27T23:02:59.431254+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -546,7 +546,7 @@
       "solo"
     ],
     "depends_on": [],
-    "notes": "Requires weekly data aggregation from daily bars. Uses weekly SMA + RSI for trend, daily RSI + SMA proximity for entry."
+    "notes": "Requires weekly data aggregation from daily bars. Uses weekly SMA + RSI for trend, daily RSI + SMA proximity for entry. [Reset: generate_signals() signature mismatch fixed 2026-02-28]"
   },
   {
     "id": "wave1_mtf_mo_opt",
@@ -604,7 +604,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019264+00:00",
-    "updated_at": "2026-02-27T05:29:01.019268+00:00",
+    "updated_at": "2026-02-27T23:02:59.446655+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -615,7 +615,7 @@
     "depends_on": [
       "wave1_mtf_mo_solo"
     ],
-    "notes": ""
+    "notes": "[auto-deferred] Dependency failed: ['wave1_mtf_mo_solo'] [Un-deferred after mtf_mo_solo fix]"
   },
   {
     "id": "wave1_mtf_mo_comb",
@@ -641,7 +641,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019272+00:00",
-    "updated_at": "2026-02-27T05:29:01.019273+00:00",
+    "updated_at": "2026-02-27T23:06:16.601362+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -652,7 +652,7 @@
     "depends_on": [
       "wave1_mtf_mo_opt"
     ],
-    "notes": ""
+    "notes": "[auto-deferred] Dependency failed: ['wave1_mtf_mo_opt'] [Un-deferred after mtf_mo_solo fix]"
   },
   {
     "id": "wave1_mtf_mo_oos",
@@ -677,7 +677,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019275+00:00",
-    "updated_at": "2026-02-27T05:29:01.019276+00:00",
+    "updated_at": "2026-02-28T00:37:09.978782+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -689,7 +689,7 @@
     "depends_on": [
       "wave1_mtf_mo_comb"
     ],
-    "notes": ""
+    "notes": "[auto-deferred] Dependency failed: ['wave1_mtf_mo_comb'] [Un-deferred after mtf_mo_solo fix]"
   },
   {
     "id": "wave1_bb_squ_solo",
@@ -706,14 +706,14 @@
     },
     "estimated_runtime_min": 5,
     "priority": "P3",
-    "status": "queued",
+    "status": "passed",
     "strategy_name": "bb_squeeze",
     "params_override": null,
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T23:02:59.447980+00:00",
     "created_at": "2026-02-27T05:29:01.019281+00:00",
-    "updated_at": "2026-02-27T05:29:01.019282+00:00",
+    "updated_at": "2026-02-27T23:06:16.595560+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -739,7 +739,7 @@
     },
     "estimated_runtime_min": 45,
     "priority": "P3",
-    "status": "queued",
+    "status": "partial",
     "strategy_name": "bb_squeeze",
     "params_override": {
       "param_grid": {
@@ -777,10 +777,10 @@
       }
     },
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-27T23:06:16.602731+00:00",
     "created_at": "2026-02-27T05:29:01.019284+00:00",
-    "updated_at": "2026-02-27T05:29:01.019286+00:00",
+    "updated_at": "2026-02-28T00:37:09.975011+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -810,14 +810,14 @@
     },
     "estimated_runtime_min": 5,
     "priority": "P3",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "bb_squeeze",
     "params_override": null,
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019292+00:00",
-    "updated_at": "2026-02-27T05:29:01.019293+00:00",
+    "updated_at": "2026-02-28T02:18:09.827246+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -828,7 +828,7 @@
     "depends_on": [
       "wave1_bb_squ_opt"
     ],
-    "notes": ""
+    "notes": "\n[auto-deferred] Optimization only reached partial (PF 1.04 < 1.1). Not worth combined testing."
   },
   {
     "id": "wave1_bb_squ_oos",
@@ -846,14 +846,14 @@
     },
     "estimated_runtime_min": 90,
     "priority": "P3",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "bb_squeeze",
     "params_override": null,
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019299+00:00",
-    "updated_at": "2026-02-27T05:29:01.019300+00:00",
+    "updated_at": "2026-02-28T02:18:09.828779+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -865,7 +865,7 @@
     "depends_on": [
       "wave1_bb_squ_comb"
     ],
-    "notes": ""
+    "notes": "\n[auto-deferred] Dependency chain: optimization partial, combined deferred."
   },
   {
     "id": "wave1_asx_reopt",
@@ -882,14 +882,14 @@
     },
     "estimated_runtime_min": 120,
     "priority": "P3",
-    "status": "queued",
+    "status": "promoted",
     "strategy_name": null,
     "params_override": null,
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-02-28T00:37:09.979852+00:00",
     "created_at": "2026-02-27T05:29:01.019307+00:00",
-    "updated_at": "2026-02-27T05:29:01.019308+00:00",
+    "updated_at": "2026-02-28T03:12:57.054292+00:00",
     "tags": [
       "wave1",
       "reoptimization",
@@ -897,7 +897,7 @@
       "features"
     ],
     "depends_on": [],
-    "notes": "SMA-200 was too aggressive on SP500 (reduced trades to insignificant levels). May behave differently on smaller ASX universe. IBS filter already proven on SP500 opening_gap \u2014 test on ASX mean_reversion."
+    "notes": "\n[analyst override] Manually verified: Sharpe +0.17, CAGR +2.2pp, DD -2.6pp. Clear pass. Automation marked partial due to metric extraction bug."
   },
   {
     "id": "wave1_vix_filter",
@@ -916,12 +916,50 @@
     "priority": "P3",
     "status": "queued",
     "strategy_name": null,
-    "params_override": null,
+    "params_override": {
+      "filter_param": "vix_filter",
+      "variants": [
+        {
+          "name": "baseline (disabled)",
+          "value": {
+            "enabled": false
+          }
+        },
+        {
+          "name": "VIX < 20",
+          "value": {
+            "enabled": true,
+            "max_entry": 20.0
+          }
+        },
+        {
+          "name": "VIX < 25",
+          "value": {
+            "enabled": true,
+            "max_entry": 25.0
+          }
+        },
+        {
+          "name": "VIX < 30",
+          "value": {
+            "enabled": true,
+            "max_entry": 30.0
+          }
+        },
+        {
+          "name": "VIX < 35",
+          "value": {
+            "enabled": true,
+            "max_entry": 35.0
+          }
+        }
+      ]
+    },
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019311+00:00",
-    "updated_at": "2026-02-27T05:29:01.019312+00:00",
+    "updated_at": "2026-02-28T02:16:06.035870+00:00",
     "tags": [
       "wave1",
       "filter",
@@ -930,7 +968,7 @@
       "sp500"
     ],
     "depends_on": [],
-    "notes": "Requires VIX (^VIX) data ingestion \u2014 check if already in SP500 cache. If not, add to data pipeline first. Williams VIX Fix (calc_wvf in helpers.py) is a stock-level proxy that doesn't need index data. Test variants: (a) skip entries VIX>25, (b) skip VIX>30, (c) halve position VIX>20, (d) tighten stops VIX>25, (e) only MR entries when VIX>25."
+    "notes": "Requires VIX (^VIX) data ingestion \u2014 check if already in SP500 cache. If not, add to data pipeline first. Williams VIX Fix (calc_wvf in helpers.py) is a stock-level proxy that doesn't need index data. Test variants: (a) skip entries VIX>25, (b) skip VIX>30, (c) halve position VIX>20, (d) tighten stops VIX>25, (e) only MR entries when VIX>25. [Requeued with vix_filter config variants 2026-02-28]"
   },
   {
     "id": "wave1_vol_filter",
@@ -948,13 +986,41 @@
     "estimated_runtime_min": 20,
     "priority": "P4",
     "status": "queued",
-    "strategy_name": null,
-    "params_override": null,
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "filter_param": "volume_entry_min",
+      "variants": [
+        {
+          "name": "baseline (disabled)",
+          "value": 0.0
+        },
+        {
+          "name": "0.5x avg",
+          "value": 0.5
+        },
+        {
+          "name": "0.8x avg",
+          "value": 0.8
+        },
+        {
+          "name": "1.0x avg",
+          "value": 1.0
+        },
+        {
+          "name": "1.5x avg",
+          "value": 1.5
+        },
+        {
+          "name": "2.0x avg",
+          "value": 2.0
+        }
+      ]
+    },
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019315+00:00",
-    "updated_at": "2026-02-27T05:29:01.019316+00:00",
+    "updated_at": "2026-02-28T02:16:06.795193+00:00",
     "tags": [
       "wave1",
       "filter",
@@ -962,14 +1028,14 @@
       "sp500"
     ],
     "depends_on": [],
-    "notes": "Test variants: (a) vol > 1.0x 20-day avg, (b) vol > 1.5x 20-day avg, (c) vol > 2.0x 20-day avg, (d) vol > 50-day avg. WARNING: aggressive volume filters reduced trades to insignificant levels during SMA-200 testing. Monitor trade count carefully."
+    "notes": "Test variants: (a) vol > 1.0x 20-day avg, (b) vol > 1.5x 20-day avg, (c) vol > 2.0x 20-day avg, (d) vol > 50-day avg. WARNING: aggressive volume filters reduced trades to insignificant levels during SMA-200 testing. Monitor trade count carefully. [Requeued with volume_entry_min variants on MR 2026-02-28]"
   },
   {
     "id": "wave1_cross_mkt",
-    "title": "Cross-market correlation signals: ASX \u2194 SP500",
+    "title": "SMA-200 trend filter A/B test on SP500",
     "category": "cross_market",
     "market": "sp500",
-    "hypothesis": "SP500 overnight moves predict ASX opening direction (ASX opens ~14h after US close), and ASX session moves predict SP500 opening direction (US opens ~7h after ASX close). If correlation > 0.3, a cross-market filter could skip entries when the other market had a large adverse move.",
+    "hypothesis": "SMA-200 filter was too aggressive when tested via coord descent (reduced trades to insignificant levels). Testing as a clean A/B toggle across all strategies to measure pure impact without confounding param changes.",
     "method": "filter_test",
     "acceptance_criteria": {
       "min_correlation": 0.3,
@@ -981,12 +1047,24 @@
     "priority": "P5",
     "status": "queued",
     "strategy_name": null,
-    "params_override": null,
+    "params_override": {
+      "filter_param": "sma200_filter",
+      "variants": [
+        {
+          "name": "baseline (SMA200 off)",
+          "value": false
+        },
+        {
+          "name": "SMA200 on",
+          "value": true
+        }
+      ]
+    },
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019318+00:00",
-    "updated_at": "2026-02-27T05:29:01.019319+00:00",
+    "updated_at": "2026-02-28T02:16:07.582642+00:00",
     "tags": [
       "wave1",
       "cross_market",
@@ -994,6 +1072,6 @@
       "exploratory"
     ],
     "depends_on": [],
-    "notes": "This is exploratory \u2014 may not yield actionable results. Data alignment: must handle AEST/ET timezone differences and date line. ASX daily data in data/cache/asx/, SP500 in data/cache/sp500/. Use SPY as SP500 proxy, STW.AX or XJO as ASX proxy."
+    "notes": "This is exploratory \u2014 may not yield actionable results. Data alignment: must handle AEST/ET timezone differences and date line. ASX daily data in data/cache/asx/, SP500 in data/cache/sp500/. Use SPY as SP500 proxy, STW.AX or XJO as ASX proxy. [Repurposed: cross-market too complex for filter_test. Now testing SMA-200 filter A/B 2026-02-28]"
   }
 ]

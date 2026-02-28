@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<!--
+    PHOSPHOR EROSION — Signal Decay in Cascading Data Streams
+    A generative art piece for the Atlas trading system.
+
+    Layers: background data grid → matrix rain → glitch clusters → terminal blocks
+    CRT overlay: scanlines + vignette + flicker
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phosphor Erosion — Atlas Generative Art</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050505;
+            --canvas-bg: #0a0a0a;
+            --sidebar-bg: rgba(8, 12, 8, 0.96);
+            --green: #00ff41;
+            --green-half: rgba(0, 255, 65, 0.5);
+            --green-low: rgba(0, 255, 65, 0.15);
+            --green-faint: rgba(0, 255, 65, 0.08);
+            --amber: #ffb000;
+            --amber-half: rgba(255, 176, 0, 0.5);
+            --cyan: #00d4ff;
+            --cyan-half: rgba(0, 212, 255, 0.5);
+            --border: rgba(0, 255, 65, 0.1);
+            --text-pri: rgba(0, 255, 65, 0.9);
+            --text-sec: rgba(0, 255, 65, 0.5);
+            --text-dim: rgba(0, 255, 65, 0.3);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            background: var(--bg);
+            height: 100vh;
+            overflow: hidden;
+            color: var(--green);
+        }
+        .container { display:flex; height:100vh; padding:10px; gap:10px; }
+
+        /* ── Sidebar ─────────────────────────────────────── */
+        .sidebar {
+            width: 290px;
+            flex-shrink: 0;
+            background: var(--sidebar-bg);
+            padding: 18px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar::-webkit-scrollbar { width:3px; }
+        .sidebar::-webkit-scrollbar-track { background:transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background:var(--green-half); border-radius:2px; }
+        .sidebar h1 {
+            font-size: 16px; font-weight: 600; letter-spacing: 3px;
+            color: var(--green);
+            text-shadow: 0 0 12px var(--green-low);
+            margin-bottom: 2px;
+        }
+        .sidebar .subtitle {
+            color: var(--text-dim); font-size: 10px;
+            margin-bottom: 20px; line-height: 1.4;
+        }
+        .control-section { margin-bottom: 20px; }
+        .control-section h3 {
+            font-size: 10px; font-weight: 600;
+            color: var(--text-sec); margin-bottom: 10px;
+            text-transform: uppercase; letter-spacing: 1.5px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .control-section h3::before { content:'>'; color:var(--green); }
+
+        /* Seed */
+        .seed-input {
+            width: 100%;
+            background: var(--green-faint);
+            padding: 8px; border-radius: 4px;
+            font-family: inherit; font-size: 14px;
+            color: var(--green); border: 1px solid var(--border);
+            text-align: center; margin-bottom: 6px;
+        }
+        .seed-input:focus { outline:none; border-color:var(--green-half); box-shadow:0 0 6px var(--green-low); }
+        .seed-controls { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:5px; }
+        .jump-row { display:flex; gap:4px; margin-top:5px; }
+        .jump-input {
+            flex:1; background:var(--green-faint); padding:6px 8px; border-radius:4px;
+            font-family:inherit; font-size:11px; color:var(--green); border:1px solid var(--border);
+        }
+        .jump-input:focus { outline:none; border-color:var(--green-half); }
+
+        /* Buttons */
+        .btn {
+            background: var(--green-faint); color: var(--green);
+            border: 1px solid var(--border); padding: 7px 10px;
+            border-radius: 4px; font-family: inherit;
+            font-size: 11px; cursor: pointer;
+            transition: all .15s; width: 100%;
+        }
+        .btn:hover { background:var(--green-low); border-color:var(--green-half); text-shadow:0 0 6px var(--green-low); }
+        .btn:active { transform:scale(0.97); }
+        .btn-cy { color:var(--cyan); border-color:rgba(0,212,255,.12); background:rgba(0,212,255,.04); }
+        .btn-cy:hover { background:rgba(0,212,255,.1); border-color:var(--cyan-half); }
+        .btn-am { color:var(--amber); border-color:rgba(255,176,0,.12); background:rgba(255,176,0,.04); }
+        .btn-am:hover { background:rgba(255,176,0,.1); border-color:var(--amber-half); }
+        .btn-row { display:flex; gap:5px; margin-bottom:5px; }
+        .btn-row .btn { flex:1; }
+
+        /* Sliders */
+        .cg { margin-bottom: 14px; }
+        .cg label { display:block; font-size:10px; color:var(--text-sec); margin-bottom:5px; }
+        .sl { display:flex; align-items:center; gap:8px; }
+        .sl input[type="range"] {
+            flex:1; height:2px;
+            background: var(--green-low);
+            border-radius:1px; outline:none;
+            -webkit-appearance:none;
+        }
+        .sl input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance:none; width:10px; height:10px;
+            background:var(--green); border-radius:50%; cursor:pointer;
+            box-shadow:0 0 5px var(--green-low);
+        }
+        .sl input[type="range"]::-moz-range-thumb {
+            width:10px; height:10px; background:var(--green);
+            border-radius:50%; border:none; cursor:pointer;
+        }
+        .vd { font-size:10px; color:var(--text-dim); min-width:38px; text-align:right; }
+
+        /* Canvas */
+        .canvas-area { flex:1; min-width:0; position:relative; }
+        #canvas-container {
+            width:100%; height:100%; position:relative;
+            overflow:hidden; background:var(--canvas-bg);
+            border-radius:6px; border:1px solid var(--border);
+        }
+        #canvas-container canvas { display:block; }
+
+        /* CRT overlays */
+        .crt-scan {
+            position:absolute; inset:0; pointer-events:none; z-index:10;
+            background: repeating-linear-gradient(
+                to bottom, transparent 0px, transparent 1px,
+                rgba(0,0,0,1) 1px, rgba(0,0,0,1) 2px
+            );
+            opacity: 0.06;
+        }
+        .crt-vig {
+            position:absolute; inset:0; pointer-events:none; z-index:11;
+            background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.75) 100%);
+        }
+        .loading {
+            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            color:var(--text-dim); font-size:13px; z-index:20;
+        }
+        @media (max-width:768px) {
+            .container { flex-direction:column; }
+            .sidebar { width:100%; max-height:35vh; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <h1>PHOSPHOR EROSION</h1>
+        <div class="subtitle">> signal decay in cascading data streams_</div>
+
+        <!-- ── Seed ────────────────────────────── -->
+        <div class="control-section">
+            <h3>Seed</h3>
+            <input type="number" id="seed-input" class="seed-input" value="42" onchange="setSeed()">
+            <div class="seed-controls">
+                <button class="btn btn-cy" onclick="prevSeed()">← Prev</button>
+                <button class="btn btn-cy" onclick="nextSeed()">Next →</button>
+            </div>
+            <button class="btn btn-am" onclick="randSeed()">↻ Random</button>
+            <div class="jump-row">
+                <input type="number" id="jump-input" class="jump-input" placeholder="seed #">
+                <button class="btn btn-cy" style="width:auto;padding:6px 12px" onclick="jumpSeed()">Go</button>
+            </div>
+        </div>
+
+        <!-- ── Parameters ──────────────────────── -->
+        <div class="control-section">
+            <h3>Rain</h3>
+            <div class="cg"><label>Columns</label><div class="sl">
+                <input type="range" id="p-cols" min="15" max="90" step="5" value="50" oninput="up('rainColumns',this.value)">
+                <span class="vd" id="v-cols">50</span>
+            </div></div>
+            <div class="cg"><label>Speed</label><div class="sl">
+                <input type="range" id="p-speed" min="0.2" max="3.0" step="0.1" value="1.0" oninput="up('rainSpeed',this.value)">
+                <span class="vd" id="v-speed">1.0</span>
+            </div></div>
+            <div class="cg"><label>Trail Length</label><div class="sl">
+                <input type="range" id="p-trail" min="5" max="40" step="1" value="22" oninput="up('trailLength',this.value)">
+                <span class="vd" id="v-trail">22</span>
+            </div></div>
+        </div>
+        <div class="control-section">
+            <h3>Terminals</h3>
+            <div class="cg"><label>Block Count</label><div class="sl">
+                <input type="range" id="p-term" min="1" max="8" step="1" value="4" oninput="up('terminalBlocks',this.value)">
+                <span class="vd" id="v-term">4</span>
+            </div></div>
+            <div class="cg"><label>Glitch Clusters</label><div class="sl">
+                <input type="range" id="p-glitch" min="0" max="35" step="1" value="15" oninput="up('glitchClusters',this.value)">
+                <span class="vd" id="v-glitch">15</span>
+            </div></div>
+        </div>
+        <div class="control-section">
+            <h3>Atmosphere</h3>
+            <div class="cg"><label>Grid Opacity</label><div class="sl">
+                <input type="range" id="p-grid" min="0" max="0.15" step="0.005" value="0.055" oninput="up('gridOpacity',this.value)">
+                <span class="vd" id="v-grid">0.055</span>
+            </div></div>
+            <div class="cg"><label>Scanlines</label><div class="sl">
+                <input type="range" id="p-scan" min="0" max="0.20" step="0.005" value="0.06" oninput="up('scanlineOpacity',this.value)">
+                <span class="vd" id="v-scan">0.06</span>
+            </div></div>
+            <div class="cg"><label>CRT Flicker</label><div class="sl">
+                <input type="range" id="p-flick" min="0" max="0.08" step="0.005" value="0.015" oninput="up('crtFlicker',this.value)">
+                <span class="vd" id="v-flick">0.015</span>
+            </div></div>
+        </div>
+
+        <!-- ── Actions ─────────────────────────── -->
+        <div class="control-section">
+            <h3>Actions</h3>
+            <div class="btn-row">
+                <button class="btn" onclick="regen()">Regenerate</button>
+                <button class="btn btn-cy" onclick="resetAll()">Reset</button>
+            </div>
+            <button class="btn btn-am" style="margin-top:5px" onclick="downloadPNG()">↓ Download PNG</button>
+        </div>
+    </div>
+
+    <div class="canvas-area">
+        <div id="canvas-container">
+            <div class="crt-scan" id="crt-scan"></div>
+            <div class="crt-vig"></div>
+            <div class="loading" id="loader">> initializing phosphor erosion...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// PARAMETERS
+// ═══════════════════════════════════════════════════════════════════════════
+let params = {
+    seed: 42,
+    rainColumns: 50,
+    rainSpeed: 1.0,
+    trailLength: 22,
+    terminalBlocks: 4,
+    glitchClusters: 15,
+    gridOpacity: 0.055,
+    scanlineOpacity: 0.06,
+    crtFlicker: 0.015,
+};
+const defaults = JSON.parse(JSON.stringify(params));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MARKET DATA LEXICON
+// ═══════════════════════════════════════════════════════════════════════════
+const TICKERS = [
+    'BHP','CBA','WDS','FMG','CSL','NAB','WBC','ANZ','RIO','TLS',
+    'AAPL','MSFT','NVDA','TSLA','AMZN','GOOG','META','SPY','QQQ','AMD'
+];
+const PRICES = [
+    '$82.47','$4.23','$142.80','$35.67','$308.45','$28.91','$124.56',
+    '$67.33','$18.92','$245.10','$3847.20','$172.50','$505.62','$238.45'
+];
+const PCTS = ['+2.31%','-0.87%','+1.45%','-2.13%','+0.56%','-1.78%','+3.21%','-0.32%','+0.95%','-1.23%','+4.07%','-3.45%'];
+const VOLS = ['1.2M','845K','3.4M','256K','1.8M','567K','2.1M','432K','12.6M','98K'];
+const TERM_MSGS = [
+    '[EXEC] BUY BHP @ 42.15 x 500',
+    '[EXEC] SELL FMG @ 18.92 x 1000',
+    '[EXEC] BUY NVDA @ 505.62 x 200',
+    '[EXEC] SELL CBA @ 124.56 x 800',
+    '[EXEC] BUY AMD @ 172.50 x 350',
+    '[SIGNAL] RSI(14) OVERSOLD :: CBA',
+    '[SIGNAL] MACD CROSS :: MSFT',
+    '[SIGNAL] BREAKOUT :: AMD +3.2%',
+    '[SIGNAL] MEAN_REV TRIGGER :: WDS',
+    '[SIGNAL] MOMENTUM SHIFT :: NVDA',
+    '[SCAN] ASX200 MOMENTUM SHIFT DETECTED',
+    '[SCAN] SP500 SECTOR ROTATION: TECH->ENERGY',
+    '[SCAN] UNUSUAL VOLUME :: TSLA 12.6M',
+    '[ATLAS] PORTFOLIO DELTA: +$3,247.83',
+    '[ATLAS] STRATEGY: MEAN_REVERSION ACTIVE',
+    '[ATLAS] POSITION SIZE: 2.3% RISK/TRADE',
+    '[ATLAS] DAILY P&L: +$1,847.20',
+    '[SYNC] S&P500 FEED CONNECTED',
+    '[SYNC] ASX200 STREAM: ONLINE',
+    '[SYNC] MOOMOO BROKER: HEARTBEAT OK',
+    '[RISK] VAR(95) = $12,450 WITHIN LIMITS',
+    '[RISK] MAX DRAWDOWN: -4.2% < THRESHOLD',
+    '[RISK] CORRELATION SPIKE: BHP/RIO 0.94',
+    '[OPT] SHARPE: 1.87 → 2.14',
+    '[OPT] ANNEALING TEMP: 0.42 COOLING...',
+    '[OPT] PARAM GRID: 847/2048 COMPLETE',
+    '[FLOW] DARK POOL ACTIVITY :: NVDA',
+    '[FLOW] BLOCK TRADE: SPY 45K SHARES',
+    '[DATA] REFRESH COMPLETE: 500 SYMBOLS',
+    '[DATA] OHLCV INTEGRITY CHECK: PASS',
+];
+const GRID_ITEMS = [
+    'SMA20:4847.2','EMA50:4831.7','RSI14:62.4','MACD:12.8','ATR14:23.5',
+    'BB_UP:4892.1','BB_LO:4802.3','VOL20:18.4%','BETA:1.12','SHARPE:1.87',
+    'SORTINO:2.14','CALMAR:1.45','Δ0.67','Θ-0.04','Γ0.012','V23.5',
+    'ρ0.82','σ0.185','μ0.043','λ1.24','R²0.87','ADX:34.2','OBV:2.4M',
+    'MFI:58','CCI:112','VWAP:4839','STOCH:72','WLMS:-18','VIX:16.4',
+    'IV30:22.1','HV20:18.7','SKEW:4.2','KURT:3.1','CORR:0.78','TRIN:1.04',
+];
+const STATION_PHRASES = [
+    'EXECUTE SEQUENCE','ALPHA SIGNAL LOCKED','CORRELATION MATRIX ACTIVE',
+    'REGIME CHANGE DETECTED','SIGNAL CONFIRMED','FREQUENCY ALIGNED',
+    'PATTERN CONVERGENCE','EIGENVALUE SHIFT','DECODE COMPLETE',
+    'SEQUENCE VERIFIED','TRANSMISSION LOCKED','MATRIX DECOMPOSITION',
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════
+let columns = [];
+let terminals = [];
+let glitches = [];
+let gridBuf = null;
+let gridScroll = 0;
+let ready = false;
+let cw, ch;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RAIN COLUMN
+// ═══════════════════════════════════════════════════════════════════════════
+class RainCol {
+    constructor(x) {
+        this.x = x;
+        this.fs = floor(random(12, 16));
+        this.spacing = this.fs * 1.45;
+        this.speed = random(0.4, 2.8);
+        this.headY = random(-ch, ch * 0.4);
+        this.trail = floor(random(params.trailLength * 0.5, params.trailLength * 1.6));
+        this.alpha = random(0.35, 1.0);
+        this.chars = [];
+        this.surging = false;
+        this.surgeTimer = 0;
+
+        let r = random();
+        if (r < 0.60) { this.hue = 'g'; this.rgb = [0, 255, 65]; this.glow = 'rgba(0,255,65,'; }
+        else if (r < 0.85) { this.hue = 'a'; this.rgb = [255, 176, 0]; this.glow = 'rgba(255,176,0,'; }
+        else { this.hue = 'c'; this.rgb = [0, 212, 255]; this.glow = 'rgba(0,212,255,'; }
+
+        for (let i = 0; i < this.trail + 5; i++) this.chars.push(this._ch());
+    }
+
+    _ch() {
+        let r = random();
+        if (r < 0.38) return String.fromCharCode(48 + floor(random(10)));
+        if (r < 0.62) return String.fromCharCode(65 + floor(random(26)));
+        if (r < 0.78) return random(['$','%','.','+','-','/','@',':','#','*']);
+        if (r < 0.90) return random(['Δ','Θ','Σ','Γ','α','β','μ','σ','ρ','λ']);
+        return random(['↑','↓','→','←','░','▒','▓','█','■','◆']);
+    }
+
+    update() {
+        // Surge events
+        if (!this.surging && random() < 0.0008) {
+            this.surging = true;
+            this.surgeTimer = floor(random(15, 40));
+        }
+        if (this.surging) {
+            this.surgeTimer--;
+            this.speed = 5.0;
+            this.alpha = 1.0;
+            if (this.surgeTimer <= 0) {
+                this.surging = false;
+                this.speed = random(0.4, 2.8);
+                this.alpha = random(0.35, 1.0);
+            }
+        }
+
+        this.headY += this.speed * params.rainSpeed;
+
+        // Mutate chars
+        if (random() < 0.06) {
+            this.chars[floor(random(this.chars.length))] = this._ch();
+        }
+
+        // Reset
+        if (this.headY - this.trail * this.spacing > ch + 60) {
+            this.headY = random(-350, -40);
+            this.speed = random(0.4, 2.8);
+            this.trail = floor(random(params.trailLength * 0.5, params.trailLength * 1.6));
+            this.alpha = random(0.35, 1.0);
+            for (let i = 0; i < this.chars.length; i++) this.chars[i] = this._ch();
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TERMINAL BLOCK
+// ═══════════════════════════════════════════════════════════════════════════
+class TermBlock {
+    constructor(zoneIdx) {
+        this.w = floor(random(240, 370));
+        this.h = floor(random(110, 185));
+        // Position in zones to distribute across canvas
+        let zones = [
+            [0.02, 0.35, 0.02, 0.30],
+            [0.55, 0.96, 0.02, 0.28],
+            [0.02, 0.38, 0.62, 0.95],
+            [0.55, 0.96, 0.65, 0.95],
+            [0.30, 0.70, 0.02, 0.20],
+            [0.30, 0.70, 0.75, 0.96],
+            [0.02, 0.25, 0.35, 0.60],
+            [0.72, 0.96, 0.35, 0.60],
+        ];
+        let z = zones[zoneIdx % zones.length];
+        this.x = floor(random(z[0] * cw, max(z[0] * cw + 10, z[1] * cw - this.w)));
+        this.y = floor(random(z[2] * ch, max(z[2] * ch + 10, z[3] * ch - this.h)));
+
+        let r = random();
+        if (r < 0.5) { this.rgb = [0, 255, 65]; this.glow = 'rgba(0,255,65,'; }
+        else if (r < 0.8) { this.rgb = [0, 212, 255]; this.glow = 'rgba(0,212,255,'; }
+        else { this.rgb = [255, 176, 0]; this.glow = 'rgba(255,176,0,'; }
+
+        this.maxLines = floor((this.h - 30) / 15);
+        this.lines = [];
+        this.curMsg = '';
+        this.tgtMsg = random(TERM_MSGS);
+        this.ci = 0;
+        this.typeDelay = floor(random(2, 5));
+        this.typeTimer = 0;
+        this.pauseDelay = floor(random(40, 100));
+        this.pauseTimer = 0;
+        this.paused = false;
+        this.blink = true;
+        this.blinkT = 0;
+        this.label = random(['ATLAS TERMINAL','SYS MONITOR','EXEC ENGINE','RISK GATE','DATA FEED','OPT WORKER']);
+    }
+
+    _ts() {
+        let h = str(floor(random(24))).padStart(2,'0');
+        let m = str(floor(random(60))).padStart(2,'0');
+        let s = str(floor(random(60))).padStart(2,'0');
+        let ms = str(floor(random(1000))).padStart(3,'0');
+        return h+':'+m+':'+s+'.'+ms;
+    }
+
+    update() {
+        this.blinkT++;
+        if (this.blinkT > 25) { this.blink = !this.blink; this.blinkT = 0; }
+
+        if (this.paused) {
+            this.pauseTimer++;
+            if (this.pauseTimer > this.pauseDelay) {
+                this.paused = false;
+                this.pauseTimer = 0;
+                this.tgtMsg = random(TERM_MSGS);
+                this.curMsg = '';
+                this.ci = 0;
+            }
+            return;
+        }
+
+        this.typeTimer++;
+        if (this.typeTimer >= this.typeDelay && this.ci < this.tgtMsg.length) {
+            this.curMsg += this.tgtMsg[this.ci];
+            this.ci++;
+            this.typeTimer = 0;
+        }
+
+        if (this.ci >= this.tgtMsg.length && this.curMsg.length > 0) {
+            this.lines.push(this._ts() + ' ' + this.curMsg);
+            while (this.lines.length > this.maxLines) this.lines.shift();
+            this.curMsg = '';
+            this.ci = 0;
+            this.paused = true;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GLITCH CLUSTER
+// ═══════════════════════════════════════════════════════════════════════════
+class Glitch {
+    constructor() { this.reset(); }
+
+    reset() {
+        this.x = random(cw);
+        this.y = random(ch);
+        this.isPhrase = random() < 0.07;
+        if (this.isPhrase) {
+            this.txt = random(STATION_PHRASES);
+            this.life = floor(random(140, 300));
+        } else {
+            let n = floor(random(5, 8));
+            this.txt = '';
+            for (let i = 0; i < n; i++) this.txt += str(floor(random(10)));
+            this.life = floor(random(50, 180));
+        }
+        this.age = 0;
+        this.scrambleAt = this.life * (this.isPhrase ? 0.78 : 0.62);
+        this.fs = this.isPhrase ? floor(random(14, 18)) : floor(random(12, 17));
+        this.isAmber = random() < 0.65;
+        this.rgb = this.isAmber ? [255, 176, 0] : [0, 212, 255];
+        this.glow = this.isAmber ? 'rgba(255,176,0,' : 'rgba(0,212,255,';
+    }
+
+    update() {
+        this.age++;
+        if (!this.isPhrase && this.age > this.scrambleAt) {
+            if (random() < 0.25) {
+                let a = this.txt.split('');
+                a[floor(random(a.length))] = str(floor(random(10)));
+                this.txt = a.join('');
+            }
+        }
+        if (this.age > this.life) this.reset();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// P5.JS CORE
+// ═══════════════════════════════════════════════════════════════════════════
+function setup() {
+    let cont = document.getElementById('canvas-container');
+    cw = cont.offsetWidth;
+    ch = cont.offsetHeight;
+    let canvas = createCanvas(cw, ch);
+    canvas.parent('canvas-container');
+    canvas.style('display', 'block');
+    background(10);
+    noLoop();
+
+    // Wait for font, then start
+    if (document.fonts) {
+        document.fonts.ready.then(() => {
+            textFont('JetBrains Mono');
+            initSystem();
+            document.getElementById('loader')?.remove();
+            ready = true;
+            loop();
+        });
+    } else {
+        textFont('JetBrains Mono');
+        initSystem();
+        document.getElementById('loader')?.remove();
+        ready = true;
+        loop();
+    }
+}
+
+function windowResized() {
+    let cont = document.getElementById('canvas-container');
+    cw = cont.offsetWidth;
+    ch = cont.offsetHeight;
+    resizeCanvas(cw, ch);
+    initSystem();
+}
+
+function initSystem() {
+    randomSeed(params.seed);
+    noiseSeed(params.seed);
+    gridScroll = 0;
+
+    // Grid buffer
+    buildGrid();
+
+    // Rain columns
+    columns = [];
+    let colW = cw / params.rainColumns;
+    for (let i = 0; i < params.rainColumns; i++) {
+        columns.push(new RainCol(i * colW + colW * 0.5));
+    }
+
+    // Terminal blocks
+    terminals = [];
+    for (let i = 0; i < params.terminalBlocks; i++) {
+        terminals.push(new TermBlock(i));
+    }
+
+    // Glitch clusters
+    glitches = [];
+    for (let i = 0; i < params.glitchClusters; i++) {
+        glitches.push(new Glitch());
+    }
+}
+
+function buildGrid() {
+    let bh = ch * 3;
+    gridBuf = createGraphics(cw, bh);
+    gridBuf.textFont('JetBrains Mono');
+    gridBuf.textSize(10);
+    gridBuf.fill(0, 255, 65);
+    gridBuf.textAlign(LEFT, TOP);
+    gridBuf.noStroke();
+
+    let y = 4;
+    while (y < bh) {
+        let x = 8;
+        while (x < cw - 40) {
+            let item = random(GRID_ITEMS);
+            gridBuf.text(item, x, y);
+            x += item.length * 6.5 + random(18, 35);
+        }
+        y += floor(random(13, 17));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════════════════════════════════════
+function draw() {
+    if (!ready) return;
+
+    // Clear
+    background(10, 10, 10);
+
+    // ── Layer 0: Background Data Grid ──
+    if (gridBuf) {
+        push();
+        drawingContext.globalAlpha = params.gridOpacity;
+        gridScroll = (gridScroll + 0.18) % gridBuf.height;
+        image(gridBuf, 0, -gridScroll);
+        if (gridScroll > 0) image(gridBuf, 0, gridBuf.height - gridScroll);
+        drawingContext.globalAlpha = 1.0;
+        pop();
+    }
+
+    // ── Layer 1: Rain Trails (no shadow — fast) ──
+    textAlign(LEFT, TOP);
+    noStroke();
+    drawingContext.shadowBlur = 0;
+    for (let col of columns) {
+        col.update();
+        textSize(col.fs);
+        for (let i = 2; i < col.trail; i++) {
+            let y = col.headY - i * col.spacing;
+            if (y < -30 || y > ch + 30) continue;
+            let t = i / col.trail;
+            let a = (1 - t) * 190 * col.alpha;
+            if (a < 2) continue;
+            fill(col.rgb[0], col.rgb[1], col.rgb[2], a);
+            text(col.chars[i % col.chars.length], col.x, y);
+        }
+    }
+
+    // ── Layer 1b: Rain Heads (with glow) ──
+    for (let col of columns) {
+        textSize(col.fs);
+        for (let i = 0; i < min(2, col.trail); i++) {
+            let y = col.headY - i * col.spacing;
+            if (y < -30 || y > ch + 30) continue;
+            if (i === 0) {
+                // White-hot head
+                drawingContext.shadowColor = col.glow + '0.7)';
+                drawingContext.shadowBlur = 12;
+                fill(255, 255, 255, 240 * col.alpha);
+            } else {
+                // Near-head bright color
+                drawingContext.shadowColor = col.glow + '0.4)';
+                drawingContext.shadowBlur = 6;
+                fill(col.rgb[0], col.rgb[1], col.rgb[2], 220 * col.alpha);
+            }
+            text(col.chars[i % col.chars.length], col.x, y);
+        }
+    }
+    drawingContext.shadowBlur = 0;
+
+    // ── Layer 2: Glitch Clusters ──
+    for (let g of glitches) {
+        g.update();
+        let fadeIn = min(1, g.age / 12);
+        let fadeOut = max(0, 1 - max(0, g.age - g.life + 25) / 25);
+        let a = min(fadeIn, fadeOut);
+        if (random() < 0.12) a *= random(0.2, 0.7);
+        if (a < 0.02) continue;
+
+        textSize(g.fs);
+        drawingContext.shadowColor = g.glow + (a * 0.5).toFixed(2) + ')';
+        drawingContext.shadowBlur = 8;
+        fill(g.rgb[0], g.rgb[1], g.rgb[2], a * 210);
+        text(g.txt, g.x, g.y);
+    }
+    drawingContext.shadowBlur = 0;
+
+    // ── Layer 3: Terminal Blocks ──
+    for (let t of terminals) {
+        t.update();
+
+        // Background pane
+        fill(0, 0, 0, 170);
+        stroke(t.rgb[0], t.rgb[1], t.rgb[2], 45);
+        strokeWeight(1);
+        rect(t.x, t.y, t.w, t.h, 3);
+        noStroke();
+
+        // Header bar
+        fill(t.rgb[0], t.rgb[1], t.rgb[2], 20);
+        rect(t.x + 1, t.y + 1, t.w - 2, 18, 3, 3, 0, 0);
+
+        // Header label
+        textSize(9);
+        drawingContext.shadowColor = t.glow + '0.4)';
+        drawingContext.shadowBlur = 4;
+        fill(t.rgb[0], t.rgb[1], t.rgb[2], 160);
+        text(t.label, t.x + 8, t.y + 5);
+        drawingContext.shadowBlur = 0;
+
+        // Completed lines
+        textSize(10);
+        let ly = t.y + 26;
+        for (let ln of t.lines) {
+            // Timestamp in dimmer color
+            fill(t.rgb[0], t.rgb[1], t.rgb[2], 70);
+            text(ln.substring(0, 12), t.x + 6, ly);
+            // Message in brighter color
+            fill(t.rgb[0], t.rgb[1], t.rgb[2], 130);
+            text(ln.substring(12), t.x + 6 + 12 * 6.2, ly);
+            ly += 15;
+        }
+
+        // Current typing line
+        if (!t.paused && t.curMsg.length > 0) {
+            fill(t.rgb[0], t.rgb[1], t.rgb[2], 180);
+            drawingContext.shadowColor = t.glow + '0.3)';
+            drawingContext.shadowBlur = 3;
+            text(t.curMsg + (t.blink ? '█' : ' '), t.x + 6, ly);
+            drawingContext.shadowBlur = 0;
+        } else {
+            fill(t.rgb[0], t.rgb[1], t.rgb[2], t.blink ? 180 : 0);
+            text('█', t.x + 6, ly);
+        }
+    }
+
+    // ── CRT Flicker ──
+    if (random() < params.crtFlicker) {
+        fill(255, 255, 255, random(1, 4));
+        noStroke();
+        rect(0, 0, cw, ch);
+    }
+    // Occasional horizontal glitch band
+    if (random() < 0.003) {
+        let by = random(ch);
+        let bh2 = random(2, 6);
+        fill(random([0,255,65]), random([0,176,255]), random([0,65,255]), random(8, 20));
+        noStroke();
+        rect(0, by, cw, bh2);
+    }
+
+    // Update CRT CSS overlays
+    document.getElementById('crt-scan').style.opacity = params.scanlineOpacity;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI HANDLERS
+// ═══════════════════════════════════════════════════════════════════════════
+const paramMap = {
+    rainColumns:     { el: 'p-cols',  vd: 'v-cols',  parse: parseInt },
+    rainSpeed:       { el: 'p-speed', vd: 'v-speed', parse: parseFloat },
+    trailLength:     { el: 'p-trail', vd: 'v-trail', parse: parseInt },
+    terminalBlocks:  { el: 'p-term',  vd: 'v-term',  parse: parseInt },
+    glitchClusters:  { el: 'p-glitch',vd: 'v-glitch',parse: parseInt },
+    gridOpacity:     { el: 'p-grid',  vd: 'v-grid',  parse: parseFloat },
+    scanlineOpacity: { el: 'p-scan',  vd: 'v-scan',  parse: parseFloat },
+    crtFlicker:      { el: 'p-flick', vd: 'v-flick', parse: parseFloat },
+};
+
+function up(key, val) {
+    let m = paramMap[key];
+    let v = m.parse(val);
+    params[key] = v;
+    document.getElementById(m.vd).textContent = val;
+
+    // Structural params need full regen
+    if (['rainColumns','terminalBlocks','glitchClusters','trailLength'].includes(key)) {
+        initSystem();
+    }
+}
+
+function syncUI() {
+    for (let [k, m] of Object.entries(paramMap)) {
+        document.getElementById(m.el).value = params[k];
+        document.getElementById(m.vd).textContent = params[k];
+    }
+    document.getElementById('seed-input').value = params.seed;
+}
+
+// ── Seed Controls ──
+function setSeed() {
+    let v = parseInt(document.getElementById('seed-input').value);
+    if (v && v > 0) { params.seed = v; initSystem(); }
+    else { document.getElementById('seed-input').value = params.seed; }
+}
+function prevSeed() { params.seed = max(1, params.seed - 1); document.getElementById('seed-input').value = params.seed; initSystem(); }
+function nextSeed() { params.seed++; document.getElementById('seed-input').value = params.seed; initSystem(); }
+function randSeed() { params.seed = floor(Math.random() * 999999) + 1; document.getElementById('seed-input').value = params.seed; initSystem(); }
+function jumpSeed() {
+    let v = parseInt(document.getElementById('jump-input').value);
+    if (v && v > 0) { params.seed = v; document.getElementById('seed-input').value = v; initSystem(); }
+}
+
+// ── Actions ──
+function regen() { initSystem(); }
+function resetAll() { params = JSON.parse(JSON.stringify(defaults)); syncUI(); initSystem(); }
+function downloadPNG() { saveCanvas('phosphor-erosion-' + params.seed, 'png'); }
+
+// ── Init UI ──
+window.addEventListener('load', syncUI);
+</script>
+</body>
+</html>

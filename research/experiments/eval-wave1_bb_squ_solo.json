@@ -1,0 +1,30 @@
+{
+  "experiment_id": "wave1_bb_squ_solo",
+  "strategy": "bb_squeeze",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 284,
+  "config_version": "v2.0",
+  "timestamp": "2026-02-27T23:03:00.333643+00:00",
+  "solo": {
+    "total_trades": 322,
+    "cagr_pct": -12.267,
+    "sharpe": -1.6772,
+    "sortino": -2.11,
+    "max_drawdown_pct": 27.3524,
+    "win_rate_pct": 45.03,
+    "profit_factor": 0.7419,
+    "total_pnl": -773.84,
+    "avg_trade": -2.4,
+    "final_equity": 3110.43,
+    "strategy_breakdown": {
+      "bb_squeeze": {
+        "trades": 322,
+        "total_pnl": -773.84,
+        "win_rate_pct": 45.0
+      }
+    }
+  },
+  "runtime_s": 197.1
+}
