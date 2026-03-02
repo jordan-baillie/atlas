@@ -40,7 +40,7 @@ from telegram.ext import (
 )
 
 from utils.config import get_active_config
-from paper_engine.engine import PaperPortfolio, TradePlanGenerator
+from brokers.plan import TradePlanGenerator
 from utils.telegram import _load_credentials, _esc, _build_portfolio_snapshot
 
 logger = logging.getLogger("atlas.telegram_bot")
@@ -195,9 +195,7 @@ def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
     # Approve the plan using LivePortfolio
     from brokers.live_portfolio import LivePortfolio
     portfolio = LivePortfolio(config, market_id=market_id)
-    if not portfolio.connect():
-        # Fallback to paper portfolio just for plan approval (file-based)
-        portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio.connect()
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.approve_plan(trade_date)
     if isinstance(portfolio, LivePortfolio):
@@ -339,84 +337,6 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
     return "\n".join(lines)
 
 
-def _execute_paper(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
-    """DEPRECATED: Execute plan through paper engine. Not called in live-only mode."""
-    import pandas as pd
-    from paper_engine.engine import PaperPortfolio
-    from markets.registry import get_market
-
-    market = get_market(market_id)
-    try:
-        from universe.builder import get_universe_tickers
-        tickers = get_universe_tickers(market_id)
-    except Exception:
-        tickers = market.get_universe_tickers()
-
-    # Load cached OHLCV data and extract latest prices
-    base_cache = PROJECT_ROOT / config["data"]["cache_dir"]
-    market_cache = base_cache / market_id
-    data = {}
-    for ticker in tickers:
-        fname = ticker.replace(".", "_") + ".parquet"
-        path = market_cache / fname
-        if not path.exists():
-            path = base_cache / fname
-        if path.exists():
-            data[ticker] = pd.read_parquet(path)
-    prices = {t: float(df["close"].iloc[-1]) for t, df in data.items() if len(df) > 0}
-
-    portfolio = PaperPortfolio(config, market_id=market_id)
-    entries = plan.get("proposed_entries", [])
-    exits = plan.get("proposed_exits", [])
-
-    executed_entries = 0
-    executed_exits = 0
-
-    # Exits first
-    for ex in exits:
-        ticker = ex.get("ticker")
-        if not ticker:
-            continue
-        price = prices.get(ticker, ex.get("entry_price", 0))
-        reason = ex.get("reason", ex.get("exit_reason", "planned_exit"))
-        try:
-            portfolio.execute_exit(ticker, price, trade_date, reason)
-            executed_exits += 1
-        except Exception as e:
-            logger.error("Paper exit %s failed: %s", ticker, e)
-
-    # Entries — build signal-like objects for execute_entry()
-    class _Signal:
-        def __init__(self, d):
-            self.ticker = d["ticker"]
-            self.strategy = d["strategy"]
-            self.entry_price = d["entry_price"]
-            self.stop_price = d["stop_price"]
-            self.take_profit = d.get("take_profit")
-            self.position_size = d["position_size"]
-            self.confidence = d.get("confidence", 0)
-            self.rationale = d.get("rationale", "")
-            self.sector = d.get("sector", "Unknown")
-
-    for entry in entries:
-        ticker = entry.get("ticker")
-        if not ticker:
-            continue
-        price = prices.get(ticker, entry["entry_price"])
-        try:
-            sig = _Signal(entry)
-            portfolio.execute_entry(sig, price, trade_date)
-            executed_entries += 1
-        except Exception as e:
-            logger.error("Paper entry %s failed: %s", ticker, e)
-
-    return (
-        f"📝 <b>Paper Execution Complete — {trade_date}</b>\n\n"
-        f"  Entries: {executed_entries}/{len(entries)}\n"
-        f"  Exits:   {executed_exits}/{len(exits)}"
-    )
-
-
 # ═══════════════════════════════════════════════════════════════
 # Bot handlers
 # ═══════════════════════════════════════════════════════════════
@@ -535,8 +455,9 @@ async def handle_approval_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
     if action == "reject":
         # Mark rejected — update the message
         config = get_active_config(market_id)
-        # Just need TradePlanGenerator for plan file access — PaperPortfolio is fine here
-        portfolio = PaperPortfolio(config, market_id=market_id)
+        # TradePlanGenerator just needs portfolio for plan file access
+        from brokers.live_portfolio import LivePortfolio
+        portfolio = LivePortfolio(config, market_id=market_id)
         plan_gen = TradePlanGenerator(portfolio, config)
         plan = plan_gen.load_plan(trade_date)
         if plan:
@@ -693,7 +614,7 @@ def send_plan_for_approval(
     # Load plan
     if plan_path is None:
         today = datetime.now().strftime("%Y-%m-%d")
-        plan_path = str(PROJECT_ROOT / f"paper_engine/plans/plan_{today}.json")
+        plan_path = str(PROJECT_ROOT / f"plans/plan_{today}.json")
 
     plan_file = Path(plan_path)
     if not plan_file.exists():

@@ -42,8 +42,8 @@ def get_config(market_id: str = "asx"):
 def get_portfolio(config):
     # Load from per-market state file first, fall back to legacy
     market_id = config.get("market", "asx")
-    per_market = PROJECT_ROOT / "paper_engine" / "state" / f"{market_id}.json"
-    legacy = PROJECT_ROOT / "paper_engine" / "portfolio_state.json"
+    per_market = PROJECT_ROOT / "brokers" / "state" / f"{market_id}.json"
+    legacy = PROJECT_ROOT / "paper_engine" / "portfolio_state.json"  # legacy fallback
 
     state = None
     if per_market.exists():
@@ -65,7 +65,10 @@ def _load_plan_metadata() -> dict:
     Returns {ticker: {strategy, entry_date, stop_price, confidence, sector, ...}}
     from the most recent executed/approved plans.
     """
-    plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
+    plans_dir = PROJECT_ROOT / "plans"
+    # Fall back to legacy paper_engine/plans if new dir not yet populated
+    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
+        plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
     if not plans_dir.exists():
         return {}
 
@@ -206,7 +209,10 @@ def get_live_broker_data(config):
 
 def get_latest_plan(market_id: str = ""):
     """Get the latest plan, optionally filtered by market_id."""
-    plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
+    plans_dir = PROJECT_ROOT / "plans"
+    # Fall back to legacy paper_engine/plans if new dir is empty
+    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
+        plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
     if not plans_dir.exists():
         return None
     # Try per-market files first (plan_{market}_{date}.json)
@@ -238,10 +244,13 @@ def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
 
     Called on every dashboard refresh so fills show up within minutes.
     """
-    from paper_engine.engine import PaperPortfolio
+    from brokers.live_portfolio import LivePortfolio
 
-    portfolio = PaperPortfolio(config, market_id=market_id)
-    paper_tickers = {p.ticker for p in portfolio.positions}
+    portfolio = LivePortfolio(config, market_id=market_id)
+    portfolio.connect()
+    live_tickers = {p.ticker for p in portfolio.positions}
+    portfolio.disconnect()
+    paper_tickers = live_tickers
 
     # Load latest plan to find Atlas-managed entries
     plan = get_latest_plan(market_id)
@@ -632,7 +641,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
 
     # Realized P&L from closed trades
     # In live mode, use live state file; otherwise paper state or ledger
-    live_state_file = PROJECT_ROOT / "paper_engine" / "state" / f"live_{market_id}.json"
+    live_state_file = PROJECT_ROOT / "brokers" / "state" / f"live_{market_id}.json"
     live_closed = safe_json(live_state_file, {}).get("closed_trades", [])
     closed = live_closed or portfolio.get("closed_trades", []) or ledger or []
     realized_pnl = round(sum(t.get("pnl", 0) for t in closed), 2)

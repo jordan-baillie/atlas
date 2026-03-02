@@ -380,7 +380,7 @@ def watchdog_check(market_id: str, days: int = ROLLBACK_WATCH_DAYS) -> dict:
         exp = load_experiment(exp_id)
 
         # Check paper trading state for recent performance
-        paper_state_path = PROJECT / 'paper_engine' / 'state' / f'paper_{market_id}.json'
+        paper_state_path = PROJECT / 'brokers' / 'state' / f'live_{market_id}.json'
         if paper_state_path.exists():
             with open(paper_state_path) as f:
                 paper_state = json.load(f)

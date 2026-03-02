@@ -43,7 +43,7 @@ from strategies.opening_gap import OpeningGap
 from strategies.mtf_momentum import MTFMomentum
 from strategies.dividend_capture import DividendCapture
 from backtest.engine import BacktestEngine
-from paper_engine.engine import PaperPortfolio, TradePlanGenerator
+from brokers.plan import TradePlanGenerator
 from brokers.live_portfolio import LivePortfolio
 from journal.logger import DecisionJournal, TradeLedger, MistakeLog, WeeklySummary
 from utils.signal_enrichment import enrich_signals
@@ -112,7 +112,7 @@ def get_tickers(market_id: str = None):
 
 # ===================================================================
 # Portfolio helper — always returns a LivePortfolio connected to the
-# broker.  Falls back to PaperPortfolio only for backtesting contexts.
+# live broker.  Live broker is the sole source of truth.
 # ===================================================================
 
 def _get_portfolio(config: dict, market_id: str):
@@ -120,8 +120,8 @@ def _get_portfolio(config: dict, market_id: str):
     lp = LivePortfolio(config, market_id=market_id)
     if lp.connect():
         return lp
-    logger.warning("Broker connect failed for %s — falling back to paper state", market_id)
-    return PaperPortfolio(config, market_id=market_id)
+    logger.warning("Broker connect failed for %s — returning disconnected LivePortfolio", market_id)
+    return lp
 
 
 def _disconnect_portfolio(portfolio):
@@ -285,16 +285,12 @@ def cmd_plan(args):
         )
 
     print(plan_gen.format_plan_text(plan))
-    print("\nPlan saved to paper_engine/plans/plan_%s.json" % trade_date)
+    print("\nPlan saved to plans/plan_%s.json" % trade_date)
     _disconnect_portfolio(portfolio)
 
 
 
-def cmd_paper_run(args):
-    """DEPRECATED: Paper execution removed. Use live_run or Telegram approval."""
-    print("ERROR: Paper execution is deprecated. All trading uses the live broker.")
-    print("  Use 'live_run' command or approve via Telegram bot instead.")
-    return
+
 
 
 def cmd_approve(args):
@@ -989,8 +985,6 @@ def main():
     p.add_argument("--date", type=str, default=None)
     p = subparsers.add_parser("approve", help="Approve a pending trade plan")
     p.add_argument("--date", type=str, default=None)
-    p = subparsers.add_parser("paper-run", help="Execute approved trade plan")
-    p.add_argument("--date", type=str, default=None)
     subparsers.add_parser("status", help="Show portfolio status")
     p = subparsers.add_parser("ledger", help="Show trade ledger")
     p.add_argument("--days", type=int, default=30)
@@ -1018,7 +1012,7 @@ def main():
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     commands = {
         "ingest": cmd_ingest, "universe": cmd_universe, "backtest": cmd_backtest,
-        "plan": cmd_plan, "approve": cmd_approve, "paper-run": cmd_paper_run,
+        "plan": cmd_plan, "approve": cmd_approve,
         "status": cmd_status, "ledger": cmd_ledger, "review": cmd_review,
         "markets": cmd_markets,
         "broker": cmd_broker_status, "live-run": cmd_live_run,

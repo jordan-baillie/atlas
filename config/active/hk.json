@@ -28,7 +28,7 @@
     }
   },
   "trading": {
-    "mode": "paper",
+    "mode": "live",
     "broker": "ibkr",
     "live_enabled": false,
     "holding_period_min": 2,

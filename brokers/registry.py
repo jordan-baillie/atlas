@@ -4,20 +4,20 @@ Single source of truth for broker instantiation. All code that needs
 a broker MUST use this module — never import broker classes directly.
 
 Supported brokers:
-    paper  — simulated (always available, safe default)
     moomoo — Moomoo/Futu via OpenD gateway (ASX, SP500)
-    ibkr   — Interactive Brokers via TWS/Gateway (ASX, SP500, etc.)
+    ibkr   — Interactive Brokers via TWS/Gateway (ASX, SP500, HK, etc.)
 
 Broker selection is driven by config:
-    trading.broker   = "paper" | "moomoo" | "ibkr"
+    trading.broker      = "moomoo" | "ibkr"
     trading.live_enabled = true | false
 
 Live trading requires BOTH broker != "paper" AND live_enabled == true.
+The live broker is the sole source of truth — no paper fallback.
 
 Usage:
     from brokers.registry import get_broker, get_live_broker
 
-    broker = get_broker("asx", config)          # Read-only / paper
+    broker = get_broker("asx", config)          # Live broker (or None)
     live   = get_live_broker(config)             # Live broker (or None)
 """
 
@@ -42,8 +42,6 @@ def _register_defaults():
     if _BROKER_FACTORIES:
         return
 
-    _BROKER_FACTORIES["paper"] = _make_paper_broker
-
     try:
         from brokers.moomoo.broker import MomooBroker  # noqa: F401
         _BROKER_FACTORIES["moomoo"] = _make_moomoo_broker
@@ -67,30 +65,33 @@ def available_brokers() -> list[str]:
 # Public API
 # ═══════════════════════════════════════════════════════════════
 
-def get_broker(market_id: str, config: Dict[str, Any]) -> BrokerAdapter:
-    """Instantiate the appropriate broker for a market.
+def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter]:
+    """Instantiate the configured live broker for a market.
 
-    Returns a paper broker unless live is explicitly configured.
-    This is the standard path for signal generation, EOD settlement,
-    and dashboard data.
+    Returns the live broker if configured and available, or None
+    if live trading is not configured.
     """
     _register_defaults()
     market_id = market_id.lower().strip()
     broker_name = _resolve_broker_name(config)
     live_enabled = config.get("trading", {}).get("live_enabled", False)
 
-    if broker_name == "paper" or not live_enabled:
-        return _make_paper_broker(market_id, config)
+    if not live_enabled or broker_name == "paper":
+        logger.debug(
+            "Broker not configured for live trading (broker=%s, live_enabled=%s)",
+            broker_name, live_enabled,
+        )
+        return None
 
     factory = _BROKER_FACTORIES.get(broker_name)
-    if factory and factory != _make_paper_broker:
+    if factory:
         return factory(market_id, config, live=live_enabled)
 
     logger.warning(
-        "Broker '%s' not available (installed: %s) — falling back to paper",
+        "Broker '%s' not available (installed: %s)",
         broker_name, list(_BROKER_FACTORIES.keys()),
     )
-    return _make_paper_broker(market_id, config)
+    return None
 
 
 def get_live_broker(config: Dict[str, Any]) -> Optional[BrokerAdapter]:
@@ -114,7 +115,7 @@ def get_live_broker(config: Dict[str, Any]) -> Optional[BrokerAdapter]:
         return None
 
     factory = _BROKER_FACTORIES.get(broker_name)
-    if not factory or factory == _make_paper_broker:
+    if not factory:
         logger.warning("Broker '%s' not registered or unavailable", broker_name)
         return None
 
@@ -151,13 +152,6 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
 def _resolve_broker_name(config: Dict[str, Any]) -> str:
     """Extract and normalise broker name from config."""
     return config.get("trading", {}).get("broker", "paper").lower().strip()
-
-
-def _make_paper_broker(
-    market_id: str, config: Dict[str, Any], **kwargs,
-) -> BrokerAdapter:
-    from brokers.paper import PaperBroker
-    return PaperBroker(config)
 
 
 def _make_moomoo_broker(
