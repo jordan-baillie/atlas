@@ -50,6 +50,7 @@ logger = logging.getLogger("atlas.telegram_bot")
 # ═══════════════════════════════════════════════════════════════
 
 DEFAULT_MARKET = os.environ.get("ATLAS_MARKET", "sp500")
+ALL_MARKETS = ["asx", "sp500", "hk"]  # Scanned by /plan and /status when no market specified
 SECRETS_PATH = Path.home() / ".atlas-secrets.json"
 
 
@@ -192,16 +193,11 @@ def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
     """
     config = get_active_config(market_id)
 
-    # Approve the plan using LivePortfolio
-    from brokers.live_portfolio import LivePortfolio
-    portfolio = LivePortfolio(config, market_id=market_id)
-    portfolio.connect()
-    plan_gen = TradePlanGenerator(portfolio, config)
-    plan = plan_gen.approve_plan(trade_date)
-    if isinstance(portfolio, LivePortfolio):
-        portfolio.disconnect()
+    # Approve plan (file-based — no broker connection needed)
+    plan_gen = TradePlanGenerator(None, config)
+    plan = plan_gen.approve_plan(trade_date, market_id=market_id)
     if not plan:
-        return "❌ No plan found for %s" % trade_date
+        return "❌ No plan found for %s (%s)" % (trade_date, market_id)
 
     # Always execute live — broker is the sole source of truth
     return _execute_live(plan, trade_date, config, market_id)
@@ -341,14 +337,30 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
 # ═══════════════════════════════════════════════════════════════
 
 async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Handle /status command — show portfolio snapshot."""
+    """Handle /status command — show portfolio snapshot.
+
+    Usage: /status [market]   e.g. /status asx
+    Without argument, shows all markets with active configs.
+    """
     if not _authorized(update.effective_chat.id):
         return
 
-    snapshot = _build_portfolio_snapshot(DEFAULT_MARKET)
-    if snapshot:
+    # Parse optional market argument
+    args = (update.message.text or "").split()
+    markets = [args[1].lower()] if len(args) > 1 else ALL_MARKETS
+
+    parts = []
+    for mkt in markets:
+        config_path = PROJECT_ROOT / "config" / "active" / f"{mkt}.json"
+        if not config_path.exists():
+            continue
+        snapshot = _build_portfolio_snapshot(mkt)
+        if snapshot:
+            parts.append(f"<b>📊 {mkt.upper()}</b>\n{snapshot}")
+
+    if parts:
         await update.message.reply_text(
-            f"📊 <b>Atlas Status</b>\n\n{snapshot}",
+            "\n\n".join(parts),
             parse_mode="HTML",
         )
     else:
@@ -356,49 +368,60 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_plan(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Handle /plan command — show today's plan with approval buttons."""
+    """Handle /plan command — show today's plan with approval buttons.
+
+    Usage: /plan [market]   e.g. /plan asx
+    Without argument, shows plans for all markets.
+    """
     if not _authorized(update.effective_chat.id):
         return
 
     trade_date = datetime.now().strftime("%Y-%m-%d")
-    config = get_active_config(DEFAULT_MARKET)
-    # Use LivePortfolio for plan loading (just needs TradePlanGenerator for file access)
-    from brokers.live_portfolio import LivePortfolio
-    portfolio = LivePortfolio(config, market_id=DEFAULT_MARKET)
-    portfolio.connect()
-    plan_gen = TradePlanGenerator(portfolio, config)
-    plan = plan_gen.load_plan(trade_date)
+    args = (update.message.text or "").split()
+    markets = [args[1].lower()] if len(args) > 1 else ALL_MARKETS
 
-    if not plan:
+    found_any = False
+    for market_id in markets:
+        config_path = PROJECT_ROOT / "config" / "active" / f"{market_id}.json"
+        if not config_path.exists():
+            continue
+
+        config = get_active_config(market_id)
+        plan_gen = TradePlanGenerator(None, config)
+        plan = plan_gen.load_plan(trade_date, market_id=market_id)
+        if not plan:
+            continue
+
+        found_any = True
+        msg = format_plan_message(plan, market_id)
+
+        if plan.get("status") == "APPROVED":
+            await update.message.reply_text(
+                msg + "\n\n✅ <b>Already approved</b>", parse_mode="HTML",
+            )
+        elif plan.get("status") == "EXECUTED":
+            await update.message.reply_text(
+                msg + "\n\n✅ <b>Already executed</b>", parse_mode="HTML",
+            )
+        else:
+            entries = plan.get("proposed_entries", [])
+            exits = plan.get("proposed_exits", [])
+            if not entries and not exits:
+                await update.message.reply_text(
+                    msg + "\n\n💤 No trades today — nothing to approve.",
+                    parse_mode="HTML",
+                )
+            else:
+                await update.message.reply_text(
+                    msg, parse_mode="HTML",
+                    reply_markup=approval_keyboard(trade_date, market_id),
+                )
+
+    if not found_any:
         await update.message.reply_text(
             f"📊 No plan found for {trade_date}.\nRun pre-market first.",
             parse_mode="HTML",
         )
-        return
-
-    msg = format_plan_message(plan, DEFAULT_MARKET)
-
-    if plan.get("status") == "APPROVED":
-        await update.message.reply_text(
-            msg + "\n\n✅ <b>Already approved</b>", parse_mode="HTML",
-        )
-    elif plan.get("status") == "EXECUTED":
-        await update.message.reply_text(
-            msg + "\n\n✅ <b>Already executed</b>", parse_mode="HTML",
-        )
-    else:
-        entries = plan.get("proposed_entries", [])
-        exits = plan.get("proposed_exits", [])
-        if not entries and not exits:
-            await update.message.reply_text(
-                msg + "\n\n💤 No trades today — nothing to approve.",
-                parse_mode="HTML",
-            )
-        else:
-            await update.message.reply_text(
-                msg, parse_mode="HTML",
-                reply_markup=approval_keyboard(trade_date),
-            )
 
 
 async def cmd_halt(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
@@ -454,11 +477,9 @@ async def handle_approval_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
     if action == "reject":
         # Mark rejected — update the message
         config = get_active_config(market_id)
-        # TradePlanGenerator just needs portfolio for plan file access
-        from brokers.live_portfolio import LivePortfolio
-        portfolio = LivePortfolio(config, market_id=market_id)
-        plan_gen = TradePlanGenerator(portfolio, config)
-        plan = plan_gen.load_plan(trade_date)
+        # TradePlanGenerator for file-based plan access (no broker needed)
+        plan_gen = TradePlanGenerator(None, config)
+        plan = plan_gen.load_plan(trade_date, market_id=market_id)
         if plan:
             plan["status"] = "REJECTED"
             plan["rejected_at"] = datetime.now().isoformat()
