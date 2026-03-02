@@ -186,8 +186,6 @@ class BacktestEngine:
         self.fred_filter_enabled = _fred_cfg.get("enabled", False)
         self.fred_yield_curve_min = _fred_cfg.get("yield_curve_min", None)  # e.g. -0.5 (skip if T10Y2Y < this)
         self.fred_claims_max = _fred_cfg.get("claims_max", None)  # e.g. 300000 (skip if ICSA > this)
-        self._fred_data = {}  # populated lazily in _load_fred_data()
-
         # Benchmark — use config value, fall back to market profile
         self.benchmark_ticker = config.get("universe", {}).get("benchmark_ticker")
         if not self.benchmark_ticker:
@@ -391,15 +389,21 @@ class BacktestEngine:
         # --- Phase 9A: Max loss per trade cap ---
         if self.max_loss_per_trade is not None and open_positions:
             _maxloss_exits = []  # (pos_idx, exit_price)
+            # Audit C1: use yesterday's close for trigger decision to avoid look-ahead bias
+            _yest_date_mlc = trading_dates[day_idx - 1] if day_idx > 0 else None
             for _pi, _pos in enumerate(open_positions):
                 _ticker = _pos["ticker"]
                 _today_df = data.get(_ticker)
                 if _today_df is None or today not in _today_df.index:
                     continue
-                _today_close = _today_df.loc[today, "close"]
-                _unrealized_pnl = (_today_close - _pos["fill_price"]) * _pos["shares"]
+                _today_close = _today_df.loc[today, "close"]  # used for fill price only
+                # Audit C1: skip day 0 (no yesterday) or if yesterday not in this ticker's data
+                if _yest_date_mlc is None or _yest_date_mlc not in _today_df.index:
+                    continue
+                _yest_close = _today_df.loc[_yest_date_mlc, "close"]  # Audit C1: trigger on yesterday
+                _unrealized_pnl = (_yest_close - _pos["fill_price"]) * _pos["shares"]
                 if _unrealized_pnl <= -abs(self.max_loss_per_trade):
-                    _maxloss_exits.append((_pi, _today_close))
+                    _maxloss_exits.append((_pi, _today_close))  # fill at today's close
                     logger.debug(
                         f"MAX_LOSS_CAP {_ticker}: unrealized ${_unrealized_pnl:.2f} "
                         f"<= -${abs(self.max_loss_per_trade):.2f}"
@@ -448,6 +452,8 @@ class BacktestEngine:
         # --- Trailing stop: update state and check exits ---
         if self.trailing_stop_enabled and open_positions:
             _trail_exits = []  # (pos_idx, exit_price)
+            # Audit C1: use yesterday's close for exit trigger to avoid look-ahead bias
+            _yest_date_trail = trading_dates[day_idx - 1] if day_idx > 0 else None
             for _pi, _pos in enumerate(open_positions):
                 _ticker = _pos["ticker"]
                 _today_df = data.get(_ticker)
@@ -458,6 +464,13 @@ class BacktestEngine:
                 _today_low  = _today_df.loc[today, "low"]
                 _today_close = _today_df.loc[today, "close"]
                 _fill = _pos["fill_price"]
+
+                # Audit C1: yesterday's close for exit trigger (avoid look-ahead bias)
+                _yest_close_trail = (
+                    _today_df.loc[_yest_date_trail, "close"]
+                    if _yest_date_trail is not None and _yest_date_trail in _today_df.index
+                    else None
+                )
 
                 # Get ATR: prefer live calculation, fall back to entry feature
                 _atr = _pos.get("features", {}).get("atr", 0.0) or 0.0
@@ -501,11 +514,11 @@ class BacktestEngine:
                         _pos["trailing_stop_price"], _pos["stop_price"]
                     )
 
-                    # Check exit: today's close <= trailing stop
-                    if _today_close <= _pos["trailing_stop_price"]:
-                        _trail_exits.append((_pi, _today_close))
+                    # Audit C1: trigger on yesterday's close; fill at today's close
+                    if _yest_close_trail is not None and _yest_close_trail <= _pos["trailing_stop_price"]:
+                        _trail_exits.append((_pi, _today_close))  # fill at today's close
                         logger.debug(
-                            f"TRAIL EXIT {_ticker}: close={_today_close:.3f} "
+                            f"TRAIL EXIT {_ticker}: yest_close={_yest_close_trail:.3f} "
                             f"<= trail_stop={_pos['trailing_stop_price']:.3f}"
                         )
 
@@ -751,6 +764,23 @@ class BacktestEngine:
 
                     # Check if we already hold this ticker
                     if any(p["ticker"] == ticker for p in open_positions):
+                        continue
+
+                    # Audit H1: sector concentration check
+                    signal_sector = (
+                        signal.features.get("sector", "Unknown")
+                        if hasattr(signal, "features") and signal.features
+                        else "Unknown"
+                    )
+                    sector_count = sum(
+                        1 for p in open_positions
+                        if p.get("features", {}).get("sector", "Unknown") == signal_sector
+                    )
+                    if sector_count >= self.max_sector:
+                        logger.debug(
+                            f"SKIP {ticker}: sector '{signal_sector}' already has "
+                            f"{sector_count} positions (max={self.max_sector})"
+                        )
                         continue
 
                     # Get today's open for fill
