@@ -1,0 +1,986 @@
+{
+  "metadata": {
+    "built_at": "2026-03-02T21:16:54.805741",
+    "config_version": "v1.0",
+    "candidates_evaluated": 130,
+    "candidates_valid": 128,
+    "candidates_failed": 2,
+    "filters": {
+      "min_price": 0.5,
+      "min_median_daily_value": 10000000,
+      "min_market_cap": 1000000000,
+      "top_n": 120,
+      "exclusions": []
+    },
+    "filtered_out": {
+      "by_price": 3,
+      "by_daily_value": 2,
+      "by_market_cap": 0
+    },
+    "final_count": 120
+  },
+  "tickers": [
+    "0700.HK",
+    "9988.HK",
+    "1810.HK",
+    "3690.HK",
+    "0981.HK",
+    "2318.HK",
+    "2899.HK",
+    "1024.HK",
+    "1347.HK",
+    "0941.HK",
+    "1299.HK",
+    "2628.HK",
+    "9888.HK",
+    "0883.HK",
+    "0388.HK",
+    "0939.HK",
+    "0005.HK",
+    "0020.HK",
+    "9999.HK",
+    "2269.HK",
+    "1398.HK",
+    "9618.HK",
+    "1093.HK",
+    "9868.HK",
+    "0358.HK",
+    "3993.HK",
+    "0992.HK",
+    "9626.HK",
+    "0857.HK",
+    "0386.HK",
+    "3968.HK",
+    "0241.HK",
+    "2015.HK",
+    "2020.HK",
+    "3988.HK",
+    "0175.HK",
+    "2382.HK",
+    "6160.HK",
+    "0016.HK",
+    "1818.HK",
+    "2600.HK",
+    "2601.HK",
+    "0669.HK",
+    "1336.HK",
+    "1109.HK",
+    "0001.HK",
+    "0268.HK",
+    "1088.HK",
+    "6618.HK",
+    "2388.HK",
+    "0011.HK",
+    "1177.HK",
+    "0027.HK",
+    "0762.HK",
+    "2319.HK",
+    "2313.HK",
+    "0728.HK",
+    "1171.HK",
+    "6030.HK",
+    "0291.HK",
+    "1928.HK",
+    "0688.HK",
+    "1919.HK",
+    "0002.HK",
+    "0288.HK",
+    "2688.HK",
+    "6886.HK",
+    "0006.HK",
+    "0012.HK",
+    "0914.HK",
+    "0836.HK",
+    "9866.HK",
+    "6881.HK",
+    "1833.HK",
+    "2333.HK",
+    "1929.HK",
+    "2202.HK",
+    "0066.HK",
+    "1113.HK",
+    "0267.HK",
+    "0168.HK",
+    "1038.HK",
+    "0960.HK",
+    "0853.HK",
+    "0753.HK",
+    "0390.HK",
+    "0003.HK",
+    "0017.HK",
+    "0316.HK",
+    "0135.HK",
+    "1548.HK",
+    "0322.HK",
+    "0293.HK",
+    "0670.HK",
+    "0019.HK",
+    "0101.HK",
+    "1997.HK",
+    "0083.HK",
+    "0551.HK",
+    "6823.HK",
+    "1044.HK",
+    "2196.HK",
+    "0656.HK",
+    "0177.HK",
+    "1800.HK",
+    "0867.HK",
+    "0144.HK",
+    "6098.HK",
+    "0220.HK",
+    "0460.HK",
+    "0151.HK",
+    "6110.HK",
+    "1368.HK",
+    "0008.HK",
+    "1186.HK",
+    "0004.HK",
+    "0880.HK",
+    "1199.HK",
+    "1313.HK",
+    "0347.HK"
+  ],
+  "details": [
+    {
+      "ticker": "0700.HK",
+      "last_close": 518.0,
+      "median_daily_value": 11478055862.0,
+      "avg_daily_value": 12867784779.908333,
+      "market_cap": 4636891514024.0
+    },
+    {
+      "ticker": "9988.HK",
+      "last_close": 142.89999389648438,
+      "median_daily_value": 11487101506.925919,
+      "avg_daily_value": 12253744623.133287,
+      "market_cap": 2605053741488.381
+    },
+    {
+      "ticker": "1810.HK",
+      "last_close": 34.900001525878906,
+      "median_daily_value": 5341138386.47669,
+      "avg_daily_value": 5651957407.839497,
+      "market_cap": 859756403234.9299
+    },
+    {
+      "ticker": "3690.HK",
+      "last_close": 81.1500015258789,
+      "median_daily_value": 3877400683.52396,
+      "avg_daily_value": 4406310807.611333,
+      "market_cap": 472671589344.941
+    },
+    {
+      "ticker": "0981.HK",
+      "last_close": 68.0,
+      "median_daily_value": 4016253560.592415,
+      "avg_daily_value": 4213226983.367442,
+      "market_cap": 630838951667.3208
+    },
+    {
+      "ticker": "2318.HK",
+      "last_close": 68.0,
+      "median_daily_value": 2471959829.720852,
+      "avg_daily_value": 2794398390.0875793,
+      "market_cap": 1286065520171.5188
+    },
+    {
+      "ticker": "2899.HK",
+      "last_close": 45.0,
+      "median_daily_value": 2264911417.5954456,
+      "avg_daily_value": 2640956723.0263615,
+      "market_cap": 1296498894702.618
+    },
+    {
+      "ticker": "1024.HK",
+      "last_close": 62.849998474121094,
+      "median_daily_value": 2066737817.6678925,
+      "avg_daily_value": 2453031899.3435054,
+      "market_cap": 264406285165.5
+    },
+    {
+      "ticker": "1347.HK",
+      "last_close": 96.75,
+      "median_daily_value": 2086080604.9743614,
+      "avg_daily_value": 2201401944.671883,
+      "market_cap": 187463677194.94513
+    },
+    {
+      "ticker": "0941.HK",
+      "last_close": 79.30000305175781,
+      "median_daily_value": 1956854451.1231842,
+      "avg_daily_value": 1992743812.044484,
+      "market_cap": 1721739258537.7495
+    },
+    {
+      "ticker": "1299.HK",
+      "last_close": 86.80000305175781,
+      "median_daily_value": 1869459313.3842392,
+      "avg_daily_value": 1955008792.4868867,
+      "market_cap": 889234213810.0
+    },
+    {
+      "ticker": "2628.HK",
+      "last_close": 31.579999923706055,
+      "median_daily_value": 1936489200.908039,
+      "avg_daily_value": 1950873540.4464643,
+      "market_cap": 1746515778657.5
+    },
+    {
+      "ticker": "9888.HK",
+      "last_close": 123.69999694824219,
+      "median_daily_value": 1888182377.2919617,
+      "avg_daily_value": 1871079235.4423993,
+      "market_cap": 332418540612.0
+    },
+    {
+      "ticker": "0883.HK",
+      "last_close": 25.31999969482422,
+      "median_daily_value": 1618024710.362299,
+      "avg_daily_value": 1816993232.2775815,
+      "market_cap": 1319920792145.438
+    },
+    {
+      "ticker": "0388.HK",
+      "last_close": 419.0,
+      "median_daily_value": 1601817054.5415344,
+      "avg_daily_value": 1815141412.2259467,
+      "market_cap": 519465901533.0
+    },
+    {
+      "ticker": "0939.HK",
+      "last_close": 7.989999771118164,
+      "median_daily_value": 1735288656.813661,
+      "avg_daily_value": 1788190126.1869311,
+      "market_cap": 2085411871082.2446
+    },
+    {
+      "ticker": "0005.HK",
+      "last_close": 147.3000030517578,
+      "median_daily_value": 1485338948.0,
+      "avg_daily_value": 1721206121.716709,
+      "market_cap": 2398080918612.627
+    },
+    {
+      "ticker": "0020.HK",
+      "last_close": 2.559999942779541,
+      "median_daily_value": 1135426913.250334,
+      "avg_daily_value": 1395450990.2860575,
+      "market_cap": 93783765461.40433
+    },
+    {
+      "ticker": "9999.HK",
+      "last_close": 179.1999969482422,
+      "median_daily_value": 1222184187.303688,
+      "avg_daily_value": 1304691882.3229616,
+      "market_cap": 571343687649.7937
+    },
+    {
+      "ticker": "2269.HK",
+      "last_close": 40.220001220703125,
+      "median_daily_value": 1052417694.7792759,
+      "avg_daily_value": 1236949958.2507918,
+      "market_cap": 159923142591.58224
+    },
+    {
+      "ticker": "1398.HK",
+      "last_close": 6.449999809265137,
+      "median_daily_value": 1093462939.2739193,
+      "avg_daily_value": 1126979289.769319,
+      "market_cap": 2837359021653.0923
+    },
+    {
+      "ticker": "9618.HK",
+      "last_close": 104.4000015258789,
+      "median_daily_value": 1153178981.268219,
+      "avg_daily_value": 1123445737.1264164,
+      "market_cap": 312643595940.4822
+    },
+    {
+      "ticker": "1093.HK",
+      "last_close": 9.899999618530273,
+      "median_daily_value": 839254497.9116406,
+      "avg_daily_value": 1061894522.0111736,
+      "market_cap": 109427086721.0961
+    },
+    {
+      "ticker": "9868.HK",
+      "last_close": 68.3499984741211,
+      "median_daily_value": 899305861.603241,
+      "avg_daily_value": 1048329840.3859286,
+      "market_cap": 128308301175.25
+    },
+    {
+      "ticker": "0358.HK",
+      "last_close": 45.599998474121094,
+      "median_daily_value": 816920592.4708633,
+      "avg_daily_value": 988710247.6496173,
+      "market_cap": 223456600514.04498
+    },
+    {
+      "ticker": "3993.HK",
+      "last_close": 24.15999984741211,
+      "median_daily_value": 924919130.59443,
+      "avg_daily_value": 965403638.634919,
+      "market_cap": 602941939032.439
+    },
+    {
+      "ticker": "0992.HK",
+      "last_close": 9.729999542236328,
+      "median_daily_value": 841063632.4741235,
+      "avg_daily_value": 908497211.6027713,
+      "market_cap": 117472126911.8114
+    },
+    {
+      "ticker": "9626.HK",
+      "last_close": 221.1999969482422,
+      "median_daily_value": 854416022.4391937,
+      "avg_daily_value": 900870677.2166667,
+      "market_cap": 87054181318.73062
+    },
+    {
+      "ticker": "0857.HK",
+      "last_close": 9.539999961853027,
+      "median_daily_value": 802129107.4024696,
+      "avg_daily_value": 900599088.2323129,
+      "market_cap": 2438308609877.542
+    },
+    {
+      "ticker": "0386.HK",
+      "last_close": 5.449999809265137,
+      "median_daily_value": 743274673.4890709,
+      "avg_daily_value": 877332705.9670194,
+      "market_cap": 926089046065.6045
+    },
+    {
+      "ticker": "3968.HK",
+      "last_close": 48.84000015258789,
+      "median_daily_value": 803584900.8822899,
+      "avg_daily_value": 836869860.1978899,
+      "market_cap": 1212065814218.2473
+    },
+    {
+      "ticker": "0241.HK",
+      "last_close": 5.579999923706055,
+      "median_daily_value": 514284183.8373742,
+      "avg_daily_value": 788493256.2744972,
+      "market_cap": 86589486740.97774
+    },
+    {
+      "ticker": "2015.HK",
+      "last_close": 68.75,
+      "median_daily_value": 759022781.4979324,
+      "avg_daily_value": 784621469.855266,
+      "market_cap": 137806659496.0
+    },
+    {
+      "ticker": "2020.HK",
+      "last_close": 85.05000305175781,
+      "median_daily_value": 688391768.8610458,
+      "avg_daily_value": 760857012.2990949,
+      "market_cap": 229812932286.75623
+    },
+    {
+      "ticker": "3988.HK",
+      "last_close": 4.639999866485596,
+      "median_daily_value": 749925853.0790386,
+      "avg_daily_value": 760360855.271767,
+      "market_cap": 1836531670806.2878
+    },
+    {
+      "ticker": "0175.HK",
+      "last_close": 16.149999618530273,
+      "median_daily_value": 685893230.4633493,
+      "avg_daily_value": 722209748.6076405,
+      "market_cap": 170736611309.7468
+    },
+    {
+      "ticker": "2382.HK",
+      "last_close": 58.25,
+      "median_daily_value": 613003879.4833488,
+      "avg_daily_value": 673904666.5217855,
+      "market_cap": 59346289121.23642
+    },
+    {
+      "ticker": "6160.HK",
+      "last_close": 192.3000030517578,
+      "median_daily_value": 665167287.6217499,
+      "avg_daily_value": 664240946.6985898,
+      "market_cap": 266132353655.0
+    },
+    {
+      "ticker": "0016.HK",
+      "last_close": 146.0,
+      "median_daily_value": 577868824.1133232,
+      "avg_daily_value": 660105556.1810571,
+      "market_cap": 420178139875.0
+    },
+    {
+      "ticker": "1818.HK",
+      "last_close": 34.5,
+      "median_daily_value": 535511907.4303875,
+      "avg_daily_value": 632137337.733824,
+      "market_cap": 129509900402.97676
+    },
+    {
+      "ticker": "2600.HK",
+      "last_close": 14.140000343322754,
+      "median_daily_value": 534837232.13391685,
+      "avg_daily_value": 627301604.9953226,
+      "market_cap": 274461679572.152
+    },
+    {
+      "ticker": "2601.HK",
+      "last_close": 35.939998626708984,
+      "median_daily_value": 569681883.1037521,
+      "avg_daily_value": 584318419.7018392,
+      "market_cap": 458372810502.27014
+    },
+    {
+      "ticker": "0669.HK",
+      "last_close": 127.5999984741211,
+      "median_daily_value": 412645292.64014435,
+      "avg_daily_value": 557885419.9963244,
+      "market_cap": 229565847721.0
+    },
+    {
+      "ticker": "1336.HK",
+      "last_close": 55.25,
+      "median_daily_value": 539666273.4022408,
+      "avg_daily_value": 537730305.3395141,
+      "market_cap": 226769442780.28943
+    },
+    {
+      "ticker": "1109.HK",
+      "last_close": 31.780000686645508,
+      "median_daily_value": 457214243.4968662,
+      "avg_daily_value": 529062857.0688554,
+      "market_cap": 222913172871.68256
+    },
+    {
+      "ticker": "0001.HK",
+      "last_close": 64.4000015258789,
+      "median_daily_value": 499568103.5211487,
+      "avg_daily_value": 522390872.69257736,
+      "market_cap": 239952293769.1841
+    },
+    {
+      "ticker": "0268.HK",
+      "last_close": 10.069999694824219,
+      "median_daily_value": 392319064.43035746,
+      "avg_daily_value": 471790166.2364072,
+      "market_cap": 33797957801.017204
+    },
+    {
+      "ticker": "1088.HK",
+      "last_close": 44.959999084472656,
+      "median_daily_value": 431848809.4060707,
+      "avg_daily_value": 462159072.26019067,
+      "market_cap": 1236484308965.1548
+    },
+    {
+      "ticker": "6618.HK",
+      "last_close": 56.75,
+      "median_daily_value": 399420586.12945175,
+      "avg_daily_value": 437728613.94032574,
+      "market_cap": 172239358583.06833
+    },
+    {
+      "ticker": "2388.HK",
+      "last_close": 44.900001525878906,
+      "median_daily_value": 405607317.2207451,
+      "avg_daily_value": 426043546.34671086,
+      "market_cap": 452303526916.03406
+    },
+    {
+      "ticker": "0011.HK",
+      "last_close": 154.3000030517578,
+      "median_daily_value": 163755142.6461029,
+      "avg_daily_value": 406201623.94949305,
+      "market_cap": 288994261959.10004
+    },
+    {
+      "ticker": "1177.HK",
+      "last_close": 6.050000190734863,
+      "median_daily_value": 362111259.17862844,
+      "avg_daily_value": 404753770.4971677,
+      "market_cap": 105214727481.20697
+    },
+    {
+      "ticker": "0027.HK",
+      "last_close": 41.7599983215332,
+      "median_daily_value": 382239516.4375534,
+      "avg_daily_value": 396269904.2411006,
+      "market_cap": 175695132728.02628
+    },
+    {
+      "ticker": "0762.HK",
+      "last_close": 7.550000190734863,
+      "median_daily_value": 349111217.74183106,
+      "avg_daily_value": 373042608.82773554,
+      "market_cap": 229790987003.32642
+    },
+    {
+      "ticker": "2319.HK",
+      "last_close": 16.18000030517578,
+      "median_daily_value": 328036880.9775281,
+      "avg_daily_value": 366909140.8781119,
+      "market_cap": 60190439257.70691
+    },
+    {
+      "ticker": "2313.HK",
+      "last_close": 63.349998474121094,
+      "median_daily_value": 330017430.2722435,
+      "avg_daily_value": 360957315.68318075,
+      "market_cap": 92974302960.71466
+    },
+    {
+      "ticker": "0728.HK",
+      "last_close": 4.980000019073486,
+      "median_daily_value": 325713222.40669584,
+      "avg_daily_value": 346663979.9928643,
+      "market_cap": 597984843643.0929
+    },
+    {
+      "ticker": "1171.HK",
+      "last_close": 14.0,
+      "median_daily_value": 289166589.31991816,
+      "avg_daily_value": 333752756.85884935,
+      "market_cap": 205658322254.82715
+    },
+    {
+      "ticker": "6030.HK",
+      "last_close": 28.059999465942383,
+      "median_daily_value": 272479619.2540283,
+      "avg_daily_value": 298234665.13260925,
+      "market_cap": 490130070559.72504
+    },
+    {
+      "ticker": "0291.HK",
+      "last_close": 27.600000381469727,
+      "median_daily_value": 268221472.65303326,
+      "avg_daily_value": 290230501.4082597,
+      "market_cap": 88171920989.99023
+    },
+    {
+      "ticker": "1928.HK",
+      "last_close": 17.709999084472656,
+      "median_daily_value": 269573487.23291874,
+      "avg_daily_value": 289048725.73484254,
+      "market_cap": 141634142405.0
+    },
+    {
+      "ticker": "0688.HK",
+      "last_close": 14.350000381469727,
+      "median_daily_value": 263592238.3410654,
+      "avg_daily_value": 283367158.13273364,
+      "market_cap": 153775615768.37085
+    },
+    {
+      "ticker": "1919.HK",
+      "last_close": 15.180000305175781,
+      "median_daily_value": 236398780.6365738,
+      "avg_daily_value": 270381057.47850716,
+      "market_cap": 278418001574.6669
+    },
+    {
+      "ticker": "0002.HK",
+      "last_close": 74.19999694824219,
+      "median_daily_value": 245124332.032135,
+      "avg_daily_value": 262763971.65243542,
+      "market_cap": 187336313620.55762
+    },
+    {
+      "ticker": "0288.HK",
+      "last_close": 9.84000015258789,
+      "median_daily_value": 242486985.0656147,
+      "avg_daily_value": 255481562.96535042,
+      "market_cap": 127019168650.65965
+    },
+    {
+      "ticker": "2688.HK",
+      "last_close": 68.80000305175781,
+      "median_daily_value": 239597365.33226013,
+      "avg_daily_value": 248282040.5548893,
+      "market_cap": 75955143890.59009
+    },
+    {
+      "ticker": "6886.HK",
+      "last_close": 16.780000686645508,
+      "median_daily_value": 196968357.6027298,
+      "avg_daily_value": 232023279.63570735,
+      "market_cap": 171226735860.8526
+    },
+    {
+      "ticker": "0006.HK",
+      "last_close": 63.45000076293945,
+      "median_daily_value": 206466020.400774,
+      "avg_daily_value": 230414658.16315702,
+      "market_cap": 133833402045.2958
+    },
+    {
+      "ticker": "0012.HK",
+      "last_close": 35.439998626708984,
+      "median_daily_value": 190952025.21401787,
+      "avg_daily_value": 228529194.27881294,
+      "market_cap": 168673923958.09705
+    },
+    {
+      "ticker": "0914.HK",
+      "last_close": 24.5,
+      "median_daily_value": 161348177.04271412,
+      "avg_daily_value": 227670045.23272222,
+      "market_cap": 147550780124.0657
+    },
+    {
+      "ticker": "0836.HK",
+      "last_close": 18.68000030517578,
+      "median_daily_value": 207361032.78064156,
+      "avg_daily_value": 226224797.31439584,
+      "market_cap": 97898161092.35368
+    },
+    {
+      "ticker": "9866.HK",
+      "last_close": 39.599998474121094,
+      "median_daily_value": 190245571.20649338,
+      "avg_daily_value": 225721844.72998446,
+      "market_cap": 97290543069.7906
+    },
+    {
+      "ticker": "6881.HK",
+      "last_close": 9.90999984741211,
+      "median_daily_value": 209403418.3933072,
+      "avg_daily_value": 225529913.0269281,
+      "market_cap": 181132719157.5725
+    },
+    {
+      "ticker": "1833.HK",
+      "last_close": 13.170000076293945,
+      "median_daily_value": 169870971.29252005,
+      "avg_daily_value": 211246097.07545394,
+      "market_cap": 25774329290.150536
+    },
+    {
+      "ticker": "2333.HK",
+      "last_close": 12.859999656677246,
+      "median_daily_value": 176003940.3805256,
+      "avg_daily_value": 205659856.6117201,
+      "market_cap": 157286337099.3027
+    },
+    {
+      "ticker": "1929.HK",
+      "last_close": 13.119999885559082,
+      "median_daily_value": 194928604.34226894,
+      "avg_daily_value": 205641560.25791544,
+      "market_cap": 128737528911.58887
+    },
+    {
+      "ticker": "2202.HK",
+      "last_close": 3.759999990463257,
+      "median_daily_value": 152016121.01880515,
+      "avg_daily_value": 205475079.3126158,
+      "market_cap": 57107205524.6529
+    },
+    {
+      "ticker": "0066.HK",
+      "last_close": 37.34000015258789,
+      "median_daily_value": 170268486.70604897,
+      "avg_daily_value": 193489325.72262913,
+      "market_cap": 225112541630.38632
+    },
+    {
+      "ticker": "1113.HK",
+      "last_close": 49.779998779296875,
+      "median_daily_value": 162509027.05044365,
+      "avg_daily_value": 191499726.58577022,
+      "market_cap": 170509204704.67035
+    },
+    {
+      "ticker": "0267.HK",
+      "last_close": 12.520000457763672,
+      "median_daily_value": 182689056.29899406,
+      "avg_daily_value": 188610483.21356338,
+      "market_cap": 356355717217.5
+    },
+    {
+      "ticker": "0168.HK",
+      "last_close": 53.0,
+      "median_daily_value": 161585135.97229004,
+      "avg_daily_value": 182538697.83975372,
+      "market_cap": 80183578848.31174
+    },
+    {
+      "ticker": "1038.HK",
+      "last_close": 66.44999694824219,
+      "median_daily_value": 173831354.07590866,
+      "avg_daily_value": 181321437.22144648,
+      "market_cap": 165664419699.5
+    },
+    {
+      "ticker": "0960.HK",
+      "last_close": 9.949999809265137,
+      "median_daily_value": 152507892.40617514,
+      "avg_daily_value": 171838701.65447947,
+      "market_cap": 66758573904.109566
+    },
+    {
+      "ticker": "0853.HK",
+      "last_close": 10.9399995803833,
+      "median_daily_value": 143781632.96014786,
+      "avg_daily_value": 170437099.79795706,
+      "market_cap": 19721194677.603485
+    },
+    {
+      "ticker": "0753.HK",
+      "last_close": 6.789999961853027,
+      "median_daily_value": 146407354.0354483,
+      "avg_daily_value": 157936680.93780243,
+      "market_cap": 148238211181.44205
+    },
+    {
+      "ticker": "0390.HK",
+      "last_close": 5.170000076293945,
+      "median_daily_value": 84420099.75468493,
+      "avg_daily_value": 149144465.5360566,
+      "market_cap": 178358052915.75497
+    },
+    {
+      "ticker": "0003.HK",
+      "last_close": 7.610000133514404,
+      "median_daily_value": 131215729.96852398,
+      "avg_daily_value": 139125967.54987323,
+      "market_cap": 141068616880.71365
+    },
+    {
+      "ticker": "0017.HK",
+      "last_close": 10.859999656677246,
+      "median_daily_value": 72223752.26589227,
+      "avg_daily_value": 131554961.21722907,
+      "market_cap": 25442825135.993958
+    },
+    {
+      "ticker": "0316.HK",
+      "last_close": 149.5,
+      "median_daily_value": 103108392.76850891,
+      "avg_daily_value": 123897800.84330317,
+      "market_cap": 101235228598.69937
+    },
+    {
+      "ticker": "0135.HK",
+      "last_close": 8.390000343322754,
+      "median_daily_value": 103541461.45630646,
+      "avg_daily_value": 112901954.18403345,
+      "market_cap": 72389237027.16827
+    },
+    {
+      "ticker": "1548.HK",
+      "last_close": 11.9399995803833,
+      "median_daily_value": 110231970.79975367,
+      "avg_daily_value": 112814301.55281594,
+      "market_cap": 24682407018.692383
+    },
+    {
+      "ticker": "0322.HK",
+      "last_close": 13.09000015258789,
+      "median_daily_value": 95934227.36901474,
+      "avg_daily_value": 111765714.27769391,
+      "market_cap": 73669267105.07172
+    },
+    {
+      "ticker": "0293.HK",
+      "last_close": 14.0600004196167,
+      "median_daily_value": 62099337.92825651,
+      "avg_daily_value": 107761733.93250634,
+      "market_cap": 81973603182.0005
+    },
+    {
+      "ticker": "0670.HK",
+      "last_close": 5.550000190734863,
+      "median_daily_value": 87598435.56998062,
+      "avg_daily_value": 102539449.38796018,
+      "market_cap": 135591070876.90201
+    },
+    {
+      "ticker": "0019.HK",
+      "last_close": 84.1500015258789,
+      "median_daily_value": 98252625.96794128,
+      "avg_daily_value": 99983193.3629551,
+      "market_cap": 298215054028.4653
+    },
+    {
+      "ticker": "0101.HK",
+      "last_close": 10.270000457763672,
+      "median_daily_value": 71171213.81036901,
+      "avg_daily_value": 95381468.59488311,
+      "market_cap": 49757401760.863014
+    },
+    {
+      "ticker": "1997.HK",
+      "last_close": 28.899999618530273,
+      "median_daily_value": 91987685.4832201,
+      "avg_daily_value": 93909264.16687158,
+      "market_cap": 86289580864.98576
+    },
+    {
+      "ticker": "0083.HK",
+      "last_close": 12.779999732971191,
+      "median_daily_value": 78431629.97703362,
+      "avg_daily_value": 88765023.02017812,
+      "market_cap": 118935559828.01524
+    },
+    {
+      "ticker": "0551.HK",
+      "last_close": 18.59000015258789,
+      "median_daily_value": 64220758.42326927,
+      "avg_daily_value": 82413417.01580383,
+      "market_cap": 29539737400.83533
+    },
+    {
+      "ticker": "6823.HK",
+      "last_close": 12.34000015258789,
+      "median_daily_value": 76726876.78803205,
+      "avg_daily_value": 82301272.86766917,
+      "market_cap": 93767828024.12798
+    },
+    {
+      "ticker": "1044.HK",
+      "last_close": 29.18000030517578,
+      "median_daily_value": 71061563.31206226,
+      "avg_daily_value": 73710901.57994512,
+      "market_cap": 32922749945.53512
+    },
+    {
+      "ticker": "2196.HK",
+      "last_close": 20.020000457763672,
+      "median_daily_value": 59107580.94097233,
+      "avg_daily_value": 72217011.7156916,
+      "market_cap": 77318922856.16747
+    },
+    {
+      "ticker": "0656.HK",
+      "last_close": 3.869999885559082,
+      "median_daily_value": 40285697.67907047,
+      "avg_daily_value": 60598276.48204846,
+      "market_cap": 31685761455.694103
+    },
+    {
+      "ticker": "0177.HK",
+      "last_close": 10.180000305175781,
+      "median_daily_value": 59298094.87447786,
+      "avg_daily_value": 59955269.58736321,
+      "market_cap": 71152508757.15652
+    },
+    {
+      "ticker": "1800.HK",
+      "last_close": 5.190000057220459,
+      "median_daily_value": 50016249.28127074,
+      "avg_daily_value": 56137555.96403755,
+      "market_cap": 136195597744.2623
+    },
+    {
+      "ticker": "0867.HK",
+      "last_close": 14.600000381469727,
+      "median_daily_value": 47721612.40924072,
+      "avg_daily_value": 54323759.56429459,
+      "market_cap": 34543730267.757416
+    },
+    {
+      "ticker": "0144.HK",
+      "last_close": 17.479999542236328,
+      "median_daily_value": 47739410.435567856,
+      "avg_daily_value": 50498128.77061437,
+      "market_cap": 72331696370.3139
+    },
+    {
+      "ticker": "6098.HK",
+      "last_close": 6.320000171661377,
+      "median_daily_value": 42284902.45669246,
+      "avg_daily_value": 47741677.069156885,
+      "market_cap": 21100257172.267326
+    },
+    {
+      "ticker": "0220.HK",
+      "last_close": 7.71999979019165,
+      "median_daily_value": 42739910.49872208,
+      "avg_daily_value": 45107467.53717344,
+      "market_cap": 34295512207.154274
+    },
+    {
+      "ticker": "0460.HK",
+      "last_close": 1.5499999523162842,
+      "median_daily_value": 27463306.77627802,
+      "avg_daily_value": 43515839.52993106,
+      "market_cap": 13444602924.488821
+    },
+    {
+      "ticker": "0151.HK",
+      "last_close": 4.900000095367432,
+      "median_daily_value": 31776824.343122005,
+      "avg_daily_value": 43506660.4735133,
+      "market_cap": 56890804896.83144
+    },
+    {
+      "ticker": "6110.HK",
+      "last_close": 3.1500000953674316,
+      "median_daily_value": 33804339.00611484,
+      "avg_daily_value": 42295252.63786306,
+      "market_cap": 19409825644.79354
+    },
+    {
+      "ticker": "1368.HK",
+      "last_close": 5.329999923706055,
+      "median_daily_value": 38554235.19090271,
+      "avg_daily_value": 42130290.589050055,
+      "market_cap": 14146524306.363474
+    },
+    {
+      "ticker": "0008.HK",
+      "last_close": 5.940000057220459,
+      "median_daily_value": 36373087.715019464,
+      "avg_daily_value": 39575461.5650321,
+      "market_cap": 45479365093.99895
+    },
+    {
+      "ticker": "1186.HK",
+      "last_close": 5.599999904632568,
+      "median_daily_value": 29969855.83963394,
+      "avg_daily_value": 36812865.77563576,
+      "market_cap": 113553198533.5
+    },
+    {
+      "ticker": "0004.HK",
+      "last_close": 25.899999618530273,
+      "median_daily_value": 34975199.60058975,
+      "avg_daily_value": 35634048.782950245,
+      "market_cap": 77439732932.49277
+    },
+    {
+      "ticker": "0880.HK",
+      "last_close": 2.4100000858306885,
+      "median_daily_value": 28970950.123341084,
+      "avg_daily_value": 28907230.325062986,
+      "market_cap": 17115351544.022844
+    },
+    {
+      "ticker": "1199.HK",
+      "last_close": 6.489999771118164,
+      "median_daily_value": 19517716.322044134,
+      "avg_daily_value": 22109847.859913327,
+      "market_cap": 25502110046.63044
+    },
+    {
+      "ticker": "1313.HK",
+      "last_close": 1.8799999952316284,
+      "median_daily_value": 14841159.8254174,
+      "avg_daily_value": 21282067.51786733,
+      "market_cap": 13197752376.128273
+    },
+    {
+      "ticker": "0347.HK",
+      "last_close": 2.1500000953674316,
+      "median_daily_value": 15025288.628268242,
+      "avg_daily_value": 21219402.554414034,
+      "market_cap": 28814378313.367664
+    }
+  ]
+}

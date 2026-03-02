@@ -1,0 +1,84 @@
+{
+  "timestamp": "20260302_212141",
+  "config_version": "v1.0",
+  "tickers_count": 120,
+  "metrics": {
+    "total_return": 0.1356,
+    "cagr": 0.067019,
+    "max_drawdown": 0.027184,
+    "sharpe": 0.8175,
+    "sortino": 1.291,
+    "win_rate": 0.569,
+    "profit_factor": 2.3578,
+    "avg_trade": 72.12,
+    "total_trades": 58,
+    "total_pnl": 4182.7,
+    "exposure": 0.6653,
+    "turnover": 8.6296,
+    "avg_equity": 31748.73,
+    "final_equity": 34068.05,
+    "avg_winner": 220.1,
+    "avg_loser": -123.22,
+    "largest_winner": 1660.91,
+    "largest_loser": -281.34,
+    "avg_hold_days": 13.0,
+    "calmar": 2.4654,
+    "var_95": 0.002672,
+    "var_99": 0.004863,
+    "cvar_95": 0.004306,
+    "var_95_parametric": 0.003299,
+    "expectancy_r": 0.4656,
+    "avg_r": 0.4656,
+    "avg_winner_r": 1.4114,
+    "avg_loser_r": -0.7829,
+    "win_rate_r": 0.569,
+    "total_r": 27.004,
+    "r_count": 58,
+    "largest_winner_r": 11.3525,
+    "largest_loser_r": -1.7619,
+    "edge_t_statistic": 1.8592,
+    "edge_p_value": 0.068157,
+    "edge_significant": false,
+    "strategy_correlation": {
+      "strategies": [
+        "mean_reversion",
+        "trend_following"
+      ],
+      "matrix": [
+        [
+          1.0,
+          -0.0594
+        ],
+        [
+          -0.0594,
+          1.0
+        ]
+      ],
+      "concentrated_pairs": [],
+      "n_active_days": 320
+    },
+    "mc_p95_drawdown": 0.036495,
+    "mc_p99_drawdown": 0.043942,
+    "mc_fragile": false,
+    "monte_carlo": {
+      "p50_drawdown": 0.022786,
+      "p75_drawdown": 0.02769,
+      "p95_drawdown": 0.036495,
+      "p99_drawdown": 0.043942,
+      "worst_drawdown": 0.05181,
+      "actual_drawdown": 0.026568,
+      "n_simulations": 1000,
+      "n_trades": 58,
+      "fragile": false
+    }
+  },
+  "benchmark_metrics": {
+    "cagr": 0.268899,
+    "max_drawdown": 0.200957,
+    "sharpe": 0.9702,
+    "sortino": 1.2186,
+    "total_return": 0.6012,
+    "final_equity": 48036.14
+  },
+  "total_trades": 58
+}
