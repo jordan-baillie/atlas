@@ -530,14 +530,14 @@
     },
     "estimated_runtime_min": 5,
     "priority": "P3",
-    "status": "queued",
+    "status": "failed",
     "strategy_name": "mtf_momentum",
     "params_override": null,
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-03-02T23:00:55.127874+00:00",
     "created_at": "2026-02-27T05:29:01.019261+00:00",
-    "updated_at": "2026-03-01T01:05:53.348435+00:00",
+    "updated_at": "2026-03-02T23:12:01.588920+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -546,7 +546,7 @@
       "solo"
     ],
     "depends_on": [],
-    "notes": "Re-queued: code bugs fixed (signature mismatch, _risk_per_trade AttributeError, calc_atr signature). Default params produce 0 trades \u2014 optimization step should explore daily_rsi_max=45-55, pullback_sma_pct=0.04-0.06.",
+    "notes": "Re-queued: code bugs fixed (signature mismatch, _risk_per_trade AttributeError, calc_atr signature). Default params produce 0 trades \u2014 optimization step should explore daily_rsi_max=45-55, pullback_sma_pct=0.04-0.06.\n[3rd failure] Root cause: confidence=0.50 hardcoded, min_confidence=0.75 in config. All signals filtered. Fix strategy confidence scoring before retesting.",
     "result": {}
   },
   {
@@ -564,7 +564,7 @@
     },
     "estimated_runtime_min": 60,
     "priority": "P3",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "mtf_momentum",
     "params_override": {
       "param_grid": {
@@ -605,7 +605,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-02-27T05:29:01.019264+00:00",
-    "updated_at": "2026-03-01T00:31:36.771292+00:00",
+    "updated_at": "2026-03-02T23:12:01.597534+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -616,7 +616,7 @@
     "depends_on": [
       "wave1_mtf_mo_solo"
     ],
-    "notes": "Unblocked: upstream code bugs fixed."
+    "notes": "Unblocked: upstream code bugs fixed.\n[auto-deferred] Dependency failed: ['wave1_mtf_mo_solo']\n[auto-deferred] Dependency failed: wave1_mtf_mo_solo \u2014 confidence bug prevents any trades."
   },
   {
     "id": "wave1_mtf_mo_comb",
@@ -635,7 +635,7 @@
     },
     "estimated_runtime_min": 5,
     "priority": "P3",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "mtf_momentum",
     "params_override": null,
     "config_snapshot": null,
@@ -653,7 +653,7 @@
     "depends_on": [
       "wave1_mtf_mo_opt"
     ],
-    "notes": "Unblocked: upstream code bugs fixed."
+    "notes": "Unblocked: upstream code bugs fixed.\n[auto-deferred] Dependency chain failed: mtf_momentum confidence bug."
   },
   {
     "id": "wave1_mtf_mo_oos",
@@ -671,7 +671,7 @@
     },
     "estimated_runtime_min": 90,
     "priority": "P3",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "mtf_momentum",
     "params_override": null,
     "config_snapshot": null,
@@ -690,7 +690,7 @@
     "depends_on": [
       "wave1_mtf_mo_comb"
     ],
-    "notes": "Unblocked: upstream code bugs fixed."
+    "notes": "Unblocked: upstream code bugs fixed.\n[auto-deferred] Dependency chain failed: mtf_momentum confidence bug."
   },
   {
     "id": "wave1_bb_squ_solo",

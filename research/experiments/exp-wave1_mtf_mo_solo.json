@@ -20,9 +20,9 @@
     "params_override": null,
     "config_snapshot": null,
     "claimed_by": "atlas-research",
-    "claimed_at": "2026-03-01T00:18:39.323929+00:00",
+    "claimed_at": "2026-03-02T23:00:55.127874+00:00",
     "created_at": "2026-02-27T05:29:01.019261+00:00",
-    "updated_at": "2026-03-01T00:18:39.323941+00:00",
+    "updated_at": "2026-03-02T23:00:55.127883+00:00",
     "tags": [
       "wave1",
       "dormant",
@@ -31,13 +31,14 @@
       "solo"
     ],
     "depends_on": [],
-    "notes": "Requires weekly data aggregation from daily bars. Uses weekly SMA + RSI for trend, daily RSI + SMA proximity for entry. [Reset: generate_signals() signature mismatch fixed 2026-02-28]"
+    "notes": "Re-queued: code bugs fixed (signature mismatch, _risk_per_trade AttributeError, calc_atr signature). Default params produce 0 trades \u2014 optimization step should explore daily_rsi_max=45-55, pullback_sma_pct=0.04-0.06.",
+    "result": {}
   },
   "config_snapshot": {
-    "version": "v2.0",
+    "version": "v2.2",
     "project": "Atlas",
     "market": "sp500",
-    "description": "SP500 v2.0 \u2014 optimized via parallel coordinate descent. CAGR 15.69%, Sharpe 1.04, DD 5.39%. OOS validated (all 3 tests pass).",
+    "description": "SP500 v2.2 \u2014 max_open_positions 10\u219215 (Task #26 research: Sharpe 0.868\u21920.983, CAGR 11.7%\u219213.3%, PnL +15%). Base: v2.1 parallel coordinate descent optimized.",
     "universe": {
       "method": "top_liquid",
       "top_n": 200,
@@ -50,7 +51,7 @@
     "risk": {
       "starting_equity": 4000,
       "max_risk_per_trade_pct": 0.005,
-      "max_open_positions": 10,
+      "max_open_positions": 15,
       "max_sector_concentration": 2,
       "max_daily_drawdown_pct": 0.02,
       "require_stop_loss": true,
@@ -102,7 +103,7 @@
         "atr_stop_mult": 2.5,
         "profit_target_atr_mult": 1.5,
         "max_hold_days": 10,
-        "sma200_filter": false,
+        "sma200_filter": true,
         "ibs_max": 1.0,
         "volume": {
           "lookback": 20,
@@ -162,7 +163,8 @@
           "high_threshold": 60.0,
           "low_penalty": 0.05,
           "high_boost": 0.0
-        }
+        },
+        "sma200_filter": true
       },
       "opening_gap": {
         "enabled": true,
@@ -175,7 +177,7 @@
         "sma_exit_period": 5,
         "ibs_exit_threshold": 0.8,
         "max_hold_days": 7,
-        "sma200_filter": false,
+        "sma200_filter": true,
         "earnings_blackout": {
           "enabled": false,
           "days_before": 5,
@@ -228,6 +230,29 @@
       "max_drawdown_increase_pct": 0.01,
       "changelog_file": "journal/changelog.json"
     },
+    "allocation": {
+      "_note": "Per-strategy position slot pools. Set enabled=true to activate. mode=hard_pool (strict cap) or soft_pool (overflow allowed). Sum of pool max_positions should be <= risk.max_open_positions.",
+      "enabled": false,
+      "mode": "hard_pool",
+      "overflow_enabled": true,
+      "pools": {
+        "trend_following": {
+          "max_positions": 5
+        },
+        "mean_reversion": {
+          "max_positions": 5
+        },
+        "opening_gap": {
+          "max_positions": 3
+        },
+        "momentum_breakout": {
+          "max_positions": 5
+        },
+        "_other": {
+          "max_positions": 2
+        }
+      }
+    },
     "dynamic_sizing": {
       "enabled": false
     },
@@ -247,6 +272,13 @@
       "perturbation_mean_cagr": 0.0858,
       "perturbation_negative_trials": 0,
       "window_profitable_pct": 76.0
+    },
+    "_version_metadata": {
+      "created_at": "2026-03-02T07:55:00.000000",
+      "previous_version": "v2.1",
+      "market": "sp500",
+      "change": "max_open_positions 10\u219215 (Task #26 research, Task #51 promotion)",
+      "oos_validation": "ALL PASS \u2014 IS Sharpe 0.534, OOS Sharpe 0.962, 76% WF windows profitable, perturbation robust (2/10 collapse, mean CAGR +2.4%)"
     }
   },
   "inputs": {
@@ -262,8 +294,8 @@
     "mode": "solo",
     "params_override": null,
     "n_tickers": 284,
-    "config_version": "v2.0",
-    "timestamp": "2026-03-01T00:18:41.051452+00:00",
+    "config_version": "v2.2",
+    "timestamp": "2026-03-02T23:00:57.042463+00:00",
     "solo": {
       "total_trades": 0,
       "cagr_pct": 0.0,
@@ -286,23 +318,25 @@
       "mc_p95_drawdown_pct": 0.0,
       "mc_fragile": false
     },
-    "runtime_s": 684.5,
+    "runtime_s": 665.8,
     "output_path": "/root/atlas/research/experiments/eval-wave1_mtf_mo_solo.json"
   },
   "metadata": {
     "agent_id": "atlas-research",
-    "started_at": "2026-03-01T00:18:39.326614+00:00",
-    "finished_at": "2026-03-01T00:30:04.797892+00:00",
-    "runtime_s": 684.5
+    "started_at": "2026-03-02T23:00:55.130740+00:00",
+    "finished_at": "2026-03-02T23:12:01.588200+00:00",
+    "runtime_s": 665.8
   },
   "verdict": "fail",
-  "verdict_rationale": "Code bug: 'The truth value of a Series is ambiguous' errors on ~50% of tickers. calc_atr signature fixed but deeper Series comparison issues remain in generate_signals(). 0 usable signals. This is a CODE failure, not a hypothesis rejection.",
+  "verdict_rationale": "MTF Momentum generates signals at confidence=0.50 (hardcoded) but min_confidence=0.75 in config. All signals filtered out by backtest engine. This is the 3rd failure \u2014 root cause is now confirmed: the strategy never sets confidence above 0.50 so it can never pass the min_confidence gate.",
   "learnings": [
-    "calc_atr() call fixed (was passing df instead of df['high'],df['low'],df['close'])",
-    "Second bug: Series comparison ambiguity in signal generation logic",
-    "Strategy needs full code audit \u2014 multiple comparison operators likely use raw Series",
-    "PATTERN: Dormant strategies have accumulated API drift bugs",
-    "DO NOT re-queue until code is audited and unit-tested"
+    "ROOT CAUSE FOUND: strategies/mtf_momentum.py hardcodes confidence=0.5 at line 173",
+    "Config risk.min_confidence=0.75 filters out ALL MTF signals (0.50 < 0.75)",
+    "Previous 2 failures were misdiagnosed as API signature bugs \u2014 those were real but not the only issue",
+    "FIX NEEDED: MTF momentum needs dynamic confidence scoring (like other strategies) or min_confidence override in config",
+    "Two fix options: (1) Add confidence calculation based on signal quality, or (2) Set mtf_momentum.min_confidence=0.4 in config",
+    "PATTERN: All strategies need confidence scoring above min_confidence threshold to generate trades",
+    "This experiment chain (solo/opt/comb/oos) should be DEFERRED until the confidence bug is fixed"
   ],
   "promoted": false,
   "candidate_config_path": null

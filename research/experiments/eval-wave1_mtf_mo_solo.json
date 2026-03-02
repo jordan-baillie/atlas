@@ -5,8 +5,8 @@
   "mode": "solo",
   "params_override": null,
   "n_tickers": 284,
-  "config_version": "v2.0",
-  "timestamp": "2026-03-01T00:18:41.051452+00:00",
+  "config_version": "v2.2",
+  "timestamp": "2026-03-02T23:00:57.042463+00:00",
   "solo": {
     "total_trades": 0,
     "cagr_pct": 0.0,
@@ -29,5 +29,5 @@
     "mc_p95_drawdown_pct": 0.0,
     "mc_fragile": false
   },
-  "runtime_s": 684.5
+  "runtime_s": 665.8
 }

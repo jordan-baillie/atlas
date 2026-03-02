@@ -3,7 +3,7 @@
   "generated_at": "2026-03-02T19:03:53.578557",
   "market_id": "asx",
   "config_version": "asx_ibkr_tf_only_v1.0",
-  "status": "PENDING_APPROVAL",
+  "status": "REJECTED",
   "portfolio_snapshot": {
     "equity": 3999.0,
     "cash": 3999.0,
@@ -742,5 +742,6 @@
     "cash_after_entries": 60.03,
     "portfolio_exposure_pct": 98.5
   },
-  "open_positions": []
+  "open_positions": [],
+  "rejected_at": "2026-03-03T01:24:54.035832"
 }

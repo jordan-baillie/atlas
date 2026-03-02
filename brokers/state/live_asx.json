@@ -40,10 +40,20 @@
       "total_realized_pnl": 0,
       "total_closed_trades": 0,
       "positions": []
+    },
+    {
+      "date": "2026-03-03",
+      "equity": 3999.0,
+      "cash": 3999.0,
+      "positions_value": 0.0,
+      "num_positions": 0,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": []
     }
   ],
   "daily_high_water": 3999.0,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-02T16:30:41.888723"
+  "last_saved": "2026-03-03T09:32:55.889714"
 }

@@ -1281,5 +1281,67 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_mtf_mo_solo",
+    "timestamp": "2026-03-02T23:12:01.593034+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends. This is similar in spirit to trend_following but uses a different timeframe for trend confirmation (weekly SMA vs daily MA crossover). Key question: signal overlap with trend_following. If >60% overlap, the strategy adds complexity without diversification.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0,
+      "avg_trade": 0.0,
+      "final_equity": 4000.0,
+      "expectancy_r": 0.0,
+      "avg_r": 0.0,
+      "r_count": 0,
+      "edge_p_value": 1.0,
+      "edge_significant": false,
+      "var_95_pct": -0.0,
+      "cvar_95_pct": -0.0,
+      "calmar": 0.0,
+      "mc_p95_drawdown_pct": 0.0,
+      "mc_fragile": false
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 665.8,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_mtf_mo_solo",
+    "timestamp": "2026-03-02T23:13:10.520965+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends for diversification vs trend_following",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "signals_generated": "hundreds (visible in logs)",
+      "sharpe": 0.0,
+      "cagr_pct": 0.0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "ROOT CAUSE: confidence=0.50 hardcoded in mtf_momentum.py, filtered by min_confidence=0.75 in config",
+      "3rd failure \u2014 first 2 were API signature bugs (fixed), this is the remaining blocker",
+      "Strategy generates hundreds of signals but none pass confidence gate",
+      "FIX: Add dynamic confidence scoring or per-strategy min_confidence override",
+      "BLOCKED: Do not re-queue until confidence calculation is implemented"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
   }
 ]
