@@ -248,14 +248,19 @@ class MTFMomentum(BaseStrategy):
 
                 # 2. Trailing stop
                 elif days_held >= 3:
-                    trail_stop = today_close - self.trailing_stop_atr_mult * current_atr
-                    if today_close <= trail_stop:
-                        exits.append({
-                            "ticker": ticker,
-                            "reason": "trailing_stop",
-                            "exit_price": today_close,
-                            "details": f"{ticker} trailing stop at ${today_close:.2f}",
-                        })
+                    # Audit H3: trail from highest high since entry, not from today_close
+                    entry_ts = pd.Timestamp(entry_date)
+                    mask_since_entry = df.index >= entry_ts
+                    if mask_since_entry.any():
+                        highest = float(df.loc[mask_since_entry, "high"].max())
+                        trail_stop = highest - self.trailing_stop_atr_mult * current_atr
+                        if today_close <= trail_stop:
+                            exits.append({
+                                "ticker": ticker,
+                                "reason": "trailing_stop",
+                                "exit_price": today_close,
+                                "details": f"{ticker} trailing stop at ${today_close:.2f}",
+                            })
 
                 # 3. Take profit
                 elif pos.get("take_profit") and today_close >= pos["take_profit"]:

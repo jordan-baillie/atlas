@@ -40,6 +40,7 @@ class Position:
         self.mae = 0.0  # max adverse excursion
         self.mfe = 0.0  # max favorable excursion
         self.stop_order_id = ""  # Moomoo protective stop order ID (empty = no exchange stop)
+        self.entry_commission = 0.0  # Audit M7: track entry commission for accurate PnL
 
     def current_value(self, price: float) -> float:
         return round(price * self.shares, 2)
@@ -78,6 +79,7 @@ class Position:
             "mae": self.mae,
             "mfe": self.mfe,
             "stop_order_id": self.stop_order_id,
+            "entry_commission": self.entry_commission,
         }
 
     @classmethod
@@ -95,6 +97,7 @@ class Position:
         pos.mfe = d.get("mfe", 0.0)
         pos.entry_value = d.get("entry_value", pos.entry_price * pos.shares)
         pos.stop_order_id = d.get("stop_order_id", "")
+        pos.entry_commission = d.get("entry_commission", 0.0)
         return pos
 
 
@@ -114,6 +117,7 @@ class PaperPortfolio:
         self.commission_flat = config["fees"]["commission_per_trade"]
         self.commission_pct = config["fees"]["commission_pct"]
         self.slippage_pct = config["fees"]["slippage_pct"]
+        self.flat_fee_threshold = config.get("fees", {}).get("flat_fee_threshold", 2000.0)
 
         # State
         self.cash = self.starting_equity
@@ -172,8 +176,11 @@ class PaperPortfolio:
             "last_saved": datetime.now().isoformat(),
         }
         save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(save_path, "w") as f:
+        # Audit M15: atomic write to prevent corruption on crash
+        tmp_path = save_path.with_suffix('.json.tmp')
+        with open(tmp_path, "w") as f:
             json.dump(state, f, indent=2)
+        os.replace(str(tmp_path), str(save_path))
 
     def equity(self, prices: dict[str, float] = None) -> float:
         """Total equity = cash + market value of positions."""
@@ -186,7 +193,11 @@ class PaperPortfolio:
         return round(self.cash + pos_value, 2)
 
     def _calc_commission(self, value: float) -> float:
-        return round(max(self.commission_flat, value * self.commission_pct), 2)
+        # Audit H4: match backtest engine's smart commission model
+        pct_commission = value * self.commission_pct
+        if value < self.flat_fee_threshold:
+            return round(pct_commission, 2)
+        return round(max(self.commission_flat, pct_commission), 2)
 
     def _apply_slippage(self, price: float, direction: str) -> float:
         if direction == "buy":
@@ -266,6 +277,7 @@ class PaperPortfolio:
             rationale=signal.rationale,
             sector=getattr(signal, "sector", "Unknown"),
         )
+        pos.entry_commission = commission  # Audit M7: store for accurate PnL on exit
 
         self.cash -= total_cost
         self.positions.append(pos)
@@ -299,7 +311,7 @@ class PaperPortfolio:
         commission = self._calc_commission(proceeds)
         net_proceeds = proceeds - commission
 
-        pnl = net_proceeds - pos.entry_value - self._calc_commission(pos.entry_value)
+        pnl = net_proceeds - pos.entry_value - pos.entry_commission  # Audit M7: use stored entry commission
         pnl_pct = pnl / pos.entry_value * 100
 
         self.cash += net_proceeds
@@ -315,7 +327,7 @@ class PaperPortfolio:
             "shares": pos.shares,
             "entry_value": pos.entry_value,
             "exit_value": round(proceeds, 2),
-            "entry_commission": self._calc_commission(pos.entry_value),
+            "entry_commission": pos.entry_commission,  # Audit M7: use stored entry commission
             "exit_commission": commission,
             "pnl": round(pnl, 2),
             "pnl_pct": round(pnl_pct, 2),
@@ -533,66 +545,67 @@ class TradePlanGenerator:
 
     def format_plan_text(self, plan: dict) -> str:
         """Format trade plan as readable text."""
+        # Audit M2: use single quotes inside f-string expressions (Python < 3.12 compat)
         lines = []
         lines.append(f"═══════════════════════════════════════════════")
-        lines.append(f"  DAILY TRADE PLAN — {plan["trade_date"]}")
-        lines.append(f"  Status: {plan["status"]}")
+        lines.append(f"  DAILY TRADE PLAN — {plan['trade_date']}")
+        lines.append(f"  Status: {plan['status']}")
         lines.append(f"═══════════════════════════════════════════════")
         lines.append("")
 
         snap = plan["portfolio_snapshot"]
-        lines.append(f"📊 PORTFOLIO: Equity ${snap["equity"]:,.2f} | "
-                     f"Cash ${snap["cash"]:,.2f} | "
-                     f"PnL ${snap["total_pnl"]:+,.2f} ({snap["total_pnl_pct"]:+.1f}%) | "
-                     f"Positions {snap["open_positions"]}")
+        lines.append(f"📊 PORTFOLIO: Equity ${snap['equity']:,.2f} | "
+                     f"Cash ${snap['cash']:,.2f} | "
+                     f"PnL ${snap['total_pnl']:+,.2f} ({snap['total_pnl_pct']:+.1f}%) | "
+                     f"Positions {snap['open_positions']}")
         lines.append("")
 
         # Proposed entries
         if plan["proposed_entries"]:
-            lines.append(f"🟢 PROPOSED ENTRIES ({len(plan["proposed_entries"])})")
+            lines.append(f"🟢 PROPOSED ENTRIES ({len(plan['proposed_entries'])})")
             lines.append(f"{'Ticker':<8} {'Strategy':<20} {'Entry':>8} {'Stop':>8} {'Size':>5} {'Risk$':>7} {'Conf':>5}")
-            lines.append(f"{"─"*8} {"─"*20} {"─"*8} {"─"*8} {"─"*5} {"─"*7} {"─"*5}")
+            lines.append(f"{'─'*8} {'─'*20} {'─'*8} {'─'*8} {'─'*5} {'─'*7} {'─'*5}")
             for e in plan["proposed_entries"]:
-                lines.append(f"{e["ticker"]:<8} {e["strategy"]:<20} "
-                             f"${e["entry_price"]:>7.2f} ${e["stop_price"]:>7.2f} "
-                             f"{e["position_size"]:>5} ${e["risk_amount"]:>6.2f} "
-                             f"{e["confidence"]:>5.2f}")
-                lines.append(f"  → {e["rationale"]}")
+                lines.append(f"{e['ticker']:<8} {e['strategy']:<20} "
+                             f"${e['entry_price']:>7.2f} ${e['stop_price']:>7.2f} "
+                             f"{e['position_size']:>5} ${e['risk_amount']:>6.2f} "
+                             f"{e['confidence']:>5.2f}")
+                lines.append(f"  → {e['rationale']}")
             lines.append("")
 
         # Rejected
         if plan["rejected_entries"]:
-            lines.append(f"🔴 REJECTED ({len(plan["rejected_entries"])})")
+            lines.append(f"🔴 REJECTED ({len(plan['rejected_entries'])})")
             for e in plan["rejected_entries"]:
-                lines.append(f"  {e["ticker"]} ({e["strategy"]}): {e["rejection_reason"]}")
+                lines.append(f"  {e['ticker']} ({e['strategy']}): {e['rejection_reason']}")
             lines.append("")
 
         # Exits
         if plan["proposed_exits"]:
-            lines.append(f"🟡 PROPOSED EXITS ({len(plan["proposed_exits"])})")
+            lines.append(f"🟡 PROPOSED EXITS ({len(plan['proposed_exits'])})")
             for ex in plan["proposed_exits"]:
-                lines.append(f"  {ex.get("ticker", "?")} — {ex.get("reason", "?")}")
+                lines.append(f"  {ex.get('ticker', '?')} — {ex.get('reason', '?')}")
             lines.append("")
 
         # Risk summary
         risk = plan["risk_summary"]
-        lines.append(f"⚠️  RISK: Cost ${risk["total_proposed_cost"]:,.2f} | "
-                     f"Risk ${risk["total_proposed_risk"]:,.2f} | "
-                     f"Positions after: {risk["positions_after"]} | "
-                     f"Exposure: {risk["portfolio_exposure_pct"]:,.1f}%")
+        lines.append(f"⚠️  RISK: Cost ${risk['total_proposed_cost']:,.2f} | "
+                     f"Risk ${risk['total_proposed_risk']:,.2f} | "
+                     f"Positions after: {risk['positions_after']} | "
+                     f"Exposure: {risk['portfolio_exposure_pct']:,.1f}%")
         lines.append("")
 
         # Open positions
         if plan["open_positions"]:
-            lines.append(f"📋 OPEN POSITIONS ({len(plan["open_positions"])})")
+            lines.append(f"📋 OPEN POSITIONS ({len(plan['open_positions'])})")
             lines.append(f"{'Ticker':<8} {'Entry':>8} {'Current':>8} {'PnL$':>8} {'PnL%':>7} {'Stop':>8}")
-            lines.append(f"{"─"*8} {"─"*8} {"─"*8} {"─"*8} {"─"*7} {"─"*8}")
+            lines.append(f"{'─'*8} {'─'*8} {'─'*8} {'─'*8} {'─'*7} {'─'*8}")
             for p in plan["open_positions"]:
-                lines.append(f"{p["ticker"]:<8} ${p["entry_price"]:>7.2f} "
-                             f"${p["current_price"]:>7.2f} "
-                             f"${p["unrealized_pnl"]:>+7.2f} "
-                             f"{p["unrealized_pnl_pct"]:>+6.1f}% "
-                             f"${p["stop_price"]:>7.2f}")
+                lines.append(f"{p['ticker']:<8} ${p['entry_price']:>7.2f} "
+                             f"${p['current_price']:>7.2f} "
+                             f"${p['unrealized_pnl']:>+7.2f} "
+                             f"{p['unrealized_pnl_pct']:>+6.1f}% "
+                             f"${p['stop_price']:>7.2f}")
             lines.append("")
 
         lines.append("⏳ Reply APPROVED to execute, or REJECT to skip.")

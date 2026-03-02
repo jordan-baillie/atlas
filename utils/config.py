@@ -88,6 +88,19 @@ def save_config(config: Dict[str, Any], path: Optional[Path] = None) -> Path:
     return config_path
 
 
+def validate_config(config: Dict[str, Any]) -> None:
+    """Audit M3: Validate required config fields exist."""
+    required = {
+        "risk.starting_equity": config.get("risk", {}).get("starting_equity"),
+        "risk.max_open_positions": config.get("risk", {}).get("max_open_positions"),
+        "fees": config.get("fees"),
+        "strategies": config.get("strategies"),
+    }
+    missing = [k for k, v in required.items() if v is None]
+    if missing:
+        raise ValueError(f"Config missing required fields: {', '.join(missing)}")
+
+
 def get_active_config(market_id: Optional[str] = None) -> Dict[str, Any]:
     """Load the currently active configuration for a market.
 
@@ -98,7 +111,9 @@ def get_active_config(market_id: Optional[str] = None) -> Dict[str, Any]:
     Returns:
         Dictionary containing the active configuration.
     """
-    return load_config(_active_config_path(market_id))
+    config = load_config(_active_config_path(market_id))
+    validate_config(config)
+    return config
 
 
 def save_config_version(config: Dict[str, Any], version: Optional[str] = None,

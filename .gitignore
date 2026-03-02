@@ -50,3 +50,10 @@ Thumbs.db
 # Backup / temp files
 *.bak
 *.pkl
+
+# Audit L2: additional entries
+*.log
+*.tmp
+audit/
+config/active/*.bak*
+.pi-swarm/

@@ -59,7 +59,8 @@
   "ibkr": {
     "host": "127.0.0.1",
     "port": 4001,
-    "account_id": "U24658976",
+    "account_id": "",
+    "_account_id_note": "Set IBKR_ACCOUNT_ID in ~/.atlas-secrets.json or env var",
     "currency": "AUD",
     "time_in_force": "DAY",
     "client_id": 10,

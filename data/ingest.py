@@ -125,7 +125,11 @@ def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) 
         return
     path = _cache_path(ticker, market_id)
     try:
-        df.to_parquet(path, engine="pyarrow")
+        # Audit H8: atomic write to prevent corruption from concurrent reads
+        tmp_path = path.with_suffix('.parquet.tmp')
+        df.to_parquet(tmp_path, engine="pyarrow")
+        import os
+        os.replace(str(tmp_path), str(path))
         logger.debug(f"Cached {ticker}: {len(df)} rows -> {path}")
     except Exception as e:
         logger.warning(f"Cache write error for {ticker}: {e}")

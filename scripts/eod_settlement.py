@@ -73,6 +73,10 @@ def fetch_closing_prices(tickers):
             try:
                 df = pd.read_parquet(cache_path)
                 if not df.empty and "close" in df.columns:
+                    # Audit C2: warn about stale price data
+                    data_age = (pd.Timestamp.now() - df.index[-1]).days
+                    if data_age > 2:
+                        log.warning(f"STALE DATA: {ticker} latest data is {data_age} days old ({df.index[-1].date()})")
                     last = df.iloc[-1]
                     prices[ticker] = float(last["close"])
                     lows[ticker]   = float(last["low"])  if "low"  in df.columns else prices[ticker]
@@ -273,7 +277,8 @@ def main():
         _is_weekend = _market.is_weekend(datetime.now(_tz).weekday())
         _tz_label = datetime.now(_tz).strftime("%Z")
     except (ImportError, KeyError):
-        _tz = BRISBANE
+        # Audit H11: use correct timezone per market for weekend detection
+        _tz = ZoneInfo("America/New_York") if market_id == "sp500" else BRISBANE
         _is_weekend = datetime.now(_tz).weekday() >= 5
         _tz_label = "AEST"
 
