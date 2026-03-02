@@ -1,8 +1,8 @@
 {
-  "version": "v1.0",
+  "version": "v1.1",
   "project": "Atlas",
   "market": "hk",
-  "description": "HK v1.0 — Initial Hong Kong (SEHK) market config. Hang Seng Composite universe, IBKR broker, HKD. live_enabled=false until full validation.",
+  "description": "HK v1.1 — Hong Kong (SEHK) market config. Moomoo broker via OpenD, HKD. No equity allocated yet (starting_equity=0).",
   "universe": {
     "method": "top_liquid",
     "top_n": 120,
@@ -13,7 +13,7 @@
     "benchmark_ticker": "2800.HK"
   },
   "risk": {
-    "starting_equity": 30000,
+    "starting_equity": 0,
     "max_risk_per_trade_pct": 0.02,
     "max_open_positions": 10,
     "max_sector_concentration": 2,
@@ -29,7 +29,7 @@
   },
   "trading": {
     "mode": "live",
-    "broker": "ibkr",
+    "broker": "moomoo",
     "live_enabled": false,
     "holding_period_min": 2,
     "holding_period_max": 20,
@@ -41,18 +41,18 @@
       "max_order_value": 10000,
       "max_daily_orders": 10,
       "dry_run_first": true,
-      "_note": "HK via IBKR IB Gateway Docker. Set live_enabled=true only after full backtest + OOS validation."
+      "_note": "HK via Moomoo OpenD. Set live_enabled=true only after full backtest + OOS validation."
     }
   },
   "fees": {
-    "commission_per_trade": 18.0,
-    "commission_pct": 0.0005,
+    "commission_per_trade": 0.0,
+    "commission_pct": 0.0003,
     "slippage_pct": 0.001,
-    "flat_fee_threshold": 36000.0,
+    "flat_fee_threshold": 0.0,
     "min_position_value": 2000.0,
-    "_broker": "ibkr_hk",
-    "_fee_notes": "IBKR HK (Fixed pricing): 0.05% of trade value, minimum HKD 18.00 per order. For positions under HKD 36,000 the flat fee applies. Round-trip = HKD 36.00 minimum.",
-    "_fee_impact": "On HKD 2,000 min position: 1.8% round-trip drag. Use min_position_value to mitigate."
+    "_broker": "moomoo_hk",
+    "_fee_notes": "Moomoo HK: 0.03% commission, no platform fee for HK stocks. Platform levy + stamp duty apply separately.",
+    "_fee_impact": "Lower fees than IBKR for HK market."
   },
   "strategies": {
     "momentum_breakout": {
@@ -186,8 +186,7 @@
     "currency": "HKD",
     "order_type": "NORMAL",
     "time_in_force": "DAY",
-    "_credentials": "Managed via ~/.atlas-secrets.json",
-    "_note": "Moomoo HK support included for reference. Primary broker for HK is IBKR."
+    "_credentials": "Managed via ~/.atlas-secrets.json"
   },
   "backtest": {
     "train_window_days": 247,
@@ -231,9 +230,9 @@
     "enabled": false
   },
   "_version_metadata": {
-    "created_at": "2026-03-02T20:57:00.000000",
+    "created_at": "2026-03-03T00:55:00.000000",
     "market": "hk",
-    "change": "Initial HK market config — SEHK via IBKR, HKD, live_enabled=false",
-    "notes": "Requires full backtest + OOS validation before enabling live trading"
+    "change": "v1.1 — Switched broker from IBKR to Moomoo, zeroed starting_equity (no HK holdings)",
+    "notes": "HK market authorized on Moomoo FUTUAU account. No equity allocated yet."
   }
 }
