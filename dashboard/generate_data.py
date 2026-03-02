@@ -560,7 +560,6 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
 
     trading = config.get("trading", {})
     is_live_mode = (trading.get("mode") == "live"
-                    and trading.get("broker", "ibkr") != "ibkr"
                     and trading.get("live_enabled", False))
 
     # ── Try live broker data first ──────────────────────────────
@@ -1560,7 +1559,6 @@ def generate():
         trading = cfg.get("trading", {})
         broker_name = trading.get("broker", "ibkr")
         if (trading.get("mode") == "live"
-                and broker_name != "ibkr"
                 and trading.get("live_enabled", False)):
             if broker_name == "moomoo" and moomoo_data is not None:
                 # Reuse existing Moomoo connection
