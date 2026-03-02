@@ -43,12 +43,12 @@ def get_portfolio(config):
     # Load from per-market state file first, fall back to legacy
     market_id = config.get("market", "asx")
     per_market = PROJECT_ROOT / "brokers" / "state" / f"{market_id}.json"
-
+    legacy = PROJECT_ROOT / "brokers" / "state" / "live_state.json"
 
     state = None
     if per_market.exists():
         state = safe_json(per_market, None)
-    if state is None:
+    if state is None and legacy.exists():
         state = safe_json(legacy, None)
 
     seq = config.get("risk", {}).get("starting_equity", 5000)
@@ -112,6 +112,10 @@ def get_live_broker_data(config):
         from brokers.registry import get_live_broker
 
         broker = get_live_broker(config)
+        # Use a separate clientId for dashboard reads to avoid conflicts
+        # with the executor (clientId=10) and telegram bot
+        if hasattr(broker, '_client_id'):
+            broker._client_id = config.get("ibkr", {}).get("dashboard_client_id", 20)
         if not broker or not broker.connect():
             logger.warning("Dashboard: broker connect failed (broker=%s)", broker_name)
             return None, [], False, []
@@ -1554,6 +1558,11 @@ def generate():
     broker_caches = {}
     moomoo_data = None  # shared Moomoo connection (all markets on one account)
 
+    import signal
+
+    def _broker_timeout_handler(signum, frame):
+        raise TimeoutError("Broker connection timed out")
+
     for mid in markets:
         cfg = get_config(mid)
         trading = cfg.get("trading", {})
@@ -1565,7 +1574,17 @@ def generate():
                 broker_caches[mid] = moomoo_data
                 print(f"  {mid}: reusing moomoo connection")
             else:
-                acct, positions, ok, orders = get_live_broker_data(cfg)
+                # Per-broker timeout — don't let one broker block others
+                broker_timeout = 30 if broker_name == "ibkr" else 15
+                try:
+                    signal.signal(signal.SIGALRM, _broker_timeout_handler)
+                    signal.alarm(broker_timeout)
+                    acct, positions, ok, orders = get_live_broker_data(cfg)
+                    signal.alarm(0)  # cancel alarm on success
+                except TimeoutError:
+                    signal.alarm(0)
+                    print(f"  {mid}: broker TIMEOUT after {broker_timeout}s ({broker_name})")
+                    acct, positions, ok, orders = None, [], False, []
                 if ok:
                     cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
                     broker_caches[mid] = cache
@@ -1598,7 +1617,9 @@ def generate():
         market_data[mid] = data
 
     # ── Fetch exchange rates for AUD-normalised combined view ───
-    exchange_rates = {"AUDUSD": 0.63, "USDAUD": 1.587}  # fallback
+    # Fallback: use last successful rate from previous dashboard output, else hardcoded
+    prev_data = safe_json(OUTPUT, {})
+    exchange_rates = prev_data.get("exchange_rates", {"AUDUSD": 0.70, "USDAUD": 1.43})
     try:
         import yfinance as yf
         audusd_data = yf.Ticker("AUDUSD=X").history(period="1d")
@@ -1607,7 +1628,7 @@ def generate():
             exchange_rates = {"AUDUSD": round(audusd, 5), "USDAUD": round(1 / audusd, 5)}
             print(f"  Exchange rate: 1 AUD = {audusd:.4f} USD (1 USD = {1/audusd:.4f} AUD)")
     except Exception as e:
-        print(f"  Exchange rate fetch failed ({e}), using fallback")
+        print(f"  Exchange rate fetch failed ({e}), using last-known: {exchange_rates}")
 
     def to_aud(amount, currency):
         """Convert any currency amount to AUD."""
