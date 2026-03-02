@@ -208,6 +208,19 @@
     "max_drawdown_increase_pct": 0.01,
     "changelog_file": "journal/changelog.json"
   },
+  "allocation": {
+    "_note": "Per-strategy position slot pools. Set enabled=true to activate. mode=hard_pool (strict cap) or soft_pool (overflow allowed).",
+    "enabled": false,
+    "mode": "hard_pool",
+    "overflow_enabled": true,
+    "pools": {
+      "trend_following":  {"max_positions": 5},
+      "mean_reversion":   {"max_positions": 4},
+      "opening_gap":      {"max_positions": 3},
+      "momentum_breakout": {"max_positions": 4},
+      "_other":           {"max_positions": 2}
+    }
+  },
   "dynamic_sizing": {
     "enabled": false
   },

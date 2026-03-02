@@ -11,6 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from utils.allocation import build_allocation_pool
+
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -28,6 +30,9 @@ class TradePlanGenerator:
     def generate_plan(self, signals: list, exit_recommendations: list,
                       prices: dict, trade_date: str) -> dict:
         """Generate a daily trade plan."""
+        # Build allocation pool (no-op when allocation.enabled=false)
+        allocation_pool = build_allocation_pool(self.config)
+
         # Risk check each signal
         proposed_entries = []
         rejected_entries = []
@@ -64,7 +69,18 @@ class TradePlanGenerator:
                 rejected_entries.append(base_entry)
                 continue
 
-            passed, reason = self.portfolio.check_risk_limits(signal)
+            # Simulate proposed positions for pool check (portfolio positions + already proposed)
+            proposed_pos_dicts = [{"strategy": e["strategy"]} for e in proposed_entries]
+            passed, reason = self.portfolio.check_risk_limits(signal, allocation_pool=allocation_pool)
+            # Additional pool check against already-proposed entries in this plan
+            if passed and allocation_pool.is_enabled():
+                live_pos_dicts = [{"strategy": p.strategy} for p in self.portfolio.positions]
+                combined_pos = live_pos_dicts + proposed_pos_dicts
+                pool_ok, pool_reason = allocation_pool.can_accept(signal.strategy, combined_pos)
+                if not pool_ok:
+                    passed = False
+                    reason = pool_reason
+
             if passed:
                 proposed_entries.append(base_entry)
             else:
@@ -105,6 +121,9 @@ class TradePlanGenerator:
                 "portfolio_exposure_pct": round((current_eq - self.portfolio.cash + proposed_cost) / current_eq * 100, 2) if current_eq > 0 else 0,
             },
             "open_positions": summary["open_positions"],
+            "allocation_summary": allocation_pool.counts_summary(
+                [{"strategy": p.strategy} for p in self.portfolio.positions]
+            ) if allocation_pool.is_enabled() else {},
         }
 
         # Save plan

@@ -329,6 +329,19 @@
       "description": "Reduces sizing during equity drawdowns"
     }
   },
+  "allocation": {
+    "_note": "Per-strategy position slot pools. Set enabled=true to activate. mode=hard_pool (strict cap) or soft_pool (overflow allowed).",
+    "enabled": false,
+    "mode": "hard_pool",
+    "overflow_enabled": true,
+    "pools": {
+      "trend_following":  {"max_positions": 5},
+      "mean_reversion":   {"max_positions": 3},
+      "opening_gap":      {"max_positions": 2},
+      "momentum_breakout": {"max_positions": 3},
+      "_other":           {"max_positions": 2}
+    }
+  },
   "fee_aware_filter": {
     "enabled": false,
     "reward_risk_ratio": 1.4,

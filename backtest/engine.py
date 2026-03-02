@@ -42,6 +42,7 @@ from strategies.base import BaseStrategy, Signal
 from utils.market_breadth import MarketBreadth
 from utils.relative_strength import RelativeStrength
 from utils.dynamic_sizing import DynamicSizer
+from utils.allocation import build_allocation_pool, StrategyAllocationPool
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +168,15 @@ class BacktestEngine:
 
         # Phase1-Fix5: Minimum confidence threshold
         self.min_confidence = self.risk_config.get("min_confidence", 0.0)
+
+        # Per-strategy allocation pool (optional, disabled by default)
+        self.allocation_pool: StrategyAllocationPool = build_allocation_pool(config)
+        if self.allocation_pool.is_enabled():
+            logger.info(
+                "Allocation pools enabled: mode=%s, pools=%s",
+                self.allocation_pool.mode,
+                self.allocation_pool.pools,
+            )
 
         # Fee-Aware Signal Filter config
         _faf = config.get("fee_aware_filter", {})
@@ -782,6 +792,17 @@ class BacktestEngine:
                             f"{sector_count} positions (max={self.max_sector})"
                         )
                         continue
+
+                    # Per-strategy allocation pool check
+                    if self.allocation_pool.is_enabled():
+                        pool_ok, pool_reason = self.allocation_pool.can_accept(
+                            signal.strategy, open_positions
+                        )
+                        if not pool_ok:
+                            logger.debug(
+                                f"SKIP {ticker} ({signal.strategy}): {pool_reason}"
+                            )
+                            continue
 
                     # Get today's open for fill
                     today_df = data.get(ticker)

@@ -235,12 +235,29 @@ class LivePortfolio:
         ) if prices else sum(p.entry_value for p in self.positions)
         return round(self.cash + pos_value, 2)
 
-    def check_risk_limits(self, signal) -> tuple[bool, str]:
-        """Validate a proposed trade against risk limits."""
+    def count_positions_by_strategy(self, strategy_name: str) -> int:
+        """Count open positions belonging to a given strategy."""
+        return sum(1 for p in self.positions if p.strategy == strategy_name)
+
+    def check_risk_limits(self, signal, allocation_pool=None) -> tuple[bool, str]:
+        """Validate a proposed trade against risk limits.
+
+        Args:
+            signal: Signal object to check.
+            allocation_pool: Optional StrategyAllocationPool.  When provided
+                             and enabled, per-strategy pool limits are enforced.
+        """
         reasons = []
 
         if len(self.positions) >= self.max_positions:
             reasons.append(f"Max positions ({self.max_positions}) reached")
+
+        # Per-strategy allocation pool check
+        if allocation_pool is not None and allocation_pool.is_enabled():
+            pos_dicts = [{"strategy": p.strategy} for p in self.positions]
+            ok, pool_reason = allocation_pool.can_accept(signal.strategy, pos_dicts)
+            if not ok:
+                reasons.append(pool_reason)
 
         sector = getattr(signal, "sector", "Unknown")
         sector_count = sum(1 for p in self.positions if p.sector == sector)
