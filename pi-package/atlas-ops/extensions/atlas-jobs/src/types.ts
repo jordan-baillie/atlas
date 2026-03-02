@@ -13,6 +13,7 @@ export type AtlasJobName =
   | "cli_paper_run"
   | "cli_status"
   | "cli_ledger"
+  | "cli_eod_settlement"
   | "anneal_review";
 
 export type AtlasJobStatus =

@@ -169,6 +169,10 @@ function buildPythonScriptInvocation(scriptPath: string, scriptArgs: string[]) {
 function buildCliInvocation(subcommand: string, params?: RunArgs) {
   const args = { ...(params ?? {}) };
   const cliArgs = ["scripts/cli.py", subcommand];
+  const market = consumeArg<string>(args, "market");
+  if (market !== undefined) {
+    cliArgs.push("-m", String(market));
+  }
   const date = consumeArg<string>(args, "date");
   if (date !== undefined) {
     cliArgs.push("--date", String(date));
@@ -251,6 +255,17 @@ function resolveJobCommand(job: AtlasJobName, rawArgs?: RunArgs) {
       return buildCliInvocation("status", args);
     case "cli_ledger":
       return buildCliInvocation("ledger", args);
+    case "cli_eod_settlement": {
+      const market = consumeArg<string>(args, "market");
+      const dryRun = consumeArg<boolean | string>(args, "dryRun");
+      assertNoExtraArgs(job, args);
+      const scriptArgs = ["scripts/eod_settlement.py"];
+      if (market) scriptArgs.push("-m", String(market));
+      if (dryRun === true || (typeof dryRun === "string" && dryRun.toLowerCase() === "true")) {
+        scriptArgs.push("--dry-run");
+      }
+      return buildPythonScriptInvocation(scriptArgs[0], scriptArgs.slice(1));
+    }
     case "anneal_review":
       return buildCliInvocation("review", args);
     default: {

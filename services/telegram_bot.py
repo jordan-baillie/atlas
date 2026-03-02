@@ -66,7 +66,7 @@ def _authorized(chat_id: int | str) -> bool:
 # Plan formatting (with inline buttons)
 # ═══════════════════════════════════════════════════════════════
 
-def format_plan_message(plan: dict, market_id: str = "asx") -> str:
+def format_plan_message(plan: dict, market_id: str = "sp500") -> str:
     """Build an HTML summary of the trade plan for Telegram."""
     trade_date = plan.get("trade_date", "?")
     entries = plan.get("proposed_entries", [])
@@ -162,7 +162,7 @@ def format_plan_message(plan: dict, market_id: str = "asx") -> str:
     return "\n".join(lines)
 
 
-def approval_keyboard(trade_date: str, market_id: str = "asx") -> InlineKeyboardMarkup:
+def approval_keyboard(trade_date: str, market_id: str = "sp500") -> InlineKeyboardMarkup:
     """Build Approve / Reject inline buttons for a plan.
 
     Callback data format: plan:{date}:{action}:{market}
