@@ -165,5 +165,6 @@
   "daily_high_water": 5025.31,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-02-27T16:00:38.508603"
+  "last_saved": "2026-02-27T16:00:38.508603",
+  "starting_equity": 5000
 }

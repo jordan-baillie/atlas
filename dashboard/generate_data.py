@@ -55,7 +55,11 @@ def get_portfolio(config):
     if state is None:
         return {"cash": seq, "positions": [], "closed_trades": [],
                 "equity_history": [], "halted": False, "starting_equity": seq}
-    state["starting_equity"] = seq
+    # Prefer state file's starting_equity (tracks actual capital deployed)
+    # over config's (which may have been changed for future sizing).
+    # Only fall back to config when state has no starting_equity recorded.
+    if state.get("starting_equity") in (None, 0) and seq > 0:
+        state["starting_equity"] = seq
     return state
 
 
@@ -548,7 +552,9 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     plan = get_latest_plan(market_id)
     ledger = safe_json(PROJECT_ROOT / "journal" / "trade_ledger.json", [])
 
-    seq = config.get("risk", {}).get("starting_equity", 5000)
+    # Use portfolio's starting_equity (tracks actual capital deployed) when available,
+    # fall back to config (which may have been changed for future position sizing).
+    seq = portfolio.get("starting_equity") or config.get("risk", {}).get("starting_equity", 5000)
     fees_cfg = config.get("fees", {})
     commission = fees_cfg.get("commission_per_trade", 3.0)
 
