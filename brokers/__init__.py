@@ -7,7 +7,7 @@ Usage:
     from brokers import get_broker, get_live_executor
     from brokers.base import BrokerAdapter, OrderResult, OrderStatus
 
-    broker = get_broker("asx", config)             # Always paper unless live_enabled
+    broker = get_broker("asx", config)             # Returns broker based on config
     executor = get_live_executor(config)            # None if live disabled
 """
 

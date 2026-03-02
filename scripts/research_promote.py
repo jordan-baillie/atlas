@@ -368,7 +368,7 @@ def reject_candidate(experiment_id: str, market_id: str, reason: str) -> dict:
 def watchdog_check(market_id: str, days: int = ROLLBACK_WATCH_DAYS) -> dict:
     """Check if a recently promoted config is degrading.
 
-    Compares recent paper trading performance against the promotion baseline.
+    Compares recent live trading performance against the promotion baseline.
     """
     recent = get_recent_promotions(market_id, days=days)
     if not recent:
@@ -379,13 +379,13 @@ def watchdog_check(market_id: str, days: int = ROLLBACK_WATCH_DAYS) -> dict:
         exp_id = promo.get('experiment_id', 'unknown')
         exp = load_experiment(exp_id)
 
-        # Check paper trading state for recent performance
-        paper_state_path = PROJECT / 'brokers' / 'state' / f'live_{market_id}.json'
-        if paper_state_path.exists():
-            with open(paper_state_path) as f:
-                paper_state = json.load(f)
+        # Check live trading state for recent performance
+        live_state_path = PROJECT / 'brokers' / 'state' / f'live_{market_id}.json'
+        if live_state_path.exists():
+            with open(live_state_path) as f:
+                live_state = json.load(f)
 
-            equity_history = paper_state.get('equity_history', [])
+            equity_history = live_state.get('equity_history', [])
             if len(equity_history) >= 2:
                 recent_equity = [e.get('equity', 0) for e in equity_history[-days:]]
                 if recent_equity:

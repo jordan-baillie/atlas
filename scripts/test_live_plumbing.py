@@ -63,13 +63,13 @@ print()
 
 # ─── Test 1: Paper config → broker returns None ───────────────
 print("1. Paper/disabled config uses no broker (live_enabled=False)")
-paper_cfg = json.loads(json.dumps(real_config))
-paper_cfg["trading"]["broker"] = "paper"
-paper_cfg["trading"]["live_enabled"] = False
-broker = get_broker("asx", paper_cfg)
+dry_cfg = json.loads(json.dumps(real_config))
+# paper broker removed
+dry_cfg["trading"]["live_enabled"] = False
+broker = get_broker("asx", dry_cfg)
 check(broker is None, f"get_broker returns None when live disabled (got {type(broker).__name__ if broker else 'None'})")
 
-executor = get_live_executor(paper_cfg)
+executor = get_live_executor(dry_cfg)
 check(executor is None, "get_live_executor returns None when disabled")
 print()
 

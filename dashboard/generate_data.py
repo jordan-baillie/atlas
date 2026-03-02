@@ -43,7 +43,7 @@ def get_portfolio(config):
     # Load from per-market state file first, fall back to legacy
     market_id = config.get("market", "asx")
     per_market = PROJECT_ROOT / "brokers" / "state" / f"{market_id}.json"
-    legacy = PROJECT_ROOT / "paper_engine" / "portfolio_state.json"  # legacy fallback
+
 
     state = None
     if per_market.exists():
@@ -66,9 +66,6 @@ def _load_plan_metadata() -> dict:
     from the most recent executed/approved plans.
     """
     plans_dir = PROJECT_ROOT / "plans"
-    # Fall back to legacy paper_engine/plans if new dir not yet populated
-    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
-        plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
     if not plans_dir.exists():
         return {}
 
@@ -103,8 +100,8 @@ def get_live_broker_data(config):
     Broker is the sole source of truth for positions and equity.
     """
     trading = config.get("trading", {})
-    broker_name = trading.get("broker", "paper")
-    if broker_name == "paper" or not trading.get("live_enabled"):
+    broker_name = trading.get("broker", "ibkr")
+    if not trading.get("live_enabled"):
         return None, [], False, []
 
     try:
@@ -132,10 +129,10 @@ def get_live_broker_data(config):
 
         # Detect broker returning zeroed data (e.g. OpenD up but Futu backend
         # unreachable — "Network interruption").  Equity==0 with a live account
-        # is a clear signal the query failed silently; fall back to paper state.
+        # is a clear signal the query failed silently; broker offline.
         if acct.equity == 0 and acct.cash == 0:
             logger.warning("Dashboard: broker returned $0 equity/$0 cash — "
-                           "treating as offline (falling back to paper state)")
+                           "treating as offline (broker offline)")
             return None, [], False, []
 
         # Build account dict
@@ -210,9 +207,6 @@ def get_live_broker_data(config):
 def get_latest_plan(market_id: str = ""):
     """Get the latest plan, optionally filtered by market_id."""
     plans_dir = PROJECT_ROOT / "plans"
-    # Fall back to legacy paper_engine/plans if new dir is empty
-    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
-        plans_dir = PROJECT_ROOT / "paper_engine" / "plans"
     if not plans_dir.exists():
         return None
     # Try per-market files first (plan_{market}_{date}.json)
@@ -236,11 +230,11 @@ def get_latest_plan(market_id: str = ""):
 
 
 def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
-    """Sync broker fills into paper state for allocation tracking.
+    """Sync broker fills into live state for allocation tracking.
 
-    Compares broker positions (filtered to this market) with paper state.
+    Compares broker positions (filtered to this market) with live state.
     Any broker position whose ticker is in the approved plan but NOT in
-    paper state is a new fill — record it immediately.
+    live state is a new fill — record it immediately.
 
     Called on every dashboard refresh so fills show up within minutes.
     """
@@ -250,7 +244,7 @@ def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
     portfolio.connect()
     live_tickers = {p.ticker for p in portfolio.positions}
     portfolio.disconnect()
-    paper_tickers = live_tickers
+    live_tickers = live_tickers
 
     # Load latest plan to find Atlas-managed entries
     plan = get_latest_plan(market_id)
@@ -261,7 +255,7 @@ def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
     synced = 0
     for bp in broker_positions:
         ticker = bp.get("ticker", "")
-        if ticker in paper_tickers:
+        if ticker in live_tickers:
             continue  # already tracked
         if ticker not in plan_entries:
             continue  # not an Atlas-managed position (manual hold)
@@ -288,7 +282,7 @@ def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
 
         portfolio.execute_entry(_Sig(), fill_price, trade_date)
         synced += 1
-        logger.info("Fill sync [%s]: %s %dx @ $%.2f → paper state",
+        logger.info("Fill sync [%s]: %s %dx @ $%.2f → live state",
                      market_id, ticker, shares, fill_price)
 
     if synced:
@@ -549,7 +543,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
       Keys: "acct", "positions", "ok". If None, connects fresh.
     """
     config = get_config(market_id)
-    portfolio = get_portfolio(config)  # paper state — used only for fallback mode
+    portfolio = get_portfolio(config)  # live state fallback
     plan = get_latest_plan(market_id)
     ledger = safe_json(PROJECT_ROOT / "journal" / "trade_ledger.json", [])
 
@@ -559,7 +553,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
 
     trading = config.get("trading", {})
     is_live_mode = (trading.get("mode") == "live"
-                    and trading.get("broker", "paper") != "paper"
+                    and trading.get("broker", "ibkr") != "ibkr"
                     and trading.get("live_enabled", False))
 
     # ── Try live broker data first ──────────────────────────────
@@ -613,7 +607,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         positions = portfolio.get("positions", [])
         atlas_positions = positions
         all_positions = positions
-        data_source = "paper"
+        data_source = "offline"
         cash = portfolio.get("cash", seq)
 
         # Collect tickers needing prices
@@ -640,7 +634,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         market_pnl = round(pos_value - total_entry_value, 2)
 
     # Realized P&L from closed trades
-    # In live mode, use live state file; otherwise paper state or ledger
+    # In live mode, use live state file; otherwise cached state
     live_state_file = PROJECT_ROOT / "brokers" / "state" / f"live_{market_id}.json"
     live_closed = safe_json(live_state_file, {}).get("closed_trades", [])
     closed = live_closed or portfolio.get("closed_trades", []) or ledger or []
@@ -731,7 +725,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     today_str = now.strftime("%Y-%m-%d")
 
     # Only update the equity curve when we have reliable data (broker online).
-    # When falling back to paper state with stale cached prices, the equity
+    # When broker offline with stale cached prices, the equity
     # value is approximate — writing it would corrupt the curve with inaccurate
     # points that can't be corrected later.
     if data_source == "broker":
@@ -766,7 +760,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     elif is_live_mode and dry_run:
         mode_label = "live_dry_run"
     else:
-        mode_label = "paper"
+        mode_label = "offline"
 
     # Split positions into Atlas-managed and manual
     atlas_open = [p for p in open_pos if p.get("is_atlas", True)]
@@ -789,8 +783,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         "market_id": market_id,
         "currency": currency,
         "trading_mode": mode_label,
-        "data_source": data_source if broker_ok else "paper",
-        "broker": trading.get("broker", "paper"),
+        "data_source": data_source if broker_ok else "offline",
+        "broker": trading.get("broker", "ibkr"),
         "portfolio": {
             "equity": equity, "cash": round(cash, 2),
             "starting_equity": seq,
@@ -1512,7 +1506,7 @@ def generate():
         cfg = get_config(mid)
         trading = cfg.get("trading", {})
         if (trading.get("mode") == "live"
-                and trading.get("broker", "paper") != "paper"
+                and trading.get("broker", "ibkr") != "ibkr"
                 and trading.get("live_enabled", False)):
             acct, positions, ok, orders = get_live_broker_data(cfg)
             if ok:
@@ -1611,9 +1605,9 @@ def generate():
         "markets": market_data,
         "exchange_rates": exchange_rates,
         # Top-level summary (combined across ALL markets, AUD-normalised)
-        "trading_mode": "live" if any(md.get("trading_mode") == "live" for md in market_data.values()) else "paper",
-        "data_source": "broker" if broker_caches else "paper",
-        "broker": {mid: get_config(mid).get("trading", {}).get("broker", "paper") for mid in markets},
+        "trading_mode": "live" if any(md.get("trading_mode") == "live" for md in market_data.values()) else "offline",
+        "data_source": "broker" if broker_caches else "offline",
+        "broker": {mid: get_config(mid).get("trading", {}).get("broker", "ibkr") for mid in markets},
         "config_version": {mid: md.get("config_version", "?") for mid, md in market_data.items()},
         "account": {
             "equity": round(combined_equity_aud, 2),

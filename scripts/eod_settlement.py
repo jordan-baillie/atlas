@@ -97,7 +97,7 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
     (simulating a stop-market order), not at the intraday low.
 
     Positions with a stop_order_id (exchange stop placed) are skipped —
-    the broker handles those, and reconcile_stops() syncs them to paper.
+    the broker handles those, and reconcile_stops() syncs them to live state.
     """
     exits = []
     for pos in list(portfolio.positions):
@@ -105,7 +105,7 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
             continue
         # Skip positions protected by exchange stop orders
         if getattr(pos, "stop_order_id", ""):
-            log.info(f"  {pos.ticker}: exchange stop active (order {pos.stop_order_id}), skipping paper check")
+            log.info(f"  {pos.ticker}: exchange stop active (order {pos.stop_order_id}), skipping local check")
             continue
         intraday_low = lows.get(pos.ticker, prices[pos.ticker])
         close_price  = prices[pos.ticker]

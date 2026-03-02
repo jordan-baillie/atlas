@@ -3,7 +3,7 @@
 
 Long-running bot that:
   - Sends trade plans with Approve / Reject inline buttons
-  - Executes approved plans through the live (or paper) executor
+  - Executes approved plans through the live executor
   - Reports execution results back to chat
 
 Credentials from ~/.atlas-secrets.json:
@@ -143,11 +143,11 @@ def format_plan_message(plan: dict, market_id: str = "asx") -> str:
 
     # Mode indicator
     config = get_active_config(market_id)
-    mode = config.get("trading", {}).get("mode", "paper")
+    mode = config.get("trading", {}).get("mode", "live")
     dry_run = config.get("trading", {}).get("live_safety", {}).get("dry_run_first", True)
-    broker = config.get("trading", {}).get("broker", "paper")
+    broker = config.get("trading", {}).get("broker", "ibkr")
 
-    if broker == "paper":
+    if not broker or broker not in ("moomoo", "ibkr"):
         mode_str = "📝 PAPER"
     elif dry_run:
         mode_str = "🔶 LIVE (DRY RUN)"
@@ -210,7 +210,6 @@ def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
 def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
     """Execute plan through LiveExecutor against the real broker.
 
-    After live execution, also updates the paper portfolio state so the
     $X allocation tracking stays in sync with actual broker fills.
     """
     from brokers.live_executor import LiveExecutor

@@ -206,10 +206,10 @@ def _fmt_pnl(value: float, currency: str = "USD") -> str:
 def _build_market_block(market_id: str, md: dict) -> list[str]:
     """Build message lines for a single market from dashboard data."""
     pf = md.get("portfolio", {})
-    mode = md.get("trading_mode", "paper")
+    mode = md.get("trading_mode", "live")
     currency = "AUD" if market_id == "asx" else "USD"
 
-    mode_icon = {"live": "🔴 LIVE", "live_dry_run": "🔶 DRY RUN", "paper": "📝 PAPER"}.get(mode, mode)
+    mode_icon = {"live": "🔴 LIVE", "live_dry_run": "🔶 DRY RUN", }.get(mode, mode)
     equity = pf.get("equity", 0)
     total_pnl = pf.get("total_pnl", 0)
     total_pnl_pct = pf.get("total_pnl_pct", 0)

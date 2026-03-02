@@ -1,6 +1,6 @@
 """Live Portfolio — broker-backed position/cash tracking.
 
-Drop-in replacement for PaperPortfolio when running in live mode.
+Live Portfolio — broker-backed position/cash tracking.
 Reads positions and cash from the connected broker instead of a JSON file.
 Maintains its own closed-trade history and equity curve in
     brokers/state/live_{market_id}.json
@@ -10,7 +10,7 @@ Usage:
 
     lp = LivePortfolio(config, market_id="asx")
     lp.connect()   # connects to broker
-    # ... use like PaperPortfolio: lp.positions, lp.cash, lp.equity(), etc.
+    # ... use: lp.positions, lp.cash, lp.equity(), etc.
     lp.disconnect()
 """
 
@@ -31,18 +31,18 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class LivePortfolio:
-    """Broker-backed portfolio that mirrors the PaperPortfolio interface.
+    """Broker-backed portfolio for live position and cash tracking.
 
     Positions and cash come from the live broker.
     Risk-limit checks, plan generation, and equity snapshots all work
-    against real broker state — no paper-engine coupling.
+    against real broker state — positions from broker directly.
     """
 
     def __init__(self, config: dict, market_id: str = "asx"):
         self.config = config
         self.market_id = market_id
 
-        # Risk params (same as PaperPortfolio)
+        # Risk params
         risk = config.get("risk", {})
         self.starting_equity = risk.get("starting_equity", 5000)
         self.max_risk_per_trade = risk.get("max_risk_per_trade_pct", 0.005)
@@ -212,13 +212,13 @@ class LivePortfolio:
         logger.info("LivePortfolio: %d positions, cash=$%.2f, equity=$%.2f",
                      len(self.positions), self.cash, self._broker_equity)
 
-    # ── Interface matching PaperPortfolio ──────────────────────
+    # ── Portfolio interface ──────────────────────
 
     def update_positions(self, prices: dict[str, float]):
         """Update MAE/MFE excursions for all positions with current prices.
 
-        # Audit C3: mirrors PaperPortfolio.update_positions() interface so
-        # eod_settlement.py can call it without caring about live vs paper.
+        # Audit C3: standard update_positions() interface so
+        # eod_settlement.py can call it uniformly.
         """
         for pos in self.positions:
             if pos.ticker in prices:
@@ -236,7 +236,7 @@ class LivePortfolio:
         return round(self.cash + pos_value, 2)
 
     def check_risk_limits(self, signal) -> tuple[bool, str]:
-        """Validate a proposed trade against risk limits (same logic as PaperPortfolio)."""
+        """Validate a proposed trade against risk limits."""
         reasons = []
 
         if len(self.positions) >= self.max_positions:
@@ -286,7 +286,7 @@ class LivePortfolio:
         self.halt_reason = ""
 
     def portfolio_summary(self, prices: dict[str, float] = None) -> dict:
-        """Build summary matching PaperPortfolio.portfolio_summary format."""
+        """Build portfolio summary."""
         eq = self.equity(prices)
         total_pnl = eq - self.starting_equity
         total_pnl_pct = round(total_pnl / self.starting_equity * 100, 2) if self.starting_equity else 0

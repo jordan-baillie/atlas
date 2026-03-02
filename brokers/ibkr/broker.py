@@ -1,7 +1,7 @@
 """Interactive Brokers broker implementation for Atlas — ib_insync (socket API).
 
 Connects to IB Gateway / TWS via the native TWS API protocol (port 4001 live,
-4002 paper). Uses ib_insync for async-to-sync bridging.
+4002 demo). Uses ib_insync for async-to-sync bridging.
 
 Prerequisites:
     - IB Gateway running (Docker: ghcr.io/gnzsnz/ib-gateway)
@@ -54,7 +54,7 @@ def _map_order_status(status_str: str) -> OrderStatus:
 
 
 class IBKRBroker(BrokerAdapter):
-    """Live/paper trading via IB Gateway socket API (ib_insync)."""
+    """Live trading via IB Gateway socket API (ib_insync)."""
 
     def __init__(self, config: dict, live: bool = False):
         super().__init__(config)
@@ -63,7 +63,7 @@ class IBKRBroker(BrokerAdapter):
 
         ibkr_cfg = config.get("ibkr", {})
         self._host = ibkr_cfg.get("host", "127.0.0.1")
-        # Port: 4001=live, 4002=paper (IB Gateway standard)
+        # Port: 4001=live, 4002=demo (IB Gateway standard)
         self._port = ibkr_cfg.get("port", 4001 if live else 4002)
         self._account_id: str = ibkr_cfg.get("account_id", "")
         self._currency: str = ibkr_cfg.get("currency", "AUD")

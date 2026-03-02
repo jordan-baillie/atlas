@@ -11,7 +11,7 @@ Broker selection is driven by config:
     trading.broker      = "moomoo" | "ibkr"
     trading.live_enabled = true | false
 
-Live trading requires BOTH broker != "paper" AND live_enabled == true.
+Live trading requires live_enabled == true and a valid broker configured.
 The live broker is the sole source of truth — no paper fallback.
 
 Usage:
@@ -76,7 +76,7 @@ def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter
     broker_name = _resolve_broker_name(config)
     live_enabled = config.get("trading", {}).get("live_enabled", False)
 
-    if not live_enabled or broker_name == "paper":
+    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
         logger.debug(
             "Broker not configured for live trading (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -107,7 +107,7 @@ def get_live_broker(config: Dict[str, Any]) -> Optional[BrokerAdapter]:
     live_enabled = config.get("trading", {}).get("live_enabled", False)
     broker_name = _resolve_broker_name(config)
 
-    if not live_enabled or broker_name == "paper":
+    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
         logger.debug(
             "Live broker not available (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -134,7 +134,7 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
     live_enabled = config.get("trading", {}).get("live_enabled", False)
     broker_name = _resolve_broker_name(config)
 
-    if not live_enabled or broker_name == "paper":
+    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
         logger.debug(
             "Live executor not available (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -151,7 +151,7 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
 
 def _resolve_broker_name(config: Dict[str, Any]) -> str:
     """Extract and normalise broker name from config."""
-    return config.get("trading", {}).get("broker", "paper").lower().strip()
+    return config.get("trading", {}).get("broker", "ibkr").lower().strip()
 
 
 def _make_moomoo_broker(

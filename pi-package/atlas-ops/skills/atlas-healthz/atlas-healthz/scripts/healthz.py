@@ -226,8 +226,8 @@ def check_config(project: Path, market_id: str) -> list:
 
     # Trading mode
     trading = cfg.get("trading", {})
-    mode = trading.get("mode", "paper")
-    broker = trading.get("broker", "paper")
+    mode = trading.get("mode", "live")
+    broker = trading.get("broker", "ibkr")
     live = trading.get("live_enabled", False)
     dry = trading.get("live_safety", {}).get("dry_run_first", True)
     results.append({"check": "trading_mode", "verdict": "ok",
@@ -253,9 +253,9 @@ def check_broker(project: Path, market_id: str) -> list:
         return results
 
     cfg = _load_json(cfg_path)
-    broker_name = cfg.get("trading", {}).get("broker", "paper")
-    if broker_name == "paper":
-        results.append({"check": "broker", "verdict": "ok", "message": "Broker is 'paper' — no live connection to check"})
+    broker_name = cfg.get("trading", {}).get("broker", "ibkr")
+    if broker_name not in ("moomoo", "ibkr"):
+        results.append({"check": "broker", "verdict": "ok", "message": "No valid broker configured"})
         return results
 
     try:
@@ -295,8 +295,6 @@ def check_portfolio(project: Path, market_id: str) -> list:
     """Portfolio: live state, equity history, closed trades, consistency."""
     results = []
     state_path = project / "brokers" / "state" / f"live_{market_id}.json"
-    if not state_path.exists():
-        state_path = project / "paper_engine" / "state" / f"live_{market_id}.json"  # legacy fallback
 
     if not state_path.exists():
         results.append({"check": "live_state", "verdict": "warn", "message": f"No live state file for {market_id}"})
@@ -337,8 +335,6 @@ def check_portfolio(project: Path, market_id: str) -> list:
 
     # Plans
     plans_dir = project / "plans"
-    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
-        plans_dir = project / "paper_engine" / "plans"  # legacy fallback
     if plans_dir.exists():
         plans = sorted(plans_dir.glob("plan_*.json"))
         if plans:

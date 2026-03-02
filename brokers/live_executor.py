@@ -70,7 +70,7 @@ def preflight_check_config(config: dict) -> list[str]:
             errors.append("live_safety.max_daily_orders must be > 0")
 
     # Check broker-specific config exists
-    broker_name = config.get("trading", {}).get("broker", "paper").lower()
+    broker_name = config.get("trading", {}).get("broker", "ibkr").lower()
     if broker_name == "moomoo" and not config.get("moomoo", {}).get("opend_host"):
         errors.append("moomoo.opend_host not configured")
     elif broker_name == "ibkr" and not config.get("ibkr", {}):
@@ -189,7 +189,7 @@ class LiveExecutor:
         from brokers.registry import get_live_broker
         self._broker = get_live_broker(self.config)
         if not self._broker:
-            broker_name = self.config.get("trading", {}).get("broker", "paper")
+            broker_name = self.config.get("trading", {}).get("broker", "ibkr")
             _journal_entry("connect_failed", {"reason": f"No live broker for {broker_name}"})
             logger.error("LiveExecutor: no live broker available for '%s'", broker_name)
             return False
@@ -666,105 +666,6 @@ class LiveExecutor:
 
         return stop_orders
 
-    # ── Broker ↔ Paper reconciliation ──────────────────────────
-
-    def reconcile_stops(self, portfolio) -> dict:
-        """Detect positions closed by exchange stop orders and sync paper state.
-
-        Compares paper positions (with stop_order_ids) against broker:
-        - If paper has a position but broker doesn't → stop was filled
-        - Queries the filled stop order to get fill price
-        - Closes the paper position at that price
-
-        Args:
-            portfolio: PaperPortfolio instance (mutated in place).
-
-        Returns:
-            Report dict with synced exits.
-        """
-        if not self._connected or not self._broker:
-            return {"error": "Not connected", "synced": []}
-
-        from datetime import datetime
-
-        trade_date = datetime.now().strftime("%Y-%m-%d")
-        broker_positions = self._broker.get_positions()
-        broker_tickers = {p.ticker for p in broker_positions}
-
-        synced = []
-
-        for pos in list(portfolio.positions):
-            if not pos.stop_order_id:
-                continue  # no exchange stop — skip
-
-            # Position still on broker → stop hasn't fired
-            if pos.ticker in broker_tickers:
-                continue
-
-            # Position GONE from broker but paper still has it → stop filled
-            logger.warning(
-                "RECONCILE: %s gone from broker (stop_order=%s) — syncing paper exit",
-                pos.ticker, pos.stop_order_id,
-            )
-
-            # Try to get the fill price from the stop order
-            fill_price = pos.stop_price  # default to stop price
-            try:
-                order_status = self._broker.get_order_status(pos.stop_order_id)
-                if order_status and order_status.fill_price > 0:
-                    fill_price = order_status.fill_price
-                    logger.info(
-                        "  Stop order %s filled at $%.2f",
-                        pos.stop_order_id, fill_price,
-                    )
-            except Exception as e:
-                logger.warning("  Could not query stop order %s: %s", pos.stop_order_id, e)
-
-            # Also check history deals for actual fill
-            try:
-                deals = self._broker.get_today_deals()
-                for deal in deals:
-                    if deal.ticker == pos.ticker and deal.side == OrderSide.SELL:
-                        if deal.price > 0:
-                            fill_price = deal.price
-                            logger.info("  Found deal fill at $%.2f", fill_price)
-                            break
-            except Exception as e:
-                logger.debug("  Deal query failed: %s", e)
-
-            # Close the paper position
-            result = portfolio.execute_exit(
-                pos.ticker, fill_price, trade_date, "broker_stop_fill"
-            )
-
-            if result:
-                synced.append({
-                    "ticker": pos.ticker,
-                    "stop_order_id": pos.stop_order_id,
-                    "fill_price": fill_price,
-                    "pnl": result.get("pnl", 0),
-                    "reason": "broker_stop_fill",
-                })
-                _journal_entry("reconcile_stop_fill", {
-                    "ticker": pos.ticker,
-                    "stop_order_id": pos.stop_order_id,
-                    "fill_price": fill_price,
-                    "pnl": result.get("pnl", 0),
-                })
-
-        if synced:
-            portfolio.save_state()
-            logger.info("Reconciliation: synced %d broker stop fills", len(synced))
-
-        report = {
-            "trade_date": trade_date,
-            "paper_positions": len(portfolio.positions),
-            "broker_positions": len(broker_tickers),
-            "synced": synced,
-        }
-        _journal_entry("reconciliation_complete", report)
-        return report
-
     # ── Account queries (delegated to broker) ──────────────────
 
     def get_account_info(self) -> Optional[AccountInfo]:
@@ -1053,69 +954,7 @@ class LiveExecutor:
             "orders": history,
         }
 
-    # ── Reconciliation ─────────────────────────────────────────
 
-    def reconcile_with_paper(self, paper_positions: list[dict]) -> dict:
-        """Compare live positions with paper portfolio.
-
-        Returns a report of discrepancies. Does NOT auto-correct.
-        """
-        if not self._connected or not self._broker:
-            return {"error": "Not connected"}
-
-        live_positions = self._broker.get_positions()
-        # Filter to the market's tickers (e.g. .AX for ASX, bare for US)
-        market_id = self.config.get("market", "asx")
-        from markets.registry import get_market
-        mkt = get_market(market_id)
-        suffix = mkt.yfinance_suffix if mkt else ".AX"
-        if suffix:
-            live_map = {p.ticker: p for p in live_positions if p.ticker.endswith(suffix)}
-        else:
-            live_map = {p.ticker: p for p in live_positions}
-        paper_map = {p["ticker"]: p for p in paper_positions}
-
-        discrepancies = []
-
-        # Check paper positions missing from live
-        for ticker, paper in paper_map.items():
-            if ticker not in live_map:
-                discrepancies.append({
-                    "ticker": ticker,
-                    "type": "PAPER_ONLY",
-                    "paper_shares": paper.get("shares", 0),
-                    "live_shares": 0,
-                })
-            else:
-                live = live_map[ticker]
-                if paper.get("shares", 0) != live.shares:
-                    discrepancies.append({
-                        "ticker": ticker,
-                        "type": "QTY_MISMATCH",
-                        "paper_shares": paper.get("shares", 0),
-                        "live_shares": live.shares,
-                    })
-
-        # Check live positions missing from paper
-        for ticker, live in live_map.items():
-            if ticker not in paper_map:
-                discrepancies.append({
-                    "ticker": ticker,
-                    "type": "LIVE_ONLY",
-                    "paper_shares": 0,
-                    "live_shares": live.shares,
-                })
-
-        report = {
-            "timestamp": datetime.now().isoformat(),
-            "paper_count": len(paper_map),
-            "live_count": len(live_map),
-            "discrepancies": discrepancies,
-            "in_sync": len(discrepancies) == 0,
-        }
-
-        _journal_entry("reconciliation", report)
-        return report
 
     # ── Helpers ────────────────────────────────────────────────
 

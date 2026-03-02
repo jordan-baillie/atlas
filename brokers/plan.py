@@ -1,7 +1,6 @@
 """TradePlanGenerator — generates daily trade plans for approval.
 
-Extracted from paper_engine/engine.py. Plans are now saved to plans/ at
-the project root instead of paper_engine/plans/.
+Plans are saved to plans/ at the project root.
 """
 
 from __future__ import annotations
@@ -128,17 +127,12 @@ class TradePlanGenerator:
     def load_plan(self, trade_date: str, market_id: str = "") -> Optional[dict]:
         plans_dir = PROJECT_ROOT / self.PLANS_DIR
         market_id = market_id or self.config.get("market", "")
-        # Try per-market file first, fall back to legacy paper_engine/plans path
+        # Try per-market file first, then generic
         candidates = []
         if market_id:
             candidates.append(plans_dir / f"plan_{market_id}_{trade_date}.json")
         candidates.append(plans_dir / f"plan_{trade_date}.json")
-        # Legacy fallback: plans may still be in paper_engine/plans/
-        legacy_dir = PROJECT_ROOT / "paper_engine" / "plans"
-        if legacy_dir.exists():
-            if market_id:
-                candidates.append(legacy_dir / f"plan_{market_id}_{trade_date}.json")
-            candidates.append(legacy_dir / f"plan_{trade_date}.json")
+
         for path in candidates:
             if path.exists():
                 with open(path) as f:

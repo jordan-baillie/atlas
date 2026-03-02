@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Self-Annealing Improvement Loop.
 
-At the end of each trading day (paper), runs:
+At the end of each trading day, runs:
 1. Review: Summarize performance and drawdown
 2. Hypothesis: Propose 1-2 small, testable changes
 3. Experiment: Backtest changes with walk-forward validation

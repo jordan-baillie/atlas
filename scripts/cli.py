@@ -228,7 +228,7 @@ def cmd_plan(args):
 
     # Use live broker portfolio as source of truth
     portfolio = _get_portfolio(config, market_id)
-    broker_name = config.get("trading", {}).get("broker", "paper")
+    broker_name = config.get("trading", {}).get("broker", "ibkr")
     print("LIVE MODE: Planning against $%.2f equity (%d positions) via %s" %
           (portfolio.equity(prices), len(portfolio.positions), broker_name))
 
@@ -401,8 +401,8 @@ def cmd_broker_status(args):
     """Show broker connection and account status."""
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
-    broker_name = config.get("trading", {}).get("broker", "paper")
-    mode = config.get("trading", {}).get("mode", "paper")
+    broker_name = config.get("trading", {}).get("broker", "ibkr")
+    mode = config.get("trading", {}).get("mode", "live")
 
     print("\n" + "=" * 55)
     print("  BROKER STATUS")
@@ -456,14 +456,14 @@ def cmd_live_run(args):
     """Execute approved plan via live broker with safety gates."""
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
-    mode = config.get("trading", {}).get("mode", "paper")
-    broker_name = config.get("trading", {}).get("broker", "paper")
+    mode = config.get("trading", {}).get("mode", "live")
+    broker_name = config.get("trading", {}).get("broker", "ibkr")
 
-    if broker_name == "paper":
-        print("ERROR: trading.broker is 'paper'. Set to 'moomoo' or 'ibkr' for live execution.")
+    if broker_name not in ("moomoo", "ibkr"):
+        print("ERROR: trading.broker must be 'moomoo' or 'ibkr'.")
         return
-    if mode not in ("live", "paper"):
-        print("ERROR: trading.mode must be 'live' or 'paper'")
+    if mode != "live":
+        print("ERROR: trading.mode must be 'live'")
         return
 
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
@@ -867,7 +867,7 @@ def cmd_market_check(args):
 
 
 def cmd_sync(args):
-    """Reconcile Atlas paper state with live broker positions."""
+    """Reconcile Atlas state with live broker positions."""
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
     from brokers.registry import get_broker

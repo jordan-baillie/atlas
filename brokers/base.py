@@ -1,6 +1,6 @@
 """Abstract broker interface for Atlas.
 
-All brokers (paper, moomoo, future) implement this ABC.
+All brokers (moomoo, ibkr, future) implement this ABC.
 Atlas internals use yfinance ticker format throughout — conversion
 happens inside each broker implementation at the boundary.
 For ASX: .AX format. For US: bare tickers. For LSE: .L format.
@@ -303,5 +303,5 @@ class BrokerAdapter(ABC):
 
     def __repr__(self):
         status = "connected" if self._connected else "disconnected"
-        live = "LIVE" if self.is_live else "paper"
+        live = "LIVE" if self.is_live else "DRY_RUN"
         return f"<{self.name} [{live}] {status}>"

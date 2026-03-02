@@ -1,6 +1,6 @@
 """Position — represents a single open trading position.
 
-Extracted from paper_engine/engine.py for shared use across broker adapters.
+Position data class used across broker adapters.
 """
 
 from typing import Optional
