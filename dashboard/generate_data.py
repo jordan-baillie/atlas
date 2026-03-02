@@ -565,6 +565,9 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
 
     # ── Try live broker data first ──────────────────────────────
     broker_acct, broker_positions, broker_ok = None, [], False
+    # Also check for cross-broker positions: Moomoo may hold .AX stocks
+    # even when this market's primary broker is IBKR.
+    cross_broker_positions = []
     if is_live_mode:
         if broker_cache and broker_cache.get("ok"):
             # Reuse shared broker connection — filter positions to this market
@@ -572,14 +575,27 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
             all_broker_pos = broker_cache["positions"]
             # Filter positions by market
             if market_id == "sp500":
-                broker_positions = [p for p in all_broker_pos if not p.get("ticker", "").endswith(".AX")]
+                broker_positions = [p for p in all_broker_pos if not p.get("ticker", "").endswith(".AX") and not p.get("ticker", "").endswith(".HK")]
             elif market_id == "asx":
                 broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".AX")]
+            elif market_id == "hk":
+                broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".HK")]
             else:
                 broker_positions = all_broker_pos
             broker_ok = True
         else:
             broker_acct, broker_positions, broker_ok, _orders = get_live_broker_data(config)
+    elif broker_cache and broker_cache.get("ok"):
+        # Not in live mode, but we have shared broker data (cross-broker).
+        # Extract positions that belong to THIS market as manual holdings.
+        all_broker_pos = broker_cache["positions"]
+        if market_id == "asx":
+            cross_broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".AX")]
+        elif market_id == "hk":
+            cross_broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".HK")]
+        if cross_broker_positions:
+            logger.info("Cross-broker positions for %s: %d from shared broker",
+                        market_id, len(cross_broker_positions))
 
     if broker_ok and broker_acct:
         # Broker is the sole source of truth
@@ -613,7 +629,9 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         # Paper/fallback mode
         positions = portfolio.get("positions", [])
         atlas_positions = positions
-        all_positions = positions
+        # Include cross-broker positions (e.g. ASX stocks held on Moomoo)
+        # as manual (non-Atlas) holdings alongside paper positions.
+        all_positions = list(positions) + cross_broker_positions
         data_source = "offline"
         cash = portfolio.get("cash", seq)
         # When no capital is allocated and no positions exist, cash must be 0
@@ -659,7 +677,10 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         t = p.get("ticker", "")
         is_atlas = p.get("is_atlas", True)
 
-        if broker_ok:
+        # Cross-broker positions (from shared Moomoo data) already have
+        # market_value and unrealized_pnl from the broker even in paper mode.
+        has_broker_data = broker_ok or p.get("market_value", 0) > 0
+        if has_broker_data:
             # Broker already provides current_price and unrealized_pnl
             ep = p.get("entry_price", 0)
             sh = p.get("shares", 0)
@@ -841,6 +862,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
             market_orders = [o for o in all_orders if o.get("market") == "US"]
         elif market_id == "asx":
             market_orders = [o for o in all_orders if o.get("market") in ("AU", "")]
+        elif market_id == "hk":
+            market_orders = [o for o in all_orders if o.get("market") == "HK"]
         else:
             market_orders = all_orders
         result["pending_orders"] = market_orders
@@ -1525,20 +1548,47 @@ def generate():
     markets = list_markets()  # ['asx', 'sp500']
 
     # ── Per-market broker connections (each market has its own broker) ──
+    # Connect to each distinct broker ONCE and share positions across markets.
+    # Moomoo holds positions across AU/US/HK on a single account, so one
+    # connection provides data for all markets — positions are filtered by
+    # ticker suffix when building each market's cache.
     broker_caches = {}
+    moomoo_data = None  # shared Moomoo connection (all markets on one account)
+
     for mid in markets:
         cfg = get_config(mid)
         trading = cfg.get("trading", {})
+        broker_name = trading.get("broker", "ibkr")
         if (trading.get("mode") == "live"
-                and trading.get("broker", "ibkr") != "ibkr"
+                and broker_name != "ibkr"
                 and trading.get("live_enabled", False)):
-            acct, positions, ok, orders = get_live_broker_data(cfg)
-            if ok:
-                broker_caches[mid] = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
-                print(f"  {mid}: broker connected ({trading.get('broker')}), "
-                      f"{len(positions)} positions")
+            if broker_name == "moomoo" and moomoo_data is not None:
+                # Reuse existing Moomoo connection
+                broker_caches[mid] = moomoo_data
+                print(f"  {mid}: reusing moomoo connection")
             else:
-                print(f"  {mid}: broker connect FAILED ({trading.get('broker')})")
+                acct, positions, ok, orders = get_live_broker_data(cfg)
+                if ok:
+                    cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
+                    broker_caches[mid] = cache
+                    if broker_name == "moomoo":
+                        moomoo_data = cache
+                    print(f"  {mid}: broker connected ({broker_name}), "
+                          f"{len(positions)} positions")
+                else:
+                    print(f"  {mid}: broker connect FAILED ({broker_name})")
+
+    # Share Moomoo positions with markets that don't have their own live broker
+    # but DO have positions on Moomoo (e.g. ASX stocks held on Moomoo account).
+    if moomoo_data:
+        for mid in markets:
+            if mid in broker_caches:
+                continue  # already has broker data
+            cfg = get_config(mid)
+            # Check if this market has a moomoo config section (could hold positions)
+            if cfg.get("moomoo"):
+                broker_caches[mid] = moomoo_data
+                print(f"  {mid}: using shared moomoo data (cross-broker positions)")
 
     # ── Generate per-market data ────────────────────────────────
     market_data = {}
