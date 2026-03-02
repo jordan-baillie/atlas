@@ -3,19 +3,22 @@
 Atlas uses yfinance format:
   ASX:   BHP.AX, CBA.AX, IOZ.AX
   SP500: AAPL, MSFT, ON  (plain symbols, no suffix)
+  HK:    0700.HK, 0005.HK, 2800.HK  (leading zeros preserved)
 
 Moomoo uses market prefix:
   ASX:   AU.BHP, AU.CBA, AU.IOZ
   US:    US.AAPL, US.MSFT, US.ON
+  HK:    HK.0700, HK.0005, HK.2800  (leading zeros preserved)
 
 All conversion happens at the broker boundary — Atlas internals
-never see AU./US. format.
+never see AU./US./HK. format.
 """
 
 # Market ID → Moomoo prefix
 _MARKET_PREFIX = {
     "asx": "AU",
     "sp500": "US",
+    "hk": "HK",
 }
 
 # Moomoo prefix → yfinance suffix (empty string = no suffix)
@@ -35,6 +38,10 @@ def to_moomoo(ticker: str, market_id: str = "asx") -> str:
     'US.AAPL'
     >>> to_moomoo('US.AAPL', 'sp500')
     'US.AAPL'
+    >>> to_moomoo('0700.HK', 'hk')
+    'HK.0700'
+    >>> to_moomoo('0005', 'hk')
+    'HK.0005'
     """
     prefix = _MARKET_PREFIX.get(market_id, "AU")
 
@@ -61,6 +68,10 @@ def to_atlas(moomoo_code: str) -> str:
     'AAPL'
     >>> to_atlas('BHP.AX')
     'BHP.AX'
+    >>> to_atlas('HK.0700')
+    '0700.HK'
+    >>> to_atlas('HK.0005')
+    '0005.HK'
     """
     for prefix, suffix in _PREFIX_SUFFIX.items():
         if moomoo_code.startswith(f"{prefix}."):

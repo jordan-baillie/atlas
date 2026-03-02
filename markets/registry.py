@@ -81,9 +81,10 @@ def list_markets() -> List[str]:
 def _auto_register():
     """Register all built-in market profiles."""
     from markets.asx import ASXMarket
+    from markets.hk import HKMarket
     from markets.sp500 import SP500Market
 
-    for MarketClass in [ASXMarket, SP500Market]:
+    for MarketClass in [ASXMarket, HKMarket, SP500Market]:
         instance = MarketClass()
         if instance.market_id not in _registry:
             MarketRegistry.register(instance)
