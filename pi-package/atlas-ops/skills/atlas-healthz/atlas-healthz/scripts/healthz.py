@@ -294,7 +294,9 @@ def check_broker(project: Path, market_id: str) -> list:
 def check_portfolio(project: Path, market_id: str) -> list:
     """Portfolio: live state, equity history, closed trades, consistency."""
     results = []
-    state_path = project / "paper_engine" / "state" / f"live_{market_id}.json"
+    state_path = project / "brokers" / "state" / f"live_{market_id}.json"
+    if not state_path.exists():
+        state_path = project / "paper_engine" / "state" / f"live_{market_id}.json"  # legacy fallback
 
     if not state_path.exists():
         results.append({"check": "live_state", "verdict": "warn", "message": f"No live state file for {market_id}"})
@@ -334,7 +336,9 @@ def check_portfolio(project: Path, market_id: str) -> list:
                         "message": f"Win rate: {win_rate:.0f}%, Total P&L: ${total_pnl:+,.2f}, Avg: ${sum(pnls)/len(pnls):+,.2f}"})
 
     # Plans
-    plans_dir = project / "paper_engine" / "plans"
+    plans_dir = project / "plans"
+    if not plans_dir.exists() or not any(plans_dir.glob("plan_*.json")):
+        plans_dir = project / "paper_engine" / "plans"  # legacy fallback
     if plans_dir.exists():
         plans = sorted(plans_dir.glob("plan_*.json"))
         if plans:

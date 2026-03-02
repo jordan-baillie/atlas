@@ -54,17 +54,13 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
     os.chdir(PROJECT_ROOT)
 
     from utils.config import get_active_config
-    from paper_engine.engine import PaperPortfolio, TradePlanGenerator
+    from brokers.live_portfolio import LivePortfolio
+    from brokers.plan import TradePlanGenerator
 
     config = get_active_config(market_id)
-    trading = config.get("trading", {})
-    broker_name = trading.get("broker", "paper")
-    is_live = (trading.get("mode") == "live"
-               and trading.get("live_enabled", False)
-               and broker_name != "paper")
 
-    # Load & approve the plan
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    # Load & approve the plan (live broker is sole source of truth)
+    portfolio = LivePortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.load_plan(trade_date)
 
@@ -79,11 +75,8 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
 
     plan_gen.approve_plan(trade_date)
 
-    # Execute based on broker mode
-    if is_live:
-        result = _execute_live(plan, trade_date, config, market_id)
-    else:
-        result = _execute_paper(plan, trade_date, config, market_id)
+    # Always execute live — live broker is sole source of truth
+    result = _execute_live(plan, trade_date, config, market_id)
 
     # Regenerate dashboard data
     try:
@@ -107,39 +100,12 @@ def _execute_live(plan, trade_date, config, market_id) -> dict:
     try:
         report = executor.execute_plan(plan, trade_date)
 
-        # Sync paper state with broker fills
-        try:
-            paper_pf = __import__("paper_engine.engine", fromlist=["PaperPortfolio"]).PaperPortfolio(config, market_id=market_id)
-            for entry_r in report.get("entries", []):
-                if entry_r.get("success"):
-                    ticker = entry_r.get("ticker", "")
-                    # Build a signal-like object for paper tracking
-                    plan_entry = next(
-                        (e for e in plan.get("proposed_entries", [])
-                         if e["ticker"] == ticker), None
-                    )
-                    if plan_entry and ticker not in {p.ticker for p in paper_pf.positions}:
-                        class _Sig:
-                            pass
-                        sig = _Sig()
-                        sig.ticker = ticker
-                        sig.strategy = plan_entry.get("strategy", "unknown")
-                        sig.entry_price = entry_r.get("fill_price", plan_entry["entry_price"])
-                        sig.stop_price = plan_entry.get("stop_price", 0)
-                        sig.take_profit = plan_entry.get("take_profit")
-                        sig.position_size = entry_r.get("qty", plan_entry["position_size"])
-                        sig.confidence = plan_entry.get("confidence", 0)
-                        sig.features = plan_entry.get("features", {})
-                        sig.sector = plan_entry.get("sector", "")
-                        paper_pf.execute_entry(sig, sig.entry_price, trade_date)
-        except Exception as e:
-            print(f"Paper sync after live execution failed: {e}")
-
         # Mark plan as executed
         plan["status"] = "EXECUTED"
         plan["executed_at"] = __import__("datetime").datetime.now().isoformat()
-        from paper_engine.engine import TradePlanGenerator
-        tpg = TradePlanGenerator(paper_pf, config)
+        from brokers.plan import TradePlanGenerator
+        from brokers.live_portfolio import LivePortfolio
+        tpg = TradePlanGenerator(LivePortfolio(config, market_id=market_id), config)
         tpg._save_plan(plan, trade_date)
 
         entries_ok = sum(1 for e in report.get("entries", []) if e.get("success"))
@@ -159,67 +125,17 @@ def _execute_live(plan, trade_date, config, market_id) -> dict:
         executor.disconnect()
 
 
-def _execute_paper(plan, trade_date, config, market_id) -> dict:
-    """Execute on paper portfolio."""
-    from paper_engine.engine import PaperPortfolio, TradePlanGenerator
-
-    portfolio = PaperPortfolio(config, market_id=market_id)
-    entries = plan.get("proposed_entries", [])
-    exits = plan.get("proposed_exits", [])
-
-    executed_entries = 0
-    executed_exits = 0
-
-    for ex in exits:
-        ticker = ex.get("ticker", "")
-        price = ex.get("exit_price", ex.get("current_price", 0))
-        reason = ex.get("reason", ex.get("exit_reason", "plan_exit"))
-        if price > 0 and ticker:
-            portfolio.execute_exit(ticker, price, trade_date, reason)
-            executed_exits += 1
-
-    for e in entries:
-        class _Sig:
-            pass
-        sig = _Sig()
-        sig.ticker = e["ticker"]
-        sig.strategy = e.get("strategy", "unknown")
-        sig.entry_price = e["entry_price"]
-        sig.stop_price = e.get("stop_price", 0)
-        sig.take_profit = e.get("take_profit")
-        sig.position_size = e["position_size"]
-        sig.confidence = e.get("confidence", 0)
-        sig.features = e.get("features", {})
-        sig.sector = e.get("sector", "")
-        price = e["entry_price"]
-        if price > 0:
-            portfolio.execute_entry(sig, price, trade_date)
-            executed_entries += 1
-
-    plan["status"] = "EXECUTED"
-    plan["executed_at"] = __import__("datetime").datetime.now().isoformat()
-    tpg = TradePlanGenerator(portfolio, config)
-    tpg._save_plan(plan, trade_date)
-
-    return {
-        "ok": True,
-        "mode": "paper",
-        "market_id": market_id,
-        "entries": f"{executed_entries}/{len(entries)}",
-        "exits": f"{executed_exits}/{len(exits)}",
-    }
-
-
 def _reject_plan(trade_date: str, market_id: str) -> dict:
     """Reject a plan (mark as REJECTED, don't execute)."""
     sys.path.insert(0, str(PROJECT_ROOT))
     os.chdir(PROJECT_ROOT)
 
     from utils.config import get_active_config
-    from paper_engine.engine import PaperPortfolio, TradePlanGenerator
+    from brokers.live_portfolio import LivePortfolio
+    from brokers.plan import TradePlanGenerator
 
     config = get_active_config(market_id)
-    portfolio = PaperPortfolio(config, market_id=market_id)
+    portfolio = LivePortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.load_plan(trade_date)
 

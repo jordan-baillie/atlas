@@ -3,7 +3,7 @@
 Drop-in replacement for PaperPortfolio when running in live mode.
 Reads positions and cash from the connected broker instead of a JSON file.
 Maintains its own closed-trade history and equity curve in
-    paper_engine/state/live_{market_id}.json
+    brokers/state/live_{market_id}.json
 
 Usage:
     from brokers.live_portfolio import LivePortfolio
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 from brokers.base import PositionInfo
-from paper_engine.engine import Position
+from brokers.position import Position
 
 logger = logging.getLogger("atlas.live_portfolio")
 
@@ -80,7 +80,7 @@ class LivePortfolio:
     # ── State file (local, tracks history only) ────────────────
 
     def _state_path(self) -> Path:
-        return PROJECT_ROOT / "paper_engine" / "state" / f"live_{self.market_id}.json"
+        return PROJECT_ROOT / "brokers" / "state" / f"live_{self.market_id}.json"
 
     def _load_local_state(self):
         path = self._state_path()

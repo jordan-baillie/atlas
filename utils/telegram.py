@@ -14,7 +14,7 @@ Usage (Python):
     from utils.telegram import send_message, send_premarket_summary, send_postclose_summary, send_error
 
     send_message("Hello from Atlas")
-    send_premarket_summary(plan_path="paper_engine/plans/plan_2026-02-25.json")
+    send_premarket_summary(plan_path="plans/plan_2026-02-25.json")
     send_postclose_summary(market_id="asx")
     send_error("premarket", "Traceback ...")
 
@@ -299,7 +299,7 @@ def send_premarket_summary(plan_path: Optional[str] = None, market_id: str = "sp
 
     if plan_path is None:
         today = datetime.now().strftime("%Y-%m-%d")
-        plan_path = str(PROJECT_ROOT / f"paper_engine/plans/plan_{today}.json")
+        plan_path = str(PROJECT_ROOT / f"plans/plan_{today}.json")
 
     # Portfolio snapshot from dashboard data
     snapshot = _build_portfolio_snapshot(market_id)

@@ -81,7 +81,10 @@ def test_hk_backtest_defaults():
     assert d["step_days"] == 20  # 247//12
 
 def test_hk_paper_state():
-    state_path = PROJECT / "paper_engine" / "state" / "hk.json"
+    # Check both new location (brokers/state/) and legacy (paper_engine/state/)
+    state_path = PROJECT / "brokers" / "state" / "hk.json"
+    if not state_path.exists():
+        state_path = PROJECT / "paper_engine" / "state" / "hk.json"
     assert state_path.exists()
     state = json.loads(state_path.read_text())
     assert state["market_id"] == "hk"
