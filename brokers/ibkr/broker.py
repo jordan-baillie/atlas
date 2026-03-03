@@ -593,6 +593,184 @@ class IBKRBroker(BrokerAdapter):
         """
         return self.get_history_deals()
 
+    # ── Protective orders ──────────────────────────────────────
+
+    def place_protective_orders(
+        self,
+        ticker: str,
+        qty: int,
+        stop_price: float,
+        take_profit: Optional[float] = None,
+    ) -> dict:
+        """Place SL + TP protective orders for an existing position.
+
+        Places a stop-loss and optional take-profit as an OCA (One-Cancels-All)
+        group. When SL fills, TP is automatically cancelled (and vice versa).
+        When take_profit is None, only a GTC stop-loss is placed — common for
+        trailing-stop strategies that manage exits outside the broker.
+
+        Args:
+            ticker:      Atlas ticker (e.g. 'BHP.AX', 'AAPL').
+            qty:         Number of shares to protect.
+            stop_price:  Stop-loss trigger price.
+            take_profit: Take-profit limit price (None = SL-only).
+
+        Returns:
+            dict with keys: success, sl_order_id, tp_order_id, oca_group, message.
+        """
+        self._require_connected()
+        from brokers.ibkr.protective_orders import place_protective_orders as _place
+
+        contract = self._qualify_contract(ticker)
+        result = _place(
+            self._ib, contract, qty,
+            stop_price=stop_price,
+            take_profit_price=take_profit,
+            account_id=self._account_id,
+        )
+
+        logger.info(
+            "place_protective_orders %s qty=%d sl=%.4f tp=%s → success=%s SL=%s TP=%s",
+            ticker, qty, stop_price,
+            f"{take_profit:.4f}" if take_profit else "none",
+            result["success"],
+            result.get("sl_order_id"),
+            result.get("tp_order_id"),
+        )
+        return result
+
+    def sync_all_protective_orders(self, plan_entries: list[dict]) -> dict:
+        """Ensure all current long positions have broker-side protective orders.
+
+        Fetches live positions from IBKR via portfolio(), then for each long
+        position checks if an Atlas SL order exists. Positions missing a
+        stop-loss get protective orders placed (SL + TP if plan provides a target).
+
+        This is safe to call multiple times — positions already protected are
+        skipped. Useful as a daily reconciliation step to recover from missed
+        stop placements after server restarts.
+
+        Args:
+            plan_entries: List of plan entry dicts (from TradePlanGenerator).
+                          Expected keys: ticker, stop_price, optionally
+                          take_profit or take_profit_price.
+
+        Returns:
+            sync summary dict — see protective_orders.sync_protective_orders().
+        """
+        self._require_connected()
+        from brokers.ibkr import protective_orders as po
+
+        # Build plan lookup by ticker for stop/tp data
+        plan_by_ticker: dict = {}
+        for entry in (plan_entries or []):
+            t = entry.get("ticker", "")
+            if t:
+                plan_by_ticker[t] = entry
+
+        # Fetch live portfolio to find long positions
+        portfolio_items = self._ib.portfolio(self._account_id)
+        positions_for_sync: list[dict] = []
+
+        for item in portfolio_items:
+            qty = int(item.position)
+            if qty <= 0:
+                continue  # skip shorts and flat positions
+
+            contract = item.contract
+            symbol = contract.symbol
+            exchange = contract.exchange or contract.primaryExchange or ""
+            ticker = mapper.to_atlas(symbol, exchange)
+
+            plan = plan_by_ticker.get(ticker, {})
+            stop_price = plan.get("stop_price", 0)
+            raw_tp = plan.get("take_profit_price") or plan.get("take_profit", 0)
+            tp_price = float(raw_tp) if raw_tp else None
+
+            positions_for_sync.append({
+                "contract": contract,
+                "qty": qty,
+                "ticker": ticker,
+                "stop_price": stop_price,
+                "take_profit_price": tp_price,
+            })
+
+        if not positions_for_sync:
+            logger.info("sync_all_protective_orders: no long positions found")
+            return {
+                "positions_checked": 0,
+                "already_protected": 0,
+                "orders_placed": 0,
+                "no_stop_price": 0,
+                "failed": 0,
+                "details": [],
+            }
+
+        logger.info(
+            "sync_all_protective_orders: %d long position(s), %d plan entries",
+            len(positions_for_sync), len(plan_entries or []),
+        )
+
+        return po.sync_protective_orders(
+            self._ib,
+            positions_for_sync,
+            plan_entries=plan_entries,
+            account_id=self._account_id,
+        )
+
+    def get_protective_order_status(self, ticker: str) -> dict:
+        """Return the current SL/TP order status for a ticker.
+
+        Queries open trades for Atlas-managed stop-loss and take-profit orders
+        on this contract. Useful for reconciliation and dashboard display.
+
+        Args:
+            ticker: Atlas ticker string (e.g. 'BHP.AX').
+
+        Returns:
+            dict with keys:
+                ticker:      str
+                protected:   bool — True if at least one SL order exists
+                has_sl:      bool
+                has_tp:      bool
+                sl_orders:   list[dict] — each with order_id, stop_price, status, etc.
+                tp_orders:   list[dict] — each with order_id, limit_price, status, etc.
+                oca_groups:  list[str]
+        """
+        self._require_connected()
+        from brokers.ibkr.protective_orders import get_existing_protective_orders
+
+        contract = self._qualify_contract(ticker)
+        existing = get_existing_protective_orders(
+            self._ib, contract, self._account_id,
+        )
+
+        def _trade_to_dict(trade) -> dict:
+            o = trade.order
+            s = trade.orderStatus
+            return {
+                "order_id": str(o.orderId),
+                "order_type": o.orderType or "",
+                "action": o.action or "",
+                "qty": int(o.totalQuantity),
+                "stop_price": float(o.auxPrice or 0),
+                "limit_price": float(o.lmtPrice or 0),
+                "status": s.status if s else "unknown",
+                "oca_group": o.ocaGroup or "",
+                "order_ref": o.orderRef or "",
+                "tif": o.tif or "",
+            }
+
+        return {
+            "ticker": ticker,
+            "protected": existing["protected"],
+            "has_sl": existing["has_sl"],
+            "has_tp": existing["has_tp"],
+            "sl_orders": [_trade_to_dict(t) for t in existing["sl_orders"]],
+            "tp_orders": [_trade_to_dict(t) for t in existing["tp_orders"]],
+            "oca_groups": list(existing["oca_groups"]),
+        }
+
     # ── Internal ───────────────────────────────────────────────
 
     def _require_connected(self):

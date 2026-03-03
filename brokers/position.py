@@ -28,7 +28,8 @@ class Position:
         self.entry_value = round(entry_price * shares, 2)
         self.mae = 0.0  # max adverse excursion
         self.mfe = 0.0  # max favorable excursion
-        self.stop_order_id = ""  # Moomoo protective stop order ID (empty = no exchange stop)
+        self.stop_order_id = ""  # Broker SL order ID (stop-loss placed on exchange)
+        self.tp_order_id = ""   # Broker TP order ID (take-profit placed on exchange, empty = none)
         self.entry_commission = 0.0  # Audit M7: track entry commission for accurate PnL
 
     def current_value(self, price: float) -> float:
@@ -68,6 +69,7 @@ class Position:
             "mae": self.mae,
             "mfe": self.mfe,
             "stop_order_id": self.stop_order_id,
+            "tp_order_id": self.tp_order_id,
             "entry_commission": self.entry_commission,
         }
 
@@ -86,5 +88,6 @@ class Position:
         pos.mfe = d.get("mfe", 0.0)
         pos.entry_value = d.get("entry_value", pos.entry_price * pos.shares)
         pos.stop_order_id = d.get("stop_order_id", "")
+        pos.tp_order_id = d.get("tp_order_id", "")
         pos.entry_commission = d.get("entry_commission", 0.0)
         return pos
