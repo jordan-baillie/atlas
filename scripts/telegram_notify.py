@@ -12,6 +12,7 @@ Usage:
     python3 scripts/telegram_notify.py test
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from utils.telegram import (
     send_error,
     send_startup,
     send_research_complete,
+    send_message,
 )
 
 
@@ -49,6 +51,33 @@ def main():
     elif cmd == "postclose-ok":
         market_id = sys.argv[2] if len(sys.argv) > 2 else "sp500"
         ok = send_postclose_summary(market_id=market_id)
+
+    elif cmd == "volatility-block":
+        market_id = sys.argv[2] if len(sys.argv) > 2 else "sp500"
+        import json, glob
+        # Read the latest volatility gate log
+        gate_files = sorted(glob.glob(f"{os.path.dirname(__file__)}/../logs/volatility_gate_*.json"))
+        detail = ""
+        if gate_files:
+            try:
+                with open(gate_files[-1]) as f:
+                    gate = json.load(f)
+                flags = gate.get("flags", [])
+                details = gate.get("details", {})
+                lines = [f"⚠️ <b>Volatility Gate — {market_id.upper()} entries BLOCKED</b>"]
+                lines.append(f"Flags: {len(flags)} triggered\n")
+                for flag in flags:
+                    d = details.get(flag, {})
+                    if flag == "vix":
+                        lines.append(f"  📊 VIX spike {d.get('spike_pct', 0):.1f}% (threshold {d.get('vix_spike_threshold_pct', 20)}%)")
+                    else:
+                        lines.append(f"  {'🛢️' if flag == 'oil' else '🥇'} {flag.upper()} gap {d.get('gap_pct', 0):.1f}% (threshold {d.get('threshold_pct', 0)}%)")
+                lines.append(f"\n✅ Existing positions unaffected.")
+                lines.append(f"No new entries until next session.")
+                detail = "\n".join(lines)
+            except Exception:
+                detail = f"⚠️ Volatility gate blocked all {market_id.upper()} entries. Check logs."
+        ok = send_message(detail or f"⚠️ Volatility gate blocked {market_id.upper()} entries.")
 
     elif cmd == "error":
         mode = sys.argv[2] if len(sys.argv) > 2 else "unknown"
@@ -92,11 +121,9 @@ def main():
             print("Failed to send promotion request")
 
     elif cmd == "research-idle":
-        from utils.telegram import send_message
         ok = send_message("🔬 Research cron: queue empty — nothing to run. Seed new experiments to resume.")
 
     elif cmd == "research-wave-planned":
-        from utils.telegram import send_message
         # Read the latest wave brief for summary
         waves_dir = PROJECT_ROOT / "research" / "waves"
         brief_files = sorted(waves_dir.glob("wave_*_brief.json"), reverse=True)

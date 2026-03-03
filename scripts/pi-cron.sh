@@ -79,7 +79,7 @@ case "$MODE" in
             python3 "$PROJECT/scripts/volatility_gate.py" \
                 --check --market "$MARKET" --alert \
                 >> "$LOG_DIR/pi-cron.log" 2>&1 || true
-            notify error "volatility-gate-block" "" 2>/dev/null || true
+            notify volatility-block "$MARKET" 2>/dev/null || true
             exit 0   # Not an error — clean exit, entries intentionally paused
         fi
 
