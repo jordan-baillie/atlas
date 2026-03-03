@@ -111,16 +111,21 @@ def _find_existing_sl(open_orders: list[OrderResult], ticker: str, stop_price: f
             continue
         if o.side != OrderSide.SELL:
             continue
+        remark = str(o.raw.get("remark", "")).lower()
         raw_type = str(o.raw.get("order_type", "")).upper()
-        # Accept STOP or STOP_LIMIT as SL
-        is_stop = raw_type in ("STOP", "STOP_LIMIT") or "STOP" in raw_type
-        if not is_stop:
-            # Also check by remark
-            remark = str(o.raw.get("remark", "")).lower()
-            if not remark.startswith("atlas_sl_"):
-                continue
-        if _prices_match(o.requested_price, stop_price):
+
+        # Remark-based match: trust our own remark prefix unconditionally
+        # (Moomoo returns price=0 for STOP orders, so price matching fails)
+        if remark.startswith("atlas_sl_") or remark.startswith("atlas_stop_"):
             return o.order_id
+
+        # Type-based match: STOP/STOP_LIMIT SELL with matching price
+        is_stop = raw_type in ("STOP", "STOP_LIMIT") or "STOP" in raw_type
+        if is_stop:
+            # Try matching on requested_price or aux_price
+            check_price = o.requested_price or float(o.raw.get("aux_price", 0))
+            if _prices_match(check_price, stop_price):
+                return o.order_id
     return None
 
 
@@ -134,16 +139,17 @@ def _find_existing_tp(open_orders: list[OrderResult], ticker: str, take_profit: 
             continue
         if o.side != OrderSide.SELL:
             continue
+        remark = str(o.raw.get("remark", "")).lower()
+
+        # Remark-based match: trust our own remark prefix unconditionally
+        if remark.startswith("atlas_tp_"):
+            return o.order_id
+
+        # Type-based match: LIMIT/NORMAL SELL (not STOP) with matching price
         raw_type = str(o.raw.get("order_type", "")).upper()
-        # TP is a LIMIT/NORMAL order (not STOP)
-        is_stop = "STOP" in raw_type
-        if is_stop:
+        if "STOP" in raw_type:
             continue
         if _prices_match(o.requested_price, take_profit):
-            return o.order_id
-        # Also check by remark — tp orders placed by us always have atlas_tp_ prefix
-        remark = str(o.raw.get("remark", "")).lower()
-        if remark.startswith("atlas_tp_") and o.ticker == ticker:
             return o.order_id
     return None
 

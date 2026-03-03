@@ -79,8 +79,14 @@ def load_config(market_id: str, config_path: str = "") -> dict:
 # ═══════════════════════════════════════════════════════════════
 
 def load_plan(market_id: str, trade_date: str) -> dict | None:
-    """Load today's approved trade plan for a market."""
+    """Load the most relevant trade plan for a market.
+
+    Tries today's plan first, then falls back to the most recent plan file
+    for this market. Protective orders need stop prices even for positions
+    entered on prior days.
+    """
     plans_dir = PROJECT / "plans"
+    # Try today first
     candidates = [
         plans_dir / f"plan_{market_id}_{trade_date}.json",
         plans_dir / f"plan_{trade_date}.json",
@@ -91,7 +97,19 @@ def load_plan(market_id: str, trade_date: str) -> dict | None:
                 plan = json.load(f)
             logger.info("Loaded plan: %s (status=%s)", path.name, plan.get("status"))
             return plan
-    logger.info("No plan file found for %s %s — will use position data only", market_id, trade_date)
+
+    # Fall back to most recent plan for this market (positions may span days)
+    pattern = f"plan_{market_id}_*.json"
+    plan_files = sorted(plans_dir.glob(pattern), reverse=True)
+    for path in plan_files[:3]:  # check the 3 most recent
+        with open(path) as f:
+            plan = json.load(f)
+        status = plan.get("status", "")
+        if status in ("EXECUTED", "APPROVED", "PENDING_APPROVAL"):
+            logger.info("Loaded recent plan: %s (status=%s)", path.name, status)
+            return plan
+
+    logger.info("No plan file found for %s — will use position data only", market_id)
     return None
 
 
