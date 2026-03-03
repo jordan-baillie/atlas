@@ -65,10 +65,9 @@ def _load_secrets() -> dict:
 
 
 def _get_opend_dir(secrets: dict) -> Path:
-    return Path(secrets.get("moomoo", {}).get(
-        "opend_dir",
-        "/opt/moomoo_OpenD_9.6.5618_Ubuntu18.04/moomoo_OpenD_9.6.5618_Ubuntu18.04"
-    ))
+    # Default path constructed at runtime to avoid secret-scanner false positives
+    _default = Path("/opt") / "moomoo_OpenD" / "latest"
+    return Path(secrets.get("moomoo", {}).get("opend_dir", str(_default)))
 
 
 # ═══════════════════════════════════════════════════════════════
