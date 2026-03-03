@@ -864,6 +864,111 @@ class MomooBroker(BrokerAdapter):
 
         return reports
 
+    # ── Protective orders ──────────────────────────────────────
+
+    def place_protective_orders(
+        self,
+        ticker: str,
+        qty: int,
+        stop_price: float,
+        take_profit: Optional[float],
+        strategy: str = "",
+        trade_date: str = "",
+        *,
+        dry_run: bool = False,
+    ):
+        """Place SL (stop) + TP (limit) protective orders for a filled position.
+
+        Note: Moomoo does NOT support OCA groups. SL and TP are placed as
+        separate independent orders. If one fills, the intraday monitor must
+        cancel the other.
+
+        Args:
+            ticker:       Atlas-format ticker (e.g. 'BHP.AX').
+            qty:          Number of shares to protect.
+            stop_price:   Stop-loss trigger price.
+            take_profit:  Take-profit limit price (None → skip TP).
+            strategy:     Strategy name — used in order remark.
+            trade_date:   YYYY-MM-DD string — used in order remark.
+            dry_run:      Log intent but do NOT send orders.
+
+        Returns:
+            ProtectiveOrderResult with sl_order_id, tp_order_id, and placement flags.
+        """
+        from brokers.moomoo.protective_orders import place_protective_orders
+        self._require_connected()
+        return place_protective_orders(
+            broker=self,
+            ticker=ticker,
+            qty=qty,
+            stop_price=stop_price,
+            take_profit=take_profit,
+            strategy=strategy,
+            trade_date=trade_date,
+            dry_run=dry_run,
+            config=self.config,
+        )
+
+    def sync_all_protective_orders(
+        self,
+        positions: list,
+        plan: Optional[dict] = None,
+        *,
+        trade_date: str = "",
+        dry_run: bool = False,
+    ) -> dict:
+        """Sync protective orders for all live positions.
+
+        Idempotent — existing orders are detected and skipped.
+        Only missing SL/TP orders are placed.
+
+        Args:
+            positions:   List of Position objects from live_portfolio.
+            plan:        Today's trade plan dict (for stop/TP lookups).
+            trade_date:  YYYY-MM-DD (defaults to today if empty).
+            dry_run:     Log intent but do NOT send orders.
+
+        Returns:
+            Summary dict with counts and per-ticker results.
+        """
+        from brokers.moomoo.protective_orders import sync_protective_orders
+        self._require_connected()
+
+        # Fetch current open orders once (avoids repeated API calls per position)
+        open_orders = self.get_open_orders()
+
+        return sync_protective_orders(
+            broker=self,
+            positions=positions,
+            open_orders=open_orders,
+            plan=plan,
+            config=self.config,
+            trade_date=trade_date,
+            dry_run=dry_run,
+        )
+
+    def get_protective_order_status(
+        self,
+        stop_order_id: str,
+        tp_order_id: str = "",
+    ) -> dict:
+        """Query live status of SL and TP orders.
+
+        Args:
+            stop_order_id:  SL order ID (empty → skip).
+            tp_order_id:    TP order ID (empty → skip).
+
+        Returns:
+            Dict with 'sl' and 'tp' keys, each containing status and fill info.
+        """
+        from brokers.moomoo.protective_orders import get_protective_order_status
+        self._require_connected()
+        return get_protective_order_status(
+            broker=self,
+            stop_order_id=stop_order_id,
+            tp_order_id=tp_order_id,
+        )
+
     # ── Internal ───────────────────────────────────────────────
 
     def _require_connected(self):
