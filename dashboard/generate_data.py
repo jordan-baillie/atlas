@@ -725,6 +725,59 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
         total_pnl = round(equity - seq, 2)
         total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
 
+        # ── C1: Refresh stale prices for same-day MOO fills ──────────
+        # IBKR returns fill price as marketPrice when no market data snapshot exists
+        # (common for ASX MOO orders with no market data subscription).
+        # Detect: current_price ≈ entry_price → override with Yahoo Finance price.
+        if data_source in ("broker", "cached"):
+            stale_tickers = set()
+            for p in atlas_positions:
+                if abs(p.get("current_price", 0) - p.get("entry_price", 0)) < 0.0001:
+                    stale_tickers.add(p.get("ticker", ""))
+            stale_tickers.discard("")
+            refreshed: dict = {}
+            if stale_tickers:
+                refreshed = get_prices(stale_tickers)
+                for p in atlas_positions:
+                    t = p.get("ticker", "")
+                    if t in refreshed and t in stale_tickers:
+                        new_price = refreshed[t]["close"]
+                        p["current_price"] = round(new_price, 4)
+                        ep = p.get("entry_price", 0)
+                        sh = p.get("shares", 0)
+                        p["unrealized_pnl"] = round((new_price - ep) * sh, 2)
+                        p["market_value"] = round(new_price * sh, 2)
+                        logger.info(
+                            "C1 stale price refresh [%s]: entry=%.4f → yf=%.4f, pnl=%.2f",
+                            t, ep, new_price, p["unrealized_pnl"],
+                        )
+                # Recalculate market-level aggregates after price refresh
+                atlas_value = sum(p.get("market_value", 0) for p in atlas_positions)
+                market_pnl = round(atlas_value - total_entry_value, 2)
+                pos_value = atlas_value
+                equity = round(cash + atlas_value, 2)
+                total_pnl = round(equity - seq, 2)
+                total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
+
+        # ── C2: P&L consistency validation ──────────────────────────
+        # Brokers (esp. Moomoo) may return unrealized_pnl from a stale snapshot
+        # while current_price comes from a different snapshot.
+        # If |broker_pnl - (cp-ep)*shares| > 10%, recalculate from prices.
+        for p in all_positions:
+            ep = p.get("entry_price", 0)
+            cp = p.get("current_price", 0)
+            sh = p.get("shares", 0)
+            if ep > 0 and cp > 0 and sh > 0:
+                expected_pnl = round((cp - ep) * sh, 2)
+                actual_pnl = p.get("unrealized_pnl", 0)
+                if abs(actual_pnl - expected_pnl) > max(abs(expected_pnl) * 0.10, 1.0):
+                    logger.warning(
+                        "P&L inconsistency [%s]: broker_pnl=%.2f, calc_pnl=%.2f "
+                        "(cp=%.4f, ep=%.4f, sh=%d) — using calculated",
+                        p.get("ticker"), actual_pnl, expected_pnl, cp, ep, sh,
+                    )
+                    p["unrealized_pnl"] = expected_pnl
+                    p["unrealized_pnl_pct"] = round((cp - ep) / ep * 100, 2)
 
     else:
         # Paper/fallback mode
@@ -773,6 +826,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
     now = datetime.now(BRISBANE)
     open_pos = []
     strategy_stats = {}
+    # W9: Build sector fallback lookup from state file — broker often omits sector
+    state_positions = {sp.get("ticker"): sp for sp in portfolio.get("positions", [])}
 
     for p in all_positions:
         t = p.get("ticker", "")
@@ -813,12 +868,16 @@ def generate_market(market_id: str, broker_cache: dict | None = None):
             strategy_stats[strat]["pnl"] += upnl
             strategy_stats[strat]["value"] += cp * sh
 
+        # W9: Use broker sector → state file fallback → "Unknown"
+        sector_val = (p.get("sector") or
+                      state_positions.get(t, {}).get("sector") or
+                      "Unknown")
         open_pos.append({
             "ticker": t, "strategy": strat,
             "entry_date": ed, "entry_price": ep, "current_price": round(cp, 4),
             "shares": sh, "pnl": upnl, "pnl_pct": upnl_pct,
             "stop_price": p.get("stop_price", 0),
-            "days_held": dh, "sector": p.get("sector", ""),
+            "days_held": dh, "sector": sector_val,
             "is_atlas": is_atlas,
         })
 
@@ -1785,8 +1844,9 @@ def generate():
             if key not in combined_strats:
                 combined_strats[key] = {"strategy": key, "positions": 0, "unrealized_pnl": 0, "market_value": 0}
             combined_strats[key]["positions"] += s["positions"]
-            combined_strats[key]["unrealized_pnl"] += s["unrealized_pnl"]
-            combined_strats[key]["market_value"] += s["market_value"]
+            # C3: convert to AUD before summing (strategy values are in native market currency)
+            combined_strats[key]["unrealized_pnl"] += round(to_aud(s["unrealized_pnl"], ccy), 2)
+            combined_strats[key]["market_value"] += round(to_aud(s["market_value"], ccy), 2)
 
     # ── Combined equity curve (sum across markets) ──────────────
     combined_curve = _merge_equity_curves(market_data, exchange_rates)
@@ -1807,6 +1867,38 @@ def generate():
     # Pick primary for fields that don't merge well (plan, risk)
     primary = "sp500" if "sp500" in market_data else markets[0]
     primary_data = market_data[primary]
+
+    # W3: Prefer APPROVED/PENDING_APPROVAL plans over stale EXECUTED ones
+    # Scan all markets: an actionable plan today is more useful than yesterday's SP500 plan.
+    primary_plan = None
+    for status_pref in ("PENDING_APPROVAL", "APPROVED"):
+        for md in market_data.values():
+            p = md.get("plan")
+            if p and p.get("status") == status_pref:
+                primary_plan = p
+                break
+        if primary_plan:
+            break
+    if not primary_plan:
+        primary_plan = primary_data.get("plan")
+
+    # W1/W10: Build combined risk block across all markets
+    combined_pos_value_aud = sum(
+        to_aud(
+            sum(p.get("current_price", 0) * p.get("shares", 0)
+                for p in md.get("portfolio", {}).get("open_positions", [])),
+            md.get("currency", "AUD"),
+        )
+        for md in market_data.values()
+    )
+    combined_risk = {
+        "exposure_pct": round(combined_pos_value_aud / combined_equity_aud * 100, 2)
+                        if combined_equity_aud > 0 else 0,
+        "max_positions": sum(md.get("risk", {}).get("max_positions", 0) for md in market_data.values()),
+        "halted": any(md.get("risk", {}).get("halted", False) for md in market_data.values()),
+        "risk_per_trade": "varies",
+        "max_portfolio_risk": 0.05,
+    }
 
     result = {
         "timestamp": now.isoformat(),
@@ -1857,9 +1949,9 @@ def generate():
         "benchmark_return_pct": round(
             (combined_bench[-1]["equity"] / combined_starting_aud - 1) * 100, 2
         ) if combined_bench and combined_starting_aud > 0 else 0,
-        "plan": primary_data.get("plan"),
+        "plan": primary_plan,
         "closed_trades": all_closed,
-        "risk": primary_data.get("risk", {}),
+        "risk": combined_risk,
         "tasks": primary_data.get("tasks", {}),
         "research": research_data,
     }
