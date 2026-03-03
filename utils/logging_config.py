@@ -71,6 +71,11 @@ class TelegramErrorCollector(logging.Handler):
         self._flushed = False
 
     def emit(self, record: logging.LogRecord):
+        # yfinance logs routine download failures (delisted tickers, 404s) at
+        # ERROR level. These are data-quality issues, not system errors, and
+        # must never be forwarded to Telegram as operator alerts.
+        if record.name.startswith("yfinance"):
+            return
         with self._lock:
             if len(self.records) < self.MAX_RECORDS:
                 self.records.append(record)
@@ -222,8 +227,13 @@ def setup_logging(
         atexit.register(_collector.flush_to_telegram)
 
     # Suppress noisy third-party loggers
-    for noisy in ["urllib3", "yfinance", "peewee", "futu"]:
+    for noisy in ["urllib3", "peewee", "futu"]:
         logging.getLogger(noisy).setLevel(logging.WARNING)
+    # yfinance logs routine download failures (delisted tickers, 404s) at ERROR
+    # level. Suppress to CRITICAL so they never appear in stderr or Telegram.
+    # The backtest engine already handles missing data gracefully (tickers with
+    # no data are skipped), so silencing these is safe.
+    logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
     _setup_done = True
 
