@@ -597,6 +597,24 @@ def cmd_live_run(args):
         print("    Cash:   %s" % format_aud(info.cash))
         print("    PnL:    %s (%.1f%%)" % (format_aud(info.total_pnl), info.total_pnl_pct))
 
+        # Place protective orders (SL + TP) on the broker for all positions
+        if broker.is_live and entries:
+            print("\n  Syncing protective orders (SL/TP) on broker...")
+            try:
+                plan_entries = plan.get("proposed_entries", []) if plan else entries
+                if hasattr(broker, "sync_all_protective_orders"):
+                    sync_result = broker.sync_all_protective_orders(plan_entries)
+                    sl_placed = sync_result.get("sl_placed", sync_result.get("counts", {}).get("sl_placed", 0))
+                    tp_placed = sync_result.get("tp_placed", sync_result.get("counts", {}).get("tp_placed", 0))
+                    errors = sync_result.get("errors", sync_result.get("counts", {}).get("errors", 0))
+                    print("    SL placed: %d | TP placed: %d | errors: %d" % (sl_placed, tp_placed, errors))
+                else:
+                    print("    Broker does not support protective orders — skipping")
+            except Exception as e:
+                print("    WARNING: Protective order sync failed: %s" % e)
+                import traceback
+                traceback.print_exc()
+
     finally:
         broker.disconnect()
 
