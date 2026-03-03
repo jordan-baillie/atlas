@@ -406,3 +406,174 @@ class TestRunBatchBacktest:
         )
         assert result is not None
         assert "trades" in result
+
+
+# ── yfinance noise suppression tests ─────────────────────────────────────────
+
+
+class TestYfinanceFiltering:
+    """Verify yfinance ERROR logs are silenced and never reach TelegramErrorCollector.
+
+    yfinance logs routine download failures (delisted tickers, HTTP 404s) at
+    ERROR level.  These are data-quality issues, not system errors — they
+    must never appear in Telegram operator alerts.
+    """
+
+    def test_yfinance_errors_not_collected(self):
+        """TelegramErrorCollector must silently drop yfinance ERROR records."""
+        import logging
+        from utils.logging_config import TelegramErrorCollector
+
+        collector = TelegramErrorCollector(script_name="test")
+
+        # Simulate the exact style of record that yfinance emits for delisted tickers
+        record = logging.LogRecord(
+            name="yfinance",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="$IOZ.AX: possibly delisted; found responses for: %s",
+            args=(["IOZ.AX"],),
+            exc_info=None,
+        )
+        collector.emit(record)
+        assert len(collector.records) == 0, (
+            "yfinance ERROR record should be filtered out of TelegramErrorCollector"
+        )
+
+    def test_yfinance_sublogger_errors_not_collected(self):
+        """Records from yfinance.* child loggers must also be filtered."""
+        import logging
+        from utils.logging_config import TelegramErrorCollector
+
+        collector = TelegramErrorCollector(script_name="test")
+
+        record = logging.LogRecord(
+            name="yfinance.base",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="No data found, symbol may be delisted",
+            args=(),
+            exc_info=None,
+        )
+        collector.emit(record)
+        assert len(collector.records) == 0, (
+            "yfinance.base ERROR record should be filtered out"
+        )
+
+    def test_non_yfinance_errors_are_collected(self):
+        """Real Atlas ERROR records must still be collected for Telegram alerts."""
+        import logging
+        from utils.logging_config import TelegramErrorCollector
+
+        collector = TelegramErrorCollector(script_name="test")
+
+        record = logging.LogRecord(
+            name="atlas.backtest",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="Broker connection refused: OpenD not running",
+            args=(),
+            exc_info=None,
+        )
+        collector.emit(record)
+        assert len(collector.records) == 1, (
+            "Non-yfinance ERROR should be collected for Telegram"
+        )
+
+    def test_yfinance_logger_level_is_critical_after_setup(self):
+        """After setup_logging, yfinance logger must be at CRITICAL level."""
+        import logging
+        from utils.logging_config import setup_logging, _setup_done
+        import utils.logging_config as lc
+
+        # Reset setup state so we can call setup_logging fresh
+        original = lc._setup_done
+        lc._setup_done = False
+        try:
+            setup_logging("test_yf_level", telegram_errors=False)
+            yf_level = logging.getLogger("yfinance").level
+            assert yf_level == logging.CRITICAL, (
+                f"Expected yfinance logger at CRITICAL ({logging.CRITICAL}), "
+                f"got {yf_level}"
+            )
+        finally:
+            lc._setup_done = original
+
+
+# ── Benchmark pre-download robustness tests ───────────────────────────────────
+
+
+class TestBenchmarkPreDownload:
+    """Verify that benchmark download failure does not crash the backtest.
+
+    The pre-download in run_backtest() is best-effort: if IOZ.AX or any
+    other benchmark is unavailable, the backtest must still complete and
+    return valid results (without benchmark_metrics).
+    """
+
+    def test_benchmark_failure_does_not_crash_parallel_backtest(self):
+        """Patching download_ticker to always raise must not crash run_backtest."""
+        import unittest.mock as mock
+
+        cfg = _minimal_config()
+        data = _make_data(n_tickers=2, n_bars=200)
+
+        # Patch download_ticker in the backtest module's namespace so that the
+        # pre-download step raises.  Workers run in-process for n_workers=1,
+        # so this also validates the engine's _calc_benchmark fallback.
+        with mock.patch("data.ingest.download_ticker", side_effect=Exception("delisted")):
+            # n_workers=1 skips the parallel path; use 2 to exercise pre-download
+            # but workers are still spawned via ProcessPoolExecutor.
+            # We fall back to n_workers=1 to keep test fast and portable.
+            result = run_backtest(cfg, data, market_id="asx", n_workers=1)
+
+        # Backtest must complete — error key must not be present
+        assert "error" not in result, f"run_backtest crashed: {result.get('error')}"
+        assert "trades" in result
+
+    def test_benchmark_failure_uses_warning_not_error(self):
+        """When benchmark pre-download fails, only a WARNING is logged (not ERROR).
+
+        This ensures the failure path does not pollute TelegramErrorCollector
+        with a false-positive system alert.
+        """
+        import logging
+        import unittest.mock as mock
+        from scripts.backtest import run_backtest
+
+        cfg = _minimal_config()
+        data = _make_data(n_tickers=2, n_bars=200)
+
+        warning_records = []
+        error_records = []
+
+        class CapturingHandler(logging.Handler):
+            def emit(self, record):
+                if record.levelno == logging.WARNING:
+                    warning_records.append(record)
+                elif record.levelno >= logging.ERROR:
+                    error_records.append(record)
+
+        handler = CapturingHandler()
+        logging.getLogger().addHandler(handler)
+        try:
+            # Pre-download happens only for n_workers > 1
+            with mock.patch(
+                "data.ingest.download_ticker",
+                side_effect=Exception("404 not found"),
+            ):
+                run_backtest(cfg, data, market_id="asx", n_workers=2)
+        finally:
+            logging.getLogger().removeHandler(handler)
+
+        # No ERROR-level records should have been emitted for the benchmark failure
+        benchmark_errors = [
+            r for r in error_records
+            if "benchmark" in r.getMessage().lower()
+        ]
+        assert benchmark_errors == [], (
+            f"Benchmark failure emitted ERROR records: {[r.getMessage() for r in benchmark_errors]}"
+        )

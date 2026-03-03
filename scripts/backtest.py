@@ -352,6 +352,25 @@ def run_backtest(
         return result
 
     # ── Parallel mode ────────────────────────────────────────────────────────
+
+    # Pre-download benchmark data ONCE in the main process before spawning
+    # workers. Without this, each worker independently calls download_ticker()
+    # for the benchmark (e.g. IOZ.AX), generating yfinance ERROR spam if the
+    # ticker is delisted or unavailable. If this fails, the backtest continues
+    # normally — benchmark comparison is optional.
+    _benchmark_ticker = cfg.get("universe", {}).get("benchmark_ticker")
+    if _benchmark_ticker:
+        try:
+            from data.ingest import download_ticker as _dl_benchmark
+            logger.info("Pre-downloading benchmark %s to warm cache…", _benchmark_ticker)
+            _dl_benchmark(_benchmark_ticker, use_cache=True)
+        except Exception as _bench_err:
+            logger.warning(
+                "Benchmark pre-download failed (%s): %s — continuing without benchmark comparison",
+                _benchmark_ticker,
+                _bench_err,
+            )
+
     batches = _split_tickers(data, n_workers)
     actual_workers = len(batches)
 
