@@ -375,6 +375,43 @@ def main():
         log.info("No open positions — nothing to monitor.")
         return
 
+    # ── Enrich positions with stop prices from plan/state ──────
+    # IBKR doesn't return stop_price — read from today's plan file
+    # or the live state file as fallback.
+    _plan_stops = {}
+    _state_stops = {}
+    try:
+        plan_path = PROJECT / "plans" / f"plan_{market_id}_{now.strftime('%Y-%m-%d')}.json"
+        if plan_path.exists():
+            import json as _json
+            plan = _json.load(open(plan_path))
+            for e in plan.get("proposed_entries", []):
+                t = e.get("ticker", "")
+                sp = e.get("stop_price", 0)
+                if t and sp:
+                    _plan_stops[t] = sp
+        state_path = PROJECT / "brokers" / "state" / f"live_{market_id}.json"
+        if state_path.exists():
+            import json as _json
+            state = _json.load(open(state_path))
+            for p in state.get("positions", []):
+                t = p.get("ticker", "")
+                sp = p.get("stop_price", 0)
+                if t and sp:
+                    _state_stops[t] = sp
+    except Exception as e:
+        log.warning(f"Failed to load stop prices from plan/state: {e}")
+
+    enriched = 0
+    for pos in portfolio.positions:
+        if pos.stop_price == 0 or pos.stop_price is None:
+            sp = _plan_stops.get(pos.ticker) or _state_stops.get(pos.ticker) or 0
+            if sp:
+                pos.stop_price = sp
+                enriched += 1
+    if enriched:
+        log.info(f"Enriched {enriched} positions with stop prices from plan/state files")
+
     tickers = [p.ticker for p in portfolio.positions]
     log.info(f"Monitoring {len(tickers)} positions: {tickers}")
 
