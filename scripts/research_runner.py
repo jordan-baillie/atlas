@@ -34,6 +34,7 @@ import copy
 import signal
 import logging
 import argparse
+import traceback
 import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
@@ -54,6 +55,11 @@ from utils.logging_config import setup_logging
 logger = setup_logging("research_runner")
 
 MAX_RUNTIME_S = 4 * 3600  # 4 hour budget per experiment
+
+# Code-level errors that indicate a programming bug (not a research failure).
+# These are retried once automatically before being marked as failed.
+# Non-code errors (data missing, acceptance criteria not met) are NOT in this list.
+CODE_ERRORS = (TypeError, AttributeError, NameError, KeyError, ValueError)
 
 
 class TimeoutError(Exception):
@@ -662,8 +668,43 @@ def run_experiment(entry: dict, agent_id: str, dry_run: bool = False) -> dict:
         signal.alarm(MAX_RUNTIME_S)
 
     try:
-        # 4. Dispatch
-        result = dispatch_experiment(entry, agent_id, dry_run)
+        # 4. Dispatch — auto-retry once on code-level errors (programming bugs).
+        # Non-code errors (data missing, acceptance criteria failures) are NOT retried.
+        envelope.metadata['retries'] = 0
+        result = None
+        retry_count = 0
+        while True:
+            try:
+                result = dispatch_experiment(entry, agent_id, dry_run)
+                break  # Success — exit retry loop
+            except CODE_ERRORS as code_err:
+                retry_count += 1
+                envelope.metadata['retries'] = retry_count
+                if retry_count <= 1:
+                    logger.warning(
+                        f"Code error in {exp_id} ({type(code_err).__name__}: {code_err}) — "
+                        f"retrying (attempt {retry_count}/1)"
+                    )
+                    # Brief pause before retry to let transient state settle
+                    time.sleep(1)
+                    continue
+                else:
+                    # Second failure — do not retry again; record full traceback
+                    tb = traceback.format_exc()
+                    logger.error(
+                        f"Experiment {exp_id} failed after {retry_count} attempt(s): "
+                        f"{type(code_err).__name__}: {code_err}"
+                    )
+                    update_queue_entry(exp_id, {'status': ExperimentStatus.FAILED})
+                    envelope.verdict = 'fail'
+                    envelope.verdict_rationale = (
+                        f'Code error after {retry_count} attempt(s): '
+                        f'{type(code_err).__name__}: {code_err}\n\nTraceback:\n{tb}'
+                    )
+                    envelope.metadata['error'] = str(code_err)
+                    if not dry_run:
+                        envelope.save()
+                    return envelope.to_dict()
 
         # 5. Update envelope with results
         envelope.outputs = result
