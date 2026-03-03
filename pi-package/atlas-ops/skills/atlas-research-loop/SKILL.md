@@ -85,15 +85,61 @@ append_to_queue(entry)
 cd /root/atlas && python3 scripts/research_runner.py --dry-run
 ```
 
-### Step 2: Execute
+### Step 2: Execute — ALWAYS IN PARALLEL
+
+**This machine has 8 cores. Never run experiments sequentially.**
+
+Use `scripts/run_wave2_parallel.py` (or a custom parallel runner) to execute
+independent experiments across all cores simultaneously:
+
 ```bash
-cd /root/atlas && python3 scripts/research_runner.py --agent-id atlas-research
+cd /root/atlas && python3 scripts/run_wave2_parallel.py --workers 8
 ```
 
-Or run all queued:
-```bash
-cd /root/atlas && python3 scripts/research_runner.py --run-all --agent-id atlas-research
+For a specific subset, write a small parallel runner:
+```python
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from scripts.research_runner import run_experiment
+from research.models import read_queue, claim_experiment
+
+def run_one(exp_id):
+    queue = read_queue()
+    entry = next((e for e in queue if e['id'] == exp_id), None)
+    claimed = claim_experiment(exp_id, 'atlas-research')
+    return run_experiment(claimed, 'atlas-research')
+
+exp_ids = [...]  # your experiment IDs
+with ProcessPoolExecutor(max_workers=8) as pool:
+    futures = {pool.submit(run_one, eid): eid for eid in exp_ids}
+    for f in as_completed(futures):
+        print(f"{futures[f]}: {f.result().get('verdict')}")
 ```
+
+**Long-running parallel jobs MUST use systemd** (not screen/nohup):
+```bash
+# Write runner to /tmp/run_experiments.py, then:
+cat > /etc/systemd/system/atlas-research-run.service <<EOF
+[Service]
+Type=simple
+WorkingDirectory=/root/atlas
+ExecStart=/bin/bash -c 'python3 /tmp/run_experiments.py > /tmp/research_results.log 2>&1'
+TimeoutStartSec=7200
+EOF
+systemctl daemon-reload && systemctl start atlas-research-run
+# Check: systemctl status atlas-research-run && grep verdict /tmp/research_results.log
+```
+
+### Wave design rule: max 8 independent experiments per batch
+
+When planning a wave, **design experiments so each batch has ≤ 8 independent
+(no dependencies) experiments** that can saturate all 8 cores in parallel.
+If a wave has 20 experiments, split into batches:
+- Batch 1: 8 independent experiments (run in parallel)
+- Batch 2: 8 more independent experiments (run in parallel after batch 1)
+- Batch 3: 4 dependent experiments (run after their prereqs complete)
+
+A single backtest takes ~4 min. 8 in parallel = ~4 min wall-clock per batch.
+A 24-experiment wave completes in ~12 min instead of ~96 min sequential.
 
 ### Step 3: Verify output
 Check that `research/experiments/exp-{id}.json` was created with full envelope.
@@ -298,6 +344,7 @@ Run **3-5 searches** covering:
 3. **Build on learnings** — reference specific findings from previous waves
 4. **6-12 experiments** — enough to thoroughly explore the theme, not so many it takes weeks
 5. **Clear acceptance criteria** — every experiment has measurable pass/fail thresholds
+6. **Parallelism-first batching** — design waves so independent experiments come in groups of ≤ 8 (matching CPU cores). All independent experiments in a batch run simultaneously. Dependent chains run after their prereqs complete. A well-designed wave with 12 experiments might have batch 1 (8 independent, ~4 min parallel), then batch 2 (4 dependent, ~4 min parallel) = ~8 min total instead of ~48 min sequential.
 
 ### Theme Selection — Profit First
 
