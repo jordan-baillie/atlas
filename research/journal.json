@@ -952,4 +952,396 @@
   },
   {
     "experiment_id": "wave1_vix_filter",
-    "timestamp": 
+    "timestamp": "2026-03-01T00:31:36.776149+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "combined",
+    "hypothesis": "VIX regime filter improves risk-adjusted returns",
+    "verdict": "fail",
+    "key_metrics": {
+      "baseline_sharpe": 0.59,
+      "vix20_sharpe": 0.03,
+      "vix25_sharpe": 0.47,
+      "vix30_sharpe": 0.51,
+      "vix35_sharpe": 0.5
+    },
+    "delta_vs_baseline": {
+      "sharpe": -0.09,
+      "note": "best variant VIX<30 still -0.08 Sharpe"
+    },
+    "learnings": [
+      "VIX filter is counterproductive for this portfolio mix",
+      "Mean reversion thrives during high-VIX (panic) periods \u2014 blocking entries there destroys alpha",
+      "All 4 VIX thresholds tested (20/25/30/35) degrade Sharpe",
+      "KEY INSIGHT: MR buys oversold stocks during panic, which is the high-VIX regime",
+      "VIX filter might work for trend-only portfolio but not MR-heavy one",
+      "CLOSED: Do not re-test VIX filters on combined portfolio"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_vol_filter",
+    "timestamp": "2026-03-01T00:31:36.779472+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Volume filter improves MR signal quality",
+    "verdict": "pass",
+    "key_metrics": {
+      "baseline_sharpe": -0.02,
+      "best_sharpe": 0.38,
+      "best_variant": "1.5x avg",
+      "baseline_pf": 1.3,
+      "best_pf": 1.62,
+      "best_trades": 235,
+      "baseline_dd": 5.24,
+      "best_dd": 4.03
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.4,
+      "profit_factor": 0.32,
+      "max_drawdown_pct": -1.21
+    },
+    "learnings": [
+      "1.5x avg volume filter on MR: Sharpe jumps from -0.02 to 0.38 (massive)",
+      "Mechanism: higher volume entries = more institutional participation = better follow-through",
+      "PF 1.30 \u2192 1.62 (23% improvement), DD 5.24% \u2192 4.03% (1.2pp reduction)",
+      "Trade count 332 \u2192 235 (29% reduction) \u2014 acceptable for the quality improvement",
+      "2x avg is too aggressive: only 115 trades, Sharpe drops to -0.30",
+      "0.5x/0.8x/1.0x show minimal improvement \u2014 1.5x is the threshold where quality jumps",
+      "NEXT: Test 1.5x volume filter on combined portfolio (all strategies)"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_cross_mkt",
+    "timestamp": "2026-03-01T00:31:36.782722+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "combined",
+    "hypothesis": "SMA-200 filter improves portfolio risk-adjusted returns",
+    "verdict": "pass",
+    "key_metrics": {
+      "baseline_sharpe": 0.59,
+      "sma200_sharpe": 0.87,
+      "delta_sharpe": 0.28,
+      "baseline_cagr": 10.05,
+      "sma200_cagr": 11.66,
+      "delta_cagr": 1.61,
+      "baseline_dd": 6.56,
+      "sma200_dd": 5.33,
+      "delta_dd": -1.23,
+      "baseline_pf": 1.38,
+      "sma200_pf": 1.66,
+      "sma200_trades": 270
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.28,
+      "cagr_pct": 1.61,
+      "max_drawdown_pct": -1.23,
+      "profit_factor": 0.28
+    },
+    "learnings": [
+      "SMA-200 filter is a CLEAR WIN on combined portfolio",
+      "Sharpe improvement: +0.28 (0.59 \u2192 0.87) \u2014 far exceeds 0.03 threshold",
+      "CAGR improvement: +1.6pp (10.1% \u2192 11.7%) with LESS risk",
+      "DD reduction: -1.2pp (6.6% \u2192 5.3%) \u2014 better risk profile",
+      "Trade count 443 \u2192 270 \u2014 healthy reduction, quality > quantity",
+      "MECHANISM: filtering out entries below 200-day MA avoids buying into downtrends",
+      "Previous coord descent rejected SMA-200 because it reduces trade count too aggressively",
+      "As a clean A/B toggle, the quality improvement overwhelms the quantity loss",
+      "PROMOTION CANDIDATE: Sharpe +0.28, CAGR +1.6pp, DD -1.2pp all exceed thresholds"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sma200",
+    "timestamp": "2026-03-01T01:12:48.944423+00:00",
+    "market": "sp500",
+    "category": "promotion",
+    "strategy": null,
+    "hypothesis": "Promoting experiment wave1_sma200 to active config",
+    "verdict": "promoted",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Promoted to /root/atlas/config/versions/sp500_v2.1.json"
+    ],
+    "promoted": true,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_cross_mkt",
+    "timestamp": "2026-03-01T01:13:41.273344+00:00",
+    "market": "sp500",
+    "category": "promotion",
+    "strategy": "sma200_filter",
+    "hypothesis": "SMA-200 filter on all active strategies improves signal quality by avoiding entries in downtrends",
+    "verdict": "promoted",
+    "key_metrics": {
+      "sharpe": 0.868,
+      "cagr_pct": 11.66,
+      "max_dd_pct": 5.33,
+      "profit_factor": 1.66,
+      "win_rate_pct": 58.89,
+      "trades": 270
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.28,
+      "cagr_pct": 1.6,
+      "max_dd_pct": -1.23,
+      "profit_factor": 0.28,
+      "win_rate_pct": 1.33
+    },
+    "learnings": [
+      "SMA-200 filter promoted to SP500 active config v2.1",
+      "Applied to all 3 active strategies: mean_reversion, trend_following, opening_gap",
+      "Trades reduced 443\u2192270 but quality improvement overwhelms quantity loss",
+      "Human approved via Telegram promotion request"
+    ],
+    "promoted": true,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_opt",
+    "timestamp": "2026-03-01T23:34:59.031919+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Coordinate descent on Sector Rotation params will improve solo performance significantly.",
+    "verdict": "pass",
+    "key_metrics": {
+      "total_trades": 237,
+      "cagr_pct": 9.6133,
+      "sharpe": 0.4262,
+      "sortino": 0.5542,
+      "max_drawdown_pct": 12.6801,
+      "win_rate_pct": 44.3,
+      "profit_factor": 1.4757,
+      "total_pnl": 976.83,
+      "avg_trade": 4.12,
+      "final_equity": 4771.73,
+      "expectancy_r": 0.2275,
+      "avg_r": 0.2275,
+      "r_count": 237,
+      "edge_p_value": 0.015129,
+      "edge_significant": true,
+      "var_95_pct": 1.206,
+      "cvar_95_pct": 1.818,
+      "calmar": 0.7581,
+      "mc_p95_drawdown_pct": 7.65,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "sector_rotation": {
+          "trades": 237,
+          "total_pnl": 976.83,
+          "win_rate_pct": 44.3
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_comb",
+    "timestamp": "2026-03-01T23:42:19.630175+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Adding optimized Sector Rotation to the active strategy set (MR+TF+OG) improves the portfolio.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 237,
+      "cagr_pct": 9.6133,
+      "sharpe": 0.4262,
+      "sortino": 0.5542,
+      "max_drawdown_pct": 12.6801,
+      "win_rate_pct": 44.3,
+      "profit_factor": 1.4757,
+      "total_pnl": 976.83,
+      "avg_trade": 4.12,
+      "final_equity": 4771.73,
+      "expectancy_r": 0.2275,
+      "avg_r": 0.2275,
+      "r_count": 237,
+      "edge_p_value": 0.015129,
+      "edge_significant": true,
+      "var_95_pct": 1.206,
+      "cvar_95_pct": 1.818,
+      "calmar": 0.7581,
+      "mc_p95_drawdown_pct": 7.65,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "sector_rotation": {
+          "trades": 237,
+          "total_pnl": 976.83,
+          "win_rate_pct": 44.3
+        }
+      }
+    },
+    "delta_vs_baseline": {
+      "cagr_pct": -0.5968,
+      "sharpe": -0.3203,
+      "sortino": -0.4714,
+      "max_drawdown_pct": 6.2377,
+      "win_rate_pct": -10.22,
+      "profit_factor": -0.2247,
+      "total_pnl": 64.06,
+      "total_trades": 69
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 440.6,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_opt",
+    "timestamp": "2026-03-01T23:43:57.850533+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Coordinate descent on Sector Rotation params will improve solo performance significantly",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.43,
+      "cagr_pct": 9.61,
+      "max_dd_pct": 12.68,
+      "profit_factor": 1.48,
+      "win_rate_pct": 44.3,
+      "trades": 237,
+      "edge_p_value": 0.015,
+      "edge_significant": true
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.54,
+      "cagr_pct": 6.36,
+      "profit_factor": 0.23,
+      "params_changed": {
+        "top_sectors": "3\u21922",
+        "atr_stop_mult": "3.0\u21922.5",
+        "max_hold_days": "25\u219230"
+      }
+    },
+    "learnings": [
+      "Sector rotation viable solo after optimization: Sharpe 0.43, CAGR 9.6%, PF 1.48",
+      "Fewer sectors (2) + tighter stops (2.5x ATR) + longer holds (30d) is optimal",
+      "Edge is statistically significant (p=0.015)"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_sector_comb",
+    "timestamp": "2026-03-01T23:43:57.850533+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "sector_rotation",
+    "hypothesis": "Adding optimized Sector Rotation to active set improves portfolio",
+    "verdict": "fail",
+    "key_metrics": {
+      "combined_sharpe": 0.55,
+      "combined_cagr": 11.06,
+      "combined_dd": 11.57,
+      "baseline_sharpe": 0.87,
+      "baseline_cagr": 11.66,
+      "baseline_dd": 5.33,
+      "delta_sharpe": -0.32,
+      "delta_cagr": -0.6,
+      "delta_dd": 6.24,
+      "sr_trades": 178,
+      "mr_trades": 71,
+      "tf_trades": 86,
+      "total_trades": 339
+    },
+    "delta_vs_baseline": {
+      "sharpe": -0.32,
+      "cagr_pct": -0.6,
+      "max_drawdown_pct": 6.24
+    },
+    "learnings": [
+      "PATTERN CONFIRMED (4th time): dormant strategies fail combined test due to position contention",
+      "All 4 tested (momentum_breakout, short_term_mr, bb_squeeze, sector_rotation) degrade portfolio when added",
+      "Root cause: max_open_positions=10 creates zero-sum competition for position slots",
+      "SR crowds out MR (-34%) and TF (-45%) \u2014 both proven profit drivers",
+      "DECISION: Wave 1 dormant activation theme is CLOSED",
+      "NEXT PRIORITY: Position allocation pools (per-strategy-type max positions) to unlock new strategies"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_mtf_mo_solo",
+    "timestamp": "2026-03-02T23:12:01.593034+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends. This is similar in spirit to trend_following but uses a different timeframe for trend confirmation (weekly SMA vs daily MA crossover). Key question: signal overlap with trend_following. If >60% overlap, the strategy adds complexity without diversification.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0,
+      "avg_trade": 0.0,
+      "final_equity": 4000.0,
+      "expectancy_r": 0.0,
+      "avg_r": 0.0,
+      "r_count": 0,
+      "edge_p_value": 1.0,
+      "edge_significant": false,
+      "var_95_pct": -0.0,
+      "cvar_95_pct": -0.0,
+      "calmar": 0.0,
+      "mc_p95_drawdown_pct": 0.0,
+      "mc_fragile": false
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 665.8,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave1_mtf_mo_solo",
+    "timestamp": "2026-03-02T23:13:10.520965+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "MTF momentum enters daily pullbacks within weekly uptrends for diversification vs trend_following",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 0,
+      "signals_generated": "hundreds (visible in logs)",
+      "sharpe": 0.0,
+      "cagr_pct": 0.0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "ROOT CAUSE: confidence=0.50 hardcoded in mtf_momentum.py, filtered by min_confidence=0.75 in config",
+      "3rd failure \u2014 first 2 were API signature bugs (fixed), this is the remaining blocker",
+      "Strategy generates hundreds of signals but none pass confidence gate",
+      "FIX: Add dynamic confidence scoring or per-strategy min_confidence override",
+      "BLOCKED: Do not re-queue until confidence calculation is implemented"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  }
+]

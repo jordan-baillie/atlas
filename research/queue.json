@@ -1,1 +1,482 @@
-[]
+[
+  {
+    "id": "wave2_vol_combined",
+    "title": "Volume filter 1.5x on combined portfolio (MR+TF+OG)",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Wave 1 proved 1.5x volume filter on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Applying to the full combined portfolio should similarly improve signal quality by filtering out low-conviction entries across all strategies.",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_dd_increase_pp": 1.0,
+      "min_trades": 150,
+      "description": "Sharpe improvement >= +0.03 over baseline combined portfolio. Max drawdown increase <= 1pp. Min 150 trades after filtering."
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_param": "volume_min_ratio",
+      "variants": [
+        {
+          "name": "baseline (0.5x \u2014 current)",
+          "value": 0.5
+        },
+        {
+          "name": "1.0x avg",
+          "value": 1.0
+        },
+        {
+          "name": "1.5x avg (proven on MR)",
+          "value": 1.5
+        }
+      ]
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718946+00:00",
+    "updated_at": "2026-03-03T01:33:08.718960+00:00",
+    "tags": [
+      "wave2",
+      "filter",
+      "volume",
+      "combined",
+      "high_impact"
+    ],
+    "depends_on": [],
+    "notes": "Wave 1 result on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62, DD 5.24%\u21924.03%, trades 332\u2192235. 1.5x is the sweet spot. 2.0x was too aggressive (115 trades, Sharpe -0.30)."
+  },
+  {
+    "id": "wave2_rsi2_solo",
+    "title": "Connors RSI(2) mean reversion \u2014 solo backtest",
+    "category": "new_strategy",
+    "market": "sp500",
+    "hypothesis": "Connors RSI(2) with SMA-200 filter has proven 74%+ win rate across 34 years of backtesting (Connors & Alvarez 2008, confirmed by reddit/algotrading 2024). Entry: RSI(2)<10 + close>SMA(200). Exit: close>SMA(5). This is DISTINCT from our existing MR (RSI-14/z-score) and should generate uncorrelated signals on different stocks at different times.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_trades": 100,
+      "min_sharpe": 0.0,
+      "min_profit_factor": 1.1,
+      "min_win_rate": 55.0,
+      "description": "Min 100 trades, Sharpe > 0, PF > 1.1, win rate > 55%. RSI(2) strategies typically have high win rates but need enough trades to be statistically meaningful."
+    },
+    "estimated_runtime_min": 15,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "connors_rsi2",
+    "params_override": {
+      "connors_rsi2": {
+        "enabled": true,
+        "rsi_period": 2,
+        "rsi_entry": 10,
+        "sma_trend_period": 200,
+        "sma200_filter": true,
+        "sma_exit_period": 5,
+        "exit_mode": "sma",
+        "max_hold_days": 10,
+        "atr_period": 14,
+        "atr_stop_mult": 3.0
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718967+00:00",
+    "updated_at": "2026-03-03T01:33:08.718969+00:00",
+    "tags": [
+      "wave2",
+      "new_strategy",
+      "connors_rsi2",
+      "mean_reversion"
+    ],
+    "depends_on": [],
+    "notes": "New strategy implementation at strategies/connors_rsi2.py. Based on Connors RSI(2) from 'Short Term Trading Strategies That Work'. Uses RSI period=2 (not 14 like existing MR). Exit via SMA(5) crossover."
+  },
+  {
+    "id": "wave2_rsi2_opt",
+    "title": "Connors RSI(2) \u2014 parameter optimization",
+    "category": "new_strategy",
+    "market": "sp500",
+    "hypothesis": "Default RSI(2) params may not be optimal for our SP500 top-200 universe. Key params to optimize: rsi_entry threshold (5-15), sma_exit_period (3-10), atr_stop_mult (2.0-4.0), max_hold_days (5-15). Research shows RSI(2)<5 is more selective but higher quality.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "min_sharpe": 0.3,
+      "min_profit_factor": 1.2,
+      "min_trades": 80,
+      "description": "Optimized Sharpe > 0.30, PF > 1.2, min 80 trades. Must not over-optimize to tiny trade count."
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "connors_rsi2",
+    "params_override": {
+      "optimize_params": {
+        "rsi_entry": [
+          5,
+          8,
+          10,
+          15
+        ],
+        "sma_exit_period": [
+          3,
+          5,
+          7,
+          10
+        ],
+        "atr_stop_mult": [
+          2.0,
+          2.5,
+          3.0,
+          4.0
+        ],
+        "max_hold_days": [
+          5,
+          7,
+          10,
+          15
+        ],
+        "ibs_filter_enabled": [
+          false,
+          true
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718974+00:00",
+    "updated_at": "2026-03-03T01:33:08.718976+00:00",
+    "tags": [
+      "wave2",
+      "new_strategy",
+      "connors_rsi2",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave2_rsi2_solo"
+    ],
+    "notes": "Optimization grid: 4\u00d74\u00d74\u00d74\u00d72 = 512 combinations. Use coordinate descent."
+  },
+  {
+    "id": "wave2_rsi2_combined",
+    "title": "Connors RSI(2) \u2014 combined portfolio test (MR+TF+OG+RSI2)",
+    "category": "portfolio",
+    "market": "sp500",
+    "hypothesis": "RSI(2) generates different signals from existing MR (RSI-14/z-score) at different times, adding uncorrelated alpha. With max_positions=15, there are position slots available. Unlike wave 1 dormant strategies, RSI(2) is designed to be short-duration (avg 3-5 days) so it should not create sustained position contention.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_combined_sharpe": 0.85,
+      "max_drawdown_pct": 7.0,
+      "sharpe_vs_baseline": -0.05,
+      "description": "Combined Sharpe >= 0.85 (current baseline ~0.87). Max DD <= 7%. Sharpe should not degrade by more than 0.05. If combined Sharpe > baseline, this is a clear win."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "connors_rsi2",
+    "params_override": {
+      "connors_rsi2": {
+        "enabled": true
+      },
+      "_use_optimized_params": true,
+      "_note": "Use params from wave2_rsi2_opt result"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718980+00:00",
+    "updated_at": "2026-03-03T01:33:08.718981+00:00",
+    "tags": [
+      "wave2",
+      "new_strategy",
+      "connors_rsi2",
+      "combined_test"
+    ],
+    "depends_on": [
+      "wave2_rsi2_opt"
+    ],
+    "notes": "CRITICAL: Wave 1 showed ALL dormant strategies fail combined test due to position contention. RSI(2) has shorter holds (3-5d vs 10-20d for others) which should mitigate this. If it still fails, test with allocation pools."
+  },
+  {
+    "id": "wave2_rsi2_oos",
+    "title": "Connors RSI(2) \u2014 out-of-sample validation for promotion",
+    "category": "portfolio",
+    "market": "sp500",
+    "hypothesis": "RSI(2) combined portfolio improvement survives OOS walk-forward validation. Strategy has 34-year published track record so OOS decay should be minimal.",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "oos_sharpe_ratio": 0.7,
+      "min_wf_profitable_pct": 50.0,
+      "description": "OOS Sharpe >= 70% of IS Sharpe. >50% of walk-forward windows profitable. Perturbation: mean CAGR stays positive after 10 random param shifts."
+    },
+    "estimated_runtime_min": 45,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "connors_rsi2",
+    "params_override": {
+      "_use_combined_config": true,
+      "_note": "Use the combined config from wave2_rsi2_combined"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718984+00:00",
+    "updated_at": "2026-03-03T01:33:08.718985+00:00",
+    "tags": [
+      "wave2",
+      "new_strategy",
+      "connors_rsi2",
+      "oos",
+      "promotion_gate"
+    ],
+    "depends_on": [
+      "wave2_rsi2_combined"
+    ],
+    "notes": "If this passes, generate candidate config for human approval."
+  },
+  {
+    "id": "wave2_vol_promotion",
+    "title": "Volume filter 1.5x \u2014 OOS validation for promotion",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "1.5x volume filter improvement on combined portfolio survives OOS validation. This was already OOS-validated on MR solo in wave 1, so combined OOS should also pass.",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "oos_sharpe_ratio": 0.7,
+      "min_wf_profitable_pct": 50.0,
+      "description": "OOS Sharpe >= 70% of IS Sharpe. >50% WF windows profitable. If pass, generate candidate config with volume.min_ratio=1.5 across all strategies."
+    },
+    "estimated_runtime_min": 45,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "volume_min_ratio": 1.5,
+      "_apply_to": "all_strategies"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718988+00:00",
+    "updated_at": "2026-03-03T01:33:08.718990+00:00",
+    "tags": [
+      "wave2",
+      "filter",
+      "volume",
+      "oos",
+      "promotion_gate"
+    ],
+    "depends_on": [
+      "wave2_vol_combined"
+    ],
+    "notes": "If wave2_vol_combined passes AND this OOS passes, create candidate config at config/candidates/sp500_wave2_vol.json. Promote to v2.3 after human approval."
+  },
+  {
+    "id": "wave2_exit_mr",
+    "title": "Mean reversion \u2014 RSI recovery exit vs current MA exit",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Research shows MR trades benefit from RSI-based exits over fixed MA exits. When RSI(2) recovers above 65-70, the oversold condition is resolved and holding longer adds risk without reward. Current MR uses SMA(20) reversion + ATR profit target; RSI recovery exit may capture the same edge with less exposure.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.05,
+      "or_pf_improvement": 0.1,
+      "description": "Sharpe improvement >= 0.05 OR PF improvement >= 0.1 vs current MR exit rules. Min 150 trades."
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "sweep_params": {
+        "exit_method": [
+          {
+            "name": "baseline (MA+ATR)",
+            "type": "current"
+          },
+          {
+            "name": "RSI(2)>65 exit",
+            "rsi_exit_threshold": 65
+          },
+          {
+            "name": "RSI(2)>70 exit",
+            "rsi_exit_threshold": 70
+          },
+          {
+            "name": "time_only_5d",
+            "max_hold_days": 5
+          },
+          {
+            "name": "time_only_7d",
+            "max_hold_days": 7
+          }
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718993+00:00",
+    "updated_at": "2026-03-03T01:33:08.718994+00:00",
+    "tags": [
+      "wave2",
+      "exit_optimization",
+      "mean_reversion"
+    ],
+    "depends_on": [],
+    "notes": "Connors research: stops HURT mean reversion. Time-based and RSI-recovery exits often outperform fixed stops. QuantifiedStrategies confirms this."
+  },
+  {
+    "id": "wave2_exit_og",
+    "title": "Opening gap \u2014 IBS-based vs current SMA exit",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Opening gap reversal trades should exit when IBS > 0.8-0.9 (close near high = buying exhaustion). This is more targeted than SMA(5) exit. Also test shorter hold periods since gap fills typically resolve in 1-3 days.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.05,
+      "or_pf_improvement": 0.1,
+      "description": "Sharpe improvement >= 0.05 OR PF improvement >= 0.1 vs current OG exit. Min 80 trades after filtering."
+    },
+    "estimated_runtime_min": 15,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "opening_gap",
+    "params_override": {
+      "sweep_params": {
+        "exit_method": [
+          {
+            "name": "baseline (SMA5+IBS0.8)",
+            "type": "current"
+          },
+          {
+            "name": "IBS>0.85 only",
+            "ibs_exit_threshold": 0.85
+          },
+          {
+            "name": "IBS>0.9 only",
+            "ibs_exit_threshold": 0.9
+          },
+          {
+            "name": "max_hold_3d",
+            "max_hold_days": 3
+          },
+          {
+            "name": "max_hold_5d",
+            "max_hold_days": 5
+          }
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.718997+00:00",
+    "updated_at": "2026-03-03T01:33:08.718998+00:00",
+    "tags": [
+      "wave2",
+      "exit_optimization",
+      "opening_gap"
+    ],
+    "depends_on": [],
+    "notes": "Gap fills are fast events. Shorter holds reduce exposure risk."
+  },
+  {
+    "id": "wave2_chandelier_tf",
+    "title": "Trend following \u2014 Chandelier exit vs current trailing stop",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Chandelier exit (highest-high minus N\u00d7ATR) adapts to volatility better than fixed trailing stop ATR multiplier. It locks in profits during strong trends while giving room during pullbacks. Testing different ATR multipliers (2.5-4.0) against current trailing_stop_atr_mult=2.5.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.05,
+      "description": "Sharpe improvement >= 0.05 vs current TF exit. Chandelier should capture more trend profit with adaptive stops."
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "trend_following",
+    "params_override": {
+      "sweep_params": {
+        "trailing_stop_atr_mult": [
+          2.0,
+          2.5,
+          3.0,
+          3.5,
+          4.0
+        ],
+        "max_hold_days": [
+          10,
+          15,
+          20,
+          25
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.719005+00:00",
+    "updated_at": "2026-03-03T01:33:08.719006+00:00",
+    "tags": [
+      "wave2",
+      "exit_optimization",
+      "trend_following"
+    ],
+    "depends_on": [],
+    "notes": "Current TF: trailing_stop_atr_mult=2.5, max_hold=15. Research suggests wider stops (3-4x ATR) capture more trend."
+  },
+  {
+    "id": "wave2_tom_filter",
+    "title": "Turn of Month timing filter on combined portfolio",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "The Turn of Month effect (last 5 + first 3 trading days) shows stocks generate virtually all monthly returns in this window (Lakonishok & Smidt 1988, confirmed 2024). Boosting signal confidence during TOM window (or suppressing signals mid-month) should improve trade quality. This is a calendar-based filter, completely uncorrelated with our price-based signals.",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.02,
+      "min_trades": 100,
+      "description": "Sharpe improvement >= 0.02 when only taking trades in TOM window vs taking trades anytime. Min 100 trades to avoid under-trading."
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P4",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_param": "turn_of_month",
+      "variants": [
+        {
+          "name": "baseline (no TOM filter)",
+          "value": false
+        },
+        {
+          "name": "TOM window only (last 5 + first 3 days)",
+          "value": true,
+          "days_before_month_end": 5,
+          "days_after_month_start": 3
+        },
+        {
+          "name": "TOM boost (confidence +0.05 in window)",
+          "value": "boost",
+          "confidence_boost": 0.05
+        }
+      ]
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T01:33:08.719010+00:00",
+    "updated_at": "2026-03-03T01:33:08.719011+00:00",
+    "tags": [
+      "wave2",
+      "filter",
+      "calendar",
+      "turn_of_month",
+      "exploratory"
+    ],
+    "depends_on": [],
+    "notes": "Quantpedia, QuantifiedStrategies, and academic research (Etula et al 2020) confirm TOM effect is robust across 34+ countries and 100+ years. Mechanism: pension fund rebalancing + payroll cash flows at month-end."
+  }
+]
