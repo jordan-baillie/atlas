@@ -1554,5 +1554,169 @@
     ],
     "depends_on": [],
     "notes": "Quantpedia, QuantifiedStrategies, and academic research (Etula et al 2020) confirm TOM effect is robust across 34+ countries and 100+ years. Mechanism: pension fund rebalancing + payroll cash flows at month-end."
+  },
+  {
+    "id": "wave2_vix_roc_05_roc_spike_20pct",
+    "title": "VIX regime filter v2: ROC: skip when VIX 5d spike > 20%",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Wave 2 experiment found 'ROC: skip when VIX 5d spike > 20%' improves RSI-MR Sharpe by +0.289. Validate on full Atlas backtest engine (multi-stock, 3-year IS, with OOS).",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_cagr_drop": 2.0,
+      "min_trades": 200,
+      "description": "Full backtest: Sharpe improvement \u2265 0.03, CAGR drop \u2264 2pp, min 200 trades."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_type": "vix_roc",
+      "filter_name": "ROC: skip when VIX 5d spike > 20%",
+      "variant_id": "05_roc_spike_20pct",
+      "is_sharpe": 0.6162,
+      "is_delta_sharpe": 0.2888,
+      "is_trades": 48
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T03:40:50.560937",
+    "updated_at": "2026-03-03T03:40:50.560953",
+    "tags": [
+      "wave2",
+      "filter",
+      "vix",
+      "roc",
+      "regime",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Promoted from vix_regime_filter_v2 experiment. IS (SPY proxy, 2020\u20132026): Sharpe=0.616 (+0.289 vs baseline), trades=48, CAGR=10.95%."
+  },
+  {
+    "id": "wave2_vix_roc_06_roc_spike_30pct",
+    "title": "VIX regime filter v2: ROC: skip when VIX 5d spike > 30%",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Wave 2 experiment found 'ROC: skip when VIX 5d spike > 30%' improves RSI-MR Sharpe by +0.188. Validate on full Atlas backtest engine (multi-stock, 3-year IS, with OOS).",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_cagr_drop": 2.0,
+      "min_trades": 200,
+      "description": "Full backtest: Sharpe improvement \u2265 0.03, CAGR drop \u2264 2pp, min 200 trades."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_type": "vix_roc",
+      "filter_name": "ROC: skip when VIX 5d spike > 30%",
+      "variant_id": "06_roc_spike_30pct",
+      "is_sharpe": 0.5152,
+      "is_delta_sharpe": 0.1878,
+      "is_trades": 52
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T03:40:50.560972",
+    "updated_at": "2026-03-03T03:40:50.560974",
+    "tags": [
+      "wave2",
+      "filter",
+      "vix",
+      "roc",
+      "regime",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Promoted from vix_regime_filter_v2 experiment. IS (SPY proxy, 2020\u20132026): Sharpe=0.515 (+0.188 vs baseline), trades=52, CAGR=9.84%."
+  },
+  {
+    "id": "wave2_vix_roc_07_roc_spike_50pct",
+    "title": "VIX regime filter v2: ROC: skip when VIX 5d spike > 50%",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Wave 2 experiment found 'ROC: skip when VIX 5d spike > 50%' improves RSI-MR Sharpe by +0.362. Validate on full Atlas backtest engine (multi-stock, 3-year IS, with OOS).",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_cagr_drop": 2.0,
+      "min_trades": 200,
+      "description": "Full backtest: Sharpe improvement \u2265 0.03, CAGR drop \u2264 2pp, min 200 trades."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_type": "vix_roc",
+      "filter_name": "ROC: skip when VIX 5d spike > 50%",
+      "variant_id": "07_roc_spike_50pct",
+      "is_sharpe": 0.6894,
+      "is_delta_sharpe": 0.362,
+      "is_trades": 58
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T03:40:50.560989",
+    "updated_at": "2026-03-03T03:40:50.560991",
+    "tags": [
+      "wave2",
+      "filter",
+      "vix",
+      "roc",
+      "regime",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Promoted from vix_regime_filter_v2 experiment. IS (SPY proxy, 2020\u20132026): Sharpe=0.689 (+0.362 vs baseline), trades=58, CAGR=12.27%."
+  },
+  {
+    "id": "wave2_vix_roc_08_roc_abs_30pct",
+    "title": "VIX regime filter v2: ROC (abs): skip |VIX 5d chg| > 30%",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Wave 2 experiment found 'ROC (abs): skip |VIX 5d chg| > 30%' improves RSI-MR Sharpe by +0.188. Validate on full Atlas backtest engine (multi-stock, 3-year IS, with OOS).",
+    "method": "filter_test",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "max_cagr_drop": 2.0,
+      "min_trades": 200,
+      "description": "Full backtest: Sharpe improvement \u2265 0.03, CAGR drop \u2264 2pp, min 200 trades."
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {
+      "filter_type": "vix_roc",
+      "filter_name": "ROC (abs): skip |VIX 5d chg| > 30%",
+      "variant_id": "08_roc_abs_30pct",
+      "is_sharpe": 0.5152,
+      "is_delta_sharpe": 0.1878,
+      "is_trades": 52
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-03T03:40:50.561000",
+    "updated_at": "2026-03-03T03:40:50.561001",
+    "tags": [
+      "wave2",
+      "filter",
+      "vix",
+      "roc",
+      "regime",
+      "sp500"
+    ],
+    "depends_on": [],
+    "notes": "Promoted from vix_regime_filter_v2 experiment. IS (SPY proxy, 2020\u20132026): Sharpe=0.515 (+0.188 vs baseline), trades=52, CAGR=9.84%."
   }
 ]
