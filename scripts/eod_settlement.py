@@ -433,6 +433,9 @@ def main():
         json.dump(summary, f, indent=2, default=str)
     log.info(f"EOD summary saved: {summary_path}")
 
+    # Disconnect broker to free clientId for position monitor
+    portfolio.disconnect()
+
 
 def run_position_monitor():
     """Evaluate manual position conditions after EOD settlement."""
@@ -448,4 +451,5 @@ def run_position_monitor():
 if __name__ == "__main__":
     main()
     # Run position monitor after EOD settlement
+    # (main() broker connection is closed at end of main, so clientId is free)
     run_position_monitor()
