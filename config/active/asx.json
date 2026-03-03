@@ -361,5 +361,23 @@
     "_finding": "Phase 3 test (2026-02-20): Filter removed 91/199 trades (46%). CAGR 8.34%->3.15%, Sharpe 0.522->-0.071. Over-restrictive: ASX spends majority of time in NEUTRAL regime (mixed signals). 0.75x neutral scale causes marginal trades to fail min_position_value. Bear regime = 0 trades (0.5x always below $500 min). Best trades occur in neutral/mixed markets - removing them is harmful. Disabled. Regime injected as INFO features in signals for future ML use (Phase 5)."
   },
   "market": "asx",
+  "volatility_gate": {
+    "enabled": true,
+    "_comment": "Pre-market macro volatility check — blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
+    "thresholds": {
+      "oil_gap_pct": 5.0,
+      "gold_gap_pct": 2.0,
+      "vix_level": 25.0,
+      "vix_spike_pct": 20.0,
+      "asx_futures_gap_pct": 1.5
+    },
+    "indicators": {
+      "oil": true,
+      "gold": true,
+      "vix": true,
+      "asx_futures": true
+    },
+    "_behavior": "1 flag → 50% position size reduction | 2+ flags → block all entries + Telegram alert"
+  },
   "_notes": "TF-only config for ASX via IBKR. Based on IBKR reopt results 2026-03-02. TF solo: CAGR 8.46%, Sharpe 0.455, DD 9.45%, PF 1.341, 211 trades. Adding MR/OG hurts due to position contention with 7 max slots."
 }

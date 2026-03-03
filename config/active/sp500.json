@@ -246,6 +246,25 @@
     "regime_filter": {
         "enabled": false
     },
+    "volatility_gate": {
+        "enabled": true,
+        "_comment": "Pre-market macro volatility check — blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
+        "thresholds": {
+            "oil_gap_pct": 5.0,
+            "gold_gap_pct": 2.0,
+            "vix_level": 25.0,
+            "vix_spike_pct": 20.0,
+            "asx_futures_gap_pct": 1.5
+        },
+        "indicators": {
+            "oil": true,
+            "gold": true,
+            "vix": true,
+            "asx_futures": false
+        },
+        "_behavior": "1 flag → 50% position size reduction | 2+ flags → block all entries + Telegram alert",
+        "_note": "ASX futures disabled for SP500 market — not relevant for US trading session"
+    },
     "_optimization_metadata": {
         "optimized_at": "2026-02-27T13:47:48.297173",
         "baseline_cagr": 0.119,

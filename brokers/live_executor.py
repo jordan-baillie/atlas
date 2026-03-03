@@ -275,15 +275,63 @@ class LiveExecutor:
             "errors": [],
         }
 
-        # Execute exits first (frees cash)
+        # Execute exits first (frees cash) — protective orders always proceed
         for exit_rec in plan.get("proposed_exits", []):
             result = self._execute_exit(exit_rec, trade_date)
             report["exits"].append(result)
 
-        # Execute entries
-        for entry_rec in plan.get("proposed_entries", []):
-            result = self._execute_entry(entry_rec, trade_date)
-            report["entries"].append(result)
+        # ── Volatility gate: check macro conditions before new entries ──────
+        vol_gate = self._run_volatility_gate()
+        report["volatility_gate"] = vol_gate
+
+        if vol_gate["action"] == "block":
+            # Block all new entries — protective orders above already processed
+            logger.warning(
+                "Volatility gate BLOCKED all new entries: %s", vol_gate["message"],
+            )
+            _journal_entry("volatility_gate_block", {
+                "trade_date": trade_date,
+                "flags": vol_gate.get("flags", []),
+                "message": vol_gate["message"],
+            })
+            # Send Telegram alert
+            try:
+                from scripts.volatility_gate import send_volatility_alert
+                send_volatility_alert(vol_gate)
+            except Exception as _e:
+                logger.warning("Could not send volatility alert: %s", _e)
+            # Record skipped entries
+            for entry_rec in plan.get("proposed_entries", []):
+                report["entries"].append({
+                    "ticker": entry_rec.get("ticker", ""),
+                    "side": "BUY",
+                    "qty": entry_rec.get("position_size", 0),
+                    "price": entry_rec.get("entry_price", 0),
+                    "success": False,
+                    "blocked": True,
+                    "reason": "volatility_gate",
+                    "message": vol_gate["message"],
+                    "dry_run": self.is_dry_run,
+                })
+
+        else:
+            # Proceed with entries — apply size reduction if gate is in "reduce" mode
+            for entry_rec in plan.get("proposed_entries", []):
+                if vol_gate["action"] == "reduce":
+                    # Apply 50% size reduction: halve position_size
+                    original_qty = entry_rec.get("position_size", 0)
+                    reduced_qty = max(1, int(original_qty * vol_gate["size_multiplier"]))
+                    entry_rec = dict(entry_rec)   # shallow copy — don't mutate plan
+                    entry_rec["position_size"] = reduced_qty
+                    entry_rec["vol_gate_reduced"] = True
+                    entry_rec["vol_gate_original_qty"] = original_qty
+                    logger.warning(
+                        "Volatility gate REDUCING %s size: %d → %d (50%%): %s",
+                        entry_rec.get("ticker", ""), original_qty, reduced_qty,
+                        vol_gate["message"],
+                    )
+                result = self._execute_entry(entry_rec, trade_date)
+                report["entries"].append(result)
 
         # Place protective stop orders for filled entries
         stop_orders = self.place_stops_for_plan(
@@ -955,6 +1003,31 @@ class LiveExecutor:
         }
 
 
+
+    # ── Volatility gate ────────────────────────────────────────
+
+    def _run_volatility_gate(self) -> dict:
+        """Run the pre-market volatility gate check.
+
+        Loads the gate module lazily to avoid import overhead when not needed.
+        Returns a safe no-action result if the module fails to import or errors.
+        """
+        try:
+            from scripts.volatility_gate import check_volatility_gate
+            return check_volatility_gate(self.config)
+        except ImportError as e:
+            logger.warning("Volatility gate module unavailable: %s — skipping", e)
+        except Exception as e:
+            logger.error("Volatility gate check failed: %s — skipping", e)
+        # Safe fallback: no gate action (proceed normally)
+        return {
+            "gate_enabled": False,
+            "triggered_count": 0,
+            "flags": [],
+            "action": "none",
+            "size_multiplier": 1.0,
+            "message": "Volatility gate skipped (error or unavailable)",
+        }
 
     # ── Helpers ────────────────────────────────────────────────
 

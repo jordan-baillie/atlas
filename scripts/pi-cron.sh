@@ -52,7 +52,45 @@ AGENT_ID="${3:-atlas-research}"
 
 case "$MODE" in
     premarket)
-        PROMPT="Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md"
+        # ── Pre-flight: volatility gate check ──────────────────────────────
+        # Check macro indicators before generating the plan.
+        # Exit codes: 0=ok, 1=reduce(50%), 2=block(skip entries)
+        VOL_GATE_LOG="$LOG_DIR/volatility_gate_${TIMESTAMP}.json"
+        VOL_GATE_EXIT=0
+        set +e
+        python3 "$PROJECT/scripts/volatility_gate.py" \
+            --check --market "$MARKET" --json \
+            > "$VOL_GATE_LOG" 2>>"$LOG_DIR/pi-cron.log"
+        VOL_GATE_EXIT=$?
+        set -e
+
+        # Parse gate result for prompt context
+        VOL_GATE_ACTION="none"
+        VOL_GATE_FLAGS=""
+        if [ -f "$VOL_GATE_LOG" ]; then
+            VOL_GATE_ACTION=$(python3 -c "import json,sys; d=json.load(open('$VOL_GATE_LOG')); print(d.get('action','none'))" 2>/dev/null || echo "none")
+            VOL_GATE_FLAGS=$(python3 -c "import json,sys; d=json.load(open('$VOL_GATE_LOG')); print(','.join(d.get('flags',[])))" 2>/dev/null || echo "")
+        fi
+        echo "$(date -Iseconds) Volatility gate: action=$VOL_GATE_ACTION flags=$VOL_GATE_FLAGS" >> "$LOG_DIR/pi-cron.log"
+
+        # If gate BLOCKS, send alert immediately and skip the planning agent
+        if [ "$VOL_GATE_EXIT" -eq 2 ] || [ "$VOL_GATE_ACTION" = "block" ]; then
+            echo "$(date -Iseconds) Volatility gate BLOCKED entries — sending alert, skipping plan" >> "$LOG_DIR/pi-cron.log"
+            python3 "$PROJECT/scripts/volatility_gate.py" \
+                --check --market "$MARKET" --alert \
+                >> "$LOG_DIR/pi-cron.log" 2>&1 || true
+            notify error "volatility-gate-block" "" 2>/dev/null || true
+            exit 0   # Not an error — clean exit, entries intentionally paused
+        fi
+
+        # Build volatility context for the planning prompt
+        if [ "$VOL_GATE_ACTION" = "reduce" ]; then
+            VOL_CONTEXT="⚠️ VOLATILITY GATE: 1 indicator flagged ($VOL_GATE_FLAGS) — position sizes will be reduced 50% at execution. Note this in the plan summary."
+        else
+            VOL_CONTEXT="✅ Volatility gate: OK — no macro flags."
+        fi
+
+        PROMPT="Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). ${VOL_CONTEXT} Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md"
         LOGFILE="$LOG_DIR/pi-cron-premarket-${TIMESTAMP}.log"
         ;;
     postclose)
