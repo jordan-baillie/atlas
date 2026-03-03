@@ -58,7 +58,9 @@ scripts/pi-cron.sh recover postclose sp500
 
 ## Research State
 
-- **Wave 1** (Dormant Strategy Activation): 16/24 resolved. **2 promoted** (SMA-200 to SP500 v2.1, ASX reopt to v9.3).
+- **Wave 1** (Dormant Strategy Activation): 23/24 resolved. **2 promoted** (SMA-200 to SP500 v2.1, ASX reopt to v9.3).
 - **Root finding:** Position contention (max_pos=10) blocked all dormant strategies. Allocation pools built (Task #52) as the unlock mechanism.
-- **Wave 2 theme:** Volume filter combined test + MTF Momentum bug fixes + position pool tuning.
-- **Next experiments in queue:** wave1_vol_filter combined, MTF Momentum post-fix.
+- **Wave 2** (Enhanced Mean Reversion Alpha): 10 experiments queued. Theme: Connors RSI(2) new strategy + volume filter promotion + exit optimization.
+  - **New strategy:** `strategies/connors_rsi2.py` implemented (RSI period=2, SMA-200 filter, SMA(5) exit). Registered in CLI + config.
+  - **Dependency chains:** vol_combined→vol_promotion | rsi2_solo→opt→combined→oos | exit_mr, exit_og, chandelier_tf (independent) | tom_filter (exploratory)
+  - **Expected promotions:** Volume 1.5x filter → v2.3, ConnorsRSI(2) → v2.4
