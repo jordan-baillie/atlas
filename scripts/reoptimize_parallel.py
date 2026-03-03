@@ -400,10 +400,9 @@ def optimize_strategy_parallel(config, strat_name, data, n_workers=2,
 
 def _optimize_one_strategy(args):
     """Top-level worker: optimise a single strategy (used by strategy-level parallelism)."""
-    config, strat_name, data, market_id, active_strategies = args
-    # Each strategy gets 1 inner worker (to avoid over-subscribing cores)
+    config, strat_name, data, market_id, active_strategies, inner_workers = args
     result, updated_config = optimize_strategy_parallel(
-        config, strat_name, data, n_workers=1,
+        config, strat_name, data, n_workers=inner_workers,
         market_id=market_id, active_strategies=active_strategies,
     )
     # Extract only this strategy's params from the updated config
@@ -425,6 +424,9 @@ def parse_args():
     parser.add_argument('--promote-active', action='store_true')
     parser.add_argument('--workers', type=int, default=5,
                         help='Number of strategies to optimise in parallel (default: 5)')
+    parser.add_argument('--inner-workers', type=int, default=None,
+                        help='Param-sweep workers per strategy (default: auto = cpu_count // n_strategy_workers). '
+                             'Override for manual core tuning.')
     return parser.parse_args()
 
 
@@ -454,6 +456,13 @@ if __name__ == '__main__':
     ACTIVE = get_active_strategies(market_id, config)
 
     n_strategy_workers = min(args.workers, len(ACTIVE))
+
+    # Auto-calculate inner (param-sweep) workers per strategy
+    cpu_cores = os.cpu_count() or 8
+    if args.inner_workers is not None:
+        inner_workers = max(1, args.inner_workers)
+    else:
+        inner_workers = max(1, cpu_cores // max(1, n_strategy_workers))
     RESULTS_FILE = PROJECT / 'backtest' / 'results' / f'reoptimization_{market_id}.json'
     results_path = resolve_output_path(args.results_path, RESULTS_FILE)
 
@@ -470,7 +479,8 @@ if __name__ == '__main__':
     print(f'Started: {datetime.now().isoformat()}', flush=True)
     print(f'Market: {market_id}', flush=True)
     print(f'Active strategies: {ACTIVE}', flush=True)
-    print(f'Workers: {n_strategy_workers} strategy-level processes', flush=True)
+    print(f'Workers: {n_strategy_workers} strategy-level × {inner_workers} inner = '
+          f'{n_strategy_workers * inner_workers} total cores', flush=True)
     print(f'Results file: {results_path}', flush=True)
     print(f'Candidate config target: {candidate_config_path}', flush=True)
     print(f'Promote active config: {args.promote_active}', flush=True)
@@ -509,6 +519,8 @@ if __name__ == '__main__':
         'candidate_config_path': str(candidate_config_path),
         'active_config_overwritten': False,
         'parallel_workers': n_strategy_workers,
+        'inner_workers': inner_workers,
+        'cpu_cores': cpu_cores,
     }
     results_path.parent.mkdir(parents=True, exist_ok=True)
     with open(results_path, 'w') as f:
@@ -520,7 +532,7 @@ if __name__ == '__main__':
     print(f'{"=" * 70}', flush=True)
 
     strategy_args = [
-        (copy.deepcopy(config), sn, data, market_id, ACTIVE)
+        (copy.deepcopy(config), sn, data, market_id, ACTIVE, inner_workers)
         for sn in ACTIVE
     ]
 
