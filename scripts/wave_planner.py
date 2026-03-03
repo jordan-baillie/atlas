@@ -40,11 +40,26 @@ def load_json(path, default=None):
 
 
 def get_current_wave_number() -> int:
-    """Determine next wave number from existing wave files."""
+    """Determine next wave number from existing wave files.
+
+    If the latest wave brief is still 'pending' (not yet executed),
+    return that wave number so the agent plans it instead of creating
+    a new one. Only increment when the latest wave is complete.
+    """
     WAVES_DIR.mkdir(parents=True, exist_ok=True)
-    existing = list(WAVES_DIR.glob("wave_*_brief.json"))
+    existing = sorted(WAVES_DIR.glob("wave_*_brief.json"))
     if not existing:
         return 2  # Wave 1 was manually seeded
+
+    # Check if the latest wave is still pending — reuse it
+    latest = existing[-1]
+    try:
+        data = json.load(open(latest))
+        if data.get("status") == "pending":
+            return data.get("wave_number", 2)
+    except Exception:
+        pass
+
     nums = []
     for p in existing:
         try:
@@ -190,9 +205,18 @@ def generate_brief() -> dict:
         "experiments": [],  # Filled by agent
     }
 
-    # Save brief
+    # Save brief — but if this wave already has a pending brief, reuse it
     WAVES_DIR.mkdir(parents=True, exist_ok=True)
     brief_path = WAVES_DIR / f"wave_{wave_num}_brief.json"
+    if brief_path.exists():
+        try:
+            existing = json.load(open(brief_path))
+            if existing.get("status") == "pending":
+                print(f"Wave {wave_num} brief already exists (pending) — reusing")
+                return existing
+        except Exception:
+            pass
+
     with open(brief_path, "w") as f:
         json.dump(brief, f, indent=2)
 
