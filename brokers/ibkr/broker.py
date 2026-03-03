@@ -234,29 +234,36 @@ class IBKRBroker(BrokerAdapter):
     def get_positions(self) -> list[PositionInfo]:
         self._require_connected()
 
-        ib_positions = self._ib.positions(self._account_id)
+        # Use portfolio() instead of positions() — it includes marketPrice
+        # and unrealizedPNL from IBKR's own valuation, without requiring
+        # reqMktData snapshots (which fail without a market data subscription
+        # and spam Error 354 to logs and Telegram).
+        portfolio_items = self._ib.portfolio(self._account_id)
         positions = []
 
-        for pos in ib_positions:
-            qty = int(pos.position)
+        # Build a lookup from positions() for avgCost (portfolio uses
+        # averageCost which is the same but let's be safe)
+        for item in portfolio_items:
+            qty = int(item.position)
             if qty == 0:
                 continue
 
-            contract = pos.contract
+            contract = item.contract
             symbol = contract.symbol
             exchange = contract.exchange or contract.primaryExchange or ""
             ticker = mapper.to_atlas(symbol, exchange)
 
-            avg_cost = float(pos.avgCost)
-            # Request current price
-            mkt_price = avg_cost  # fallback
-            try:
-                mkt_price = self._get_last_price(contract) or avg_cost
-            except Exception as e:
-                logger.debug("Price fetch failed for %s: %s", ticker, e)
+            avg_cost = float(item.averageCost)
+            mkt_price = float(item.marketPrice)
+            mkt_value = float(item.marketValue)
+            upnl = float(item.unrealizedPNL)
 
-            mkt_value = mkt_price * abs(qty)
-            upnl = (mkt_price - avg_cost) * qty
+            # Fallback if marketPrice is 0 or stale
+            if mkt_price <= 0:
+                mkt_price = avg_cost
+                mkt_value = mkt_price * abs(qty)
+                upnl = 0
+
             upnl_pct = round((mkt_price - avg_cost) / avg_cost * 100, 2) if avg_cost > 0 else 0
 
             positions.append(PositionInfo(
@@ -264,7 +271,7 @@ class IBKRBroker(BrokerAdapter):
                 entry_price=round(avg_cost, 4),
                 shares=abs(qty),
                 current_price=round(mkt_price, 4),
-                market_value=round(mkt_value, 2),
+                market_value=round(abs(mkt_value), 2),
                 unrealized_pnl=round(upnl, 2),
                 unrealized_pnl_pct=upnl_pct,
                 cost_basis=round(avg_cost * abs(qty), 2),
