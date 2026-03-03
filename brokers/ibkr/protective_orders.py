@@ -47,8 +47,9 @@ def _is_our_sl_order(order) -> bool:
     oca = (order.ocaGroup or "")
     return (
         order.action == "SELL"
-        and order_type in ("STP", "STOP", "STP LMT")
-        and (ref.startswith("atlas_sl_") or oca.startswith("atlas_oca_"))
+        and order_type in ("STP", "STOP", "STP LMT", "TRAIL")
+        and (ref.startswith("atlas_sl_") or ref.startswith("atlas_stop_")
+             or oca.startswith("atlas_oca_"))
     )
 
 
@@ -122,6 +123,14 @@ def place_protective_orders(
     }
 
     try:
+        # ── Ensure contract has exchange set (Error 321 fix) ───────────────
+        # portfolio() returns contracts with exchange='' and primaryExchange='ASX'.
+        # IBKR rejects orders without exchange set, so copy from primaryExchange.
+        if not contract.exchange and contract.primaryExchange:
+            contract.exchange = contract.primaryExchange
+            logger.debug("Set exchange=%s from primaryExchange for %s",
+                         contract.exchange, symbol)
+
         # ── Stop-loss order ────────────────────────────────────────────────
         sl_order = StopOrder("SELL", position_qty, round(stop_price, 4))
         sl_order.tif = "GTC"
@@ -394,6 +403,7 @@ def sync_protective_orders(
     positions: list[dict],
     plan_entries: list[dict] | None = None,
     account_id: str = "",
+    dry_run: bool = False,
 ) -> dict:
     """Ensure every position in the list has broker-side protective orders.
 
@@ -489,6 +499,22 @@ def sync_protective_orders(
                 "ticker": ticker,
                 "action": "skipped",
                 "reason": "no stop_price available",
+            })
+            continue
+
+        if dry_run:
+            logger.info(
+                "[DRY RUN] Would place protective orders for %s qty=%d sl=%.4f tp=%s",
+                ticker, qty, stop_price,
+                f"{tp_price:.4f}" if tp_price else "none",
+            )
+            summary["orders_placed"] += 1
+            summary["details"].append({
+                "ticker": ticker,
+                "action": "dry_run",
+                "stop_price": stop_price,
+                "take_profit_price": tp_price,
+                "message": "DRY RUN — no order placed",
             })
             continue
 

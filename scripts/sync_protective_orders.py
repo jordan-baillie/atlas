@@ -52,8 +52,8 @@ logger = logging.getLogger("atlas.sync_protective_orders")
 _MARKETS = ("asx", "sp500", "hk")
 # Default broker per market (overridden by config)
 _DEFAULT_BROKER: dict[str, str] = {
-    "asx": "moomoo",
-    "sp500": "ibkr",
+    "asx": "ibkr",
+    "sp500": "moomoo",
     "hk": "ibkr",
 }
 
@@ -167,53 +167,52 @@ def sync_market(
             logger.error("Broker connect failed for %s", market_id)
             return result
 
-        # ── Fetch live positions from broker ─────────────────
-        from brokers.live_portfolio import LivePortfolio
-        portfolio = LivePortfolio(config, market_id=market_id)
-        portfolio._broker = broker
-        portfolio._connected = True
-        portfolio._refresh_from_broker()
-
-        if not portfolio.positions:
-            logger.info("No live positions in %s — nothing to protect", market_id)
-            result["counts"] = {"positions_checked": 0}
-            return result
-
-        logger.info("%d live positions in %s", len(portfolio.positions), market_id)
-
-        # ── Fetch open orders once ────────────────────────────
-        open_orders = broker.get_open_orders()
-        logger.info("%d open orders fetched from broker", len(open_orders))
-
         # ── Sync protective orders ────────────────────────────
-        from brokers.moomoo.protective_orders import sync_protective_orders
+        if broker_name == "ibkr":
+            # IBKR broker's sync method fetches positions internally via
+            # portfolio() and takes plan_entries as a flat list of dicts.
+            plan_entries = plan.get("proposed_entries", []) if plan else []
+            sync_result = broker.sync_all_protective_orders(plan_entries, dry_run=dry_run)
+        elif broker_name == "moomoo":
+            # Moomoo needs positions + open orders for duplicate detection.
+            # Use LivePortfolio to get enriched position objects.
+            from brokers.live_portfolio import LivePortfolio
+            portfolio = LivePortfolio(config, market_id=market_id)
+            if not portfolio.connect():
+                result["error"] = "LivePortfolio connect failed"
+                return result
 
-        # For IBKR broker, use IBKR's sync if available, otherwise fall back to moomoo module
-        if broker_name == "ibkr" and hasattr(broker, "sync_all_protective_orders"):
-            sync_result = broker.sync_all_protective_orders(
-                positions=portfolio.positions,
-                plan=plan,
-                trade_date=trade_date,
-                dry_run=dry_run,
-            )
-        elif broker_name == "moomoo" and hasattr(broker, "sync_all_protective_orders"):
-            sync_result = broker.sync_all_protective_orders(
-                positions=portfolio.positions,
-                plan=plan,
-                trade_date=trade_date,
-                dry_run=dry_run,
-            )
+            if not portfolio.positions:
+                logger.info("No live positions in %s — nothing to protect", market_id)
+                result["counts"] = {"positions_checked": 0}
+                return result
+
+            logger.info("%d live positions in %s", len(portfolio.positions), market_id)
+
+            open_orders = broker.get_open_orders()
+            logger.info("%d open orders fetched from broker", len(open_orders))
+
+            if hasattr(broker, "sync_all_protective_orders"):
+                sync_result = broker.sync_all_protective_orders(
+                    positions=portfolio.positions,
+                    plan=plan,
+                    trade_date=trade_date,
+                    dry_run=dry_run,
+                )
+            else:
+                from brokers.moomoo.protective_orders import sync_protective_orders
+                sync_result = sync_protective_orders(
+                    broker=broker,
+                    positions=portfolio.positions,
+                    open_orders=open_orders,
+                    plan=plan,
+                    config=config,
+                    trade_date=trade_date,
+                    dry_run=dry_run,
+                )
         else:
-            # Generic fallback using moomoo protective_orders module
-            sync_result = sync_protective_orders(
-                broker=broker,
-                positions=portfolio.positions,
-                open_orders=open_orders,
-                plan=plan,
-                config=config,
-                trade_date=trade_date,
-                dry_run=dry_run,
-            )
+            result["error"] = f"Unsupported broker: {broker_name}"
+            return result
 
         result["counts"] = sync_result.get("counts", {})
         result["results"] = sync_result.get("results", {})

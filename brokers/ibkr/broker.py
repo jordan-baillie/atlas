@@ -639,7 +639,7 @@ class IBKRBroker(BrokerAdapter):
         )
         return result
 
-    def sync_all_protective_orders(self, plan_entries: list[dict]) -> dict:
+    def sync_all_protective_orders(self, plan_entries: list[dict], *, dry_run: bool = False) -> dict:
         """Ensure all current long positions have broker-side protective orders.
 
         Fetches live positions from IBKR via portfolio(), then for each long
@@ -654,6 +654,7 @@ class IBKRBroker(BrokerAdapter):
             plan_entries: List of plan entry dicts (from TradePlanGenerator).
                           Expected keys: ticker, stop_price, optionally
                           take_profit or take_profit_price.
+            dry_run:      If True, log what would be placed but don't send orders.
 
         Returns:
             sync summary dict — see protective_orders.sync_protective_orders().
@@ -716,6 +717,7 @@ class IBKRBroker(BrokerAdapter):
             positions_for_sync,
             plan_entries=plan_entries,
             account_id=self._account_id,
+            dry_run=dry_run,
         )
 
     def get_protective_order_status(self, ticker: str) -> dict:
