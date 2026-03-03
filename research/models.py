@@ -63,6 +63,110 @@ class Priority(str, Enum):
     P5_BACKLOG = "P5"   # Cross-market, long-term ideas
 
 
+def _get_strategy_registry() -> Dict[str, Any]:
+    """Lazy-load the strategy registry to check strategy_name validity."""
+    try:
+        from scripts.strategy_evaluator import STRATEGY_REGISTRY, load_sandbox_strategy
+        return STRATEGY_REGISTRY, load_sandbox_strategy
+    except ImportError:
+        return {}, None
+
+
+def validate_queue_entry(entry: "QueueEntry") -> List[str]:
+    """Validate a QueueEntry against what research_runner can actually execute.
+
+    Returns a list of error strings. Empty list = valid.
+
+    This prevents aspirational experiments from being queued with params_override
+    formats that don't match what the runner expects, saving wasted compute.
+    """
+    errors = []
+    method = entry.method if isinstance(entry.method, str) else entry.method.value
+    params = entry.params_override or {}
+
+    # ── Strategy existence check ──────────────────────────────────────────
+    if entry.strategy_name:
+        registry, sandbox_loader = _get_strategy_registry()
+        if registry and entry.strategy_name not in registry:
+            # Check sandbox
+            if sandbox_loader and sandbox_loader(entry.strategy_name) is None:
+                errors.append(
+                    f"strategy_name='{entry.strategy_name}' not found in "
+                    f"STRATEGY_REGISTRY ({list(registry.keys())}) or sandbox"
+                )
+
+    # ── Method-specific params_override validation ────────────────────────
+    if method == ExperimentType.PARAM_SWEEP:
+        # Runner expects: params_override.sweep_param (str) + params_override.sweep_values (list)
+        if "sweep_param" not in params:
+            hint = ""
+            if "sweep_params" in params:
+                hint = " (found 'sweep_params' — use singular 'sweep_param' + 'sweep_values')"
+            errors.append(f"param_sweep requires params_override.sweep_param (str){hint}")
+        elif not isinstance(params["sweep_param"], str):
+            errors.append(f"params_override.sweep_param must be a str, got {type(params['sweep_param']).__name__}")
+        if "sweep_values" not in params:
+            errors.append("param_sweep requires params_override.sweep_values (list)")
+        elif not isinstance(params["sweep_values"], list) or len(params["sweep_values"]) < 2:
+            errors.append("params_override.sweep_values must be a list with >= 2 values")
+
+        if not entry.strategy_name:
+            errors.append("param_sweep requires strategy_name to be set")
+
+    elif method == ExperimentType.FILTER_TEST:
+        # Runner expects: params_override.filter_param (str)
+        #   + either params_override.variants (list of {name, value})
+        #   or params_override.filter_on + params_override.filter_off
+        if "filter_param" not in params:
+            hint = ""
+            if "filter_type" in params:
+                hint = " (found 'filter_type' — use 'filter_param' instead)"
+            errors.append(f"filter_test requires params_override.filter_param (str){hint}")
+        if "variants" in params:
+            if not isinstance(params["variants"], list) or len(params["variants"]) < 2:
+                errors.append("params_override.variants must be a list with >= 2 entries")
+            else:
+                for i, v in enumerate(params["variants"]):
+                    if not isinstance(v, dict) or "value" not in v:
+                        errors.append(f"variants[{i}] must be a dict with at least 'value' key")
+        elif "filter_on" not in params and "filter_off" not in params:
+            errors.append("filter_test requires either 'variants' list or 'filter_on'+'filter_off'")
+
+    elif method == ExperimentType.FULL_OPTIMIZATION:
+        # If strategy_name is set (dormant/new_strategy), runner uses coordinate descent
+        # which requires params_override.param_grid (dict of str→list)
+        if entry.strategy_name and entry.category in ("dormant", "new_strategy"):
+            pg = params.get("param_grid")
+            if pg is None:
+                # Also accept nested: params_override.optimize_params → should be param_grid
+                if "optimize_params" in params:
+                    errors.append(
+                        "full_optimization uses 'param_grid' not 'optimize_params' — "
+                        "rename params_override.optimize_params to params_override.param_grid"
+                    )
+                else:
+                    errors.append(
+                        "full_optimization with strategy_name requires "
+                        "params_override.param_grid (dict of param→[values])"
+                    )
+            elif not isinstance(pg, dict):
+                errors.append("params_override.param_grid must be a dict")
+            else:
+                for k, v in pg.items():
+                    if not isinstance(v, list) or len(v) < 2:
+                        errors.append(f"param_grid['{k}'] must be a list with >= 2 values")
+
+    elif method == ExperimentType.SINGLE_STRATEGY_TEST:
+        if not entry.strategy_name:
+            errors.append("single_strategy_test requires strategy_name to be set")
+
+    elif method == ExperimentType.COMBINED_PORTFOLIO_TEST:
+        if not entry.strategy_name:
+            errors.append("combined_portfolio_test requires strategy_name to be set")
+
+    return errors
+
+
 @dataclass
 class QueueEntry:
     """A single experiment in the research queue."""
@@ -213,8 +317,22 @@ def read_queue() -> List[dict]:
     return _locked_read(QUEUE_PATH)
 
 
-def append_to_queue(entry: QueueEntry) -> str:
-    """Add an experiment to the queue. Returns the entry ID."""
+def append_to_queue(entry: QueueEntry, skip_validation: bool = False) -> str:
+    """Add an experiment to the queue. Returns the entry ID.
+
+    Validates the entry against what research_runner.py can actually execute.
+    Raises ValueError if the entry has invalid params_override format.
+    Pass skip_validation=True only for experimental/sandbox entries.
+    """
+    if not skip_validation:
+        errors = validate_queue_entry(entry)
+        if errors:
+            raise ValueError(
+                f"Queue entry '{entry.id}' failed validation:\n"
+                + "\n".join(f"  • {e}" for e in errors)
+                + "\n\nFix params_override to match what research_runner.py expects, "
+                "or pass skip_validation=True to override."
+            )
     _locked_append(QUEUE_PATH, entry.to_dict())
     return entry.id
 

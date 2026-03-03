@@ -47,6 +47,7 @@ from strategies.short_term_mr import ShortTermMR
 from strategies.sector_rotation import SectorRotation
 from strategies.mtf_momentum import MTFMomentum
 from strategies.dividend_capture import DividendCapture
+from strategies.connors_rsi2 import ConnorsRSI2
 
 from utils.logging_config import setup_logging
 setup_logging("strategy_evaluator", level=logging.WARNING)
@@ -65,6 +66,7 @@ STRATEGY_REGISTRY = {
     'sector_rotation': SectorRotation,
     'mtf_momentum': MTFMomentum,
     'dividend_capture': DividendCapture,
+    'connors_rsi2': ConnorsRSI2,
 }
 
 
