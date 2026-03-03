@@ -60,3 +60,6 @@ config/active/*.bak*
 pi-package/atlas-ops/package-lock.json
 pi-package/atlas-ops/package-lock.json
 plans/plan_hk_2026-03-03.json
+research/waves/wave_2_brief.json
+scripts/seed_wave2.py
+strategies/connors_rsi2.py
