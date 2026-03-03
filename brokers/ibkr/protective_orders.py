@@ -27,10 +27,77 @@ orders placed by Atlas vs. any manual orders on the account.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from typing import Optional
 
 logger = logging.getLogger("atlas.broker.ibkr.protective_orders")
+
+
+# ─── Tick-size rounding ──────────────────────────────────────────────────────
+
+# ASX tick schedule (ASX Operating Rules, Schedule 4)
+_ASX_TICKS = [
+    (0.10,  0.001),
+    (2.00,  0.005),
+    (float("inf"), 0.01),
+]
+
+# US exchanges — generally $0.01 for all prices
+_US_TICK = 0.01
+
+# SEHK (Hong Kong) tick schedule
+_SEHK_TICKS = [
+    (0.25,  0.001),
+    (0.50,  0.005),
+    (10.0,  0.010),
+    (20.0,  0.020),
+    (100.0, 0.050),
+    (200.0, 0.100),
+    (500.0, 0.200),
+    (1000.0, 0.500),
+    (2000.0, 1.000),
+    (5000.0, 2.000),
+    (float("inf"), 5.000),
+]
+
+
+def _tick_size(price: float, exchange: str) -> float:
+    """Return the minimum tick size for a price on a given exchange."""
+    exchange = (exchange or "").upper()
+    if exchange in ("ASX", ""):
+        # Default to ASX for .AX tickers
+        schedule = _ASX_TICKS
+    elif exchange in ("SEHK", "HKSE"):
+        schedule = _SEHK_TICKS
+    else:
+        return _US_TICK
+
+    for threshold, tick in schedule:
+        if price < threshold:
+            return tick
+    return schedule[-1][1]
+
+
+def round_to_tick(price: float, exchange: str, direction: str = "down") -> float:
+    """Round a price to the nearest valid tick for the exchange.
+
+    For stop-losses, round DOWN (tighter stop = safer).
+    For take-profits, round UP (higher target = more conservative).
+
+    Args:
+        price:     Raw price to round.
+        exchange:  Exchange string (e.g. 'ASX', 'NASDAQ', 'SEHK').
+        direction: 'down' for stops, 'up' for take-profits.
+
+    Returns:
+        Price rounded to the nearest valid tick.
+    """
+    tick = _tick_size(price, exchange)
+    if direction == "down":
+        return math.floor(price / tick) * tick
+    else:
+        return math.ceil(price / tick) * tick
 
 
 # ─── OCA group helpers ────────────────────────────────────────────────────────
@@ -124,12 +191,27 @@ def place_protective_orders(
 
     try:
         # ── Ensure contract has exchange set (Error 321 fix) ───────────────
-        # portfolio() returns contracts with exchange='' and primaryExchange='ASX'.
-        # IBKR rejects orders without exchange set, so copy from primaryExchange.
-        if not contract.exchange and contract.primaryExchange:
-            contract.exchange = contract.primaryExchange
-            logger.debug("Set exchange=%s from primaryExchange for %s",
-                         contract.exchange, symbol)
+        # portfolio() returns contracts with exchange='' and primaryExchange set.
+        # Use SMART routing to avoid Error 10311 (direct-route fee warning)
+        # while keeping primaryExchange for tick-size lookup.
+        exchange = contract.primaryExchange or contract.exchange or ""
+        if not contract.exchange or contract.exchange == exchange:
+            contract.exchange = "SMART"
+            logger.debug("Set exchange=SMART (primary=%s) for %s", exchange, symbol)
+
+        # ── Round prices to valid tick size ────────────────────────────────
+        raw_stop = stop_price
+        stop_price = round_to_tick(stop_price, exchange, direction="down")
+        if raw_stop != stop_price:
+            logger.info("Rounded SL %.4f → %.4f (tick=%s, exchange=%s)",
+                        raw_stop, stop_price, _tick_size(raw_stop, exchange), exchange)
+
+        if take_profit_price and take_profit_price > 0:
+            raw_tp = take_profit_price
+            take_profit_price = round_to_tick(take_profit_price, exchange, direction="up")
+            if raw_tp != take_profit_price:
+                logger.info("Rounded TP %.4f → %.4f (tick=%s, exchange=%s)",
+                            raw_tp, take_profit_price, _tick_size(raw_tp, exchange), exchange)
 
         # ── Stop-loss order ────────────────────────────────────────────────
         sl_order = StopOrder("SELL", position_qty, round(stop_price, 4))
