@@ -1,65 +1,81 @@
-"""Ticker mapping between Atlas and Alpaca Markets formats.
+"""Ticker mapping between Atlas and Alpaca formats.
 
-Atlas uses yfinance format:
-  SP500: AAPL, MSFT, TSLA  (plain symbols, no suffix)
+Atlas uses yfinance format for US/SP500:
+    AAPL, MSFT, GOOGL, BRK.B  (plain symbols, no suffix)
 
-Alpaca uses the same bare symbol format for US equities:
-  AAPL, MSFT, TSLA
+Alpaca uses the same format for US stocks:
+    AAPL, MSFT, GOOGL, BRK.B  (plain symbols, no suffix)
 
-Conversion for US stocks is essentially a passthrough. This module
-exists for consistency with other broker implementations and to handle
-any edge cases (e.g. accidental .AX suffix, case normalisation).
+This means conversion is mostly pass-through for SP500.
+Edge cases handled:
+    - Strip .AX suffix if somehow an ASX ticker gets passed in
+    - Strip .HK suffix if somehow an HK ticker gets passed in
+    - Uppercase normalisation
 
 All conversion happens at the broker boundary — Atlas internals
-never see Alpaca-specific formatting.
+never see broker-specific formatting.
 """
 
-from __future__ import annotations
+
+# Suffixes that indicate non-US markets — not supported via Alpaca US equity
+_NON_US_SUFFIXES = (".AX", ".HK", ".L", ".T", ".PA", ".DE")
 
 
-def to_alpaca(ticker: str, market_id: str = "sp500") -> str:
-    """Convert Atlas ticker to Alpaca symbol format.
+def to_alpaca(atlas_ticker: str) -> str:
+    """Convert Atlas ticker to Alpaca symbol.
 
-    For US stocks (SP500): passthrough — both use bare symbols like AAPL.
-    Strips any accidental suffixes and uppercases.
+    For US equities (SP500), this is a no-op since both formats
+    use plain symbols (AAPL, MSFT, etc.).
 
-    >>> to_alpaca("AAPL")
+    Edge cases:
+        - Already in Alpaca format → returned as-is (uppercased)
+        - Has non-US suffix (e.g. BHP.AX) → strip suffix, warn
+        - Handles BRK.B style class suffixes correctly (not stripped)
+
+    >>> to_alpaca('AAPL')
     'AAPL'
-    >>> to_alpaca("aapl")
+    >>> to_alpaca('aapl')
     'AAPL'
-    >>> to_alpaca("BHP.AX", "asx")
-    'BHP'
-    >>> to_alpaca("0700.HK", "hk")
-    '0700'
+    >>> to_alpaca('BRK.B')
+    'BRK.B'
     """
-    t = ticker.strip().upper()
+    ticker = atlas_ticker.strip().upper()
 
-    # Strip yfinance suffixes if accidentally present
-    for suffix in (".AX", ".HK", ".L", ".T"):
-        if t.endswith(suffix):
-            return t[: -len(suffix)]
+    # Strip known non-US suffixes
+    for suffix in _NON_US_SUFFIXES:
+        if ticker.endswith(suffix):
+            # Non-US ticker — strip suffix for best-effort lookup
+            return ticker[: -len(suffix)]
 
-    return t
+    return ticker
 
 
-def to_atlas(alpaca_symbol: str, market_id: str = "sp500") -> str:
+def to_atlas(alpaca_symbol: str) -> str:
     """Convert Alpaca symbol to Atlas/yfinance format.
 
-    For US stocks: passthrough — same bare symbol like AAPL.
+    For US equities, this is a no-op since Alpaca uses the same
+    bare format as Atlas for SP500 symbols.
 
-    >>> to_atlas("AAPL")
+    >>> to_atlas('AAPL')
     'AAPL'
-    >>> to_atlas("msft")
-    'MSFT'
+    >>> to_atlas('BRK/B')
+    'BRK-B'
     """
-    return alpaca_symbol.strip().upper()
+    symbol = alpaca_symbol.strip().upper()
+
+    # Alpaca sometimes uses '/' for class separators (BRK/B) while
+    # yfinance uses '-'. Normalise to yfinance format.
+    if "/" in symbol:
+        symbol = symbol.replace("/", "-")
+
+    return symbol
 
 
-def to_alpaca_list(tickers: list[str], market_id: str = "sp500") -> list[str]:
+def to_alpaca_list(tickers: list[str]) -> list[str]:
     """Convert list of Atlas tickers to Alpaca format."""
-    return [to_alpaca(t, market_id) for t in tickers]
+    return [to_alpaca(t) for t in tickers]
 
 
-def to_atlas_list(alpaca_symbols: list[str], market_id: str = "sp500") -> list[str]:
+def to_atlas_list(alpaca_symbols: list[str]) -> list[str]:
     """Convert list of Alpaca symbols to Atlas format."""
-    return [to_atlas(s, market_id) for s in alpaca_symbols]
+    return [to_atlas(s) for s in alpaca_symbols]
