@@ -1,0 +1,873 @@
+/*
+ * stripe-refresh.css
+ * Atlas Dashboard — Phase 1-3 CSS overrides.
+ * Loaded AFTER the inline <style> block; all rules here override the defaults.
+ * Design language: flat, monochrome, tight-grid, no glow/bloom/warm tints.
+ */
+
+/* ── Phase 1: Tokens ────────────────────────────────────────────────────── */
+
+:root {
+  --bg: #111111;
+  --surface: transparent;
+  --surface-hover: #191919;
+  --surface-raised: #222222;
+  --border: #1e1e1e;
+  --border-subtle: #181818;
+  --border-glow: #2a2a2a;
+  --border-dotted: rgba(234, 234, 234, 0.12);
+
+  --text: #eaeaea;
+  --text-secondary: #8d8d8d;
+  --text-tertiary: #555555;
+
+  --green: #c4e817;
+  --green-bright: #d4f527;
+  --green-dim: rgba(196, 232, 23, 0.08);
+  --red: #ff4444;
+  --red-dim: rgba(255, 68, 68, 0.06);
+  --amber: #d4a84a;
+  --amber-dim: rgba(212, 168, 74, 0.06);
+  --blue: #6b9fff;
+  --blue-dim: rgba(107, 159, 255, 0.06);
+  --purple: #b08ae6;
+  --purple-dim: rgba(176, 138, 230, 0.06);
+  --orange: #e88a55;
+  --orange-dim: rgba(232, 138, 85, 0.06);
+  --cyan: #55c4b8;
+
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-xs: 2px;
+
+  /* Kill the serif display font — everything uses the same sans stack */
+  --font-display: var(--font);
+}
+
+/* ── Phase 1: Base ──────────────────────────────────────────────────────── */
+
+html body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Kill the top accent bar */
+html body::after {
+  display: none !important;
+}
+
+/* ── Phase 1: Typography — reduce all heavy weights ────────────────────── */
+
+/* Headings / card values / large mono figures */
+html body .card-value,
+html body .research-card-value,
+html body .pnl-value,
+html body .metric-value,
+html body .mon-ticker,
+html body .mon-pnl {
+  font-weight: 500;
+  letter-spacing: -1.5px;
+}
+
+/* Weight 700 → 500 globally */
+html body [style*="font-weight: 700"],
+html body [style*="font-weight:700"] {
+  font-weight: 500 !important;
+}
+
+/* Weight 800 → 500 */
+html body .research-card-value {
+  font-weight: 500;
+}
+
+/* Weight 600 → 400 for labels/UI chrome */
+html body .card-label,
+html body .pnl-label,
+html body .metric-label,
+html body .research-card-label,
+html body th,
+html body .plan-btn,
+html body .tab-btn,
+html body .strat,
+html body .market-tag,
+html body .order-status,
+html body .research-badge,
+html body .task-col-head,
+html body .version,
+html body .status-pill,
+html body .plan-badge,
+html body .chart-range-btn {
+  font-weight: 400;
+}
+
+/* ── Phase 1: Cards — flat, no glow ────────────────────────────────────── */
+
+html body .card {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+html body .card:hover {
+  border-color: #2a2a2a;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Kill the top-edge accent on the first card */
+html body .card:first-child {
+  border-color: var(--border);
+}
+
+html body .card:first-child::after,
+html body .card::before,
+html body .card::after {
+  display: none !important;
+}
+
+/* Accent colour variants — keep border only, no gradient fill */
+html body .card.accent-green,
+html body .card.accent-red {
+  background: none;
+}
+
+/* ── Phase 1: Sections — just content on the grid ──────────────────────── */
+
+html body .section {
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Scroll-reveal initial / revealed states */
+html body .section,
+html body .card {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html body .section.sr-visible,
+html body .card.sr-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* The existing inline animation kicks in immediately; let the override
+   honour it by keeping animate-in behaviour on cards. */
+html body .card {
+  /* Cards use animation-based reveal from inline styles; keep opacity chain */
+  animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+html body .section {
+  animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: 0.2s;
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Phase 2: Section headers ("/SECTION" pattern) ─────────────────────── */
+
+html body .section-head {
+  background: none;
+  padding: 0 0 8px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+html body .section-head:hover {
+  background: none;
+}
+
+html body .section-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.3px;
+  color: var(--text-secondary);
+  /* Remove Instrument Serif */
+  font-family: var(--mono);
+}
+
+/* The '/' prefix is added directly in HTML by Builder 3 — no ::before needed */
+
+html body .section-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--text-tertiary);
+}
+
+/* ── Phase 2: Tab navigation ────────────────────────────────────────────── */
+
+html body .tab-nav {
+  background: none;
+  border: none;
+  padding: 0;
+  gap: 4px;
+}
+
+html body .tab-btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.3px;
+  background: none;
+  border: none;
+  border-radius: 2px;
+  padding: 6px 12px;
+  color: var(--text-tertiary);
+}
+
+html body .tab-btn:hover {
+  color: var(--text-secondary);
+  background: none;
+}
+
+html body .tab-btn.active {
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: none;
+}
+
+/* Hide SVG icons in tabs */
+html body .tab-btn .tab-icon {
+  display: none;
+}
+
+/* Keyboard hint spans */
+html body .tab-btn .hotkey-hint {
+  opacity: 0.5;
+}
+
+/* ── Phase 2: Plan / action buttons (pill style) ────────────────────────── */
+
+html body .plan-btn {
+  border-radius: 99px;
+  background: none;
+  border: 1px solid var(--text);
+  color: var(--text);
+  box-shadow: none;
+}
+
+html body .plan-btn:hover:not(:disabled) {
+  background: var(--text);
+  color: var(--bg);
+}
+
+html body .plan-btn-approve {
+  border-color: var(--green);
+  color: var(--green);
+  background: none;
+}
+
+html body .plan-btn-approve:hover:not(:disabled) {
+  background: var(--green);
+  color: var(--bg);
+}
+
+html body .plan-btn-reject {
+  border-color: var(--red);
+  color: var(--red);
+  background: none;
+}
+
+html body .plan-btn-reject:hover:not(:disabled) {
+  background: var(--red);
+  color: var(--bg);
+}
+
+/* ── Phase 2: Tags & badges (dotted borders, no bg fill) ────────────────── */
+
+/* Strategy badges */
+html body .strat,
+html body .market-tag {
+  background: none;
+  border: 1px dotted var(--border-dotted);
+  color: var(--text-secondary);
+  border-radius: 2px;
+}
+
+html body .strat-trend_following {
+  color: var(--blue);
+  border-color: rgba(107, 159, 255, 0.2);
+  background: none;
+}
+
+html body .strat-mean_reversion {
+  color: var(--purple);
+  border-color: rgba(176, 138, 230, 0.2);
+  background: none;
+}
+
+html body .strat-opening_gap {
+  color: var(--green);
+  border-color: rgba(196, 232, 23, 0.2);
+  background: none;
+}
+
+html body .strat-momentum_breakout {
+  color: var(--orange);
+  border-color: rgba(232, 138, 85, 0.2);
+  background: none;
+}
+
+html body .strat-short_term_mr {
+  color: var(--cyan);
+  border-color: rgba(85, 196, 184, 0.2);
+  background: none;
+}
+
+html body .strat-sector_rotation {
+  color: var(--amber);
+  border-color: rgba(212, 168, 74, 0.2);
+  background: none;
+}
+
+html body .strat-manual {
+  color: var(--text-tertiary);
+  border-color: rgba(234, 234, 234, 0.08);
+  background: none;
+}
+
+/* Market tags */
+html body .market-sp500 {
+  color: var(--blue);
+  border-color: rgba(107, 159, 255, 0.2);
+  background: none;
+}
+
+html body .market-asx {
+  color: var(--purple);
+  border-color: rgba(176, 138, 230, 0.2);
+  background: none;
+}
+
+/* Order status badges */
+html body .order-status {
+  background: none;
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+}
+
+html body .order-filled {
+  color: var(--green);
+  border-color: rgba(196, 232, 23, 0.2);
+  background: none;
+}
+
+html body .order-partial {
+  color: var(--amber);
+  border-color: rgba(212, 168, 74, 0.2);
+  background: none;
+}
+
+html body .order-pending {
+  color: var(--blue);
+  border-color: rgba(107, 159, 255, 0.2);
+  background: none;
+}
+
+html body .order-failed {
+  color: var(--red);
+  border-color: rgba(255, 68, 68, 0.2);
+  background: none;
+}
+
+html body .order-cancelled {
+  color: var(--text-tertiary);
+  border-color: rgba(234, 234, 234, 0.08);
+  background: none;
+}
+
+/* Research badges */
+html body .research-badge {
+  background: none;
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+}
+
+html body .badge-pass {
+  color: var(--green);
+  border-color: rgba(196, 232, 23, 0.2);
+  background: none;
+}
+
+html body .badge-fail {
+  color: var(--red);
+  border-color: rgba(255, 68, 68, 0.2);
+  background: none;
+}
+
+html body .badge-partial {
+  color: var(--amber);
+  border-color: rgba(212, 168, 74, 0.2);
+  background: none;
+}
+
+html body .badge-queued {
+  color: var(--text-tertiary);
+  border-color: rgba(234, 234, 234, 0.08);
+  background: none;
+}
+
+html body .badge-deferred {
+  color: var(--amber);
+  border-color: rgba(212, 168, 74, 0.2);
+  background: none;
+}
+
+html body .badge-promoted {
+  color: var(--green-bright);
+  border-color: rgba(196, 232, 23, 0.2);
+  background: none;
+}
+
+html body .badge-running {
+  color: var(--blue);
+  border-color: rgba(107, 159, 255, 0.2);
+  background: none;
+}
+
+/* Plan status badge */
+html body .plan-badge {
+  border-radius: 2px;
+}
+
+html body .plan-badge.approved {
+  background: none;
+  border: 1px dotted rgba(196, 232, 23, 0.2);
+  color: var(--green);
+}
+
+html body .plan-badge.pending {
+  background: none;
+  border: 1px dotted rgba(212, 168, 74, 0.2);
+  color: var(--amber);
+}
+
+html body .plan-badge.executed {
+  background: none;
+  border: 1px dotted rgba(107, 159, 255, 0.2);
+  color: var(--blue);
+}
+
+/* ── Phase 2: Grid overlay ──────────────────────────────────────────────── */
+
+html body .grid-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  height: 100%;
+}
+
+html body .grid-col-line {
+  border-right: 1px solid rgba(234, 234, 234, 0.03);
+}
+
+html body .grid-col-line:last-child {
+  border-right: none;
+}
+
+/* Grid cross (+) markers at intersections */
+html body .grid-cross {
+  position: absolute;
+  color: rgba(234, 234, 234, 0.08);
+  opacity: 0;
+  font-size: 10px;
+  line-height: 1;
+  animation: crossEntrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes crossEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Stagger delays for grid crosses */
+html body .grid-cross:nth-child(1)  { animation-delay: 0.0s; }
+html body .grid-cross:nth-child(2)  { animation-delay: 0.05s; }
+html body .grid-cross:nth-child(3)  { animation-delay: 0.10s; }
+html body .grid-cross:nth-child(4)  { animation-delay: 0.15s; }
+html body .grid-cross:nth-child(5)  { animation-delay: 0.20s; }
+html body .grid-cross:nth-child(6)  { animation-delay: 0.25s; }
+html body .grid-cross:nth-child(7)  { animation-delay: 0.30s; }
+html body .grid-cross:nth-child(8)  { animation-delay: 0.35s; }
+html body .grid-cross:nth-child(9)  { animation-delay: 0.40s; }
+html body .grid-cross:nth-child(10) { animation-delay: 0.45s; }
+html body .grid-cross:nth-child(11) { animation-delay: 0.50s; }
+html body .grid-cross:nth-child(12) { animation-delay: 0.55s; }
+
+/* ── Phase 2: Tables ────────────────────────────────────────────────────── */
+
+html body th {
+  font-weight: 400;
+  letter-spacing: -0.3px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+html body th::after {
+  display: none;
+}
+
+html body td {
+  border-bottom: 1px dotted var(--border-dotted);
+}
+
+/* ── Phase 2: Header ────────────────────────────────────────────────────── */
+
+html body .header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: var(--bg);
+  border: none;
+  border-radius: 0;
+  padding: 12px 24px;
+  box-shadow: none;
+}
+
+/* Kill per-market header border accents */
+html body .shell[data-market="sp500"] .header,
+html body .shell[data-market="asx"] .header,
+html body .shell[data-market="hk"] .header {
+  border-color: transparent;
+}
+
+html body .logo {
+  -webkit-text-fill-color: var(--text);
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  font-family: var(--font);
+  font-weight: 300;
+  font-size: 32px;
+  letter-spacing: -1px;
+}
+
+html body .version {
+  background: none;
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+  color: var(--text-tertiary);
+}
+
+/* ── Phase 2: Status pills ──────────────────────────────────────────────── */
+
+html body .status-pill {
+  background: none;
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+}
+
+html body .pulse,
+html body .pulse-live,
+html body .pulse-paper {
+  box-shadow: none;
+}
+
+/* ── Phase 2: Market selector ───────────────────────────────────────────── */
+
+html body .market-btn {
+  border-radius: 2px;
+  border: 1px dotted var(--border-dotted);
+  background: none;
+}
+
+html body .market-btn:hover {
+  background: var(--surface-hover);
+}
+
+html body .market-btn.active {
+  border: 1px solid var(--text-secondary);
+  border-style: solid;
+  background: none;
+  box-shadow: none;
+}
+
+/* ── Phase 2: Chart controls ────────────────────────────────────────────── */
+
+html body .chart-range-btn {
+  border-radius: 2px;
+}
+
+html body .chart-range-btn.active {
+  background: rgba(196, 232, 23, 0.06);
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: none;
+}
+
+/* ── Phase 2: Monitor / position cards ──────────────────────────────────── */
+
+html body .mon-card {
+  border-radius: 2px;
+  background: none;
+  border: 1px solid var(--border);
+}
+
+html body .mon-card:hover {
+  border-color: var(--border-glow);
+  transform: none;
+  box-shadow: none;
+}
+
+html body .confirm-box {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* ── Phase 2: Metadata items — dotted borders ───────────────────────────── */
+
+html body .plan-entry {
+  border-bottom: 1px dotted var(--border-dotted);
+}
+
+html body .plan-entry:last-child {
+  border-bottom: none;
+}
+
+html body .metric {
+  border-color: var(--border-dotted);
+  border-right-style: dotted;
+  border-bottom-style: dotted;
+}
+
+html body .pnl-item {
+  border-color: var(--border-dotted);
+  border-right-style: dotted;
+}
+
+html body .pnl-item:last-child {
+  border-right: none;
+}
+
+/* ── Phase 2: Market clock ──────────────────────────────────────────────── */
+
+html body .market-clock {
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+  background: none;
+}
+
+/* ── Phase 2: Halted banner ─────────────────────────────────────────────── */
+
+html body .halted-banner {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* ── Phase 2: Insight card ──────────────────────────────────────────────── */
+
+html body .insight-card {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+html body .insight-card::before {
+  display: none !important;
+}
+
+/* ── Phase 2: Research cards ────────────────────────────────────────────── */
+
+html body .research-card {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+html body .research-card-value {
+  font-weight: 500;
+  letter-spacing: -1.5px;
+}
+
+/* ── Phase 2: Task items ────────────────────────────────────────────────── */
+
+html body .task-item {
+  border-radius: 2px;
+  background: none;
+  border-color: var(--border);
+}
+
+html body .task-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--border);
+}
+
+/* ── Phase 2: Scrollbar ─────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* ── Phase 2: Remove CRT effects ────────────────────────────────────────── */
+
+#phosphor-bg,
+.crt-scanlines,
+.crt-vignette {
+  display: none !important;
+}
+
+/* ── Phase 2: Tooltip ───────────────────────────────────────────────────── */
+
+html body .eq-tooltip {
+  border-radius: 2px;
+  box-shadow: none;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+
+/* ── Phase 2: Exposure bar ──────────────────────────────────────────────── */
+
+html body .exposure-bar-fill {
+  box-shadow: none;
+}
+
+/* ── Phase 2: Confirm panel ─────────────────────────────────────────────── */
+
+html body .confirm-panel {
+  backdrop-filter: none;
+}
+
+/* ── Phase 3: Scroll-reveal override (replaces inline fadeIn) ────────────── */
+
+/* Redefine fadeIn to use the spring easing */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure .animate-in cards use the new curve */
+html body .animate-in {
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-duration: 0.5s;
+}
+
+/* ── Misc overrides ─────────────────────────────────────────────────────── */
+
+/* Queue bar — tighten radius */
+html body .queue-bar {
+  border-radius: 2px;
+}
+
+/* Progress bar — no box-shadow */
+html body .queue-bar .bar-pass,
+html body .queue-bar .bar-fail,
+html body .queue-bar .bar-defer {
+  box-shadow: none;
+}
+
+/* Live dot — keep the dot but strip bloom */
+html body .live-dot {
+  box-shadow: none;
+}
+
+/* Skeleton — darken slightly for new bg */
+html body .skeleton {
+  background: linear-gradient(
+    90deg,
+    #191919 25%,
+    #222222 50%,
+    #191919 75%
+  );
+}
+
+/* Plan risk grid */
+html body .plan-risk {
+  border-radius: 2px;
+}
+
+html body .plan-risk-item {
+  border-color: var(--border-dotted);
+  border-right-style: dotted;
+}
+
+html body .plan-result {
+  border-radius: 2px;
+}
+
+/* Section body — keep existing collapse logic intact */
+html body .section-body {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Chevron */
+html body .chevron {
+  border-radius: 2px;
+}
+
+/* Strat breakdown top-border */
+html body .strat-breakdown {
+  border-color: var(--border-dotted);
+  border-top-style: dotted;
+}
+
+/* Task column head border */
+html body .task-col-head {
+  border-bottom-color: var(--border);
+  font-weight: 400;
+}
+
+/* Two-col sections */
+html body .two-col > .section {
+  border: none;
+}
+
+/* Focus ring colour — use new blue */
+html body .tab-btn:focus-visible,
+html body .chart-range-btn:focus-visible,
+html body .section-head:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
