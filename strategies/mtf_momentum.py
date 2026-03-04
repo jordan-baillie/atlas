@@ -170,11 +170,41 @@ class MTFMomentum(BaseStrategy):
                 if pos["shares"] < 1:
                     continue
 
-                confidence = 0.5
+                # Multi-factor confidence scoring (range ~0.65–0.95)
+                w_rsi_val = float(weekly_rsi.iloc[-1])
+                w_sma_val = float(weekly_sma.iloc[-1])
+                w_close = float(weekly["close"].iloc[-1])
+                d_rsi_val = float(daily_rsi.iloc[-1])
+                v_ratio = float(vol_ratio.iloc[-1])
+
+                # Base confidence
+                confidence = 0.65
+
+                # Factor 1: Weekly RSI strength — RSI from weekly_rsi_min to 80 → 0..0.10
+                weekly_rsi_bonus = 0.10 * min(1.0, (w_rsi_val - self.weekly_rsi_min) / 30.0)
+                confidence += weekly_rsi_bonus
+
+                # Factor 2: Weekly trend depth — price above weekly SMA, 0%→5% maps 0..0.08
+                weekly_ma_spread = (w_close - w_sma_val) / w_sma_val
+                confidence += 0.08 * min(1.0, weekly_ma_spread / 0.05)
+
+                # Factor 3: Daily pullback quality — lower RSI = more oversold → 0..0.10
+                confidence += 0.10 * max(0.0, 1.0 - d_rsi_val / self.daily_rsi_max)
+
+                # Factor 4: SMA proximity — closer to support = better → 0..0.07
+                confidence += 0.07 * max(0.0, 1.0 - pct_from_sma / self.pullback_sma_pct)
+
+                # Factor 5: Volume confirmation — above minimum threshold → 0..0.07
+                vol_range = max(1.0, 2.0 - self.vol_min_ratio)
+                confidence += 0.07 * min(1.0, max(0.0, (v_ratio - self.vol_min_ratio) / vol_range))
+
+                confidence = round(min(0.95, confidence), 4)
+
                 rationale = (
                     f"{ticker} MTF momentum: weekly uptrend confirmed "
-                    f"(RSI={weekly_rsi.iloc[-1]:.1f}), daily pullback "
-                    f"(RSI={daily_rsi.iloc[-1]:.1f}), near SMA support."
+                    f"(RSI={weekly_rsi.iloc[-1]:.1f}, {weekly_ma_spread*100:.1f}% above SMA), "
+                    f"daily pullback (RSI={daily_rsi.iloc[-1]:.1f}), near SMA support "
+                    f"({pct_from_sma*100:.2f}% from SMA). Confidence={confidence:.2f}."
                 )
 
                 signal = Signal(

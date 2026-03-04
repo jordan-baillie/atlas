@@ -227,7 +227,7 @@ class OpeningGap(BaseStrategy):
                     continue
 
                 # --- Confidence scoring ---
-                confidence = 0.55  # Base
+                confidence = 0.60  # Base (range ~0.60–0.95)
 
                 # 1. Gap magnitude bonus: up to +0.15 (larger gaps, saturate at 5%)
                 abs_gap_pct = abs(gap_pct)

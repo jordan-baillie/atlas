@@ -199,17 +199,20 @@ class TrendFollowing(BaseStrategy):
                     self._logger.debug(f"{ticker}: position size is 0, skipping")
                     continue
 
-                # Confidence: based on MA spread strength and pullback depth
+                # Confidence: base 0.60, proportional weights, range ~0.60–0.95
+                # Strong setups (high MA spread + deep pullback + long trend) hit 0.90+
+                # Weak setups (barely passing filters) land at ~0.65–0.70
                 ma_spread = (current_fast - current_slow) / current_slow
                 pullback_depth = pullback_from_high / self.pullback_pct  # 1.0 = minimum
 
                 confidence = min(
-                    1.0,
-                    0.5 * min(ma_spread * 50, 1.0)
-                    + 0.3 * min(pullback_depth / 3.0, 1.0)
-                    + 0.2 * min(trend_bars / 20.0, 1.0),
+                    0.95,
+                    0.60
+                    + 0.175 * min(ma_spread * 50, 1.0)
+                    + 0.105 * min(pullback_depth / 3.0, 1.0)
+                    + 0.07 * min(trend_bars / 20.0, 1.0),
                 )
-                confidence = max(0.1, confidence)
+                confidence = max(0.60, confidence)
 
                 # Phase 7A: Volume information (recorded in features, no confidence change)
                 if current_vol_ratio >= self.vol_boost_threshold:
