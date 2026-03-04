@@ -136,6 +136,10 @@ class LivePortfolio:
         """Connect to broker and load positions + cash."""
         from brokers.registry import get_broker
         self._broker = get_broker(self.market_id, self.config)
+        if self._broker is None:
+            logger.warning("LivePortfolio: no broker configured for %s (live_enabled=%s)",
+                           self.market_id, self.config.get("trading", {}).get("live_enabled", False))
+            return False
         if not self._broker.connect():
             logger.error("LivePortfolio: broker connect failed")
             return False
@@ -216,8 +220,12 @@ class LivePortfolio:
         # Enrich positions with plan metadata (stop prices, strategy, etc.)
         self._enrich_from_plans()
 
-        logger.info("LivePortfolio: %d positions, cash=$%.2f, equity=$%.2f",
-                     len(self.positions), self.cash, self._broker_equity)
+        n_atlas = len(self.atlas_positions)
+        n_manual = len(self.manual_positions)
+        logger.info("LivePortfolio: %d positions (%d atlas, %d manual), cash=$%.2f, "
+                     "atlas_equity=$%.2f, broker_equity=$%.2f",
+                     len(self.positions), n_atlas, n_manual,
+                     self.cash, self.equity(), self._broker_equity)
 
     def _enrich_from_plans(self):
         """Fill in stop_price, strategy, entry_date from recent trade plans.
@@ -284,16 +292,32 @@ class LivePortfolio:
             if pos.ticker in prices:
                 pos.update_excursions(prices[pos.ticker])
 
+    @property
+    def atlas_positions(self) -> list:
+        """Positions managed by Atlas (excludes manual/unknown positions)."""
+        return [p for p in self.positions if p.strategy not in ("unknown", "")]
+
+    @property
+    def manual_positions(self) -> list:
+        """Manual positions not managed by Atlas."""
+        return [p for p in self.positions if p.strategy in ("unknown", "")]
+
     def equity(self, prices: dict[str, float] = None) -> float:
-        """Total equity from broker (prices arg ignored — broker has live prices)."""
-        if self._broker_equity > 0:
-            return self._broker_equity
-        # Fallback: calculate from positions
-        pos_value = sum(
-            p.current_value(prices.get(p.ticker, p.entry_price))
-            for p in self.positions
-        ) if prices else sum(p.entry_value for p in self.positions)
-        return round(self.cash + pos_value, 2)
+        """Atlas-only equity: cash + Atlas position values (excludes manual positions).
+
+        Manual positions (strategy='unknown') are in the broker account but
+        are not Atlas-managed.  Position sizing, risk checks, and P&L should
+        only reflect capital Atlas controls.
+        """
+        atlas_pos_value = sum(
+            p.current_value(prices.get(p.ticker, p.entry_price) if prices else p.entry_price)
+            for p in self.atlas_positions
+        )
+        return round(self.cash + atlas_pos_value, 2)
+
+    def broker_equity(self) -> float:
+        """Full broker account equity (all positions including manual)."""
+        return self._broker_equity
 
     def count_positions_by_strategy(self, strategy_name: str) -> int:
         """Count open positions belonging to a given strategy."""

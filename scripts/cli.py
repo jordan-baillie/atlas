@@ -232,8 +232,11 @@ def cmd_plan(args):
     # Use live broker portfolio as source of truth
     portfolio = _get_portfolio(config, market_id)
     broker_name = config.get("trading", {}).get("broker", "ibkr")
-    print("LIVE MODE: Planning against $%.2f equity (%d positions) via %s" %
-          (portfolio.equity(prices), len(portfolio.positions), broker_name))
+    n_atlas = len(portfolio.atlas_positions) if hasattr(portfolio, 'atlas_positions') else len(portfolio.positions)
+    n_manual = len(portfolio.manual_positions) if hasattr(portfolio, 'manual_positions') else 0
+    manual_note = f" + {n_manual} manual" if n_manual else ""
+    print("LIVE MODE: Planning against $%.2f atlas equity (%d atlas positions%s) via %s" %
+          (portfolio.equity(prices), n_atlas, manual_note, broker_name))
 
     plan_gen = TradePlanGenerator(portfolio, config)
     decision_journal = DecisionJournal()

@@ -94,6 +94,14 @@ class TradePlanGenerator:
         current_eq = self.portfolio.equity(prices)
         summary = self.portfolio.portfolio_summary(prices)
 
+        # Use Atlas-only positions for plan metrics (exclude manual positions)
+        atlas_positions = (self.portfolio.atlas_positions
+                           if hasattr(self.portfolio, 'atlas_positions')
+                           else self.portfolio.positions)
+        atlas_open = [op for op in summary["open_positions"]
+                      if op.get("strategy", "unknown") not in ("unknown", "")]
+        n_atlas = len(atlas_positions)
+
         market_id = self.config.get("market", "")
         plan = {
             "trade_date": trade_date,
@@ -104,7 +112,7 @@ class TradePlanGenerator:
             "portfolio_snapshot": {
                 "equity": current_eq,
                 "cash": self.portfolio.cash,
-                "open_positions": len(self.portfolio.positions),
+                "open_positions": n_atlas,
                 "total_pnl": summary["total_pnl"],
                 "total_pnl_pct": summary["total_pnl_pct"],
             },
@@ -116,11 +124,11 @@ class TradePlanGenerator:
                 "total_proposed_cost": round(proposed_cost, 2),
                 "total_proposed_risk": round(proposed_risk, 2),
                 "risk_pct_of_equity": round(proposed_risk / current_eq * 100, 2) if current_eq > 0 else 0,
-                "positions_after": len(self.portfolio.positions) + len(proposed_entries) - len(exit_recommendations),
+                "positions_after": n_atlas + len(proposed_entries) - len(exit_recommendations),
                 "cash_after_entries": round(self.portfolio.cash - proposed_cost, 2),
                 "portfolio_exposure_pct": round((current_eq - self.portfolio.cash + proposed_cost) / current_eq * 100, 2) if current_eq > 0 else 0,
             },
-            "open_positions": summary["open_positions"],
+            "open_positions": atlas_open if atlas_open else summary["open_positions"],
             "allocation_summary": allocation_pool.counts_summary(
                 [{"strategy": p.strategy} for p in self.portfolio.positions]
             ) if allocation_pool.is_enabled() else {},
