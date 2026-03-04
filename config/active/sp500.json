@@ -195,6 +195,11 @@
         "time_in_force": "DAY",
         "_credentials": "Managed via ~/.atlas-secrets.json"
     },
+    "alpaca": {
+        "paper": true,
+        "data_feed": "iex",
+        "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
+    },
     "backtest": {
         "train_window_days": 252,
         "test_window_days": 63,
