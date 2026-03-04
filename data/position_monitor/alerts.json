@@ -1,0 +1,16 @@
+[
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "type": "invalidation_breach",
+    "message": "Price $229.41 breached invalidation $280.00",
+    "timestamp": "2026-03-04T19:58:39"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "type": "invalidation_breach",
+    "message": "Price $229.41 breached invalidation $280.00",
+    "timestamp": "2026-03-04T19:59:03"
+  }
+]
