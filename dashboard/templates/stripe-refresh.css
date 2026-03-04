@@ -44,6 +44,299 @@
   --font-display: var(--font);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE — Stripe editorial palette
+   Activated via html[data-theme="light"] or auto mode during daytime
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] {
+  --bg: #eaeaea;
+  --surface: transparent;
+  --surface-hover: #e0e0e0;
+  --surface-raised: #f5f5f5;
+  --border: #d0d0d0;
+  --border-subtle: #dcdcdc;
+  --border-glow: #c0c0c0;
+  --border-dotted: rgba(30, 30, 30, 0.15);
+
+  --text: #1e1e1e;
+  --text-secondary: #555555;
+  --text-tertiary: #8d8d8d;
+
+  --green: #2d8a00;
+  --green-bright: #3ba600;
+  --green-dim: rgba(45, 138, 0, 0.08);
+  --red: #cc2222;
+  --red-dim: rgba(204, 34, 34, 0.06);
+  --amber: #b08218;
+  --amber-dim: rgba(176, 130, 24, 0.06);
+  --blue: #2b6cb0;
+  --blue-dim: rgba(43, 108, 176, 0.06);
+  --purple: #7c3aed;
+  --purple-dim: rgba(124, 58, 237, 0.06);
+  --orange: #c05621;
+  --orange-dim: rgba(192, 86, 33, 0.06);
+  --cyan: #0d9488;
+
+  --font-display: var(--font);
+}
+
+/* Light-mode-specific overrides that can't use variables */
+html[data-theme="light"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Header solid bg in light mode */
+html[data-theme="light"] .header {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Grid overlay visibility — stronger lines in light */
+html[data-theme="light"] .grid-col-line {
+  border-right-color: rgba(30, 30, 30, 0.06);
+}
+html[data-theme="light"] .grid-cross {
+  color: rgba(30, 30, 30, 0.12);
+}
+
+/* Cards get a subtle white fill in light mode */
+html[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--border);
+}
+html[data-theme="light"] .card:hover {
+  border-color: #b0b0b0;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* Tables */
+html[data-theme="light"] th {
+  background: var(--bg);
+}
+html[data-theme="light"] tr:hover td {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Tab active inverts correctly in light mode */
+html[data-theme="light"] .tab-btn.active {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Section body scroll areas */
+html[data-theme="light"] .table-scroll::after {
+  background: linear-gradient(to left, var(--bg), transparent);
+}
+
+/* Skeleton loader */
+html[data-theme="light"] .skeleton {
+  background: linear-gradient(90deg, #e0e0e0 25%, #ebebeb 50%, #e0e0e0 75%);
+}
+
+/* Tooltip */
+html[data-theme="light"] .eq-tooltip {
+  background: #ffffff;
+  border-color: var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Plan buttons in light mode */
+html[data-theme="light"] .plan-btn {
+  border-color: var(--text);
+  color: var(--text);
+}
+html[data-theme="light"] .plan-btn:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+html[data-theme="light"] .plan-btn-approve {
+  border-color: var(--green);
+  color: var(--green);
+}
+html[data-theme="light"] .plan-btn-reject {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* Market button active in light mode */
+html[data-theme="light"] .market-btn.active {
+  border-color: var(--text-secondary);
+  background: rgba(30, 30, 30, 0.04);
+}
+
+/* Chart range active */
+html[data-theme="light"] .chart-range-btn.active {
+  background: rgba(45, 138, 0, 0.08);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* Monitor cards get white bg */
+html[data-theme="light"] .mon-card {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Confirm/modal overlay */
+html[data-theme="light"] .confirm-panel {
+  background: rgba(0, 0, 0, 0.3);
+}
+html[data-theme="light"] .confirm-box {
+  background: #ffffff;
+  border-color: var(--border);
+}
+html[data-theme="light"] #monitor-modal {
+  background: rgba(0, 0, 0, 0.3);
+}
+html[data-theme="light"] #monitor-modal-content {
+  background: #ffffff;
+  border-color: var(--border);
+}
+
+/* Status pills in light mode */
+html[data-theme="light"] .status-pill {
+  background: rgba(30, 30, 30, 0.04);
+  border-color: var(--border);
+}
+
+/* Market clocks */
+html[data-theme="light"] .market-clock {
+  background: rgba(30, 30, 30, 0.04);
+  border-color: var(--border);
+}
+html[data-theme="light"] .market-clock.mc-open {
+  background: rgba(45, 138, 0, 0.04);
+  border-color: rgba(45, 138, 0, 0.25);
+}
+
+/* Version pill */
+html[data-theme="light"] .version {
+  background: rgba(30, 30, 30, 0.04);
+  border-color: var(--border);
+}
+
+/* Logo — no gradient needed in light */
+html[data-theme="light"] .logo {
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+/* P&L items */
+html[data-theme="light"] .pnl-item {
+  border-color: var(--border-dotted);
+}
+
+/* Metrics */
+html[data-theme="light"] .metric {
+  border-color: var(--border-dotted);
+}
+
+/* Scrollbar */
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+/* Halted banner */
+html[data-theme="light"] .halted-banner {
+  background: rgba(204, 34, 34, 0.08);
+  border-color: rgba(204, 34, 34, 0.2);
+}
+
+/* Strategy badges keep readable colors in light */
+html[data-theme="light"] .strat-trend_following { color: var(--blue); border-color: rgba(43, 108, 176, 0.25); }
+html[data-theme="light"] .strat-mean_reversion  { color: var(--purple); border-color: rgba(124, 58, 237, 0.25); }
+html[data-theme="light"] .strat-opening_gap     { color: var(--green); border-color: rgba(45, 138, 0, 0.25); }
+html[data-theme="light"] .strat-momentum_breakout { color: var(--orange); border-color: rgba(192, 86, 33, 0.25); }
+html[data-theme="light"] .strat-short_term_mr   { color: var(--cyan); border-color: rgba(13, 148, 136, 0.25); }
+html[data-theme="light"] .strat-sector_rotation  { color: var(--amber); border-color: rgba(176, 130, 24, 0.25); }
+
+/* ── Theme toggle button ────────────────────────────────────────────────── */
+
+.theme-toggle {
+  display: flex;
+  gap: 1px;
+  background: var(--surface-hover);
+  border: 1px dotted var(--border-dotted);
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.theme-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.theme-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(234, 234, 234, 0.05);
+}
+
+html[data-theme="light"] .theme-btn:hover {
+  background: rgba(30, 30, 30, 0.05);
+}
+
+.theme-btn.active {
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+.theme-btn svg {
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.theme-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.theme-btn.active svg {
+  transform: scale(1);
+}
+
+/* Smooth theme transition on ALL elements */
+html[data-theme],
+html[data-theme] body,
+html[data-theme] .header,
+html[data-theme] .card,
+html[data-theme] .section,
+html[data-theme] .section-head,
+html[data-theme] th,
+html[data-theme] td,
+html[data-theme] .tab-btn,
+html[data-theme] .status-pill,
+html[data-theme] .market-clock,
+html[data-theme] .market-btn,
+html[data-theme] .version,
+html[data-theme] .grid-col-line,
+html[data-theme] .grid-cross,
+html[data-theme] .confirm-box,
+html[data-theme] .mon-card,
+html[data-theme] .strat,
+html[data-theme] .market-tag,
+html[data-theme] .eq-tooltip,
+html[data-theme] .logo,
+html[data-theme] .plan-btn,
+html[data-theme] .chart-range-btn,
+html[data-theme] .theme-btn {
+  transition:
+    background-color 0.5s cubic-bezier(0.19, 1, 0.22, 1),
+    color 0.5s cubic-bezier(0.19, 1, 0.22, 1),
+    border-color 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
 /* ── Phase 1: Base ──────────────────────────────────────────────────────── */
 
 html body {

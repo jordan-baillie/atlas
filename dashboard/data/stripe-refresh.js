@@ -355,14 +355,101 @@
     });
   }
 
+  /* ═══ 11. Theme switching — light / dark / auto ════════════════════════ */
+
+  var THEME_KEY = 'atlas-theme';
+  var autoTimer = null;
+
+  function getStoredTheme() {
+    try { return localStorage.getItem(THEME_KEY) || 'auto'; }
+    catch (e) { return 'auto'; }
+  }
+
+  function storeTheme(theme) {
+    try { localStorage.setItem(THEME_KEY, theme); }
+    catch (e) { /* private browsing */ }
+  }
+
+  /**
+   * Auto mode: light between 6:00–18:00 local time, dark otherwise.
+   * Re-checks every minute so transitions happen live.
+   */
+  function resolveAutoTheme() {
+    var hour = new Date().getHours();
+    return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+  }
+
+  function applyTheme(theme) {
+    var resolved = theme === 'auto' ? resolveAutoTheme() : theme;
+    document.documentElement.setAttribute('data-theme', resolved);
+
+    // Update toggle button states
+    document.querySelectorAll('.theme-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+    });
+
+    // Clear / set auto-refresh timer
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+    if (theme === 'auto') {
+      autoTimer = setInterval(function () {
+        var newResolved = resolveAutoTheme();
+        var current = document.documentElement.getAttribute('data-theme');
+        if (newResolved !== current) {
+          document.documentElement.setAttribute('data-theme', newResolved);
+        }
+      }, 60000); // check every minute
+    }
+  }
+
+  function initThemeToggle() {
+    var toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', function (e) {
+      var btn = e.target.closest('.theme-btn');
+      if (!btn) return;
+
+      var theme = btn.getAttribute('data-theme');
+      storeTheme(theme);
+      applyTheme(theme);
+    });
+
+    // Apply stored preference immediately
+    applyTheme(getStoredTheme());
+  }
+
+  // Also support keyboard shortcut: L for light/dark cycle
+  function addThemeKeyboard() {
+    document.addEventListener('keydown', function (e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key.toLowerCase() === 'l') {
+        var current = getStoredTheme();
+        var next = current === 'dark' ? 'light' : current === 'light' ? 'auto' : 'dark';
+        storeTheme(next);
+        applyTheme(next);
+      }
+    });
+  }
+
   /* ═══ Bootstrap ═══════════════════════════════════════════════════════ */
+
+  // Apply theme ASAP (before DOMContentLoaded) to prevent flash
+  (function () {
+    var theme = getStoredTheme();
+    var resolved = theme === 'auto' ? resolveAutoTheme() : theme;
+    document.documentElement.setAttribute('data-theme', resolved);
+  })();
 
   document.addEventListener('DOMContentLoaded', function () {
     removeCRTEffects();
+    initThemeToggle();
     initGridCrosses();
     initScrollReveals();
     initCountUps();
     initKeyboardShortcuts();
+    addThemeKeyboard();
     initMutationWatcher();
     initHoverArrows();
 
