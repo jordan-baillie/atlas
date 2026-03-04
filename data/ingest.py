@@ -491,6 +491,51 @@ def clear_cache(ticker: Optional[str] = None, market_id: Optional[str] = None) -
     return count
 
 
+def refresh_macro_data(cache_max_age_hours: int = 24) -> bool:
+    """Refresh macro regime data (gold, copper, VIX, yield curve).
+
+    Downloads macro data from yfinance and FRED and caches it for use by
+    the macro regime calculator (data.macro).  Called by cron scripts
+    during the daily data refresh cycle so that macro signals are current
+    before the trading session begins.
+
+    The function is a no-op (returns False with a warning) when data.macro
+    is not yet installed — this keeps the cron pipeline safe during deploys.
+
+    Args:
+        cache_max_age_hours: Skip network refresh when cached data is younger
+                             than this many hours.  Defaults to 24 (daily).
+
+    Returns:
+        True if the refresh succeeded and returned non-empty data.
+        False on any failure (import error, network error, empty result).
+    """
+    try:
+        from data.macro import download_macro_data
+    except ImportError as e:
+        logger.warning(
+            "data.macro not available — macro data refresh skipped "
+            f"(install data/macro.py to enable): {e}"
+        )
+        return False
+
+    logger.info("Refreshing macro regime data (gold, copper, VIX, yields)...")
+    try:
+        df = download_macro_data(cache_max_age_hours=cache_max_age_hours)
+        if df is None or (hasattr(df, "empty") and df.empty):
+            logger.warning("Macro data refresh returned empty result — check data sources")
+            return False
+        logger.info(
+            f"Macro data refreshed successfully: {len(df)} rows, "
+            f"columns={list(df.columns)}, "
+            f"range=[{df.index.min().date()}, {df.index.max().date()}]"
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Macro data refresh failed: {e}", exc_info=True)
+        return False
+
+
 def cache_stats(market_id: Optional[str] = None) -> Dict:
     """Return statistics about the cache.
 
