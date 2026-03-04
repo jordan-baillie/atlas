@@ -6,9 +6,10 @@ a broker MUST use this module — never import broker classes directly.
 Supported brokers:
     moomoo — Moomoo/Futu via OpenD gateway (ASX, SP500)
     ibkr   — Interactive Brokers via TWS/Gateway (ASX, SP500, HK, etc.)
+    alpaca — Alpaca Markets REST API (SP500, commission-free)
 
 Broker selection is driven by config:
-    trading.broker      = "moomoo" | "ibkr"
+    trading.broker      = "moomoo" | "ibkr" | "alpaca"
     trading.live_enabled = true | false
 
 Live trading requires live_enabled == true and a valid broker configured.
@@ -54,6 +55,12 @@ def _register_defaults():
     except Exception:
         logger.debug("ibkr broker module not available")
 
+    try:
+        from brokers.alpaca.broker import AlpacaBroker  # noqa: F401
+        _BROKER_FACTORIES["alpaca"] = _make_alpaca_broker
+    except Exception:
+        logger.debug("alpaca broker not available (install: pip install alpaca-py)")
+
 
 def available_brokers() -> list[str]:
     """Return names of all brokers whose dependencies are installed."""
@@ -76,7 +83,8 @@ def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter
     broker_name = _resolve_broker_name(config)
     live_enabled = config.get("trading", {}).get("live_enabled", False)
 
-    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
+    _KNOWN_BROKERS = ("moomoo", "ibkr", "alpaca")
+    if not live_enabled or broker_name not in _KNOWN_BROKERS:
         logger.debug(
             "Broker not configured for live trading (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -107,7 +115,8 @@ def get_live_broker(config: Dict[str, Any]) -> Optional[BrokerAdapter]:
     live_enabled = config.get("trading", {}).get("live_enabled", False)
     broker_name = _resolve_broker_name(config)
 
-    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
+    _KNOWN_BROKERS = ("moomoo", "ibkr", "alpaca")
+    if not live_enabled or broker_name not in _KNOWN_BROKERS:
         logger.debug(
             "Live broker not available (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -134,7 +143,8 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
     live_enabled = config.get("trading", {}).get("live_enabled", False)
     broker_name = _resolve_broker_name(config)
 
-    if not live_enabled or broker_name not in ("moomoo", "ibkr"):
+    _KNOWN_BROKERS = ("moomoo", "ibkr", "alpaca")
+    if not live_enabled or broker_name not in _KNOWN_BROKERS:
         logger.debug(
             "Live executor not available (broker=%s, live_enabled=%s)",
             broker_name, live_enabled,
@@ -166,3 +176,10 @@ def _make_ibkr_broker(
 ) -> BrokerAdapter:
     from brokers.ibkr.broker import IBKRBroker
     return IBKRBroker(config, live=live)
+
+
+def _make_alpaca_broker(
+    market_id: str, config: Dict[str, Any], live: bool = False, **kwargs,
+) -> BrokerAdapter:
+    from brokers.alpaca.broker import AlpacaBroker
+    return AlpacaBroker(config, live=live)
