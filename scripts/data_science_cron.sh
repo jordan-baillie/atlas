@@ -45,24 +45,36 @@ echo "=== Pi Agent Interpretation ===" >> "$LOG_FILE"
 ANALYSIS_FILE=$(mktemp /tmp/atlas-ds-XXXXXX.json)
 echo "$ANALYSIS_JSON" > "$ANALYSIS_FILE"
 
-PROMPT="You are the Atlas Data Scientist agent. Your job is to interpret trading system analytics and produce a concise, actionable weekly briefing.
+PROMPT="You are the Atlas Data Scientist agent (Opus). Your job is to interpret trading system analytics and research results, then produce a concise, actionable weekly briefing.
 
 Read the analysis results from: $ANALYSIS_FILE
 
-Then produce a Telegram-formatted briefing following this structure:
+The file contains a weekly digest with these sections:
+- regime_state: Current market regime (trending/mean-reverting/volatile)
+- signal_accuracy: Forward-tested signal win rates and returns
+- confidence_model: Whether confidence scores predict profitability
+- strategy_mix: Strategy signal generation balance
+- rejection_impact: Opportunity cost of rejected signals
+- alpha_decay: Rolling performance degradation
+- research_insights: Full research journal analysis — strategy scorecard (A/B/C/D grades), infrastructure blockers, key learnings from 56 experiments
+- wave_recommendations: Prioritized list of what Wave 3 should focus on, cross-referencing regime + research + signals
 
-1. **REGIME** — Current market regime and whether our strategy allocation matches it
-2. **SIGNAL QUALITY** — Are our signals actually profitable? Win rate, avg return by strategy
-3. **KEY FINDING** — The single most important insight this week (could be positive or negative)
-4. **ACTION ITEMS** — Concrete numbered list of what to change/investigate (max 3 items)
-5. **DATA QUALITY NOTE** — How much data we have, confidence in the results
+Produce a Telegram-formatted briefing with these sections:
+
+1. **REGIME & ALIGNMENT** — Current regime, whether strategy allocation matches, what to shift
+2. **SIGNAL QUALITY** — Win rates, returns by strategy. Be honest about data sufficiency.
+3. **RESEARCH SCORECARD** — Which strategies are promising (grade A/B), which are failing (D), which have infrastructure blockers
+4. **WAVE 3 DIRECTION** — What the next research wave should prioritize and why. Be specific about experiments to run. Cross-reference regime (what the market needs) with research results (what shows promise).
+5. **ACTION ITEMS** — Max 5 concrete numbered items covering: live trading adjustments, research priorities, infrastructure fixes
+6. **DATA CONFIDENCE** — How much data we have, what conclusions are solid vs. preliminary
 
 Rules:
-- Be direct and quantitative. No filler.
-- If data is insufficient (e.g. <20 testable signals), say so clearly and don't over-interpret.
-- If strategies are misaligned with regime, flag it as priority #1.
-- Format for Telegram: use <b>bold</b>, bullet points, keep under 3000 chars.
-- The briefing should help a trader decide what to do THIS week.
+- Be direct and quantitative. No filler. You are Opus — think deeply about cross-cutting insights.
+- If strategies that work well in the current regime were tested and showed promise in research, flag them as high-priority promotion candidates.
+- If infrastructure blockers are preventing valid experiments, flag fix-first before more research.
+- If the confidence model is broken, recommend specific remediation.
+- Format for Telegram: use <b>bold</b>, bullet points, keep under 4000 chars.
+- The briefing should help a trader decide what to trade AND what to research THIS week.
 
 After writing the briefing text, send it to Telegram by running:
   cd /root/atlas && python3 -c \"

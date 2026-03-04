@@ -7,13 +7,15 @@ research journal, price cache, broker state) and produces actionable
 reports. Designed to be called by a pi agent or cron job.
 
 Analyses:
-  signal_accuracy   — Forward-test proposed signals against actual prices
-  strategy_mix      — Diagnose strategy imbalance and coverage gaps
-  confidence_model  — Evaluate confidence scoring quality
-  rejection_impact  — Quantify opportunity cost of rejected signals
-  regime_state      — Current market regime classification
-  alpha_decay       — Track rolling strategy performance vs expectations
-  weekly_digest     — Full weekly summary combining all analyses
+  signal_accuracy      — Forward-test proposed signals against actual prices
+  strategy_mix         — Diagnose strategy imbalance and coverage gaps
+  confidence_model     — Evaluate confidence scoring quality
+  rejection_impact     — Quantify opportunity cost of rejected signals
+  regime_state         — Current market regime classification
+  alpha_decay          — Track rolling strategy performance vs expectations
+  research_insights    — Research journal analysis: strategy scorecard, infra blockers, learnings
+  wave_recommendations — Synthesize research + regime + signals into next wave priorities
+  weekly_digest        — Full weekly summary combining all analyses
 
 Usage:
   python3 scripts/data_scientist.py --analysis signal_accuracy
@@ -37,6 +39,8 @@ PROJECT = Path(__file__).resolve().parent.parent
 CACHE_DIR = PROJECT / "data" / "cache" / "sp500"
 JOURNAL_PATH = PROJECT / "journal" / "decision_journal.json"
 RESEARCH_JOURNAL = PROJECT / "research" / "journal.json"
+RESEARCH_QUEUE = PROJECT / "research" / "queue.json"
+RESEARCH_WAVES = PROJECT / "research" / "waves"
 STATE_PATH = PROJECT / "state" / "live_sp500.json"
 CONFIG_PATH = PROJECT / "config" / "active" / "sp500.json"
 
@@ -612,6 +616,331 @@ def analyze_alpha_decay() -> dict:
     }
 
 
+# ── Analysis: Research Insights ─────────────────────────────────
+
+def load_research_journal() -> list[dict]:
+    """Load research journal entries."""
+    if not RESEARCH_JOURNAL.exists():
+        return []
+    data = json.loads(RESEARCH_JOURNAL.read_text())
+    return data if isinstance(data, list) else data.get("entries", data.get("experiments", []))
+
+
+def load_research_queue() -> list[dict]:
+    """Load research queue."""
+    if not RESEARCH_QUEUE.exists():
+        return []
+    data = json.loads(RESEARCH_QUEUE.read_text())
+    return data if isinstance(data, list) else data.get("experiments", [])
+
+
+def load_wave_briefs() -> list[dict]:
+    """Load all wave brief files."""
+    waves = []
+    if RESEARCH_WAVES.exists():
+        for f in sorted(RESEARCH_WAVES.glob("wave_*_brief.json")):
+            try:
+                waves.append(json.loads(f.read_text()))
+            except Exception:
+                pass
+    return waves
+
+
+def analyze_research_insights() -> dict:
+    """
+    Analyze research journal to extract patterns, identify what works,
+    what fails, and what infrastructure issues block progress.
+    
+    Produces:
+      - Strategy viability scorecard (which strategies have real potential)
+      - Infrastructure blockers (recurring test failures)
+      - Untested hypotheses (gaps in research coverage)
+      - Promoted experiments and their impact
+    """
+    journal = load_research_journal()
+    queue = load_research_queue()
+    
+    if not journal:
+        return {"analysis": "research_insights", "error": "No research journal"}
+    
+    # ── Strategy viability scorecard ──
+    strat_results = defaultdict(lambda: {"pass": 0, "fail": 0, "partial": 0, "promoted": 0,
+                                          "best_sharpe": None, "learnings": []})
+    for e in journal:
+        strat = e.get("strategy") or e.get("category", "unknown")
+        verdict = e.get("verdict", "unknown")
+        if verdict in ("pass", "fail", "partial", "promoted"):
+            strat_results[strat][verdict] += 1
+        if verdict == "promoted":
+            strat_results[strat]["promoted"] += 1
+        
+        km = e.get("key_metrics", {})
+        sharpe = km.get("sharpe") or km.get("best_sharpe")
+        if sharpe is not None:
+            current_best = strat_results[strat]["best_sharpe"]
+            if current_best is None or sharpe > current_best:
+                strat_results[strat]["best_sharpe"] = sharpe
+        
+        for l in e.get("learnings", [])[:2]:
+            strat_results[strat]["learnings"].append(l[:120])
+    
+    # Scorecard: rank strategies by research evidence
+    scorecard = {}
+    for strat, r in strat_results.items():
+        total = r["pass"] + r["fail"] + r["partial"] + r["promoted"]
+        pass_rate = (r["pass"] + r["promoted"]) / total if total > 0 else 0
+        
+        if r["promoted"] > 0:
+            grade = "A"
+            status = "PROMOTED — live-ready"
+        elif pass_rate >= 0.5 and r["pass"] >= 2:
+            grade = "B"
+            status = "PROMISING — needs OOS validation"
+        elif r["pass"] >= 1:
+            grade = "C"
+            status = "MIXED — some positive results"
+        elif r["partial"] > r["fail"]:
+            grade = "C"
+            status = "PARTIAL — infrastructure issues likely"
+        else:
+            grade = "D"
+            status = "FAILING — needs rethink or abandonment"
+        
+        scorecard[strat] = {
+            "grade": grade,
+            "status": status,
+            "experiments": total,
+            "pass": r["pass"],
+            "fail": r["fail"],
+            "partial": r["partial"],
+            "promoted": r["promoted"],
+            "pass_rate": round(pass_rate, 2),
+            "best_sharpe": round(r["best_sharpe"], 3) if r["best_sharpe"] is not None else None,
+        }
+    
+    # ── Infrastructure blockers ──
+    infra_failures = []
+    for e in journal:
+        for l in e.get("learnings", []):
+            if "INFRASTRUCTURE" in l.upper() or "IDENTICAL RESULTS" in l.upper() or "ROOT CAUSE" in l.upper():
+                infra_failures.append({
+                    "experiment": e.get("experiment_id", "?"),
+                    "issue": l[:150],
+                })
+    
+    # ── Queue health ──
+    queue_status = Counter(e.get("status", "?") for e in queue)
+    stalled_experiments = [e.get("id", "?") for e in queue if e.get("status") in ("failed", "partial")]
+    
+    # ── Key learnings (deduplicated) ──
+    all_learnings = []
+    seen = set()
+    for e in journal:
+        for l in e.get("learnings", []):
+            key = l[:60].lower()
+            if key not in seen:
+                seen.add(key)
+                all_learnings.append({
+                    "experiment": e.get("experiment_id", "?"),
+                    "strategy": e.get("strategy") or e.get("category", "?"),
+                    "verdict": e.get("verdict", "?"),
+                    "learning": l[:200],
+                })
+    
+    return {
+        "analysis": "research_insights",
+        "total_experiments": len(journal),
+        "verdict_distribution": dict(Counter(e.get("verdict") for e in journal)),
+        "category_distribution": dict(Counter(e.get("category") for e in journal)),
+        "strategy_scorecard": scorecard,
+        "infrastructure_blockers": infra_failures,
+        "queue_status": dict(queue_status),
+        "stalled_experiments": stalled_experiments,
+        "key_learnings": all_learnings[-20:],  # Most recent 20
+    }
+
+
+# ── Analysis: Wave Recommendations ─────────────────────────────
+
+def analyze_wave_recommendations() -> dict:
+    """
+    Synthesize research findings + market regime + strategy performance
+    to recommend what Wave 3 should focus on.
+    
+    Cross-references:
+      - Research scorecard (what strategies show promise)
+      - Current regime (what the market needs right now)
+      - Infrastructure blockers (what to fix first)
+      - Queue status (what's stuck)
+      - Signal funnel data (what's actually generating/rejecting)
+    """
+    research = analyze_research_insights()
+    regime = analyze_regime_state()
+    entries = load_journal()
+    mix = analyze_strategy_mix(entries)
+    
+    scorecard = research.get("strategy_scorecard", {})
+    current_regime = regime.get("regime", "UNKNOWN")
+    infra_blockers = research.get("infrastructure_blockers", [])
+    
+    recommendations = []
+    priority = 0
+    
+    # ── Priority 0: Fix infrastructure blockers ──
+    if infra_blockers:
+        unique_issues = set()
+        for b in infra_blockers:
+            issue = b["issue"]
+            if "filter_test" in issue.lower() or "identical results" in issue.lower():
+                unique_issues.add("filter_test infrastructure broken (nested params + TOM engine)")
+            elif "hardcoded" in issue.lower() or "confidence=0.50" in issue.lower():
+                unique_issues.add("mtf_momentum confidence hardcoded at 0.50")
+            else:
+                unique_issues.add(issue[:80])
+        
+        for issue in unique_issues:
+            priority += 1
+            recommendations.append({
+                "priority": priority,
+                "type": "infrastructure_fix",
+                "title": f"Fix: {issue}",
+                "rationale": "Research experiments producing invalid results. Must fix before running more experiments.",
+                "experiments": [],
+            })
+    
+    # ── Priority 1: Regime-aligned strategy research ──
+    regime_strategies = {
+        "TRENDING_UP": ["trend_following", "momentum_breakout"],
+        "TRENDING_DOWN": ["short_term_mr", "mean_reversion"],
+        "MEAN_REVERTING": ["mean_reversion", "opening_gap", "connors_rsi2", "short_term_mr"],
+        "VOLATILE": ["mean_reversion", "bb_squeeze"],
+    }
+    
+    favored = regime_strategies.get(current_regime, [])
+    for strat in favored:
+        sc = scorecard.get(strat, {})
+        grade = sc.get("grade", "?")
+        
+        # Strategy has research promise but isn't promoted yet
+        if grade in ("B", "C") and sc.get("promoted", 0) == 0:
+            priority += 1
+            experiments = []
+            if sc.get("best_sharpe") and sc["best_sharpe"] > 0:
+                experiments.append(f"{strat}_combined — Test in combined portfolio (not just solo)")
+                experiments.append(f"{strat}_oos — OOS walk-forward validation")
+            else:
+                experiments.append(f"{strat}_param_sweep — Wider parameter search")
+            
+            recommendations.append({
+                "priority": priority,
+                "type": "regime_aligned",
+                "title": f"Advance {strat} (grade {grade}, regime favors it)",
+                "rationale": f"Market is {current_regime}. {strat} has {sc.get('pass', 0)} pass / {sc.get('fail', 0)} fail. Best Sharpe: {sc.get('best_sharpe', '?')}",
+                "experiments": experiments,
+            })
+    
+    # ── Priority 2: Strategy mix rebalancing ──
+    mix_strategies = mix.get("strategies", {})
+    dominant = max(mix_strategies.items(), key=lambda x: x[1]["pct_of_total"], default=(None, {}))
+    if dominant[0] and dominant[1].get("pct_of_total", 0) > 70:
+        underweight = [s for s in mix.get("enabled_strategies", [])
+                       if mix_strategies.get(s, {}).get("pct_of_total", 0) < 10]
+        if underweight:
+            priority += 1
+            recommendations.append({
+                "priority": priority,
+                "type": "rebalancing",
+                "title": f"Investigate why {', '.join(underweight)} generate so few signals",
+                "rationale": f"{dominant[0]} at {dominant[1]['pct_of_total']}% is crowding out other strategies. "
+                            f"Check parameter sensitivity and market condition filters.",
+                "experiments": [f"{s}_sensitivity — Parameter sensitivity analysis" for s in underweight],
+            })
+    
+    # ── Priority 3: Confidence model rebuild ──
+    conf_analysis = analyze_confidence_model(entries)
+    if "BROKEN" in conf_analysis.get("diagnosis", ""):
+        priority += 1
+        recommendations.append({
+            "priority": priority,
+            "type": "model_improvement",
+            "title": "Rebuild confidence scoring model",
+            "rationale": conf_analysis.get("diagnosis", ""),
+            "experiments": [
+                "confidence_backtest — Backtest accuracy of confidence scores vs actual returns",
+                "confidence_features — Feature importance analysis for confidence model inputs",
+                "confidence_threshold — Optimal threshold search via walk-forward",
+            ],
+        })
+    
+    # ── Priority 4: Stalled queue experiments ──
+    stalled = research.get("stalled_experiments", [])
+    if stalled:
+        priority += 1
+        recommendations.append({
+            "priority": priority,
+            "type": "queue_cleanup",
+            "title": f"Resolve {len(stalled)} stalled experiments",
+            "rationale": f"Experiments stuck in failed/partial: {', '.join(stalled[:5])}",
+            "experiments": [f"retry_{s} — Fix and re-run" for s in stalled[:5]],
+        })
+    
+    # ── Priority 5: Unexplored high-value areas ──
+    explored_strats = set(scorecard.keys())
+    all_strats = {"mean_reversion", "trend_following", "opening_gap", "momentum_breakout",
+                  "sector_rotation", "short_term_mr", "bb_squeeze", "mtf_momentum",
+                  "dividend_capture", "connors_rsi2"}
+    unexplored = all_strats - explored_strats
+    
+    # Also flag strategies with very few experiments
+    undertested = [s for s, sc in scorecard.items() if sc.get("experiments", 0) < 3 and s in all_strats]
+    
+    gaps = list(unexplored) + undertested
+    if gaps:
+        priority += 1
+        recommendations.append({
+            "priority": priority,
+            "type": "coverage_gap",
+            "title": f"Research gaps: {', '.join(sorted(set(gaps)))}",
+            "rationale": "Strategies with little or no research data. Need baseline solo testing.",
+            "experiments": [f"{s}_solo — Baseline solo backtest" for s in sorted(set(gaps))[:5]],
+        })
+    
+    return {
+        "analysis": "wave_recommendations",
+        "current_regime": current_regime,
+        "research_summary": {
+            "total_experiments": research.get("total_experiments", 0),
+            "verdicts": research.get("verdict_distribution", {}),
+            "infra_blockers": len(infra_blockers),
+            "stalled_count": len(stalled),
+        },
+        "strategy_scorecard": scorecard,
+        "recommendations": recommendations,
+        "suggested_wave_theme": _derive_wave_theme(recommendations, current_regime),
+    }
+
+
+def _derive_wave_theme(recommendations: list[dict], regime: str) -> str:
+    """Generate a wave theme from the top recommendations."""
+    if not recommendations:
+        return "Maintenance — no actionable research directions identified"
+    
+    types = [r["type"] for r in recommendations[:3]]
+    
+    if "infrastructure_fix" in types:
+        return f"Infrastructure Repair + {regime.replace('_', ' ').title()} Strategy Alignment"
+    
+    if "regime_aligned" in types:
+        strats = [r["title"].split("(")[0].replace("Advance ", "").strip()
+                  for r in recommendations if r["type"] == "regime_aligned"]
+        return f"{regime.replace('_', ' ').title()} Regime — Advance {', '.join(strats[:3])}"
+    
+    if "rebalancing" in types:
+        return "Signal Generation Rebalancing + Confidence Model Rebuild"
+    
+    return f"Research Deepening — {regime.replace('_', ' ').title()} Market"
+
+
 # ── Weekly Digest ───────────────────────────────────────────────
 
 def generate_weekly_digest() -> dict:
@@ -627,6 +956,8 @@ def generate_weekly_digest() -> dict:
         "rejection_impact": analyze_rejection_impact(entries),
         "regime_state": analyze_regime_state(),
         "alpha_decay": analyze_alpha_decay(),
+        "research_insights": analyze_research_insights(),
+        "wave_recommendations": analyze_wave_recommendations(),
     }
 
 
@@ -700,12 +1031,60 @@ def format_report(result: dict) -> str:
         lines.append(f"\n   {'🔴 DECAY DETECTED' if decay else '🟢 No significant decay'}")
         lines.append(f"   {result.get('recommendation', '?')}")
     
+    elif analysis == "research_insights":
+        lines.append("🔬 RESEARCH INSIGHTS REPORT")
+        lines.append(f"   {result.get('total_experiments', 0)} experiments total")
+        vd = result.get("verdict_distribution", {})
+        lines.append(f"   Verdicts: {vd.get('pass',0)} pass, {vd.get('fail',0)} fail, {vd.get('partial',0)} partial, {vd.get('promoted',0)} promoted\n")
+        
+        lines.append("   Strategy Scorecard:")
+        for strat, sc in sorted(result.get("strategy_scorecard", {}).items(), key=lambda x: x[1].get("grade", "Z")):
+            grade = sc.get("grade", "?")
+            icon = {"A": "🟢", "B": "🔵", "C": "🟡", "D": "🔴"}.get(grade, "⚪")
+            sharpe_str = f"Sharpe {sc['best_sharpe']:.2f}" if sc.get("best_sharpe") is not None else "no Sharpe"
+            lines.append(f"   {icon} [{grade}] {strat:20s} {sc.get('pass',0)}p/{sc.get('fail',0)}f/{sc.get('partial',0)}pt — {sc.get('status', '?')} ({sharpe_str})")
+        
+        blockers = result.get("infrastructure_blockers", [])
+        if blockers:
+            lines.append(f"\n   🚧 Infrastructure Blockers ({len(blockers)}):")
+            seen = set()
+            for b in blockers:
+                issue = b["issue"][:100]
+                if issue not in seen:
+                    seen.add(issue)
+                    lines.append(f"     ❌ {issue}")
+        
+        qs = result.get("queue_status", {})
+        if qs:
+            lines.append(f"\n   Queue: {dict(qs)}")
+    
+    elif analysis == "wave_recommendations":
+        lines.append("🧭 WAVE RECOMMENDATIONS")
+        lines.append(f"   Regime: {result.get('current_regime', '?')}")
+        rs = result.get("research_summary", {})
+        lines.append(f"   Research: {rs.get('total_experiments',0)} experiments, {rs.get('infra_blockers',0)} blockers, {rs.get('stalled_count',0)} stalled\n")
+        
+        theme = result.get("suggested_wave_theme", "?")
+        lines.append(f"   📋 Suggested Wave 3 Theme: {theme}\n")
+        
+        for rec in result.get("recommendations", []):
+            prio = rec.get("priority", "?")
+            rtype = rec.get("type", "?")
+            icon = {"infrastructure_fix": "🔧", "regime_aligned": "📈", "rebalancing": "⚖️",
+                    "model_improvement": "🧠", "queue_cleanup": "🧹", "coverage_gap": "🔍"}.get(rtype, "•")
+            lines.append(f"   {icon} P{prio}: {rec.get('title', '?')}")
+            lines.append(f"      {rec.get('rationale', '')[:120]}")
+            for exp in rec.get("experiments", [])[:3]:
+                lines.append(f"      → {exp}")
+            lines.append("")
+    
     elif analysis == "weekly_digest":
         lines.append("═" * 60)
         lines.append("📊 ATLAS WEEKLY DATA SCIENCE DIGEST")
         lines.append(f"   Generated: {result.get('generated_at', '?')[:19]}")
         lines.append("═" * 60)
-        for key in ["regime_state", "signal_accuracy", "confidence_model", "strategy_mix", "rejection_impact", "alpha_decay"]:
+        for key in ["regime_state", "signal_accuracy", "confidence_model", "strategy_mix",
+                     "rejection_impact", "alpha_decay", "research_insights", "wave_recommendations"]:
             if key in result:
                 lines.append("")
                 lines.append(format_report(result[key]))
@@ -725,6 +1104,8 @@ ANALYSES = {
     "rejection_impact": lambda: analyze_rejection_impact(load_journal()),
     "regime_state": analyze_regime_state,
     "alpha_decay": analyze_alpha_decay,
+    "research_insights": analyze_research_insights,
+    "wave_recommendations": analyze_wave_recommendations,
     "weekly_digest": generate_weekly_digest,
 }
 
