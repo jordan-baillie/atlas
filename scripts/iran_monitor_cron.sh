@@ -42,11 +42,12 @@ echo "[$(date '+%H:%M:%S')] Data collected ($(wc -c < "$DATA_FILE") bytes)" >> "
 
 # ── Step 2: Search latest news (multi-endpoint: news API + web API) ──
 # Uses /news/search for breaking coverage + /web/search for analysis depth
-# 8 sections × 1-2 queries = ~14 API calls (within free tier 2K/month)
+# 11 API calls: 6 news (count=20) + 3 web (count=10) + 2 video (count=5)
+# Results split into 🔴 LAST 4H (since previous cron) vs 🟡 OLDER CONTEXT
 echo "[$(date '+%H:%M:%S')] Searching news (multi-endpoint)..." >> "$LOG_FILE"
 NEWS_FILE="/tmp/iran_monitor_news_${TIMESTAMP}.txt"
 
-timeout 120 node "$PROJECT/scripts/brave_news.js" > "$NEWS_FILE" 2>>"$LOG_FILE"
+timeout 120 node "$PROJECT/scripts/brave_news.js" --hours 4 > "$NEWS_FILE" 2>>"$LOG_FILE"
 SEARCH_EXIT=$?
 if [ $SEARCH_EXIT -ne 0 ] || [ ! -s "$NEWS_FILE" ]; then
     echo "[$(date '+%H:%M:%S')] WARNING: brave_news.js failed (exit=$SEARCH_EXIT), falling back to basic search" >> "$LOG_FILE"
@@ -65,9 +66,18 @@ You are the Atlas Iran Conflict Monitor agent. Every 4 hours you assess geopolit
 
 ## YOUR DATA FILES
 1. **Position & price data**: /tmp/iran_monitor_data_TS.json — prices, technicals, derived metrics, portfolio checks, rate history, escalation tracking.
-2. **Latest news**: /tmp/iran_monitor_news_TS.txt — Brave Search results from 5 targeted queries.
+2. **Latest news**: /tmp/iran_monitor_news_TS.txt — Multi-endpoint Brave Search (news + web + video). Results are split into two sections:
+   - 🔴 **NEW SINCE LAST UPDATE (last 4h)** — these are the developments since your previous run. Focus here first.
+   - 🟡 **OLDER CONTEXT (4-24h)** — background from earlier today. Only reference if relevant.
 
 Read BOTH files first using the read tool before making any changes.
+
+## 4-HOUR COMPARISON PROTOCOL
+You run every 4 hours. Your job is to identify WHAT CHANGED since the last run:
+- Compare the 🔴 RECENT section against the position states and rate_history from the data file.
+- If the 🔴 RECENT section is empty, that itself is signal (no breaking developments = stable).
+- Only change manual toggles when 🔴 RECENT news clearly justifies a change. Do NOT re-litigate old news.
+- In your Telegram briefing, lead with "X new developments since last update" or "No new developments".
 
 ## SCORING SYSTEM
 Health = (sum of passing_weights + 0.5 × warning_weights) / total_weight × 10.
