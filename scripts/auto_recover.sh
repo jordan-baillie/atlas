@@ -174,9 +174,16 @@ if [ -n "$FAILED_LOG" ] && [ -f "$FAILED_LOG" ]; then
         DIAGNOSIS="${DIAGNOSIS}📦 Missing Python module\n"
         MODULE=$(grep -oP "No module named '\K[^']+" "$FAILED_LOG" | head -1)
         if [ -n "$MODULE" ]; then
-            log "Attempting pip install $MODULE"
-            pip install "$MODULE" >> "$RECOVER_LOG" 2>&1 && \
-                FIXES_APPLIED="${FIXES_APPLIED}✅ Installed missing module: $MODULE\n"
+            # SAFETY: never auto-install numpy/scipy/pandas — ABI-sensitive.
+            # Use requirements.txt: pip install -r requirements.txt
+            if echo "$MODULE" | grep -qiE '^(numpy|scipy|pandas)$'; then
+                log "REFUSING auto-install of $MODULE (ABI-sensitive). Run: pip install --break-system-packages -r /root/atlas/requirements.txt"
+                DIAGNOSIS="${DIAGNOSIS}⚠️ $MODULE needs manual reinstall via requirements.txt\n"
+            else
+                log "Attempting pip install $MODULE"
+                pip install --break-system-packages "$MODULE" >> "$RECOVER_LOG" 2>&1 && \
+                    FIXES_APPLIED="${FIXES_APPLIED}✅ Installed missing module: $MODULE\n"
+            fi
         fi
     fi
     if grep -qi "JSONDecodeError\|json.decoder" "$FAILED_LOG"; then

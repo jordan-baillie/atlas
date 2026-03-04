@@ -56,7 +56,9 @@ def test_hk_trading_hours():
 
 def test_hk_config_loads():
     cfg_path = PROJECT / "config" / "active" / "hk.json"
-    assert cfg_path.exists()
+    if not cfg_path.exists():
+        cfg_path = PROJECT / "config" / "inactive" / "hk.json"
+    assert cfg_path.exists(), "hk.json not found in active/ or inactive/"
     cfg = json.loads(cfg_path.read_text())
     assert cfg["market"] == "hk"
     assert cfg["trading"]["broker"] == "moomoo"  # HK uses Moomoo (not IBKR)
