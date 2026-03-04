@@ -95,54 +95,79 @@ def _mark_fired(fired: dict, key: str):
 # ── Price fetching ────────────────────────────────────────────
 
 def fetch_live_prices(tickers: list[str]) -> dict:
-    """Fetch current prices via yfinance (batch download, 1d period).
+    """Fetch current prices — Alpaca snapshots first, yfinance fallback.
+
+    For SP500 markets: tries Alpaca ``get_snapshot_prices()`` which provides
+    real-time data (no 15-min delay).  Falls back to yfinance batch download
+    for any tickers not covered by Alpaca (ASX, HK, etc.) or if Alpaca
+    is unavailable.
 
     Returns dict: ticker -> {close, low, high, last_price}
     """
-    import yfinance as yf
-    import pandas as pd
-
     if not tickers:
         return {}
 
     log.info(f"Fetching live prices for {len(tickers)} tickers...")
     prices = {}
 
+    # ── Alpaca (primary) ──────────────────────────────────────
     try:
-        # Batch download — 1 day period for intraday OHLC
+        from brokers.alpaca.market_data import get_snapshot_prices
+        alpaca_raw = get_snapshot_prices(tickers)
+        for ticker, snap in alpaca_raw.items():
+            price = snap.get("price", 0)
+            if price > 0:
+                prices[ticker] = {
+                    "close": price,
+                    "last_price": price,
+                    "low": snap.get("day_low", price),
+                    "high": snap.get("day_high", price),
+                }
+        if alpaca_raw:
+            log.info(f"Alpaca: got {len(alpaca_raw)}/{len(tickers)} prices")
+    except Exception as e:
+        log.debug(f"Alpaca snapshot fetch failed: {e}")
+
+    # Determine which tickers still need prices
+    missing = [t for t in tickers if t not in prices]
+    if not missing:
+        return prices
+
+    # ── yfinance fallback for remaining tickers ───────────────
+    try:
+        import yfinance as yf
+        import pandas as pd
+
+        log.info(f"yfinance fallback for {len(missing)} tickers: {missing}")
         data = yf.download(
-            tickers, period="1d", interval="1d",
+            missing, period="1d", interval="1d",
             progress=False, threads=True, group_by="ticker",
         )
 
-        if data.empty:
-            log.warning("yfinance returned empty data")
-            return {}
+        if not data.empty:
+            for ticker in missing:
+                try:
+                    row = data if len(missing) == 1 else data[ticker]
+                    if row.empty or row.dropna(how="all").empty:
+                        continue
+                    last = row.iloc[-1]
+                    close = float(last.get("Close", 0))
+                    low = float(last.get("Low", close))
+                    high = float(last.get("High", close))
+                    if close > 0:
+                        prices[ticker] = {
+                            "close": close,
+                            "last_price": close,
+                            "low": low,
+                            "high": high,
+                        }
+                except Exception as e:
+                    log.debug(f"  {ticker}: yfinance parse error: {e}")
+        else:
+            log.warning("yfinance returned empty data for fallback tickers")
 
-        for ticker in tickers:
-            try:
-                if len(tickers) == 1:
-                    row = data
-                else:
-                    row = data[ticker]
-
-                if row.empty or row.dropna(how="all").empty:
-                    continue
-
-                last = row.iloc[-1]
-                close = float(last.get("Close", 0))
-                low = float(last.get("Low", close))
-                high = float(last.get("High", close))
-
-                if close > 0:
-                    prices[ticker] = {
-                        "close": close,
-                        "low": low,
-                        "high": high,
-                    }
-            except Exception as e:
-                log.debug(f"  {ticker}: parse error: {e}")
-
+    except ImportError:
+        log.warning("yfinance not installed — no fallback available for missing tickers")
     except Exception as e:
         log.error(f"yfinance batch download failed: {e}")
 

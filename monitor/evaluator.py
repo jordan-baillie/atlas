@@ -22,6 +22,26 @@ logger = logging.getLogger(__name__)
 
 PROJECT = Path(__file__).resolve().parent.parent
 
+# ── Alpaca client (lazy singleton) ────────────────────────────────────────────
+
+def _get_alpaca_client():
+    """Return the shared AlpacaMarketData singleton, or None if unavailable."""
+    try:
+        from brokers.alpaca.market_data import get_alpaca_data_client
+        return get_alpaca_data_client()
+    except Exception:
+        return None
+
+
+def _is_us_equity(ticker: str) -> bool:
+    """Return True for plain US equity symbols (no .AX/.HK suffix, no ^ prefix)."""
+    return (
+        not ticker.endswith(".AX")
+        and not ticker.endswith(".HK")
+        and not ticker.startswith("^")
+    )
+
+
 # FRED series ID mapping for common shorthand
 FRED_SERIES_MAP = {
     "RIGS": "RIGS",           # Baker Hughes US rig count (if available)
@@ -34,7 +54,25 @@ FRED_SERIES_MAP = {
 
 
 def _fetch_yfinance_price(ticker: str) -> Optional[float]:
-    """Get latest closing price via yfinance."""
+    """Get latest closing price.
+
+    For US equities (no .AX/.HK suffix, no ^ prefix): tries Alpaca
+    snapshot first (lower latency, no rate limits) then falls back to
+    yfinance.  For all other tickers uses yfinance directly.
+    """
+    # Try Alpaca for US equities
+    if _is_us_equity(ticker):
+        try:
+            alpaca = _get_alpaca_client()
+            if alpaca is not None:
+                snap = alpaca.get_snapshot(ticker)
+                if snap and snap.get("price", 0) > 0:
+                    logger.debug("Alpaca price for %s: %.4f", ticker, snap["price"])
+                    return float(snap["price"])
+        except Exception as e:
+            logger.debug("Alpaca price fetch failed for %s: %s", ticker, e)
+
+    # Fallback: yfinance
     try:
         import yfinance as yf
         t = yf.Ticker(ticker)
@@ -48,7 +86,39 @@ def _fetch_yfinance_price(ticker: str) -> Optional[float]:
 
 
 def _fetch_yfinance_ma(ticker: str, period: int) -> Optional[float]:
-    """Get N-day simple moving average via yfinance."""
+    """Get N-day simple moving average.
+
+    For US equities: tries Alpaca historical daily bars first (avoids
+    yfinance rate limits), falls back to yfinance.  For non-US tickers
+    uses yfinance directly.
+
+    ``period + 30`` calendar days are requested to ensure enough trading
+    days remain after excluding weekends and holidays.
+    """
+    lookback_days = period + 60  # extra buffer for weekends/holidays
+
+    # Try Alpaca historical bars for US equities
+    if _is_us_equity(ticker):
+        try:
+            from brokers.alpaca.market_data import get_historical_bars
+            from datetime import datetime, timedelta
+            end_dt = datetime.now()
+            start_dt = end_dt - timedelta(days=lookback_days)
+            result = get_historical_bars(
+                ticker,
+                start=start_dt.strftime("%Y-%m-%d"),
+                end=end_dt.strftime("%Y-%m-%d"),
+            )
+            df = result.get(ticker)
+            if df is not None and len(df) >= period:
+                ma = df["close"].iloc[-period:].mean()
+                logger.debug("Alpaca MA(%d) for %s: %.4f from %d bars",
+                             period, ticker, ma, len(df))
+                return round(float(ma), 4)
+        except Exception as e:
+            logger.debug("Alpaca MA fetch failed for %s: %s", ticker, e)
+
+    # Fallback: yfinance
     try:
         import yfinance as yf
         t = yf.Ticker(ticker)
@@ -56,7 +126,8 @@ def _fetch_yfinance_ma(ticker: str, period: int) -> Optional[float]:
         days = period + 30
         hist = t.history(period=f"{days}d")
         if len(hist) < period:
-            logger.warning("Insufficient data for %s MA(%d): got %d rows", ticker, period, len(hist))
+            logger.warning("Insufficient data for %s MA(%d): got %d rows",
+                           ticker, period, len(hist))
             return None
         ma = hist["Close"].rolling(period).mean().iloc[-1]
         return float(ma) if pd.notna(ma) else None

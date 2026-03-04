@@ -46,6 +46,17 @@ logger = logging.getLogger("atlas.volatility_gate")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+# ── Alpaca client (lazy singleton) ────────────────────────────────────────────
+
+def _get_alpaca_market_data():
+    """Return the shared AlpacaMarketData singleton, or None if unavailable."""
+    try:
+        from brokers.alpaca.market_data import get_alpaca_data_client
+        return get_alpaca_data_client()
+    except Exception:
+        return None
+
+
 # ── Default thresholds ─────────────────────────────────────────────────────
 
 DEFAULT_THRESHOLDS = {
@@ -60,11 +71,56 @@ DEFAULT_THRESHOLDS = {
 # ── Core gate logic ────────────────────────────────────────────────────────
 
 def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]:
-    """Fetch the last N days of OHLCV data for a ticker via yfinance.
+    """Fetch the last N days of OHLCV data for a ticker.
+
+    Routing logic:
+      - Tickers starting with ``^`` (indices: ^VIX, ^AXJO) → yfinance only,
+        as Alpaca does not carry index symbols.
+      - All other tickers → try Alpaca ``get_historical_bars()`` first,
+        fall back to yfinance on failure or insufficient data.
 
     Returns a dict with keys: prev_close, open, high, low, close, volume
     for the most recent session, or None if data unavailable.
     """
+    # Index symbols (^VIX, ^AXJO, etc.) — use yfinance directly
+    use_yfinance_only = ticker.startswith("^")
+
+    # ── Alpaca path (non-index tickers) ──────────────────────────────────────
+    if not use_yfinance_only:
+        try:
+            from brokers.alpaca.market_data import get_historical_bars
+            end_dt = datetime.utcnow()
+            start_dt = end_dt - timedelta(days=lookback_days)
+            result = get_historical_bars(
+                ticker,
+                start=start_dt.strftime("%Y-%m-%d"),
+                end=end_dt.strftime("%Y-%m-%d"),
+            )
+            df_alpaca = result.get(ticker)
+            if df_alpaca is not None and len(df_alpaca) >= 2:
+                prev_row = df_alpaca.iloc[-2]
+                curr_row = df_alpaca.iloc[-1]
+                logger.debug("Alpaca overnight data for %s: prev_close=%.4f open=%.4f",
+                             ticker, prev_row["close"], curr_row["open"])
+                return {
+                    "ticker":     ticker,
+                    "prev_date":  str(df_alpaca.index[-2].date()),
+                    "curr_date":  str(df_alpaca.index[-1].date()),
+                    "prev_close": float(prev_row["close"]),
+                    "open":       float(curr_row["open"]),
+                    "high":       float(curr_row["high"]),
+                    "low":        float(curr_row["low"]),
+                    "close":      float(curr_row["close"]),
+                    "volume":     float(curr_row["volume"]),
+                }
+            # Not enough bars — fall through to yfinance
+            logger.debug("Alpaca: insufficient bars for %s (%d) — falling back to yfinance",
+                         ticker, len(df_alpaca) if df_alpaca is not None else 0)
+        except Exception as e:
+            logger.debug("Alpaca overnight data failed for %s: %s — falling back to yfinance",
+                         ticker, e)
+
+    # ── yfinance path (fallback for all tickers, primary for index symbols) ──
     try:
         import yfinance as yf
         end = datetime.utcnow()
@@ -78,7 +134,8 @@ def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]
             auto_adjust=True,
         )
         if df is None or df.empty or len(df) < 2:
-            logger.warning("Insufficient data for %s (rows=%d)", ticker, len(df) if df is not None else 0)
+            logger.warning("Insufficient data for %s (rows=%d)",
+                           ticker, len(df) if df is not None else 0)
             return None
 
         # Handle MultiIndex columns from yfinance
@@ -89,15 +146,15 @@ def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]
         curr_row = df.iloc[-1]
 
         return {
-            "ticker": ticker,
-            "prev_date": str(df.index[-2].date()),
-            "curr_date": str(df.index[-1].date()),
+            "ticker":     ticker,
+            "prev_date":  str(df.index[-2].date()),
+            "curr_date":  str(df.index[-1].date()),
             "prev_close": float(prev_row["Close"]),
-            "open": float(curr_row["Open"]),
-            "high": float(curr_row["High"]),
-            "low": float(curr_row["Low"]),
-            "close": float(curr_row["Close"]),
-            "volume": float(curr_row["Volume"]) if "Volume" in curr_row else 0,
+            "open":       float(curr_row["Open"]),
+            "high":       float(curr_row["High"]),
+            "low":        float(curr_row["Low"]),
+            "close":      float(curr_row["Close"]),
+            "volume":     float(curr_row["Volume"]) if "Volume" in curr_row else 0,
         }
     except Exception as e:
         logger.error("Failed to fetch data for %s: %s", ticker, e)

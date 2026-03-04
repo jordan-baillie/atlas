@@ -392,11 +392,21 @@ def sync_broker_fills(market_id: str, broker_positions: list, config: dict):
         logger.info("Synced %d new fills for %s", synced, market_id)
 
 
-def get_live_prices(tickers):
-    """Fetch live intraday prices via yfinance.
+def _get_alpaca_market_data():
+    """Return the shared AlpacaMarketData singleton, or None if unavailable."""
+    try:
+        from brokers.alpaca.market_data import get_alpaca_data_client
+        return get_alpaca_data_client()
+    except Exception:
+        return None
 
-    Uses 15m interval for the current day. Falls back gracefully
-    if market is closed or data unavailable.
+
+def get_live_prices(tickers):
+    """Fetch live intraday prices — Alpaca-first for US tickers, yfinance for others.
+
+    For US equities (no .AX / .HK suffix): tries Alpaca snapshots first,
+    falls back to yfinance on failure or missing data.
+    For non-US tickers: uses yfinance directly (Alpaca is US-only).
 
     Returns dict of ticker -> {"close": float, "prev_close": float|None, "date": str, "live": bool}
     """
@@ -405,35 +415,68 @@ def get_live_prices(tickers):
         return prices
 
     ticker_list = list(tickers)
-    try:
-        import yfinance as yf
-        # Batch download — single HTTP call for all tickers
-        data = yf.download(ticker_list, period="2d", interval="15m",
-                           progress=False, threads=True)
-        if data.empty:
-            return prices
 
-        for t in ticker_list:
-            try:
-                if len(ticker_list) > 1:
-                    series = data["Close"][t].dropna()
-                else:
-                    series = data["Close"].dropna()
-                if len(series) == 0:
-                    continue
-                last_price = float(series.iloc[-1])
-                prev_price = float(series.iloc[-2]) if len(series) > 1 else None
-                last_ts = series.index[-1]
-                prices[t] = {
-                    "close": last_price,
-                    "prev_close": prev_price,
-                    "date": str(last_ts),
-                    "live": True,
-                }
-            except Exception:
-                pass
-    except Exception as e:
-        print(f"  WARN: live price fetch failed: {e}")
+    # Split tickers by market: US equities → Alpaca, ASX/HK → yfinance
+    us_tickers = [t for t in ticker_list
+                  if not t.endswith(".AX") and not t.endswith(".HK")]
+    non_us_tickers = [t for t in ticker_list
+                      if t.endswith(".AX") or t.endswith(".HK")]
+
+    # ── US tickers via Alpaca snapshots ──────────────────────────
+    if us_tickers:
+        try:
+            alpaca = _get_alpaca_market_data()
+            if alpaca is not None:
+                snapshots = alpaca.get_snapshots(us_tickers)
+                for ticker, snap in snapshots.items():
+                    price = snap.get("price", 0.0)
+                    if not price:
+                        continue
+                    prev_daily = snap.get("prev_daily_bar", {}) or {}
+                    prev_close = prev_daily.get("close") or None
+                    # Best available timestamp: minute bar > daily bar
+                    ts = (snap.get("minute_bar", {}) or {}).get("timestamp") \
+                        or (snap.get("daily_bar", {}) or {}).get("timestamp") \
+                        or str(datetime.now(BRISBANE).date())
+                    prices[ticker] = {
+                        "close":      round(float(price), 4),
+                        "prev_close": round(float(prev_close), 4) if prev_close else None,
+                        "date":       str(ts),
+                        "live":       True,
+                    }
+                logger.debug("Alpaca snapshots: %d/%d US tickers", len(prices), len(us_tickers))
+        except Exception as e:
+            print(f"  WARN: Alpaca live price fetch failed: {e}")
+
+    # ── Fallback to yfinance for missing US tickers + all non-US ─
+    yf_tickers = [t for t in us_tickers if t not in prices] + non_us_tickers
+    if yf_tickers:
+        try:
+            import yfinance as yf
+            data = yf.download(yf_tickers, period="2d", interval="15m",
+                               progress=False, threads=True)
+            if not data.empty:
+                for t in yf_tickers:
+                    try:
+                        if len(yf_tickers) > 1:
+                            series = data["Close"][t].dropna()
+                        else:
+                            series = data["Close"].dropna()
+                        if len(series) == 0:
+                            continue
+                        last_price = float(series.iloc[-1])
+                        prev_price = float(series.iloc[-2]) if len(series) > 1 else None
+                        last_ts = series.index[-1]
+                        prices[t] = {
+                            "close":      last_price,
+                            "prev_close": prev_price,
+                            "date":       str(last_ts),
+                            "live":       True,
+                        }
+                    except Exception:
+                        pass
+        except Exception as e:
+            print(f"  WARN: yfinance live price fetch failed: {e}")
 
     return prices
 

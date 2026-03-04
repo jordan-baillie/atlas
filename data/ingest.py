@@ -26,7 +26,13 @@ from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
+
+try:
+    import yfinance as yf
+    YF_AVAILABLE = True
+except ImportError:
+    YF_AVAILABLE = False
+    logger.warning("yfinance not installed — yfinance fallback unavailable")
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +211,98 @@ def _clean_ohlcv(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
     return df
 
 
+def _clean_alpaca_bars(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
+    """Clean and standardize OHLCV DataFrame from Alpaca ``get_historical_bars()``.
+
+    Alpaca returns lowercase OHLCV columns (open, high, low, close, volume,
+    vwap) with a tz-naive DatetimeIndex named 'date'.  This normalizer
+    produces exactly the same output shape as ``_clean_ohlcv()`` so the
+    rest of the pipeline is unaware of the data source.
+    """
+    if df.empty:
+        return df
+
+    # Ensure expected columns exist
+    expected = ["open", "high", "low", "close", "volume"]
+    for col in expected:
+        if col not in df.columns:
+            logger.warning(f"{ticker}: Alpaca missing column '{col}'")
+            df[col] = np.nan
+
+    # adj_close: Alpaca does not separately split-adjust — use close as proxy
+    if "adj_close" not in df.columns:
+        df["adj_close"] = df["close"]
+
+    # Add ticker column
+    df["ticker"] = ticker
+
+    # Sort, drop rows with null close
+    df = df.sort_index()
+    df = df.dropna(subset=["close"])
+
+    # Ensure DatetimeIndex named 'date' (Alpaca already provides this, but guard anyway)
+    if not isinstance(df.index, pd.DatetimeIndex):
+        df.index = pd.to_datetime(df.index)
+    df.index.name = "date"
+
+    # Remove timezone info if present (Atlas standard: tz-naive)
+    if df.index.tz is not None:
+        df.index = df.index.tz_localize(None)
+
+    return df
+
+
+def _fetch_ohlcv(
+    ticker: str,
+    start_str: str,
+    end_str: str,
+    market_id: Optional[str] = None,
+) -> pd.DataFrame:
+    """Download OHLCV from the best available source and return cleaned data.
+
+    For SP500: tries Alpaca ``get_historical_bars()`` first; falls back to
+    yfinance if Alpaca returns empty or is unavailable.
+    For all other markets: uses yfinance directly.
+
+    Args:
+        ticker:    Fully-formatted ticker (e.g. 'AAPL' for sp500, 'BHP.AX' for asx).
+        start_str: Inclusive start date 'YYYY-MM-DD'.
+        end_str:   Inclusive end date   'YYYY-MM-DD' (yfinance +1-day offset handled internally).
+        market_id: Market identifier (e.g. 'sp500', 'asx').
+
+    Returns:
+        Cleaned DataFrame (same format as ``_clean_ohlcv``), or empty DataFrame.
+    """
+    if (market_id or "").lower() == "sp500":
+        try:
+            from brokers.alpaca.market_data import get_historical_bars as _alpaca_bars
+            result = _alpaca_bars(ticker, start=start_str, end=end_str)
+            df = result.get(ticker, pd.DataFrame())
+            if not df.empty:
+                logger.debug(f"{ticker}: Alpaca historical bars ({len(df)} rows)")
+                return df  # already in Atlas format from get_historical_bars
+            logger.debug(f"{ticker}: Alpaca returned empty — falling back to yfinance")
+        except Exception as e:
+            logger.debug(f"{ticker}: Alpaca fetch failed ({e}) — falling back to yfinance")
+
+    # yfinance path (all non-sp500 markets, or sp500 fallback)
+    if not YF_AVAILABLE:
+        logger.warning(f"{ticker}: yfinance not available and Alpaca returned no data")
+        return pd.DataFrame()
+
+    # yfinance end is exclusive — add 1 day so end_str is included
+    fetch_end = (pd.Timestamp(end_str) + timedelta(days=1)).strftime("%Y-%m-%d")
+    try:
+        df = yf.download(ticker, start=start_str, end=fetch_end,
+                         progress=False, auto_adjust=False)
+        if not df.empty:
+            return _clean_ohlcv(df, ticker)
+    except Exception as e:
+        logger.error(f"{ticker}: yfinance download failed: {e}")
+
+    return pd.DataFrame()
+
+
 def download_ticker(
     ticker: str,
     start: Optional[str] = None,
@@ -261,34 +359,23 @@ def download_ticker(
             frames = [cached]
 
             if need_before:
-                logger.info(f"{ticker}: fetching earlier data {start_str} to {cache_start.strftime('%Y-%m-%d')}")
-                try:
-                    earlier = yf.download(
-                        ticker, start=start_str,
-                        end=cache_start.strftime("%Y-%m-%d"),
-                        progress=False, auto_adjust=False
-                    )
-                    if not earlier.empty:
-                        earlier = _clean_ohlcv(earlier, ticker)
-                        frames.insert(0, earlier)
-                except Exception as e:
-                    logger.warning(f"{ticker}: failed to fetch earlier data: {e}")
+                # Inclusive end for _fetch_ohlcv: day before cache_start
+                before_end = (cache_start - timedelta(days=1)).strftime("%Y-%m-%d")
+                logger.info(f"{ticker}: fetching earlier data {start_str} to {before_end}")
+                earlier = _fetch_ohlcv(ticker, start_str, before_end, market_id)
+                if not earlier.empty:
+                    frames.insert(0, earlier)
+                else:
+                    logger.debug(f"{ticker}: no earlier data fetched")
 
             if need_after:
                 fetch_from = (cache_end + timedelta(days=1)).strftime("%Y-%m-%d")
-                # yfinance 'end' is exclusive, so add 1 day to include end_dt
-                fetch_end = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
                 logger.info(f"{ticker}: fetching newer data {fetch_from} to {end_str}")
-                try:
-                    later = yf.download(
-                        ticker, start=fetch_from, end=fetch_end,
-                        progress=False, auto_adjust=False
-                    )
-                    if not later.empty:
-                        later = _clean_ohlcv(later, ticker)
-                        frames.append(later)
-                except Exception as e:
-                    logger.warning(f"{ticker}: failed to fetch newer data: {e}")
+                later = _fetch_ohlcv(ticker, fetch_from, end_str, market_id)
+                if not later.empty:
+                    frames.append(later)
+                else:
+                    logger.debug(f"{ticker}: no newer data fetched")
 
             combined = pd.concat(frames)
             combined = combined[~combined.index.duplicated(keep="last")]
@@ -299,21 +386,13 @@ def download_ticker(
             logger.info(f"{ticker}: incremental update complete ({len(combined[mask])} rows)")
             return combined[mask]
 
-    # Full download (yfinance 'end' is exclusive, so add 1 day)
-    fetch_end = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+    # Full download — Alpaca-first for sp500, yfinance for others/fallback
     logger.info(f"{ticker}: downloading {start_str} to {end_str}")
-    try:
-        df = yf.download(ticker, start=start_str, end=fetch_end,
-                         progress=False, auto_adjust=False)
-    except Exception as e:
-        logger.error(f"{ticker}: download failed: {e}")
-        return pd.DataFrame()
+    df = _fetch_ohlcv(ticker, start_str, end_str, market_id)
 
     if df.empty:
-        logger.warning(f"{ticker}: no data returned")
+        logger.warning(f"{ticker}: no data returned from any source")
         return pd.DataFrame()
-
-    df = _clean_ohlcv(df, ticker)
 
     if use_cache:
         _save_cache(ticker, df, market_id)

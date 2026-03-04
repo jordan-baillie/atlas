@@ -1,15 +1,19 @@
 """Live price fetcher for Atlas dashboard.
 
-Provides near-real-time quotes via Yahoo Finance v8 API with in-memory
-caching. Designed to be called frequently (every 10-30s) from the
-dashboard server's /api/prices endpoint.
+Provides near-real-time quotes with in-memory caching. Designed to be
+called frequently (every 10–30 s) from the dashboard server's
+/api/prices endpoint.
 
-Price sources (priority order):
+Price sources (priority order per ticker):
   1. In-memory cache (if fresh, < CACHE_TTL seconds old)
-  2. Yahoo Finance v8 chart API (no auth, ~50-350ms per ticker)
+  2. Alpaca snapshot API — US equities only (no 15-min delay, real-time)
+  3. Yahoo Finance v8 chart API — fallback for non-US tickers, indices,
+     FX pairs (^GSPC, ^AXJO, AUDUSD=X) that Alpaca does not support.
 
-Supports: US equities (AAPL, MSFT), ASX (.AX suffix), HK (.HK suffix),
-FX pairs (AUDUSD=X), indices (^GSPC, ^AXJO).
+Alpaca is skipped automatically when:
+  - The ticker has a non-US suffix (.AX, .HK, =X, ^)
+  - Alpaca credentials are not configured
+  - Alpaca returns no data for the ticker
 """
 
 import json
@@ -51,6 +55,72 @@ def get_cached(ticker: str) -> Optional[dict]:
         if _is_fresh(ticker):
             return _cache[ticker]
     return None
+
+
+# ── Alpaca ticker classification ────────────────────────────
+
+# Patterns that Alpaca US equity API cannot handle.
+# These always fall back to Yahoo Finance.
+_YAHOO_ONLY_PREFIXES = ("^",)          # indices: ^GSPC, ^AXJO, ^HSI
+_YAHOO_ONLY_SUFFIXES = (".AX", ".HK", ".L", ".T", "=X")  # non-US / FX
+
+
+def _is_alpaca_supported(ticker: str) -> bool:
+    """Return True if this ticker can be fetched via Alpaca (US equity)."""
+    t = ticker.upper().strip()
+    if any(t.startswith(p) for p in _YAHOO_ONLY_PREFIXES):
+        return False
+    if any(t.endswith(s) for s in _YAHOO_ONLY_SUFFIXES):
+        return False
+    return True
+
+
+def _fetch_alpaca_quote(ticker: str) -> Optional[dict]:
+    """Fetch a live quote from Alpaca snapshot API for a US equity.
+
+    Returns the same dict shape as ``_fetch_yf_quote()`` so callers are
+    source-agnostic.  Returns None on failure or if Alpaca unavailable.
+    """
+    try:
+        from brokers.alpaca.market_data import get_alpaca_data_client
+        client = get_alpaca_data_client()
+        if not client or not client.is_available:
+            return None
+
+        snap = client.get_snapshot(ticker)
+        if not snap:
+            return None
+
+        price = snap.get("price", 0.0)
+        if not price or price <= 0:
+            return None
+
+        daily = snap.get("daily_bar", {})
+        prev = snap.get("prev_daily_bar", {})
+        trade = snap.get("latest_trade", {})
+
+        prev_close = prev.get("close", 0.0)
+        change = round(price - prev_close, 4) if prev_close else 0
+        change_pct = round(change / prev_close * 100, 2) if prev_close else 0
+
+        return {
+            "ticker": ticker,
+            "price": round(price, 4),
+            "prev_close": round(prev_close, 4) if prev_close else None,
+            "change": round(change, 4),
+            "change_pct": round(change_pct, 2),
+            "day_high": daily.get("high", price),
+            "day_low": daily.get("low", price),
+            "volume": daily.get("volume", trade.get("size", 0)),
+            "currency": "USD",
+            "exchange": "NASDAQ/NYSE",
+            "market_time": snap.get("latest_trade", {}).get("timestamp"),
+            "source": "alpaca",
+            "_fetched_at": time.time(),
+        }
+    except Exception as e:
+        logger.debug("Alpaca quote failed for %s: %s", ticker, e)
+        return None
 
 
 # ── Yahoo Finance v8 fetcher ─────────────────────────────────
@@ -118,10 +188,29 @@ def _fetch_yf_quote(ticker: str) -> Optional[dict]:
 
 # ── Batch fetcher ─────────────────────────────────────────────
 
+def _fetch_best_quote(ticker: str) -> Optional[dict]:
+    """Fetch a quote from the best available source for this ticker.
+
+    For US equities: tries Alpaca first (real-time), falls back to Yahoo.
+    For indices / FX / non-US tickers: uses Yahoo directly.
+    """
+    if _is_alpaca_supported(ticker):
+        quote = _fetch_alpaca_quote(ticker)
+        if quote:
+            return quote
+        logger.debug("Alpaca miss for %s — falling back to Yahoo", ticker)
+
+    return _fetch_yf_quote(ticker)
+
+
 def fetch_prices(tickers: list[str]) -> dict[str, dict]:
     """Fetch live prices for a list of tickers.
 
     Uses cache for fresh quotes, fetches stale ones in parallel.
+    Source priority per ticker:
+      - Alpaca snapshot (US equities, real-time)
+      - Yahoo Finance v8 (indices, FX, ASX, HK, or Alpaca fallback)
+
     Returns {ticker: quote_dict}.
     """
     if not tickers:
@@ -141,9 +230,9 @@ def fetch_prices(tickers: list[str]) -> dict[str, dict]:
     if not stale:
         return result
 
-    # Fetch stale tickers in parallel
+    # Fetch stale tickers in parallel using best source per ticker
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(stale))) as pool:
-        futures = {pool.submit(_fetch_yf_quote, t): t for t in stale}
+        futures = {pool.submit(_fetch_best_quote, t): t for t in stale}
         for future in as_completed(futures, timeout=BATCH_TIMEOUT):
             ticker = futures[future]
             try:
