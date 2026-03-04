@@ -13,7 +13,7 @@
         "benchmark_ticker": "SPY"
     },
     "risk": {
-        "starting_equity": 10000,
+        "starting_equity": 4000,
         "max_risk_per_trade_pct": 0.005,
         "max_open_positions": 15,
         "max_sector_concentration": 2,
