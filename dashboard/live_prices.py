@@ -75,6 +75,31 @@ def _is_alpaca_supported(ticker: str) -> bool:
     return True
 
 
+def _classify_freshness(ticker: str, market_time) -> str:
+    """Classify quote freshness based on market timestamp age.
+
+    Returns: 'live' (<60s), 'delayed' (<15min), 'stale' (<1h), 'closed' (>1h), 'unknown'.
+    """
+    if not market_time:
+        return "unknown"
+    try:
+        if isinstance(market_time, (int, float)):
+            ts = datetime.fromtimestamp(market_time)
+        else:
+            ts = datetime.fromisoformat(str(market_time))
+        age_s = (datetime.now() - ts).total_seconds()
+        if age_s < 60:
+            return "live"
+        elif age_s < 900:  # 15 min
+            return "delayed"
+        elif age_s < 3600:  # 1 hour
+            return "stale"
+        else:
+            return "closed"
+    except Exception:
+        return "unknown"
+
+
 def _fetch_alpaca_quote(ticker: str) -> Optional[dict]:
     """Fetch a live quote from Alpaca snapshot API for a US equity.
 
@@ -103,6 +128,7 @@ def _fetch_alpaca_quote(ticker: str) -> Optional[dict]:
         change = round(price - prev_close, 4) if prev_close else 0
         change_pct = round(change / prev_close * 100, 2) if prev_close else 0
 
+        market_time = snap.get("latest_trade", {}).get("timestamp")
         return {
             "ticker": ticker,
             "price": round(price, 4),
@@ -114,7 +140,8 @@ def _fetch_alpaca_quote(ticker: str) -> Optional[dict]:
             "volume": daily.get("volume", trade.get("size", 0)),
             "currency": "USD",
             "exchange": "NASDAQ/NYSE",
-            "market_time": snap.get("latest_trade", {}).get("timestamp"),
+            "market_time": market_time,
+            "freshness": _classify_freshness(ticker, market_time),
             "source": "alpaca",
             "_fetched_at": time.time(),
         }
@@ -164,6 +191,7 @@ def _fetch_yf_quote(ticker: str) -> Optional[dict]:
         day_low = min(lows) if lows else price
         volume = sum(v for v in volumes if v is not None) if volumes else 0
 
+        market_time_val = meta.get("regularMarketTime")
         quote = {
             "ticker": ticker,
             "price": round(price, 4),
@@ -175,7 +203,8 @@ def _fetch_yf_quote(ticker: str) -> Optional[dict]:
             "volume": volume,
             "currency": meta.get("currency", ""),
             "exchange": meta.get("exchangeName", ""),
-            "market_time": meta.get("regularMarketTime"),
+            "market_time": market_time_val,
+            "freshness": _classify_freshness(ticker, market_time_val),
             "source": "yahoo",
             "_fetched_at": time.time(),
         }

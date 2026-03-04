@@ -19,12 +19,16 @@ import secrets
 import signal
 import sys
 import threading
+import time
 import traceback
 from datetime import datetime
 from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+# Rate limiting for expensive endpoints
+_last_evaluate_time = 0.0
 
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -164,6 +168,18 @@ class AuthHandler(SimpleHTTPRequestHandler):
 
     expected_user = ""
     expected_pass = ""
+
+    def end_headers(self):
+        """Add cache control headers based on response content type."""
+        path = self.path.split('?')[0] if hasattr(self, 'path') else ''
+        if path.endswith('.json'):
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+        elif path.endswith('.html') or path in ('/', ''):
+            self.send_header('Cache-Control', 'no-cache')
+        else:
+            self.send_header('Cache-Control', 'public, max-age=3600')
+        super().end_headers()
 
     def do_GET(self):
         if not self._check_auth():
@@ -356,6 +372,15 @@ class AuthHandler(SimpleHTTPRequestHandler):
 
     def _handle_monitor_evaluate(self):
         """POST /api/monitor/evaluate — evaluate all positions now."""
+        global _last_evaluate_time
+        now = time.time()
+        if now - _last_evaluate_time < 10:
+            return self._send_json(429, {
+                "error": "Rate limited — wait 10 seconds between evaluations",
+                "retry_after": round(10 - (now - _last_evaluate_time), 1),
+            })
+        _last_evaluate_time = now
+
         sys.path.insert(0, str(PROJECT_ROOT))
         import threading
         result = {"pending": True}
