@@ -254,7 +254,7 @@ echo "$(date -Iseconds) pi-cron $MODE finished (exit=$EXIT_CODE)" >> "$LOG_DIR/p
 # Stale logs (from previous days) contain errors already handled by that session.
 if [ $EXIT_CODE -eq 0 ] && [ "$MODE" = "research" ]; then
     TODAY=$(date '+%Y-%m-%d')
-    RESEARCH_LOG=$(ls -t "$LOG_DIR"/research_run_*.log 2>/dev/null | head -1)
+    RESEARCH_LOG=$(ls -t "$LOG_DIR"/research_run_*.log "$LOG_DIR"/research_*.log 2>/dev/null | head -1 || true)
     # Only check if the log was created/modified today
     if [ -n "$RESEARCH_LOG" ]; then
         LOG_DATE=$(date -r "$RESEARCH_LOG" '+%Y-%m-%d' 2>/dev/null || echo "")
