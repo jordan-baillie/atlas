@@ -37,25 +37,20 @@ if [ ! -s "$DATA_FILE" ]; then
 fi
 echo "[$(date '+%H:%M:%S')] Data collected ($(wc -c < "$DATA_FILE") bytes)" >> "$LOG_FILE"
 
-# ── Step 2: Search latest news (5 targeted queries) ──
-echo "[$(date '+%H:%M:%S')] Searching news..." >> "$LOG_FILE"
+# ── Step 2: Search latest news (multi-endpoint: news API + web API) ──
+# Uses /news/search for breaking coverage + /web/search for analysis depth
+# 8 sections × 1-2 queries = ~14 API calls (within free tier 2K/month)
+echo "[$(date '+%H:%M:%S')] Searching news (multi-endpoint)..." >> "$LOG_FILE"
 NEWS_FILE="/tmp/iran_monitor_news_${TIMESTAMP}.txt"
-echo "=== BRAVE SEARCH — Iran Conflict Intelligence ===" > "$NEWS_FILE"
-echo "Search time: $(date)" >> "$NEWS_FILE"
-echo "" >> "$NEWS_FILE"
 
-search_query() {
-    local label="$1"; shift
-    echo "── $label ──" >> "$NEWS_FILE"
-    timeout 30 node "$BRAVE_SEARCH" "$@" >> "$NEWS_FILE" 2>>"$LOG_FILE" || echo "(search failed)" >> "$NEWS_FILE"
-    echo "" >> "$NEWS_FILE"
-}
-
-search_query "MILITARY / STRIKES / CEASEFIRE" "Iran military strikes ceasefire latest today" -n 8 --freshness pd
-search_query "OIL / HORMUZ / TANKER RATES" "oil price Iran Hormuz strait tanker VLCC rates" -n 6 --freshness pd
-search_query "GOLD / SAFE HAVEN / FED POLICY" "gold price safe haven Fed rate expectations central bank buying" -n 5 --freshness pd
-search_query "CYBER / INFRASTRUCTURE THREATS" "Iran cyber attack US infrastructure CISA warning" -n 4 --freshness pd
-search_query "DEFENCE / BUDGET / DIPLOMACY" "US defence spending supplemental Iran diplomacy negotiations" -n 4 --freshness pd
+timeout 120 node "$PROJECT/scripts/brave_news.js" > "$NEWS_FILE" 2>>"$LOG_FILE"
+SEARCH_EXIT=$?
+if [ $SEARCH_EXIT -ne 0 ] || [ ! -s "$NEWS_FILE" ]; then
+    echo "[$(date '+%H:%M:%S')] WARNING: brave_news.js failed (exit=$SEARCH_EXIT), falling back to basic search" >> "$LOG_FILE"
+    # Fallback: single web search query
+    echo "=== BRAVE SEARCH — FALLBACK ===" > "$NEWS_FILE"
+    timeout 30 node "$BRAVE_SEARCH" "Iran conflict war latest news" -n 10 --freshness pd >> "$NEWS_FILE" 2>>"$LOG_FILE"
+fi
 
 echo "[$(date '+%H:%M:%S')] News collected ($(wc -c < "$NEWS_FILE") bytes)" >> "$LOG_FILE"
 
