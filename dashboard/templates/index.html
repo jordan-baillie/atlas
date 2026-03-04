@@ -6,7 +6,7 @@
 <title>Atlas Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500;600;700&display=optional" rel="stylesheet">
 <style>
 :root {
   --bg: #0d0c0a;
@@ -18,8 +18,8 @@
   --border-glow: #3a3020;
 
   --text: #e8e4da;
-  --text-secondary: #a09585;
-  --text-tertiary: #635a4c;
+  --text-secondary: #b0a494;  /* improved contrast — was #a09585 */
+  --text-tertiary: #8a7e70;  /* passes WCAG AA — was #635a4c */
 
   --green: #7fb858;
   --green-bright: #9dd672;
@@ -59,7 +59,7 @@ body::after {
 .crt-scanlines { display: none; }
 .crt-vignette {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.3) 100%);
 }
 
 /* ── Shell ── */
@@ -186,8 +186,8 @@ body::after {
   background: var(--surface-raised); padding: 2px 9px; border-radius: 20px;
 }
 .section-body {
-  padding: 0 20px 16px; max-height: 3000px; overflow: hidden; opacity: 1;
-  transition: max-height 0.3s ease, opacity 0.15s ease, padding 0.25s ease;
+  padding: 0 20px 16px; max-height: 2000px; overflow: hidden; opacity: 1;
+  transition: max-height 0.15s ease-out, opacity 0.1s ease, padding 0.15s ease;
 }
 .section-body.collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; content-visibility: hidden; }
 .chevron {
@@ -231,7 +231,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 /* ── Market badges ── */
 .market-tag {
   display: inline-flex; padding: 1px 6px; border-radius: 3px;
-  font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.4px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
 }
 .market-sp500 { background: var(--blue-dim); color: var(--blue); }
 .market-asx { background: var(--purple-dim); color: var(--purple); }
@@ -450,6 +450,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 @media (max-width: 700px) {
   .shell { padding: 18px 14px 48px; }
   .cards { grid-template-columns: repeat(2, 1fr); }
+  .cards > .card:last-child { grid-column: 1 / -1; }
   .task-columns { grid-template-columns: 1fr; }
   .pnl-grid { grid-template-columns: repeat(2, 1fr); }
   .pnl-item:nth-child(2) { border-right: none; }
@@ -516,7 +517,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 }
 .plan-risk-item { padding: 8px 12px; border-right: 1px solid var(--border-subtle); }
 .plan-risk-item:last-child { border-right: none; }
-.plan-risk-label { font-size: 9px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
+.plan-risk-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
 .plan-risk-value { font-family: var(--mono); font-size: 14px; font-weight: 600; margin-top: 2px; }
 
 /* ── Scrollbar ── */
@@ -524,6 +525,38 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ── Skeleton loading ── */
+@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+.skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%); background-size: 400px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: var(--radius-sm); }
+.skeleton-card { height: 80px; }
+
+/* ── Table scroll indicator ── */
+.table-scroll { position: relative; }
+.table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 5px; width: 24px; background: linear-gradient(to left, var(--surface), transparent); pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 1; }
+.table-scroll.has-overflow::after { opacity: 1; }
+
+/* ── Live dot ── */
+.live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 4px var(--green); margin-left: 4px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
+
+/* ── Market header accent ── */
+.shell[data-market="sp500"] .header { border-color: rgba(90,147,192,0.3); }
+.shell[data-market="asx"] .header { border-color: rgba(155,123,184,0.3); }
+.shell[data-market="hk"] .header { border-color: rgba(85,176,165,0.3); }
+
+/* ── In-page confirmation panel ── */
+.confirm-panel {
+  position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+}
+.confirm-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 28px 32px; max-width: 440px; width: 90%;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+.confirm-box-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.confirm-box-msg { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+.confirm-box-actions { display: flex; gap: 8px; }
 
 /* ── Position Monitor ── */
 .mon-card {
@@ -553,7 +586,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .mon-cond-value { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); }
 .mon-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
 .mon-tag {
-  font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: 0.3px;
+  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
   padding: 2px 8px; border-radius: 3px; text-transform: uppercase;
   background: var(--amber-dim); color: var(--amber);
 }
@@ -656,7 +689,13 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   <div class="tab-content active" id="tab-trading">
 
   <!-- Top KPI Cards -->
-  <div class="cards" id="cards"></div>
+  <div class="cards" id="cards">
+    <div class="card"><div class="skeleton skeleton-card"></div></div>
+    <div class="card"><div class="skeleton skeleton-card"></div></div>
+    <div class="card"><div class="skeleton skeleton-card"></div></div>
+    <div class="card"><div class="skeleton skeleton-card"></div></div>
+    <div class="card"><div class="skeleton skeleton-card"></div></div>
+  </div>
 
   <!-- P&L Breakdown -->
   <div class="section" style="animation-delay:0.30s">
@@ -859,6 +898,8 @@ function switchMarket(m) {
   document.querySelectorAll('.market-btn').forEach(function(el) {
     el.classList.toggle('active', el.getAttribute('data-market') === m);
   });
+  var shell = document.querySelector('.shell');
+  if (shell) shell.setAttribute('data-market', m);
   if (_rawData) render(buildView(_rawData, m));
 }
 
@@ -977,15 +1018,47 @@ function ago(ts) {
   } catch(e) { return ''; }
 }
 
+// ── In-page confirmation panel (replaces browser confirm()) ──
+function _showConfirm(title, msg, confirmLabel, confirmCls, onConfirm) {
+  var panel = document.createElement('div');
+  panel.className = 'confirm-panel';
+  panel.innerHTML =
+    '<div class="confirm-box">' +
+      '<div class="confirm-box-title">' + esc(title) + '</div>' +
+      '<div class="confirm-box-msg">' + esc(msg) + '</div>' +
+      '<div class="confirm-box-actions">' +
+        '<button class="plan-btn ' + confirmCls + '" id="_conf-ok">' + esc(confirmLabel) + '</button>' +
+        '<button class="plan-btn plan-btn-reject" id="_conf-cancel">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(panel);
+  function cleanup() { document.body.removeChild(panel); document.removeEventListener('keydown', onEsc); }
+  function onEsc(e) { if (e.key === 'Escape') { cleanup(); } }
+  document.addEventListener('keydown', onEsc);
+  panel.querySelector('#_conf-ok').onclick = function() { cleanup(); onConfirm(); };
+  panel.querySelector('#_conf-cancel').onclick = function() { cleanup(); };
+  panel.onclick = function(e) { if (e.target === panel) cleanup(); };
+}
+
 // ── Plan approval/rejection ──
 function approvePlan(tradeDate, marketId) {
-  if (!confirm('Approve & execute ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '?\n\nThis will place live orders with your broker.')) return;
-  _planAction('/api/approve', tradeDate, marketId, false);
+  _showConfirm(
+    'Approve & Execute Plan',
+    'Approve and execute ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '? This will place live orders with your broker.',
+    '✓ Confirm Execute',
+    'plan-btn-approve',
+    function() { _planAction('/api/approve', tradeDate, marketId, false); }
+  );
 }
 
 function rejectPlan(tradeDate, marketId) {
-  if (!confirm('Reject ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '?')) return;
-  _planAction('/api/reject', tradeDate, marketId, true);
+  _showConfirm(
+    'Reject Plan',
+    'Reject ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '? No orders will be placed.',
+    '✗ Confirm Reject',
+    'plan-btn-reject',
+    function() { _planAction('/api/reject', tradeDate, marketId, true); }
+  );
 }
 
 function _planAction(endpoint, tradeDate, marketId, isReject) {
@@ -1073,6 +1146,15 @@ function sparkline(points, w, h) {
   return '<span class="card-sparkline"><svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg></span>';
 }
 
+// ── Table header keyboard navigation ──
+// Allows Enter/Space to trigger click on focused th elements
+document.addEventListener('keydown', function(e) {
+  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.tagName === 'TH') {
+    e.preventDefault();
+    document.activeElement.click();
+  }
+});
+
 // ── Sort ──
 var sortState = {};
 function sortTable(tableId, col, type) {
@@ -1092,6 +1174,13 @@ function sortTable(tableId, col, type) {
     return 0;
   });
   rows.forEach(function(r) { tbody.appendChild(r); });
+}
+
+// ── Table overflow indicator ──
+function checkTableOverflow() {
+  document.querySelectorAll('.table-scroll').forEach(function(el) {
+    el.classList.toggle('has-overflow', el.scrollWidth > el.clientWidth + 10);
+  });
 }
 
 // ── Equity Chart (Canvas) ──
@@ -1287,6 +1376,7 @@ function paintChart() {
 
   // For very few points (< 5), hide drawdown panel
   var showDrawdown = n >= 5;
+  var showLowDataNote = n < 5;
 
   var ml = 52, mr = 14, mt = 6;
   if (!showDrawdown) { eqH = eqH + gap + ddH; ddH = 0; gap = 0; totalH = eqH + mt + axisH; }
@@ -1534,6 +1624,17 @@ function paintChart() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText('RETURN %', ml + 4, mt + 3);
   if (showDrawdown) ctx.fillText('DRAWDOWN', ml + 4, ddTop + 3);
+
+  // ── Low-data annotation (< 5 data points) ──
+  if (showLowDataNote) {
+    var noteY = mt + eqH - 28;
+    ctx.fillStyle = 'rgba(212,168,74,0.12)';
+    ctx.fillRect(ml + 4, noteY, 260, 20);
+    ctx.fillStyle = 'rgba(212,168,74,0.7)';
+    ctx.font = '500 10px Figtree, system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText('⚠ Early data — chart fills in as more trading days accumulate', ml + 10, noteY + 10);
+  }
 }
 
 // ── Chart hover ──
@@ -1585,6 +1686,14 @@ function chartHover(e) {
   // Position tooltip (flip side at midpoint)
   var tw = 210;
   tooltip.style.left = (pxX > canvas.offsetWidth / 2) ? (pxX - tw - 14) + 'px' : (pxX + 14) + 'px';
+
+  // Vertical bounds check — keep tooltip within canvas bounds
+  tooltip.style.top = '10px';
+  var tooltipH = tooltip.offsetHeight || 120;
+  var canvasH = canvas.offsetHeight;
+  var rawTop = 10;
+  if (rawTop + tooltipH > canvasH - 8) rawTop = Math.max(4, canvasH - tooltipH - 8);
+  tooltip.style.top = rawTop + 'px';
 }
 
 function chartLeave() {
@@ -1777,13 +1886,13 @@ function render(d) {
     document.getElementById('body-positions').innerHTML = '<div class="empty">No open positions</div>';
   } else {
     var h = '<div class="table-scroll"><table id="tbl-pos"><thead><tr>';
-    h += '<th onclick="sortTable(\'tbl-pos\',0,\'str\')">Ticker</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',1,\'str\')">Strategy</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',2,\'num\')">Entry</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',3,\'num\')">Current</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',4,\'num\')">P&L</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',5,\'num\')">Stop</th>';
-    h += '<th onclick="sortTable(\'tbl-pos\',6,\'num\')">Days</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',0,\'str\')">Ticker</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',1,\'str\')">Strategy</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',2,\'num\')">Entry</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',3,\'num\')">Current</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',4,\'num\')">P&L</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',5,\'num\')">Stop</th>';
+    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',6,\'num\')">Days</th>';
     h += '</tr></thead><tbody>';
     pos.sort(function(a,b) { return Math.abs(b.pnl) - Math.abs(a.pnl); });
     pos.forEach(function(p) {
@@ -2094,22 +2203,25 @@ function render(d) {
   // ── Research Tab ──
   renderResearch(d);
 
+  // Check table overflow for scroll indicators
+  setTimeout(checkTableOverflow, 50);
+
   // Closed trades
   var closed = d.closed_trades || [];
   if (closed.length) {
     document.getElementById('sec-closed').style.display = '';
     document.getElementById('closed-count').textContent = closed.length;
     var ch2 = '<div class="table-scroll"><table id="tbl-closed"><thead><tr>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',0,\'str\')">Ticker</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',0,\'str\')">Ticker</th>';
     ch2 += '<th>Mkt</th>';
     ch2 += '<th>Strategy</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',3,\'str\')">Entry</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',4,\'str\')">Exit</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',5,\'num\')">Price In</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',6,\'num\')">Price Out</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',7,\'num\')">P&L</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',8,\'num\')">P&L %</th>';
-    ch2 += '<th onclick="sortTable(\'tbl-closed\',9,\'num\')">Days</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',3,\'str\')">Entry</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',4,\'str\')">Exit</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',5,\'num\')">Price In</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',6,\'num\')">Price Out</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',7,\'num\')">P&L</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',8,\'num\')">P&L %</th>';
+    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',9,\'num\')">Days</th>';
     ch2 += '<th>Reason</th>';
     ch2 += '</tr></thead><tbody>';
     closed.forEach(function(t) {
@@ -2183,7 +2295,15 @@ function renderDailyInsight(insight) {
     html += '</div>';
   }
 
-  html += '<div class="insight-date">' + esc(insight.date || '') + '</div>';
+  // Format date nicely (e.g. "5 Mar 2026")
+  var insightDateStr = insight.date || '';
+  try {
+    if (insightDateStr) {
+      var dObj = new Date(insightDateStr + 'T12:00:00');
+      insightDateStr = dObj.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  } catch(e) {}
+  html += '<div class="insight-date">' + esc(insightDateStr) + '</div>';
   html += '</div>';
   container.innerHTML = html;
 }
@@ -2352,7 +2472,7 @@ function renderHorizontalBarSVG(insight) {
     if (detail[i]) {
       var d = detail[i];
       var meta = (d.trades || '') + ' trades · WR ' + (d.win_rate || 0) + '% · DD ' + (d.max_dd || 0) + '%';
-      svg += '<text x="' + marginL + '" y="' + (y + barH + 12) + '" text-anchor="start" style="font-size:9px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">';
+      svg += '<text x="' + marginL + '" y="' + (y + barH + 12) + '" text-anchor="start" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">';
       svg += esc(meta);
       svg += '</text>';
     }
@@ -2388,7 +2508,7 @@ function renderScatterSVG(insight) {
     var gy = pad.t + (gi / 4) * cH;
     var gv = yMax - (gi / 4) * (yMax - yMin);
     svg += '<line x1="' + pad.l + '" y1="' + gy + '" x2="' + (W - pad.r) + '" y2="' + gy + '" stroke="#2e2820" stroke-width="1"/>';
-    svg += '<text x="' + (pad.l - 8) + '" y="' + (gy + 4) + '" text-anchor="end" style="font-size:9px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + gv.toFixed(1) + '</text>';
+    svg += '<text x="' + (pad.l - 8) + '" y="' + (gy + 4) + '" text-anchor="end" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + gv.toFixed(1) + '</text>';
   }
 
   // Zero lines if axes cross through data
@@ -2467,7 +2587,7 @@ function renderLollipopSVG(insight) {
 
     // Before → After in small text
     if (d.before != null && d.after != null) {
-      svg += '<text x="' + (labelW - 8) + '" y="' + (y + 11) + '" text-anchor="end" style="font-size:9px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + fmtVal(d.before) + ' → ' + fmtVal(d.after) + '</text>';
+      svg += '<text x="' + (labelW - 8) + '" y="' + (y + 11) + '" text-anchor="end" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + fmtVal(d.before) + ' → ' + fmtVal(d.after) + '</text>';
     }
   });
 
@@ -2641,11 +2761,7 @@ function renderResearch(d) {
   renderDailyInsight(res.daily_insight);
   var rCompleted = rq.completed || 0;
 
-  // Tab badge — show actual queued count (not total - completed)
-  var badge = document.getElementById('research-tab-badge');
-  if (badge) badge.textContent = nQueued > 0 ? nQueued + ' queued' : (nRunning > 0 ? nRunning + ' running' : rs.total_experiments + ' done');
-
-  // Count statuses
+  // Count statuses (MUST come before badge assignment)
   var nPass = 0, nFail = 0, nDefer = 0, nQueued = 0, nRunning = 0;
   rItems.forEach(function(e) {
     if (e.status === 'passed' || e.status === 'promoted') nPass++;
@@ -2654,6 +2770,10 @@ function renderResearch(d) {
     else if (e.status === 'running' || e.status === 'claimed') nRunning++;
     else nQueued++;
   });
+
+  // Tab badge — show actual queued count (uses nQueued/nRunning computed above)
+  var badge = document.getElementById('research-tab-badge');
+  if (badge) badge.textContent = nQueued > 0 ? nQueued + ' queued' : (nRunning > 0 ? nRunning + ' running' : rs.total_experiments + ' done');
 
   // ── Hero cards ──
   var hero = '';
@@ -2692,13 +2812,13 @@ function renderResearch(d) {
   document.getElementById('rresults-count').textContent = rResults.length;
   if (rResults.length > 0) {
     var rr = '<div class="table-scroll"><table id="tbl-research"><thead><tr>';
-    rr += '<th onclick="sortTable(\'tbl-research\',0,\'str\')">Experiment</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',0,\'str\')">Experiment</th>';
     rr += '<th>Strategy</th><th>Market</th><th>Verdict</th>';
-    rr += '<th onclick="sortTable(\'tbl-research\',4,\'num\')">Trades</th>';
-    rr += '<th onclick="sortTable(\'tbl-research\',5,\'num\')">Sharpe</th>';
-    rr += '<th onclick="sortTable(\'tbl-research\',6,\'num\')">CAGR</th>';
-    rr += '<th onclick="sortTable(\'tbl-research\',7,\'num\')">Max DD</th>';
-    rr += '<th onclick="sortTable(\'tbl-research\',8,\'num\')">Win Rate</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',4,\'num\')">Trades</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',5,\'num\')">Sharpe</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',6,\'num\')">CAGR</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',7,\'num\')">Max DD</th>';
+    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',8,\'num\')">Win Rate</th>';
     rr += '<th>When</th>';
     rr += '</tr></thead><tbody>';
     rResults.forEach(function(r) {
@@ -2726,12 +2846,12 @@ function renderResearch(d) {
   // ── Queue table ──
   document.getElementById('rqueue-count').textContent = rTotal;
   var qt = '<div class="table-scroll"><table id="tbl-queue"><thead><tr>';
-  qt += '<th onclick="sortTable(\'tbl-queue\',0,\'str\')">ID</th>';
+  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',0,\'str\')">ID</th>';
   qt += '<th>Title</th>';
-  qt += '<th onclick="sortTable(\'tbl-queue\',2,\'str\')">Priority</th>';
+  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',2,\'str\')">Priority</th>';
   qt += '<th>Category</th><th>Market</th>';
-  qt += '<th onclick="sortTable(\'tbl-queue\',5,\'str\')">Status</th>';
-  qt += '<th onclick="sortTable(\'tbl-queue\',6,\'num\')">ETA</th>';
+  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',5,\'str\')">Status</th>';
+  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',6,\'num\')">ETA</th>';
   qt += '</tr></thead><tbody>';
   rItems.forEach(function(e) {
     var sc = 'badge-queued';
@@ -2887,6 +3007,11 @@ function load() {
   fetch('data/dashboard-data.json?t=' + Date.now(), {credentials: 'same-origin'})
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(data) {
+      if (!data || !data.portfolio || typeof data.portfolio.equity !== 'number') {
+        document.getElementById('updated').textContent = '⚠ Data format error';
+        console.error('Invalid dashboard data shape', data);
+        return;
+      }
       _rawData = data;
       buildMarketSelector(data);
       render(buildView(data, _currentMarket));
@@ -2896,6 +3021,15 @@ function load() {
       document.getElementById('updated').textContent = 'Load failed: ' + e.message;
     });
 }
+
+// ── "Updated X ago" refresh interval ──
+// Independently refreshes the "Updated X ago" text every 10s
+setInterval(function() {
+  if (_rawData && _rawData.timestamp) {
+    var el = document.getElementById('updated');
+    if (el) el.textContent = 'Updated ' + ago(_rawData.timestamp);
+  }
+}, 10000);
 
 // ── Smart polling: pause when tab hidden, immediate refresh on return ──
 var _pollTimer = null;
@@ -2951,8 +3085,12 @@ function monitorEvaluate() {
   fetch('/api/monitor/evaluate', {method:'POST', credentials:'same-origin',
     headers:{'Content-Type':'application/json'}, body:'{}'})
     .then(function(r) { return r.json(); })
-    .then(function() { btn.innerHTML = saved; btn.disabled = false; loadMonitor(); })
-    .catch(function() { btn.innerHTML = saved; btn.disabled = false; });
+    .then(function() { loadMonitor(); })
+    .catch(function() {})
+    .then(function() {
+      // Minimum 5s disabled period to prevent rapid re-clicks
+      setTimeout(function() { btn.innerHTML = saved; btn.disabled = false; }, 5000);
+    });
 }
 
 function healthColor(score) {
@@ -3303,7 +3441,7 @@ switchTab = function(tab) {
   var NS    = 0.002;   // noise scale (gentler flow)
   var MS    = 0.35;    // meridian strength (subtler channels)
   var SPEED = 0.4;     // drift speed (slow, meditative)
-  var NUM   = 250;     // particle count (sparse)
+  var NUM   = 120;     // particle count (reduced from 250 for performance)
   var TRAIL = 97;      // trail persistence (long fading tails)
   var W,H,pts,frameN=0;
 
@@ -3354,6 +3492,8 @@ switchTab = function(tab) {
 
   function frame(){
     if(document.hidden){requestAnimationFrame(frame);return;}
+    // Frame skip for ~30fps (skip odd frames)
+    if(frameN % 2 !== 0){frameN++;requestAnimationFrame(frame);return;}
 
     // Trail fade — semi-transparent overlay preserves traces
     var fadeA=35+(TRAIL-1)/(100-1)*(3-35);
@@ -3439,6 +3579,8 @@ switchTab = function(tab) {
   var _liveTimer = null;
   var _lastLiveUpdate = null;
   var _liveQuotes = {};
+  var _consecutiveFailures = 0;
+  var MAX_FAILURES = 3;
 
   // ── Market hours check (approximate, AEST-based) ──────────
   function isAnyMarketOpen() {
@@ -3484,10 +3626,9 @@ switchTab = function(tab) {
       if (!q || !q.price) return;
 
       var newPrice = q.price;
-      var cells = row.children;
-      // cells: [0]=ticker, [1]=strategy, [2]=entry, [3]=current, [4]=pnl, [5]=stop, [6]=days
-      var priceCell = cells[3];
-      var pnlCell = cells[4];
+      // Use CSS class selectors instead of hardcoded indices
+      var priceCell = row.querySelector('.live-price');
+      var pnlCell = row.querySelector('.live-pnl');
 
       var oldPrice = parseFloat(priceCell.getAttribute('data-v')) || 0;
       if (Math.abs(newPrice - oldPrice) < 0.0001) return; // no change
@@ -3495,7 +3636,7 @@ switchTab = function(tab) {
       // Update price cell
       var direction = newPrice > oldPrice ? 1 : -1;
       priceCell.setAttribute('data-v', newPrice);
-      priceCell.textContent = fmt(newPrice);
+      priceCell.innerHTML = fmt(newPrice) + '<span class="live-dot" title="Live price"></span>';
       flashCell(priceCell, direction);
 
       // Recalculate P&L
@@ -3572,14 +3713,34 @@ switchTab = function(tab) {
       })
       .then(function(data) {
         if (!data.ok || !data.quotes) return;
+        _consecutiveFailures = 0;
         _liveQuotes = data.quotes;
         _lastLiveUpdate = Date.now();
         updatePositions(data.quotes);
         updateIndices(data.quotes);
         updateLiveIndicator(data);
+        // Clear error indicator on success
+        var errEl = document.getElementById('live-price-error');
+        if (errEl) errEl.remove();
       })
       .catch(function(e) {
         console.warn('Live price fetch failed:', e.message);
+        _consecutiveFailures++;
+        if (_consecutiveFailures >= MAX_FAILURES) {
+          // Show visual error in header after 3 consecutive failures
+          var errEl = document.getElementById('live-price-error');
+          if (!errEl) {
+            var updEl = document.getElementById('updated');
+            if (updEl && updEl.parentNode) {
+              errEl = document.createElement('div');
+              errEl.id = 'live-price-error';
+              errEl.className = 'status-pill';
+              errEl.style.cssText = 'border-color:rgba(208,88,88,0.4);background:var(--red-dim);';
+              errEl.innerHTML = '<span style="color:var(--red)">⚠ Prices offline</span>';
+              updEl.parentNode.insertBefore(errEl, updEl);
+            }
+          }
+        }
       });
   }
 
