@@ -338,7 +338,10 @@ def run_backtest(
         return {"error": "No data", "total_trades": 0}
 
     starting_equity = float(cfg.get("risk", {}).get("starting_equity", 5000.0))
-    risk_free = float(cfg.get("risk", {}).get("risk_free_rate", 0.04))
+    # Use market-specific risk-free rate; config override if present
+    from markets import get_market
+    _market_rf = get_market(market_id).risk_free_rate if market_id else 0.04
+    risk_free = float(cfg.get("risk", {}).get("risk_free_rate", _market_rf))
 
     # ── Serial mode ─────────────────────────────────────────────────────────
     if n_workers <= 1:

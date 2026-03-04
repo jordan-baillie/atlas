@@ -12,5 +12,45 @@
     "type": "invalidation_breach",
     "message": "Price $229.41 breached invalidation $280.00",
     "timestamp": "2026-03-04T19:59:03"
+  },
+  {
+    "position_id": "7adf5478dec9",
+    "ticker": "CIBR",
+    "condition_id": "cibr_ma50",
+    "condition_label": "CIBR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 63.91,
+    "timestamp": "2026-03-04T20:25:41"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_vix",
+    "condition_label": "VIX elevated (>18)",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 22.86,
+    "timestamp": "2026-03-04T20:25:42"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 601.58,
+    "timestamp": "2026-03-04T20:25:42"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_target",
+    "condition_label": "WDS not overextended (vs $27 target)",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 30.75,
+    "timestamp": "2026-03-04T20:25:42"
   }
 ]

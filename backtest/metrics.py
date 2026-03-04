@@ -27,7 +27,9 @@ from scipy import stats
 logger = logging.getLogger(__name__)
 
 # Default risk-free rate (overridden by market profile in practice)
-DEFAULT_RF = 0.04
+# Fallback risk-free rate. Callers should pass market-specific rf from
+# MarketProfile.risk_free_rate (SP500=0.05, ASX=0.04, HK=0.04).
+DEFAULT_RF = 0.045  # Midpoint — nudges callers to pass explicit rf
 
 
 def calc_cagr(equity_curve: pd.Series) -> float:
