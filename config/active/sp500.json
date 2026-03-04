@@ -270,6 +270,16 @@
         "_behavior": "1 flag → 50% position size reduction | 2+ flags → block all entries + Telegram alert",
         "_note": "ASX futures disabled for SP500 market — not relevant for US trading session"
     },
+    "macro_regime": {
+        "enabled": false,
+        "_comment": "Macro regime filter from task #77. Mode: sizing|gate|boost. Research (task #76) showed gold/copper ratio, VIX 5d ROC, and yield curve slope (10Y-13W) as top macro predictors. sizing=multiply position sizes by macro_regime_scale; gate=block entries when scale<0.7; boost=add +0.05 confidence when scale>1.2.",
+        "gold_copper": true,
+        "vix_roc": true,
+        "vix_roc_threshold": 0.30,
+        "yield_curve": true,
+        "yc_flattening_threshold": -0.10,
+        "mode": "sizing"
+    },
     "_optimization_metadata": {
         "optimized_at": "2026-02-27T13:47:48.297173",
         "baseline_cagr": 0.119,

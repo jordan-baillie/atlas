@@ -43,6 +43,7 @@ from utils.market_breadth import MarketBreadth
 from utils.relative_strength import RelativeStrength
 from utils.dynamic_sizing import DynamicSizer
 from utils.allocation import build_allocation_pool, StrategyAllocationPool
+from data.macro import download_macro_data, compute_macro_signals
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +197,20 @@ class BacktestEngine:
         self.fred_filter_enabled = _fred_cfg.get("enabled", False)
         self.fred_yield_curve_min = _fred_cfg.get("yield_curve_min", None)  # e.g. -0.5 (skip if T10Y2Y < this)
         self.fred_claims_max = _fred_cfg.get("claims_max", None)  # e.g. 300000 (skip if ICSA > this)
+
+        # Macro regime filter — gold/copper, VIX ROC, yield curve (yfinance-sourced)
+        # Mode "sizing": multiplies position sizes by macro_regime_scale
+        # Mode "gate":   blocks entries when macro_regime_scale < 0.7
+        # Mode "boost":  adds +0.05 confidence when macro_regime_scale > 1.2
+        _macro_cfg = config.get("macro_regime", {})
+        self.macro_regime_enabled = _macro_cfg.get("enabled", False)
+        self.macro_gc_enabled = _macro_cfg.get("gold_copper", True)
+        self.macro_vix_roc_enabled = _macro_cfg.get("vix_roc", True)
+        self.macro_vix_roc_threshold = _macro_cfg.get("vix_roc_threshold", 0.30)
+        self.macro_yc_enabled = _macro_cfg.get("yield_curve", True)
+        self.macro_yc_threshold = _macro_cfg.get("yc_flattening_threshold", -0.10)
+        self.macro_mode = _macro_cfg.get("mode", "sizing")  # "sizing" | "gate" | "boost"
+
         # Turn-of-Month (TOM) calendar filter
         # Supports: false (disabled), true (only trade in TOM window),
         #           "boost" (confidence boost during TOM window)
@@ -576,6 +591,7 @@ class BacktestEngine:
         vix_series: Optional[pd.Series] = None,
         fred_yield_curve: Optional[pd.Series] = None,
         fred_claims: Optional[pd.Series] = None,
+        macro_signals: Optional[pd.DataFrame] = None,
     ) -> float:
         """Simulate one trading day — orchestrator calling sub-methods.
 
@@ -631,6 +647,38 @@ class BacktestEngine:
                     cl_val = float(fred_claims.loc[cl_mask].iloc[-1])
                     if cl_val > self.fred_claims_max:
                         fred_blocked = True
+            # Macro regime filter (gold/copper, VIX ROC, yield curve)
+            macro_blocked = False
+            macro_scale_today = 1.0
+            macro_boost_today = 0.0
+            if macro_signals is not None and self.macro_regime_enabled:
+                # Use latest available macro data on or before yesterday
+                _macro_mask = macro_signals.index <= yesterday
+                if _macro_mask.any():
+                    _macro_row = macro_signals.loc[_macro_mask].iloc[-1]
+                    macro_scale_today = float(_macro_row.get("macro_regime_scale", 1.0))
+                    _gc_regime = int(_macro_row.get("gc_regime", 2))
+                    _vix_roc = float(_macro_row.get("vix_roc_5d", 0.0))
+                    _vix_spike = bool(_macro_row.get("vix_spike", False))
+                    _yc_spread = float(_macro_row.get("yield_curve_10y_3m", 0.0))
+                    _yc_flatten = bool(_macro_row.get("yc_flattening", False))
+
+                    if self.macro_mode == "gate" and macro_scale_today < 0.7:
+                        macro_blocked = True
+                        logger.debug(
+                            f"MACRO GATE BLOCKED {today.date()}: "
+                            f"scale={macro_scale_today:.2f} < 0.7 "
+                            f"(gc_regime={_gc_regime}, vix_roc={_vix_roc:.2%}, "
+                            f"yc_spread={_yc_spread:.3f})"
+                        )
+                    elif self.macro_mode == "boost" and macro_scale_today > 1.2:
+                        macro_boost_today = 0.05
+                    logger.debug(
+                        f"MACRO {today.date()}: scale={macro_scale_today:.2f}, "
+                        f"gc_regime={_gc_regime}, vix_roc={_vix_roc:.2%}, "
+                        f"yc={_yc_spread:.3f}, mode={self.macro_mode}"
+                    )
+
             # Turn-of-Month calendar filter
             tom_in_window = self._is_tom_window(today, trading_dates) if self.tom_mode else False
             tom_blocked = (self.tom_mode is True and not tom_in_window)
@@ -647,12 +695,37 @@ class BacktestEngine:
             for strategy in strategies:
                 if len(open_positions) >= self.max_positions:
                     break
-                if vix_blocked or fred_blocked or tom_blocked:
+                if vix_blocked or fred_blocked or tom_blocked or macro_blocked:
                     break
 
                 signals = strategy.generate_signals(
                     signal_data, equity, open_positions
                 )
+
+                # Macro regime features: inject into signals and apply adjustments
+                if macro_signals is not None and self.macro_regime_enabled:
+                    _macro_mask = macro_signals.index <= yesterday
+                    if _macro_mask.any():
+                        _macro_row = macro_signals.loc[_macro_mask].iloc[-1]
+                        for _sig in signals:
+                            _sig.features["macro_gc_regime"] = int(_macro_row.get("gc_regime", 2))
+                            _sig.features["macro_gc_ratio"] = float(_macro_row.get("gold_copper_ratio", 0.0))
+                            _sig.features["macro_vix_roc"] = float(_macro_row.get("vix_roc_5d", 0.0))
+                            _sig.features["macro_vix_spike"] = bool(_macro_row.get("vix_spike", False))
+                            _sig.features["macro_yc_spread"] = float(_macro_row.get("yield_curve_10y_3m", 0.0))
+                            _sig.features["macro_yc_flattening"] = bool(_macro_row.get("yc_flattening", False))
+                            _sig.features["macro_regime_scale"] = float(_macro_row.get("macro_regime_scale", 1.0))
+                        # Boost mode: add confidence when macro is favorable
+                        if self.macro_mode == "boost" and macro_boost_today > 0:
+                            for _sig in signals:
+                                _orig_conf = _sig.confidence
+                                _sig.confidence = min(1.0, _sig.confidence + macro_boost_today)
+                                _sig.features["macro_confidence_boost"] = round(macro_boost_today, 4)
+                                _sig.features["macro_confidence_orig"] = round(_orig_conf, 4)
+                                logger.debug(
+                                    f"MACRO BOOST {_sig.ticker}: "
+                                    f"conf {_orig_conf:.3f} -> {_sig.confidence:.3f}"
+                                )
 
                 # TOM boost mode: add confidence during TOM window
                 if self.tom_mode == "boost" and tom_in_window:
@@ -829,7 +902,13 @@ class BacktestEngine:
                         price=fill_price,
                         equity_history=equity_history,
                     )
-                    risk_budget = equity * _risk_pct * regime_scale  # Phase 3: regime scaling
+                    # Phase 3: regime scaling + macro regime scaling (task #77)
+                    _effective_macro_scale = (
+                        macro_scale_today
+                        if self.macro_regime_enabled and self.macro_mode == "sizing"
+                        else 1.0
+                    )
+                    risk_budget = equity * _risk_pct * regime_scale * _effective_macro_scale
                     shares = int(risk_budget / risk_per_share)
 
                     if shares <= 0:
@@ -1171,6 +1250,37 @@ class BacktestEngine:
             except Exception as e:
                 logger.warning(f"FRED data load failed: {e} — filter disabled")
 
+        # Macro regime data (gold/copper, VIX ROC, yield curve) — task #77
+        macro_signals_df = None
+        if self.macro_regime_enabled:
+            try:
+                _macro_start = all_dates[0].strftime("%Y-%m-%d")
+                logger.info(
+                    f"Macro regime enabled (mode={self.macro_mode}): "
+                    f"downloading macro data from {_macro_start}"
+                )
+                _macro_raw = download_macro_data(
+                    start_date=_macro_start,
+                    use_cache=True,
+                    cache_max_age_hours=24,
+                )
+                if not _macro_raw.empty:
+                    macro_signals_df = compute_macro_signals(
+                        _macro_raw,
+                        vix_roc_threshold=self.macro_vix_roc_threshold,
+                        yc_flattening_threshold=self.macro_yc_threshold,
+                    )
+                    logger.info(
+                        f"Macro signals ready: {len(macro_signals_df)} days, "
+                        f"scale range [{macro_signals_df['macro_regime_scale'].min():.2f}, "
+                        f"{macro_signals_df['macro_regime_scale'].max():.2f}]"
+                    )
+                else:
+                    logger.warning("Macro regime enabled but download returned empty — disabled")
+            except Exception as e:
+                logger.warning(f"Macro regime setup failed: {e} — continuing without macro")
+                macro_signals_df = None
+
         # Walk-forward loop
         window_start = 0
         window_num = 0
@@ -1238,6 +1348,7 @@ class BacktestEngine:
                     vix_series=vix_series,
                     fred_yield_curve=fred_yield_curve,
                     fred_claims=fred_claims,
+                    macro_signals=macro_signals_df,
                 )
 
                 # Record daily equity (mark-to-market)
