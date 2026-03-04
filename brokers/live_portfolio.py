@@ -84,9 +84,13 @@ class LivePortfolio:
     # ── State file (local, tracks history only) ────────────────
 
     def _state_path(self) -> Path:
+        # IMPORTANT: always use the "live_" prefix.  Legacy files like
+        # brokers/state/sp500.json (no prefix) are stale and must NOT be read.
         return PROJECT_ROOT / "brokers" / "state" / f"live_{self.market_id}.json"
 
     def _load_local_state(self):
+        # Only reads from live_{market_id}.json via _state_path() — never the
+        # legacy bare {market_id}.json files.  Do not add any fallback here.
         path = self._state_path()
         if path.exists():
             try:
@@ -303,17 +307,27 @@ class LivePortfolio:
         return [p for p in self.positions if p.strategy in ("unknown", "")]
 
     def equity(self, prices: dict[str, float] = None) -> float:
-        """Atlas-only equity: cash + Atlas position values (excludes manual positions).
+        """Atlas-only equity: inferred cash + Atlas position values.
 
-        Manual positions (strategy='unknown') are in the broker account but
-        are not Atlas-managed.  Position sizing, risk checks, and P&L should
-        only reflect capital Atlas controls.
+        Manual positions (strategy='unknown') share the same broker account but
+        are NOT Atlas-managed.  We therefore do NOT use self.cash (total broker
+        cash) — it is inflated when manual positions exist in the account.
+
+        Instead we infer the Atlas cash slice as:
+            atlas_cash = starting_equity - sum(entry_value for atlas positions)
+
+        This mirrors the dashboard logic in generate_data.py and keeps Atlas
+        equity independent of whatever manual capital is also in the account.
         """
+        atlas_pos = self.atlas_positions
         atlas_pos_value = sum(
             p.current_value(prices.get(p.ticker, p.entry_price) if prices else p.entry_price)
-            for p in self.atlas_positions
+            for p in atlas_pos
         )
-        return round(self.cash + atlas_pos_value, 2)
+        # Infer cash: starting capital minus what is currently deployed in Atlas positions.
+        atlas_entry_cost = sum(p.entry_value for p in atlas_pos)
+        atlas_cash = self.starting_equity - atlas_entry_cost
+        return round(atlas_cash + atlas_pos_value, 2)
 
     def broker_equity(self) -> float:
         """Full broker account equity (all positions including manual)."""
