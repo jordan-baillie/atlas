@@ -509,6 +509,22 @@ def _run_oos_validation(entry: dict) -> dict:
     return result
 
 
+def _set_nested_config(config: dict, path: str, value) -> None:
+    """Set a nested config value using a dotted path.
+
+    Traverses the config dict, creating intermediate dicts as needed.
+
+    Example:
+        _set_nested_config(cfg, "strategies.mean_reversion.breadth.enabled", True)
+        → cfg["strategies"]["mean_reversion"]["breadth"]["enabled"] = True
+    """
+    keys = path.split(".")
+    d = config
+    for k in keys[:-1]:
+        d = d.setdefault(k, {})
+    d[keys[-1]] = value
+
+
 def _run_filter_test(entry: dict) -> dict:
     """Run a filter A/B test: backtest with and without a filter.
 
@@ -518,6 +534,10 @@ def _run_filter_test(entry: dict) -> dict:
     Supports two modes via params_override:
       a) Simple A/B: {filter_param, filter_on, filter_off}
       b) Multi-variant: {filter_param, variants: [{name, value}, ...]}
+                     or {filter_param, variants: [val1, val2, ...]}  (scalar list)
+
+    filter_param may be a dotted path (e.g. "strategies.mean_reversion.breadth.enabled")
+    to target nested config keys.  TOM (turn-of-month) is treated as an engine-level param.
     """
     from scripts.strategy_evaluator import (
         load_market_data, make_config_with_strategy, run_backtest
@@ -535,28 +555,51 @@ def _run_filter_test(entry: dict) -> dict:
     # Portfolio-wide mode: test filter on all active strategies
     solo = strategy is not None
 
-    # Detect engine-level params (vix_filter, regime_filter, etc.)
-    # These go on the top-level config, not per-strategy
-    _ENGINE_LEVEL_PARAMS = {'vix_filter', 'regime_filter', 'fee_aware_filter'}
+    # Detect engine-level params (vix_filter, regime_filter, tom_filter, etc.)
+    # These go on the top-level config, not per-strategy.
+    # TOM (Turn-of-Month) is treated as an engine-level scheduling filter.
+    _ENGINE_LEVEL_PARAMS = {'vix_filter', 'regime_filter', 'fee_aware_filter', 'tom_filter'}
     is_engine_param = filter_param in _ENGINE_LEVEL_PARAMS
 
-    if variants:
-        # Multi-variant mode: test several values of the filter
+    # Detect dotted-path params (e.g. "strategies.mean_reversion.breadth.enabled").
+    # Dotted paths bypass make_config_with_strategy and use _set_nested_config directly.
+    is_nested = bool(filter_param and '.' in filter_param)
+
+    def _build_cfg(param: str, value) -> dict:
+        """Build a config copy with param=value applied via the correct strategy."""
+        cfg = copy.deepcopy(config)
+        if is_nested:
+            _set_nested_config(cfg, param, value)
+            if solo:
+                # Disable all strategies except the target (solo mode)
+                for s_name in list(cfg.get('strategies', {}).keys()):
+                    if s_name != strategy:
+                        cfg['strategies'][s_name]['enabled'] = False
+                if strategy:
+                    cfg.setdefault('strategies', {}).setdefault(strategy, {})['enabled'] = True
+        elif is_engine_param:
+            cfg[param] = value
+        elif solo:
+            cfg = make_config_with_strategy(config, strategy, {param: value}, solo=True)
+        else:
+            for s_name, s_cfg in cfg.get('strategies', {}).items():
+                if s_cfg.get('enabled', False):
+                    s_cfg[param] = value
+        return cfg
+
+    if variants is not None:
+        # Multi-variant mode: test several values of the filter.
+        # Accepts both dict variants ({name, value}) and scalar variants (true/false/int/float).
         results = []
         for var in variants:
-            name = var.get('name', str(var.get('value', '?')))
-            value = var['value']
-            if solo:
-                cfg = make_config_with_strategy(config, strategy, {filter_param: value}, solo=True)
-            elif is_engine_param:
-                # Engine-level param: set on top-level config
-                cfg = copy.deepcopy(config)
-                cfg[filter_param] = value
+            if isinstance(var, dict):
+                name = var.get('name', str(var.get('value', '?')))
+                value = var['value']
             else:
-                cfg = copy.deepcopy(config)
-                for s_name, s_cfg in cfg.get('strategies', {}).items():
-                    if s_cfg.get('enabled', False):
-                        s_cfg[filter_param] = value
+                # Scalar variant (e.g. True, False, 5, 0.1)
+                name = str(var)
+                value = var
+            cfg = _build_cfg(filter_param, value)
             metrics = run_backtest(cfg, data)
             metrics['variant_name'] = name
             metrics['variant_value'] = value
@@ -565,7 +608,7 @@ def _run_filter_test(entry: dict) -> dict:
                         f"trades={metrics.get('total_trades', 0)}")
 
         # Baseline (no filter / current config)
-        if solo:
+        if solo and not is_nested:
             baseline_cfg = make_config_with_strategy(config, strategy, {}, solo=True)
         else:
             baseline_cfg = copy.deepcopy(config)
@@ -588,25 +631,8 @@ def _run_filter_test(entry: dict) -> dict:
         filter_on_value = filter_config.get('filter_on')
         filter_off_value = filter_config.get('filter_off')
 
-        if solo:
-            cfg_off = make_config_with_strategy(config, strategy,
-                                                 {filter_param: filter_off_value}, solo=True)
-            cfg_on = make_config_with_strategy(config, strategy,
-                                                {filter_param: filter_on_value}, solo=True)
-        elif is_engine_param:
-            cfg_off = copy.deepcopy(config)
-            cfg_off[filter_param] = filter_off_value
-            cfg_on = copy.deepcopy(config)
-            cfg_on[filter_param] = filter_on_value
-        else:
-            cfg_off = copy.deepcopy(config)
-            cfg_on = copy.deepcopy(config)
-            for s_name, s_cfg in cfg_off.get('strategies', {}).items():
-                if s_cfg.get('enabled', False):
-                    s_cfg[filter_param] = filter_off_value
-            for s_name, s_cfg in cfg_on.get('strategies', {}).items():
-                if s_cfg.get('enabled', False):
-                    s_cfg[filter_param] = filter_on_value
+        cfg_off = _build_cfg(filter_param, filter_off_value)
+        cfg_on = _build_cfg(filter_param, filter_on_value)
 
         metrics_off = run_backtest(cfg_off, data)
         metrics_on = run_backtest(cfg_on, data)
