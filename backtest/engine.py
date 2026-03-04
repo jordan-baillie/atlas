@@ -255,6 +255,266 @@ class BacktestEngine:
                 windowed[ticker] = sliced
         return windowed
 
+    def _build_trade_record(
+        self, pos: Dict[str, Any], fill_price: float,
+        today: pd.Timestamp, exit_reason: str,
+    ) -> Dict[str, Any]:
+        """Build a closed-trade record dict from a position and fill price."""
+        gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
+        exit_commission = self._calc_commission(pos["shares"] * fill_price)
+        total_commission = pos["entry_commission"] + exit_commission
+        net_pnl = gross_pnl - total_commission
+        hold_days = (today - pd.Timestamp(pos["entry_date"])).days
+        trade = {
+            "ticker": pos["ticker"],
+            "strategy": pos["strategy"],
+            "direction": "long",
+            "entry_date": pos["entry_date"],
+            "entry_price": pos["fill_price"],
+            "exit_date": today,
+            "exit_price": fill_price,
+            "shares": pos["shares"],
+            "position_value": pos["position_value"],
+            "gross_pnl": round(gross_pnl, 2),
+            "commission": round(total_commission, 2),
+            "pnl": round(net_pnl, 2),
+            "return_pct": round(net_pnl / pos["position_value"] * 100, 2)
+            if pos["position_value"] > 0 else 0.0,
+            "hold_days": hold_days,
+            "exit_reason": exit_reason,
+            "mae": pos.get("mae", 0.0),
+            "mfe": pos.get("mfe", 0.0),
+            "stop_price": pos.get("stop_price", 0.0),
+            "confidence": pos.get("confidence", 0.0),
+            "features": pos.get("features", {}),
+        }
+        trade["r_multiple"] = calc_r_multiple(trade)
+        return trade
+
+    def _process_strategy_exits(
+        self, day_idx: int, today: pd.Timestamp,
+        trading_dates: pd.DatetimeIndex,
+        data: Dict[str, pd.DataFrame],
+        strategies: List[BaseStrategy],
+        equity: float, open_positions: List[Dict[str, Any]],
+        closed_trades: List[Dict[str, Any]],
+    ) -> float:
+        """Check strategy exit conditions and execute exits. Returns updated equity."""
+        if day_idx <= 0:
+            return equity
+        yesterday = trading_dates[day_idx - 1]
+        exit_data = {t: df.loc[df.index <= yesterday] for t, df in data.items()
+                     if (df.index <= yesterday).any()}
+
+        for strategy in strategies:
+            exit_recs = strategy.check_exits(exit_data, open_positions)
+            for rec in exit_recs:
+                ticker = rec["ticker"]
+                pos_idx = next(
+                    (i for i, p in enumerate(open_positions)
+                     if p["ticker"] == ticker and p["strategy"] == strategy.name),
+                    None,
+                )
+                if pos_idx is None:
+                    continue
+                pos = open_positions[pos_idx]
+                today_df = data.get(ticker)
+                if today_df is None or today not in today_df.index:
+                    fill_price = self._apply_slippage(rec["exit_price"], "sell")
+                else:
+                    fill_price = self._apply_slippage(today_df.loc[today, "open"], "sell")
+
+                trade = self._build_trade_record(pos, fill_price, today, rec["reason"])
+                closed_trades.append(trade)
+                equity += trade["pnl"]
+                open_positions.pop(pos_idx)
+                logger.debug(
+                    f"EXIT {ticker} ({rec['reason']}): "
+                    f"pnl=${trade['pnl']:.2f}, equity=${equity:.2f}"
+                )
+        return equity
+
+    def _update_mae_mfe(
+        self, today: pd.Timestamp, data: Dict[str, pd.DataFrame],
+        open_positions: List[Dict[str, Any]],
+    ) -> None:
+        """Update MAE/MFE excursions for all open positions."""
+        for pos in open_positions:
+            ticker = pos["ticker"]
+            today_df = data.get(ticker)
+            if today_df is None or today not in today_df.index:
+                continue
+            fill_price = pos["fill_price"]
+            adverse = (today_df.loc[today, "low"] - fill_price) / fill_price
+            pos["mae"] = min(pos.get("mae", 0.0), adverse)
+            favorable = (today_df.loc[today, "high"] - fill_price) / fill_price
+            pos["mfe"] = max(pos.get("mfe", 0.0), favorable)
+
+    def _process_max_loss_exits(
+        self, day_idx: int, today: pd.Timestamp,
+        trading_dates: pd.DatetimeIndex,
+        data: Dict[str, pd.DataFrame],
+        equity: float, open_positions: List[Dict[str, Any]],
+        closed_trades: List[Dict[str, Any]],
+    ) -> float:
+        """Apply max-loss-per-trade cap. Returns updated equity."""
+        if self.max_loss_per_trade is None or not open_positions:
+            return equity
+        _yest = trading_dates[day_idx - 1] if day_idx > 0 else None
+        exits = []  # (pos_idx, exit_price)
+        for pi, pos in enumerate(open_positions):
+            ticker = pos["ticker"]
+            df = data.get(ticker)
+            if df is None or today not in df.index:
+                continue
+            if _yest is None or _yest not in df.index:
+                continue
+            yest_close = df.loc[_yest, "close"]
+            unrealized = (yest_close - pos["fill_price"]) * pos["shares"]
+            if unrealized <= -abs(self.max_loss_per_trade):
+                exits.append((pi, df.loc[today, "close"]))
+                logger.debug(
+                    f"MAX_LOSS_CAP {ticker}: unrealized ${unrealized:.2f} "
+                    f"<= -${abs(self.max_loss_per_trade):.2f}"
+                )
+
+        for pi, exit_price in reversed(exits):
+            pos = open_positions[pi]
+            fill = self._apply_slippage(exit_price, "sell")
+            trade = self._build_trade_record(pos, fill, today, "max_loss_cap")
+            closed_trades.append(trade)
+            equity += trade["pnl"]
+            open_positions.pop(pi)
+            logger.debug(f"MAX_LOSS_CAP EXIT {pos['ticker']}: pnl=${trade['pnl']:.2f}, equity=${equity:.2f}")
+        return equity
+
+    def _process_trailing_stops(
+        self, day_idx: int, today: pd.Timestamp,
+        trading_dates: pd.DatetimeIndex,
+        data: Dict[str, pd.DataFrame],
+        equity: float, open_positions: List[Dict[str, Any]],
+        closed_trades: List[Dict[str, Any]],
+    ) -> float:
+        """Update trailing stop state and execute triggered exits. Returns updated equity."""
+        if not self.trailing_stop_enabled or not open_positions:
+            return equity
+        _yest = trading_dates[day_idx - 1] if day_idx > 0 else None
+        trail_exits = []  # (pos_idx, exit_price)
+        for pi, pos in enumerate(open_positions):
+            ticker = pos["ticker"]
+            df = data.get(ticker)
+            if df is None or today not in df.index:
+                continue
+            today_high = df.loc[today, "high"]
+            today_close = df.loc[today, "close"]
+            fill = pos["fill_price"]
+            yest_close = (df.loc[_yest, "close"]
+                          if _yest is not None and _yest in df.index else None)
+
+            # Get ATR
+            atr = pos.get("features", {}).get("atr", 0.0) or 0.0
+            if atr <= 0:
+                mask = df.index <= today
+                w = df.loc[mask].tail(15)
+                if len(w) >= 3:
+                    atr = float((w["high"] - w["low"]).abs().rolling(14, min_periods=3).mean().iloc[-1])
+                if atr <= 0:
+                    continue
+
+            # Check activation
+            trail_active = pos.get("trailing_stop_active", False)
+            if not trail_active and (today_high - fill) / fill >= self.trail_activation_pct:
+                trail_active = True
+                pos["trailing_stop_active"] = True
+                pos["highest_price"] = today_high
+                pos["trailing_stop_price"] = today_high - self.trail_atr_multiplier * atr
+                logger.debug(f"TRAIL ACTIVATED {ticker}: high={today_high:.3f}, "
+                             f"trail_stop={pos['trailing_stop_price']:.3f}")
+
+            if trail_active:
+                new_high = max(pos.get("highest_price", today_high), today_high)
+                pos["highest_price"] = new_high
+                new_trail = new_high - self.trail_atr_multiplier * atr
+                pos["trailing_stop_price"] = max(
+                    pos.get("trailing_stop_price", pos["stop_price"]),
+                    new_trail, pos["stop_price"],
+                )
+                if yest_close is not None and yest_close <= pos["trailing_stop_price"]:
+                    trail_exits.append((pi, today_close))
+                    logger.debug(f"TRAIL EXIT {ticker}: yest_close={yest_close:.3f} "
+                                 f"<= trail_stop={pos['trailing_stop_price']:.3f}")
+
+        for pi, exit_price in reversed(trail_exits):
+            pos = open_positions[pi]
+            fill = self._apply_slippage(exit_price, "sell")
+            # Override stop_price to show trailing stop value
+            saved_stop = pos.get("stop_price", 0.0)
+            pos["stop_price"] = pos.get("trailing_stop_price", saved_stop)
+            trade = self._build_trade_record(pos, fill, today, "trailing_stop")
+            pos["stop_price"] = saved_stop  # restore
+            closed_trades.append(trade)
+            equity += trade["pnl"]
+            open_positions.pop(pi)
+            logger.debug(f"TRAIL EXIT {pos['ticker']}: pnl=${trade['pnl']:.2f}, equity=${equity:.2f}")
+        return equity
+
+    def _compute_regime(
+        self, today: pd.Timestamp, data: Dict[str, pd.DataFrame],
+        breadth_series: Optional[pd.DataFrame],
+    ) -> tuple:
+        """Compute regime filter state. Returns (regime_str, regime_scale)."""
+        _rf_cfg = self.config.get("regime_filter", {})
+        if not _rf_cfg.get("enabled", False):
+            return "neutral", 1.0
+
+        # Phase 3: 3-state regime (Bull/Neutral/Bear) using benchmark MA + breadth.
+        regime, regime_scale = "neutral", 1.0
+        ma_period = _rf_cfg.get("benchmark_ma_period", 50)
+        bull_thresh = _rf_cfg.get("breadth_bull_threshold", 50.0)
+        bear_thresh = _rf_cfg.get("breadth_bear_threshold", 40.0)
+        scales = {
+            "bull": _rf_cfg.get("bull_scale", 1.0),
+            "neutral": _rf_cfg.get("neutral_scale", 0.75),
+            "bear": _rf_cfg.get("bear_scale", 0.5),
+        }
+
+        # Signal 1: Benchmark above/below MA
+        bench_df = data.get(self.benchmark_ticker)
+        bench_above_ma = None
+        if bench_df is not None and today in bench_df.index:
+            bench_close = bench_df.loc[:today, "close"]
+            if len(bench_close) >= ma_period:
+                bench_ma = bench_close.rolling(window=ma_period).mean().iloc[-1]
+                if not pd.isna(bench_ma):
+                    bench_above_ma = bool(bench_close.iloc[-1] >= bench_ma)
+
+        # Signal 2: Market breadth — % stocks above 200-day MA
+        breadth_pct200 = None
+        if breadth_series is not None and today in breadth_series.index:
+            raw = breadth_series.loc[today].get("pct_above_200ma", None)
+            if raw is not None and not pd.isna(raw):
+                breadth_pct200 = float(raw)
+
+        # Classify
+        if bench_above_ma is not None and breadth_pct200 is not None:
+            if bench_above_ma and breadth_pct200 >= bull_thresh:
+                regime = "bull"
+            elif not bench_above_ma and breadth_pct200 < bear_thresh:
+                regime = "bear"
+            else:
+                regime = "neutral"
+        elif bench_above_ma is not None:
+            regime = "bull" if bench_above_ma else "bear"
+        regime_scale = scales[regime]
+
+        b200_str = f"{breadth_pct200:.1f}%" if breadth_pct200 is not None else "N/A"
+        logger.debug(
+            f"REGIME {today.date()}: {regime.upper()} "
+            f"(bench_above_{ma_period}MA={bench_above_ma}, "
+            f"breadth200={b200_str}, scale={regime_scale:.2f})"
+        )
+        return regime, regime_scale
+
     def _simulate_day(
         self,
         day_idx: int,
@@ -271,360 +531,34 @@ class BacktestEngine:
         fred_yield_curve: Optional[pd.Series] = None,
         fred_claims: Optional[pd.Series] = None,
     ) -> float:
-        """Simulate one trading day.
+        """Simulate one trading day — orchestrator calling sub-methods.
 
-        Process:
-            1. Update open position P&L with today's prices
-            2. Check exit conditions on open positions
-            3. Execute exits (fill at today's open, since signal was yesterday)
-            4. Generate new entry signals using data up to yesterday's close
-            5. Execute entries (fill at today's open)
-
-        Returns:
-            Updated equity value.
+        Returns updated equity value.
         """
         today = trading_dates[day_idx]
 
-        # --- Process exits first ---
-        # Check exits using data up to yesterday (signal day)
-        if day_idx > 0:
-            yesterday = trading_dates[day_idx - 1]
-            # Build data windows up to yesterday for exit checks
-            exit_data = {}
-            for ticker, df in data.items():
-                mask = df.index <= yesterday
-                if mask.any():
-                    exit_data[ticker] = df.loc[mask]
+        # 1. Strategy-driven exits
+        equity = self._process_strategy_exits(
+            day_idx, today, trading_dates, data, strategies,
+            equity, open_positions, closed_trades)
 
-            for strategy in strategies:
-                exit_recs = strategy.check_exits(exit_data, open_positions)
-                for rec in exit_recs:
-                    ticker = rec["ticker"]
-                    # Find the position
-                    pos_idx = None
-                    for i, pos in enumerate(open_positions):
-                        if pos["ticker"] == ticker and pos["strategy"] == strategy.name:
-                            pos_idx = i
-                            break
+        # 2. MAE/MFE tracking
+        self._update_mae_mfe(today, data, open_positions)
 
-                    if pos_idx is None:
-                        continue
+        # 3. Max-loss-per-trade cap
+        equity = self._process_max_loss_exits(
+            day_idx, today, trading_dates, data,
+            equity, open_positions, closed_trades)
 
-                    pos = open_positions[pos_idx]
+        # 4. Trailing stops
+        equity = self._process_trailing_stops(
+            day_idx, today, trading_dates, data,
+            equity, open_positions, closed_trades)
 
-                    # Fill at today's open with slippage
-                    today_df = data.get(ticker)
-                    if today_df is None or today not in today_df.index:
-                        # Use the recommended exit price if we can't get today's open
-                        fill_price = self._apply_slippage(
-                            rec["exit_price"], "sell"
-                        )
-                    else:
-                        today_open = today_df.loc[today, "open"]
-                        fill_price = self._apply_slippage(today_open, "sell")
+        # 5. Regime filter
+        regime, regime_scale = self._compute_regime(today, data, breadth_series)
 
-                    # Calculate exit commission
-                    exit_value = pos["shares"] * fill_price
-                    exit_commission = self._calc_commission(exit_value)
-
-                    # Calculate P&L
-                    gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
-                    total_commission = pos["entry_commission"] + exit_commission
-                    net_pnl = gross_pnl - total_commission
-
-                    # Calculate hold days
-                    hold_days = (today - pd.Timestamp(pos["entry_date"])).days
-
-                    # Record closed trade
-                    trade = {
-                        "ticker": ticker,
-                        "strategy": pos["strategy"],
-                        "direction": "long",
-                        "entry_date": pos["entry_date"],
-                        "entry_price": pos["fill_price"],
-                        "exit_date": today,
-                        "exit_price": fill_price,
-                        "shares": pos["shares"],
-                        "position_value": pos["position_value"],
-                        "gross_pnl": round(gross_pnl, 2),
-                        "commission": round(total_commission, 2),
-                        "pnl": round(net_pnl, 2),
-                        "return_pct": round(
-                            net_pnl / pos["position_value"] * 100, 2
-                        )
-                        if pos["position_value"] > 0
-                        else 0.0,
-                        "hold_days": hold_days,
-                        "exit_reason": rec["reason"],
-                        "mae": pos.get("mae", 0.0),
-                        "mfe": pos.get("mfe", 0.0),
-                        "stop_price": pos.get("stop_price", 0.0),
-                        "confidence": pos.get("confidence", 0.0),
-                        "features": pos.get("features", {}),
-                    }
-                    trade["r_multiple"] = calc_r_multiple(trade)
-                    closed_trades.append(trade)
-
-                    # Update equity
-                    equity += net_pnl
-
-                    # Remove from open positions
-                    open_positions.pop(pos_idx)
-
-                    logger.debug(
-                        f"EXIT {ticker} ({rec['reason']}): "
-                        f"pnl=${net_pnl:.2f}, equity=${equity:.2f}"
-                    )
-
-        # --- Update MAE/MFE for open positions ---
-        for pos in open_positions:
-            ticker = pos["ticker"]
-            today_df = data.get(ticker)
-            if today_df is None or today not in today_df.index:
-                continue
-
-            today_low = today_df.loc[today, "low"]
-            today_high = today_df.loc[today, "high"]
-            fill_price = pos["fill_price"]
-
-            # MAE: max adverse excursion (worst unrealized loss per share)
-            adverse = (today_low - fill_price) / fill_price
-            pos["mae"] = min(pos.get("mae", 0.0), adverse)
-
-            # MFE: max favorable excursion (best unrealized gain per share)
-            favorable = (today_high - fill_price) / fill_price
-            pos["mfe"] = max(pos.get("mfe", 0.0), favorable)
-
-
-        # --- Phase 9A: Max loss per trade cap ---
-        if self.max_loss_per_trade is not None and open_positions:
-            _maxloss_exits = []  # (pos_idx, exit_price)
-            # Audit C1: use yesterday's close for trigger decision to avoid look-ahead bias
-            _yest_date_mlc = trading_dates[day_idx - 1] if day_idx > 0 else None
-            for _pi, _pos in enumerate(open_positions):
-                _ticker = _pos["ticker"]
-                _today_df = data.get(_ticker)
-                if _today_df is None or today not in _today_df.index:
-                    continue
-                _today_close = _today_df.loc[today, "close"]  # used for fill price only
-                # Audit C1: skip day 0 (no yesterday) or if yesterday not in this ticker's data
-                if _yest_date_mlc is None or _yest_date_mlc not in _today_df.index:
-                    continue
-                _yest_close = _today_df.loc[_yest_date_mlc, "close"]  # Audit C1: trigger on yesterday
-                _unrealized_pnl = (_yest_close - _pos["fill_price"]) * _pos["shares"]
-                if _unrealized_pnl <= -abs(self.max_loss_per_trade):
-                    _maxloss_exits.append((_pi, _today_close))  # fill at today's close
-                    logger.debug(
-                        f"MAX_LOSS_CAP {_ticker}: unrealized ${_unrealized_pnl:.2f} "
-                        f"<= -${abs(self.max_loss_per_trade):.2f}"
-                    )
-
-            # Process max loss exits (reverse order to preserve indices)
-            for _pi, _exit_price in reversed(_maxloss_exits):
-                _pos = open_positions[_pi]
-                _ticker = _pos["ticker"]
-                _fill_price = self._apply_slippage(_exit_price, "sell")
-                _exit_commission = self._calc_commission(_pos["shares"] * _fill_price)
-                _gross_pnl = (_fill_price - _pos["fill_price"]) * _pos["shares"]
-                _net_pnl = _gross_pnl - _pos["entry_commission"] - _exit_commission
-                _hold_days = (today - pd.Timestamp(_pos["entry_date"])).days
-                _trade = {
-                    "ticker": _ticker,
-                    "strategy": _pos["strategy"],
-                    "direction": "long",
-                    "entry_date": _pos["entry_date"],
-                    "entry_price": _pos["fill_price"],
-                    "exit_date": today,
-                    "exit_price": _fill_price,
-                    "shares": _pos["shares"],
-                    "position_value": _pos["position_value"],
-                    "gross_pnl": round(_gross_pnl, 2),
-                    "commission": round(_pos["entry_commission"] + _exit_commission, 2),
-                    "pnl": round(_net_pnl, 2),
-                    "return_pct": round(_net_pnl / _pos["position_value"] * 100, 2)
-                        if _pos["position_value"] > 0 else 0.0,
-                    "hold_days": _hold_days,
-                    "exit_reason": "max_loss_cap",
-                    "mae": _pos.get("mae", 0.0),
-                    "mfe": _pos.get("mfe", 0.0),
-                    "stop_price": _pos.get("stop_price", 0.0),
-                    "confidence": _pos.get("confidence", 0.0),
-                    "features": _pos.get("features", {}),
-                }
-                _trade["r_multiple"] = calc_r_multiple(_trade)
-                closed_trades.append(_trade)
-                equity += _net_pnl
-                open_positions.pop(_pi)
-                logger.debug(
-                    f"MAX_LOSS_CAP EXIT {_ticker}: pnl=${_net_pnl:.2f}, equity=${equity:.2f}"
-                )
-
-        # --- Trailing stop: update state and check exits ---
-        if self.trailing_stop_enabled and open_positions:
-            _trail_exits = []  # (pos_idx, exit_price)
-            # Audit C1: use yesterday's close for exit trigger to avoid look-ahead bias
-            _yest_date_trail = trading_dates[day_idx - 1] if day_idx > 0 else None
-            for _pi, _pos in enumerate(open_positions):
-                _ticker = _pos["ticker"]
-                _today_df = data.get(_ticker)
-                if _today_df is None or today not in _today_df.index:
-                    continue
-
-                _today_high = _today_df.loc[today, "high"]
-                _today_low  = _today_df.loc[today, "low"]
-                _today_close = _today_df.loc[today, "close"]
-                _fill = _pos["fill_price"]
-
-                # Audit C1: yesterday's close for exit trigger (avoid look-ahead bias)
-                _yest_close_trail = (
-                    _today_df.loc[_yest_date_trail, "close"]
-                    if _yest_date_trail is not None and _yest_date_trail in _today_df.index
-                    else None
-                )
-
-                # Get ATR: prefer live calculation, fall back to entry feature
-                _atr = _pos.get("features", {}).get("atr", 0.0) or 0.0
-                if _atr <= 0:
-                    # Quick 14-bar ATR from today's data window
-                    _mask = _today_df.index <= today
-                    _w = _today_df.loc[_mask].tail(15)
-                    if len(_w) >= 3:
-                        _tr = (_w["high"] - _w["low"]).abs()
-                        _atr = float(_tr.rolling(14, min_periods=3).mean().iloc[-1])
-                    if _atr <= 0:
-                        continue
-
-                # Check activation: did price reach +activation_pct above entry?
-                _unrealised_pct = (_today_high - _fill) / _fill
-                _trail_active = _pos.get("trailing_stop_active", False)
-
-                if not _trail_active and _unrealised_pct >= self.trail_activation_pct:
-                    _trail_active = True
-                    _pos["trailing_stop_active"] = True
-                    _pos["highest_price"] = _today_high
-                    _pos["trailing_stop_price"] = _today_high - self.trail_atr_multiplier * _atr
-                    logger.debug(
-                        f"TRAIL ACTIVATED {_ticker}: high={_today_high:.3f}, "
-                        f"trail_stop={_pos['trailing_stop_price']:.3f}"
-                    )
-
-                if _trail_active:
-                    # Ratchet highest price upward
-                    _prev_high = _pos.get("highest_price", _today_high)
-                    _new_high = max(_prev_high, _today_high)
-                    _pos["highest_price"] = _new_high
-
-                    # New trail stop = highest - multiplier × ATR  (ratchet up only)
-                    _new_trail = _new_high - self.trail_atr_multiplier * _atr
-                    _prev_trail = _pos.get("trailing_stop_price", _pos["stop_price"])
-                    _pos["trailing_stop_price"] = max(_prev_trail, _new_trail)
-
-                    # Also enforce: trail stop >= initial stop
-                    _pos["trailing_stop_price"] = max(
-                        _pos["trailing_stop_price"], _pos["stop_price"]
-                    )
-
-                    # Audit C1: trigger on yesterday's close; fill at today's close
-                    if _yest_close_trail is not None and _yest_close_trail <= _pos["trailing_stop_price"]:
-                        _trail_exits.append((_pi, _today_close))  # fill at today's close
-                        logger.debug(
-                            f"TRAIL EXIT {_ticker}: yest_close={_yest_close_trail:.3f} "
-                            f"<= trail_stop={_pos['trailing_stop_price']:.3f}"
-                        )
-
-            # Process trailing stop exits (reverse order to preserve indices)
-            for _pi, _exit_price in reversed(_trail_exits):
-                _pos = open_positions[_pi]
-                _ticker = _pos["ticker"]
-                _fill_price = self._apply_slippage(_exit_price, "sell")
-                _exit_commission = self._calc_commission(_pos["shares"] * _fill_price)
-                _gross_pnl = (_fill_price - _pos["fill_price"]) * _pos["shares"]
-                _net_pnl = _gross_pnl - _pos["entry_commission"] - _exit_commission
-                _hold_days = (today - pd.Timestamp(_pos["entry_date"])).days
-                _trade = {
-                    "ticker": _ticker,
-                    "strategy": _pos["strategy"],
-                    "direction": "long",
-                    "entry_date": _pos["entry_date"],
-                    "entry_price": _pos["fill_price"],
-                    "exit_date": today,
-                    "exit_price": _fill_price,
-                    "shares": _pos["shares"],
-                    "position_value": _pos["position_value"],
-                    "gross_pnl": round(_gross_pnl, 2),
-                    "commission": round(_pos["entry_commission"] + _exit_commission, 2),
-                    "pnl": round(_net_pnl, 2),
-                    "return_pct": round(_net_pnl / _pos["position_value"] * 100, 2)
-                        if _pos["position_value"] > 0 else 0.0,
-                    "hold_days": _hold_days,
-                    "exit_reason": "trailing_stop",
-                    "mae": _pos.get("mae", 0.0),
-                    "mfe": _pos.get("mfe", 0.0),
-                    "stop_price": _pos.get("trailing_stop_price", _pos.get("stop_price", 0.0)),
-                    "confidence": _pos.get("confidence", 0.0),
-                    "features": _pos.get("features", {}),
-                }
-                _trade["r_multiple"] = calc_r_multiple(_trade)
-                closed_trades.append(_trade)
-                equity += _net_pnl
-                open_positions.pop(_pi)
-                logger.debug(
-                    f"TRAIL EXIT {_ticker}: pnl=${_net_pnl:.2f}, equity=${equity:.2f}"
-                )
-
-        # --- Phase 3: Simple Regime Filter (3-state: Bull/Neutral/Bear) ---
-        # Uses benchmark MA slope + market breadth pct_above_200ma to scale position sizes.
-        # Bull  (both signals positive): full position size (scale=1.0)
-        # Neutral (mixed signals):       reduced position size (scale=0.75)
-        # Bear  (both signals negative): half position size (scale=0.5)
-        _rf_cfg = self.config.get("regime_filter", {})
-        _rf_enabled = _rf_cfg.get("enabled", False)
-        regime = "neutral"   # default when regime_filter disabled or data unavailable
-        regime_scale = 1.0   # default: full size
-        if _rf_enabled:
-            _rf_ma = _rf_cfg.get("benchmark_ma_period", 50)
-            _rf_bull_thresh = _rf_cfg.get("breadth_bull_threshold", 50.0)
-            _rf_bear_thresh = _rf_cfg.get("breadth_bear_threshold", 40.0)
-            _rf_bull_scale = _rf_cfg.get("bull_scale", 1.0)
-            _rf_neutral_scale = _rf_cfg.get("neutral_scale", 0.75)
-            _rf_bear_scale = _rf_cfg.get("bear_scale", 0.5)
-            # Signal 1: Benchmark above/below MA (trend direction)
-            _bench_df = data.get(self.benchmark_ticker)
-            _bench_above_ma = None
-            if _bench_df is not None and today in _bench_df.index:
-                _bench_close = _bench_df.loc[:today, "close"]
-                if len(_bench_close) >= _rf_ma:
-                    _bench_ma = _bench_close.rolling(window=_rf_ma).mean().iloc[-1]
-                    if not pd.isna(_bench_ma):
-                        _bench_above_ma = bool(_bench_close.iloc[-1] >= _bench_ma)
-            # Signal 2: Market breadth — % stocks above 200-day MA
-            _breadth_pct200 = None
-            if breadth_series is not None and today in breadth_series.index:
-                _brow = breadth_series.loc[today]
-                _raw = _brow.get("pct_above_200ma", None)
-                if _raw is not None and not pd.isna(_raw):
-                    _breadth_pct200 = float(_raw)
-            # Classify regime using both signals
-            if _bench_above_ma is not None and _breadth_pct200 is not None:
-                if _bench_above_ma and _breadth_pct200 >= _rf_bull_thresh:
-                    regime, regime_scale = "bull", _rf_bull_scale
-                elif not _bench_above_ma and _breadth_pct200 < _rf_bear_thresh:
-                    regime, regime_scale = "bear", _rf_bear_scale
-                else:
-                    regime, regime_scale = "neutral", _rf_neutral_scale
-            elif _bench_above_ma is not None:
-                # Only MA signal available (no breadth data)
-                if _bench_above_ma:
-                    regime, regime_scale = "bull", _rf_bull_scale
-                else:
-                    regime, regime_scale = "bear", _rf_bear_scale
-            _b200_str = f"{_breadth_pct200:.1f}%" if _breadth_pct200 is not None else "N/A"
-            logger.debug(
-                f"REGIME {today.date()}: {regime.upper()} "
-                f"(IOZ_above_{_rf_ma}MA={_bench_above_ma}, "
-                f"breadth200={_b200_str}, scale={regime_scale:.2f})"
-            )
-
+        # 6. Generate new entry signals and execute entries
         # --- Generate new entry signals ---
         if day_idx > 0 and len(open_positions) < self.max_positions:  # regime_scale applied in sizing
             yesterday = trading_dates[day_idx - 1]
