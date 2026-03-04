@@ -362,6 +362,12 @@ def main():
     from brokers.live_portfolio import LivePortfolio
 
     config = get_active_config(market_id)
+
+    # Skip markets that aren't live-enabled (avoids ERROR-level Telegram spam)
+    if not config.get("trading", {}).get("live_enabled", False):
+        log.info("Market %s has live_enabled=False — skipping monitor", market_id)
+        return
+
     portfolio = LivePortfolio(config, market_id=market_id)
     if not portfolio.connect():
         log.error("Broker connection failed — cannot monitor positions")
