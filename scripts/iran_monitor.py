@@ -203,23 +203,97 @@ def get_derived_metrics(prices: dict) -> dict:
     return metrics
 
 
+def get_rate_history() -> dict:
+    """Load cross-cycle rate history for trend tracking."""
+    history_file = PROJECT / "data" / "position_monitor" / "rate_history.json"
+    try:
+        with open(history_file) as f:
+            return json.load(f)
+    except Exception:
+        return {"vlcc_spot": [], "wti": [], "brent": [], "gold": [], "vix": [],
+                "last_escalation_event": None}
+
+
+def update_rate_history(prices: dict) -> dict:
+    """Append current cycle's rates to history and return updated history."""
+    history = get_rate_history()
+    history_file = PROJECT / "data" / "position_monitor" / "rate_history.json"
+    now = datetime.now().isoformat(timespec="seconds")
+
+    # Append current values (keep last 18 cycles = 72 hours at 4h intervals)
+    MAX_HISTORY = 18
+
+    for series, ticker in [("wti", "CL=F"), ("brent", "BZ=F"), ("gold", "GC=F"), ("vix", "^VIX")]:
+        price = prices.get(ticker, {}).get("price")
+        if price:
+            history.setdefault(series, []).append({"t": now, "v": round(price, 2)})
+            history[series] = history[series][-MAX_HISTORY:]
+
+    # VLCC is manual — agent updates via iran_monitor_update.py rate command
+    # But we compute a 3-cycle trend if we have data
+    vlcc_entries = history.get("vlcc_spot", [])
+    if len(vlcc_entries) >= 2:
+        latest = vlcc_entries[-1]["v"]
+        prev = vlcc_entries[-2]["v"]
+        history["vlcc_3cycle_trend"] = (
+            "rising" if latest > prev * 1.02 else
+            "declining" if latest < prev * 0.98 else
+            "stable"
+        )
+    if len(vlcc_entries) >= 3:
+        latest = vlcc_entries[-1]["v"]
+        three_ago = vlcc_entries[-3]["v"]
+        pct = (latest - three_ago) / three_ago * 100 if three_ago else 0
+        history["vlcc_3cycle_change_pct"] = round(pct, 1)
+
+    # Hours since last escalation event
+    esc = history.get("last_escalation_event")
+    if esc and esc.get("timestamp"):
+        try:
+            esc_time = datetime.fromisoformat(esc["timestamp"])
+            hours = (datetime.now() - esc_time).total_seconds() / 3600
+            history["hours_since_escalation"] = round(hours, 1)
+            history["escalation_gap_status"] = (
+                "active" if hours < 6 else
+                "recent" if hours < 24 else
+                "cooling" if hours < 48 else
+                "stale"
+            )
+        except Exception:
+            pass
+
+    # Save
+    try:
+        with open(history_file, "w") as f:
+            json.dump(history, f, indent=2, default=str)
+    except Exception:
+        pass
+
+    return history
+
+
 def get_portfolio_level_checks(positions: list, prices: dict) -> dict:
     """Portfolio-wide risk checks."""
     checks = {}
 
-    # Total iran-conflict exposure
+    # Energy-adjacent tickers: oil, energy, AND tanker (INSW)
+    ENERGY_ADJACENT_TAGS = {"energy", "oil", "tanker"}
+
     total_value = 0
     energy_value = 0
+    energy_tickers = []
     for p in positions:
         price = prices.get(p["ticker"], {}).get("price", p.get("current_price") or p["entry_price"])
         pos_value = price * p["quantity"]
         total_value += pos_value
-        if "energy" in p.get("tags", []) or "oil" in p.get("tags", []):
+        if ENERGY_ADJACENT_TAGS & set(p.get("tags", [])):
             energy_value += pos_value
+            energy_tickers.append(f"{p['ticker']} ${pos_value:.0f}")
 
     checks["total_portfolio_value"] = round(total_value, 2)
     checks["energy_exposure_value"] = round(energy_value, 2)
     checks["energy_exposure_pct"] = round(energy_value / total_value * 100, 2) if total_value > 0 else 0
+    checks["energy_tickers"] = energy_tickers  # Shows what's counted
 
     # Concentration warning
     checks["energy_concentration_status"] = (
@@ -235,9 +309,21 @@ def get_portfolio_level_checks(positions: list, prices: dict) -> dict:
         checks["vix_extreme_fear"] = vix > 35
         checks["vix_low_vol"] = vix < 18
 
+    # Oil prices front and centre
+    wti = prices.get("CL=F", {})
+    brent = prices.get("BZ=F", {})
+    checks["oil_summary"] = {
+        "wti": wti.get("price"),
+        "wti_1d_pct": wti.get("change_1d_pct"),
+        "wti_5d_pct": wti.get("change_5d_pct"),
+        "brent": brent.get("price"),
+        "brent_1d_pct": brent.get("change_1d_pct"),
+        "brent_5d_pct": brent.get("change_5d_pct"),
+        "brent_wti_spread": round(brent.get("price", 0) - wti.get("price", 0), 2) if brent.get("price") and wti.get("price") else None,
+    }
+
     # Kill switch triggers
     checks["kill_switch_triggers"] = []
-    # (Agent assesses ceasefire from news — we flag VIX and concentration here)
     if checks.get("vix_extreme_fear"):
         checks["kill_switch_triggers"].append("VIX >35 — extreme fear — review cash deployment")
     if checks["energy_concentration_status"] == "failing":
@@ -249,6 +335,40 @@ def get_portfolio_level_checks(positions: list, prices: dict) -> dict:
     low_health = [p["ticker"] for p in positions if p.get("health_score", 10) < 6]
     if len(low_health) >= 3:
         checks["kill_switch_triggers"].append(f"3+ positions at health <6: {', '.join(low_health)} — PORTFOLIO STRESS")
+
+    # Kill switch PROXIMITY — how close to coordinated de-escalation response
+    proximity_conditions = []
+    # Check ceasefire (from position conditions)
+    for p in positions:
+        if p["ticker"] == "RTX":
+            for c in p.get("conditions", []):
+                if c.get("id") == "rtx_ceasefire":
+                    if c["status"] == "warning":
+                        proximity_conditions.append("ceasefire backchannel talks (RTX amber)")
+                    elif c["status"] == "failing":
+                        proximity_conditions.append("CEASEFIRE CONFIRMED (RTX red)")
+    if checks.get("vix_low_vol"):
+        proximity_conditions.append("VIX <18 (low vol)")
+    if checks["energy_concentration_status"] == "failing":
+        proximity_conditions.append("energy >55%")
+
+    # Escalation gap
+    rate_hist = get_rate_history()
+    gap_hours = rate_hist.get("hours_since_escalation")
+    if gap_hours and gap_hours > 48:
+        proximity_conditions.append(f"no escalation in {gap_hours:.0f}h (cooling)")
+
+    checks["kill_switch_proximity"] = {
+        "conditions_met": len(proximity_conditions),
+        "total_conditions": 4,  # ceasefire, VIX<18, concentration, escalation gap
+        "details": proximity_conditions,
+        "status": (
+            "clear" if len(proximity_conditions) == 0 else
+            "monitoring" if len(proximity_conditions) <= 1 else
+            "elevated" if len(proximity_conditions) <= 2 else
+            "imminent"
+        ),
+    }
 
     return checks
 
@@ -310,12 +430,23 @@ def collect_all() -> dict:
     """Collect everything the agent needs."""
     prices = get_price_data()
     positions = get_position_states()
+    rate_history = update_rate_history(prices)
 
     return {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "prices": prices,
         "derived_metrics": get_derived_metrics(prices),
         "portfolio_checks": get_portfolio_level_checks(positions, prices),
+        "rate_history": {
+            "vlcc_spot": rate_history.get("vlcc_spot", [])[-6:],  # Last 6 cycles (24h)
+            "vlcc_3cycle_trend": rate_history.get("vlcc_3cycle_trend"),
+            "vlcc_3cycle_change_pct": rate_history.get("vlcc_3cycle_change_pct"),
+            "wti_recent": rate_history.get("wti", [])[-6:],
+            "brent_recent": rate_history.get("brent", [])[-6:],
+            "last_escalation_event": rate_history.get("last_escalation_event"),
+            "hours_since_escalation": rate_history.get("hours_since_escalation"),
+            "escalation_gap_status": rate_history.get("escalation_gap_status"),
+        },
         "positions": positions,
         "recent_alerts": get_recent_alerts(),
     }

@@ -52,5 +52,147 @@
     "new_status": "warning",
     "value": 30.75,
     "timestamp": "2026-03-04T20:25:42"
+  },
+  {
+    "position_id": "0053ac1a7b04",
+    "ticker": "RTX",
+    "condition_id": "rtx_ceasefire",
+    "condition_label": "No ceasefire announced",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:29"
+  },
+  {
+    "position_id": "0a70124996f3",
+    "ticker": "INSW",
+    "condition_id": "insw_entry",
+    "condition_label": "Entry status",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:33"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_fed",
+    "condition_label": "Fed rate cut expectations intact",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:37"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_cbgold",
+    "condition_label": "Central bank gold buying continues",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:37"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_ryield",
+    "condition_label": "Real yields (10Y TIPS) direction",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:37"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_goldoil",
+    "condition_label": "Gold/oil ratio stable or rising",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:37"
+  },
+  {
+    "position_id": "7adf5478dec9",
+    "ticker": "CIBR",
+    "condition_id": "cibr_earnings",
+    "condition_label": "Sector earnings CRWD/PANW",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:41"
+  },
+  {
+    "position_id": "7adf5478dec9",
+    "ticker": "CIBR",
+    "condition_id": "cibr_entry",
+    "condition_label": "Entry status",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:42"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:46"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_conc",
+    "condition_label": "Combined energy exposure (XOP+WDS) <55%",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:50"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_broadband",
+    "condition_label": "Broadband subscriber trend",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:53"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_mobile",
+    "condition_label": "Mobile segment growth",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-04T20:30:53"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 601.58,
+    "timestamp": "2026-03-04T20:31:11"
   }
 ]

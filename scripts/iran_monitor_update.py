@@ -19,6 +19,13 @@ Usage:
 
     # Re-evaluate all positions (prices + auto conditions)
     python3 scripts/iran_monitor_update.py evaluate
+
+    # Record VLCC spot rate for cross-cycle trend tracking
+    python3 scripts/iran_monitor_update.py rate vlcc <value_in_thousands>
+    # e.g. rate vlcc 350  →  records $350k/day
+
+    # Record last escalation event timestamp + description
+    python3 scripts/iran_monitor_update.py escalation "Description of event" "Source (Reuters/AP/etc)"
 """
 
 import json
@@ -138,6 +145,68 @@ def cmd_evaluate():
     print(f"OK: evaluated {result['evaluated']} positions, {result['alerts']} alerts")
 
 
+def cmd_rate(series: str, value: float):
+    """Record a rate datapoint for cross-cycle trend tracking (e.g. VLCC spot)."""
+    history_file = PROJECT / "data" / "position_monitor" / "rate_history.json"
+    try:
+        with open(history_file) as f:
+            history = json.load(f)
+    except Exception:
+        history = {}
+
+    now = datetime.now().isoformat(timespec="seconds")
+    key = f"{series}_spot" if not series.endswith("_spot") else series
+    history.setdefault(key, []).append({"t": now, "v": value})
+    history[key] = history[key][-18:]  # Keep 72h at 4h intervals
+
+    # Compute 3-cycle trend for VLCC
+    if key == "vlcc_spot" and len(history[key]) >= 2:
+        latest = history[key][-1]["v"]
+        prev = history[key][-2]["v"]
+        history["vlcc_3cycle_trend"] = (
+            "rising" if latest > prev * 1.02 else
+            "declining" if latest < prev * 0.98 else
+            "stable"
+        )
+    if key == "vlcc_spot" and len(history[key]) >= 3:
+        latest = history[key][-1]["v"]
+        three_ago = history[key][-3]["v"]
+        pct = (latest - three_ago) / three_ago * 100 if three_ago else 0
+        history["vlcc_3cycle_change_pct"] = round(pct, 1)
+
+    with open(history_file, "w") as f:
+        json.dump(history, f, indent=2, default=str)
+    print(f"OK: {key} = {value} recorded. History: {len(history[key])} points")
+
+    if key == "vlcc_spot" and len(history[key]) >= 2:
+        trend = history.get("vlcc_3cycle_trend", "?")
+        print(f"    VLCC 3-cycle trend: {trend}")
+
+
+def cmd_escalation(description: str, source: str):
+    """Record a new escalation event timestamp."""
+    history_file = PROJECT / "data" / "position_monitor" / "rate_history.json"
+    try:
+        with open(history_file) as f:
+            history = json.load(f)
+    except Exception:
+        history = {}
+
+    now = datetime.now().isoformat(timespec="seconds")
+    history["last_escalation_event"] = {
+        "timestamp": now,
+        "description": description,
+        "source": source,
+    }
+    history["hours_since_escalation"] = 0.0
+    history["escalation_gap_status"] = "active"
+
+    with open(history_file, "w") as f:
+        json.dump(history, f, indent=2, default=str)
+    print(f"OK: escalation event recorded at {now}")
+    print(f"    {description} ({source})")
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(__doc__)
@@ -155,6 +224,10 @@ if __name__ == "__main__":
         cmd_set_price(sys.argv[2], sys.argv[3], float(sys.argv[4]))
     elif cmd == "evaluate":
         cmd_evaluate()
+    elif cmd == "rate" and len(sys.argv) == 4:
+        cmd_rate(sys.argv[2], float(sys.argv[3]))
+    elif cmd == "escalation" and len(sys.argv) >= 4:
+        cmd_escalation(sys.argv[2], " ".join(sys.argv[3:]))
     else:
         print(__doc__)
         sys.exit(1)
