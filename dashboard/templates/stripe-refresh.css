@@ -141,14 +141,62 @@ html body .section {
   box-shadow: none;
 }
 
-/* Scroll-reveal initial / revealed states */
+/* ═══════════════════════════════════════════════════════════════════════════
+   STRIPE-STYLE ANIMATION SYSTEM
+   Single easing: cubic-bezier(0.19, 1, 0.22, 1) — "easeOutExpo"
+   Philosophy: everything transitions, nothing snaps.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Global smooth transitions — the core of Stripe's feel ──────────── */
+/* Any property change on any interactive element animates automatically */
+html body .card,
+html body .section,
+html body .section-head,
+html body .tab-btn,
+html body .plan-btn,
+html body .market-btn,
+html body .chart-range-btn,
+html body .status-pill,
+html body .market-clock,
+html body .strat,
+html body .market-tag,
+html body .order-status,
+html body .research-badge,
+html body .mon-card,
+html body .research-card,
+html body .mon-tag-pill,
+html body .mon-toggle-btn,
+html body .version,
+html body .chevron,
+html body .tab-badge,
+html body th,
+html body td,
+html body tr,
+html body .plan-entry,
+html body .task-item,
+html body .pnl-item,
+html body .metric,
+html body .mon-cond,
+html body .exposure-bar-fill,
+html body .mon-health-fill,
+html body a {
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Faster transitions for small/frequent elements */
+html body .pulse,
+html body .pulse-live,
+html body .pulse-paper,
+html body .live-dot,
+html body .hotkey-hint {
+  transition: all 0.15s linear;
+}
+
+/* ── Scroll-reveal entrance — sections & cards ──────────────────────── */
 html body .section,
 html body .card {
   opacity: 0;
-  transform: translateY(20px);
-  transition:
-    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(24px);
 }
 
 html body .section.sr-visible,
@@ -157,26 +205,244 @@ html body .card.sr-visible {
   transform: none;
 }
 
-/* The existing inline animation kicks in immediately; let the override
-   honour it by keeping animate-in behaviour on cards. */
+/* Stagger cards within a row */
+html body .cards .card:nth-child(1) { transition-delay: 0.00s; }
+html body .cards .card:nth-child(2) { transition-delay: 0.04s; }
+html body .cards .card:nth-child(3) { transition-delay: 0.08s; }
+html body .cards .card:nth-child(4) { transition-delay: 0.12s; }
+html body .cards .card:nth-child(5) { transition-delay: 0.16s; }
+
+/* Stagger research hero cards */
+html body .research-hero .research-card:nth-child(1) { transition-delay: 0.00s; }
+html body .research-hero .research-card:nth-child(2) { transition-delay: 0.04s; }
+html body .research-hero .research-card:nth-child(3) { transition-delay: 0.08s; }
+html body .research-hero .research-card:nth-child(4) { transition-delay: 0.12s; }
+html body .research-hero .research-card:nth-child(5) { transition-delay: 0.16s; }
+
+/* Monitor cards stagger */
+html body .mon-card {
+  opacity: 0;
+  transform: translateY(24px);
+}
+html body .mon-card.sr-visible { opacity: 1; transform: none; }
+
+/* Research cards */
+html body .research-card {
+  opacity: 0;
+  transform: translateY(24px);
+}
+html body .research-card.sr-visible { opacity: 1; transform: none; }
+
+/* Override the inline fadeIn animation — use the Stripe curve */
 html body .card {
-  /* Cards use animation-based reveal from inline styles; keep opacity chain */
-  animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: revealUp 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
 
 html body .section {
-  animation: revealUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0.2s;
+  animation: revealUp 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  animation-delay: 0.15s;
 }
 
 @keyframes revealUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* ── Hover micro-interactions ───────────────────────────────────────── */
+
+/* Table rows — subtle highlight slide */
+html body tr:hover td {
+  background: rgba(234, 234, 234, 0.02);
+}
+
+/* Cards lift subtly */
+html body .card:hover {
+  border-color: #2a2a2a;
+  transform: translateY(-1px);
+}
+html body .card.sr-visible:hover {
+  transform: translateY(-1px);
+}
+
+/* Monitor cards lift */
+html body .mon-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+}
+html body .mon-card.sr-visible:hover {
+  transform: translateY(-2px);
+}
+
+/* Task items slide right on hover */
+html body .task-item:hover {
+  transform: translateX(3px);
+  border-color: var(--border);
+}
+
+/* Plan entries — subtle left-border reveal */
+html body .plan-entry:hover {
+  padding-left: 8px;
+  border-left: 2px solid var(--green);
+}
+
+/* Metric cells glow subtly */
+html body .metric:hover {
+  background: rgba(234, 234, 234, 0.015);
+}
+
+/* P&L items */
+html body .pnl-item:hover {
+  background: rgba(234, 234, 234, 0.015);
+}
+
+/* ── Section collapse/expand — Stripe accordion style ───────────────── */
+html body .section-body {
+  transition:
+    max-height 0.6s cubic-bezier(0.19, 1, 0.22, 1),
+    opacity 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+    padding 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Chevron rotation — match Stripe's 0.3s */
+html body .chevron {
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ── Tab content crossfade ──────────────────────────────────────────── */
+html body .tab-content {
+  animation: none;
+}
+html body .tab-content.active {
+  display: block;
+  animation: tabFadeIn 0.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Button hover — Stripe's invert effect ──────────────────────────── */
+html body .tab-btn:hover {
+  color: var(--text);
+  background: rgba(234, 234, 234, 0.05);
+}
+html body .tab-btn.active:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* Market buttons lift */
+html body .market-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Chart range buttons */
+html body .chart-range-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* ── KPI value counter animation ────────────────────────────────────── */
+/* Applied via JS — values slide in from below */
+html body .card-value {
+  overflow: hidden;
+}
+html body .card-value.counting {
+  animation: countSlideUp 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes countSlideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Sparkline draw-in ──────────────────────────────────────────────── */
+html body .card-sparkline svg {
+  opacity: 0;
+  animation: sparkDraw 1s cubic-bezier(0.19, 1, 0.22, 1) 0.4s forwards;
+}
+@keyframes sparkDraw {
+  from { opacity: 0; transform: scaleX(0); transform-origin: left; }
+  to   { opacity: 1; transform: scaleX(1); transform-origin: left; }
+}
+
+/* ── Header entrance ────────────────────────────────────────────────── */
+html body .header {
+  animation: headerSlideIn 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes headerSlideIn {
+  from { opacity: 0; transform: translateY(-100%); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Status pills — subtle pulse fade ───────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* ── Exposure/health bar fill animation ─────────────────────────────── */
+html body .exposure-bar-fill,
+html body .mon-health-fill {
+  transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ── Queue progress bar segments animate in ─────────────────────────── */
+html body .queue-bar > div {
+  transition: width 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ── Logo hover shimmer ─────────────────────────────────────────────── */
+html body .logo {
+  transition: opacity 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+html body .logo:hover {
+  opacity: 0.7;
+}
+
+/* ── Halted banner entrance ─────────────────────────────────────────── */
+html body .halted-banner {
+  animation: bannerSlide 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes bannerSlide {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Confirm panel fade ─────────────────────────────────────────────── */
+html body .confirm-panel {
+  animation: overlayFade 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+html body .confirm-box {
+  animation: modalSlideUp 0.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Monitor modal entrance ─────────────────────────────────────────── */
+html body #monitor-modal {
+  animation: overlayFade 0.3s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+html body #monitor-modal-content {
+  animation: modalSlideUp 0.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -499,17 +765,17 @@ html body .grid-cross {
   opacity: 0;
   font-size: 10px;
   line-height: 1;
-  animation: crossEntrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: crossEntrance 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
 
 @keyframes crossEntrance {
   from {
     opacity: 0;
-    transform: scale(0.5);
+    transform: scale(0) rotate(90deg);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) rotate(0deg);
   }
 }
 
@@ -759,6 +1025,12 @@ html body .eq-tooltip {
   box-shadow: none;
   background: var(--surface-raised);
   border: 1px solid var(--border);
+  transition: opacity 0.15s linear, transform 0.15s linear;
+}
+
+/* Crosshair follows cursor smoothly */
+html body .eq-crosshair {
+  transition: left 0.05s linear;
 }
 
 /* ── Phase 2: Exposure bar ──────────────────────────────────────────────── */
@@ -775,22 +1047,22 @@ html body .confirm-panel {
 
 /* ── Phase 3: Scroll-reveal override (replaces inline fadeIn) ────────────── */
 
-/* Redefine fadeIn to use the spring easing */
+/* Redefine fadeIn to use the Stripe easeOutExpo curve */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
-/* Ensure .animate-in cards use the new curve */
+/* Ensure .animate-in cards use the Stripe curve */
 html body .animate-in {
-  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+  animation-duration: 0.6s;
 }
 
 /* ── Misc overrides ─────────────────────────────────────────────────────── */
