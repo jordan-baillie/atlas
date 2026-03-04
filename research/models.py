@@ -15,6 +15,7 @@ File Ownership Boundaries:
 
 import json
 import fcntl
+import os
 import time
 import uuid
 from pathlib import Path
@@ -43,6 +44,7 @@ class ExperimentStatus(str, Enum):
     PROMOTED = "promoted"
     REJECTED = "rejected"
     DEFERRED = "deferred"
+    SKIPPED = "skipped"
 
 
 class ExperimentType(str, Enum):
@@ -222,11 +224,10 @@ class ExperimentEnvelope:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
     def save(self):
-        """Save this envelope to research/experiments/exp-{id}.json."""
+        """Save this envelope to research/experiments/exp-{id}.json (atomic)."""
         EXPERIMENTS_DIR.mkdir(parents=True, exist_ok=True)
         path = EXPERIMENTS_DIR / f"exp-{self.id}.json"
-        with open(path, "w") as f:
-            json.dump(self.to_dict(), f, indent=2, default=str)
+        atomic_json_write(path, self.to_dict())
         return path
 
     @classmethod
@@ -258,54 +259,100 @@ class JournalEntry:
 
 
 # ---------------------------------------------------------------------------
+# Atomic write utility
+# ---------------------------------------------------------------------------
+
+def atomic_json_write(path: Path, data) -> None:
+    """Write *data* as JSON to *path* atomically.
+
+    Writes to a ``.tmp`` sibling, fsync's, then ``os.replace``'s over the
+    target.  The original file is never truncated until the replacement is
+    fully written and flushed — so a mid-write crash/kill leaves the previous
+    version intact.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2, default=str)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise
+
+
+# ---------------------------------------------------------------------------
 # File-locked read/write helpers
 # ---------------------------------------------------------------------------
+
+def _lock_path(path: Path) -> Path:
+    """Return the sentinel ``.lock`` file used to coordinate access to *path*.
+
+    A dedicated lock file (rather than locking the data file itself) survives
+    atomic renames — so all readers/writers always coordinate on the same
+    inode even after the data file is replaced.
+    """
+    return path.with_name(path.name + ".lock")
+
 
 def _locked_read(path: Path) -> list:
     """Read a JSON list file with shared lock."""
     if not path.exists():
         return []
-    with open(path, "r") as f:
-        fcntl.flock(f, fcntl.LOCK_SH)
+    lock = _lock_path(path)
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock, "a") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_SH)
         try:
-            data = json.load(f)
-        except json.JSONDecodeError:
-            data = []
+            if not path.exists():
+                return []
+            try:
+                with open(path) as f:
+                    return json.load(f)
+            except json.JSONDecodeError:
+                return []
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
-    return data
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def _locked_write(path: Path, data: list):
-    """Write a JSON list file with exclusive lock."""
+    """Write a JSON list file with exclusive lock (atomic temp-then-rename)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+    lock = _lock_path(path)
+    with open(lock, "a") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
         try:
-            json.dump(data, f, indent=2, default=str)
+            atomic_json_write(path, data)
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def _locked_append(path: Path, entry: dict):
-    """Append a single entry to a JSON list file with exclusive lock."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # Read-modify-write with exclusive lock
-    if not path.exists():
-        with open(path, "w") as f:
-            json.dump([], f)
+    """Append a single entry to a JSON list file with exclusive lock (atomic).
 
-    with open(path, "r+") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+    Uses write-to-temp-then-rename so the data file is never left in a
+    truncated state if the process is killed mid-write.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock = _lock_path(path)
+    with open(lock, "a") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
         try:
-            f.seek(0)
-            data = json.load(f)
+            data: list = []
+            if path.exists():
+                try:
+                    with open(path) as f:
+                        data = json.load(f)
+                except json.JSONDecodeError:
+                    data = []
             data.append(entry)
-            f.seek(0)
-            f.truncate()
-            json.dump(data, f, indent=2, default=str)
+            atomic_json_write(path, data)
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 # ---------------------------------------------------------------------------
@@ -387,7 +434,8 @@ def get_next_queued(market: Optional[str] = None) -> Optional[dict]:
     # Terminal failure states — if a dependency is in one of these, the
     # dependent experiment should be deferred (includes deferred for cascade)
     FAILED_STATES = {ExperimentStatus.FAILED, ExperimentStatus.REJECTED, ExperimentStatus.DEFERRED,
-                     "failed", "rejected", "deferred"}
+                     ExperimentStatus.SKIPPED,
+                     "failed", "rejected", "deferred", "skipped"}
     # States that satisfy a dependency
     PASS_STATES = {ExperimentStatus.PASSED, ExperimentStatus.PROMOTED, "passed", "promoted"}
 

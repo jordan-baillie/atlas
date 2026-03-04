@@ -22,7 +22,7 @@ sys.path.insert(0, str(PROJECT))
 
 from research.models import (
     read_queue, claim_experiment, update_queue_entry,
-    ExperimentStatus,
+    ExperimentStatus, atomic_json_write,
 )
 from scripts.research_runner import run_experiment
 
@@ -93,49 +93,82 @@ def main():
             print(f"  {symbol} {exp_id}: {verdict} ({elapsed:.0f}s)")
             results.append(result)
 
-    # Phase 2: Run dependent experiments sequentially (respecting chains)
+    # Phase 2: Run dependent experiments in topological order with skip propagation
     if dependent:
         print(f"\n── Phase 2: Dependent experiments ({len(dependent)}) ──")
-        # Sort by dependency depth
-        done_ids = {r['id'] for r in results if r.get('verdict') == 'pass'}
-        remaining = list(dependent)
-        max_rounds = 10
-        round_num = 0
 
-        while remaining and round_num < max_rounds:
-            round_num += 1
-            runnable = [e for e in remaining
-                        if all(d in done_ids for d in e.get('depends_on', []))]
+        # result_by_id is the source of truth for dependency checking.
+        # Verdicts that mean "this dependency is a dead end".
+        TERMINAL_VERDICTS = {'fail', 'error', 'skipped'}
+
+        result_by_id: dict = {r['id']: r for r in results}
+        remaining = list(dependent)
+        # worst case: one experiment unblocked per round, plus cascading skips
+        max_rounds = len(dependent) + 2
+
+        for round_num in range(max_rounds):
+            if not remaining:
+                break
+
+            runnable = []   # deps all passed → can run now
+            skippable = []  # at least one dep failed/skipped → skip immediately
+            # anything else is still waiting for an in-progress dep
+
+            for e in remaining:
+                deps = e.get('depends_on', [])
+                dep_verdicts = {d: result_by_id.get(d, {}).get('verdict') for d in deps}
+
+                # Find the first dependency that failed/was skipped
+                failed_dep = next(
+                    (d for d, v in dep_verdicts.items() if v in TERMINAL_VERDICTS),
+                    None,
+                )
+                if failed_dep:
+                    skippable.append((e, failed_dep))
+                elif all(v == 'pass' for v in dep_verdicts.values()):
+                    runnable.append(e)
+                # else: dep not yet resolved → stays in remaining this round
+
+            # --- Skip experiments whose dependencies failed ---
+            for e, failed_dep in skippable:
+                rationale = f"dependency {failed_dep} failed"
+                print(f"  ⏭️  {e['id']}: SKIPPED ({rationale})")
+                skip_result = {'id': e['id'], 'verdict': 'skipped', 'rationale': rationale}
+                results.append(skip_result)
+                result_by_id[e['id']] = skip_result
+                remaining.remove(e)
+                update_queue_entry(e['id'], {
+                    'status': ExperimentStatus.SKIPPED,
+                    'notes': f"[auto-skipped] {rationale}",
+                })
 
             if not runnable:
-                # Check if blocked by failures
-                failed_ids = {r['id'] for r in results if r.get('verdict') != 'pass'}
-                blocked = [e for e in remaining
-                           if any(d in failed_ids for d in e.get('depends_on', []))]
-                for e in blocked:
-                    print(f"  ⏭️  {e['id']}: SKIPPED (dependency failed)")
-                    results.append({'id': e['id'], 'verdict': 'skipped', 'error': 'dependency failed'})
-                    remaining.remove(e)
-                    update_queue_entry(e['id'], {'status': ExperimentStatus.FAILED})
-                if not runnable:
+                if not skippable:
+                    # Nothing was runnable and nothing was skipped — we're stuck.
+                    if remaining:
+                        print(f"  ⚠️  {len(remaining)} experiments stuck "
+                              f"(deps unresolvable): "
+                              f"{[e['id'] for e in remaining]}")
                     break
+                # We skipped some but nothing to run yet → loop to catch cascades
+                continue
 
-            # Run this round in parallel
+            # --- Run this round's experiments in parallel ---
+            print(f"  Round {round_num + 1}: running {len(runnable)} experiment(s)")
             with ProcessPoolExecutor(max_workers=args.workers) as pool:
                 futures = {pool.submit(run_one, e['id']): e['id'] for e in runnable}
                 for future in as_completed(futures):
                     exp_id = futures[future]
                     try:
                         result = future.result(timeout=3600)
-                    except Exception as e:
-                        result = {'id': exp_id, 'verdict': 'error', 'error': str(e)[:200]}
+                    except Exception as exc:
+                        result = {'id': exp_id, 'verdict': 'error', 'error': str(exc)[:200]}
                     verdict = result.get('verdict', '?')
                     symbol = '✅' if verdict == 'pass' else '❌' if verdict == 'fail' else '⚠️'
                     elapsed = time.time() - t0
                     print(f"  {symbol} {exp_id}: {verdict} ({elapsed:.0f}s)")
                     results.append(result)
-                    if verdict == 'pass':
-                        done_ids.add(exp_id)
+                    result_by_id[exp_id] = result
 
             for e in runnable:
                 remaining.remove(e)
@@ -151,14 +184,14 @@ def main():
     print(f"Time: {elapsed:.0f}s ({elapsed/60:.1f}m)")
     print(f"End: {datetime.now().strftime('%H:%M:%S')}")
 
-    # Save results
+    # Save results atomically
     out_path = PROJECT / 'research' / 'waves' / 'wave_2_results.json'
-    with open(out_path, 'w') as f:
-        json.dump({
-            'started': t0,
-            'elapsed_s': elapsed,
-            'results': results,
-        }, f, indent=2, default=str)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_json_write(out_path, {
+        'started': t0,
+        'elapsed_s': elapsed,
+        'results': results,
+    })
     print(f"Results saved: {out_path}")
 
     return 0 if failed == 0 else 2

@@ -26,6 +26,8 @@ from collections import Counter
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from research.models import atomic_json_write
+
 RESEARCH_DIR = PROJECT_ROOT / "research"
 WAVES_DIR = RESEARCH_DIR / "waves"
 QUEUE_PATH = RESEARCH_DIR / "queue.json"
@@ -217,8 +219,7 @@ def generate_brief() -> dict:
         except Exception:
             pass
 
-    with open(brief_path, "w") as f:
-        json.dump(brief, f, indent=2)
+    atomic_json_write(brief_path, brief)
 
     return brief
 
