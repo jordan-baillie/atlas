@@ -1,7 +1,7 @@
 {
   "version": "asx_ibkr_tf_only_v1.0",
   "project": "Atlas",
-  "description": "Phase 8B: Universe 159, 8C: Sector rotation (min_conf=0.80), 8D: Dynamic position sizing. Phase 9 cointegration filter tested but disabled (net negative impact). Phase 9.4: IBKR live, ASX 00 min parcel, 2% risk sizing.",
+  "description": "Phase 8B: Universe 159, 8C: Sector rotation (min_conf=0.80), 8D: Dynamic position sizing. Phase 9 cointegration filter tested but disabled (net negative impact). Phase 9.4: IBKR live, ASX 00 min parcel, 2% risk sizing. PAUSED \u2014 fee drag unviable at A$4k via IBKR. Research/backtest only.",
   "universe": {
     "method": "top_liquid",
     "top_n": 200,
@@ -335,11 +335,21 @@
     "mode": "hard_pool",
     "overflow_enabled": true,
     "pools": {
-      "trend_following":  {"max_positions": 5},
-      "mean_reversion":   {"max_positions": 3},
-      "opening_gap":      {"max_positions": 2},
-      "momentum_breakout": {"max_positions": 3},
-      "_other":           {"max_positions": 2}
+      "trend_following": {
+        "max_positions": 5
+      },
+      "mean_reversion": {
+        "max_positions": 3
+      },
+      "opening_gap": {
+        "max_positions": 2
+      },
+      "momentum_breakout": {
+        "max_positions": 3
+      },
+      "_other": {
+        "max_positions": 2
+      }
     }
   },
   "fee_aware_filter": {
@@ -363,7 +373,7 @@
   "market": "asx",
   "volatility_gate": {
     "enabled": true,
-    "_comment": "Pre-market macro volatility check — blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
+    "_comment": "Pre-market macro volatility check \u2014 blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
     "thresholds": {
       "oil_gap_pct": 5.0,
       "gold_gap_pct": 2.0,
@@ -377,7 +387,7 @@
       "vix": true,
       "asx_futures": true
     },
-    "_behavior": "1 flag → 50% position size reduction | 2+ flags → block all entries + Telegram alert"
+    "_behavior": "1 flag \u2192 50% position size reduction | 2+ flags \u2192 block all entries + Telegram alert"
   },
   "_notes": "TF-only config for ASX via IBKR. Based on IBKR reopt results 2026-03-02. TF solo: CAGR 8.46%, Sharpe 0.455, DD 9.45%, PF 1.341, 211 trades. Adding MR/OG hurts due to position contention with 7 max slots."
 }

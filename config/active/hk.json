@@ -2,7 +2,7 @@
   "version": "v1.1",
   "project": "Atlas",
   "market": "hk",
-  "description": "HK v1.1 — Hong Kong (SEHK) market config. Moomoo broker via OpenD, HKD. No equity allocated yet (starting_equity=0).",
+  "description": "HK v1.1 \u2014 Hong Kong (SEHK) market config. Moomoo broker via OpenD, HKD. No equity allocated yet (starting_equity=0). Research/backtest only \u2014 unfunded.",
   "universe": {
     "method": "top_liquid",
     "top_n": 120,
@@ -213,11 +213,21 @@
     "mode": "hard_pool",
     "overflow_enabled": true,
     "pools": {
-      "trend_following":  {"max_positions": 5},
-      "mean_reversion":   {"max_positions": 4},
-      "opening_gap":      {"max_positions": 3},
-      "momentum_breakout": {"max_positions": 4},
-      "_other":           {"max_positions": 2}
+      "trend_following": {
+        "max_positions": 5
+      },
+      "mean_reversion": {
+        "max_positions": 4
+      },
+      "opening_gap": {
+        "max_positions": 3
+      },
+      "momentum_breakout": {
+        "max_positions": 4
+      },
+      "_other": {
+        "max_positions": 2
+      }
     }
   },
   "dynamic_sizing": {
@@ -232,7 +242,7 @@
   "_version_metadata": {
     "created_at": "2026-03-03T00:55:00.000000",
     "market": "hk",
-    "change": "v1.1 — Switched broker from IBKR to Moomoo, zeroed starting_equity (no HK holdings)",
+    "change": "v1.1 \u2014 Switched broker from IBKR to Moomoo, zeroed starting_equity (no HK holdings)",
     "notes": "HK market authorized on Moomoo FUTUAU account. No equity allocated yet."
   }
 }
