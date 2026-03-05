@@ -17,7 +17,7 @@
     "status": "failed",
     "strategy_name": null,
     "params_override": {
-      "filter_param": "volume_min_ratio",
+      "filter_param": "volume_entry_min",
       "variants": [
         {
           "name": "baseline (0.5x \u2014 current)",
@@ -34,10 +34,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": "atlas-research",
-    "claimed_at": "2026-03-03T23:59:36.488828+00:00",
+    "claimed_by": null,
+    "claimed_at": null,
     "created_at": "2026-03-03T01:33:08.718946+00:00",
-    "updated_at": "2026-03-04T00:18:22.131687+00:00",
+    "updated_at": "2026-03-04T14:33:38.034663+00:00",
     "tags": [
       "wave2",
       "filter",
@@ -426,10 +426,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": "atlas-research",
-    "claimed_at": "2026-03-04T01:12:19.136108+00:00",
+    "claimed_by": "atlas-wave2-parallel",
+    "claimed_at": "2026-03-04T14:11:25.264750+00:00",
     "created_at": "2026-03-03T01:33:08.719010+00:00",
-    "updated_at": "2026-03-04T01:30:16.627435+00:00",
+    "updated_at": "2026-03-04T14:31:03.648079+00:00",
     "tags": [
       "wave2",
       "filter",
@@ -439,5 +439,451 @@
     ],
     "depends_on": [],
     "notes": "Quantpedia, QuantifiedStrategies, and academic research (Etula et al 2020) confirm TOM effect is robust across 34+ countries and 100+ years. Mechanism: pension fund rebalancing + payroll cash flows at month-end."
+  },
+  {
+    "id": "wave3_ibs_sweep",
+    "title": "IBS entry filter sweep on MR (combined mode)",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Requiring low IBS (close near day's low) for MR entries improves signal quality. Alvarez research shows IBS < 25 gives 58% avg gain improvement on RSI(2) strategy. Our MR has ibs_max=1.0 (disabled). Testing restrictive thresholds should filter out weak MR signals.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "min_trades": 50
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "sweep_param": "ibs_max",
+      "sweep_values": [
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.5,
+        1.0
+      ],
+      "mode": "combined"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462708+00:00",
+    "updated_at": "2026-03-04T23:08:51.462738+00:00",
+    "tags": [
+      "wave3",
+      "filter",
+      "ibs",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [],
+    "notes": "From Alvarez Quant Trading & Pagonidis IBS research. IBS < 0.25 is the sweet spot."
+  },
+  {
+    "id": "wave3_vol_sweep",
+    "title": "Volume min_ratio sweep on MR (combined mode)",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Higher volume threshold for MR entries improves trade quality. Wave 1 proved 1.5x volume on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Wave 2 combined test FAILED due to infrastructure bug (nested params). This experiment uses full volume dict sweep to bypass the nested param issue. Expect 1.5x to be optimal in combined mode too.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.03,
+      "min_trades": 80
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "sweep_param": "volume",
+      "sweep_values": [
+        {
+          "lookback": 20,
+          "surge_threshold": 1.5,
+          "surge_boost": 0.0,
+          "dry_penalty": 0.0,
+          "min_ratio": 0.5
+        },
+        {
+          "lookback": 20,
+          "surge_threshold": 1.5,
+          "surge_boost": 0.0,
+          "dry_penalty": 0.0,
+          "min_ratio": 1.0
+        },
+        {
+          "lookback": 20,
+          "surge_threshold": 1.5,
+          "surge_boost": 0.0,
+          "dry_penalty": 0.0,
+          "min_ratio": 1.25
+        },
+        {
+          "lookback": 20,
+          "surge_threshold": 1.5,
+          "surge_boost": 0.0,
+          "dry_penalty": 0.0,
+          "min_ratio": 1.5
+        },
+        {
+          "lookback": 20,
+          "surge_threshold": 1.5,
+          "surge_boost": 0.0,
+          "dry_penalty": 0.0,
+          "min_ratio": 2.0
+        }
+      ],
+      "mode": "combined"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462746+00:00",
+    "updated_at": "2026-03-04T23:08:51.462748+00:00",
+    "tags": [
+      "wave3",
+      "filter",
+      "volume",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [],
+    "notes": "Retry of wave2_vol_combined with full-dict sweep to bypass nested param bug."
+  },
+  {
+    "id": "wave3_trsi_solo",
+    "title": "Triple RSI \u2014 solo backtest on SP500",
+    "category": "new_strategy",
+    "market": "sp500",
+    "hypothesis": "Triple RSI (RSI(5) declining 3 days, below 30, with lookback check) generates rare but high-conviction mean reversion signals on individual SP500 stocks. Published edge on SPY: 90% WR, PF 4.0. Adapted for individual stocks with SMA-200 filter and volume confirmation. Expects fewer but higher-quality trades than existing MR strategy.",
+    "method": "single_strategy_test",
+    "acceptance_criteria": {
+      "min_sharpe": -0.5,
+      "min_profit_factor": 0.9,
+      "min_trades": 30,
+      "min_win_rate": 50
+    },
+    "estimated_runtime_min": 15,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "triple_rsi",
+    "params_override": {
+      "rsi_period": 5,
+      "rsi_entry": 30,
+      "rsi_exit": 50,
+      "decline_days": 3,
+      "rsi_lookback_max": 60,
+      "sma200_filter": true,
+      "atr_stop_mult": 2.5,
+      "max_hold_days": 10,
+      "volume": {
+        "lookback": 20,
+        "min_ratio": 1.0
+      },
+      "ibs_max": 1.0
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462753+00:00",
+    "updated_at": "2026-03-04T23:08:51.462754+00:00",
+    "tags": [
+      "wave3",
+      "new_strategy",
+      "triple_rsi",
+      "solo"
+    ],
+    "depends_on": [],
+    "notes": "Strategy implemented in research/strategies/triple_rsi.py (sandbox). Solo metrics unreliable at $4K \u2014 focus on trade count, WR, PF for viability."
+  },
+  {
+    "id": "wave3_trsi_opt",
+    "title": "Triple RSI \u2014 parameter optimization",
+    "category": "new_strategy",
+    "market": "sp500",
+    "hypothesis": "Coordinate descent on Triple RSI parameters will find optimal balance between selectivity and trade count. Key tensions: shorter RSI period = more signals but noisier; fewer decline days = more trades but lower quality; tighter stop = less drawdown but more whipsaws.",
+    "method": "full_optimization",
+    "acceptance_criteria": {
+      "min_sharpe": 0.0,
+      "min_profit_factor": 1.1,
+      "min_trades": 30
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "triple_rsi",
+    "params_override": {
+      "param_grid": {
+        "rsi_period": [
+          3,
+          5,
+          7,
+          10
+        ],
+        "rsi_entry": [
+          20,
+          25,
+          30,
+          35
+        ],
+        "decline_days": [
+          2,
+          3,
+          4
+        ],
+        "rsi_exit": [
+          40,
+          50,
+          60,
+          70
+        ],
+        "atr_stop_mult": [
+          1.5,
+          2.0,
+          2.5,
+          3.0
+        ],
+        "max_hold_days": [
+          5,
+          7,
+          10,
+          15
+        ]
+      }
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462759+00:00",
+    "updated_at": "2026-03-04T23:08:51.462760+00:00",
+    "tags": [
+      "wave3",
+      "new_strategy",
+      "triple_rsi",
+      "optimization"
+    ],
+    "depends_on": [
+      "wave3_trsi_solo"
+    ],
+    "notes": "If solo test shows < 30 trades, reduce decline_days to 2 or lower rsi_entry."
+  },
+  {
+    "id": "wave3_trsi_comb",
+    "title": "Triple RSI \u2014 combined portfolio test",
+    "category": "new_strategy",
+    "market": "sp500",
+    "hypothesis": "Triple RSI generates rare signals (estimated 30-80/year) that won't compete significantly with MR/TF/OG for position slots. Unlike dormant strategies that generated 300-700 trades and degraded combined Sharpe, Triple RSI's low trade count should have minimal position contention. Combined portfolio may see slight Sharpe improvement from diversification.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_sharpe": 0.8,
+      "max_drawdown_pct": 8.0,
+      "min_trades": 200
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "triple_rsi",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462763+00:00",
+    "updated_at": "2026-03-04T23:08:51.462765+00:00",
+    "tags": [
+      "wave3",
+      "new_strategy",
+      "triple_rsi",
+      "combined"
+    ],
+    "depends_on": [
+      "wave3_trsi_opt"
+    ],
+    "notes": "CRITICAL TEST: All 4 previous dormant strategies failed combined test due to position contention. Triple RSI's low trade count is designed to avoid this failure mode."
+  },
+  {
+    "id": "wave3_stacked_mr",
+    "title": "MR with best IBS + volume filters in combined mode",
+    "category": "filter",
+    "market": "sp500",
+    "hypothesis": "Stacking the best IBS threshold from wave3_ibs_sweep AND the best volume threshold from wave3_vol_sweep will compound their benefits. Each filter independently improves signal quality; combined effect should be multiplicative (better entries = higher PF, lower DD). Risk: over-filtering may reduce trade count below useful threshold.",
+    "method": "combined_portfolio_test",
+    "acceptance_criteria": {
+      "min_sharpe": 0.9,
+      "min_profit_factor": 1.5,
+      "min_trades": 150
+    },
+    "estimated_runtime_min": 20,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": null,
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462768+00:00",
+    "updated_at": "2026-03-04T23:08:51.462769+00:00",
+    "tags": [
+      "wave3",
+      "filter",
+      "stacked",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [
+      "wave3_ibs_sweep",
+      "wave3_vol_sweep"
+    ],
+    "notes": "If IBS and volume sweeps both pass, manually construct params_override with best IBS + best volume values before running this test."
+  },
+  {
+    "id": "wave3_full_reopt",
+    "title": "Full SP500 portfolio reoptimization (post-filter + TRSI)",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "After adding IBS filter, volume filter, and (if passed) Triple RSI, the portfolio parameters may be suboptimal. Full coordinate descent reoptimization should find the best parameter combination across all active strategies. Expect Sharpe improvement from current v2.2 baseline.",
+    "method": "reoptimization",
+    "acceptance_criteria": {
+      "min_sharpe": 0.9,
+      "min_cagr_pct": 12.0,
+      "max_drawdown_pct": 7.0
+    },
+    "estimated_runtime_min": 120,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {},
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462772+00:00",
+    "updated_at": "2026-03-04T23:08:51.462773+00:00",
+    "tags": [
+      "wave3",
+      "reoptimization",
+      "portfolio"
+    ],
+    "depends_on": [
+      "wave3_stacked_mr"
+    ],
+    "notes": "Run AFTER filter stacking test. If Triple RSI combined test also passed, enable it in config before reoptimization. Otherwise reopt with MR+TF+OG only."
+  },
+  {
+    "id": "wave3_oos_val",
+    "title": "OOS + perturbation validation of reoptimized config",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Reoptimized config must survive out-of-sample validation before promotion. Three-test suite: (1) time-split OOS Sharpe > 0, (2) perturbation \u00b115% stability > 50%, (3) walk-forward window win rate > 50%. All three must pass per lesson #6.",
+    "method": "oos_validation",
+    "acceptance_criteria": {
+      "min_oos_sharpe": 0.0,
+      "min_oos_ratio": 0.5,
+      "min_perturbation_pass_rate": 0.5
+    },
+    "estimated_runtime_min": 60,
+    "priority": "P2",
+    "status": "queued",
+    "strategy_name": null,
+    "params_override": {},
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462776+00:00",
+    "updated_at": "2026-03-04T23:08:51.462777+00:00",
+    "tags": [
+      "wave3",
+      "validation",
+      "oos"
+    ],
+    "depends_on": [
+      "wave3_full_reopt"
+    ],
+    "notes": "GATE: No promotion without OOS pass. Use validate_oos.py with candidate config."
+  },
+  {
+    "id": "wave3_rsi_period",
+    "title": "RSI period sweep on MR (combined mode) \u2014 RSI(5) vs RSI(14)",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Web research (Triple RSI, Connors, Alvarez) consistently shows RSI(2-5) outperforming RSI(14) for mean reversion signals. Our MR uses RSI(14). Shorter RSI periods may improve entry timing. Combined-mode sweep gives realistic portfolio-level impact unlike unreliable solo sweeps (lesson #30).",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.02,
+      "min_trades": 80
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P3",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "sweep_param": "rsi_period",
+      "sweep_values": [
+        2,
+        3,
+        5,
+        7,
+        10,
+        14
+      ],
+      "mode": "combined"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462779+00:00",
+    "updated_at": "2026-03-04T23:08:51.462780+00:00",
+    "tags": [
+      "wave3",
+      "param_sweep",
+      "rsi",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [],
+    "notes": "From web research: RSI(2) and RSI(5) are the standard for MR strategies. If a shorter period wins, it could be a simple config change for immediate profit."
+  },
+  {
+    "id": "wave3_hold_combined",
+    "title": "max_hold_days sweep on MR (combined mode)",
+    "category": "param_drift",
+    "market": "sp500",
+    "hypothesis": "Wave 2 tested max_hold_days in SOLO mode (all negative Sharpe due to fee drag at $4K). Relative ranking showed 10 > 15 > 7 > 5 > 3. Combined-mode sweep gives realistic absolute Sharpe. Short holds (3-5d) may reduce time risk; longer holds (10-15d) capture more reversion.",
+    "method": "param_sweep",
+    "acceptance_criteria": {
+      "sharpe_improvement": 0.02,
+      "min_trades": 80
+    },
+    "estimated_runtime_min": 30,
+    "priority": "P4",
+    "status": "queued",
+    "strategy_name": "mean_reversion",
+    "params_override": {
+      "sweep_param": "max_hold_days",
+      "sweep_values": [
+        3,
+        5,
+        7,
+        10,
+        12,
+        15
+      ],
+      "mode": "combined"
+    },
+    "config_snapshot": null,
+    "claimed_by": null,
+    "claimed_at": null,
+    "created_at": "2026-03-04T23:08:51.462783+00:00",
+    "updated_at": "2026-03-04T23:08:51.462784+00:00",
+    "tags": [
+      "wave3",
+      "param_sweep",
+      "hold_days",
+      "mean_reversion",
+      "combined"
+    ],
+    "depends_on": [],
+    "notes": "Lesson #30: Solo param sweeps unreliable at $4K. Combined mode is required. Current default is max_hold_days=10 (from v2.2). May confirm or change."
   }
 ]

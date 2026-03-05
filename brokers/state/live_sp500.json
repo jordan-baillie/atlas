@@ -90,10 +90,98 @@
           "holding_days": 0
         }
       ]
+    },
+    {
+      "date": "2026-03-05",
+      "equity": 4003.62,
+      "cash": 731.83,
+      "positions_value": 3271.79,
+      "num_positions": 7,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "XOP",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 142.486,
+          "current_price": 160.77000427246094,
+          "unrealized_pnl": 182.84,
+          "mae": 0.0,
+          "mfe": 12.83,
+          "holding_days": 0
+        },
+        {
+          "ticker": "RTX",
+          "strategy": "unknown",
+          "shares": 6,
+          "entry_price": 207.59,
+          "current_price": 208.82000732421875,
+          "unrealized_pnl": 7.38,
+          "mae": 0.0,
+          "mfe": 0.59,
+          "holding_days": 0
+        },
+        {
+          "ticker": "PSQ",
+          "strategy": "unknown",
+          "shares": 33,
+          "entry_price": 31.2,
+          "current_price": 30.579999923706055,
+          "unrealized_pnl": -20.46,
+          "mae": -1.99,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "NEM",
+          "strategy": "unknown",
+          "shares": 5,
+          "entry_price": 122.16,
+          "current_price": 119.37000274658203,
+          "unrealized_pnl": -13.95,
+          "mae": -2.28,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "INSW",
+          "strategy": "unknown",
+          "shares": 7,
+          "entry_price": 76.891,
+          "current_price": 75.44000244140625,
+          "unrealized_pnl": -10.16,
+          "mae": -1.89,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "CIBR",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 63.8,
+          "current_price": 64.66000366210938,
+          "unrealized_pnl": 8.6,
+          "mae": 0.0,
+          "mfe": 1.35,
+          "holding_days": 0
+        },
+        {
+          "ticker": "CHTR",
+          "strategy": "trend_following",
+          "shares": 1,
+          "entry_price": 228.38,
+          "current_price": 232.0,
+          "unrealized_pnl": 3.62,
+          "mae": 0.0,
+          "mfe": 1.59,
+          "holding_days": 0
+        }
+      ]
     }
   ],
-  "daily_high_water": 4000.0,
+  "daily_high_water": 4003.62,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-03T17:28:06.676438"
+  "last_saved": "2026-03-05T08:01:05.062117"
 }

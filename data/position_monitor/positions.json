@@ -29,8 +29,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 75.46,
-        "last_checked": "2026-03-04T20:31:09",
+        "current_value": 77.37,
+        "last_checked": "2026-03-05T12:40:21",
         "notes": "<$65 = INVALIDATION (geopolitical premium unwound)"
       },
       {
@@ -43,8 +43,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 158.99,
-        "last_checked": "2026-03-04T20:31:09",
+        "current_value": 160.79,
+        "last_checked": "2026-03-05T12:40:21",
         "notes": "<$142 = BREAKEVEN STOP. >$155 = green"
       },
       {
@@ -58,7 +58,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:09",
+        "last_checked": "2026-03-05T12:40:21",
         "notes": "Green=closed/restricted, Amber=partial escorts, Red=fully reopened"
       },
       {
@@ -72,7 +72,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:09",
+        "last_checked": "2026-03-05T12:40:21",
         "notes": "Green=backwardation, Amber=flat, Red=contango"
       },
       {
@@ -85,8 +85,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 158.99,
-        "last_checked": "2026-03-04T20:31:09",
+        "current_value": 160.79,
+        "last_checked": "2026-03-05T12:40:21",
         "notes": ""
       },
       {
@@ -100,14 +100,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:09",
+        "last_checked": "2026-03-05T12:40:21",
         "notes": "Green=escalating/holding, Amber=stalemate, Red=de-escalation confirmed"
       }
     ],
     "health_score": 10.0,
-    "current_price": 158.99,
-    "unrealized_pnl": 165.0,
-    "unrealized_pnl_pct": 11.58,
+    "current_price": 160.79,
+    "unrealized_pnl": 183.0,
+    "unrealized_pnl_pct": 12.84,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -124,10 +124,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-02T18:39:39",
-    "updated_at": "2026-03-04T20:31:10",
+    "updated_at": "2026-03-05T12:40:24",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -161,9 +177,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 3,
-        "status": "warning",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:10",
+        "last_checked": "2026-03-05T12:40:24",
         "notes": "Green=no ceasefire, Amber=backchannel talks reported, Red=formal ceasefire announced. Red \u2260 auto-exit \u2192 trim to 3 shares."
       },
       {
@@ -176,8 +192,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 206.52,
-        "last_checked": "2026-03-04T20:31:10",
+        "current_value": 208.78,
+        "last_checked": "2026-03-05T12:40:24",
         "notes": "<$195 = INVALIDATION. $185 = full exit."
       },
       {
@@ -191,7 +207,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:10",
+        "last_checked": "2026-03-05T12:40:24",
         "notes": "Green=supplemental appropriations/budget increase, Amber=no change, Red=budget cuts proposed"
       },
       {
@@ -204,8 +220,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 206.52,
-        "last_checked": "2026-03-04T20:31:10",
+        "current_value": 208.78,
+        "last_checked": "2026-03-05T12:40:24",
         "notes": ""
       },
       {
@@ -219,7 +235,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:10",
+        "last_checked": "2026-03-05T12:40:24",
         "notes": "Green=<4wk ongoing, Amber=4-8wk (munition depletion thesis strengthens), Red=>8wk (broader market drag)"
       },
       {
@@ -233,14 +249,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:10",
+        "last_checked": "2026-03-05T12:40:24",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
-    "health_score": 8.5,
-    "current_price": 206.52,
-    "unrealized_pnl": -6.42,
-    "unrealized_pnl_pct": -0.52,
+    "health_score": 10.0,
+    "current_price": 208.78,
+    "unrealized_pnl": 7.14,
+    "unrealized_pnl_pct": 0.57,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -253,10 +269,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-04T20:31:11",
+    "updated_at": "2026-03-05T12:40:25",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -295,7 +327,7 @@
         "weight": 4,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=closed (<20% normal traffic), Amber=partial (20-60% normal, escorted), Red=open (>60%) = IMMEDIATE EXIT. Never sit at amber >1 cycle."
       },
       {
@@ -309,7 +341,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=>$300k/day, Amber=$150-300k/day, Red=<$150k/day"
       },
       {
@@ -323,7 +355,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=cancelled/suspended in Gulf, Amber=elevated premiums (>5x normal), Red=reinstated at normal rates"
       },
       {
@@ -337,7 +369,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=above, Amber=within 3% of trigger, Red=below = IMMEDIATE EXIT. Agent: check 30d high from price data."
       },
       {
@@ -349,9 +381,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "failing",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=filled at target, Amber=filled but gapped up >10%, Red=not yet filled"
       },
       {
@@ -363,16 +395,16 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "passing",
+        "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 9.0,
-    "current_price": 75.61,
-    "unrealized_pnl": -30.73,
-    "unrealized_pnl_pct": -5.49,
+    "current_price": 75.36,
+    "unrealized_pnl": -32.48,
+    "unrealized_pnl_pct": -5.8,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -393,10 +425,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-04T20:31:11",
+    "updated_at": "2026-03-05T12:40:25",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -431,9 +479,9 @@
         "warning_threshold": 5200.0,
         "direction": "above",
         "weight": 3,
-        "status": "passing",
-        "current_value": 5203.8,
-        "last_checked": "2026-03-04T20:31:11",
+        "status": "warning",
+        "current_value": 5195.7,
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "<$4800 (3 consecutive closes) = INVALIDATION"
       },
       {
@@ -446,8 +494,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 118.52,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 119.36,
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "<$100 = INVALIDATION"
       },
       {
@@ -461,7 +509,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=cuts priced in (dovish), Amber=hold (neutral), Red=hikes priced in (hawkish)"
       },
       {
@@ -474,8 +522,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 118.52,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 119.36,
+        "last_checked": "2026-03-05T12:40:25",
         "notes": ""
       },
       {
@@ -489,7 +537,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=continued/accelerating, Amber=stable, Red=net selling reported"
       },
       {
@@ -503,7 +551,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=falling, Amber=flat, Red=rising >2.5%"
       },
       {
@@ -517,14 +565,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:25",
         "notes": "Green=rising (gold outpacing oil), Amber=neutral, Red=falling (oil outpacing gold \u2192 stagflation shift). If this + real yields both red \u2192 trim."
       }
     ],
-    "health_score": 7.5,
-    "current_price": 118.52,
-    "unrealized_pnl": -18.2,
-    "unrealized_pnl_pct": -2.98,
+    "health_score": 6.0,
+    "current_price": 119.36,
+    "unrealized_pnl": -13.98,
+    "unrealized_pnl_pct": -2.29,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -537,10 +585,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-04T20:31:11",
+    "updated_at": "2026-03-05T12:40:26",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -577,7 +641,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "Green=elevated/active incidents, Amber=stable/background, Red=significantly reduced post-ceasefire"
       },
       {
@@ -590,8 +654,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 63.91,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 64.69,
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "$55-59 = amber, <$55 = red"
       },
       {
@@ -604,8 +668,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 63.91,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 64.69,
+        "last_checked": "2026-03-05T12:40:26",
         "notes": ""
       },
       {
@@ -619,7 +683,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "Green=still understaffed (<50%), Amber=partial restoration, Red=fully restored"
       },
       {
@@ -631,9 +695,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "warning",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "Green=beat + raised guidance, Amber=in-line, Red=miss + lowered"
       },
       {
@@ -647,7 +711,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "Green=accelerating, Amber=stable, Red=decelerating"
       },
       {
@@ -659,16 +723,16 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "failing",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:26",
         "notes": "Green=filled at target, Amber=filled but gapped, Red=not yet filled"
       }
     ],
-    "health_score": 6.5,
-    "current_price": 63.91,
-    "unrealized_pnl": 19.1,
-    "unrealized_pnl_pct": 3.08,
+    "health_score": 8.0,
+    "current_price": 64.69,
+    "unrealized_pnl": 26.85,
+    "unrealized_pnl_pct": 4.33,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -685,10 +749,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-04T20:31:11",
+    "updated_at": "2026-03-05T12:40:27",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -724,8 +804,8 @@
         "direction": "above",
         "weight": 3,
         "status": "warning",
-        "current_value": 22.64,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 21.15,
+        "last_checked": "2026-03-05T12:40:27",
         "notes": "<18 = hedge unnecessary, EXIT. 18-25 amber. >25 green."
       },
       {
@@ -737,9 +817,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 2,
-        "status": "failing",
-        "current_value": 601.58,
-        "last_checked": "2026-03-04T20:31:11",
+        "status": "passing",
+        "current_value": 610.97,
+        "last_checked": "2026-03-05T12:42:20",
         "notes": "Agent: INVERT this \u2014 QQQ below MA = GREEN for PSQ, above = RED. Set toggle accordingly."
       },
       {
@@ -753,7 +833,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:27",
         "notes": "Green=declining, Amber=flat, Red=rising (hedge is a drag). Agent: check ^GSPC 5d change."
       },
       {
@@ -767,7 +847,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:27",
         "notes": "Green=escalating, Amber=stalemate, Red=de-escalating"
       },
       {
@@ -781,7 +861,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:27",
         "notes": "Green=rising (inflationary pressure on tech), Amber=flat, Red=falling. Agent: check CL=F 5d change."
       },
       {
@@ -795,14 +875,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:27",
         "notes": "Green=<10 days, Amber=10-20 days, Red=>20 days (decay risk). Agent: calculate from entry_date."
       }
     ],
-    "health_score": 6.5,
-    "current_price": 31.04,
-    "unrealized_pnl": -5.28,
-    "unrealized_pnl_pct": -0.51,
+    "health_score": 8.5,
+    "current_price": 30.55,
+    "unrealized_pnl": -21.45,
+    "unrealized_pnl_pct": -2.08,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -811,10 +891,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-04T20:31:11",
+    "updated_at": "2026-03-05T12:42:20",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -851,8 +947,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 75.46,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 77.37,
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "<$60 = red, $60-70 = amber, >$70 = green"
       },
       {
@@ -865,8 +961,8 @@
         "direction": "above",
         "weight": 2,
         "status": "warning",
-        "current_value": 30.75,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 30.15,
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "<$30 = green (within 10% of $27 target), $30-33 = amber, >$33 = red (overextended >20%)"
       },
       {
@@ -879,8 +975,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 30.75,
-        "last_checked": "2026-03-04T20:31:11",
+        "current_value": 30.15,
+        "last_checked": "2026-03-05T12:40:28",
         "notes": ""
       },
       {
@@ -894,7 +990,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "Green=>$15/MMBtu, Amber=$10-15, Red=<$10"
       },
       {
@@ -908,7 +1004,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "Green=Qatar exports disrupted, Amber=partially restored, Red=fully restored"
       },
       {
@@ -922,7 +1018,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "Green=<40%, Amber=40-55%, Red=>55% = CONCENTRATION WARNING. Includes XOP+WDS+INSW (tanker is energy-adjacent). Agent: read portfolio_checks.energy_tickers."
       },
       {
@@ -934,16 +1030,16 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "passing",
+        "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:11",
+        "last_checked": "2026-03-05T12:40:28",
         "notes": "Green=weakening AUD (boosts USD earnings), Amber=stable, Red=strengthening AUD"
       }
     ],
-    "health_score": 8.5,
-    "current_price": 30.75,
-    "unrealized_pnl": 186.58,
-    "unrealized_pnl_pct": 19.0,
+    "health_score": 8.0,
+    "current_price": 30.15,
+    "unrealized_pnl": 163.78,
+    "unrealized_pnl_pct": 16.68,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -952,10 +1048,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-03-01T00:00:00",
-    "updated_at": "2026-03-04T20:31:12",
+    "updated_at": "2026-03-05T12:40:29",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -990,8 +1102,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 229.41,
-        "last_checked": "2026-03-04T20:31:12",
+        "current_value": 232.07,
+        "last_checked": "2026-03-05T12:40:29",
         "notes": "<$200 = structural break (red)"
       },
       {
@@ -1004,8 +1116,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 229.41,
-        "last_checked": "2026-03-04T20:31:12",
+        "current_value": 232.07,
+        "last_checked": "2026-03-05T12:40:29",
         "notes": "<$180 = INVALIDATION"
       },
       {
@@ -1019,7 +1131,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:12",
+        "last_checked": "2026-03-05T12:40:29",
         "notes": "Green=capex declining, Amber=flat, Red=increasing (thesis broken). Quarterly check only."
       },
       {
@@ -1032,8 +1144,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 229.41,
-        "last_checked": "2026-03-04T20:31:12",
+        "current_value": 232.07,
+        "last_checked": "2026-03-05T12:40:29",
         "notes": ""
       },
       {
@@ -1047,7 +1159,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:12",
+        "last_checked": "2026-03-05T12:40:29",
         "notes": "Green=losses moderating/gains, Amber=stable losses, Red=accelerating losses"
       },
       {
@@ -1061,14 +1173,14 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-04T20:31:12",
+        "last_checked": "2026-03-05T12:40:29",
         "notes": "Green=>1.5M net adds annualized, Amber=1-1.5M, Red=<1M (growth stalling)"
       }
     ],
     "health_score": 9.0,
-    "current_price": 229.41,
-    "unrealized_pnl": 1.03,
-    "unrealized_pnl_pct": 0.45,
+    "current_price": 232.07,
+    "unrealized_pnl": 3.69,
+    "unrealized_pnl_pct": 1.62,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -1077,10 +1189,26 @@
       {
         "timestamp": "2026-03-04 20:31",
         "text": "[4h update 20:26 AEST] US-Israel strikes on Iran enter day 4-6 of active conflict; Iran retaliating across all 6 GCC states, US bases, and Hormuz shipping. VLCC rates at all-time high ($423k/day Mon, $350k/day today) with war risk insurance suspended \u2014 tanker/energy thesis intact. $50B Pentagon supplemental budget expected as early as Friday (RTX catalyst). Gold/oil ratio deteriorating (69 from 79, oil +15.6% 5d) \u2014 stagflation shift risk flagged for NEM. Ceasefire talks reported across multiple sources but no formal agreement. CIBR and INSW pending Moomoo execution \u2014 entry conditions red until filled."
+      },
+      {
+        "timestamp": "2026-03-05 00:04",
+        "text": "[4h update 00:00 AEST] Brave Search FAILED \u2014 all 5 queries returned no results. Price-driven assessment only. WTI $73.61 (-1.3%d, +12.9%5d) | Brent $80.67 | Spread $7.06. CRITICAL: NEM -7.75% vs gold spot +1.82% \u2014 unexplained gold miner/spot divergence; GDX -8.76% confirms sector-wide selloff, not NEM-specific. Gold/oil ratio 70.65 vs 79.38 (5d) \u2014 nem_goldoil RED persists; nem_ryield stays AMBER \u2014 trim trigger NOT activated (requires BOTH red). Last escalation: US strikes Bandar Abbas (Reuters, 3.3h ago) \u2014 active window, no 12h gap yet. VLCC last recorded $350k/day (prev cycle) \u2014 no new rate data available. VIX 22.35 (down from 23.57). rtx_ceasefire stays AMBER from prior cycle \u2014 no new Reuters/AP confirmation or denial. All thesis conditions intact. INSW + CIBR entries still pending Moomoo fill."
+      },
+      {
+        "timestamp": "2026-03-05 01:15",
+        "text": "[Manual 01:15 AEST] Geographic expansion: US sub sank Iranian frigate in Indian Ocean + Fujairah port strike. Conflict no longer contained to Persian Gulf. RTX ceasefire reverted green \u2014 Hegseth/Rubio rhetoric is escalatory not diplomatic. Oman mediation is noise without both parties at the table."
+      },
+      {
+        "timestamp": "2026-03-05 12:23",
+        "text": "[4h update 12:16 AEST] No new developments in last 4h window. Older context confirms: Hormuz -90% traffic (NBC/Reuters/Bloomberg), VLCC 50k last confirmed (Mon peak 24k \u2014 downward trend flagged), war insurance cancelled (Reuters). Iran secret outreach to US (CNN/NYT) but US confirms 'no active negotiations' \u2014 market brief de-escalation rally was speculation only. rtx_ceasefire stays GREEN. Strikes continue day 5+. NATO intercepted Iranian missile over Turkey airspace (Reuters) \u2014 geographic scope now REGIONAL (4 zones, added Gulf of Oman via Fujairah drone boats). insw_sector downgraded (FRO -2.7%/DHT -2.9% 5d). cibr_earnings upgraded (CRWD record quarter). NEM paradox: nem_goldoil RED + nem_ryield AMBER \u2014 trim needs BOTH red, not yet triggered. VIX 21.15, energy 46.7%."
+      },
+      {
+        "timestamp": "2026-03-05 12:40",
+        "text": "[4h update 16:34 AEST] No new developments in last 4h window. Confirms: Hormuz -90% closed (NBC/Bloomberg/Reuters), VLCC 24k/day (MarineInsight \u2014 RISING from 50k, 3-cycle trend UP). Geographic scope upgraded to REGIONAL (5 zones): Gulf of Oman (Iranian drone boats/Fujairah), Arabian Sea (US sub sinks Iranian warship off Sri Lanka), Mediterranean (Cyprus RAF base hit). PSQ psq_qqq_ma corrected to GREEN (QQQ 10.75 < MA50 15.79, inverted). NEM WATCH: nem_goldoil RED (ratio 67.21 vs 79.38 5d \u2014 oil +18.5% vs gold +1.6%), nem_ryield AMBER (Treasury yields rising per CNBC, oil-inflation nexus \u2014 trim needs BOTH red, not yet triggered). Iran backchannel outreach (CNN/NYT) = noise; US confirms no active negotiations. War powers vote failed \u2014 Trump continues strikes. rtx_ceasefire GREEN. Trump naval escort offer dismissed as unlikely near-term (Argus/SSY). VIX 21.15, energy 46.7%, kill switch 0/4 clear."
       }
     ],
     "created_at": "2026-02-27T00:00:00",
-    "updated_at": "2026-03-04T20:31:12",
+    "updated_at": "2026-03-05T12:40:30",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,

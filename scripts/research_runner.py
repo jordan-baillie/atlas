@@ -180,7 +180,18 @@ def _run_combined_test(entry: dict) -> dict:
 
 
 def _run_param_sweep(entry: dict) -> dict:
-    """Run a parameter sweep for a specific param."""
+    """Run a parameter sweep for a specific param.
+
+    Supports two modes via params_override.mode:
+      - "solo" (default): Runs the target strategy in isolation.
+        Fast but unreliable at low equity (fee drag dominates).
+      - "combined": Runs the full active portfolio with only the
+        target param changed. Gives realistic Sharpe/PF because
+        all strategies share equity and diversify.
+
+    Combined mode also returns a baseline (current active config)
+    and delta vs baseline for each variant.
+    """
     from scripts.strategy_evaluator import (
         get_active_config, load_market_data, make_config_with_strategy,
         run_backtest, get_strategy_class
@@ -195,31 +206,74 @@ def _run_param_sweep(entry: dict) -> dict:
     sweep_config = entry.get('params_override', {})
     sweep_param = sweep_config.get('sweep_param')
     sweep_values = sweep_config.get('sweep_values', [])
+    mode = sweep_config.get('mode', 'solo')  # "solo" or "combined"
 
     if not sweep_param or not sweep_values:
         return {'error': 'param_sweep requires sweep_param and sweep_values in params_override'}
 
+    combined = mode == 'combined'
+
+    # In combined mode, run baseline first (current active config, no changes)
+    baseline = None
+    if combined:
+        logger.info(f"  [combined mode] Running baseline (active config as-is)...")
+        baseline = run_backtest(copy.deepcopy(config), data)
+        logger.info(f"  baseline: Sharpe={baseline.get('sharpe', 0):.3f} "
+                     f"trades={baseline.get('total_trades', 0)} "
+                     f"CAGR={baseline.get('cagr_pct', 0):.2f}%")
+
     results = []
     for val in sweep_values:
         params = {sweep_param: val}
-        cfg = make_config_with_strategy(config, strategy, params, solo=True)
+        if combined:
+            # Combined mode: apply param to target strategy within full portfolio
+            cfg = make_config_with_strategy(config, strategy, params, solo=False)
+        else:
+            # Solo mode: isolate the target strategy
+            cfg = make_config_with_strategy(config, strategy, params, solo=True)
         metrics = run_backtest(cfg, data)
         metrics['param_value'] = val
+
+        # In combined mode, compute delta vs baseline
+        if baseline:
+            delta = {}
+            for key in ('cagr_pct', 'sharpe', 'sortino', 'max_drawdown_pct',
+                         'win_rate_pct', 'profit_factor', 'total_pnl', 'total_trades'):
+                b = baseline.get(key, 0) or 0
+                c = metrics.get(key, 0) or 0
+                delta[key] = round(c - b, 4)
+            metrics['delta_vs_baseline'] = delta
+
         results.append(metrics)
-        logger.info(f"  {sweep_param}={val}: Sharpe={metrics.get('sharpe', 0):.3f} "
+        delta_str = ""
+        if baseline:
+            ds = metrics.get('delta_vs_baseline', {}).get('sharpe', 0)
+            delta_str = f" (Δ={ds:+.3f})"
+        logger.info(f"  {sweep_param}={val}: Sharpe={metrics.get('sharpe', 0):.3f}"
+                     f"{delta_str} trades={metrics.get('total_trades', 0)} "
                      f"CAGR={metrics.get('cagr_pct', 0):.2f}%")
 
-    # Find best
+    # Find best by Sharpe
     best = max(results, key=lambda r: r.get('sharpe', -999))
 
-    return {
+    result = {
         'sweep_param': sweep_param,
         'sweep_results': results,
         'best_value': best['param_value'],
         'best_metrics': best,
         'strategy': strategy,
         'market': market,
+        'mode': mode,
     }
+
+    if baseline:
+        result['baseline'] = baseline
+        # Also expose the best variant's delta for acceptance criteria
+        best_delta = best.get('delta_vs_baseline', {})
+        result['sharpe_improvement'] = best_delta.get('sharpe', 0)
+        result['dd_change'] = best_delta.get('max_drawdown_pct', 0)
+
+    return result
 
 
 def _run_full_optimization(entry: dict) -> dict:
@@ -558,7 +612,7 @@ def _run_filter_test(entry: dict) -> dict:
     # Detect engine-level params (vix_filter, regime_filter, tom_filter, etc.)
     # These go on the top-level config, not per-strategy.
     # TOM (Turn-of-Month) is treated as an engine-level scheduling filter.
-    _ENGINE_LEVEL_PARAMS = {'vix_filter', 'regime_filter', 'fee_aware_filter', 'tom_filter'}
+    _ENGINE_LEVEL_PARAMS = {'vix_filter', 'regime_filter', 'fee_aware_filter', 'tom_filter', 'turn_of_month', 'macro_regime'}
     is_engine_param = filter_param in _ENGINE_LEVEL_PARAMS
 
     # Detect dotted-path params (e.g. "strategies.mean_reversion.breadth.enabled").

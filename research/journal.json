@@ -1867,5 +1867,105 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave2_tom_filter",
+    "timestamp": "2026-03-04T14:31:03.655446+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": null,
+    "hypothesis": "The Turn of Month effect (last 5 + first 3 trading days) shows stocks generate virtually all monthly returns in this window (Lakonishok & Smidt 1988, confirmed 2024). Boosting signal confidence during TOM window (or suppressing signals mid-month) should improve trade quality. This is a calendar-based filter, completely uncorrelated with our price-based signals.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 115,
+      "cagr_pct": 2.8708,
+      "sharpe": -0.6446,
+      "sortino": -0.9537,
+      "max_drawdown_pct": 2.5751,
+      "win_rate_pct": 52.17,
+      "profit_factor": 1.4003,
+      "total_pnl": 229.0,
+      "avg_trade": 1.99,
+      "final_equity": 4234.11,
+      "expectancy_r": 0.132,
+      "avg_r": 0.132,
+      "r_count": 115,
+      "edge_p_value": 0.126582,
+      "edge_significant": false,
+      "var_95_pct": 0.312,
+      "cvar_95_pct": 0.423,
+      "calmar": 1.1148,
+      "mc_p95_drawdown_pct": 3.88,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 87,
+          "total_pnl": 174.8,
+          "win_rate_pct": 50.6
+        },
+        "mean_reversion": {
+          "trades": 28,
+          "total_pnl": 54.2,
+          "win_rate_pct": 57.1
+        }
+      },
+      "variant_name": "TOM boost (confidence +0.05 in window)",
+      "variant_value": "boost"
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-wave2-parallel"
+  },
+  {
+    "experiment_id": "wave2_vol_combined",
+    "timestamp": "2026-03-04T14:33:38.041874+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": null,
+    "hypothesis": "Wave 1 proved 1.5x volume filter on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Applying to the full combined portfolio should similarly improve signal quality by filtering out low-conviction entries across all strategies.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 117,
+      "cagr_pct": 1.3606,
+      "sharpe": -1.0448,
+      "sortino": -1.5647,
+      "max_drawdown_pct": 4.5115,
+      "win_rate_pct": 50.43,
+      "profit_factor": 1.1572,
+      "total_pnl": 104.92,
+      "avg_trade": 0.9,
+      "final_equity": 4110.12,
+      "expectancy_r": 0.0823,
+      "avg_r": 0.0823,
+      "r_count": 117,
+      "edge_p_value": 0.342443,
+      "edge_significant": false,
+      "var_95_pct": 0.324,
+      "cvar_95_pct": 0.458,
+      "calmar": 0.3016,
+      "mc_p95_drawdown_pct": 5.15,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 93,
+          "total_pnl": 60.84,
+          "win_rate_pct": 49.5
+        },
+        "mean_reversion": {
+          "trades": 24,
+          "total_pnl": 44.08,
+          "win_rate_pct": 54.2
+        }
+      },
+      "variant_name": "1.0x avg",
+      "variant_value": 1.0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-wave2-parallel"
   }
 ]

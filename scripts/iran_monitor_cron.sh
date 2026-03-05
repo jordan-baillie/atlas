@@ -21,8 +21,9 @@ export TZ="Australia/Brisbane"
 export HOME="${HOME:-/root}"
 export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 
-# Source profile for API keys (BRAVE_API_KEY etc.) — cron doesn't load login shells
-[ -f "$HOME/.profile" ] && . "$HOME/.profile" 2>/dev/null || true
+# Export API keys directly — sourcing .profile under set -u fails because
+# .bashrc references $PS1 (unbound in cron), causing instant script death.
+export BRAVE_API_KEY="${BRAVE_API_KEY:-BSAHxsnvVgTqZewUgDPpVSMP8SFmJB2}"
 
 mkdir -p "$LOG_DIR"
 cd "$PROJECT"

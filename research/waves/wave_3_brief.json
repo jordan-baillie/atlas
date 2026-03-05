@@ -1,0 +1,1420 @@
+{
+  "wave_number": 3,
+  "generated_at": "2026-03-04T23:00:03.871454+00:00",
+  "status": "planned",
+  "previous_findings": {
+    "total_experiments": 58,
+    "strategies_tested": [
+      "bb_squeeze",
+      "combined",
+      "connors_rsi2",
+      "mean_reversion",
+      "momentum_breakout",
+      "mtf_momentum",
+      "opening_gap",
+      "sector_rotation",
+      "short_term_mr",
+      "sma200_filter",
+      "trend_following",
+      "unknown"
+    ],
+    "strategies_passed": [
+      "bb_squeeze",
+      "combined",
+      "mean_reversion",
+      "momentum_breakout",
+      "sector_rotation",
+      "short_term_mr"
+    ],
+    "strategies_failed": [
+      "combined",
+      "connors_rsi2",
+      "mean_reversion",
+      "momentum_breakout",
+      "mtf_momentum",
+      "opening_gap",
+      "sector_rotation",
+      "short_term_mr",
+      "trend_following",
+      "unknown"
+    ],
+    "untested_strategies": [
+      "dividend_capture"
+    ],
+    "all_learnings": [
+      "All 5 params changed during optimization",
+      "Shorter breakout lookback (10 vs 20) works better",
+      "Tighter stops (2.0x vs 3.5x ATR) dramatically improve results",
+      "Longer trend filter (150 vs 50 SMA) eliminates false breakouts",
+      "Momentum breakout solo is modestly profitable after optimization (Sharpe 0.30, CAGR 8.0%)",
+      "But adding it to the active portfolio (MR+TF+OG) HURTS performance dramatically",
+      "Combined Sharpe drops from 0.59 to -0.16, DD increases from 6.6% to 16.5%",
+      "The 460 breakout trades compete with MR/TF signals for the 10 max positions",
+      "Breakout strategy may work better with a separate position allocation",
+      "Short-term MR is profitable solo after optimization (Sharpe 0.27, CAGR 7.6%, 63% WR)",
+      "But adding it to the active portfolio degrades Sharpe by 0.29 and CAGR by 2.4pp",
+      "The 697 STMR trades compete with MR/TF for 10 max positions",
+      "With both MR variants active, the portfolio is over-concentrated in mean reversion signals",
+      "PATTERN: Both dormant strategies fail the combined test due to position allocation contention",
+      "Future work: test with increased max_open_positions or separate allocation pools per strategy type",
+      "Sector rotation generated 0 trades across entire backtest period",
+      "Strategy signal logic likely incompatible with walk-forward engine",
+      "May need rebalance-aware backtest support (it rebalances every N days, not signal-per-bar)",
+      "Requires code-level debugging before retesting",
+      "MTF Momentum has code bug: generate_signals() takes 3 positional arguments but 4 were given",
+      "Strategy needs API signature fix before retesting",
+      "Likely needs to accept the new market_breadth parameter added to generate_signals()",
+      "BB Squeeze is viable: 322 trades, 45% WR, PF 0.74 with default params",
+      "Clearly unprofitable untuned (Sharpe -1.68, CAGR -12.3%) but signal generates enough trades",
+      "Passed to optimization phase",
+      "BB Squeeze improved dramatically: Sharpe -1.68 \u2192 -0.38, PF 0.74 \u2192 1.04",
+      "Best params: bb_period=25, bb_std=1.5 (both changed from defaults)",
+      "But PF 1.04 still below 1.1 threshold, Sharpe still negative",
+      "Near breakeven after optimization is not good enough for portfolio addition",
+      "BB Squeeze on SP500 with current implementation is likely not viable",
+      "PATTERN: All 3 dormant strategies tried so far are individually marginal after optimization",
+      "ASX reoptimization shows significant improvement across all metrics",
+      "Sharpe: 0.44 \u2192 0.60 (+0.17, well above 0.05 threshold)",
+      "CAGR: 9.1% \u2192 11.3% (+2.2pp)",
+      "Max DD: 9.7% \u2192 7.1% (-2.6pp, excellent risk reduction)",
+      "PF: 1.25 \u2192 1.37, WR: 53.6% \u2192 54.1%",
+      "Trade count: 345 \u2192 318 (slight reduction, still healthy)",
+      "Verdict was marked partial due to metric extraction bug, but manually this is a clear PASS",
+      "Candidate config at config/candidates/asx_wave1_asx_reopt.json \u2014 needs OOS validation",
+      "VIX regime filter: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format",
+      "Volume regime filter: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format",
+      "Cross-market correlation: Failed due to missing filter_param/variants in params_override",
+      "filter_test experiment type requires specific parameter format that was not configured",
+      "Need to update queue entries with filter_param field before retesting",
+      "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format",
+      "Promoted to /root/atlas/config/versions/asx_v9.3.json",
+      "Sector rotation is now functional \u2014 generates 251 trades vs 0 previously",
+      "PF 1.24 suggests alpha signal exists but untuned parameters drag Sharpe negative",
+      "Edge p-value 0.13 \u2014 not statistically significant, optimization may fix this",
+      "Strategy needs code review: may need rebalance-aware position management",
+      "DECISION: Worth sending to optimization phase despite partial verdict",
+      "calc_atr() call fixed (was passing df instead of df['high'],df['low'],df['close'])",
+      "Second bug: Series comparison ambiguity in signal generation logic",
+      "Strategy needs full code audit \u2014 multiple comparison operators likely use raw Series",
+      "PATTERN: Dormant strategies have accumulated API drift bugs",
+      "DO NOT re-queue until code is audited and unit-tested",
+      "VIX filter is counterproductive for this portfolio mix",
+      "Mean reversion thrives during high-VIX (panic) periods \u2014 blocking entries there destroys alpha",
+      "All 4 VIX thresholds tested (20/25/30/35) degrade Sharpe",
+      "KEY INSIGHT: MR buys oversold stocks during panic, which is the high-VIX regime",
+      "VIX filter might work for trend-only portfolio but not MR-heavy one",
+      "CLOSED: Do not re-test VIX filters on combined portfolio",
+      "1.5x avg volume filter on MR: Sharpe jumps from -0.02 to 0.38 (massive)",
+      "Mechanism: higher volume entries = more institutional participation = better follow-through",
+      "PF 1.30 \u2192 1.62 (23% improvement), DD 5.24% \u2192 4.03% (1.2pp reduction)",
+      "Trade count 332 \u2192 235 (29% reduction) \u2014 acceptable for the quality improvement",
+      "2x avg is too aggressive: only 115 trades, Sharpe drops to -0.30",
+      "0.5x/0.8x/1.0x show minimal improvement \u2014 1.5x is the threshold where quality jumps",
+      "NEXT: Test 1.5x volume filter on combined portfolio (all strategies)",
+      "SMA-200 filter is a CLEAR WIN on combined portfolio",
+      "Sharpe improvement: +0.28 (0.59 \u2192 0.87) \u2014 far exceeds 0.03 threshold",
+      "CAGR improvement: +1.6pp (10.1% \u2192 11.7%) with LESS risk",
+      "DD reduction: -1.2pp (6.6% \u2192 5.3%) \u2014 better risk profile",
+      "Trade count 443 \u2192 270 \u2014 healthy reduction, quality > quantity",
+      "MECHANISM: filtering out entries below 200-day MA avoids buying into downtrends",
+      "Previous coord descent rejected SMA-200 because it reduces trade count too aggressively",
+      "As a clean A/B toggle, the quality improvement overwhelms the quantity loss",
+      "PROMOTION CANDIDATE: Sharpe +0.28, CAGR +1.6pp, DD -1.2pp all exceed thresholds",
+      "Promoted to /root/atlas/config/versions/sp500_v2.1.json",
+      "SMA-200 filter promoted to SP500 active config v2.1",
+      "Applied to all 3 active strategies: mean_reversion, trend_following, opening_gap",
+      "Trades reduced 443\u2192270 but quality improvement overwhelms quantity loss",
+      "Human approved via Telegram promotion request",
+      "Sector rotation viable solo after optimization: Sharpe 0.43, CAGR 9.6%, PF 1.48",
+      "Fewer sectors (2) + tighter stops (2.5x ATR) + longer holds (30d) is optimal",
+      "Edge is statistically significant (p=0.015)",
+      "PATTERN CONFIRMED (4th time): dormant strategies fail combined test due to position contention",
+      "All 4 tested (momentum_breakout, short_term_mr, bb_squeeze, sector_rotation) degrade portfolio when added",
+      "Root cause: max_open_positions=10 creates zero-sum competition for position slots",
+      "SR crowds out MR (-34%) and TF (-45%) \u2014 both proven profit drivers",
+      "DECISION: Wave 1 dormant activation theme is CLOSED",
+      "NEXT PRIORITY: Position allocation pools (per-strategy-type max positions) to unlock new strategies",
+      "ROOT CAUSE: confidence=0.50 hardcoded in mtf_momentum.py, filtered by min_confidence=0.75 in config",
+      "3rd failure \u2014 first 2 were API signature bugs (fixed), this is the remaining blocker",
+      "Strategy generates hundreds of signals but none pass confidence gate",
+      "FIX: Add dynamic confidence scoring or per-strategy min_confidence override",
+      "BLOCKED: Do not re-queue until confidence calculation is implemented",
+      "INFRASTRUCTURE FAILURE: All 3 volume variants produced identical results",
+      "filter_test sets s_cfg[\"volume_min_ratio\"] but strategies read from s_cfg[\"volume\"][\"min_ratio\"]",
+      "Need to fix filter_test to handle nested config params before retesting",
+      "The hypothesis is NOT rejected \u2014 test was invalid",
+      "ConnorsRSI2 generates 249 trades with 57% WR \u2014 signal quality decent",
+      "But PF=0.78: losses larger than wins. ATR(3.0x) stop gives wide risk while SMA(5) exit captures small gains",
+      "Edge not statistically significant (p=0.27)",
+      "ALSO HAD CODE BUG: calc_position_size returns dict, code compared dict <= 0",
+      "Fixed: pos_result[\"shares\"] extraction. Does not change backtest outcome (only affected expensive stocks)",
+      "HYPOTHESIS REJECTED: RSI(2) solo is unprofitable with current params on SP500 at $4K equity",
+      "POSSIBLE RETRY: With tighter stop (1.5-2x ATR) and higher equity, risk-reward may improve",
+      "All max_hold_days values produce negative Sharpe in SOLO MR mode",
+      "max_hold_days=10 is relatively best (-1.98), shorter holds are worse",
+      "Current default (15) is slightly worse than 10 (-2.08 vs -1.98)",
+      "NOTE: Solo MR on $4K has inherent negative Sharpe due to fee drag",
+      "Relative ranking useful: 10 > 15 > 7 > 5 > 3 for max_hold_days",
+      "NEEDS COMBINED TEST: solo param sweep is misleading at this equity level",
+      "Only 9 trades across entire backtest \u2014 insufficient for ANY conclusion",
+      "All max_hold_days variants produce essentially identical results (9 trades each)",
+      "PATTERN: OG generates very few solo trades on SP500 with current filters",
+      "SMA-200 filter + gap threshold + RSI < 25 + volume surge = very selective",
+      "Need to relax one filter (remove RSI or lower gap threshold) for more trades before testing exits",
+      "Tighter stops (2.0x ATR) slightly better than wider (3.5-4.0x)",
+      "Difference is marginal: -1.09 vs -1.17 Sharpe (all negative in solo mode)",
+      "Current default (2.5x) is near-optimal based on this sweep",
+      "77 trades across all variants \u2014 consistent trade count means stop width only affects P&L per trade",
+      "SAME PATTERN: Solo strategy on $4K equity shows negative Sharpe due to fee drag",
+      "INFRASTRUCTURE FAILURE: All 3 TOM variants produced identical results",
+      "filter_test sets s_cfg[\"turn_of_month\"] but no strategy reads this parameter",
+      "TOM filter needs to be IMPLEMENTED in the backtest engine or strategy base class",
+      "Calendar-based filters need engine-level support (check date against TOM window)",
+      "The hypothesis is NOT rejected \u2014 test was invalid"
+    ],
+    "findings": [
+      {
+        "experiment": "wave1_moment_solo",
+        "strategy": "momentum_breakout",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "momentum_breakout pass"
+      },
+      {
+        "experiment": "wave1_short__solo",
+        "strategy": "short_term_mr",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "short_term_mr pass"
+      },
+      {
+        "experiment": "wave1_moment_opt",
+        "strategy": "momentum_breakout",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "All 5 params changed during optimization"
+      },
+      {
+        "experiment": "wave1_moment_comb",
+        "strategy": "momentum_breakout",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "Momentum breakout solo is modestly profitable after optimization (Sharpe 0.30, CAGR 8.0%)"
+      },
+      {
+        "experiment": "wave1_short__opt",
+        "strategy": "short_term_mr",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "short_term_mr pass"
+      },
+      {
+        "experiment": "wave1_short__comb",
+        "strategy": "short_term_mr",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "short_term_mr partial"
+      },
+      {
+        "experiment": "wave1_short__comb",
+        "strategy": "short_term_mr",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "Short-term MR is profitable solo after optimization (Sharpe 0.27, CAGR 7.6%, 63% WR)"
+      },
+      {
+        "experiment": "wave1_sector_solo",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "sector_rotation fail"
+      },
+      {
+        "experiment": "wave1_bb_squ_solo",
+        "strategy": "bb_squeeze",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "bb_squeeze pass"
+      },
+      {
+        "experiment": "wave1_bb_squ_opt",
+        "strategy": "bb_squeeze",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "bb_squeeze partial"
+      },
+      {
+        "experiment": "wave1_asx_reopt",
+        "strategy": "unknown",
+        "category": "param_drift",
+        "verdict": "partial",
+        "key_insight": "unknown partial"
+      },
+      {
+        "experiment": "wave1_vix_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      },
+      {
+        "experiment": "wave1_vol_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "strategy": "unknown",
+        "category": "cross_market",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      },
+      {
+        "experiment": "wave1_sector_solo",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "Sector rotation generated 0 trades across entire backtest period"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "MTF Momentum has code bug: generate_signals() takes 3 positional arguments but 4 were given"
+      },
+      {
+        "experiment": "wave1_bb_squ_solo",
+        "strategy": "bb_squeeze",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "BB Squeeze is viable: 322 trades, 45% WR, PF 0.74 with default params"
+      },
+      {
+        "experiment": "wave1_bb_squ_opt",
+        "strategy": "bb_squeeze",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "BB Squeeze improved dramatically: Sharpe -1.68 \u2192 -0.38, PF 0.74 \u2192 1.04"
+      },
+      {
+        "experiment": "wave1_asx_reopt",
+        "strategy": "combined",
+        "category": "param_drift",
+        "verdict": "pass",
+        "key_insight": "ASX reoptimization shows significant improvement across all metrics"
+      },
+      {
+        "experiment": "wave1_vix_filter",
+        "strategy": "combined",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "VIX regime filter: Failed due to missing filter_param/variants in params_override"
+      },
+      {
+        "experiment": "wave1_vol_filter",
+        "strategy": "combined",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "Volume regime filter: Failed due to missing filter_param/variants in params_override"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "strategy": "combined",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "Cross-market correlation: Failed due to missing filter_param/variants in params_override"
+      },
+      {
+        "experiment": "wave1_asx_reopt",
+        "strategy": "unknown",
+        "category": "promotion",
+        "verdict": "promoted",
+        "key_insight": "Promoted to /root/atlas/config/versions/asx_v9.3.json"
+      },
+      {
+        "experiment": "wave1_sector_solo",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "sector_rotation partial"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "mtf_momentum fail"
+      },
+      {
+        "experiment": "wave1_vix_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "partial",
+        "key_insight": "unknown partial"
+      },
+      {
+        "experiment": "wave1_vol_filter",
+        "strategy": "mean_reversion",
+        "category": "filter",
+        "verdict": "partial",
+        "key_insight": "mean_reversion partial"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "strategy": "unknown",
+        "category": "cross_market",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "mtf_momentum fail"
+      },
+      {
+        "experiment": "wave1_sector_solo",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "Sector rotation is now functional \u2014 generates 251 trades vs 0 previously"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "calc_atr() call fixed (was passing df instead of df['high'],df['low'],df['close'])"
+      },
+      {
+        "experiment": "wave1_vix_filter",
+        "strategy": "combined",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "VIX filter is counterproductive for this portfolio mix"
+      },
+      {
+        "experiment": "wave1_vol_filter",
+        "strategy": "mean_reversion",
+        "category": "filter",
+        "verdict": "pass",
+        "key_insight": "1.5x avg volume filter on MR: Sharpe jumps from -0.02 to 0.38 (massive)"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "strategy": "combined",
+        "category": "filter",
+        "verdict": "pass",
+        "key_insight": "SMA-200 filter is a CLEAR WIN on combined portfolio"
+      },
+      {
+        "experiment": "wave1_sma200",
+        "strategy": "unknown",
+        "category": "promotion",
+        "verdict": "promoted",
+        "key_insight": "Promoted to /root/atlas/config/versions/sp500_v2.1.json"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "strategy": "sma200_filter",
+        "category": "promotion",
+        "verdict": "promoted",
+        "key_insight": "SMA-200 filter promoted to SP500 active config v2.1"
+      },
+      {
+        "experiment": "wave1_sector_opt",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "sector_rotation pass"
+      },
+      {
+        "experiment": "wave1_sector_comb",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "partial",
+        "key_insight": "sector_rotation partial"
+      },
+      {
+        "experiment": "wave1_sector_opt",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "pass",
+        "key_insight": "Sector rotation viable solo after optimization: Sharpe 0.43, CAGR 9.6%, PF 1.48"
+      },
+      {
+        "experiment": "wave1_sector_comb",
+        "strategy": "sector_rotation",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "PATTERN CONFIRMED (4th time): dormant strategies fail combined test due to position contention"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "mtf_momentum fail"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "strategy": "mtf_momentum",
+        "category": "dormant",
+        "verdict": "fail",
+        "key_insight": "ROOT CAUSE: confidence=0.50 hardcoded in mtf_momentum.py, filtered by min_confidence=0.75 in config"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      },
+      {
+        "experiment": "wave2_rsi2_solo",
+        "strategy": "connors_rsi2",
+        "category": "new_strategy",
+        "verdict": "partial",
+        "key_insight": "connors_rsi2 partial"
+      },
+      {
+        "experiment": "wave2_rsi2_solo",
+        "strategy": "connors_rsi2",
+        "category": "new_strategy",
+        "verdict": "partial",
+        "key_insight": "connors_rsi2 partial"
+      },
+      {
+        "experiment": "wave2_exit_mr",
+        "strategy": "mean_reversion",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "mean_reversion fail"
+      },
+      {
+        "experiment": "wave2_exit_og",
+        "strategy": "opening_gap",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "opening_gap fail"
+      },
+      {
+        "experiment": "wave2_chandelier_tf",
+        "strategy": "trend_following",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "trend_following fail"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "partial",
+        "key_insight": "unknown partial"
+      },
+      {
+        "experiment": "wave2_rsi2_solo",
+        "strategy": "connors_rsi2",
+        "category": "new_strategy",
+        "verdict": "partial",
+        "key_insight": "connors_rsi2 partial"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "INFRASTRUCTURE FAILURE: All 3 volume variants produced identical results"
+      },
+      {
+        "experiment": "wave2_rsi2_solo",
+        "strategy": "connors_rsi2",
+        "category": "new_strategy",
+        "verdict": "fail",
+        "key_insight": "ConnorsRSI2 generates 249 trades with 57% WR \u2014 signal quality decent"
+      },
+      {
+        "experiment": "wave2_exit_mr",
+        "strategy": "mean_reversion",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "All max_hold_days values produce negative Sharpe in SOLO MR mode"
+      },
+      {
+        "experiment": "wave2_exit_og",
+        "strategy": "opening_gap",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "Only 9 trades across entire backtest \u2014 insufficient for ANY conclusion"
+      },
+      {
+        "experiment": "wave2_chandelier_tf",
+        "strategy": "trend_following",
+        "category": "param_drift",
+        "verdict": "fail",
+        "key_insight": "Tighter stops (2.0x ATR) slightly better than wider (3.5-4.0x)"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "INFRASTRUCTURE FAILURE: All 3 TOM variants produced identical results"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "partial",
+        "key_insight": "unknown partial"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "strategy": "unknown",
+        "category": "filter",
+        "verdict": "fail",
+        "key_insight": "unknown fail"
+      }
+    ],
+    "metrics_by_strategy": {
+      "momentum_breakout": [
+        {
+          "experiment": "wave1_moment_solo",
+          "verdict": "pass",
+          "sharpe": -0.9931,
+          "cagr_pct": -2.553,
+          "max_drawdown_pct": 11.205,
+          "total_trades": 342,
+          "win_rate_pct": 48.54,
+          "profit_factor": 0.9577
+        },
+        {
+          "experiment": "wave1_moment_opt",
+          "verdict": "pass",
+          "sharpe": 0.2995,
+          "cagr_pct": 8.047,
+          "max_drawdown_pct": 12.6722,
+          "total_trades": 460,
+          "win_rate_pct": 52.39,
+          "profit_factor": 1.2945
+        },
+        {
+          "experiment": "wave1_moment_comb",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "short_term_mr": [
+        {
+          "experiment": "wave1_short__solo",
+          "verdict": "pass",
+          "sharpe": -0.4471,
+          "cagr_pct": -1.6731,
+          "max_drawdown_pct": 18.2159,
+          "total_trades": 946,
+          "win_rate_pct": 58.56,
+          "profit_factor": 0.9609
+        },
+        {
+          "experiment": "wave1_short__opt",
+          "verdict": "pass",
+          "sharpe": 0.2711,
+          "cagr_pct": 7.6477,
+          "max_drawdown_pct": 10.0603,
+          "total_trades": 697,
+          "win_rate_pct": 63.13,
+          "profit_factor": 1.1739
+        },
+        {
+          "experiment": "wave1_short__comb",
+          "verdict": "partial",
+          "sharpe": 0.2711,
+          "cagr_pct": 7.6477,
+          "max_drawdown_pct": 10.0603,
+          "total_trades": 697,
+          "win_rate_pct": 63.13,
+          "profit_factor": 1.1739
+        },
+        {
+          "experiment": "wave1_short__comb",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "sector_rotation": [
+        {
+          "experiment": "wave1_sector_solo",
+          "verdict": "fail",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "total_trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        {
+          "experiment": "wave1_sector_solo",
+          "verdict": "fail",
+          "sharpe": 0,
+          "cagr_pct": 0,
+          "max_drawdown_pct": null,
+          "total_trades": 0,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_sector_solo",
+          "verdict": "partial",
+          "sharpe": -0.1102,
+          "cagr_pct": 3.2493,
+          "max_drawdown_pct": 11.6027,
+          "total_trades": 251,
+          "win_rate_pct": 44.22,
+          "profit_factor": 1.2438
+        },
+        {
+          "experiment": "wave1_sector_solo",
+          "verdict": "partial",
+          "sharpe": -0.11,
+          "cagr_pct": 3.25,
+          "max_drawdown_pct": null,
+          "total_trades": 251,
+          "win_rate_pct": 44.2,
+          "profit_factor": 1.24
+        },
+        {
+          "experiment": "wave1_sector_opt",
+          "verdict": "pass",
+          "sharpe": 0.4262,
+          "cagr_pct": 9.6133,
+          "max_drawdown_pct": 12.6801,
+          "total_trades": 237,
+          "win_rate_pct": 44.3,
+          "profit_factor": 1.4757
+        },
+        {
+          "experiment": "wave1_sector_comb",
+          "verdict": "partial",
+          "sharpe": 0.4262,
+          "cagr_pct": 9.6133,
+          "max_drawdown_pct": 12.6801,
+          "total_trades": 237,
+          "win_rate_pct": 44.3,
+          "profit_factor": 1.4757
+        },
+        {
+          "experiment": "wave1_sector_opt",
+          "verdict": "pass",
+          "sharpe": 0.43,
+          "cagr_pct": 9.61,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": 44.3,
+          "profit_factor": 1.48
+        },
+        {
+          "experiment": "wave1_sector_comb",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": 339,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "bb_squeeze": [
+        {
+          "experiment": "wave1_bb_squ_solo",
+          "verdict": "pass",
+          "sharpe": -1.6772,
+          "cagr_pct": -12.267,
+          "max_drawdown_pct": 27.3524,
+          "total_trades": 322,
+          "win_rate_pct": 45.03,
+          "profit_factor": 0.7419
+        },
+        {
+          "experiment": "wave1_bb_squ_opt",
+          "verdict": "partial",
+          "sharpe": -0.3791,
+          "cagr_pct": -0.3742,
+          "max_drawdown_pct": 16.5521,
+          "total_trades": 348,
+          "win_rate_pct": 48.28,
+          "profit_factor": 1.0364
+        },
+        {
+          "experiment": "wave1_bb_squ_solo",
+          "verdict": "pass",
+          "sharpe": -1.68,
+          "cagr_pct": -12.27,
+          "max_drawdown_pct": null,
+          "total_trades": 322,
+          "win_rate_pct": 45.0,
+          "profit_factor": 0.74
+        },
+        {
+          "experiment": "wave1_bb_squ_opt",
+          "verdict": "partial",
+          "sharpe": -0.38,
+          "cagr_pct": -0.37,
+          "max_drawdown_pct": null,
+          "total_trades": 348,
+          "win_rate_pct": 48.3,
+          "profit_factor": 1.04
+        }
+      ],
+      "unknown": [
+        {
+          "experiment": "wave1_asx_reopt",
+          "verdict": "partial",
+          "sharpe": 0.6033,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_vix_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_vol_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_cross_mkt",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_asx_reopt",
+          "verdict": "promoted",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_vix_filter",
+          "verdict": "partial",
+          "sharpe": 0.5875,
+          "cagr_pct": 10.0547,
+          "max_drawdown_pct": 6.5642,
+          "total_trades": 443,
+          "win_rate_pct": 57.56,
+          "profit_factor": 1.3848
+        },
+        {
+          "experiment": "wave1_cross_mkt",
+          "verdict": "fail",
+          "sharpe": 0.8681,
+          "cagr_pct": 11.6579,
+          "max_drawdown_pct": 5.3324,
+          "total_trades": 270,
+          "win_rate_pct": 58.89,
+          "profit_factor": 1.6613
+        },
+        {
+          "experiment": "wave1_sma200",
+          "verdict": "promoted",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave2_vol_combined",
+          "verdict": "fail",
+          "sharpe": -1.2688,
+          "cagr_pct": 1.0161,
+          "max_drawdown_pct": 4.539,
+          "total_trades": 100,
+          "win_rate_pct": 52.0,
+          "profit_factor": 1.1416
+        },
+        {
+          "experiment": "wave2_tom_filter",
+          "verdict": "partial",
+          "sharpe": -1.2688,
+          "cagr_pct": 1.0161,
+          "max_drawdown_pct": 4.539,
+          "total_trades": 100,
+          "win_rate_pct": 52.0,
+          "profit_factor": 1.1416
+        },
+        {
+          "experiment": "wave2_vol_combined",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave2_tom_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave2_tom_filter",
+          "verdict": "partial",
+          "sharpe": -0.6446,
+          "cagr_pct": 2.8708,
+          "max_drawdown_pct": 2.5751,
+          "total_trades": 115,
+          "win_rate_pct": 52.17,
+          "profit_factor": 1.4003
+        },
+        {
+          "experiment": "wave2_vol_combined",
+          "verdict": "fail",
+          "sharpe": -1.0448,
+          "cagr_pct": 1.3606,
+          "max_drawdown_pct": 4.5115,
+          "total_trades": 117,
+          "win_rate_pct": 50.43,
+          "profit_factor": 1.1572
+        }
+      ],
+      "mtf_momentum": [
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "total_trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "total_trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": 0,
+          "cagr_pct": 0,
+          "max_drawdown_pct": null,
+          "total_trades": 0,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "total_trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        {
+          "experiment": "wave1_mtf_mo_solo",
+          "verdict": "fail",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": null,
+          "total_trades": 0,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "combined": [
+        {
+          "experiment": "wave1_asx_reopt",
+          "verdict": "pass",
+          "sharpe": 0.6,
+          "cagr_pct": 11.32,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": 54.1,
+          "profit_factor": 1.37
+        },
+        {
+          "experiment": "wave1_vix_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_vol_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_cross_mkt",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_vix_filter",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave1_cross_mkt",
+          "verdict": "pass",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "mean_reversion": [
+        {
+          "experiment": "wave1_vol_filter",
+          "verdict": "partial",
+          "sharpe": 0.3811,
+          "cagr_pct": 7.0856,
+          "max_drawdown_pct": 4.0291,
+          "total_trades": 235,
+          "win_rate_pct": 59.57,
+          "profit_factor": 1.618
+        },
+        {
+          "experiment": "wave1_vol_filter",
+          "verdict": "pass",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        },
+        {
+          "experiment": "wave2_exit_mr",
+          "verdict": "fail",
+          "sharpe": -1.9809,
+          "cagr_pct": 1.0107,
+          "max_drawdown_pct": 1.2496,
+          "total_trades": 55,
+          "win_rate_pct": 60.0,
+          "profit_factor": 1.3316
+        },
+        {
+          "experiment": "wave2_exit_mr",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "sma200_filter": [
+        {
+          "experiment": "wave1_cross_mkt",
+          "verdict": "promoted",
+          "sharpe": 0.868,
+          "cagr_pct": 11.66,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": 58.89,
+          "profit_factor": 1.66
+        }
+      ],
+      "connors_rsi2": [
+        {
+          "experiment": "wave2_rsi2_solo",
+          "verdict": "partial",
+          "sharpe": 0.0,
+          "cagr_pct": 0.0,
+          "max_drawdown_pct": 0.0,
+          "total_trades": 0,
+          "win_rate_pct": 0.0,
+          "profit_factor": 0.0
+        },
+        {
+          "experiment": "wave2_rsi2_solo",
+          "verdict": "partial",
+          "sharpe": -2.6257,
+          "cagr_pct": -2.0571,
+          "max_drawdown_pct": 6.8598,
+          "total_trades": 249,
+          "win_rate_pct": 57.03,
+          "profit_factor": 0.7837
+        },
+        {
+          "experiment": "wave2_rsi2_solo",
+          "verdict": "partial",
+          "sharpe": -2.6257,
+          "cagr_pct": -2.0571,
+          "max_drawdown_pct": 6.8598,
+          "total_trades": 249,
+          "win_rate_pct": 57.03,
+          "profit_factor": 0.7837
+        },
+        {
+          "experiment": "wave2_rsi2_solo",
+          "verdict": "fail",
+          "sharpe": -2.63,
+          "cagr_pct": -2.06,
+          "max_drawdown_pct": 6.86,
+          "total_trades": null,
+          "win_rate_pct": 57.03,
+          "profit_factor": 0.78
+        }
+      ],
+      "opening_gap": [
+        {
+          "experiment": "wave2_exit_og",
+          "verdict": "fail",
+          "sharpe": -6.1493,
+          "cagr_pct": 1.0266,
+          "max_drawdown_pct": 0.2136,
+          "total_trades": 9,
+          "win_rate_pct": 88.89,
+          "profit_factor": 28.3795
+        },
+        {
+          "experiment": "wave2_exit_og",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ],
+      "trend_following": [
+        {
+          "experiment": "wave2_chandelier_tf",
+          "verdict": "fail",
+          "sharpe": -1.0911,
+          "cagr_pct": 0.9704,
+          "max_drawdown_pct": 4.6067,
+          "total_trades": 77,
+          "win_rate_pct": 53.25,
+          "profit_factor": 1.143
+        },
+        {
+          "experiment": "wave2_chandelier_tf",
+          "verdict": "fail",
+          "sharpe": null,
+          "cagr_pct": null,
+          "max_drawdown_pct": null,
+          "total_trades": null,
+          "win_rate_pct": null,
+          "profit_factor": null
+        }
+      ]
+    },
+    "patterns": [
+      "Failed strategies: sector_rotation, momentum_breakout, mtf_momentum, unknown, connors_rsi2, combined, trend_following, mean_reversion, short_term_mr, opening_gap",
+      "Passed strategies: sector_rotation, momentum_breakout, combined, bb_squeeze, mean_reversion, short_term_mr",
+      "High trade count strategies fail combined tests \u2014 position allocation bottleneck"
+    ],
+    "gaps": [
+      "dividend_capture"
+    ]
+  },
+  "queue_state": {
+    "total": 10,
+    "by_status": {
+      "failed": 5,
+      "deferred": 4,
+      "partial": 1
+    },
+    "queued_count": 0,
+    "completed_count": 9
+  },
+  "active_config": {
+    "version": "v2.2",
+    "enabled_strategies": [
+      "mean_reversion",
+      "trend_following",
+      "opening_gap"
+    ],
+    "disabled_strategies": [
+      "momentum_breakout",
+      "sector_rotation",
+      "short_term_mr",
+      "bb_squeeze",
+      "mtf_momentum",
+      "dividend_capture",
+      "connors_rsi2"
+    ],
+    "max_positions": 15,
+    "starting_equity": 4000,
+    "max_risk_per_trade_pct": 0.005
+  },
+  "theme": "New strategy: Triple RSI + MR alpha stacking \u2014 high-conviction signals and entry filter optimization",
+  "theme_rationale": "Wave 3 targets three compounding profit improvements:\n\n1. VOLUME FILTER PROMOTION (known alpha, unpromoted): Wave 1 proved 1.5x volume on MR solo:\n   Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Wave 2 combined test FAILED due to infrastructure bug\n   (nested params in filter_test). This wave uses full-dict param sweep to bypass the bug.\n\n2. IBS ENTRY FILTER (web research, new): Alvarez Quant Trading and Pagonidis (2013) showed\n   IBS < 0.25 gives 58% improvement in avg gain per trade for RSI-based MR strategies.\n   Our MR already has ibs_max parameter at 1.0 (disabled). Simply lowering it could\n   capture significant alpha with zero code changes.\n\n3. NEW TRIPLE RSI STRATEGY (web research, implemented): QuantifiedStrategies.com published\n   a Triple RSI strategy with 90% win rate, PF 4.0, 1.2% avg gain on SPY. Adapted for\n   individual SP500 stocks with SMA-200 filter and volume confirmation. Uses RSI(5) with\n   3-day consecutive decline requirement \u2014 a DIFFERENT signal from our RSI(14)+zscore MR.\n   Low trade count (~30-80/year) means minimal position contention with existing strategies.\n\nWhy this theme beats alternatives:\n- NOT \"dormant strategy activation\" \u2014 lesson learned: all 4 dormant strategies failed\n  combined test due to position contention. Triple RSI avoids this with low trade volume.\n- NOT \"exit optimization\" \u2014 Wave 2 solo exit sweeps all showed negative Sharpe at $4K equity.\n  Combined-mode param sweeps in Phase 4 address this properly.\n- NOT \"allocation pools\" \u2014 infrastructure change deferred until proven strategies exist\n  that NEED pools. Triple RSI + filter stacking may add enough alpha without pools.",
+  "web_research_queries": [
+    "backtested swing trading strategies SP500 sharpe ratio 2025 quantifiedstrategies",
+    "turnaround tuesday trading strategy SP500 backtested rules RSI IBS",
+    "triple RSI trading strategy 90 win rate backtested rules quantifiedstrategies",
+    "internal bar strength IBS trading strategy backtested stocks mean reversion",
+    "MACD histogram swing trading strategy backtested SP500 rules entry exit quantified"
+  ],
+  "web_research_findings": [
+    {
+      "source": "QuantifiedStrategies.com \u2014 Triple RSI Trading Strategy",
+      "url": "https://www.quantifiedstrategies.com/triple-rsi-trading-strategy/",
+      "strategy": "Triple RSI (modified Connors R3)",
+      "rules": "RSI(5)<30 + declining 3 consecutive days + RSI(5)<60 three days ago + close>SMA(200). Exit: RSI(5)>50.",
+      "published_metrics": {
+        "trades": 103,
+        "win_rate_pct": 90,
+        "avg_gain_pct": 1.2,
+        "profit_factor": 4.0,
+        "test_period": "1993-2024 on SPY"
+      },
+      "relevance": "HIGH \u2014 different signal from our RSI(14)+zscore MR. Very selective (3-4 trades/yr on SPY). Adapted for individual stocks in research/strategies/triple_rsi.py.",
+      "action": "Implemented as sandbox strategy. Queued solo\u2192opt\u2192combined chain."
+    },
+    {
+      "source": "Alvarez Quant Trading \u2014 Internal Bar Strength for Mean Reversion",
+      "url": "https://alvarezquanttrading.com/blog/internal-bar-strength-for-mean-reversion/",
+      "strategy": "IBS filter on RSI(2) MR strategy",
+      "rules": "Add IBS<25 filter to RSI(2)<2.5 mean reversion entries. IBS = (Close-Low)/(High-Low).",
+      "published_metrics": {
+        "improvement": "+58% avg gain per trade with IBS<25 filter",
+        "trade_retention": "34% of trades (quality > quantity)",
+        "win_rate_improvement": "71% (IBS<10) vs 57% (IBS>90)"
+      },
+      "relevance": "HIGH \u2014 our MR already has ibs_max param at 1.0 (disabled). Simple config change.",
+      "action": "Queued param sweep: ibs_max=[0.15, 0.20, 0.25, 0.30, 0.50, 1.0] in combined mode."
+    },
+    {
+      "source": "QuantifiedStrategies.com \u2014 Turnaround Tuesday Trading Strategy",
+      "url": "https://www.quantifiedstrategies.com/turnaround-tuesday/",
+      "strategy": "Turnaround Tuesday (day-of-week MR)",
+      "rules": "Monday close<open, IBS<0.2, buy Monday close, sell Tuesday close.",
+      "published_metrics": {
+        "trades": 270,
+        "win_rate_pct": 57,
+        "avg_gain_pct": 0.33,
+        "cagr_pct": 2.7,
+        "test_period": "1993-2021 on SPY"
+      },
+      "relevance": "MEDIUM \u2014 calendar effect needs engine-level support (lesson #32: TOM filter infrastructure failure). Deferred to future wave.",
+      "action": "Not queued \u2014 requires engine changes. Noted for Wave 4."
+    },
+    {
+      "source": "QuantifiedStrategies.com \u2014 MACD Histogram Trading Strategy",
+      "url": "https://www.quantifiedstrategies.com/macd-histogram/",
+      "strategy": "MACD Histogram mean reversion",
+      "rules": "MACD histogram declining, enter on close, exit when close > yesterday's close.",
+      "published_metrics": {
+        "trades": 85,
+        "avg_gain_pct": 2.2,
+        "annual_return_pct": 10.4,
+        "max_drawdown_pct": 19,
+        "test_period": "2007-2025 on QLD (2x Nasdaq)"
+      },
+      "relevance": "MEDIUM \u2014 different signal type but member-only rules. Could explore as Wave 4 candidate.",
+      "action": "Not queued \u2014 insufficient published rules for implementation."
+    },
+    {
+      "source": "Pagonidis (2013) \u2014 The IBS Effect: Mean Reversion in Equity ETFs",
+      "url": "http://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf",
+      "strategy": "IBS mean reversion on equity ETFs",
+      "rules": "Buy when IBS<0.2, sell when IBS>0.8. Close next session.",
+      "published_metrics": {
+        "avg_return_low_ibs": "+0.35% (IBS<0.20)",
+        "avg_return_high_ibs": "-0.13% (IBS>0.80)",
+        "note": "Effect present since early 90s. Strongest during high volatility."
+      },
+      "relevance": "HIGH \u2014 confirms IBS filter as legitimate alpha source. Works on individual equities (XOM example).",
+      "action": "Supports ibs_max sweep experiment."
+    }
+  ],
+  "experiments": [
+    {
+      "id": "wave3_ibs_sweep",
+      "phase": 1,
+      "title": "IBS entry filter sweep on MR (combined mode)",
+      "priority": "P2",
+      "method": "param_sweep",
+      "depends_on": [],
+      "key_question": "What IBS threshold maximizes MR quality in combined portfolio?"
+    },
+    {
+      "id": "wave3_vol_sweep",
+      "phase": 1,
+      "title": "Volume min_ratio sweep on MR (combined mode)",
+      "priority": "P2",
+      "method": "param_sweep",
+      "depends_on": [],
+      "key_question": "Does 1.5x volume filter improve combined portfolio (retrying Wave 2 infra failure)?"
+    },
+    {
+      "id": "wave3_trsi_solo",
+      "phase": 2,
+      "title": "Triple RSI \u2014 solo backtest",
+      "priority": "P3",
+      "method": "single_strategy_test",
+      "depends_on": [],
+      "key_question": "Does Triple RSI generate enough trades with acceptable PF on individual SP500 stocks?"
+    },
+    {
+      "id": "wave3_trsi_opt",
+      "phase": 2,
+      "title": "Triple RSI \u2014 parameter optimization",
+      "priority": "P3",
+      "method": "full_optimization",
+      "depends_on": [
+        "wave3_trsi_solo"
+      ],
+      "key_question": "What parameters maximize Triple RSI Sharpe while keeping 30+ trades?"
+    },
+    {
+      "id": "wave3_trsi_comb",
+      "phase": 2,
+      "title": "Triple RSI \u2014 combined portfolio test",
+      "priority": "P3",
+      "method": "combined_portfolio_test",
+      "depends_on": [
+        "wave3_trsi_opt"
+      ],
+      "key_question": "Does Triple RSI avoid position contention that killed all 4 dormant strategies?"
+    },
+    {
+      "id": "wave3_stacked_mr",
+      "phase": 3,
+      "title": "MR with best IBS + volume filters stacked",
+      "priority": "P2",
+      "method": "combined_portfolio_test",
+      "depends_on": [
+        "wave3_ibs_sweep",
+        "wave3_vol_sweep"
+      ],
+      "key_question": "Do IBS + volume filters compound benefits on combined portfolio?"
+    },
+    {
+      "id": "wave3_full_reopt",
+      "phase": 3,
+      "title": "Full portfolio reoptimization with all passing changes",
+      "priority": "P2",
+      "method": "reoptimization",
+      "depends_on": [
+        "wave3_stacked_mr"
+      ],
+      "key_question": "Can reoptimization push combined Sharpe above 1.0?"
+    },
+    {
+      "id": "wave3_oos_val",
+      "phase": 3,
+      "title": "OOS + perturbation validation",
+      "priority": "P2",
+      "method": "oos_validation",
+      "depends_on": [
+        "wave3_full_reopt"
+      ],
+      "key_question": "Does the reoptimized config survive OOS validation (lesson #6)?"
+    },
+    {
+      "id": "wave3_rsi_period",
+      "phase": 4,
+      "title": "RSI period sweep (RSI(5) vs RSI(14)) on MR",
+      "priority": "P3",
+      "method": "param_sweep",
+      "depends_on": [],
+      "key_question": "Would shorter RSI period improve MR entry timing?"
+    },
+    {
+      "id": "wave3_hold_combined",
+      "phase": 4,
+      "title": "max_hold_days sweep on MR (combined mode)",
+      "priority": "P4",
+      "method": "param_sweep",
+      "depends_on": [],
+      "key_question": "What's the optimal hold duration in combined mode (Wave 2 solo was unreliable)?"
+    }
+  ],
+  "planned_at": "2026-03-04T23:09:48.788264+00:00"
+}
