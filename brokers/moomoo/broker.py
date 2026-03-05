@@ -287,6 +287,11 @@ class MomooBroker(BrokerAdapter):
             current = float(row.get("market_val", 0)) / qty if qty else 0
             upnl = float(row.get("pl_val", 0))
             upnl_pct = float(row.get("pl_ratio", 0))  # Already in %
+            today_pl = float(row.get("today_pl_val", 0))
+            pos_ccy = str(row.get("currency", ""))
+            # Moomoo returns "N/A" for AUD positions
+            if pos_ccy in ("N/A", ""):
+                pos_ccy = "AUD" if moomoo_code.startswith("AU.") else "USD"
 
             positions.append(PositionInfo(
                 ticker=ticker,
@@ -297,6 +302,8 @@ class MomooBroker(BrokerAdapter):
                 unrealized_pnl=round(upnl, 2),
                 unrealized_pnl_pct=round(upnl_pct, 2),
                 cost_basis=round(cost_price * qty, 2),
+                today_pnl=round(today_pl, 2),
+                currency=pos_ccy,
             ))
         return positions
 

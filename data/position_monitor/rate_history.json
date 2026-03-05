@@ -114,11 +114,11 @@
     }
   ],
   "last_escalation_event": {
-    "timestamp": "2026-03-05T12:39:54",
-    "description": "UK RAF Akrotiri base Cyprus targeted by Iranian-backed strike \u2014 Mediterranean zone confirmed",
-    "source": "Reuters"
+    "timestamp": "2026-03-05T16:05:42",
+    "description": "Iran fires ballistic missiles at US military bases and Israel; Israel begins broad wave of infrastructure strikes \u2014 Day 6 full-scale conflict (Persian Gulf, Hormuz active)",
+    "source": "AP News"
   },
-  "hours_since_escalation": 3.3,
+  "hours_since_escalation": 0.0,
   "escalation_gap_status": "active",
   "vlcc_3cycle_trend": "rising"
 }

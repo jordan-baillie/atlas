@@ -332,5 +332,15 @@
     "value": null,
     "source": "iran_monitor_agent",
     "timestamp": "2026-03-05T12:42:20"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 610.97,
+    "timestamp": "2026-03-05T16:06:01"
   }
 ]

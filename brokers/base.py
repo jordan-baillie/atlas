@@ -78,6 +78,8 @@ class PositionInfo:
     take_profit: Optional[float] = None
     cost_basis: float = 0.0         # total cost including commission
     sector: str = "Unknown"
+    today_pnl: float = 0.0         # today's P&L from broker (resets pre-session)
+    currency: str = ""              # native currency of this position (USD, AUD, etc.)
 
 
 @dataclass

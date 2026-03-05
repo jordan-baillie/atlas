@@ -1873,13 +1873,43 @@ function render(d) {
       accent: cls(alpha) === 'up' ? 'accent-green' : cls(alpha) === 'down' ? 'accent-red' : 'accent-blue',
       sub: 'Atlas ' + pct(atlasRet) + ' · ' + benchTk + ' ' + pct(benchRet)
     },
-    {
-      label: 'Net P&L',
-      value: $(p.total_pnl || 0),
-      c: cls(p.total_pnl),
-      accent: cls(p.total_pnl) === 'up' ? 'accent-green' : cls(p.total_pnl) === 'down' ? 'accent-red' : 'accent-blue',
-      sub: (p.num_open || 0) + ' positions · ' + exposurePct.toFixed(0) + '% deployed' + (risk.halted ? ' · <span style="color:var(--red);font-weight:600">HALTED</span>' : '')
-    },
+    (function() {
+      // Compute today's P&L from per-currency breakdown (works for both combined and per-market views)
+      var byCcy = p.today_pnl_by_ccy || {};
+      var ccyKeys = Object.keys(byCcy).sort();
+      // Convert to AUD using exchange rates
+      var rates = (d.exchange_rates || {});
+      var usdaud = rates.USDAUD || 1.42;
+      var todayAud = 0;
+      ccyKeys.forEach(function(ccy) {
+        if (ccy === 'AUD') todayAud += byCcy[ccy];
+        else if (ccy === 'USD') todayAud += byCcy[ccy] * usdaud;
+        else todayAud += byCcy[ccy]; // fallback: assume AUD
+      });
+      todayAud = Math.round(todayAud * 100) / 100;
+      // If explicit today_pnl_aud from combined view, prefer it
+      if (p.today_pnl_aud !== undefined && _currentMarket === 'all') todayAud = p.today_pnl_aud;
+      // Subtitle: per-currency breakdown
+      var parts = [];
+      ccyKeys.forEach(function(ccy) {
+        var val = byCcy[ccy];
+        var sym = CURRENCY_SYMBOLS[ccy] || (ccy + ' ');
+        parts.push('<span class="' + cls(val) + '">' + (val >= 0 ? '+' : '-') + sym + Math.abs(val).toFixed(2) + '</span>');
+      });
+      var posInfo = (p.num_open || 0) + ' positions · ' + exposurePct.toFixed(0) + '% deployed';
+      var sub = (parts.length > 0 ? parts.join(' · ') + ' · ' : '') + posInfo + (risk.halted ? ' · <span style="color:var(--red);font-weight:600">HALTED</span>' : '');
+      // Display: use view currency
+      var viewCcy = getViewCurrency();
+      var dispSym = CURRENCY_SYMBOLS[viewCcy] || '$';
+      var dispVal = viewCcy === 'AUD' ? todayAud : (viewCcy === 'USD' ? (byCcy['USD'] || todayAud / usdaud) : todayAud);
+      return {
+        label: "Today's P&L",
+        value: (dispVal >= 0 ? '+' : '-') + dispSym + Math.abs(dispVal).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2}),
+        c: cls(todayAud),
+        accent: cls(todayAud) === 'up' ? 'accent-green' : cls(todayAud) === 'down' ? 'accent-red' : 'accent-blue',
+        sub: sub
+      };
+    })(),
   ];
   var cardIcons = ['equity','benchmark','pnl'];
   var ch = '';

@@ -267,6 +267,8 @@ def get_live_broker_data(config):
                 "unrealized_pnl": round(pos.unrealized_pnl, 2),
                 "unrealized_pnl_pct": round(pos.unrealized_pnl_pct, 2),
                 "cost_basis": round(pos.cost_basis, 2),
+                "today_pnl": round(pos.today_pnl, 2),
+                "currency": pos.currency or "",
                 # Metadata from plan history
                 "strategy": meta.get("strategy", pos.strategy or ""),
                 "entry_date": meta.get("entry_date", pos.entry_date or ""),
@@ -965,6 +967,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             "stop_price": p.get("stop_price", 0),
             "days_held": dh, "sector": sector_val,
             "is_atlas": is_atlas,
+            "today_pnl": p.get("today_pnl", 0),
+            "currency": p.get("currency", ""),
         })
 
     # Strategy performance summary
@@ -1090,6 +1094,14 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
     manual_pnl = round(sum(p.get("pnl", 0) for p in manual_open), 2)
     manual_value = round(sum(p.get("current_price", 0) * p.get("shares", 0) for p in manual_open), 2)
 
+    # Today's P&L — aggregated from broker's today_pl_val per position
+    # Grouped by native currency for the breakdown, then converted for total
+    today_pnl_by_ccy: dict[str, float] = {}
+    for p in open_pos:
+        ccy = p.get("currency", currency) or currency
+        today_pnl_by_ccy[ccy] = today_pnl_by_ccy.get(ccy, 0) + p.get("today_pnl", 0)
+    today_pnl_by_ccy = {k: round(v, 2) for k, v in today_pnl_by_ccy.items() if abs(v) > 0.005}
+
     # Assemble
     result = {
         "timestamp": now.isoformat(),
@@ -1116,6 +1128,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             # Used by dashboard for headline equity that matches broker app.
             "broker_equity": broker_equity if (broker_ok or data_source == "cross-broker") else None,
             "broker_cash": broker_cash if (broker_ok or data_source == "cross-broker") else None,
+            # Today's P&L from broker, grouped by native currency
+            "today_pnl_by_ccy": today_pnl_by_ccy,
         },
         "manual_positions": {
             "positions": manual_open,
@@ -2162,6 +2176,17 @@ def generate():
 
     ceasefire_data = generate_ceasefire_data()
 
+    # Today's P&L — merge per-currency breakdowns from all markets
+    _combined_today_pnl_by_ccy: dict[str, float] = {}
+    for md in market_data.values():
+        pf = md.get("portfolio", {})
+        for ccy, val in pf.get("today_pnl_by_ccy", {}).items():
+            _combined_today_pnl_by_ccy[ccy] = _combined_today_pnl_by_ccy.get(ccy, 0) + val
+    _combined_today_pnl_by_ccy = {k: round(v, 2) for k, v in _combined_today_pnl_by_ccy.items()}
+    _combined_today_pnl_aud = round(sum(
+        to_aud(v, ccy) for ccy, v in _combined_today_pnl_by_ccy.items()
+    ), 2)
+
     result = {
         "timestamp": now.isoformat(),
         "project": "Atlas",
@@ -2198,6 +2223,9 @@ def generate():
                 to_aud(md.get("portfolio", {}).get("total_commissions", 0), md.get("currency", "AUD"))
                 for md in market_data.values()), 2),
             "commission_per_trade": 0,
+            # Today's P&L combined across all markets, in AUD
+            "today_pnl_by_ccy": _combined_today_pnl_by_ccy,
+            "today_pnl_aud": _combined_today_pnl_aud,
         },
         "manual_positions": {
             "positions": all_manual,
