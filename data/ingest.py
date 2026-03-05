@@ -114,6 +114,15 @@ def _load_cache(ticker: str, market_id: Optional[str] = None) -> Optional[pd.Dat
     if _cache_is_fresh(path):
         try:
             df = pd.read_parquet(path)
+            # Invalidate caches built with dividend-adjusted prices.
+            # New format: split-adjusted raw prices only, no adj_close column.
+            # Any cache that still has adj_close was written by the old pipeline.
+            if "adj_close" in df.columns:
+                logger.info(
+                    f"Cache for {ticker} has adj_close — old adjusted format, "
+                    "forcing re-download with split-adjusted raw prices"
+                )
+                return None
             logger.debug(f"Cache hit for {ticker}: {len(df)} rows")
             return df
         except Exception as e:
@@ -188,9 +197,9 @@ def _clean_ohlcv(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
             logger.warning(f"{ticker}: missing column '{col}'")
             df[col] = np.nan
 
-    # Add adj_close if missing
-    if "adj_close" not in df.columns:
-        df["adj_close"] = df["close"]
+    # Drop adj_close — canonical format is split-adjusted raw OHLCV only
+    if "adj_close" in df.columns:
+        df = df.drop(columns=["adj_close"])
 
     # Add ticker column
     df["ticker"] = ticker
@@ -229,9 +238,9 @@ def _clean_alpaca_bars(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
             logger.warning(f"{ticker}: Alpaca missing column '{col}'")
             df[col] = np.nan
 
-    # adj_close: Alpaca does not separately split-adjust — use close as proxy
-    if "adj_close" not in df.columns:
-        df["adj_close"] = df["close"]
+    # Drop adj_close — canonical format is open, high, low, close, volume, ticker
+    if "adj_close" in df.columns:
+        df = df.drop(columns=["adj_close"])
 
     # Add ticker column
     df["ticker"] = ticker
@@ -248,6 +257,50 @@ def _clean_alpaca_bars(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
     # Remove timezone info if present (Atlas standard: tz-naive)
     if df.index.tz is not None:
         df.index = df.index.tz_localize(None)
+
+    return df
+
+
+def _apply_split_adjustments(df: pd.DataFrame, splits: pd.Series) -> pd.DataFrame:
+    """Apply cumulative split adjustments to raw OHLCV data (backward adjustment).
+
+    Adjusts all historical prices so they are comparable to the current
+    (post-split) price scale.  For each split event, prices *before* the
+    split date are divided by the split ratio and volumes are multiplied by
+    the split ratio to preserve dollar-volume consistency.
+
+    Only SPLIT adjustments are applied — dividend adjustments are intentionally
+    omitted to prevent retroactive price drift when dividends are paid.
+
+    Args:
+        df:     DataFrame with at least open, high, low, close columns and a
+                DatetimeIndex named 'date'.
+        splits: Series indexed by split date (tz-naive), values are split
+                ratios (e.g. 4.0 = 4:1 forward split — 1 old share → 4 new).
+
+    Returns:
+        New DataFrame with split-adjusted OHLCV.  Prices before each split
+        date are divided by the cumulative split ratio; volumes are multiplied.
+    """
+    if splits is None or splits.empty:
+        return df
+
+    df = df.copy()
+    price_cols = [c for c in ["open", "high", "low", "close"] if c in df.columns]
+
+    # Only apply splits that fall within or before the data range.
+    # Sort chronologically so earlier splits are applied first.
+    relevant = splits[splits.index <= df.index.max()].sort_index()
+
+    for split_date, ratio in relevant.items():
+        if ratio <= 0 or ratio == 1.0:
+            continue
+        mask = df.index < split_date
+        if not mask.any():
+            continue
+        df.loc[mask, price_cols] = df.loc[mask, price_cols] / ratio
+        if "volume" in df.columns:
+            df.loc[mask, "volume"] = (df.loc[mask, "volume"] * ratio).round()
 
     return df
 
@@ -280,6 +333,9 @@ def _fetch_ohlcv(
             df = result.get(ticker, pd.DataFrame())
             if not df.empty:
                 logger.debug(f"{ticker}: Alpaca historical bars ({len(df)} rows)")
+                # Drop adj_close — canonical format is open, high, low, close, volume, ticker
+                if "adj_close" in df.columns:
+                    df = df.drop(columns=["adj_close"])
                 return df  # already in Atlas format from get_historical_bars
             logger.debug(f"{ticker}: Alpaca returned empty — falling back to yfinance")
         except Exception as e:
@@ -296,7 +352,26 @@ def _fetch_ohlcv(
         df = yf.download(ticker, start=start_str, end=fetch_end,
                          progress=False, auto_adjust=False)
         if not df.empty:
-            return _clean_ohlcv(df, ticker)
+            cleaned = _clean_ohlcv(df, ticker)
+            # Fetch split history and backward-adjust prices to current scale.
+            # Only split adjustments — no dividend adjustments (prevents
+            # retroactive price drift when dividends are paid).
+            try:
+                splits = yf.Ticker(ticker).splits
+                if splits is not None and not splits.empty:
+                    # Ensure tz-naive to match cleaned df index
+                    if splits.index.tz is not None:
+                        splits.index = splits.index.tz_localize(None)
+                    cleaned = _apply_split_adjustments(cleaned, splits)
+                    logger.debug(
+                        f"{ticker}: applied {len(splits)} split adjustment(s)"
+                    )
+            except Exception as se:
+                logger.warning(
+                    f"{ticker}: split data fetch failed ({se}) "
+                    "— proceeding without split adjustment"
+                )
+            return cleaned
     except Exception as e:
         logger.error(f"{ticker}: yfinance download failed: {e}")
 
@@ -322,7 +397,8 @@ def download_ticker(
         market_id: Market identifier for cache namespacing and suffix normalization.
 
     Returns:
-        DataFrame with columns: open, high, low, close, adj_close, volume, ticker.
+        DataFrame with columns: open, high, low, close, volume, ticker.
+        Prices are split-adjusted (no dividend adjustment).
         Index is DatetimeIndex named 'date'.
     """
     ticker = _normalize_ticker(ticker, market_id)

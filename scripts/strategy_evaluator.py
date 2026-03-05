@@ -22,6 +22,7 @@ Usage:
 """
 import sys
 import json
+import shutil
 import time
 import copy
 import logging
@@ -29,6 +30,7 @@ import argparse
 import importlib
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Optional
 
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
@@ -98,8 +100,18 @@ def get_strategy_class(name: str):
     raise ValueError(f"Unknown strategy: {name}. Available: {list(STRATEGY_REGISTRY.keys())}")
 
 
-def load_market_data(market_id: str) -> dict:
-    """Load all cached ticker data for a market."""
+def load_market_data(market_id: str, snapshot_id: Optional[str] = None) -> dict:
+    """Load all cached ticker data for a market.
+
+    Args:
+        market_id:   Market identifier (e.g. 'sp500', 'asx').
+        snapshot_id: If provided, load from ``data/snapshots/{snapshot_id}/``
+                     instead of ``data/cache/{market_id}/``.  Use this for
+                     reproducible backtests pinned to a specific data state.
+
+    Returns:
+        Dict mapping ticker -> DataFrame with OHLCV data.
+    """
     try:
         from markets import get_market
         market = get_market(market_id)
@@ -112,7 +124,10 @@ def load_market_data(market_id: str) -> dict:
         yf_suffix = '.AX' if market_id == 'asx' else ''
         valid_universe = None
 
-    cache_dir = PROJECT / 'data' / 'cache' / market_id
+    if snapshot_id is not None:
+        cache_dir = PROJECT / 'data' / 'snapshots' / snapshot_id
+    else:
+        cache_dir = PROJECT / 'data' / 'cache' / market_id
 
     data_dict = {}
     for pf in sorted(cache_dir.glob('*.parquet')):
@@ -146,6 +161,80 @@ def load_market_data(market_id: str) -> dict:
         except Exception:
             pass
     return data_dict
+
+
+def save_snapshot(market: str, snapshot_id: str) -> Path:
+    """Copy cached market data to a named snapshot for reproducible backtests.
+
+    Creates ``data/snapshots/{snapshot_id}/`` containing all parquet files from
+    ``data/cache/{market}/`` plus a ``snapshot_meta.json`` with provenance info.
+    Use this before a data refresh to pin the current state for later comparison.
+
+    Args:
+        market:      Market ID whose cache to snapshot (e.g. 'sp500').
+        snapshot_id: Unique name for this snapshot (e.g. 'pre-refresh-2026-03').
+
+    Returns:
+        Path to the created snapshot directory.
+
+    Raises:
+        FileNotFoundError: If the market cache directory does not exist.
+    """
+    cache_dir = PROJECT / 'data' / 'cache' / market
+    if not cache_dir.exists():
+        raise FileNotFoundError(f"Cache directory not found: {cache_dir}")
+
+    snapshot_dir = PROJECT / 'data' / 'snapshots' / snapshot_id
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+
+    count = 0
+    for pf in cache_dir.glob('*.parquet'):
+        shutil.copy2(pf, snapshot_dir / pf.name)
+        count += 1
+
+    meta = {
+        'market': market,
+        'snapshot_id': snapshot_id,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'source_dir': str(cache_dir),
+        'file_count': count,
+    }
+    with open(snapshot_dir / 'snapshot_meta.json', 'w') as f:
+        json.dump(meta, f, indent=2)
+
+    logger.info(f"Snapshot '{snapshot_id}' saved: {count} parquet files -> {snapshot_dir}")
+    return snapshot_dir
+
+
+def list_snapshots() -> list:
+    """Return a list of all available snapshots.
+
+    Each entry is a dict from ``snapshot_meta.json`` (keys: snapshot_id, market,
+    created_at, file_count) or a minimal dict with just ``snapshot_id`` if the
+    metadata file is missing.
+
+    Returns:
+        List of snapshot metadata dicts, sorted by snapshot directory name.
+    """
+    snapshots_root = PROJECT / 'data' / 'snapshots'
+    if not snapshots_root.exists():
+        return []
+
+    snapshots = []
+    for snap_dir in sorted(snapshots_root.iterdir()):
+        if not snap_dir.is_dir():
+            continue
+        meta_path = snap_dir / 'snapshot_meta.json'
+        if meta_path.exists():
+            try:
+                with open(meta_path) as f:
+                    snapshots.append(json.load(f))
+            except Exception:
+                snapshots.append({'snapshot_id': snap_dir.name, 'market': 'unknown'})
+        else:
+            snapshots.append({'snapshot_id': snap_dir.name, 'market': 'unknown'})
+
+    return snapshots
 
 
 def make_config_with_strategy(base_config: dict, strategy_name: str,

@@ -1455,3 +1455,121 @@ class BacktestEngine:
         logger.info(f"\n{result.summary()}")
 
         return result
+
+    def run_walkforward_multioffset(
+        self,
+        data: Dict[str, pd.DataFrame],
+        strategies: List[BaseStrategy],
+        offsets: Optional[List[int]] = None,
+        n_offsets: int = 5,
+    ) -> Dict[str, Any]:
+        """Run walk-forward backtests with multiple start-date offsets for stability testing.
+
+        Measures how sensitive backtest results are to the exact data start date
+        by trimming different amounts from the beginning and checking how much
+        key metrics vary (especially trade count, which should be stable in a
+        robust strategy).
+
+        Args:
+            data:       Dict mapping ticker -> DataFrame with OHLCV data.
+            strategies: List of strategy instances to run.
+            offsets:    Explicit list of integer day offsets to trim from the
+                        start of every ticker's data.  If None, defaults to
+                        ``[0, 5, 10, …]`` with ``n_offsets`` steps of 5 days.
+            n_offsets:  Number of 5-day offsets to use when ``offsets`` is None.
+                        Default 5 → offsets [0, 5, 10, 15, 20].
+
+        Returns:
+            Dict with stability metrics::
+
+                {
+                    'median_sharpe': float,
+                    'mean_sharpe':   float,
+                    'std_sharpe':    float,
+                    'median_trades': float,
+                    'mean_trades':   float,
+                    'std_trades':    float,
+                    'cv_sharpe':     float,  # std / |mean|
+                    'cv_trades':     float,  # std / mean
+                    'stable':        bool,   # True if cv_trades < 0.30
+                    'per_offset':    list,   # per-run result dicts
+                }
+        """
+        if offsets is None:
+            offsets = [i * 5 for i in range(n_offsets)]  # [0, 5, 10, 15, 20]
+
+        per_offset: List[Dict[str, Any]] = []
+
+        for offset in offsets:
+            # Trim `offset` trading days from the START of every ticker's data
+            trimmed: Dict[str, pd.DataFrame] = {}
+            for ticker, df in data.items():
+                if len(df) > offset:
+                    trimmed[ticker] = df.iloc[offset:].copy()
+                # If offset >= len(df) that ticker is silently dropped
+
+            if not trimmed:
+                logger.warning(
+                    f"MultiOffset offset={offset}: no data remaining after trim, skipping"
+                )
+                per_offset.append({
+                    "offset": offset,
+                    "sharpe": 0.0,
+                    "trades": 0,
+                    "cagr": 0.0,
+                    "max_drawdown": 0.0,
+                    "error": "no data after trim",
+                })
+                continue
+
+            try:
+                result = self.run_walkforward(trimmed, strategies)
+                m = result.metrics
+                per_offset.append({
+                    "offset": offset,
+                    "sharpe": float(m.get("sharpe", 0.0)),
+                    "trades": int(m.get("total_trades", 0)),
+                    "cagr": float(m.get("cagr", 0.0)),
+                    "max_drawdown": float(m.get("max_drawdown", 0.0)),
+                })
+            except Exception as exc:
+                logger.warning(f"MultiOffset offset={offset}: backtest failed: {exc}")
+                per_offset.append({
+                    "offset": offset,
+                    "sharpe": 0.0,
+                    "trades": 0,
+                    "cagr": 0.0,
+                    "max_drawdown": 0.0,
+                    "error": str(exc),
+                })
+
+        # Aggregate statistics across all offsets
+        sharpes = [r["sharpe"] for r in per_offset]
+        trades = [r["trades"] for r in per_offset]
+
+        median_sharpe = float(np.median(sharpes))
+        mean_sharpe = float(np.mean(sharpes))
+        std_sharpe = float(np.std(sharpes))
+
+        median_trades = float(np.median(trades))
+        mean_trades = float(np.mean(trades))
+        std_trades = float(np.std(trades))
+
+        # Coefficient of variation (lower = more stable)
+        cv_sharpe = (std_sharpe / abs(mean_sharpe)
+                     if abs(mean_sharpe) > 1e-9 else float("inf"))
+        cv_trades = (std_trades / mean_trades
+                     if mean_trades > 1e-9 else float("inf"))
+
+        return {
+            "median_sharpe": round(median_sharpe, 4),
+            "mean_sharpe": round(mean_sharpe, 4),
+            "std_sharpe": round(std_sharpe, 4),
+            "median_trades": round(median_trades, 1),
+            "mean_trades": round(mean_trades, 1),
+            "std_trades": round(std_trades, 1),
+            "cv_sharpe": round(cv_sharpe, 4),
+            "cv_trades": round(cv_trades, 4),
+            "stable": bool(cv_trades < 0.30),
+            "per_offset": per_offset,
+        }
