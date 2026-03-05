@@ -38,6 +38,7 @@ import traceback
 import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
@@ -179,6 +180,19 @@ def _run_combined_test(entry: dict) -> dict:
     )
 
 
+def _run_sweep_variant(args: tuple) -> dict:
+    """Run a single sweep variant in a worker process. Must be module-level for pickling."""
+    config, market, strategy, sweep_param, val, combined = args
+    from scripts.strategy_evaluator import make_config_with_strategy, run_backtest, load_market_data
+    import copy as _copy
+    params = {sweep_param: val}
+    cfg = make_config_with_strategy(_copy.deepcopy(config), strategy, params, solo=not combined)
+    data = load_market_data(market)
+    metrics = run_backtest(cfg, data)
+    metrics['param_value'] = val
+    return metrics
+
+
 def _run_param_sweep(entry: dict) -> dict:
     """Run a parameter sweep for a specific param.
 
@@ -191,11 +205,14 @@ def _run_param_sweep(entry: dict) -> dict:
 
     Combined mode also returns a baseline (current active config)
     and delta vs baseline for each variant.
+
+    Sweep variants run in parallel across all available CPU cores.
     """
     from scripts.strategy_evaluator import (
         get_active_config, load_market_data, make_config_with_strategy,
         run_backtest, get_strategy_class
     )
+    import os
 
     market = entry['market']
     strategy = entry['strategy_name']
@@ -222,36 +239,44 @@ def _run_param_sweep(entry: dict) -> dict:
                      f"trades={baseline.get('total_trades', 0)} "
                      f"CAGR={baseline.get('cagr_pct', 0):.2f}%")
 
+    # Run sweep variants in parallel across available cores
+    n_workers = min(len(sweep_values), os.cpu_count() or 4)
+    logger.info(f"  Running {len(sweep_values)} variants on {n_workers} workers...")
+
+    variant_args = [
+        (copy.deepcopy(config), market, strategy, sweep_param, val, combined)
+        for val in sweep_values
+    ]
+
     results = []
-    for val in sweep_values:
-        params = {sweep_param: val}
-        if combined:
-            # Combined mode: apply param to target strategy within full portfolio
-            cfg = make_config_with_strategy(config, strategy, params, solo=False)
-        else:
-            # Solo mode: isolate the target strategy
-            cfg = make_config_with_strategy(config, strategy, params, solo=True)
-        metrics = run_backtest(cfg, data)
-        metrics['param_value'] = val
+    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        futures = {executor.submit(_run_sweep_variant, args): args[3] for args in variant_args}
+        for future in as_completed(futures):
+            val = futures[future]
+            try:
+                metrics = future.result()
+            except Exception as exc:
+                logger.error(f"  {sweep_param}={val} FAILED: {exc}")
+                metrics = {'param_value': val, 'error': str(exc), 'sharpe': -999}
 
-        # In combined mode, compute delta vs baseline
-        if baseline:
-            delta = {}
-            for key in ('cagr_pct', 'sharpe', 'sortino', 'max_drawdown_pct',
-                         'win_rate_pct', 'profit_factor', 'total_pnl', 'total_trades'):
-                b = baseline.get(key, 0) or 0
-                c = metrics.get(key, 0) or 0
-                delta[key] = round(c - b, 4)
-            metrics['delta_vs_baseline'] = delta
+            # In combined mode, compute delta vs baseline
+            if baseline and 'error' not in metrics:
+                delta = {}
+                for key in ('cagr_pct', 'sharpe', 'sortino', 'max_drawdown_pct',
+                             'win_rate_pct', 'profit_factor', 'total_pnl', 'total_trades'):
+                    b = baseline.get(key, 0) or 0
+                    c = metrics.get(key, 0) or 0
+                    delta[key] = round(c - b, 4)
+                metrics['delta_vs_baseline'] = delta
 
-        results.append(metrics)
-        delta_str = ""
-        if baseline:
-            ds = metrics.get('delta_vs_baseline', {}).get('sharpe', 0)
-            delta_str = f" (Δ={ds:+.3f})"
-        logger.info(f"  {sweep_param}={val}: Sharpe={metrics.get('sharpe', 0):.3f}"
-                     f"{delta_str} trades={metrics.get('total_trades', 0)} "
-                     f"CAGR={metrics.get('cagr_pct', 0):.2f}%")
+            results.append(metrics)
+            delta_str = ""
+            if baseline and 'delta_vs_baseline' in metrics:
+                ds = metrics['delta_vs_baseline'].get('sharpe', 0)
+                delta_str = f" (Δ={ds:+.3f})"
+            logger.info(f"  {sweep_param}={val}: Sharpe={metrics.get('sharpe', 0):.3f}"
+                         f"{delta_str} trades={metrics.get('total_trades', 0)} "
+                         f"CAGR={metrics.get('cagr_pct', 0):.2f}%")
 
     # Find best by Sharpe
     best = max(results, key=lambda r: r.get('sharpe', -999))
