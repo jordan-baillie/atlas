@@ -1,0 +1,48 @@
+{
+  "median_sharpe": 0.6284,
+  "mean_sharpe": 0.6194,
+  "std_sharpe": 0.0215,
+  "median_trades": 101.0,
+  "mean_trades": 101.0,
+  "std_trades": 1.4,
+  "cv_sharpe": 0.0348,
+  "cv_trades": 0.014,
+  "stable": true,
+  "per_offset": [
+    {
+      "offset": 0,
+      "sharpe": 0.6076,
+      "trades": 101,
+      "cagr": 0.278068,
+      "max_drawdown": 0.040062
+    },
+    {
+      "offset": 5,
+      "sharpe": 0.6284,
+      "trades": 102,
+      "cagr": 0.297899,
+      "max_drawdown": 0.045648
+    },
+    {
+      "offset": 10,
+      "sharpe": 0.6452,
+      "trades": 100,
+      "cagr": 0.300197,
+      "max_drawdown": 0.027058
+    },
+    {
+      "offset": 15,
+      "sharpe": 0.5837,
+      "trades": 103,
+      "cagr": 0.265183,
+      "max_drawdown": 0.053718
+    },
+    {
+      "offset": 20,
+      "sharpe": 0.6319,
+      "trades": 99,
+      "cagr": 0.296217,
+      "max_drawdown": 0.041744
+    }
+  ]
+}
