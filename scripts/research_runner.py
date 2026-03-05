@@ -181,13 +181,17 @@ def _run_combined_test(entry: dict) -> dict:
 
 
 def _run_sweep_variant(args: tuple) -> dict:
-    """Run a single sweep variant in a worker process. Must be module-level for pickling."""
-    config, market, strategy, sweep_param, val, combined = args
+    """Run a single sweep variant in a worker process. Must be module-level for pickling.
+
+    Args tuple: (config, market, strategy, sweep_param, val, combined, snapshot_id)
+    snapshot_id may be None (load from live cache) or a snapshot ID string.
+    """
+    config, market, strategy, sweep_param, val, combined, snapshot_id = args
     from scripts.strategy_evaluator import make_config_with_strategy, run_backtest, load_market_data
     import copy as _copy
     params = {sweep_param: val}
     cfg = make_config_with_strategy(_copy.deepcopy(config), strategy, params, solo=not combined)
-    data = load_market_data(market)
+    data = load_market_data(market, snapshot_id=snapshot_id)
     metrics = run_backtest(cfg, data)
     metrics['param_value'] = val
     return metrics
@@ -216,8 +220,9 @@ def _run_param_sweep(entry: dict) -> dict:
 
     market = entry['market']
     strategy = entry['strategy_name']
+    snapshot_id = entry.get('snapshot_id')
     config = get_active_config(market)
-    data = load_market_data(market)
+    data = load_market_data(market, snapshot_id=snapshot_id)
 
     # Get sweep params from acceptance_criteria or params_override
     sweep_config = entry.get('params_override', {})
@@ -244,7 +249,7 @@ def _run_param_sweep(entry: dict) -> dict:
     logger.info(f"  Running {len(sweep_values)} variants on {n_workers} workers...")
 
     variant_args = [
-        (copy.deepcopy(config), market, strategy, sweep_param, val, combined)
+        (copy.deepcopy(config), market, strategy, sweep_param, val, combined, snapshot_id)
         for val in sweep_values
     ]
 
@@ -331,8 +336,9 @@ def _run_strategy_coord_descent(entry: dict) -> dict:
 
     market = entry['market']
     strategy_name = entry['strategy_name']
+    snapshot_id = entry.get('snapshot_id')
     config = get_active_config(market)
-    data = load_market_data(market)
+    data = load_market_data(market, snapshot_id=snapshot_id)
 
     param_grid = (entry.get('params_override') or {}).get('param_grid', {})
     if not param_grid:
@@ -624,8 +630,9 @@ def _run_filter_test(entry: dict) -> dict:
 
     market = entry['market']
     strategy = entry.get('strategy_name')
+    snapshot_id = entry.get('snapshot_id')
     config = get_active_config(market)
-    data = load_market_data(market)
+    data = load_market_data(market, snapshot_id=snapshot_id)
 
     filter_config = entry.get('params_override') or {}
     filter_param = filter_config.get('filter_param')

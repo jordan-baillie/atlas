@@ -30,6 +30,7 @@ Usage:
     python3 scripts/backtest.py --market sp500 --output results.json
 """
 
+import argparse
 import copy
 import json
 import logging
@@ -424,17 +425,25 @@ def run_backtest(
 # ── Data loading ─────────────────────────────────────────────────────────────
 
 
-def load_market_data(market_id: str) -> Dict[str, pd.DataFrame]:
+def load_market_data(
+    market_id: str, snapshot_id: Optional[str] = None
+) -> Dict[str, pd.DataFrame]:
     """Load cached OHLCV data for all tickers in a market.
 
     Delegates to ``strategy_evaluator.load_market_data`` so loading
     logic is maintained in one place.
+
+    Args:
+        market_id: Market identifier (sp500, asx, hk).
+        snapshot_id: If provided, load from a pinned data snapshot
+            (data/snapshots/{snapshot_id}/) instead of the live cache.
+            Snapshot must first be created via save_snapshot().
     """
     # Prefer the version in strategy_evaluator to avoid duplication
     try:
         from scripts.strategy_evaluator import load_market_data as _load
 
-        return _load(market_id)
+        return _load(market_id, snapshot_id=snapshot_id)
     except ImportError:
         pass
 
@@ -452,7 +461,11 @@ def load_market_data(market_id: str) -> Dict[str, pd.DataFrame]:
         yf_suffix = ".AX" if market_id == "asx" else ""
         valid_universe = None
 
-    cache_dir = PROJECT / "data" / "cache" / market_id
+    # Snapshot overrides live cache when specified
+    if snapshot_id is not None:
+        cache_dir = PROJECT / "data" / "snapshots" / snapshot_id
+    else:
+        cache_dir = PROJECT / "data" / "cache" / market_id
     data_dict: Dict[str, pd.DataFrame] = {}
 
     for pf in sorted(cache_dir.glob("*.parquet")):
@@ -531,7 +544,57 @@ def _parse_args(argv: Optional[List[str]] = None) -> Any:
         action="store_true",
         help="Suppress human-readable summary output.",
     )
+    parser.add_argument(
+        "--snapshot",
+        type=str,
+        default=None,
+        metavar="SNAPSHOT_ID",
+        help=(
+            "Load data from a pinned snapshot (data/snapshots/<SNAPSHOT_ID>/) "
+            "instead of the live cache. Use to reproduce a specific backtest run."
+        ),
+    )
+    parser.add_argument(
+        "--multi-offset",
+        action="store_true",
+        dest="multi_offset",
+        help=(
+            "Run multi-offset walk-forward validation: trim [0,5,10,15,20] days "
+            "from the start of data and measure Sharpe/trade-count stability. "
+            "Prints a stability report and exits (skips normal backtest)."
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def _print_multioffset_report(result: dict, market_id: str) -> None:
+    """Print a human-readable multi-offset walk-forward stability report."""
+    print(f"\n{'='*60}")
+    print(f"MULTI-OFFSET WALK-FORWARD — {market_id.upper()}")
+    print(f"{'='*60}")
+    print(f"  Median Sharpe: {result.get('median_sharpe', 0):.4f}")
+    print(f"  Mean Sharpe:   {result.get('mean_sharpe', 0):.4f}")
+    print(f"  Std Sharpe:    {result.get('std_sharpe', 0):.4f}")
+    print(f"  CV Sharpe:     {result.get('cv_sharpe', 0):.4f}")
+    print(f"  Median Trades: {result.get('median_trades', 0):.1f}")
+    print(f"  Mean Trades:   {result.get('mean_trades', 0):.1f}")
+    print(f"  Std Trades:    {result.get('std_trades', 0):.1f}")
+    print(f"  CV Trades:     {result.get('cv_trades', 0):.4f}")
+    stable = result.get("stable", False)
+    print(f"  Stable:        {'✓ YES (cv_trades < 0.30)' if stable else '✗ NO  (cv_trades >= 0.30)'}")
+    print(f"{'─'*60}")
+    print(f"  Per-offset breakdown:")
+    for pr in result.get("per_offset", []):
+        offset = pr.get("offset", "?")
+        sharpe = pr.get("sharpe", 0) or 0
+        trades = pr.get("total_trades", 0) or pr.get("trades", 0) or 0
+        cagr = pr.get("cagr", 0) or 0
+        max_dd = (pr.get("max_drawdown", 0) or 0) * 100
+        print(
+            f"    offset={offset:3}d: Sharpe={sharpe:7.4f}  "
+            f"trades={trades:4d}  CAGR={cagr*100:.2f}%  MaxDD={max_dd:.1f}%"
+        )
+    print(f"{'='*60}\n")
 
 
 def _print_summary(result: dict, market_id: str) -> None:
@@ -558,8 +621,6 @@ def _print_summary(result: dict, market_id: str) -> None:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    import argparse  # already imported at top, but kept here for clarity
-
     args = _parse_args(argv)
 
     t0 = time.time()
@@ -569,9 +630,13 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     cfg = get_active_config(args.market)
 
-    # Load data
-    print(f"[backtest] Loading market data for {args.market}…")
-    data = load_market_data(args.market)
+    # Load data — optionally from a pinned snapshot
+    snapshot_id: Optional[str] = getattr(args, "snapshot", None)
+    if snapshot_id:
+        print(f"[backtest] Loading snapshot '{snapshot_id}' for {args.market}…")
+    else:
+        print(f"[backtest] Loading market data for {args.market}…")
+    data = load_market_data(args.market, snapshot_id=snapshot_id)
     if not data:
         print(f"[backtest] ERROR: No data found for market '{args.market}'", file=sys.stderr)
         return 1
@@ -581,6 +646,31 @@ def main(argv: Optional[List[str]] = None) -> int:
     strategy_names: Optional[List[str]] = None
     if args.strategy:
         strategy_names = [args.strategy]
+
+    # ── Multi-offset walk-forward validation ─────────────────────────────────
+    if getattr(args, "multi_offset", False):
+        from backtest.engine import BacktestEngine
+
+        # Build strategy list from config
+        active_names = strategy_names or [
+            name
+            for name, scfg in cfg.get("strategies", {}).items()
+            if scfg.get("enabled", False)
+        ]
+        strategies = _build_strategies(cfg, active_names)
+        if not strategies:
+            print("[backtest] ERROR: No enabled strategies for multi-offset run", file=sys.stderr)
+            return 1
+
+        print(
+            f"[backtest] Running multi-offset validation "
+            f"({len(strategies)} strategies, {len(data)} tickers)…"
+        )
+        engine = BacktestEngine(cfg, market_id=args.market)
+        mo_result = engine.run_walkforward_multioffset(data, strategies)
+
+        _print_multioffset_report(mo_result, args.market)
+        return 0
 
     n_workers = max(1, args.workers)
     print(f"[backtest] Starting backtest with {n_workers} worker(s)…")
