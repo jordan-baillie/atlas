@@ -1050,6 +1050,264 @@ Applying a VIX filter blocks entries precisely when MR alpha is highest.
     return written
 
 
+# ─── Knowledge Base (auto-generated summary for AI agent) ────────────────────
+
+
+def build_knowledge_base(
+    journal: dict[str, dict],
+    wave_briefs: list[dict],
+    output_dir: Path,
+) -> None:
+    """Generate KNOWLEDGE_BASE.md — the single-file AI agent reference."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    raw_count = sum(
+        len([e2 for e2 in json.loads((ATLAS_ROOT / "research" / "journal.json").read_text())
+             if e2.get("experiment_id") == eid])
+        for eid in journal
+    )
+
+    # ── Strategy aggregation ───────────────────────────────────────────────
+    by_strategy: dict[str, list[dict]] = defaultdict(list)
+    for eid, entry in journal.items():
+        strat = entry.get("strategy") or "portfolio_filter"
+        by_strategy[strat].append(entry)
+
+    # ── All learnings ──────────────────────────────────────────────────────
+    all_learnings: dict[str, list[str]] = defaultdict(list)
+    for eid, entry in journal.items():
+        for l in entry.get("learnings") or []:
+            strat = entry.get("strategy") or "portfolio_filter"
+            all_learnings[strat].append(l)
+
+    # ── Wave summary ───────────────────────────────────────────────────────
+    brief_map = {b.get("wave_number"): b for b in wave_briefs if b.get("wave_number")}
+    wave_themes = {
+        1: "Dormant Strategy Activation & Portfolio Filters",
+        2: "Exit Rule Optimization & Volume/Timing Filters",
+        3: "Parameter Refinement",
+        4: "New Strategy Exploration (LBR, ConnorsRSI2)",
+        5: "Re-optimization & CDD Strategy",
+    }
+    for wn, brief in brief_map.items():
+        wave_themes[wn] = brief.get("theme", wave_themes.get(wn, f"Wave {wn}"))
+
+    # Count experiments per wave
+    wave_exp_counts: dict[int, int] = defaultdict(int)
+    for eid in journal:
+        wn = get_wave_number(eid)
+        if wn:
+            wave_exp_counts[wn] += 1
+
+    lines: list[str] = []
+    lines.append(f"# Atlas Research Knowledge Base")
+    lines.append("")
+    lines.append(f"> **Auto-generated:** {now} | **Experiments:** {len(journal)} unique | **Waves:** {len(wave_themes)}")
+    lines.append(">")
+    lines.append("> This is the AI agent's internal knowledge base. Read this file at session start.")
+    lines.append("> Regenerate: `python3 scripts/build_obsidian_vault.py --force`")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 1: System State ────────────────────────────────────────────
+    lines.append("## 1. System State")
+    lines.append("")
+    lines.append("### Active Config (v2.2)")
+    lines.append("- **Equity:** $4,000 | **Broker:** Moomoo (PAUSED) → Alpaca (PLANNED, $0 commission)")
+    lines.append("- **Strategies:** Mean Reversion + Trend Following + Opening Gap")
+    lines.append("- **Max positions:** 10 | **SMA-200 filter:** ON | **Universe:** SP500 (292 tickers)")
+    lines.append("")
+    lines.append("### Baseline Performance (v2.2, $10K implied)")
+    lines.append("Sharpe 1.04 | CAGR 15.7% | 425 trades | 56% WR | PF 1.50 | Max DD ~12%")
+    lines.append("OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% profitable")
+    lines.append("")
+    lines.append("### Status")
+    lines.append("- **Live trading:** PAUSED (conflict + fee drag)")
+    lines.append("- **Research pipeline:** ACTIVE (cron-driven)")
+    lines.append("- **Mode:** Research-first — accumulate evidence for go-live")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 2: Strategy Cards ──────────────────────────────────────────
+    lines.append("## 2. Strategy Report Cards")
+    lines.append("")
+
+    # Categorize
+    active_strats = [s for s in by_strategy if s in ACTIVE_STRATEGIES]
+    dormant_strats = [s for s in by_strategy if s not in ACTIVE_STRATEGIES and s not in FILTER_STRATEGIES
+                      and get_strategy_status(s) == "dormant"]
+    filter_strats = [s for s in by_strategy if s in FILTER_STRATEGIES]
+
+    def strategy_card(strat_id: str, exps: list[dict]) -> list[str]:
+        card: list[str] = []
+        human = strategy_to_human(strat_id)
+        status = get_strategy_status(strat_id)
+        sharpes = []
+        for e in exps:
+            km = e.get("key_metrics") or {}
+            s = km.get("sharpe")
+            if s is not None:
+                try:
+                    sharpes.append(float(s))
+                except (TypeError, ValueError):
+                    pass
+        best = max(sharpes) if sharpes else None
+        worst = min(sharpes) if sharpes else None
+        verdicts = [e.get("verdict", "?") for e in exps]
+        p = sum(1 for v in verdicts if v in ("pass", "promoted"))
+        f = sum(1 for v in verdicts if v == "fail")
+
+        card.append(f"#### {human}")
+        metrics_parts = []
+        if best is not None:
+            metrics_parts.append(f"Best Sharpe: {best:.2f}")
+        if worst is not None and worst != best:
+            metrics_parts.append(f"Worst: {worst:.2f}")
+        metrics_parts.append(f"{len(exps)} experiments ({p} pass, {f} fail)")
+        card.append(f"- **Metrics:** {' | '.join(metrics_parts)}")
+
+        # Key learnings for this strategy
+        strat_learnings = all_learnings.get(strat_id, [])
+        if strat_learnings:
+            # Pick most important learnings (those with PATTERN, KEY, DECISION, CLOSED, DO NOT)
+            important = [l for l in strat_learnings
+                         if any(kw in l.upper() for kw in ("PATTERN", "KEY", "DECISION", "CLOSED", "DO NOT",
+                                                            "PROMOTED", "BLOCKED", "ROOT CAUSE", "CONFIRMED"))]
+            # Deduplicate
+            seen: set[str] = set()
+            unique: list[str] = []
+            for l in (important or strat_learnings[:5]):
+                if l not in seen:
+                    unique.append(l)
+                    seen.add(l)
+            card.append("- **Key findings:**")
+            for l in unique[:6]:
+                card.append(f"  - {l}")
+
+        card.append("")
+        return card
+
+    lines.append("### ✅ Active Strategies")
+    lines.append("")
+    for s in sorted(active_strats):
+        lines.extend(strategy_card(s, by_strategy[s]))
+
+    lines.append("### ⏸️ Dormant Strategies (passed solo, failed combined)")
+    lines.append("")
+    for s in sorted(dormant_strats):
+        lines.extend(strategy_card(s, by_strategy[s]))
+
+    lines.append("### 🔧 Portfolio Filters")
+    lines.append("")
+    for s in sorted(filter_strats):
+        lines.extend(strategy_card(s, by_strategy[s]))
+
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 3: Patterns ────────────────────────────────────────────────
+    lines.append("## 3. Confirmed Patterns (NEVER violate)")
+    lines.append("")
+    lines.append("1. **Fee Drag at Low Equity** — At $4K, Moomoo fees eat 74% of profit. Switch to Alpaca or raise equity.")
+    lines.append("2. **ETF→Stock Adaptation Fails** — ConnorsRSI2 & LBR fail on stocks. Never port ETF strategies directly.")
+    lines.append("3. **Position Slot Contention** — At max_positions=10, adding any strategy degrades portfolio. Need allocation pools.")
+    lines.append("4. **Solo vs Combined Divergence** — Solo=viability check only. Combined=promotion decision.")
+    lines.append("5. **Optimizer Blind Spots** — Coord descent rejected SMA-200 (trade count penalty). Run manual A/B tests for binary decisions.")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 4: Wave Summary ────────────────────────────────────────────
+    lines.append("## 4. Research Waves")
+    lines.append("")
+    lines.append("| Wave | Theme | Experiments | Key Outcome |")
+    lines.append("|------|-------|-------------|-------------|")
+    wave_outcomes = {
+        1: "SMA-200 promoted (+0.28 Sharpe), all dormant fail combined, VIX filter CLOSED",
+        2: "ConnorsRSI2 fails, exit sweep inconclusive, infra bugs in filter tests",
+        3: "RSI(14) optimal, IBS/vol redundant, max_hold=5 promising (p=0.30)",
+        4: "LBR fails (ETF→stock), MR hold5 OOS fails, MR strength exit inferior",
+        5: "Queued: re-optimization + CDD strategy",
+    }
+    for wn in sorted(wave_themes.keys()):
+        theme = wave_themes[wn]
+        count = wave_exp_counts.get(wn, 0)
+        outcome = wave_outcomes.get(wn, "—")
+        lines.append(f"| {wn} | {theme} | {count} | {outcome} |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 5: Closed Decisions ────────────────────────────────────────
+    lines.append("## 5. Closed Decisions (Do NOT revisit)")
+    lines.append("")
+    lines.append("1. ✅ SMA-200 filter ON for all strategies (promoted v2.1)")
+    lines.append("2. ❌ VIX filter: counterproductive for MR-heavy portfolio")
+    lines.append("3. ❌ RSI period: RSI(14) is optimal, shorter periods produce random entries")
+    lines.append("4. ❌ ETF strategy adaptation: don't port ETF strategies to stocks")
+    lines.append("5. ❌ Wave 1 dormant activation: CLOSED until allocation pools exist")
+    lines.append("6. ⏸️ max_hold=5 for MR: failed OOS, needs more evidence")
+    lines.append("7. ⏸️ Volume 1.5x filter: needs combined-mode retest (fix infra bug first)")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 6: Known Bugs ──────────────────────────────────────────────
+    lines.append("## 6. Infrastructure Issues")
+    lines.append("")
+    lines.append("| Issue | Status | Impact |")
+    lines.append("|-------|--------|--------|")
+    lines.append("| filter_test nested config paths | OPEN | Volume combined & TOM tests invalid |")
+    lines.append("| MTF Momentum confidence hardcoded=0.50 vs min=0.75 | OPEN | Strategy blocked |")
+    lines.append("| OG overly selective filters (9 trades) | OPEN | Can't test OG exits |")
+    lines.append("| Universe stale (200 vs 292 tickers) | OPEN | data/processed/sp500/universe.json |")
+    lines.append("| OpenD runs in tmux not systemd | OPEN | Reliability risk |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 7: Priorities ──────────────────────────────────────────────
+    lines.append("## 7. Next Research Priorities")
+    lines.append("")
+    lines.append("1. **Wave 5 execution** — Re-optimization + CDD strategy (queued)")
+    lines.append("2. **Allocation pools** — Critical blocker for unlocking dormant strategies")
+    lines.append("3. **Volume filter combined test** — Fix nested config bug, retest 1.5x")
+    lines.append("4. **OG filter relaxation** — More trades needed before exit testing")
+    lines.append("5. **Alpaca integration** — Eliminate fee drag for live trading")
+    lines.append("6. **Backfill Wave 4 learnings** — 7 experiments with empty learnings")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    # ── Section 8: All Learnings (searchable) ──────────────────────────────
+    lines.append("## 8. All Learnings by Strategy")
+    lines.append("")
+    lines.append("Searchable index of every learning extracted from experiments.")
+    lines.append("")
+    for strat_id in sorted(all_learnings.keys()):
+        learnings = all_learnings[strat_id]
+        if not learnings:
+            continue
+        human = strategy_to_human(strat_id)
+        lines.append(f"### {human}")
+        seen_l: set[str] = set()
+        for l in learnings:
+            if l not in seen_l:
+                lines.append(f"- {l}")
+                seen_l.add(l)
+        lines.append("")
+
+    lines.append("---")
+    lines.append("")
+    lines.append("*For detailed experiment data, see `Experiments/{id}.md`. For strategy details, see `Strategies/{name}.md`.*")
+
+    (output_dir / "KNOWLEDGE_BASE.md").write_text("\n".join(lines))
+    print(f"  Written: KNOWLEDGE_BASE.md ({len(lines)} lines)")
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 
@@ -1147,6 +1405,14 @@ def main() -> None:
         force=args.force,
     )
     print(f"  Written: {pattern_written}")
+
+    # ── Knowledge Base ─────────────────────────────────────────────────────
+    print("Generating KNOWLEDGE_BASE.md...")
+    build_knowledge_base(
+        journal=journal,
+        wave_briefs=wave_briefs,
+        output_dir=output_dir,
+    )
 
     # ── Summary ────────────────────────────────────────────────────────────
     total = exp_written + strat_written + wave_written + pattern_written

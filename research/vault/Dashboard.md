@@ -1,50 +1,40 @@
----
-tags:
-  - dashboard
-  - MOC
----
-# Atlas Research Dashboard
+# Atlas Research Vault — Index
 
-> Research-first trading lab. Building evidence for future go-live decisions.
+> Agent knowledge base. Start with `KNOWLEDGE_BASE.md` for full system state.
 
-## Quick Views
-- [[All Experiments]] — Database of all 82+ experiments with filtering
-- [[Strategy Scorecard]] — Performance overview by strategy  
-- [[Promoted]] — Experiments that led to config changes
+## Primary Reference
+- **[KNOWLEDGE_BASE.md](KNOWLEDGE_BASE.md)** — Complete research state, strategy cards, patterns, decisions, priorities. READ THIS FIRST.
 
-## Strategies
-- [[Mean Reversion]] | [[Trend Following]] | [[Opening Gap]]
-- [[Momentum Breakout]] | [[Short Term MR]] | [[Sector Rotation]]
-- [[MTF Momentum]] | [[Bollinger Band Squeeze]] | [[ConnorsRSI2]]
-- [[Lower Band Reversion]] | [[Triple RSI]] | [[SMA-200 Filter]]
+## Deep-Dive Notes
 
-## Research Waves
-- [[Wave 1]] — Dormant Strategy Activation & Portfolio Filters
-- [[Wave 2]] — Parameter Sensitivity & Combined Filters
-- [[Wave 3]] — Config Refinement & Hold Period Optimization
-- [[Wave 4]] — New Strategy Exploration (LBR, ConnorsRSI2)
-- [[Wave 5]] — Re-optimization & CDD Strategy
+### Strategies (14 cards)
+| Strategy | Status | File |
+|----------|--------|------|
+| Mean Reversion | ✅ active | `Strategies/Mean Reversion.md` |
+| Trend Following | ✅ active | `Strategies/Trend Following.md` |
+| Opening Gap | ✅ active | `Strategies/Opening Gap.md` |
+| Momentum Breakout | ⏸️ dormant | `Strategies/Momentum Breakout.md` |
+| Short Term MR | ⏸️ dormant | `Strategies/Short Term MR.md` |
+| Sector Rotation | ⏸️ dormant | `Strategies/Sector Rotation.md` |
+| BB Squeeze | ⏸️ dormant | `Strategies/Bollinger Band Squeeze.md` |
+| ConnorsRSI2 | ❌ failed | `Strategies/ConnorsRSI2.md` |
+| Lower Band Reversion | ❌ failed | `Strategies/Lower Band Reversion.md` |
+| Triple RSI | ❌ failed | `Strategies/Triple RSI.md` |
+| MTF Momentum | 🔧 blocked | `Strategies/MTF Momentum.md` |
+| SMA-200 Filter | ✅ promoted | `Strategies/SMA-200 Filter.md` |
+| Portfolio Filter | 🔧 various | `Strategies/Portfolio Filter.md` |
+| Combined Portfolio | — baseline | `Strategies/Combined Portfolio.md` |
 
-## Confirmed Patterns
-- [[Fee Drag at Low Equity]]
-- [[ETF Strategy Adaptation Fails]]
-- [[Position Slot Contention]]
-- [[SMA-200 Filter Win]]
-- [[VIX Filter Counterproductive]]
+### Experiments (35 unique)
+`Experiments/{experiment_id}.md` — Each has YAML frontmatter with metrics + full hypothesis/verdict/learnings.
 
-## Key Metrics (Baseline v2.2)
-| Metric | Value |
-|--------|-------|
-| Sharpe | 1.04 |
-| CAGR | 15.7% |
-| Total Trades | 425 |
-| Win Rate | 56% |
-| Profit Factor | 1.50 |
-| Max Drawdown | ~12% |
+### Waves (5 complete)
+`Waves/Wave {1-5}.md` — Theme, experiment list, key findings.
 
-## How to Use This Vault
-1. Browse experiments in [[All Experiments]] base view — filter by strategy, verdict, wave
-2. Click any strategy to see its full experiment history via backlinks
-3. Use the Graph View to see how strategies, experiments, and patterns connect
-4. Add new experiments using the [[Experiment]] template
-5. Regenerate vault from data: `python3 scripts/build_obsidian_vault.py --force`
+### Patterns (5 confirmed)
+`Patterns/{name}.md` — Research patterns that must never be violated.
+
+## Regenerate
+```bash
+python3 scripts/build_obsidian_vault.py --force
+```

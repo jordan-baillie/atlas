@@ -1,18 +1,17 @@
 {
   "trade_date": "2026-03-09",
-  "generated_at": "2026-03-09T19:00:50.434163",
+  "generated_at": "2026-03-09T21:41:21.915087",
   "market_id": "sp500",
   "config_version": "v2.2",
   "status": "PENDING_APPROVAL",
   "portfolio_snapshot": {
     "equity": 4003.86,
-    "cash": 1058.24,
+    "cash": 2110.76,
     "open_positions": 1,
     "total_pnl": 3.86,
     "total_pnl_pct": 0.1
   },
-  "proposed_entries": [],
-  "rejected_entries": [
+  "proposed_entries": [
     {
       "ticker": "UPS",
       "strategy": "mean_reversion",
@@ -42,11 +41,11 @@
         "rs_momentum": 0.0,
         "roc_20": -12.18,
         "roc_60": 7.13,
-        "roc_120": 21.35
+        "roc_120": 21.35,
+        "sector": "Industrials"
       },
-      "sector": "Unknown",
-      "market_id": "",
-      "rejection_reason": "Max sector concentration (2) for Unknown"
+      "sector": "Industrials",
+      "market_id": ""
     },
     {
       "ticker": "ON",
@@ -77,12 +76,14 @@
         "rs_momentum": 0.0,
         "roc_20": -9.87,
         "roc_60": 0.87,
-        "roc_120": 17.84
+        "roc_120": 17.84,
+        "sector": "Technology"
       },
-      "sector": "Unknown",
-      "market_id": "",
-      "rejection_reason": "Max sector concentration (2) for Unknown"
-    },
+      "sector": "Technology",
+      "market_id": ""
+    }
+  ],
+  "rejected_entries": [
     {
       "ticker": "TXN",
       "strategy": "mean_reversion",
@@ -112,9 +113,10 @@
         "rs_momentum": 0.0,
         "roc_20": -13.74,
         "roc_60": 6.78,
-        "roc_120": 5.81
+        "roc_120": 5.81,
+        "sector": "Technology"
       },
-      "sector": "Unknown",
+      "sector": "Technology",
       "market_id": "",
       "rejection_reason": "Confidence 0.715 below threshold 0.75"
     },
@@ -147,9 +149,10 @@
         "rs_momentum": 0.0,
         "roc_20": -15.69,
         "roc_60": -2.54,
-        "roc_120": 2.85
+        "roc_120": 2.85,
+        "sector": "Financial Services"
       },
-      "sector": "Unknown",
+      "sector": "Financial Services",
       "market_id": "",
       "rejection_reason": "Confidence 0.654 below threshold 0.75"
     },
@@ -182,9 +185,10 @@
         "rs_momentum": 0.0,
         "roc_20": -12.07,
         "roc_60": 4.6,
-        "roc_120": 3.82
+        "roc_120": 3.82,
+        "sector": "Financial Services"
       },
-      "sector": "Unknown",
+      "sector": "Financial Services",
       "market_id": "",
       "rejection_reason": "Confidence 0.613 below threshold 0.75"
     }
@@ -199,12 +203,12 @@
   ],
   "total_signals_generated": 5,
   "risk_summary": {
-    "total_proposed_cost": 0,
-    "total_proposed_risk": 0,
-    "risk_pct_of_equity": 0.0,
-    "positions_after": 0,
-    "cash_after_entries": 1058.24,
-    "portfolio_exposure_pct": 73.57
+    "total_proposed_cost": 318.46,
+    "total_proposed_risk": 31.74,
+    "risk_pct_of_equity": 0.79,
+    "positions_after": 2,
+    "cash_after_entries": 1792.3,
+    "portfolio_exposure_pct": 55.24
   },
   "open_positions": [
     {
