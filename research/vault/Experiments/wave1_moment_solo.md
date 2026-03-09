@@ -60,6 +60,12 @@ Momentum breakout captures trend initiation events that the existing trend_follo
 
 All 3 criteria met: min_trades: 342.0000 >= 10; min_win_rate: 48.5400 >= 35.0; min_profit_factor: 0.9577 >= 0.7
 
+## Learnings
+
+- Momentum breakout generates 342 trades with 48.5% WR — sufficient signal activity for viability
+- Untuned default params produce negative Sharpe (-0.99) but meet relaxed solo criteria (trades>10, WR>35%, PF>0.7)
+- Strategy is viable for optimization phase — signal exists even if untuned defaults are unprofitable
+
 ---
 
 Strategy:: [[Momentum Breakout]]

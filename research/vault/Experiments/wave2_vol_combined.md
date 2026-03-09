@@ -61,6 +61,14 @@ Wave 1 proved 1.5x volume filter on MR solo: Sharpe -0.02→0.38, PF 1.30→1.62
 
 All 4 criteria failed: sharpe_improvement: metric not found; max_dd_increase_pp: metric not found; min_trades: 117.0000 < 150; edge_p_value: 0.3424 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)
+- filter_test sets s_cfg['volume_min_ratio'] but strategies read from s_cfg['volume']['min_ratio'] (nested path)
+- Need to fix filter_test to handle nested config params before retesting volume filter
+- The hypothesis is NOT rejected — test was invalid due to config path mismatch
+- Wave 1 solo result (1.5x volume filter: Sharpe -0.02→0.38) remains valid and promising
+
 ---
 
 Strategy:: [[Portfolio Filter]]

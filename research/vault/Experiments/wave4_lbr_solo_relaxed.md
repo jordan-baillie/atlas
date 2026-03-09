@@ -58,6 +58,13 @@ Relaxing IBS threshold from 0.3 to 0.5 generates more trades on individual stock
 
 2 pass, 1 fail: edge_p_value: 0.4853 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- Relaxing IBS from 0.3 to 0.5 slightly improved Sharpe (-2.08→-1.85) and PF (0.85→0.90)
+- Trade count stable at 280 (vs 270) — relaxation adds few extra signals
+- WR improved to 59.6% but edge still not significant (p=0.49)
+- Minor improvement insufficient to make strategy viable — problem is deeper than parameter tuning
+
 ---
 
 Strategy:: [[Lower Band Reversion]]

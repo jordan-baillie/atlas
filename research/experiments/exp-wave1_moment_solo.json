@@ -294,7 +294,11 @@
   },
   "verdict": "pass",
   "verdict_rationale": "All 3 criteria met: min_trades: 342.0000 >= 10; min_win_rate: 48.5400 >= 35.0; min_profit_factor: 0.9577 >= 0.7",
-  "learnings": [],
+  "learnings": [
+    "Momentum breakout generates 342 trades with 48.5% WR \u2014 sufficient signal activity for viability",
+    "Untuned default params produce negative Sharpe (-0.99) but meet relaxed solo criteria (trades>10, WR>35%, PF>0.7)",
+    "Strategy is viable for optimization phase \u2014 signal exists even if untuned defaults are unprofitable"
+  ],
   "promoted": false,
   "candidate_config_path": null
 }

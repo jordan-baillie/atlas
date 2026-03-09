@@ -61,6 +61,14 @@ The Turn of Month effect (last 5 + first 3 trading days) shows stocks generate v
 
 1 pass, 2 fail: sharpe_improvement: metric not found; edge_p_value: 0.1266 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)
+- filter_test sets s_cfg['turn_of_month'] but no strategy reads this parameter
+- TOM filter needs to be IMPLEMENTED in the backtest engine or strategy base class before testing
+- Calendar-based filters need engine-level support (check date against TOM window before signal generation)
+- The hypothesis is NOT rejected — test was invalid due to missing implementation
+
 ---
 
 Strategy:: [[Portfolio Filter]]

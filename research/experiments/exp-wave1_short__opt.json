@@ -381,7 +381,12 @@
   },
   "verdict": "pass",
   "verdict_rationale": "All 3 criteria met: sharpe_improvement_vs_solo: 0.7182 >= 0.1; min_trades: 697.0000 >= 15; min_profit_factor: 1.1739 >= 1.1",
-  "learnings": [],
+  "learnings": [
+    "Optimization improved Sharpe from -0.45 to +0.27 \u2014 significant improvement",
+    "Post-optimization: 697 trades, 63% WR, PF 1.17, CAGR 7.6%",
+    "Trade count reduced 946\u2192697 (26%) through optimization \u2014 still very high",
+    "PF improvement 0.96\u21921.17 shows optimizer found genuine edge in parameter space"
+  ],
   "promoted": false,
   "candidate_config_path": null
 }

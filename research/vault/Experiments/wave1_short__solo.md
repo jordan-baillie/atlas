@@ -60,6 +60,13 @@ Short-term MR (RSI(2)/IBS) captures rapid 1-5 day reversals that the existing me
 
 All 3 criteria met: min_trades: 946.0000 >= 10; min_win_rate: 58.5600 >= 35.0; min_profit_factor: 0.9609 >= 0.7
 
+## Learnings
+
+- Short-term MR generates 946 trades — highest trade count of any dormant strategy tested
+- 58.6% WR suggests signal quality, but PF 0.96 means losses slightly exceed wins
+- Massive trade count (946) will create severe slot contention in combined portfolio at max_positions=10
+- Viable for optimization — high trade count gives optimizer plenty of data to tune parameters
+
 ---
 
 Strategy:: [[Short Term MR]]

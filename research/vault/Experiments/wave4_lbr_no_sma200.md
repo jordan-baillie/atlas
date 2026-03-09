@@ -46,6 +46,14 @@ All 0 criteria met:
 | Profit Factor | -0.15 |
 | Total Trades | -13.00 |
 
+## Learnings
+
+- COUNTERINTUITIVE: Removing SMA-200 filter IMPROVES LBR — Sharpe -2.08→-1.44, PnL -$174→-$5
+- With SMA-200 OFF: 283 trades, 59% WR, PF 1.00 (near breakeven vs clearly negative with filter)
+- SMA-200 filter hurts LBR because LBR targets extreme dips — which often occur below the 200-day MA
+- This is the OPPOSITE of what SMA-200 does for MR/TF/OG (where it helps by +0.28 Sharpe)
+- KEY INSIGHT: Filters are strategy-dependent. SMA-200 is not universally beneficial.
+
 ---
 
 Strategy:: [[Lower Band Reversion]]

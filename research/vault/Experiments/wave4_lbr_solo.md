@@ -58,6 +58,13 @@ The Quantitativo IBS lower-band strategy (Sharpe 2.11 on SPY) can generate profi
 
 2 pass, 1 fail: edge_p_value: 0.2529 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- LBR with published SPY params on individual SP500 stocks: Sharpe -2.08, 270 trades, 58% WR, PF 0.85
+- Win rate is decent (58%) but average loss exceeds average win — classic ETF-to-stock adaptation issue
+- Edge not statistically significant (p=0.25)
+- Published Sharpe 2.11 on SPY → -2.08 on individual stocks: dramatic degradation confirms ETF strategies don't transfer
+
 ---
 
 Strategy:: [[Lower Band Reversion]]

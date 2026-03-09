@@ -27,7 +27,11 @@
       }
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "Momentum breakout generates 342 trades with 48.5% WR \u2014 sufficient signal activity for viability",
+      "Untuned default params produce negative Sharpe (-0.99) but meet relaxed solo criteria (trades>10, WR>35%, PF>0.7)",
+      "Strategy is viable for optimization phase \u2014 signal exists even if untuned defaults are unprofitable"
+    ],
     "promoted": false,
     "runtime_s": 59.2,
     "agent_id": "atlas-research"
@@ -60,7 +64,12 @@
       }
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "Short-term MR generates 946 trades \u2014 highest trade count of any dormant strategy tested",
+      "58.6% WR suggests signal quality, but PF 0.96 means losses slightly exceed wins",
+      "Massive trade count (946) will create severe slot contention in combined portfolio at max_positions=10",
+      "Viable for optimization \u2014 high trade count gives optimizer plenty of data to tune parameters"
+    ],
     "promoted": false,
     "runtime_s": 259.0,
     "agent_id": "atlas-research"
@@ -167,7 +176,12 @@
       }
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "Optimization improved Sharpe from -0.45 to +0.27 \u2014 significant improvement",
+      "Post-optimization: 697 trades, 63% WR, PF 1.17, CAGR 7.6%",
+      "Trade count reduced 946\u2192697 (26%) through optimization \u2014 still very high",
+      "PF improvement 0.96\u21921.17 shows optimizer found genuine edge in parameter space"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -1394,7 +1408,13 @@
       "variant_value": 0.5
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)",
+      "filter_test sets s_cfg['volume_min_ratio'] but strategies read from s_cfg['volume']['min_ratio'] (nested path)",
+      "Need to fix filter_test to handle nested config params before retesting volume filter",
+      "The hypothesis is NOT rejected \u2014 test was invalid due to config path mismatch",
+      "Wave 1 solo result (1.5x volume filter: Sharpe -0.02\u21920.38) remains valid and promising"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -1660,7 +1680,13 @@
       "variant_value": false
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)",
+      "filter_test sets s_cfg['turn_of_month'] but no strategy reads this parameter",
+      "TOM filter needs to be IMPLEMENTED in the backtest engine or strategy base class before testing",
+      "Calendar-based filters need engine-level support (check date against TOM window before signal generation)",
+      "The hypothesis is NOT rejected \u2014 test was invalid due to missing implementation"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -1913,7 +1939,13 @@
       "variant_value": "boost"
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)",
+      "filter_test sets s_cfg['turn_of_month'] but no strategy reads this parameter",
+      "TOM filter needs to be IMPLEMENTED in the backtest engine or strategy base class before testing",
+      "Calendar-based filters need engine-level support (check date against TOM window before signal generation)",
+      "The hypothesis is NOT rejected \u2014 test was invalid due to missing implementation"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-wave2-parallel"
@@ -1963,7 +1995,13 @@
       "variant_value": 1.0
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)",
+      "filter_test sets s_cfg['volume_min_ratio'] but strategies read from s_cfg['volume']['min_ratio'] (nested path)",
+      "Need to fix filter_test to handle nested config params before retesting volume filter",
+      "The hypothesis is NOT rejected \u2014 test was invalid due to config path mismatch",
+      "Wave 1 solo result (1.5x volume filter: Sharpe -0.02\u21920.38) remains valid and promising"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-wave2-parallel"
@@ -2833,7 +2871,12 @@
       }
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "LBR with published SPY params on individual SP500 stocks: Sharpe -2.08, 270 trades, 58% WR, PF 0.85",
+      "Win rate is decent (58%) but average loss exceeds average win \u2014 classic ETF-to-stock adaptation issue",
+      "Edge not statistically significant (p=0.25)",
+      "Published Sharpe 2.11 on SPY \u2192 -2.08 on individual stocks: dramatic degradation confirms ETF strategies don't transfer"
+    ],
     "promoted": false,
     "runtime_s": 127.7,
     "agent_id": "atlas-research"
@@ -2850,7 +2893,13 @@
       "returncode": 0
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "OOS validation of max_hold=5 FAILED: zero OOS trades generated",
+      "Walk-forward OOS window likely too short or parameter configuration prevented trade generation",
+      "In-sample still looks good: Sharpe 0.87, PF 8.16, 53.6% WR \u2014 but can't validate out-of-sample",
+      "max_hold=5 promotion BLOCKED until OOS can be properly executed",
+      "POSSIBLE FIX: Extend OOS window or use different validation method (e.g., time-series cross-validation)"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -2893,7 +2942,12 @@
       }
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "Relaxing IBS from 0.3 to 0.5 slightly improved Sharpe (-2.08\u2192-1.85) and PF (0.85\u21920.90)",
+      "Trade count stable at 280 (vs 270) \u2014 relaxation adds few extra signals",
+      "WR improved to 59.6% but edge still not significant (p=0.49)",
+      "Minor improvement insufficient to make strategy viable \u2014 problem is deeper than parameter tuning"
+    ],
     "promoted": false,
     "runtime_s": 129.6,
     "agent_id": "atlas-research"
@@ -2937,7 +2991,13 @@
       "param_value": 7
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "LBR-style strength exit (sell when close > yesterday's high) applied to MR: Sharpe -2.10, 68 trades",
+      "Dramatic trade count reduction (101\u219268) \u2014 exit triggers too early, cutting profitable trades short",
+      "PF barely above 1.0 (1.03) \u2014 essentially random after applying this exit rule",
+      "Edge not significant (p=0.88) \u2014 the worst p-value of any MR experiment",
+      "CONCLUSION: Simple 'strength exit' is inferior to max_hold_days for MR. Price-based exits add noise, not alpha."
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -2981,7 +3041,14 @@
       "param_value": 3.5
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "Band multiplier sweep (1.5x-4.0x): band_mult=3.5 produces anomalously high PF (4.38) with Sharpe 0.71",
+      "Likely overfitting: $19K PnL on 249 trades smells like a few lucky outsized wins",
+      "Monte Carlo test confirms fragility: p95 MC drawdown > 2\u00d7 actual (trade-sequence dependent)",
+      "All other band values produce negative Sharpe \u2014 no robust parameter exists",
+      "Edge not significant at any band level (p=0.01-0.55 range, but MC fragile flags invalidate the low p-values)",
+      "CONCLUSION: LBR band parameter cannot rescue the strategy on individual stocks"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -3025,7 +3092,13 @@
       "param_value": 0.4
     },
     "delta_vs_baseline": {},
-    "learnings": [],
+    "learnings": [
+      "IBS threshold sweep (0.1-0.6): no value produces significant edge (all p>0.25)",
+      "Best Sharpe at IBS=0.4 (-1.21) with highest WR (62.4%) but PF only 1.07",
+      "Higher IBS thresholds increase trade count but don't improve edge quality",
+      "Published IBS=0.3 is not optimal for stocks \u2014 but no IBS value works",
+      "CONCLUSION: IBS parameter cannot rescue LBR on individual stocks"
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
@@ -3048,7 +3121,13 @@
       "profit_factor": -0.1499,
       "total_trades": -13
     },
-    "learnings": [],
+    "learnings": [
+      "COUNTERINTUITIVE: Removing SMA-200 filter IMPROVES LBR \u2014 Sharpe -2.08\u2192-1.44, PnL -$174\u2192-$5",
+      "With SMA-200 OFF: 283 trades, 59% WR, PF 1.00 (near breakeven vs clearly negative with filter)",
+      "SMA-200 filter hurts LBR because LBR targets extreme dips \u2014 which often occur below the 200-day MA",
+      "This is the OPPOSITE of what SMA-200 does for MR/TF/OG (where it helps by +0.28 Sharpe)",
+      "KEY INSIGHT: Filters are strategy-dependent. SMA-200 is not universally beneficial."
+    ],
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"

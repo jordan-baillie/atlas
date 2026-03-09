@@ -1,6 +1,6 @@
 # Atlas Research Knowledge Base
 
-> **Auto-generated:** 2026-03-09 12:22 UTC | **Experiments:** 35 unique | **Waves:** 5
+> **Auto-generated:** 2026-03-09 12:29 UTC | **Experiments:** 35 unique | **Waves:** 5
 >
 > This is the AI agent's internal knowledge base. Read this file at session start.
 > Regenerate: `python3 scripts/build_obsidian_vault.py --force`
@@ -34,6 +34,7 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
 - **Key findings:**
   - RSI(14) is clearly optimal for MR on SP500 — confirmed empirically
   - DO NOT try RSI period optimization again — this is definitive
+  - max_hold=5 promotion BLOCKED until OOS can be properly executed
 
 #### Opening Gap
 - **Metrics:** 1 experiments (0 pass, 1 fail)
@@ -63,15 +64,17 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
 
 #### Lower Band Reversion
 - **Metrics:** Best Sharpe: 0.71 | Worst: -2.08 | 5 experiments (1 pass, 2 fail)
+- **Key findings:**
+  - KEY INSIGHT: Filters are strategy-dependent. SMA-200 is not universally beneficial.
 
 #### Momentum Breakout
 - **Metrics:** Best Sharpe: 0.30 | Worst: -0.99 | 3 experiments (2 pass, 1 fail)
 - **Key findings:**
+  - Momentum breakout generates 342 trades with 48.5% WR — sufficient signal activity for viability
+  - Untuned default params produce negative Sharpe (-0.99) but meet relaxed solo criteria (trades>10, WR>35%, PF>0.7)
+  - Strategy is viable for optimization phase — signal exists even if untuned defaults are unprofitable
   - All 5 params changed during optimization
   - Shorter breakout lookback (10 vs 20) works better
-  - Tighter stops (2.0x vs 3.5x ATR) dramatically improve results
-  - Longer trend filter (150 vs 50 SMA) eliminates false breakouts
-  - Momentum breakout solo is modestly profitable after optimization (Sharpe 0.30, CAGR 8.0%)
 
 #### MTF Momentum
 - **Metrics:** Best Sharpe: 0.00 | 1 experiments (0 pass, 1 fail)
@@ -207,6 +210,32 @@ Searchable index of every learning extracted from experiments.
 - HYPOTHESIS REJECTED: RSI(2) solo is unprofitable with current params on SP500 at $4K equity
 - POSSIBLE RETRY: With tighter stop (1.5-2x ATR) and higher equity, risk-reward may improve
 
+### Lower Band Reversion
+- LBR with published SPY params on individual SP500 stocks: Sharpe -2.08, 270 trades, 58% WR, PF 0.85
+- Win rate is decent (58%) but average loss exceeds average win — classic ETF-to-stock adaptation issue
+- Edge not statistically significant (p=0.25)
+- Published Sharpe 2.11 on SPY → -2.08 on individual stocks: dramatic degradation confirms ETF strategies don't transfer
+- Relaxing IBS from 0.3 to 0.5 slightly improved Sharpe (-2.08→-1.85) and PF (0.85→0.90)
+- Trade count stable at 280 (vs 270) — relaxation adds few extra signals
+- WR improved to 59.6% but edge still not significant (p=0.49)
+- Minor improvement insufficient to make strategy viable — problem is deeper than parameter tuning
+- Band multiplier sweep (1.5x-4.0x): band_mult=3.5 produces anomalously high PF (4.38) with Sharpe 0.71
+- Likely overfitting: $19K PnL on 249 trades smells like a few lucky outsized wins
+- Monte Carlo test confirms fragility: p95 MC drawdown > 2× actual (trade-sequence dependent)
+- All other band values produce negative Sharpe — no robust parameter exists
+- Edge not significant at any band level (p=0.01-0.55 range, but MC fragile flags invalidate the low p-values)
+- CONCLUSION: LBR band parameter cannot rescue the strategy on individual stocks
+- IBS threshold sweep (0.1-0.6): no value produces significant edge (all p>0.25)
+- Best Sharpe at IBS=0.4 (-1.21) with highest WR (62.4%) but PF only 1.07
+- Higher IBS thresholds increase trade count but don't improve edge quality
+- Published IBS=0.3 is not optimal for stocks — but no IBS value works
+- CONCLUSION: IBS parameter cannot rescue LBR on individual stocks
+- COUNTERINTUITIVE: Removing SMA-200 filter IMPROVES LBR — Sharpe -2.08→-1.44, PnL -$174→-$5
+- With SMA-200 OFF: 283 trades, 59% WR, PF 1.00 (near breakeven vs clearly negative with filter)
+- SMA-200 filter hurts LBR because LBR targets extreme dips — which often occur below the 200-day MA
+- This is the OPPOSITE of what SMA-200 does for MR/TF/OG (where it helps by +0.28 Sharpe)
+- KEY INSIGHT: Filters are strategy-dependent. SMA-200 is not universally beneficial.
+
 ### Mean Reversion
 - 1.5x avg volume filter on MR: Sharpe jumps from -0.02 to 0.38 (massive)
 - Mechanism: higher volume entries = more institutional participation = better follow-through
@@ -235,8 +264,21 @@ Searchable index of every learning extracted from experiments.
 - MR trades resolve quickly — 5-day hold captures most reversion, longer holds add noise
 - max_hold=15 is catastrophic — trades that havent reverted by day 10 are losers
 - Promising but needs OOS confirmation before promotion (p=0.30)
+- OOS validation of max_hold=5 FAILED: zero OOS trades generated
+- Walk-forward OOS window likely too short or parameter configuration prevented trade generation
+- In-sample still looks good: Sharpe 0.87, PF 8.16, 53.6% WR — but can't validate out-of-sample
+- max_hold=5 promotion BLOCKED until OOS can be properly executed
+- POSSIBLE FIX: Extend OOS window or use different validation method (e.g., time-series cross-validation)
+- LBR-style strength exit (sell when close > yesterday's high) applied to MR: Sharpe -2.10, 68 trades
+- Dramatic trade count reduction (101→68) — exit triggers too early, cutting profitable trades short
+- PF barely above 1.0 (1.03) — essentially random after applying this exit rule
+- Edge not significant (p=0.88) — the worst p-value of any MR experiment
+- CONCLUSION: Simple 'strength exit' is inferior to max_hold_days for MR. Price-based exits add noise, not alpha.
 
 ### Momentum Breakout
+- Momentum breakout generates 342 trades with 48.5% WR — sufficient signal activity for viability
+- Untuned default params produce negative Sharpe (-0.99) but meet relaxed solo criteria (trades>10, WR>35%, PF>0.7)
+- Strategy is viable for optimization phase — signal exists even if untuned defaults are unprofitable
 - All 5 params changed during optimization
 - Shorter breakout lookback (10 vs 20) works better
 - Tighter stops (2.0x vs 3.5x ATR) dramatically improve results
@@ -264,6 +306,16 @@ Searchable index of every learning extracted from experiments.
 ### Portfolio Filter
 - Promoted to /root/atlas/config/versions/asx_v9.3.json
 - Promoted to /root/atlas/config/versions/sp500_v2.1.json
+- INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)
+- filter_test sets s_cfg['volume_min_ratio'] but strategies read from s_cfg['volume']['min_ratio'] (nested path)
+- Need to fix filter_test to handle nested config params before retesting volume filter
+- The hypothesis is NOT rejected — test was invalid due to config path mismatch
+- Wave 1 solo result (1.5x volume filter: Sharpe -0.02→0.38) remains valid and promising
+- INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)
+- filter_test sets s_cfg['turn_of_month'] but no strategy reads this parameter
+- TOM filter needs to be IMPLEMENTED in the backtest engine or strategy base class before testing
+- Calendar-based filters need engine-level support (check date against TOM window before signal generation)
+- The hypothesis is NOT rejected — test was invalid due to missing implementation
 
 ### Sector Rotation
 - Sector rotation is now functional — generates 251 trades vs 0 previously
@@ -282,6 +334,14 @@ Searchable index of every learning extracted from experiments.
 - NEXT PRIORITY: Position allocation pools (per-strategy-type max positions) to unlock new strategies
 
 ### Short Term MR
+- Short-term MR generates 946 trades — highest trade count of any dormant strategy tested
+- 58.6% WR suggests signal quality, but PF 0.96 means losses slightly exceed wins
+- Massive trade count (946) will create severe slot contention in combined portfolio at max_positions=10
+- Viable for optimization — high trade count gives optimizer plenty of data to tune parameters
+- Optimization improved Sharpe from -0.45 to +0.27 — significant improvement
+- Post-optimization: 697 trades, 63% WR, PF 1.17, CAGR 7.6%
+- Trade count reduced 946→697 (26%) through optimization — still very high
+- PF improvement 0.96→1.17 shows optimizer found genuine edge in parameter space
 - Short-term MR is profitable solo after optimization (Sharpe 0.27, CAGR 7.6%, 63% WR)
 - But adding it to the active portfolio degrades Sharpe by 0.29 and CAGR by 2.4pp
 - The 697 STMR trades compete with MR/TF for 10 max positions

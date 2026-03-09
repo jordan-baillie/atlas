@@ -58,6 +58,14 @@ IBS threshold controls signal quality vs quantity. Published used 0.3 for SPY. I
 
 All 1 criteria failed: edge_p_value: 0.7527 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- IBS threshold sweep (0.1-0.6): no value produces significant edge (all p>0.25)
+- Best Sharpe at IBS=0.4 (-1.21) with highest WR (62.4%) but PF only 1.07
+- Higher IBS thresholds increase trade count but don't improve edge quality
+- Published IBS=0.3 is not optimal for stocks — but no IBS value works
+- CONCLUSION: IBS parameter cannot rescue LBR on individual stocks
+
 ---
 
 Strategy:: [[Lower Band Reversion]]

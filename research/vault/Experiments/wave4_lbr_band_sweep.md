@@ -58,6 +58,15 @@ Band multiplier controls selectivity: wider band = fewer but deeper dips. Publis
 
 All 2 criteria failed: edge_p_value: 0.3204 >= 0.05 (edge not statistically significant); mc_fragile: True (p95 MC drawdown > 2× actual — trade sequence dependent)
 
+## Learnings
+
+- Band multiplier sweep (1.5x-4.0x): band_mult=3.5 produces anomalously high PF (4.38) with Sharpe 0.71
+- Likely overfitting: $19K PnL on 249 trades smells like a few lucky outsized wins
+- Monte Carlo test confirms fragility: p95 MC drawdown > 2× actual (trade-sequence dependent)
+- All other band values produce negative Sharpe — no robust parameter exists
+- Edge not significant at any band level (p=0.01-0.55 range, but MC fragile flags invalidate the low p-values)
+- CONCLUSION: LBR band parameter cannot rescue the strategy on individual stocks
+
 ---
 
 Strategy:: [[Lower Band Reversion]]

@@ -58,6 +58,14 @@ The LBR published exit rule (sell when close > yesterday high) captures the firs
 
 All 2 criteria failed: min_sharpe_vs_baseline: metric not found; edge_p_value: 0.8794 >= 0.05 (edge not statistically significant)
 
+## Learnings
+
+- LBR-style strength exit (sell when close > yesterday's high) applied to MR: Sharpe -2.10, 68 trades
+- Dramatic trade count reduction (101→68) — exit triggers too early, cutting profitable trades short
+- PF barely above 1.0 (1.03) — essentially random after applying this exit rule
+- Edge not significant (p=0.88) — the worst p-value of any MR experiment
+- CONCLUSION: Simple 'strength exit' is inferior to max_hold_days for MR. Price-based exits add noise, not alpha.
+
 ---
 
 Strategy:: [[Mean Reversion]]

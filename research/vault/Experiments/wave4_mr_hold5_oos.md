@@ -34,6 +34,14 @@ Wave 3 found max_hold=5 beats max_hold=10 (Sharpe +0.035, CAGR +3.1pp, PF 4.55 v
 
 All 2 criteria failed: min_oos_sharpe_ratio_vs_is: metric not found; min_oos_profit_factor: metric not found
 
+## Learnings
+
+- OOS validation of max_hold=5 FAILED: zero OOS trades generated
+- Walk-forward OOS window likely too short or parameter configuration prevented trade generation
+- In-sample still looks good: Sharpe 0.87, PF 8.16, 53.6% WR — but can't validate out-of-sample
+- max_hold=5 promotion BLOCKED until OOS can be properly executed
+- POSSIBLE FIX: Extend OOS window or use different validation method (e.g., time-series cross-validation)
+
 ---
 
 Strategy:: [[Mean Reversion]]

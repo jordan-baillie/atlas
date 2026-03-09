@@ -60,6 +60,13 @@ Coordinate descent on Short-Term Mean Reversion params will improve solo perform
 
 All 3 criteria met: sharpe_improvement_vs_solo: 0.7182 >= 0.1; min_trades: 697.0000 >= 15; min_profit_factor: 1.1739 >= 1.1
 
+## Learnings
+
+- Optimization improved Sharpe from -0.45 to +0.27 — significant improvement
+- Post-optimization: 697 trades, 63% WR, PF 1.17, CAGR 7.6%
+- Trade count reduced 946→697 (26%) through optimization — still very high
+- PF improvement 0.96→1.17 shows optimizer found genuine edge in parameter space
+
 ---
 
 Strategy:: [[Short Term MR]]
