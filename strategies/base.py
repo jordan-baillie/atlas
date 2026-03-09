@@ -51,6 +51,7 @@ class Signal:
     rationale: str
     features: Dict[str, Any] = field(default_factory=dict)
     market_id: str = ""
+    sector: str = "Unknown"
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):

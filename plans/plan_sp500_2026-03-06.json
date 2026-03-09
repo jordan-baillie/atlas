@@ -1,0 +1,45 @@
+{
+  "trade_date": "2026-03-06",
+  "generated_at": "2026-03-06T19:00:57.807590",
+  "market_id": "sp500",
+  "config_version": "v2.2",
+  "status": "PENDING_APPROVAL",
+  "portfolio_snapshot": {
+    "equity": 4002.42,
+    "cash": 1058.25,
+    "open_positions": 1,
+    "total_pnl": 2.42,
+    "total_pnl_pct": 0.06
+  },
+  "proposed_entries": [],
+  "rejected_entries": [],
+  "proposed_exits": [],
+  "total_signals_generated": 0,
+  "risk_summary": {
+    "total_proposed_cost": 0,
+    "total_proposed_risk": 0,
+    "risk_pct_of_equity": 0.0,
+    "positions_after": 1,
+    "cash_after_entries": 1058.25,
+    "portfolio_exposure_pct": 73.56
+  },
+  "open_positions": [
+    {
+      "ticker": "CHTR",
+      "strategy": "trend_following",
+      "entry_date": "2026-03-06",
+      "entry_price": 228.38,
+      "current_price": 230.8000030517578,
+      "shares": 1,
+      "unrealized_pnl": 2.42,
+      "unrealized_pnl_pct": 1.06,
+      "stop_price": 211.8972,
+      "take_profit": null,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    }
+  ],
+  "allocation_summary": {}
+}

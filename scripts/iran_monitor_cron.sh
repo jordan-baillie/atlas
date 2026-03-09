@@ -184,6 +184,8 @@ Statuses: clear (0), monitoring (1), elevated (2), imminent (3+).
 
 ## YOUR ACTIONS (in order)
 
+CRITICAL: You MUST execute ALL steps A through H using bash tool calls. Do NOT just output text analysis — that achieves nothing. Every step requires running actual commands. If you skip any step, the monitor is broken.
+
 ### A. Read all data files (use read tool, NOT cat)
 
 Also read `data/position_monitor/ceasefire_factors.json` to get the current ceasefire probability. Extract `probability`, `probability_label`, and `timeline` from it for use in the briefing.
@@ -213,7 +215,7 @@ cd /root/atlas && python3 scripts/iran_monitor_update.py note-all "[4h update HH
 cd /root/atlas && python3 scripts/iran_monitor_update.py evaluate
 ```
 
-### G. Send Telegram briefing IF material changes occurred
+### G. ALWAYS send Telegram briefing
 ```bash
 cd /root/atlas && python3 -c "
 import sys; sys.path.insert(0, '.')
@@ -221,6 +223,8 @@ from utils.telegram import send_message
 send_message('''YOUR_MESSAGE_HERE''')
 "
 ```
+
+CRITICAL: You MUST send a Telegram message EVERY cycle. No exceptions. Even if no toggles changed, the briefing confirms the situation is being monitored. "No new developments" IS a valid briefing — send it.
 
 Required briefing format — oil prices FRONT AND CENTRE:
 ```
@@ -234,6 +238,7 @@ Required briefing format — oil prices FRONT AND CENTRE:
 
 <b>Changes:</b>
 • TICKER condition: old → new (reason + SOURCE)
+(or "No toggle changes" if none)
 
 <b>Health:</b> XOP X | RTX X | INSW X | NEM X | CIBR X | PSQ X | WDS X | CHTR X
 <b>Energy exposure:</b> XX% [XOP+WDS+INSW] (status)
@@ -242,8 +247,6 @@ Required briefing format — oil prices FRONT AND CENTRE:
 
 Threat: 🟢/🟡/🔴/⚫
 ```
-
-If nothing material changed, SKIP Telegram — just add note-all.
 
 ### H. Refresh dashboard
 ```bash
@@ -267,6 +270,16 @@ timeout 600 pi -p --no-session --model anthropic/claude-sonnet-4-6 "$PROMPT" >> 
 PI_EXIT=$?
 
 echo "[$(date '+%H:%M:%S')] Agent exit: $PI_EXIT" >> "$LOG_FILE"
+
+# ── Verify Telegram was sent (agent sometimes skips it) ──
+if ! grep -qi "send_message\|Telegram.*sent\|telegram.*ok\|200.*ok" "$LOG_FILE" 2>/dev/null; then
+    echo "[$(date '+%H:%M:%S')] WARNING: No Telegram send detected in agent output — sending fallback" >> "$LOG_FILE"
+    python3 -c "
+import sys; sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+send_message('⚠️ <b>Iran Monitor [$(date '+%H:%M') AEST]</b>\n\nAgent completed but did not send briefing. Check logs.\nExit code: $PI_EXIT')
+" >> "$LOG_FILE" 2>&1
+fi
 
 # ── Cleanup ──
 rm -f "$DATA_FILE" "$NEWS_FILE"

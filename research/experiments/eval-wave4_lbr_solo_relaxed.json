@@ -1,0 +1,48 @@
+{
+  "experiment_id": "wave4_lbr_solo_relaxed",
+  "strategy": "lower_band_reversion",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": {
+    "range_lookback": 25,
+    "high_lookback": 10,
+    "band_mult": 2.5,
+    "ibs_threshold": 0.5,
+    "max_hold_days": 7,
+    "atr_stop_mult": 2.0,
+    "sma200_filter": true
+  },
+  "n_tickers": 284,
+  "config_version": "v2.2",
+  "timestamp": "2026-03-08T00:11:34.637723+00:00",
+  "solo": {
+    "total_trades": 280,
+    "cagr_pct": -1.5275,
+    "sharpe": -1.851,
+    "sortino": -2.5328,
+    "max_drawdown_pct": 5.0171,
+    "win_rate_pct": 59.64,
+    "profit_factor": 0.8987,
+    "total_pnl": -112.32,
+    "avg_trade": -0.4,
+    "final_equity": 3883.07,
+    "expectancy_r": -0.0253,
+    "avg_r": -0.0253,
+    "r_count": 280,
+    "edge_p_value": 0.485253,
+    "edge_significant": false,
+    "var_95_pct": 0.366,
+    "cvar_95_pct": 0.508,
+    "calmar": -0.3045,
+    "mc_p95_drawdown_pct": 7.82,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "lower_band_reversion": {
+        "trades": 280,
+        "total_pnl": -112.32,
+        "win_rate_pct": 59.6
+      }
+    }
+  },
+  "runtime_s": 129.6
+}

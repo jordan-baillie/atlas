@@ -178,10 +178,186 @@
           "holding_days": 0
         }
       ]
+    },
+    {
+      "date": "2026-03-06",
+      "equity": 4002.42,
+      "cash": 1058.24,
+      "positions_value": 2944.18,
+      "num_positions": 7,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "XOP",
+          "strategy": "unknown",
+          "shares": 8,
+          "entry_price": 137.759,
+          "current_price": 164.25379943847656,
+          "unrealized_pnl": 211.96,
+          "mae": 0.0,
+          "mfe": 19.23,
+          "holding_days": 0
+        },
+        {
+          "ticker": "RTX",
+          "strategy": "unknown",
+          "shares": 6,
+          "entry_price": 207.59,
+          "current_price": 205.3341064453125,
+          "unrealized_pnl": -13.54,
+          "mae": -1.09,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "PSQ",
+          "strategy": "unknown",
+          "shares": 33,
+          "entry_price": 31.2,
+          "current_price": 30.540000915527344,
+          "unrealized_pnl": -21.78,
+          "mae": -2.12,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "NEM",
+          "strategy": "unknown",
+          "shares": 5,
+          "entry_price": 122.16,
+          "current_price": 116.80999755859375,
+          "unrealized_pnl": -26.75,
+          "mae": -4.38,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "INSW",
+          "strategy": "unknown",
+          "shares": 7,
+          "entry_price": 76.891,
+          "current_price": 73.20999908447266,
+          "unrealized_pnl": -25.77,
+          "mae": -4.79,
+          "mfe": 0.0,
+          "holding_days": 0
+        },
+        {
+          "ticker": "CIBR",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 63.8,
+          "current_price": 66.08999633789062,
+          "unrealized_pnl": 22.9,
+          "mae": 0.0,
+          "mfe": 3.59,
+          "holding_days": 0
+        },
+        {
+          "ticker": "CHTR",
+          "strategy": "trend_following",
+          "shares": 1,
+          "entry_price": 228.38,
+          "current_price": 230.8000030517578,
+          "unrealized_pnl": 2.42,
+          "mae": 0.0,
+          "mfe": 1.06,
+          "holding_days": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-03-06",
+      "equity": 4003.86,
+      "cash": 1058.25,
+      "positions_value": 2945.61,
+      "num_positions": 7,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "XOP",
+          "strategy": "unknown",
+          "shares": 8,
+          "entry_price": 137.759,
+          "current_price": 164.1300048828125,
+          "unrealized_pnl": 210.97,
+          "mae": 0.0,
+          "mfe": 19.14,
+          "holding_days": -1
+        },
+        {
+          "ticker": "RTX",
+          "strategy": "unknown",
+          "shares": 6,
+          "entry_price": 207.59,
+          "current_price": 209.75999450683594,
+          "unrealized_pnl": 13.02,
+          "mae": 0.0,
+          "mfe": 1.05,
+          "holding_days": -1
+        },
+        {
+          "ticker": "PSQ",
+          "strategy": "unknown",
+          "shares": 33,
+          "entry_price": 31.2,
+          "current_price": 31.139999389648438,
+          "unrealized_pnl": -1.98,
+          "mae": -0.19,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "NEM",
+          "strategy": "unknown",
+          "shares": 5,
+          "entry_price": 122.16,
+          "current_price": 116.29000091552734,
+          "unrealized_pnl": -29.35,
+          "mae": -4.81,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "INSW",
+          "strategy": "unknown",
+          "shares": 7,
+          "entry_price": 76.891,
+          "current_price": 72.41000366210938,
+          "unrealized_pnl": -31.37,
+          "mae": -5.83,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CIBR",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 63.8,
+          "current_price": 66.0,
+          "unrealized_pnl": 22.0,
+          "mae": 0.0,
+          "mfe": 3.45,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CHTR",
+          "strategy": "trend_following",
+          "shares": 1,
+          "entry_price": 228.38,
+          "current_price": 232.24000549316406,
+          "unrealized_pnl": 3.86,
+          "mae": 0.0,
+          "mfe": 1.69,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 4003.62,
+  "daily_high_water": 4003.86,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-05T08:01:05.062117"
+  "last_saved": "2026-03-07T08:02:38.508434"
 }

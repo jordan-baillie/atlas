@@ -246,6 +246,21 @@ def cmd_plan(args):
         _disconnect_portfolio(portfolio)
         return
     strategies = get_strategies(config)
+    # Load sector map for signal enrichment
+    _sector_map = {}
+    for _sm_path in [
+        PROJECT_ROOT / "data" / "processed" / f"sector_map_{market_id}.json",
+        PROJECT_ROOT / "data" / "processed" / "sector_map.json",
+    ]:
+        if _sm_path.exists():
+            with open(_sm_path) as _f:
+                _sector_map = json.load(_f)
+            break
+    if _sector_map:
+        logger.info("Sector map loaded: %d tickers", len(_sector_map))
+    else:
+        logger.warning("No sector map found — sector concentration checks will use 'Unknown'")
+
     all_signals = []
     exit_recommendations = []
     existing_positions = [p.to_dict() for p in portfolio.positions]
@@ -263,6 +278,12 @@ def cmd_plan(args):
     logger.info("Enriching %d raw signals with Phase 7 features...", len(all_signals))
     all_signals = enrich_signals(all_signals, data, config, trade_date)
     logger.info("%d signals after enrichment", len(all_signals))
+    # Enrich signals with sector from sector map
+    if _sector_map:
+        for sig in all_signals:
+            sector = _sector_map.get(sig.ticker, "Unknown")
+            sig.sector = sector
+            sig.features["sector"] = sector
     all_signals.sort(key=lambda s: s.confidence, reverse=True)
     plan = plan_gen.generate_plan(all_signals, exit_recommendations, prices, trade_date)
 

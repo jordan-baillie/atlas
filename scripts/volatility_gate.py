@@ -38,7 +38,7 @@ import argparse
 import json
 import logging
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -89,7 +89,7 @@ def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]
     if not use_yfinance_only:
         try:
             from brokers.alpaca.market_data import get_historical_bars
-            end_dt = datetime.utcnow()
+            end_dt = datetime.now(timezone.utc)
             start_dt = end_dt - timedelta(days=lookback_days)
             result = get_historical_bars(
                 ticker,
@@ -123,7 +123,7 @@ def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]
     # ── yfinance path (fallback for all tickers, primary for index symbols) ──
     try:
         import yfinance as yf
-        end = datetime.utcnow()
+        end = datetime.now(timezone.utc)
         start = end - timedelta(days=lookback_days)
         df = yf.download(
             ticker,
@@ -292,7 +292,7 @@ def check_volatility_gate(config: dict) -> dict:
             "checked_at": str,             # ISO timestamp
         }
     """
-    checked_at = datetime.utcnow().isoformat() + "Z"
+    checked_at = datetime.now(timezone.utc).isoformat()
 
     gate_cfg = config.get("volatility_gate", {})
     gate_enabled = gate_cfg.get("enabled", True)

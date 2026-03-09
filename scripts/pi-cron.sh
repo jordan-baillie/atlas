@@ -19,9 +19,12 @@ PROJECT="$(dirname "$SCRIPT_DIR")"
 LOG_DIR="$PROJECT/logs"
 
 # Global error trap — log + alert on any unhandled crash (prevents silent failures)
+# _IN_SET_PLUS_E guards against false alarms when `set +e` is active (e.g. volatility gate)
+_IN_SET_PLUS_E=0
 _cron_error_trap() {
     local exit_code=$?
     local line_no=$1
+    [ "$_IN_SET_PLUS_E" -eq 1 ] && return 0
     mkdir -p "$LOG_DIR"
     echo "$(date -Iseconds) FATAL: pi-cron.sh crashed at line $line_no (exit=$exit_code)" >> "$LOG_DIR/pi-cron.log"
     python3 "$PROJECT/scripts/telegram_notify.py" error "cron-crash" "" 2>/dev/null || true
@@ -57,12 +60,14 @@ case "$MODE" in
         # Exit codes: 0=ok, 1=reduce(50%), 2=block(skip entries)
         VOL_GATE_LOG="$LOG_DIR/volatility_gate_${TIMESTAMP}.json"
         VOL_GATE_EXIT=0
+        _IN_SET_PLUS_E=1
         set +e
         python3 "$PROJECT/scripts/volatility_gate.py" \
             --check --market "$MARKET" --json \
             > "$VOL_GATE_LOG" 2>>"$LOG_DIR/pi-cron.log"
         VOL_GATE_EXIT=$?
         set -e
+        _IN_SET_PLUS_E=0
 
         # Parse gate result for prompt context
         VOL_GATE_ACTION="none"
@@ -114,10 +119,12 @@ print(sum(1 for e in q if e.get('status') == 'queued'))
             # Generate the wave brief (analyzes journal, config, gaps)
             # Wrapped in set +e to prevent silent death on wave_planner crash
             cd "$PROJECT"
+            _IN_SET_PLUS_E=1
             set +e
             python3 scripts/wave_planner.py --generate >> "$LOG_DIR/pi-cron.log" 2>&1
             WAVE_EXIT=$?
             set -e
+            _IN_SET_PLUS_E=0
             if [ $WAVE_EXIT -ne 0 ]; then
                 echo "$(date -Iseconds) ERROR: wave_planner.py --generate failed (exit=$WAVE_EXIT)" >> "$LOG_DIR/pi-cron.log"
                 notify error "research" "" 2>/dev/null || true

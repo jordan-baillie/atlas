@@ -1,0 +1,54 @@
+{
+  "experiment_id": "wave3_trsi_solo",
+  "strategy": "triple_rsi",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": {
+    "rsi_period": 5,
+    "rsi_entry": 30,
+    "rsi_exit": 50,
+    "decline_days": 3,
+    "rsi_lookback_max": 60,
+    "sma200_filter": true,
+    "atr_stop_mult": 2.5,
+    "max_hold_days": 10,
+    "volume": {
+      "lookback": 20,
+      "min_ratio": 1.0
+    },
+    "ibs_max": 1.0
+  },
+  "n_tickers": 284,
+  "config_version": "v2.2",
+  "timestamp": "2026-03-05T23:25:29.622645+00:00",
+  "solo": {
+    "total_trades": 138,
+    "cagr_pct": -1.4649,
+    "sharpe": -2.119,
+    "sortino": -2.3177,
+    "max_drawdown_pct": 4.5669,
+    "win_rate_pct": 55.8,
+    "profit_factor": 0.8265,
+    "total_pnl": -126.68,
+    "avg_trade": -0.92,
+    "final_equity": 3887.83,
+    "expectancy_r": -0.0623,
+    "avg_r": -0.0623,
+    "r_count": 138,
+    "edge_p_value": 0.393839,
+    "edge_significant": false,
+    "var_95_pct": 0.262,
+    "cvar_95_pct": 0.482,
+    "calmar": -0.3208,
+    "mc_p95_drawdown_pct": 7.69,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "triple_rsi": {
+        "trades": 138,
+        "total_pnl": -126.68,
+        "win_rate_pct": 55.8
+      }
+    }
+  },
+  "runtime_s": 186.6
+}

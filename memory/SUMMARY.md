@@ -60,9 +60,8 @@ scripts/pi-cron.sh recover postclose sp500
 
 - **Wave 1** (Dormant Strategy Activation): 23/24 resolved. **2 promoted** (SMA-200 to SP500 v2.1, ASX reopt to v9.3).
 - **Root finding:** Position contention (max_pos=10) blocked all dormant strategies. Allocation pools built (Task #52) as the unlock mechanism.
-- **Wave 2** (Enhanced MR Alpha): Batch 1 complete (6/10). **0 promotions.** 4 failed, 2 infra failures, 4 deferred.
-  - **ConnorsRSI2 solo FAILED** — Sharpe -2.63, PF 0.78 (losses > wins). Code bugs fixed (position_size dict, vol_ratio Series).
-  - **Param sweeps FAILED** — All solo strategies show negative Sharpe at $4K equity. Relative rankings useful but absolute values misleading.
-  - **Filter tests BROKEN** — filter_test can't handle nested config params (volume.min_ratio) or unimplemented filters (TOM).
-  - **Blockers:** Task #68 (filter infrastructure), Task #69 (combined-mode param sweep). Parallel runner file locking (Task #33 lesson).
-  - **Next:** Fix infrastructure, then re-run vol_combined + tom_filter + rsi2 chain with proper params.
+- **Wave 2** (Enhanced MR Alpha): 6/10 run. **0 promotions.** ConnorsRSI2 and all solo strategies unprofitable at $4K equity.
+- **Wave 3** (MR Deep Dive): 5/5 run. **0 promotions.** IBS, volume, hold-period sweeps — marginal improvements only.
+- **Wave 4** (LBR + MR Tweaks): 7/10 run, 3 deferred. **0 promotions.** LBR comprehensively unprofitable on individual stocks (Sharpe -2.08 to -1.44). Published ETF strategies do NOT translate to component stocks. MR strength exit no improvement.
+  - **Pattern confirmed:** Strategies published for SPY/index ETFs (ConnorsRSI2, LBR) fail on individual SP500 stocks. Don't adapt more of these.
+  - **Queue empty** — need Wave 5 theme. Options: re-optimization of TF/MR/OG (>30 days), portfolio-level improvements, or new strategy class designed for individual stocks.

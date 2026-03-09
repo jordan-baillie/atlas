@@ -1967,5 +1967,1090 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-wave2-parallel"
+  },
+  {
+    "experiment_id": "wave3_ibs_sweep",
+    "timestamp": "2026-03-05T12:02:31.574136+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Requiring low IBS (close near day's low) for MR entries improves signal quality. Alvarez research shows IBS < 25 gives 58% avg gain improvement on RSI(2) strategy. Our MR has ibs_max=1.0 (disabled). Testing restrictive thresholds should filter out weak MR signals.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 115,
+      "cagr_pct": 0.7786,
+      "sharpe": -1.2344,
+      "sortino": -1.7775,
+      "max_drawdown_pct": 3.1728,
+      "win_rate_pct": 52.17,
+      "profit_factor": 1.0951,
+      "total_pnl": 65.43,
+      "avg_trade": 0.57,
+      "final_equity": 4062.83,
+      "expectancy_r": 0.0716,
+      "avg_r": 0.0716,
+      "r_count": 115,
+      "edge_p_value": 0.429679,
+      "edge_significant": false,
+      "var_95_pct": 0.315,
+      "cvar_95_pct": 0.472,
+      "calmar": 0.2454,
+      "mc_p95_drawdown_pct": 5.65,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 86,
+          "total_pnl": 159.39,
+          "win_rate_pct": 53.5
+        },
+        "mean_reversion": {
+          "trades": 29,
+          "total_pnl": -93.96,
+          "win_rate_pct": 48.3
+        }
+      },
+      "param_value": 1.0,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_vol_sweep",
+    "timestamp": "2026-03-05T12:13:20.205394+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Higher volume threshold for MR entries improves trade quality. Wave 1 proved 1.5x volume on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Wave 2 combined test FAILED due to infrastructure bug (nested params). This experiment uses full volume dict sweep to bypass the nested param issue. Expect 1.5x to be optimal in combined mode too.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 115,
+      "cagr_pct": 0.7786,
+      "sharpe": -1.2344,
+      "sortino": -1.7775,
+      "max_drawdown_pct": 3.1728,
+      "win_rate_pct": 52.17,
+      "profit_factor": 1.0951,
+      "total_pnl": 65.43,
+      "avg_trade": 0.57,
+      "final_equity": 4062.83,
+      "expectancy_r": 0.0716,
+      "avg_r": 0.0716,
+      "r_count": 115,
+      "edge_p_value": 0.429679,
+      "edge_significant": false,
+      "var_95_pct": 0.315,
+      "cvar_95_pct": 0.472,
+      "calmar": 0.2454,
+      "mc_p95_drawdown_pct": 5.65,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 86,
+          "total_pnl": 159.39,
+          "win_rate_pct": 53.5
+        },
+        "mean_reversion": {
+          "trades": 29,
+          "total_pnl": -93.96,
+          "win_rate_pct": 48.3
+        }
+      },
+      "param_value": {
+        "lookback": 20,
+        "surge_threshold": 1.5,
+        "surge_boost": 0.0,
+        "dry_penalty": 0.0,
+        "min_ratio": 1.25
+      },
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_trsi_solo",
+    "timestamp": "2026-03-05T12:16:37.832165+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "triple_rsi",
+    "hypothesis": "Triple RSI (RSI(5) declining 3 days, below 30, with lookback check) generates rare but high-conviction mean reversion signals on individual SP500 stocks. Published edge on SPY: 90% WR, PF 4.0. Adapted for individual stocks with SMA-200 filter and volume confirmation. Expects fewer but higher-quality trades than existing MR strategy.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 141,
+      "cagr_pct": -2.1846,
+      "sharpe": -2.2478,
+      "sortino": -2.4316,
+      "max_drawdown_pct": 6.8513,
+      "win_rate_pct": 54.61,
+      "profit_factor": 0.772,
+      "total_pnl": -173.82,
+      "avg_trade": -1.23,
+      "final_equity": 3826.33,
+      "expectancy_r": -0.087,
+      "avg_r": -0.087,
+      "r_count": 141,
+      "edge_p_value": 0.233448,
+      "edge_significant": false,
+      "var_95_pct": 0.269,
+      "cvar_95_pct": 0.504,
+      "calmar": -0.3189,
+      "mc_p95_drawdown_pct": 8.26,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "triple_rsi": {
+          "trades": 141,
+          "total_pnl": -173.82,
+          "win_rate_pct": 54.6
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 197.6,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_rsi_period",
+    "timestamp": "2026-03-05T12:27:51.721536+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Web research (Triple RSI, Connors, Alvarez) consistently shows RSI(2-5) outperforming RSI(14) for mean reversion signals. Our MR uses RSI(14). Shorter RSI periods may improve entry timing. Combined-mode sweep gives realistic portfolio-level impact unlike unreliable solo sweeps (lesson #30).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 115,
+      "cagr_pct": 0.7786,
+      "sharpe": -1.2344,
+      "sortino": -1.7775,
+      "max_drawdown_pct": 3.1728,
+      "win_rate_pct": 52.17,
+      "profit_factor": 1.0951,
+      "total_pnl": 65.43,
+      "avg_trade": 0.57,
+      "final_equity": 4062.83,
+      "expectancy_r": 0.0716,
+      "avg_r": 0.0716,
+      "r_count": 115,
+      "edge_p_value": 0.429679,
+      "edge_significant": false,
+      "var_95_pct": 0.315,
+      "cvar_95_pct": 0.472,
+      "calmar": 0.2454,
+      "mc_p95_drawdown_pct": 5.65,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 86,
+          "total_pnl": 159.39,
+          "win_rate_pct": 53.5
+        },
+        "mean_reversion": {
+          "trades": 29,
+          "total_pnl": -93.96,
+          "win_rate_pct": 48.3
+        }
+      },
+      "param_value": 14,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_hold_combined",
+    "timestamp": "2026-03-05T12:38:48.661771+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Wave 2 tested max_hold_days in SOLO mode (all negative Sharpe due to fee drag at $4K). Relative ranking showed 10 > 15 > 7 > 5 > 3. Combined-mode sweep gives realistic absolute Sharpe. Short holds (3-5d) may reduce time risk; longer holds (10-15d) capture more reversion.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 113,
+      "cagr_pct": 1.9844,
+      "sharpe": -0.8536,
+      "sortino": -1.2262,
+      "max_drawdown_pct": 2.7632,
+      "win_rate_pct": 53.1,
+      "profit_factor": 1.2314,
+      "total_pnl": 155.27,
+      "avg_trade": 1.37,
+      "final_equity": 4161.11,
+      "expectancy_r": 0.1086,
+      "avg_r": 0.1086,
+      "r_count": 113,
+      "edge_p_value": 0.256442,
+      "edge_significant": false,
+      "var_95_pct": 0.318,
+      "cvar_95_pct": 0.475,
+      "calmar": 0.7182,
+      "mc_p95_drawdown_pct": 5.32,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 87,
+          "total_pnl": 187.67,
+          "win_rate_pct": 50.6
+        },
+        "mean_reversion": {
+          "trades": 26,
+          "total_pnl": -32.4,
+          "win_rate_pct": 61.5
+        }
+      },
+      "param_value": 15,
+      "delta_vs_baseline": {
+        "cagr_pct": 1.2058,
+        "sharpe": 0.3808,
+        "sortino": 0.5513,
+        "max_drawdown_pct": -0.4096,
+        "win_rate_pct": 0.93,
+        "profit_factor": 0.1363,
+        "total_pnl": 89.84,
+        "total_trades": -2
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_ibs_sweep",
+    "timestamp": "2026-03-05T23:14:57.076161+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Requiring low IBS (close near day's low) for MR entries improves signal quality. Alvarez research shows IBS < 25 gives 58% avg gain improvement on RSI(2) strategy. Our MR has ibs_max=1.0 (disabled). Testing restrictive thresholds should filter out weak MR signals.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 100,
+      "cagr_pct": 27.8974,
+      "sharpe": 0.6101,
+      "sortino": 11.5186,
+      "max_drawdown_pct": 4.369,
+      "win_rate_pct": 51.0,
+      "profit_factor": 4.0475,
+      "total_pnl": 2449.68,
+      "avg_trade": 24.5,
+      "final_equity": 6427.33,
+      "expectancy_r": 1.287,
+      "avg_r": 1.287,
+      "r_count": 100,
+      "edge_p_value": 0.321322,
+      "edge_significant": false,
+      "var_95_pct": 0.307,
+      "cvar_95_pct": 0.476,
+      "calmar": 6.3853,
+      "mc_p95_drawdown_pct": 7.07,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 67,
+          "total_pnl": 2336.88,
+          "win_rate_pct": 44.8
+        },
+        "mean_reversion": {
+          "trades": 30,
+          "total_pnl": 105.46,
+          "win_rate_pct": 63.3
+        },
+        "opening_gap": {
+          "trades": 3,
+          "total_pnl": 7.34,
+          "win_rate_pct": 66.7
+        }
+      },
+      "param_value": 0.2,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0906,
+        "sharpe": 0.0025,
+        "sortino": 1.2251,
+        "max_drawdown_pct": 0.3628,
+        "win_rate_pct": 1.5,
+        "profit_factor": 0.4058,
+        "total_pnl": 40.22,
+        "total_trades": -1
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_vol_sweep",
+    "timestamp": "2026-03-05T23:25:28.391360+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Higher volume threshold for MR entries improves trade quality. Wave 1 proved 1.5x volume on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Wave 2 combined test FAILED due to infrastructure bug (nested params). This experiment uses full volume dict sweep to bypass the nested param issue. Expect 1.5x to be optimal in combined mode too.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 101,
+      "cagr_pct": 27.8068,
+      "sharpe": 0.6076,
+      "sortino": 10.2935,
+      "max_drawdown_pct": 4.0062,
+      "win_rate_pct": 49.5,
+      "profit_factor": 3.6417,
+      "total_pnl": 2409.46,
+      "avg_trade": 23.86,
+      "final_equity": 6418.55,
+      "expectancy_r": 1.2722,
+      "avg_r": 1.2722,
+      "r_count": 101,
+      "edge_p_value": 0.329212,
+      "edge_significant": false,
+      "var_95_pct": 0.293,
+      "cvar_95_pct": 0.492,
+      "calmar": 6.9409,
+      "mc_p95_drawdown_pct": 8.44,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 59,
+          "total_pnl": 2454.41,
+          "win_rate_pct": 49.2
+        },
+        "mean_reversion": {
+          "trades": 42,
+          "total_pnl": -44.95,
+          "win_rate_pct": 50.0
+        }
+      },
+      "param_value": {
+        "lookback": 20,
+        "surge_threshold": 1.5,
+        "surge_boost": 0.0,
+        "dry_penalty": 0.0,
+        "min_ratio": 1.0
+      },
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_trsi_solo",
+    "timestamp": "2026-03-05T23:28:35.014560+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "triple_rsi",
+    "hypothesis": "Triple RSI (RSI(5) declining 3 days, below 30, with lookback check) generates rare but high-conviction mean reversion signals on individual SP500 stocks. Published edge on SPY: 90% WR, PF 4.0. Adapted for individual stocks with SMA-200 filter and volume confirmation. Expects fewer but higher-quality trades than existing MR strategy.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 138,
+      "cagr_pct": -1.4649,
+      "sharpe": -2.119,
+      "sortino": -2.3177,
+      "max_drawdown_pct": 4.5669,
+      "win_rate_pct": 55.8,
+      "profit_factor": 0.8265,
+      "total_pnl": -126.68,
+      "avg_trade": -0.92,
+      "final_equity": 3887.83,
+      "expectancy_r": -0.0623,
+      "avg_r": -0.0623,
+      "r_count": 138,
+      "edge_p_value": 0.393839,
+      "edge_significant": false,
+      "var_95_pct": 0.262,
+      "cvar_95_pct": 0.482,
+      "calmar": -0.3208,
+      "mc_p95_drawdown_pct": 7.69,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "triple_rsi": {
+          "trades": 138,
+          "total_pnl": -126.68,
+          "win_rate_pct": 55.8
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 186.6,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_ibs_sweep",
+    "timestamp": "2026-03-05T23:36:52.659958+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Requiring low IBS (close near day's low) for MR entries improves signal quality. Alvarez research shows IBS < 25 gives 58% avg gain improvement on RSI(2) strategy. Our MR has ibs_max=1.0 (disabled). Testing restrictive thresholds should filter out weak MR signals.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 100,
+      "cagr_pct": 27.8974,
+      "sharpe": 0.6101,
+      "sortino": 11.5186,
+      "max_drawdown_pct": 4.369,
+      "win_rate_pct": 51.0,
+      "profit_factor": 4.0475,
+      "total_pnl": 2449.68,
+      "avg_trade": 24.5,
+      "final_equity": 6427.33,
+      "expectancy_r": 1.287,
+      "avg_r": 1.287,
+      "r_count": 100,
+      "edge_p_value": 0.321322,
+      "edge_significant": false,
+      "var_95_pct": 0.307,
+      "cvar_95_pct": 0.476,
+      "calmar": 6.3853,
+      "mc_p95_drawdown_pct": 7.07,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 67,
+          "total_pnl": 2336.88,
+          "win_rate_pct": 44.8
+        },
+        "mean_reversion": {
+          "trades": 30,
+          "total_pnl": 105.46,
+          "win_rate_pct": 63.3
+        },
+        "opening_gap": {
+          "trades": 3,
+          "total_pnl": 7.34,
+          "win_rate_pct": 66.7
+        }
+      },
+      "param_value": 0.2,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0906,
+        "sharpe": 0.0025,
+        "sortino": 1.2251,
+        "max_drawdown_pct": 0.3628,
+        "win_rate_pct": 1.5,
+        "profit_factor": 0.4058,
+        "total_pnl": 40.22,
+        "total_trades": -1
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_rsi_period",
+    "timestamp": "2026-03-05T23:40:42.483908+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Web research (Triple RSI, Connors, Alvarez) consistently shows RSI(2-5) outperforming RSI(14) for mean reversion signals. Our MR uses RSI(14). Shorter RSI periods may improve entry timing. Combined-mode sweep gives realistic portfolio-level impact unlike unreliable solo sweeps (lesson #30).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 101,
+      "cagr_pct": 27.8068,
+      "sharpe": 0.6076,
+      "sortino": 10.2935,
+      "max_drawdown_pct": 4.0062,
+      "win_rate_pct": 49.5,
+      "profit_factor": 3.6417,
+      "total_pnl": 2409.46,
+      "avg_trade": 23.86,
+      "final_equity": 6418.55,
+      "expectancy_r": 1.2722,
+      "avg_r": 1.2722,
+      "r_count": 101,
+      "edge_p_value": 0.329212,
+      "edge_significant": false,
+      "var_95_pct": 0.293,
+      "cvar_95_pct": 0.492,
+      "calmar": 6.9409,
+      "mc_p95_drawdown_pct": 8.44,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 59,
+          "total_pnl": 2454.41,
+          "win_rate_pct": 49.2
+        },
+        "mean_reversion": {
+          "trades": 42,
+          "total_pnl": -44.95,
+          "win_rate_pct": 50.0
+        }
+      },
+      "param_value": 14,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_hold_combined",
+    "timestamp": "2026-03-05T23:48:19.143351+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Wave 2 tested max_hold_days in SOLO mode (all negative Sharpe due to fee drag at $4K). Relative ranking showed 10 > 15 > 7 > 5 > 3. Combined-mode sweep gives realistic absolute Sharpe. Short holds (3-5d) may reduce time risk; longer holds (10-15d) capture more reversion.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 109,
+      "cagr_pct": 30.8646,
+      "sharpe": 0.6424,
+      "sortino": 13.4329,
+      "max_drawdown_pct": 3.7835,
+      "win_rate_pct": 54.13,
+      "profit_factor": 4.5453,
+      "total_pnl": 2744.65,
+      "avg_trade": 25.18,
+      "final_equity": 6717.82,
+      "expectancy_r": 1.2401,
+      "avg_r": 1.2401,
+      "r_count": 109,
+      "edge_p_value": 0.30437,
+      "edge_significant": false,
+      "var_95_pct": 0.316,
+      "cvar_95_pct": 0.46,
+      "calmar": 8.1577,
+      "mc_p95_drawdown_pct": 5.94,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 67,
+          "total_pnl": 2573.52,
+          "win_rate_pct": 49.3
+        },
+        "mean_reversion": {
+          "trades": 41,
+          "total_pnl": 169.0,
+          "win_rate_pct": 61.0
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 2.13,
+          "win_rate_pct": 100.0
+        }
+      },
+      "param_value": 5,
+      "delta_vs_baseline": {
+        "cagr_pct": 3.0578,
+        "sharpe": 0.0348,
+        "sortino": 3.1394,
+        "max_drawdown_pct": -0.2227,
+        "win_rate_pct": 4.63,
+        "profit_factor": 0.9036,
+        "total_pnl": 335.19,
+        "total_trades": 8
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "wave3-runner"
+  },
+  {
+    "experiment_id": "wave3_hold_combined",
+    "timestamp": "2026-03-06T00:02:43.636943+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Wave 2 tested max_hold_days in SOLO mode (all negative Sharpe due to fee drag at $4K). Relative ranking showed 10 > 15 > 7 > 5 > 3. Combined-mode sweep gives realistic absolute Sharpe. Short holds (3-5d) may reduce time risk; longer holds (10-15d) capture more reversion.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 109,
+      "cagr_pct": 30.8646,
+      "sharpe": 0.6424,
+      "sortino": 13.4329,
+      "max_drawdown_pct": 3.7835,
+      "win_rate_pct": 54.13,
+      "profit_factor": 4.5453,
+      "total_pnl": 2744.65,
+      "avg_trade": 25.18,
+      "final_equity": 6717.82,
+      "expectancy_r": 1.2401,
+      "avg_r": 1.2401,
+      "r_count": 109,
+      "edge_p_value": 0.30437,
+      "edge_significant": false,
+      "var_95_pct": 0.316,
+      "cvar_95_pct": 0.46,
+      "calmar": 8.1577,
+      "mc_p95_drawdown_pct": 5.94,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 67,
+          "total_pnl": 2573.52,
+          "win_rate_pct": 49.3
+        },
+        "mean_reversion": {
+          "trades": 41,
+          "total_pnl": 169.0,
+          "win_rate_pct": 61.0
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 2.13,
+          "win_rate_pct": 100.0
+        }
+      },
+      "param_value": 5,
+      "delta_vs_baseline": {
+        "cagr_pct": 3.0578,
+        "sharpe": 0.0348,
+        "sortino": 3.1394,
+        "max_drawdown_pct": -0.2227,
+        "win_rate_pct": 4.63,
+        "profit_factor": 0.9036,
+        "total_pnl": 335.19,
+        "total_trades": 8
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_ibs_sweep",
+    "timestamp": "2026-03-06T00:05:42.192931+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Requiring low IBS (close near day's low) for MR entries improves signal quality. Alvarez research shows IBS < 25 gives 58% avg gain improvement on RSI(2) strategy. Our MR has ibs_max=1.0 (disabled). Testing restrictive thresholds should filter out weak MR signals.",
+    "verdict": "fail",
+    "key_metrics": {
+      "sharpe": 0.6101,
+      "sharpe_improvement": 0.0025,
+      "trades": 100
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "IBS filter is redundant with RSI+vol in combined mode \u2014 adds no alpha",
+      "IBS < 0.15 crashes performance (kills 10% of trades, all good ones)",
+      "Baseline is stable: Sharpe=0.608, 101 trades, CAGR=27.8%"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_vol_sweep",
+    "timestamp": "2026-03-06T00:05:42.203102+00:00",
+    "market": "sp500",
+    "category": "filter",
+    "strategy": "mean_reversion",
+    "hypothesis": "Higher volume threshold for MR entries improves trade quality. Wave 1 proved 1.5x volume on MR solo: Sharpe -0.02\u21920.38, PF 1.30\u21921.62. Wave 2 combined test FAILED due to infrastructure bug (nested params). This experiment uses full volume dict sweep to bypass the nested param issue. Expect 1.5x to be optimal in combined mode too.",
+    "verdict": "fail",
+    "key_metrics": {
+      "sharpe": 0.6076,
+      "sharpe_improvement": 0.0,
+      "trades": 101
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Volume min_ratio filter has zero effect on MR \u2014 never triggers",
+      "MR signals naturally occur on high-vol days (oversold conditions correlate with volume spikes)",
+      "Remove vol_surge from MR acceptance criteria \u2014 it adds nothing"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_trsi_solo",
+    "timestamp": "2026-03-06T00:05:42.211744+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "triple_rsi",
+    "hypothesis": "Triple RSI (RSI(5) declining 3 days, below 30, with lookback check) generates rare but high-conviction mean reversion signals on individual SP500 stocks. Published edge on SPY: 90% WR, PF 4.0. Adapted for individual stocks with SMA-200 filter and volume confirmation. Expects fewer but higher-quality trades than existing MR strategy.",
+    "verdict": "fail",
+    "key_metrics": {
+      "sharpe": -2.119,
+      "profit_factor": 0.8265,
+      "trades": 0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "Triple RSI (RSI + streak + acceleration) fails on SP500 solo \u2014 too restrictive",
+      "Sharpe -2.12 is beyond salvage via optimization",
+      "Confirmed: dormant strategies need combined-mode test first, not solo"
+    ],
+    "promoted": false,
+    "runtime_s": 186.6,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_rsi_period",
+    "timestamp": "2026-03-06T00:05:42.219486+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Web research (Triple RSI, Connors, Alvarez) consistently shows RSI(2-5) outperforming RSI(14) for mean reversion signals. Our MR uses RSI(14). Shorter RSI periods may improve entry timing. Combined-mode sweep gives realistic portfolio-level impact unlike unreliable solo sweeps (lesson #30).",
+    "verdict": "fail",
+    "key_metrics": {
+      "sharpe": 0.6076,
+      "sharpe_improvement": 0.0,
+      "trades": 101
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "RSI(14) is clearly optimal for MR on SP500 \u2014 confirmed empirically",
+      "Shorter RSI periods increase trade count but destroy quality (more false positives)",
+      "RSI(5) and RSI(3) produce near-random entries (Sharpe < -1.5)",
+      "DO NOT try RSI period optimization again \u2014 this is definitive"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave3_hold_combined",
+    "timestamp": "2026-03-06T00:05:42.227291+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Wave 2 tested max_hold_days in SOLO mode (all negative Sharpe due to fee drag at $4K). Relative ranking showed 10 > 15 > 7 > 5 > 3. Combined-mode sweep gives realistic absolute Sharpe. Short holds (3-5d) may reduce time risk; longer holds (10-15d) capture more reversion.",
+    "verdict": "partial",
+    "key_metrics": {
+      "sharpe": 0.6424,
+      "sharpe_improvement": 0.0348,
+      "cagr_pct": 30.86,
+      "max_dd_pct": 3.78,
+      "trades": 109
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "max_hold=5 beats max_hold=10: Sharpe +0.035, CAGR +3.1pp, PF 4.55 vs 3.64",
+      "MR trades resolve quickly \u2014 5-day hold captures most reversion, longer holds add noise",
+      "max_hold=15 is catastrophic \u2014 trades that havent reverted by day 10 are losers",
+      "Promising but needs OOS confirmation before promotion (p=0.30)"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_lbr_solo",
+    "timestamp": "2026-03-07T23:03:17.792663+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "The Quantitativo IBS lower-band strategy (Sharpe 2.11 on SPY) can generate profitable signals when adapted to individual SP500 stocks. Published params: range_lookback=25, high_lookback=10, band_mult=2.5, IBS<0.3, exit on close>prev_high.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 270,
+      "cagr_pct": -2.6036,
+      "sharpe": -2.0834,
+      "sortino": -2.7807,
+      "max_drawdown_pct": 6.769,
+      "win_rate_pct": 58.15,
+      "profit_factor": 0.846,
+      "total_pnl": -174.35,
+      "avg_trade": -0.65,
+      "final_equity": 3801.69,
+      "expectancy_r": -0.0447,
+      "avg_r": -0.0447,
+      "r_count": 270,
+      "edge_p_value": 0.252942,
+      "edge_significant": false,
+      "var_95_pct": 0.346,
+      "cvar_95_pct": 0.547,
+      "calmar": -0.3846,
+      "mc_p95_drawdown_pct": 8.91,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "lower_band_reversion": {
+          "trades": 270,
+          "total_pnl": -174.35,
+          "win_rate_pct": 58.1
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 127.7,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_mr_hold5_oos",
+    "timestamp": "2026-03-08T00:11:33.521256+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Wave 3 found max_hold=5 beats max_hold=10 (Sharpe +0.035, CAGR +3.1pp, PF 4.55 vs 3.64). OOS validation needed before promotion. MR trades resolve quickly \u2014 5-day hold captures most reversion, longer holds add noise.",
+    "verdict": "fail",
+    "key_metrics": {
+      "returncode": 0
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_lbr_solo_relaxed",
+    "timestamp": "2026-03-08T00:13:43.179012+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "Relaxing IBS threshold from 0.3 to 0.5 generates more trades on individual stocks (which have wider IBS distributions than SPY). Tests if the band signal alone carries enough edge without strict IBS filtering.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 280,
+      "cagr_pct": -1.5275,
+      "sharpe": -1.851,
+      "sortino": -2.5328,
+      "max_drawdown_pct": 5.0171,
+      "win_rate_pct": 59.64,
+      "profit_factor": 0.8987,
+      "total_pnl": -112.32,
+      "avg_trade": -0.4,
+      "final_equity": 3883.07,
+      "expectancy_r": -0.0253,
+      "avg_r": -0.0253,
+      "r_count": 280,
+      "edge_p_value": 0.485253,
+      "edge_significant": false,
+      "var_95_pct": 0.366,
+      "cvar_95_pct": 0.508,
+      "calmar": -0.3045,
+      "mc_p95_drawdown_pct": 7.82,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "lower_band_reversion": {
+          "trades": 280,
+          "total_pnl": -112.32,
+          "win_rate_pct": 59.6
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 129.6,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_mr_strength_exit",
+    "timestamp": "2026-03-08T00:17:47.461203+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "The LBR published exit rule (sell when close > yesterday high) captures the first sign of strength recovery. Testing this on existing MR strategy as an alternative to the current profit-target + mean-reversion exit. Expected: faster exits, higher win rate, possibly lower avg profit per trade.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 68,
+      "cagr_pct": 0.3657,
+      "sharpe": -2.0995,
+      "sortino": -2.6985,
+      "max_drawdown_pct": 1.3874,
+      "win_rate_pct": 51.47,
+      "profit_factor": 1.0333,
+      "total_pnl": 10.26,
+      "avg_trade": 0.15,
+      "final_equity": 4028.24,
+      "expectancy_r": 0.0133,
+      "avg_r": 0.0133,
+      "r_count": 68,
+      "edge_p_value": 0.879408,
+      "edge_significant": false,
+      "var_95_pct": 0.193,
+      "cvar_95_pct": 0.323,
+      "calmar": 0.2636,
+      "mc_p95_drawdown_pct": 3.66,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 68,
+          "total_pnl": 10.26,
+          "win_rate_pct": 51.5
+        }
+      },
+      "param_value": 7
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_lbr_band_sweep",
+    "timestamp": "2026-03-08T00:20:00.643692+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "Band multiplier controls selectivity: wider band = fewer but deeper dips. Published used 2.5x. Testing 1.5-4.0x to find optimal trade-off between trade frequency and signal quality on individual stocks.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 249,
+      "cagr_pct": 148.5959,
+      "sharpe": 0.707,
+      "sortino": 81.1185,
+      "max_drawdown_pct": 3.4415,
+      "win_rate_pct": 61.04,
+      "profit_factor": 4.3847,
+      "total_pnl": 19009.09,
+      "avg_trade": 76.34,
+      "final_equity": 23139.48,
+      "expectancy_r": 3.9207,
+      "avg_r": 3.9207,
+      "r_count": 249,
+      "edge_p_value": 0.320421,
+      "edge_significant": false,
+      "var_95_pct": 0.358,
+      "cvar_95_pct": 0.619,
+      "calmar": 43.1777,
+      "mc_p95_drawdown_pct": 32.02,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "lower_band_reversion": {
+          "trades": 249,
+          "total_pnl": 19009.09,
+          "win_rate_pct": 61.0
+        }
+      },
+      "param_value": 3.5
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_lbr_ibs_sweep",
+    "timestamp": "2026-03-08T00:22:09.188748+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "IBS threshold controls signal quality vs quantity. Published used 0.3 for SPY. Individual stocks have different IBS distributions. Testing 0.1-0.6 to find optimal threshold that maximizes risk-adjusted returns.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 282,
+      "cagr_pct": 0.5991,
+      "sharpe": -1.2085,
+      "sortino": -1.6703,
+      "max_drawdown_pct": 4.505,
+      "win_rate_pct": 62.41,
+      "profit_factor": 1.0655,
+      "total_pnl": 70.28,
+      "avg_trade": 0.25,
+      "final_equity": 4046.32,
+      "expectancy_r": 0.0117,
+      "avg_r": 0.0117,
+      "r_count": 282,
+      "edge_p_value": 0.752657,
+      "edge_significant": false,
+      "var_95_pct": 0.337,
+      "cvar_95_pct": 0.495,
+      "calmar": 0.133,
+      "mc_p95_drawdown_pct": 6.2,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "lower_band_reversion": {
+          "trades": 282,
+          "total_pnl": 70.28,
+          "win_rate_pct": 62.4
+        }
+      },
+      "param_value": 0.4
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave4_lbr_no_sma200",
+    "timestamp": "2026-03-08T00:26:28.690771+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "SMA-200 filter was a clear win for existing MR (+0.28 Sharpe). But LBR specifically targets extreme dips \u2014 which often occur in downtrends. Testing if removing SMA-200 captures more deep-dip opportunities that still revert quickly. Published strategy on SPY used SMA-300 as improvement.",
+    "verdict": "pass",
+    "key_metrics": {},
+    "delta_vs_baseline": {
+      "cagr_pct": -2.2014,
+      "sharpe": -0.6398,
+      "sortino": -0.7256,
+      "max_drawdown_pct": 1.8623,
+      "win_rate_pct": -0.86,
+      "profit_factor": -0.1499,
+      "total_trades": -13
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
   }
 ]

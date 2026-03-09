@@ -261,15 +261,17 @@ def main():
 
     market_id = args.market
 
-    # Use market-aware timezone for "now" and weekend detection
+    # Use exchange timezone for trade-date and weekend detection.
+    # The operator may be in a different TZ (e.g. AEST Saturday = NYSE Friday),
+    # so we must use the exchange's local date to decide if it's a trading day.
     try:
         from markets import get_market
         _market = get_market(market_id)
-        _tz = _market.operator_tz()
+        _tz = _market.exchange_tz()
         _is_weekend = _market.is_weekend(datetime.now(_tz).weekday())
         _tz_label = datetime.now(_tz).strftime("%Z")
     except (ImportError, KeyError):
-        # Audit H11: use correct timezone per market for weekend detection
+        # Fallback: use correct exchange timezone per market
         _tz = ZoneInfo("America/New_York") if market_id == "sp500" else BRISBANE
         _is_weekend = datetime.now(_tz).weekday() >= 5
         _tz_label = "AEST"
