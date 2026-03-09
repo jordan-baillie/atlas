@@ -1,0 +1,13 @@
+filters:
+  and:
+    - file.hasTag("experiment")
+    - "promoted == true"
+views:
+  - type: table
+    name: "Promoted Experiments"
+    order:
+      - file.name
+      - note.strategy
+      - note.sharpe
+      - note.cagr
+      - note.verdict
