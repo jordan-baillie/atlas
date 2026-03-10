@@ -114,84 +114,48 @@ case "$MODE" in
         LOGFILE="$LOG_DIR/research_${TIMESTAMP}.log"
         SKILL_DIR="$RESEARCH_SKILL_DIR"
 
-        # Check if daemon is running — if so, skip cron research
-        if systemctl is-active --quiet atlas-research-daemon 2>/dev/null; then
-            echo "$(date -Iseconds) Research daemon is active, skipping cron research" >> "$LOG_DIR/pi-cron.log"
-            exit 0
+        # Collect sweeper status for the prompt
+        SWEEPER_STATUS="not running"
+        if systemctl is-active --quiet atlas-autoresearch 2>/dev/null; then
+            SWEEPER_STATUS="running"
+        fi
+        HEARTBEAT=""
+        if [ -f /tmp/autoresearch-heartbeat.json ]; then
+            HEARTBEAT=$(cat /tmp/autoresearch-heartbeat.json 2>/dev/null || echo "{}")
         fi
 
-        # Quick check: any queued experiments? Skip spawning agent if nothing to do.
-        QUEUED_COUNT=$(cd "$PROJECT" && python3 -c "
-import json
-q = json.load(open('research/queue.json'))
-print(sum(1 for e in q if e.get('status') == 'queued'))
-" 2>/dev/null || echo "0")
+        PROMPT="Run a daily autoresearch session. Read research/program.md first.
 
-        if [ "$QUEUED_COUNT" = "0" ]; then
-            echo "$(date -Iseconds) Research queue empty — planning next wave" >> "$LOG_DIR/pi-cron.log"
+SWEEPER STATUS: ${SWEEPER_STATUS}
+HEARTBEAT: ${HEARTBEAT}
 
-            # Generate the wave brief (analyzes journal, config, gaps)
-            # Wrapped in set +e to prevent silent death on wave_planner crash
-            cd "$PROJECT"
-            _IN_SET_PLUS_E=1
-            set +e
-            python3 scripts/wave_planner.py --generate >> "$LOG_DIR/pi-cron.log" 2>&1
-            WAVE_EXIT=$?
-            set -e
-            _IN_SET_PLUS_E=0
-            if [ $WAVE_EXIT -ne 0 ]; then
-                echo "$(date -Iseconds) ERROR: wave_planner.py --generate failed (exit=$WAVE_EXIT)" >> "$LOG_DIR/pi-cron.log"
-                notify error "research" "" 2>/dev/null || true
-                exit 1
-            fi
+Your daily research tasks (in order):
 
-            # Find the brief file
-            WAVE_BRIEF=$(ls -t research/waves/wave_*_brief.json 2>/dev/null | head -1)
-            WAVE_NUM=$(echo "$WAVE_BRIEF" | grep -oP 'wave_\K\d+' || echo "next")
+1. REVIEW SWEEPER RESULTS
+   - Run: leaderboard('sp500') — see what the 24/7 sweeper found
+   - Check research/results/*.tsv for recent keep/discard history
+   - Identify which strategies improved and which are stuck
 
-            PROMPT="You are planning Research Wave ${WAVE_NUM} for the Atlas trading system.
+2. CREATIVE RESEARCH (what the sweeper can't do)
+   Pick 2-3 of these based on what the leaderboard shows:
+   a) Screen untested sandbox strategies: quick_check() then baseline if alive
+   b) Try parameter combos the grid missed (pairs, triples, unusual values)
+   c) Run combined_test() on any strategy with Sharpe > 0.3
+   d) Test radical changes (disable filters, flip directions, extreme values)
 
-A wave brief has been generated at ${WAVE_BRIEF} — read it first to understand previous findings, patterns, and gaps.
+3. PROMOTION CHECK
+   Any strategy with solo Sharpe > 0.3 AND passing combined test:
+   - Stage candidate config in config/candidates/
+   - Send promotion request via Telegram (NEVER auto-promote)
 
-THE GOAL: Make the live trading system more profitable. Every wave must either:
-  A) Find new profitable trading strategies to add to the portfolio, OR
-  B) Optimise existing strategies to improve returns (higher Sharpe, higher CAGR, lower drawdown)
-Everything else is secondary. Do not waste experiments on diagnostics or infrastructure — focus on profit.
+4. SEND SUMMARY via Telegram:
+   - Sweeper overnight results (experiments run, improvements found)
+   - Your creative research results
+   - Current leaderboard top 5
+   - What needs human attention (promotions, stuck strategies)
 
-Your task:
-1. READ the wave brief to understand what was tested, what passed/failed, and key learnings
-2. SEARCH the web (use brave-search) for profitable trading strategy ideas. Run 3-5 searches:
-   - Search for backtested swing trading strategies with published results (quantifiedstrategies.com, quantpedia.com, alphaarchitect.com)
-   - Search for the specific opportunity identified in the brief (e.g. if position sizing is the bottleneck, search for position sizing research)
-   - Search for new strategy types that could complement what we already run (mean reversion + trend following + opening gap)
-   - Look for strategies with Sharpe > 0.5 and at least 50 trades in backtests
-3. DESIGN a themed wave: pick ONE central theme. The theme must directly target profit improvement:
-   - 'New strategy: <name> — adds uncorrelated returns to portfolio'
-   - 'Optimise <strategy>: parameter tuning for higher Sharpe'
-   - 'Position allocation overhaul — unlock capacity for more strategies'
-   - 'Adaptive exit rules — capture more profit per trade'
-   Do NOT pick themes like 'diagnostics' or 'infrastructure' or 'monitoring'.
-4. CREATE 6-12 experiments that explore different aspects of the theme. Use research/models.py to seed them:
-   - Each experiment should have clear hypothesis, acceptance criteria, and method
-   - Use dependency chains where experiments build on each other (solo → optimise → combined → OOS)
-   - Set appropriate priorities (P2 for high-impact, P3 for standard, P4 for exploratory)
-   - If adding a new strategy: implement it in strategies/ following the BaseStrategy pattern
-5. UPDATE the wave brief file with theme, rationale, web research findings, and experiment list
-6. VERIFY the queue has been seeded by running: python3 scripts/wave_planner.py --status
-7. Send a summary via: python3 scripts/telegram_notify.py research-wave-planned
-
-IMPORTANT:
-- The wave theme must have a clear path to improving live P&L
-- Every experiment must have measurable acceptance criteria tied to profitability (Sharpe, CAGR, PF)
-- Do NOT re-test ideas that already failed unless you have a genuinely new approach from web research
-- Maximum 12 experiments per wave to keep scope manageable
-- If web research reveals a promising published strategy, implement it and test it"
-
-            LOGFILE="$LOG_DIR/wave_plan_${TIMESTAMP}.log"
-        else
-            echo "$(date -Iseconds) Research queue has $QUEUED_COUNT experiments" >> "$LOG_DIR/pi-cron.log"
-            PROMPT="Run one full atlas-research-loop cycle: read current state (journal, health check, queue — $QUEUED_COUNT experiments queued), execute queued experiments via research_runner.py --run-all --agent-id ${AGENT_ID}, evaluate results, and send promotion requests for any passing experiments. Summarize all outcomes at the end."
-        fi
+Budget: up to 8 hours. Run as many experiments as time allows.
+Focus on strategies the sweeper hasn't cracked yet."
 
         # Lock file check — prevent concurrent research sessions
         if [ -f "$RESEARCH_LOCK" ]; then
