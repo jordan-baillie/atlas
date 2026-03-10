@@ -1,40 +1,60 @@
-# Atlas Research Vault — Index
+---
+tags: [meta, dashboard]
+updated: 2026-03-10T08:03:19.173005+00:00
+---
 
-> Agent knowledge base. Start with `KNOWLEDGE_BASE.md` for full system state.
+# Research Dashboard
 
-## Primary Reference
-- **[KNOWLEDGE_BASE.md](KNOWLEDGE_BASE.md)** — Complete research state, strategy cards, patterns, decisions, priorities. READ THIS FIRST.
+## 📊 Today (2026-03-10)
+| Metric | Value |
+|--------|-------|
+| Experiments | 11 |
+| Pass/Fail/Partial | 1/4/6 |
+| Best Sharpe | unknown (0.75) |
+| Queue depth | 1 |
+| Daemon status | ⛔ dead |
 
-## Deep-Dive Notes
+## 📈 All-Time Stats
+| Metric | Value |
+|--------|-------|
+| Total experiments | 93 |
+| Overall pass rate | 14.0% |
+| Strategies tested | 14 |
+| Hypotheses | 1 open / 0 confirmed / 0 rejected |
+| Days active | 12 |
 
-### Strategies (14 cards)
-| Strategy | Status | File |
-|----------|--------|------|
-| Mean Reversion | ✅ active | `Strategies/Mean Reversion.md` |
-| Trend Following | ✅ active | `Strategies/Trend Following.md` |
-| Opening Gap | ✅ active | `Strategies/Opening Gap.md` |
-| Momentum Breakout | ⏸️ dormant | `Strategies/Momentum Breakout.md` |
-| Short Term MR | ⏸️ dormant | `Strategies/Short Term MR.md` |
-| Sector Rotation | ⏸️ dormant | `Strategies/Sector Rotation.md` |
-| BB Squeeze | ⏸️ dormant | `Strategies/Bollinger Band Squeeze.md` |
-| ConnorsRSI2 | ❌ failed | `Strategies/ConnorsRSI2.md` |
-| Lower Band Reversion | ❌ failed | `Strategies/Lower Band Reversion.md` |
-| Triple RSI | ❌ failed | `Strategies/Triple RSI.md` |
-| MTF Momentum | 🔧 blocked | `Strategies/MTF Momentum.md` |
-| SMA-200 Filter | ✅ promoted | `Strategies/SMA-200 Filter.md` |
-| Portfolio Filter | 🔧 various | `Strategies/Portfolio Filter.md` |
-| Combined Portfolio | — baseline | `Strategies/Combined Portfolio.md` |
+## 🏆 Strategy Leaderboard
+| # | Strategy | Best Sharpe | Win Rate | Trades | Stage |
+|---|----------|-------------|----------|--------|-------|
+| 1 | sma200_filter | 0.87 | 59% | 0 | solo |
+| 2 | combined | 0.75 | 0% | 0 | solo |
+| 3 | lower_band_reversion | 0.71 | 61% | 249 | solo |
+| 4 | mean_reversion | 0.64 | 54% | 109 | oos |
+| 5 | trend_following | 0.62 | 53% | 99 | solo |
+| 6 | opening_gap | 0.62 | 51% | 101 | solo |
+| 7 | sector_rotation | 0.43 | 44% | 0 | solo |
+| 8 | momentum_breakout | 0.30 | 52% | 460 | solo |
+| 9 | short_term_mr | 0.27 | 63% | 697 | solo |
+| 10 | mtf_momentum | 0.00 | 0% | 0 | solo |
 
-### Experiments (35 unique)
-`Experiments/{experiment_id}.md` — Each has YAML frontmatter with metrics + full hypothesis/verdict/learnings.
+## 📋 Queue
+| Priority | Count |
+|----------|-------|
+| P1 Critical | 0 |
+| P2 High | 20 |
+| P3 Medium | 17 |
+| P4 Low | 3 |
 
-### Waves (5 complete)
-`Waves/Wave {1-5}.md` — Theme, experiment list, key findings.
-
-### Patterns (5 confirmed)
-`Patterns/{name}.md` — Research patterns that must never be violated.
-
-## Regenerate
-```bash
-python3 scripts/build_obsidian_vault.py --force
-```
+## 🔄 Recent Experiments (last 10)
+| Experiment | Strategy | Verdict | Sharpe | Date |
+|------------|----------|---------|--------|------|
+| wave5_cdd_solo | consecutive_down_days | fail | — | 2026-03-10 |
+| wave5_og_gap_sweep | opening_gap | partial | 0.62 | 2026-03-10 |
+| wave5_tf_trail_sweep | trend_following | partial | 0.62 | 2026-03-10 |
+| wave5_mr_profit_sweep | mean_reversion | partial | 0.62 | 2026-03-10 |
+| wave5_pool_toggle | combined | fail | 0.62 | 2026-03-10 |
+| wave5_full_reopt | combined | pass | 0.75 | 2026-03-10 |
+| wave5_og_gap_sweep | opening_gap | partial | 0.62 | 2026-03-10 |
+| wave5_tf_trail_sweep | trend_following | partial | 0.62 | 2026-03-10 |
+| wave5_mr_profit_sweep | mean_reversion | partial | 0.62 | 2026-03-10 |
+| wave5_pool_toggle | None | fail | 0.62 | 2026-03-10 |
