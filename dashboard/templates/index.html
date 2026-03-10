@@ -262,6 +262,59 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .strat-opening_gap { background: var(--green-dim); color: var(--green); }
 .strat-momentum_breakout { background: var(--orange-dim); color: var(--orange); }
 .strat-short_term_mr { background: rgba(85,176,165,0.10); color: var(--cyan); }
+/* ── Strategy tooltip ── */
+.strat-tip {
+  position: relative; cursor: help;
+}
+.strat-tip .strat-tiptext {
+  visibility: hidden; opacity: 0;
+  position: absolute; z-index: 100;
+  bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: 300px; max-width: 90vw;
+  background: var(--surface-raised); border: 1px solid var(--border-glow);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  font-size: 11px; line-height: 1.55; font-weight: 400; font-family: var(--font);
+  color: var(--text-secondary); text-transform: none; letter-spacing: 0;
+  white-space: normal; text-align: left;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  pointer-events: none;
+}
+.strat-tip .strat-tiptext::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--border-glow);
+}
+.strat-tip:hover .strat-tiptext {
+  visibility: visible; opacity: 1;
+}
+.strat-tip .tip-name {
+  font-weight: 600; color: var(--text); font-size: 12px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.strat-tip .tip-ref {
+  font-size: 10px; color: var(--text-tertiary); font-style: italic; margin-top: 4px;
+}
+/* Keep tooltip visible when it would overflow left */
+td:first-child .strat-tip .strat-tiptext,
+td:nth-child(2) .strat-tip .strat-tiptext {
+  left: 0; transform: none;
+}
+td:first-child .strat-tip .strat-tiptext::after,
+td:nth-child(2) .strat-tip .strat-tiptext::after {
+  left: 20px; transform: none;
+}
+/* Allow tooltip overflow from table scroll containers */
+.table-scroll { overflow: visible !important; }
+.table-scroll { overflow-x: auto !important; }
+/* Activity feed tooltips appear below (items are near top of viewport) */
+.activity-strat .strat-tip .strat-tiptext {
+  bottom: auto; top: calc(100% + 8px);
+}
+.activity-strat .strat-tip .strat-tiptext::after {
+  top: auto; bottom: 100%;
+  border-top-color: transparent; border-bottom-color: var(--border-glow);
+}
+
 .strat-sector_rotation, .strat-rotation { background: var(--amber-dim); color: var(--amber); }
 .strat-volatility, .strat-volatility_breakout { background: rgba(160,126,196,0.10); color: var(--purple); }
 .strat-event { background: var(--orange-dim); color: var(--orange); }
@@ -2965,6 +3018,21 @@ function renderRadarSVG(insight) {
 }
 
 // ── Research Tab ──
+// Strategy tooltip helper — builds a badge with hover description
+var _stratDescMap = {};
+function stratTip(id) {
+  if (!id) return '';
+  var info = _stratDescMap[id];
+  if (!info || !info.desc) return strat(id);
+  var html = '<span class="strat-tip">' + strat(id);
+  html += '<span class="strat-tiptext">';
+  html += '<div class="tip-name">' + esc(info.name || id.replace(/_/g, ' ')) + '</div>';
+  html += esc(info.desc);
+  if (info.ref) html += '<div class="tip-ref">' + esc(info.ref) + '</div>';
+  html += '</span></span>';
+  return html;
+}
+
 function renderResearch(d) {
   var res = d.research || {};
   var daemon = res.daemon || {};
@@ -2978,6 +3046,12 @@ function renderResearch(d) {
   var qbs = qs.by_status || {};
   var qbp = qs.by_priority || {};
   var pending = qs.pending_items || [];
+
+  // Build strategy description lookup
+  _stratDescMap = {};
+  lb.forEach(function(s) {
+    _stratDescMap[s.id] = { name: s.name, desc: s.description || '', ref: s.reference || '' };
+  });
 
   // Daily Insight
   renderDailyInsight(res.daily_insight);
@@ -3066,7 +3140,7 @@ function renderResearch(d) {
     var trCls = isTested ? '' : ' class="untested"';
     lt += '<tr' + trCls + ' style="' + (!isTested ? 'opacity:0.45' : '') + '">';
     lt += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (isTested ? rank : '—') + '</td>';
-    lt += '<td>' + strat(s.id) + '</td>';
+    lt += '<td>' + stratTip(s.id) + '</td>';
     lt += '<td>' + strat(s.type) + '</td>';
     // Status badge
     var sc = 'badge-queued';
@@ -3149,7 +3223,7 @@ function renderResearch(d) {
       af += '<div class="activity-item">';
       af += '<span class="activity-dot ' + vc + '"></span>';
       af += '<span class="activity-time">' + ago(a.timestamp) + '</span>';
-      af += '<span class="activity-strat">' + esc(a.strategy || 'N/A') + '</span>';
+      af += '<span class="activity-strat">' + stratTip(a.strategy || '') + '</span>';
       af += '<span class="research-badge badge-' + (a.verdict === 'pass' ? 'pass' : a.verdict === 'fail' ? 'fail' : a.verdict === 'promoted' ? 'promoted' : 'partial') + '">' + esc(a.verdict) + '</span>';
       af += '<span class="activity-detail">' + detail + '</span>';
       if (a.learnings && a.learnings.length > 0) {
@@ -3195,7 +3269,7 @@ function renderResearch(d) {
       var sc = e.status === 'running' || e.status === 'claimed' ? 'badge-running' : 'badge-queued';
       qo += '<tr>';
       qo += '<td class="pri-' + (e.priority||'').toLowerCase() + '" style="font-weight:700;font-size:12px">' + esc(e.priority) + '</td>';
-      qo += '<td>' + strat(e.strategy_name || '') + '</td>';
+      qo += '<td>' + stratTip(e.strategy_name || '') + '</td>';
       qo += '<td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title) + '</td>';
       qo += '<td style="font-size:11px;color:var(--text-secondary)">' + esc(e.category) + '</td>';
       qo += '<td><span class="research-badge ' + sc + '">' + esc(e.status) + '</span></td>';
@@ -3217,7 +3291,7 @@ function renderResearch(d) {
     var cov = s.coverage || {};
     var hasCov = covStages.some(function(cs) { return cov[cs]; });
     ct += '<tr class="' + (!hasCov ? 'untested' : '') + '">';
-    ct += '<td>' + strat(s.id) + '</td>';
+    ct += '<td>' + stratTip(s.id) + '</td>';
     var sc = 'badge-queued';
     if (s.status === 'active') sc = 'badge-pass';
     else if (s.status === 'dormant') sc = 'badge-partial';

@@ -1689,6 +1689,27 @@ def _read_vault_strategies() -> list:
     except ImportError:
         pass
 
+    # Load descriptions from discovery engine (Tier 1 strategies have them)
+    desc_map = {
+        # Tier 0 fallbacks (originals without STRATEGY_UNIVERSE descriptions)
+        "bb_squeeze": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
+        "short_term_mr": "RSI(2)/IBS short-term mean reversion. Captures rapid 1–5 day reversals that standard MR (RSI 14) misses.",
+        "momentum_breakout": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
+        "consecutive_down_days": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
+        "mtf_momentum": "Multi-timeframe momentum: weekly trend confirmation + daily entry timing. Combines fast and slow momentum signals.",
+        "dividend_capture": "Buy before ex-dividend date, capture dividend payment, exit shortly after. Event-driven income strategy.",
+        "sector_rotation": "Top-down momentum sector rotation. Selects strongest GICS sectors by momentum, rotates monthly.",
+    }
+    ref_map = {}
+    try:
+        for sid, info in STRATEGY_UNIVERSE.items():
+            if info.get("description"):
+                desc_map.setdefault(sid, info["description"])
+            if info.get("reference"):
+                ref_map[sid] = info["reference"]
+    except Exception:
+        pass
+
     strat_dir = PROJECT_ROOT / "research" / "vault" / "Strategies"
     if not strat_dir.exists():
         return []
@@ -1702,6 +1723,32 @@ def _read_vault_strategies() -> list:
         # Always prefer discovery engine type (authoritative); vault cards often
         # have 'strategy' (generic) or abbreviated types like 'adx', 'demark'
         strat_type = type_map.get(sid, raw_type)
+
+        # Get description: prefer vault ## Overview, fall back to STRATEGY_UNIVERSE
+        description = ""
+        try:
+            text = md.read_text()
+            parts = text.split("---", 2)
+            body = parts[2] if len(parts) >= 3 else text
+            in_overview = False
+            for line in body.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("## Overview"):
+                    in_overview = True
+                    continue
+                if in_overview and stripped.startswith("## "):
+                    break
+                if in_overview and stripped and not stripped.startswith(">"):
+                    # Skip generic placeholder text
+                    if not stripped.startswith("Research strategy `"):
+                        description = stripped
+                        break
+        except Exception:
+            pass
+        if not description:
+            description = desc_map.get(sid, "")
+        reference = ref_map.get(sid, "")
+
         strategies.append({
             "id": sid,
             "name": md.stem,
@@ -1710,6 +1757,8 @@ def _read_vault_strategies() -> list:
             "type": strat_type,
             "total_experiments": fm.get("total_experiments", 0),
             "best_sharpe": fm.get("best_sharpe", None),
+            "description": description[:200],
+            "reference": reference[:100],
         })
     return strategies
 
@@ -1991,6 +2040,8 @@ def generate_research_data() -> dict:
             "stage": highest_stage,
             "stage_icon": highest_icon,
             "coverage": stages,
+            "description": s.get("description", ""),
+            "reference": s.get("reference", ""),
         })
     # Filter out meta-strategies (filters/combined — not directly tradable)
     leaderboard = [s for s in leaderboard if s["status"] != "filter"]
