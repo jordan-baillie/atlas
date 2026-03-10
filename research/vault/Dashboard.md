@@ -1,6 +1,6 @@
 ---
 tags: [meta, dashboard]
-updated: 2026-03-10T08:15:56.152882+00:00
+updated: 2026-03-10T08:32:05.667637+00:00
 ---
 
 # Research Dashboard
@@ -8,17 +8,17 @@ updated: 2026-03-10T08:15:56.152882+00:00
 ## 📊 Today (2026-03-10)
 | Metric | Value |
 |--------|-------|
-| Experiments | 13 |
-| Pass/Fail/Partial | 1/4/8 |
+| Experiments | 15 |
+| Pass/Fail/Partial | 1/4/10 |
 | Best Sharpe | unknown (0.75) |
-| Queue depth | 4 |
-| Daemon status | ⚠️ stale |
+| Queue depth | 1 |
+| Daemon status | ✅ running |
 
 ## 📈 All-Time Stats
 | Metric | Value |
 |--------|-------|
-| Total experiments | 95 |
-| Overall pass rate | 13.7% |
+| Total experiments | 97 |
+| Overall pass rate | 13.4% |
 | Strategies tested | 14 |
 | Hypotheses | 1 open / 0 confirmed / 0 rejected |
 | Days active | 12 |
@@ -48,6 +48,8 @@ updated: 2026-03-10T08:15:56.152882+00:00
 ## 🔄 Recent Experiments (last 10)
 | Experiment | Strategy | Verdict | Sharpe | Date |
 |------------|----------|---------|--------|------|
+| 20260310_181024_d2d7b3 | mtf_momentum | partial | -2.34 | 2026-03-10 |
+| 20260310_181024_d14b81 | short_term_mr | partial | -1.52 | 2026-03-10 |
 | 20260310_181024_f7508b | bb_squeeze | partial | -1.05 | 2026-03-10 |
 | 20260310_181024_9b3400 | momentum_breakout | partial | -2.72 | 2026-03-10 |
 | wave5_cdd_solo | consecutive_down_days | fail | — | 2026-03-10 |
@@ -56,5 +58,3 @@ updated: 2026-03-10T08:15:56.152882+00:00
 | wave5_mr_profit_sweep | mean_reversion | partial | 0.62 | 2026-03-10 |
 | wave5_pool_toggle | combined | fail | 0.62 | 2026-03-10 |
 | wave5_full_reopt | combined | pass | 0.75 | 2026-03-10 |
-| wave5_og_gap_sweep | opening_gap | partial | 0.62 | 2026-03-10 |
-| wave5_tf_trail_sweep | trend_following | partial | 0.62 | 2026-03-10 |

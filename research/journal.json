@@ -3657,5 +3657,93 @@
     "promoted": false,
     "runtime_s": 311.6,
     "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_181024_d2d7b3",
+    "timestamp": "2026-03-10T08:31:59.671851+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "mtf_momentum",
+    "hypothesis": "Test if mtf_momentum is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 15,
+      "cagr_pct": 0.1862,
+      "cagr_full_period_pct": 0.1194,
+      "sharpe": -2.3438,
+      "sortino": -2.8573,
+      "max_drawdown_pct": 2.2508,
+      "win_rate_pct": 40.0,
+      "profit_factor": 1.0963,
+      "total_pnl": 14.37,
+      "avg_trade": 0.96,
+      "final_equity": 4014.37,
+      "expectancy_r": 0.0116,
+      "avg_r": 0.0116,
+      "r_count": 15,
+      "edge_p_value": 0.977294,
+      "edge_significant": false,
+      "var_95_pct": 0.194,
+      "cvar_95_pct": 0.356,
+      "calmar": 0.0827,
+      "mc_p95_drawdown_pct": 3.03,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "mtf_momentum": {
+          "trades": 15,
+          "total_pnl": 14.37,
+          "win_rate_pct": 40.0
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 946.3,
+    "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_183205_1eac79",
+    "timestamp": "2026-03-10T08:34:20.671876+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "momentum_breakout",
+    "hypothesis": "Test if momentum_breakout is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 71,
+      "cagr_pct": -0.5873,
+      "cagr_full_period_pct": -0.377,
+      "sharpe": -2.7161,
+      "sortino": -3.313,
+      "max_drawdown_pct": 3.0485,
+      "win_rate_pct": 46.48,
+      "profit_factor": 0.9492,
+      "total_pnl": -18.98,
+      "avg_trade": -0.27,
+      "final_equity": 3954.84,
+      "expectancy_r": -0.0245,
+      "avg_r": -0.0245,
+      "r_count": 71,
+      "edge_p_value": 0.806937,
+      "edge_significant": false,
+      "var_95_pct": 0.202,
+      "cvar_95_pct": 0.325,
+      "calmar": -0.1927,
+      "mc_p95_drawdown_pct": 4.27,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 71,
+          "total_pnl": -18.98,
+          "win_rate_pct": 46.5
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 134.9,
+    "agent_id": "research-daemon"
   }
 ]

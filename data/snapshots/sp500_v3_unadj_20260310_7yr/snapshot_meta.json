@@ -1,0 +1,7 @@
+{
+  "market": "sp500",
+  "snapshot_id": "sp500_v3_unadj_20260310_7yr",
+  "created_at": "2026-03-10T08:44:10.056680+00:00",
+  "source_dir": "/root/atlas/data/cache/sp500",
+  "file_count": 200
+}

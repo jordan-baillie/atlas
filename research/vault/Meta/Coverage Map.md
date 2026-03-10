@@ -1,6 +1,6 @@
 ---
 tags: [meta, coverage]
-updated: 2026-03-10T08:15:56.157086+00:00
+updated: 2026-03-10T08:32:05.669972+00:00
 ---
 
 # Strategy Coverage Map
@@ -23,7 +23,7 @@ updated: 2026-03-10T08:15:56.157086+00:00
 | mean_reversion | mean_reversion | — | — | ⚠️ | — | ✅ | ❌ | — |
 | momentum_breakout | momentum | — | — | ✅ | — | — | — | — |
 | monthly_rotation | rotation | — | — | — | — | — | — | — |
-| mtf_momentum | momentum | — | — | ❌ | — | — | — | — |
+| mtf_momentum | momentum | — | — | ⚠️ | — | — | — | — |
 | opening_gap | mean_reversion | — | — | ⚠️ | — | — | — | — |
 | overnight_return | mean_reversion | — | — | — | — | — | — | — |
 | pead_earnings_drift | event | — | — | — | — | — | — | — |
