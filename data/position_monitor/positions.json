@@ -29,8 +29,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 100.12,
-        "last_checked": "2026-03-09T20:05:50",
+        "current_value": 88.56,
+        "last_checked": "2026-03-10T16:06:50",
         "notes": "<$65 = INVALIDATION (geopolitical premium unwound)"
       },
       {
@@ -43,8 +43,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 164.13,
-        "last_checked": "2026-03-09T20:05:50",
+        "current_value": 161.1,
+        "last_checked": "2026-03-10T16:06:50",
         "notes": "<$142 = BREAKEVEN STOP. >$155 = green"
       },
       {
@@ -58,7 +58,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:50",
+        "last_checked": "2026-03-10T16:06:50",
         "notes": "Green=closed/restricted, Amber=partial escorts, Red=fully reopened"
       },
       {
@@ -72,7 +72,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:50",
+        "last_checked": "2026-03-10T16:06:50",
         "notes": "Green=backwardation, Amber=flat, Red=contango"
       },
       {
@@ -85,8 +85,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 164.13,
-        "last_checked": "2026-03-09T20:05:50",
+        "current_value": 161.1,
+        "last_checked": "2026-03-10T16:06:50",
         "notes": ""
       },
       {
@@ -100,14 +100,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:50",
+        "last_checked": "2026-03-10T16:06:50",
         "notes": "Green=escalating/holding, Amber=stalemate, Red=de-escalation confirmed"
       }
     ],
     "health_score": 10.0,
-    "current_price": 164.13,
-    "unrealized_pnl": 173.12,
-    "unrealized_pnl_pct": 15.19,
+    "current_price": 161.1,
+    "unrealized_pnl": 148.88,
+    "unrealized_pnl_pct": 13.06,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -244,10 +244,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-02T18:39:39",
-    "updated_at": "2026-03-09T20:05:52",
+    "updated_at": "2026-03-10T16:06:52",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -283,7 +303,7 @@
         "weight": 3,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:52",
+        "last_checked": "2026-03-10T16:06:52",
         "notes": "Green=no ceasefire, Amber=backchannel talks reported, Red=formal ceasefire announced. Red \u2260 auto-exit \u2192 trim to 3 shares."
       },
       {
@@ -296,8 +316,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 209.84,
-        "last_checked": "2026-03-09T20:05:52",
+        "current_value": 208.29,
+        "last_checked": "2026-03-10T16:06:52",
         "notes": "<$195 = INVALIDATION. $185 = full exit."
       },
       {
@@ -311,7 +331,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:52",
+        "last_checked": "2026-03-10T16:06:52",
         "notes": "Green=supplemental appropriations/budget increase, Amber=no change, Red=budget cuts proposed"
       },
       {
@@ -324,8 +344,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 209.84,
-        "last_checked": "2026-03-09T20:05:52",
+        "current_value": 208.29,
+        "last_checked": "2026-03-10T16:06:52",
         "notes": ""
       },
       {
@@ -339,7 +359,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:52",
+        "last_checked": "2026-03-10T16:06:52",
         "notes": "Green=<4wk ongoing, Amber=4-8wk (munition depletion thesis strengthens), Red=>8wk (broader market drag)"
       },
       {
@@ -353,14 +373,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:52",
+        "last_checked": "2026-03-10T16:06:52",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 8.5,
-    "current_price": 209.84,
-    "unrealized_pnl": 13.47,
-    "unrealized_pnl_pct": 1.08,
+    "current_price": 208.29,
+    "unrealized_pnl": 4.2,
+    "unrealized_pnl_pct": 0.34,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -493,10 +513,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-09T20:05:54",
+    "updated_at": "2026-03-10T16:06:53",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -535,7 +575,7 @@
         "weight": 4,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=closed (<20% normal traffic), Amber=partial (20-60% normal, escorted), Red=open (>60%) = IMMEDIATE EXIT. Never sit at amber >1 cycle."
       },
       {
@@ -549,7 +589,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=>$300k/day, Amber=$150-300k/day, Red=<$150k/day"
       },
       {
@@ -563,7 +603,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=cancelled/suspended in Gulf, Amber=elevated premiums (>5x normal), Red=reinstated at normal rates"
       },
       {
@@ -577,7 +617,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=above, Amber=within 3% of trigger, Red=below = IMMEDIATE EXIT. Agent: check 30d high from price data."
       },
       {
@@ -591,7 +631,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=filled at target, Amber=filled but gapped up >10%, Red=not yet filled"
       },
       {
@@ -605,14 +645,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 9.0,
-    "current_price": 72.44,
-    "unrealized_pnl": -52.92,
-    "unrealized_pnl_pct": -9.45,
+    "current_price": 75.69,
+    "unrealized_pnl": -30.17,
+    "unrealized_pnl_pct": -5.39,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -753,10 +793,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-09T20:05:54",
+    "updated_at": "2026-03-10T16:06:53",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -792,8 +852,8 @@
         "direction": "above",
         "weight": 3,
         "status": "warning",
-        "current_value": 5113.2,
-        "last_checked": "2026-03-09T20:05:54",
+        "current_value": 5187.2,
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "<$4800 (3 consecutive closes) = INVALIDATION"
       },
       {
@@ -806,8 +866,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 116.33,
-        "last_checked": "2026-03-09T20:05:54",
+        "current_value": 117.01,
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "<$100 = INVALIDATION"
       },
       {
@@ -821,7 +881,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=cuts priced in (dovish), Amber=hold (neutral), Red=hikes priced in (hawkish)"
       },
       {
@@ -833,9 +893,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "warning",
-        "current_value": 116.33,
-        "last_checked": "2026-03-09T20:05:54",
+        "status": "passing",
+        "current_value": 117.01,
+        "last_checked": "2026-03-10T16:06:53",
         "notes": ""
       },
       {
@@ -849,7 +909,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=continued/accelerating, Amber=stable, Red=net selling reported"
       },
       {
@@ -863,7 +923,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=falling, Amber=flat, Red=rising >2.5%"
       },
       {
@@ -877,14 +937,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:54",
+        "last_checked": "2026-03-10T16:06:53",
         "notes": "Green=rising (gold outpacing oil), Amber=neutral, Red=falling (oil outpacing gold \u2192 stagflation shift). If this + real yields both red \u2192 trim."
       }
     ],
-    "health_score": 5.5,
-    "current_price": 116.33,
-    "unrealized_pnl": -29.15,
-    "unrealized_pnl_pct": -4.77,
+    "health_score": 6.0,
+    "current_price": 117.01,
+    "unrealized_pnl": -25.75,
+    "unrealized_pnl_pct": -4.22,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1017,10 +1077,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-09T20:05:55",
+    "updated_at": "2026-03-10T16:06:55",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1057,7 +1137,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:55",
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "Green=elevated/active incidents, Amber=stable/background, Red=significantly reduced post-ceasefire"
       },
       {
@@ -1070,8 +1150,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 65.99,
-        "last_checked": "2026-03-09T20:05:55",
+        "current_value": 66.2,
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "$55-59 = amber, <$55 = red"
       },
       {
@@ -1084,8 +1164,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 65.99,
-        "last_checked": "2026-03-09T20:05:55",
+        "current_value": 66.2,
+        "last_checked": "2026-03-10T16:06:55",
         "notes": ""
       },
       {
@@ -1099,7 +1179,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:55",
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "Green=still understaffed (<50%), Amber=partial restoration, Red=fully restored"
       },
       {
@@ -1113,7 +1193,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:55",
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "Green=beat + raised guidance, Amber=in-line, Red=miss + lowered"
       },
       {
@@ -1127,7 +1207,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:55",
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "Green=accelerating, Amber=stable, Red=decelerating"
       },
       {
@@ -1141,14 +1221,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:55",
+        "last_checked": "2026-03-10T16:06:55",
         "notes": "Green=filled at target, Amber=filled but gapped, Red=not yet filled"
       }
     ],
     "health_score": 8.0,
-    "current_price": 65.99,
-    "unrealized_pnl": 39.9,
-    "unrealized_pnl_pct": 6.44,
+    "current_price": 66.2,
+    "unrealized_pnl": 42.0,
+    "unrealized_pnl_pct": 6.77,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1285,10 +1365,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-09T20:05:56",
+    "updated_at": "2026-03-10T16:06:56",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1324,8 +1424,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 31.62,
-        "last_checked": "2026-03-09T20:05:56",
+        "current_value": 25.5,
+        "last_checked": "2026-03-10T16:06:56",
         "notes": "<18 = hedge unnecessary, EXIT. 18-25 amber. >25 green."
       },
       {
@@ -1338,8 +1438,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 599.91,
-        "last_checked": "2026-03-09T20:06:26",
+        "current_value": 607.24,
+        "last_checked": "2026-03-10T16:07:31",
         "notes": "Agent: INVERT this \u2014 QQQ below MA = GREEN for PSQ, above = RED. Set toggle accordingly."
       },
       {
@@ -1351,9 +1451,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 2,
-        "status": "passing",
+        "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:56",
+        "last_checked": "2026-03-10T16:06:56",
         "notes": "Green=declining, Amber=flat, Red=rising (hedge is a drag). Agent: check ^GSPC 5d change."
       },
       {
@@ -1367,7 +1467,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:56",
+        "last_checked": "2026-03-10T16:06:56",
         "notes": "Green=escalating, Amber=stalemate, Red=de-escalating"
       },
       {
@@ -1381,7 +1481,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:56",
+        "last_checked": "2026-03-10T16:06:56",
         "notes": "Green=rising (inflationary pressure on tech), Amber=flat, Red=falling. Agent: check CL=F 5d change."
       },
       {
@@ -1395,14 +1495,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:56",
+        "last_checked": "2026-03-10T16:06:56",
         "notes": "Green=<10 days, Amber=10-20 days, Red=>20 days (decay risk). Agent: calculate from entry_date."
       }
     ],
-    "health_score": 10.0,
-    "current_price": 31.14,
-    "unrealized_pnl": -1.98,
-    "unrealized_pnl_pct": -0.19,
+    "health_score": 9.0,
+    "current_price": 30.78,
+    "unrealized_pnl": -13.86,
+    "unrealized_pnl_pct": -1.35,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -1531,10 +1631,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-09T20:06:26",
+    "updated_at": "2026-03-10T16:07:31",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1571,8 +1691,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 100.12,
-        "last_checked": "2026-03-09T20:05:57",
+        "current_value": 88.56,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "<$60 = red, $60-70 = amber, >$70 = green"
       },
       {
@@ -1585,8 +1705,8 @@
         "direction": "above",
         "weight": 2,
         "status": "warning",
-        "current_value": 31.36,
-        "last_checked": "2026-03-09T20:05:57",
+        "current_value": 30.18,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "<$30 = green (within 10% of $27 target), $30-33 = amber, >$33 = red (overextended >20%)"
       },
       {
@@ -1599,8 +1719,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 31.36,
-        "last_checked": "2026-03-09T20:05:57",
+        "current_value": 30.18,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": ""
       },
       {
@@ -1614,7 +1734,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:57",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=>$15/MMBtu, Amber=$10-15, Red=<$10"
       },
       {
@@ -1628,7 +1748,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:57",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=Qatar exports disrupted, Amber=partially restored, Red=fully restored"
       },
       {
@@ -1642,7 +1762,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:57",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=<40%, Amber=40-55%, Red=>55% = CONCENTRATION WARNING. Includes XOP+WDS+INSW (tanker is energy-adjacent). Agent: read portfolio_checks.energy_tickers."
       },
       {
@@ -1654,16 +1774,16 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "passing",
+        "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:57",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=weakening AUD (boosts USD earnings), Amber=stable, Red=strengthening AUD"
       }
     ],
-    "health_score": 8.5,
-    "current_price": 31.36,
-    "unrealized_pnl": 209.76,
-    "unrealized_pnl_pct": 21.36,
+    "health_score": 7.5,
+    "current_price": 30.18,
+    "unrealized_pnl": 164.92,
+    "unrealized_pnl_pct": 16.8,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -1792,10 +1912,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-01T00:00:00",
-    "updated_at": "2026-03-09T20:05:57",
+    "updated_at": "2026-03-10T16:06:57",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1830,8 +1970,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 232.05,
-        "last_checked": "2026-03-09T20:05:58",
+        "current_value": 222.84,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "<$200 = structural break (red)"
       },
       {
@@ -1844,8 +1984,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 232.05,
-        "last_checked": "2026-03-09T20:05:58",
+        "current_value": 222.84,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "<$180 = INVALIDATION"
       },
       {
@@ -1859,7 +1999,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:58",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=capex declining, Amber=flat, Red=increasing (thesis broken). Quarterly check only."
       },
       {
@@ -1872,8 +2012,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 232.05,
-        "last_checked": "2026-03-09T20:05:58",
+        "current_value": 222.84,
+        "last_checked": "2026-03-10T16:06:57",
         "notes": ""
       },
       {
@@ -1887,7 +2027,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:58",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=losses moderating/gains, Amber=stable losses, Red=accelerating losses"
       },
       {
@@ -1901,14 +2041,14 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-09T20:05:58",
+        "last_checked": "2026-03-10T16:06:57",
         "notes": "Green=>1.5M net adds annualized, Amber=1-1.5M, Red=<1M (growth stalling)"
       }
     ],
     "health_score": 9.0,
-    "current_price": 232.05,
-    "unrealized_pnl": 3.67,
-    "unrealized_pnl_pct": 1.61,
+    "current_price": 222.84,
+    "unrealized_pnl": -5.54,
+    "unrealized_pnl_pct": -2.43,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -2037,10 +2177,30 @@
       {
         "timestamp": "2026-03-09 20:05",
         "text": "[4h update 20:00 AEST] Day 10: 10 new developments since 16:00 AEST. (1) Bloomberg: Greek tanker exits Hormuz 'with signal off' (AIS blackout/running dark) \u2014 extreme danger zone confirmed, insw_hormuz GREEN reinforced; (2) Barron's: Oil spikes near $120 intraday, fuel plants hit in Iran war \u2014 new energy infrastructure strikes (Dow Jones sourced, not Reuters/AP); (3) channelstv: Iran actively targeting Gulf energy installations, EU gas prices soar \u2014 XOP/WDS/INSW thesis deepening; (4) thejournal.ie: Iran launches new missiles as Khamenei son takes charge, war intensifies in Lebanon \u2014 Day 10 offensive ongoing; (5) NPR/NYT: Oil above $110 confirmed across this cycle (intraday peak), settling WTI $99.12 (+9.0%d), Brent $102.82 (+10.9%d), spread $3.70; (6) Independent.co.uk: Trump says oil spike 'very small price to pay for safety and peace' \u2014 zero off-ramp signal, rtx_ceasefire GREEN reinforced; (7) Guardian: Stagflation fears rising \u2014 NEM paradox deepening (oil shock \u2192 inflation \u2192 hikes \u2192 gold down); (8) Al Jazeera: Day 10 confirmed, US-Israel attacks continuing; (9) Korea Herald: Extraordinary fuel price measures globally \u2014 economic pain accelerating; (10) Markets: ASX plunges, EU shares dive, Dow futures -1000pts, dollar surges. TOGGLE: psq_qqq_ma failing \u2192 PASSING (QQQ $599.75 < MA50 $615.25 \u2014 inverted for PSQ hedge). INSW CRITICAL: $72.41 vs $72.00 invalidation = $0.41 (0.57%) \u2014 thesis ALL GREEN (Bloomberg AIS-off tanker confirms Hormuz still extremely restricted). Trail stop $68.85 (5.35% buffer). NEM paradox: goldoil FAILING (ratio 51.55 vs 68.5 5d = -24.7%) + ryield AMBER \u2014 trim NOT triggered (need BOTH red; Guardian stagflation fears raise ryield watch). No geographic scope update via escalation script (Lebanon ground war from prior cycle; no new Reuters/AP confirmation of new zone in this window). WTI $99.12 (+9.0%d, +32.9%5d) | Brent $102.82 (+10.9%d) | Spread $3.70. Energy 44.47%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 00:05",
+        "text": "[4h update 00:00 AEST] 9 new developments since 20:00 AEST. (1) Oil confirmed crossing $110 intraday (Yahoo Finance/LA Times/Al Jazeera) then settling WTI $99.53 (+9.5%d, +33.5%5d), Brent $101.60 (+9.6%d), spread $2.07 (Brent premium); Yahoo Finance headline explicitly: 'Iran war keeps Strait of Hormuz closed, forces shut-ins' -- insw_hormuz/xop_hormuz stay GREEN; (2) G7 holds EMERGENCY oil meeting as markets sink (BBC 2.7h) + G7 mulling SPR/crude reserves release (IBD 1.1h) -- economic response only, NOT ceasefire; SPR release risk: ~5-10% temporary oil headwind if implemented but 2022 precedent shows limited sustained impact during structural Hormuz closure; (3) Trump predicts 'rapid drop' in oil (Barron's 1.4h) -- analysts disagree per same article, no policy action; rtx_ceasefire stays GREEN; (4) INSW SURGES +3.45%d to $74.91 -- invalidation cushion improves dramatically from 0.57% to 4.0% ($72.00 floor); trail stop $68.85 (8.1% buffer); 30d high $76.50 (2.08% away); thesis ALL GREEN; (5) 5 tankers escaped Gulf with Iranian crude (Tradewinds older context) + AIS-dark Greek tanker (Bloomberg) -- only Iran-sanctioned cargo moving, commercial traffic still blocked; (6) NEM $111.13 (-4.44%d) -- below $115 warning threshold (nem_floor moving to WARNING post-evaluate); gold $5,089 (-1.10%d); gold/oil ratio 51.13 vs 68.5 5d = -25.4% (FAILING); NEM paradox: goldoil FAILING + ryield AMBER -- trim NOT triggered (need BOTH red); WATCH: if nem_ryield goes RED (TIPS >2.5%), trim NEM activated; (7) No new Reuters/AP military escalation events this window; 7.9h since last confirmed action (Saudi evacuation CNBC); (8) XOP $164.62 at 30d HIGH (+0.30%d) -- all conditions GREEN; (9) TOGGLE CHANGES: None -- all prior assessments hold. KEY WATCH: G7/SPR release decision, nem_ryield direction. WTI $99.53 | Brent $101.60 | Spread $2.07. Energy 44.9%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 04:09",
+        "text": "[4h update 04:00 AEST] 10 new developments since 00:00 AEST. (1) Mojtaba Khamenei formally installed as Supreme Leader -- signaling no letup in war (NZ Herald/CBS 45m) -- rtx_ceasefire/xop_geopol GREEN confirmed; (2) gCaptain [36m]: CRITICAL threat PERSISTS in Hormuz -- GPS jamming + attacks ongoing -- commercial traffic still blocked -- insw_hormuz/xop_hormuz GREEN; (3) Iran: No Room for Talks as hardline Ayatollah takes command (ZeroHedge 2.3h) -- ceasefire 9% unchanged; (4) US State Secy calls Iran regime terrorist, defends action (ANI 45m) -- rtx_ceasefire GREEN reinforced, zero off-ramp; (5) Iran sends operational trigger to activate sleeper cells abroad (NY Post 1.3h) -- cibr_cyber GREEN; (6) France to deploy warships to Middle East, mulls Hormuz mission (IndiaToday 1.5h) -- NATO/European engagement deepening, not de-escalation; (7) G7 pledges necessary measures for energy supplies (BBC 2.3h) -- economic response ONLY, not ceasefire; SPR release risk retained ~5-10pct temp headwind; (8) Baird Maritime [2.2h]: Greek tanker with Saudi cargo sails through Hormuz -- ISOLATED event, not partial reopening; gCaptain simultaneous critical threat persists confirms <20pct normal traffic; xop_hormuz/insw_hormuz STAY GREEN; (9) WTI 95.13 (-4.4pct vs prior cycle 99.53 on G7/SPR discussion, +4.65pctd) | Brent 99.39 (+7.2pctd) | Spread 4.26 -- thesis intact; (10) ~12h since last confirmed escalation (Saudi evac CNBC) -- borderline gap BUT new hardline SC + no talks + GPS jamming = operational escalation continues. TOGGLE CHANGES: None -- all prior assessments hold. INSW: 75.40, cushion 3.40 (4.7pct) vs 72.00 invalidation, trail 68.85 (8.5pct buffer), 30d high 76.50 (1.4pct away). NEM paradox: goldoil FAILING (ratio 53.6 vs 68.5 5d = -21.7pct) + ryield AMBER -- trim NOT triggered (need BOTH red). WTI 95.13 (+4.65pctd, +27.6pct5d) | Brent 99.39 | Spread 4.26. Energy 44.8pct, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 08:06",
+        "text": "[4h update 08:00 AEST] 13 new devs since 04:00 AEST. LEAD: Trump says war 'very complete' at press conference (FT/Al-Monitor 1h) \u2014 one-sided claim, no bilateral talks; Iran rallying around hardline SC Mojtaba; rtx_ceasefire/xop_geopol stay GREEN. OIL CRASH: WTI $85.08 (-6.4%d, -10pct vs prior cycle 95.13) | Brent $88.69 (-4.32%d) | Spread $3.61 \u2014 biggest single-cycle drop of conflict; G7 SPR discussion + Trump language driving; WTI still +14.1%5d, well above $65 invalidation + $70 warning. MSC halts Gulf exports (News18 31m) + isolated Greek vessel passage \u2014 blockade intact <5pct normal traffic; insw_hormuz GREEN; INSW $75.76 +4.63%d (paradox surge on blockade confirmation), trail $68.85 (9.1pct buffer), 30d high $76.50. Iran hackers targeting US infra + Israel cyber (CybersecurityNews/Haaretz 1.4h) \u2014 cibr_cyber GREEN. Hegseth 'oil prices won't limit Trump actions' (31m) \u2014 rtx_ceasefire GREEN. AP wire confirms Iran war threatening transport routes. BoC rate hike bets rising (FinancialPost 31m) \u2014 NEM paradox watch; goldoil ratio 60.52 vs 68.5 5d = -11.6% FAILING, ryield AMBER \u2014 trim NOT triggered (need BOTH red). VIX 25.5 (-13.5%d) still >18; QQQ $607.76 below MA50 $614.97 \u2014 psq_qqq_ma GREEN. Cyprus EU drone attack (Aawsat 31m) \u2014 geographic expansion to Mediterranean possible but non-Reuters/AP; NOT formally recorded. TOGGLE: psq_spx5d passing->warning (SPX 5d -0.3% flat); wds_audusd passing->warning (AUD +0.97%d today, stable). KEY WATCH: Trump 'very complete' \u2014 watch for (a) formal ceasefire, (b) bilateral diplomatic channel opening, (c) oil sustaining sub-$85. No Reuters/AP military escalation events this window. Energy 44.68%, kill switch 0/4 clear. Ceasefire 9pct VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 12:04",
+        "text": "[4h update 12:00 AEST] 31 new results since 08:00 AEST. (1) WaPo/Pentagon: $5.6B in munitions spent in early Iran strikes \u2014 MASSIVE RTX replenishment demand signal; rtx_defence GREEN reinforced; (2) Hegseth on CBS 60 Minutes: strikes 'just the beginning' \u2014 rtx_ceasefire GREEN confirmed; official Pentagon stance explicitly escalatory; (3) Trump mixed messages: 'end very soon'/'achieving major strides' (IANS/regional outlets, NOT Reuters/AP) vs Hegseth CBS escalatory \u2014 oil seesawing, NO bilateral off-ramp, Iran still refusing talks; (4) WTI $85.54 (+0.5% vs 08:00 $85.08), Brent $89.01, spread $3.47 \u2014 oil STABILIZING after 2-cycle crash; still +14.7%5d, well above $65 invalidation; (5) CNBC: 'another big reason shipping cos and insurers won't risk Hormuz' \u2014 insw_hormuz/insw_insurance GREEN maintained; (6) State Dept orders drawdown at MORE Mideast diplomatic missions (citizensvoice) \u2014 expanding threat zone expectation; (7) 7th US casualty in Saudi Arabia (WHDH); (8) US calls on Ukraine for Iranian Shahed drone defense (ABC Australia) \u2014 asymmetric war continues, US drone-threat still active; (9) Graham pushes Saudi to be more involved \u2014 further escalation signal; (10) Trump says 'will remove some oil sanctions' (Times of India) \u2014 rhetorical, no Reuters/AP confirmation, no impact on Hormuz structural closure. TOGGLE CHANGE: psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for PSQ; correcting auto-evaluator error). NEM paradox: goldoil FAILING (ratio 60.55 vs 68.5 5d = falling) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). No Reuters/AP military escalation events this window. 19.9h since last confirmed action (Saudi evac CNBC). WTI $85.54 | Brent $89.01 | Spread $3.47. Energy 44.14%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-10 16:06",
+        "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-02-27T00:00:00",
-    "updated_at": "2026-03-09T20:05:59",
+    "updated_at": "2026-03-10T16:06:58",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,

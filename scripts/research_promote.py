@@ -65,6 +65,11 @@ def stage_candidate(experiment_id: str, market_id: str,
                     enable_strategy: str = None) -> Path:
     """Stage a candidate config from a successful experiment.
 
+    If a candidate file already exists at the target path (e.g. written by
+    reoptimize_parallel.py), it is preserved and only promotion metadata is
+    added.  This prevents the reoptimiser's optimised params from being
+    silently overwritten with a copy of the active config.
+
     Args:
         experiment_id: The experiment that produced these results
         market_id: Market to create candidate for
@@ -74,6 +79,31 @@ def stage_candidate(experiment_id: str, market_id: str,
     Returns:
         Path to the staged candidate config
     """
+    CANDIDATES_DIR.mkdir(parents=True, exist_ok=True)
+    candidate_path = CANDIDATES_DIR / f'{market_id}_{experiment_id}.json'
+
+    # If the candidate was already written (e.g. by reoptimize_parallel.py)
+    # and we have no new changes to apply, preserve it — just add metadata.
+    if candidate_path.exists() and not strategy_params and not enable_strategy:
+        with open(candidate_path) as f:
+            config = json.load(f)
+        # Don't re-add metadata if it's already there
+        if '_promotion_metadata' not in config:
+            config['_promotion_metadata'] = {
+                'experiment_id': experiment_id,
+                'staged_at': datetime.now(timezone.utc).isoformat(),
+                'source_version': config.get('version', 'unknown'),
+                'changes': {
+                    'strategy_params': None,
+                    'enable_strategy': None,
+                    'note': 'Candidate preserved from reoptimiser output',
+                },
+            }
+            with open(candidate_path, 'w') as f:
+                json.dump(config, f, indent=2, default=str)
+        logger.info(f"Candidate already exists at {candidate_path} — preserved (no overwrite)")
+        return candidate_path
+
     config = get_active_config(market_id)
 
     # Apply strategy parameter changes
@@ -102,8 +132,6 @@ def stage_candidate(experiment_id: str, market_id: str,
     }
 
     # Save candidate
-    CANDIDATES_DIR.mkdir(parents=True, exist_ok=True)
-    candidate_path = CANDIDATES_DIR / f'{market_id}_{experiment_id}.json'
     with open(candidate_path, 'w') as f:
         json.dump(config, f, indent=2, default=str)
 
@@ -429,8 +457,11 @@ def send_promotion_request(experiment_id: str, market_id: str,
 
     # Metrics where lower is better
     _LOWER_IS_BETTER = {'max_drawdown', 'max_drawdown_pct', 'max_dd', 'drawdown'}
-    _PCT_METRICS = {'cagr', 'cagr_pct', 'max_drawdown', 'max_drawdown_pct', 'max_dd',
-                    'win_rate', 'win_rate_pct', 'drawdown', 'total_return'}
+    # Decimal-form percentages (0.38 = 38%) — need ×100 for display
+    _DECIMAL_PCT = {'cagr', 'max_drawdown', 'max_dd', 'drawdown', 'total_return',
+                    'win_rate'}
+    # Already-percent metrics (38.14 = 38.14%) — display as-is, no ×100
+    _ALREADY_PCT = {'cagr_pct', 'max_drawdown_pct', 'win_rate_pct'}
     _LABELS = {
         'sharpe': 'Sharpe', 'cagr': 'CAGR', 'cagr_pct': 'CAGR',
         'max_drawdown': 'Max DD', 'max_drawdown_pct': 'Max DD', 'max_dd': 'Max DD',
@@ -452,7 +483,6 @@ def send_promotion_request(experiment_id: str, market_id: str,
         c = data.get('candidate', 0)
         delta = data.get('delta', 0)
         inverted = metric in _LOWER_IS_BETTER
-        is_pct = metric in _PCT_METRICS
         label = _LABELS.get(metric, metric)
 
         improved = (delta < 0) if inverted else (delta > 0)
@@ -460,8 +490,12 @@ def send_promotion_request(experiment_id: str, market_id: str,
         icon = "🟢" if improved else "🔴" if worsened else "⚪"
         arrow = "↑" if delta > 0 else "↓" if delta < 0 else "→"
 
-        if is_pct:
+        if metric in _DECIMAL_PCT:
+            # Values are decimals (e.g. 0.38), multiply by 100 for display
             lines.append(f"  {icon} {_esc(label)}: {b*100:.1f}% → {c*100:.1f}% ({delta*100:+.1f}pp {arrow})")
+        elif metric in _ALREADY_PCT:
+            # Values are already in percent (e.g. 38.14), display as-is
+            lines.append(f"  {icon} {_esc(label)}: {b:.1f}% → {c:.1f}% ({delta:+.1f}pp {arrow})")
         else:
             lines.append(f"  {icon} {_esc(label)}: {b:.3f} → {c:.3f} ({delta:+.3f} {arrow})")
 

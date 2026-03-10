@@ -119,3 +119,9 @@ filter_test sets `s_cfg[filter_param] = value` but many strategy params are nest
 
 ### 33. Parallel research runner has file locking issues
 `run_wave2_parallel.py` with ProcessPoolExecutor causes concurrent writes to queue.json and journal.json. Updates are lost silently. Sequential `--run-all` works correctly. Fix parallel runner's file locking before using it for production runs.
+
+### 34. stage_candidate() clobbers reoptimizer output
+`stage_candidate()` starts from `get_active_config()` and applies `strategy_params` on top. When the research-loop agent calls it for reoptimization experiments without passing `strategy_params`, it overwrites the candidate file (already correctly saved by `reoptimize_parallel.py`) with a verbatim copy of the active config. This silently invalidated wave5_full_reopt results and caused OOS to validate the wrong config. **Fix:** `stage_candidate()` now preserves existing candidate files when no new changes are requested. **Rule:** Any function that writes to a path that another process also writes to must check-before-clobber.
+
+### 35. Double-multiplication bug in Telegram promotion formatter
+`run_backtest()` returns `cagr_pct`, `max_drawdown_pct`, `win_rate_pct` already in percent form (e.g. 38.14 = 38.14%). The Telegram formatter in `send_promotion_request()` had a single `_PCT_METRICS` set that treated ALL percent-related metrics as decimals and multiplied by 100 — producing 3814% CAGR. **Fix:** Split into `_DECIMAL_PCT` (needs ×100) and `_ALREADY_PCT` (display as-is). **Rule:** When a metric name includes `_pct`, the value is already in percent — never multiply again.

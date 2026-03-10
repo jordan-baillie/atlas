@@ -1,6 +1,6 @@
 # Atlas Research Knowledge Base
 
-> **Auto-generated:** 2026-03-09 12:29 UTC | **Experiments:** 35 unique | **Waves:** 5
+> **Auto-generated:** 2026-03-10 05:23 UTC | **Experiments:** 41 unique | **Waves:** 5
 >
 > This is the AI agent's internal knowledge base. Read this file at session start.
 > Regenerate: `python3 scripts/build_obsidian_vault.py --force`
@@ -30,19 +30,19 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
 ### ✅ Active Strategies
 
 #### Mean Reversion
-- **Metrics:** Best Sharpe: 0.64 | Worst: -2.10 | 8 experiments (1 pass, 6 fail)
+- **Metrics:** Best Sharpe: 0.64 | Worst: -2.10 | 9 experiments (1 pass, 6 fail)
 - **Key findings:**
   - RSI(14) is clearly optimal for MR on SP500 — confirmed empirically
   - DO NOT try RSI period optimization again — this is definitive
   - max_hold=5 promotion BLOCKED until OOS can be properly executed
 
 #### Opening Gap
-- **Metrics:** 1 experiments (0 pass, 1 fail)
+- **Metrics:** Best Sharpe: 0.62 | 2 experiments (0 pass, 1 fail)
 - **Key findings:**
   - PATTERN: OG generates very few solo trades on SP500 with current filters
 
 #### Trend Following
-- **Metrics:** 1 experiments (0 pass, 1 fail)
+- **Metrics:** Best Sharpe: 0.62 | 2 experiments (0 pass, 1 fail)
 - **Key findings:**
   - SAME PATTERN: Solo strategy on $4K equity shows negative Sharpe due to fee drag
 
@@ -61,6 +61,12 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
   - Edge not statistically significant (p=0.27)
   - ALSO HAD CODE BUG: calc_position_size returns dict, code compared dict <= 0
   - Fixed: pos_result["shares"] extraction. Does not change backtest outcome (only affected expensive stocks)
+
+#### Consecutive Down Days
+- **Metrics:** 1 experiments (0 pass, 1 fail)
+- **Key findings:**
+  - CDD strategy missing check_exits() abstract method — incomplete implementation
+  - Fix code before re-queuing
 
 #### Lower Band Reversion
 - **Metrics:** Best Sharpe: 0.71 | Worst: -2.08 | 5 experiments (1 pass, 2 fail)
@@ -103,7 +109,7 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
 ### 🔧 Portfolio Filters
 
 #### Combined Portfolio
-- **Metrics:** 1 experiments (0 pass, 1 fail)
+- **Metrics:** Best Sharpe: 0.75 | Worst: 0.62 | 3 experiments (1 pass, 2 fail)
 - **Key findings:**
   - KEY INSIGHT: MR buys oversold stocks during panic, which is the high-VIX regime
   - CLOSED: Do not re-test VIX filters on combined portfolio
@@ -139,7 +145,7 @@ OOS: Sharpe 1.23, 108 trades | Perturbation: 0/10 negative | Walk-forward: 76% p
 | 2 | Enhanced Mean Reversion Alpha — Connors RSI(2) strategy + volume filter promotion + exit optimization | 6 | ConnorsRSI2 fails, exit sweep inconclusive, infra bugs in filter tests |
 | 3 | New strategy: Triple RSI + MR alpha stacking — high-conviction signals and entry filter optimization | 5 | RSI(14) optimal, IBS/vol redundant, max_hold=5 promising (p=0.30) |
 | 4 | New strategy: Lower Band Reversion — IBS-based mean reversion with published 2.11 Sharpe edge | 7 | LBR fails (ETF→stock), MR hold5 OOS fails, MR strength exit inferior |
-| 5 | Full Portfolio Reoptimization + Consecutive Down Days — Maximize Returns and Add Uncorrelated Alpha | 0 | Queued: re-optimization + CDD strategy |
+| 5 | Full Portfolio Reoptimization + Consecutive Down Days — Maximize Returns and Add Uncorrelated Alpha | 6 | Queued: re-optimization + CDD strategy |
 
 ---
 
@@ -200,6 +206,13 @@ Searchable index of every learning extracted from experiments.
 - KEY INSIGHT: MR buys oversold stocks during panic, which is the high-VIX regime
 - VIX filter might work for trend-only portfolio but not MR-heavy one
 - CLOSED: Do not re-test VIX filters on combined portfolio
+- Coordinate descent post-SMA200 yields +0.13 Sharpe — confirms reopt hypothesis
+- MR RSI period optimized 14→5; sma200_filter disabled for MR and OG (counterintuitive)
+- OG was completely broken at baseline (score -999), now viable at 14.12
+- Trade count improved 101→124, good for statistical reliability
+- NEEDS OOS VALIDATION before promotion
+- Pools are no-op with 3 strategies + 15 max positions — no contention
+- Pools only matter when 4+ strategies compete for limited slots
 
 ### ConnorsRSI2
 - ConnorsRSI2 generates 249 trades with 57% WR — signal quality decent
@@ -209,6 +222,10 @@ Searchable index of every learning extracted from experiments.
 - Fixed: pos_result["shares"] extraction. Does not change backtest outcome (only affected expensive stocks)
 - HYPOTHESIS REJECTED: RSI(2) solo is unprofitable with current params on SP500 at $4K equity
 - POSSIBLE RETRY: With tighter stop (1.5-2x ATR) and higher equity, risk-reward may improve
+
+### Consecutive Down Days
+- CDD strategy missing check_exits() abstract method — incomplete implementation
+- Fix code before re-queuing
 
 ### Lower Band Reversion
 - LBR with published SPY params on individual SP500 stocks: Sharpe -2.08, 270 trades, 58% WR, PF 0.85
@@ -274,6 +291,7 @@ Searchable index of every learning extracted from experiments.
 - PF barely above 1.0 (1.03) — essentially random after applying this exit rule
 - Edge not significant (p=0.88) — the worst p-value of any MR experiment
 - CONCLUSION: Simple 'strength exit' is inferior to max_hold_days for MR. Price-based exits add noise, not alpha.
+- MR profit target has negligible impact on combined portfolio — noise-level
 
 ### Momentum Breakout
 - Momentum breakout generates 342 trades with 48.5% WR — sufficient signal activity for viability
@@ -302,6 +320,8 @@ Searchable index of every learning extracted from experiments.
 - PATTERN: OG generates very few solo trades on SP500 with current filters
 - SMA-200 filter + gap threshold + RSI < 25 + volume surge = very selective
 - Need to relax one filter (remove RSI or lower gap threshold) for more trades before testing exits
+- OG generates <10 trades — gap_threshold parameter is meaningless
+- OG needs reopt params to become active
 
 ### Portfolio Filter
 - Promoted to /root/atlas/config/versions/asx_v9.3.json
@@ -361,6 +381,7 @@ Searchable index of every learning extracted from experiments.
 - Current default (2.5x) is near-optimal based on this sweep
 - 77 trades across all variants — consistent trade count means stop width only affects P&L per trade
 - SAME PATTERN: Solo strategy on $4K equity shows negative Sharpe due to fee drag
+- TF trailing stop 3.5 marginally better than 3.0, wider stops worse — confirms Wave 4
 
 ### Triple RSI
 - Triple RSI (RSI + streak + acceleration) fails on SP500 solo — too restrictive

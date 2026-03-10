@@ -354,10 +354,87 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-03-09",
+      "equity": 3994.43,
+      "cash": 2699.06,
+      "positions_value": 1295.37,
+      "num_positions": 6,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "XOP",
+          "strategy": "unknown",
+          "shares": 8,
+          "entry_price": 137.759,
+          "current_price": 161.82000732421875,
+          "unrealized_pnl": 192.49,
+          "mae": 0.0,
+          "mfe": 17.47,
+          "holding_days": -1
+        },
+        {
+          "ticker": "RTX",
+          "strategy": "unknown",
+          "shares": 6,
+          "entry_price": 207.59,
+          "current_price": 208.22999572753906,
+          "unrealized_pnl": 3.84,
+          "mae": 0.0,
+          "mfe": 0.31,
+          "holding_days": -1
+        },
+        {
+          "ticker": "PSQ",
+          "strategy": "unknown",
+          "shares": 33,
+          "entry_price": 31.2,
+          "current_price": 30.739999771118164,
+          "unrealized_pnl": -15.18,
+          "mae": -1.47,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "INSW",
+          "strategy": "unknown",
+          "shares": 7,
+          "entry_price": 76.891,
+          "current_price": 75.76000213623047,
+          "unrealized_pnl": -7.92,
+          "mae": -1.47,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CIBR",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 63.8,
+          "current_price": 66.27999877929688,
+          "unrealized_pnl": 24.8,
+          "mae": 0.0,
+          "mfe": 3.89,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CHTR",
+          "strategy": "trend_following",
+          "shares": 1,
+          "entry_price": 228.38,
+          "current_price": 222.80999755859375,
+          "unrealized_pnl": -5.57,
+          "mae": -2.44,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 4003.86,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-07T08:02:38.508434"
+  "last_saved": "2026-03-10T08:00:51.450068"
 }

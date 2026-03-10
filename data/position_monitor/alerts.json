@@ -1018,5 +1018,191 @@
     "value": null,
     "source": "iran_monitor_agent",
     "timestamp": "2026-03-09T20:06:26"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_floor",
+    "condition_label": "NEM above $100 floor",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 111.31,
+    "timestamp": "2026-03-10T00:06:08"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_ma50",
+    "condition_label": "NEM above 50-day MA",
+    "old_status": "warning",
+    "new_status": "failing",
+    "value": 111.31,
+    "timestamp": "2026-03-10T00:06:08"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "type": "health_critical",
+    "message": "Health score dropped to 4.0/10 \u2014 review thesis",
+    "old_score": 5.5,
+    "new_score": 4.0,
+    "timestamp": "2026-03-10T00:06:08"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 593.4,
+    "timestamp": "2026-03-10T00:06:10"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T00:06:38"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_floor",
+    "condition_label": "NEM above $100 floor",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": 117.01,
+    "timestamp": "2026-03-10T08:00:56"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_ma50",
+    "condition_label": "NEM above 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": 117.01,
+    "timestamp": "2026-03-10T08:00:56"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 607.24,
+    "timestamp": "2026-03-10T08:00:58"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_spx5d",
+    "condition_label": "S&P 500 5-day trend declining",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T08:06:02"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_audusd",
+    "condition_label": "AUD/USD rate direction",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T08:06:05"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T12:04:27"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 607.24,
+    "timestamp": "2026-03-10T12:05:00"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_target",
+    "condition_label": "WDS not overextended (vs $27 target)",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": 29.56,
+    "timestamp": "2026-03-10T12:05:01"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T16:06:05"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_audusd",
+    "condition_label": "AUD/USD rate direction",
+    "old_status": "warning",
+    "new_status": "failing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T16:06:14"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 607.24,
+    "timestamp": "2026-03-10T16:06:56"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_target",
+    "condition_label": "WDS not overextended (vs $27 target)",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 30.18,
+    "timestamp": "2026-03-10T16:06:57"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-10T16:07:31"
   }
 ]

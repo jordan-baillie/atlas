@@ -3131,5 +3131,399 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_full_reopt",
+    "timestamp": "2026-03-10T01:53:41.284762+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": null,
+    "hypothesis": "SMA-200 filter (promoted v2.1) fundamentally changed the trade mix (443\u2192270 trades). All MR/TF/OG parameters were optimized WITHOUT SMA-200 active. Re-running coordinate descent with SMA-200 enabled should find better parameter combinations. ASX reopt in Wave 1 yielded +0.17 Sharpe improvement from a similar post-filter reopt.",
+    "verdict": "fail",
+    "key_metrics": {
+      "trades": 124,
+      "cagr": 0.381395,
+      "sharpe": 0.7486,
+      "max_dd": 0.046987,
+      "pf": 3.7784,
+      "wr": 0.5565,
+      "total_pnl": 3397.9
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_pool_toggle",
+    "timestamp": "2026-03-10T02:10:33.468279+00:00",
+    "market": "sp500",
+    "category": "portfolio",
+    "strategy": null,
+    "hypothesis": "Enabling allocation pools (TF:5, MR:5, OG:3) with current 3 active strategies should produce results within 5% of no-pools baseline. Pool totals (13) are under max_positions (15), so no crowding. This validates the pool system works correctly before adding strategies.",
+    "verdict": "fail",
+    "key_metrics": {
+      "total_trades": 101,
+      "cagr_pct": 29.5155,
+      "sharpe": 0.6183,
+      "sortino": 11.3567,
+      "max_drawdown_pct": 3.8115,
+      "win_rate_pct": 51.49,
+      "profit_factor": 3.7734,
+      "total_pnl": 2546.9,
+      "avg_trade": 25.22,
+      "final_equity": 6584.98,
+      "expectancy_r": 1.2766,
+      "avg_r": 1.2766,
+      "r_count": 101,
+      "edge_p_value": 0.327502,
+      "edge_significant": false,
+      "var_95_pct": 0.31,
+      "cvar_95_pct": 0.479,
+      "calmar": 7.7438,
+      "mc_p95_drawdown_pct": 8.64,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 58,
+          "total_pnl": 2596.37,
+          "win_rate_pct": 50.0
+        },
+        "mean_reversion": {
+          "trades": 43,
+          "total_pnl": -49.47,
+          "win_rate_pct": 53.5
+        }
+      },
+      "variant_name": "pools_off",
+      "variant_value": false
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_mr_profit_sweep",
+    "timestamp": "2026-03-10T02:22:10.456359+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "Current MR profit target (1.5x ATR) was set pre-SMA200. With the trend filter active, winners may run further (in uptrend). A higher profit target could capture more profit per trade. Sweeping 1.0-3.0x in combined mode to find optimal take-profit level.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 97,
+      "cagr_pct": 29.5097,
+      "sharpe": 0.6187,
+      "sortino": 13.5374,
+      "max_drawdown_pct": 3.1633,
+      "win_rate_pct": 51.55,
+      "profit_factor": 4.3601,
+      "total_pnl": 2570.02,
+      "avg_trade": 26.5,
+      "final_equity": 6584.41,
+      "expectancy_r": 1.3325,
+      "avg_r": 1.3325,
+      "r_count": 97,
+      "edge_p_value": 0.326159,
+      "edge_significant": false,
+      "var_95_pct": 0.32,
+      "cvar_95_pct": 0.439,
+      "calmar": 9.3288,
+      "mc_p95_drawdown_pct": 6.93,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 59,
+          "total_pnl": 2491.68,
+          "win_rate_pct": 49.2
+        },
+        "mean_reversion": {
+          "trades": 38,
+          "total_pnl": 78.34,
+          "win_rate_pct": 55.3
+        }
+      },
+      "param_value": 2.5,
+      "delta_vs_baseline": {
+        "cagr_pct": -0.0058,
+        "sharpe": 0.0004,
+        "sortino": 2.1807,
+        "max_drawdown_pct": -0.6482,
+        "win_rate_pct": 0.06,
+        "profit_factor": 0.5867,
+        "total_pnl": 23.12,
+        "total_trades": -4
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_tf_trail_sweep",
+    "timestamp": "2026-03-10T02:33:56.724099+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "trend_following",
+    "hypothesis": "TF trailing stop (currently 2.5x ATR) determines how much room trends have to breathe. With SMA-200 filtering out downtrends, surviving trades are higher quality and may benefit from tighter or wider stops. Sweep 1.5-3.5x in combined mode.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 99,
+      "cagr_pct": 29.618,
+      "sharpe": 0.62,
+      "sortino": 11.8058,
+      "max_drawdown_pct": 3.3601,
+      "win_rate_pct": 52.53,
+      "profit_factor": 3.6586,
+      "total_pnl": 2559.07,
+      "avg_trade": 25.85,
+      "final_equity": 6595.02,
+      "expectancy_r": 1.3008,
+      "avg_r": 1.3008,
+      "r_count": 99,
+      "edge_p_value": 0.328223,
+      "edge_significant": false,
+      "var_95_pct": 0.316,
+      "cvar_95_pct": 0.468,
+      "calmar": 8.8146,
+      "mc_p95_drawdown_pct": 8.9,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 59,
+          "total_pnl": 2608.53,
+          "win_rate_pct": 49.2
+        },
+        "mean_reversion": {
+          "trades": 40,
+          "total_pnl": -49.46,
+          "win_rate_pct": 57.5
+        }
+      },
+      "param_value": 3.5,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.1025,
+        "sharpe": 0.0017,
+        "sortino": 0.4491,
+        "max_drawdown_pct": -0.4514,
+        "win_rate_pct": 1.04,
+        "profit_factor": -0.1148,
+        "total_pnl": 12.17,
+        "total_trades": -2
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_og_gap_sweep",
+    "timestamp": "2026-03-10T02:45:58.602181+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "opening_gap",
+    "hypothesis": "Opening gap only generates 9 trades over the backtest period with current thresholds. The -1.5% gap threshold may be too strict with SMA-200 filtering. Relaxing gap threshold to -1.0% or -0.5% could increase trade count while maintaining quality.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 101,
+      "cagr_pct": 29.5155,
+      "sharpe": 0.6183,
+      "sortino": 11.3567,
+      "max_drawdown_pct": 3.8115,
+      "win_rate_pct": 51.49,
+      "profit_factor": 3.7734,
+      "total_pnl": 2546.9,
+      "avg_trade": 25.22,
+      "final_equity": 6584.98,
+      "expectancy_r": 1.2766,
+      "avg_r": 1.2766,
+      "r_count": 101,
+      "edge_p_value": 0.327502,
+      "edge_significant": false,
+      "var_95_pct": 0.31,
+      "cvar_95_pct": 0.479,
+      "calmar": 7.7438,
+      "mc_p95_drawdown_pct": 8.64,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 58,
+          "total_pnl": 2596.37,
+          "win_rate_pct": 50.0
+        },
+        "mean_reversion": {
+          "trades": 43,
+          "total_pnl": -49.47,
+          "win_rate_pct": 53.5
+        }
+      },
+      "param_value": -0.02,
+      "delta_vs_baseline": {
+        "cagr_pct": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown_pct": 0.0,
+        "win_rate_pct": 0.0,
+        "profit_factor": 0.0,
+        "total_pnl": 0.0,
+        "total_trades": 0
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_full_reopt",
+    "timestamp": "2026-03-10T03:08:20.648951+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "combined",
+    "hypothesis": "Post-SMA200 reoptimization should find better params since all were tuned without SMA200",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.7486,
+      "cagr_pct": 38.14,
+      "max_dd_pct": 4.7,
+      "trades": 124,
+      "pf": 3.778
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.131,
+      "cagr_pct": 8.62,
+      "trades": 23
+    },
+    "learnings": [
+      "Coordinate descent post-SMA200 yields +0.13 Sharpe \u2014 confirms reopt hypothesis",
+      "MR RSI period optimized 14\u21925; sma200_filter disabled for MR and OG (counterintuitive)",
+      "OG was completely broken at baseline (score -999), now viable at 14.12",
+      "Trade count improved 101\u2192124, good for statistical reliability",
+      "NEEDS OOS VALIDATION before promotion"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_pool_toggle",
+    "timestamp": "2026-03-10T03:08:20.648966+00:00",
+    "market": "sp500",
+    "category": "portfolio",
+    "strategy": "combined",
+    "hypothesis": "Allocation pools should not degrade current 3-strategy portfolio",
+    "verdict": "fail",
+    "key_metrics": {
+      "sharpe": 0.6183,
+      "cagr_pct": 29.52,
+      "max_dd_pct": 3.81,
+      "trades": 101
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0,
+      "cagr_pct": 0
+    },
+    "learnings": [
+      "Pools are no-op with 3 strategies + 15 max positions \u2014 no contention",
+      "Pools only matter when 4+ strategies compete for limited slots"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_mr_profit_sweep",
+    "timestamp": "2026-03-10T03:08:20.648971+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "mean_reversion",
+    "hypothesis": "MR profit_target_atr_mult sweep should find better exit level",
+    "verdict": "partial",
+    "key_metrics": {
+      "sharpe": 0.6187,
+      "max_dd_pct": 3.16,
+      "trades": 97
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.0004
+    },
+    "learnings": [
+      "MR profit target has negligible impact on combined portfolio \u2014 noise-level"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_tf_trail_sweep",
+    "timestamp": "2026-03-10T03:08:20.648974+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "trend_following",
+    "hypothesis": "TF trailing_stop_atr_mult 3.5 slightly better than 3.0",
+    "verdict": "partial",
+    "key_metrics": {
+      "sharpe": 0.62,
+      "max_dd_pct": 3.36,
+      "trades": 99
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0.0017
+    },
+    "learnings": [
+      "TF trailing stop 3.5 marginally better than 3.0, wider stops worse \u2014 confirms Wave 4"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_og_gap_sweep",
+    "timestamp": "2026-03-10T03:08:20.648977+00:00",
+    "market": "sp500",
+    "category": "param_drift",
+    "strategy": "opening_gap",
+    "hypothesis": "OG gap_threshold sweep \u2014 current -0.02 may be suboptimal",
+    "verdict": "partial",
+    "key_metrics": {
+      "sharpe": 0.6183,
+      "trades": 101
+    },
+    "delta_vs_baseline": {
+      "sharpe": 0
+    },
+    "learnings": [
+      "OG generates <10 trades \u2014 gap_threshold parameter is meaningless",
+      "OG needs reopt params to become active"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "wave5_cdd_solo",
+    "timestamp": "2026-03-10T03:08:20.648979+00:00",
+    "market": "sp500",
+    "category": "new_strategy",
+    "strategy": "consecutive_down_days",
+    "hypothesis": "CDD captures short-term reversal on large-cap stocks",
+    "verdict": "fail",
+    "key_metrics": {},
+    "delta_vs_baseline": {},
+    "learnings": [
+      "CDD strategy missing check_exits() abstract method \u2014 incomplete implementation",
+      "Fix code before re-queuing"
+    ],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
   }
 ]

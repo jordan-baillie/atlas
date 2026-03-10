@@ -42,13 +42,13 @@ providing uncorrelated alpha.
 
 | Experiment | Verdict | Strategy | Sharpe | Promoted |
 |------------|---------|----------|--------|----------|
-| [[wave5_full_reopt]] | — | — | — | |
+| [[wave5_full_reopt]] | `pass` | Combined Portfolio | 0.75 |  |
 | [[wave5_reopt_oos]] | — | — | — | |
-| [[wave5_mr_profit_sweep]] | — | — | — | |
-| [[wave5_tf_trail_sweep]] | — | — | — | |
-| [[wave5_og_gap_sweep]] | — | — | — | |
-| [[wave5_pool_toggle]] | — | — | — | |
-| [[wave5_cdd_solo]] | — | — | — | |
+| [[wave5_mr_profit_sweep]] | `partial` | Mean Reversion | 0.62 |  |
+| [[wave5_tf_trail_sweep]] | `partial` | Trend Following | 0.62 |  |
+| [[wave5_og_gap_sweep]] | `partial` | Opening Gap | 0.62 |  |
+| [[wave5_pool_toggle]] | `fail` | Combined Portfolio | 0.62 |  |
+| [[wave5_cdd_solo]] | `fail` | Consecutive Down Days | N/A |  |
 | [[wave5_cdd_opt]] | — | — | — | |
 | [[wave5_cdd_combined]] | — | — | — | |
 | [[wave5_cdd_oos]] | — | — | — | |
