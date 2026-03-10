@@ -249,6 +249,108 @@ class ConsecutiveDownDays(BaseStrategy):
         self._logger.info(f"ConsecutiveDownDays: {len(signals)} signals from {len(data)} tickers")
         return signals
 
+    def check_exits(
+        self,
+        data: Dict[str, pd.DataFrame],
+        positions: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """Check exit conditions for held consecutive_down_days positions.
+
+        Exit rules (in priority order):
+          1. Stop hit: current price <= stop_price
+          2. Profit target: price >= take_profit (if profit_target_atr_mult > 0)
+          3. Time exit: held >= max_hold_days
+          4. Strength exit (exit_rule == "strength"): close > previous close
+          5. SMA exit (exit_rule == "sma"): close > SMA(sma_exit_period)
+
+        Returns:
+            List of dicts with keys: ticker, reason, exit_price, details.
+        """
+        exits: List[Dict[str, Any]] = []
+
+        for pos in positions:
+            if pos.get("strategy") != self.name:
+                continue
+
+            ticker = pos.get("ticker")
+            if not ticker or ticker not in data:
+                continue
+
+            df = data[ticker]
+            if len(df) < 2:
+                continue
+
+            current_close = df["close"].iloc[-1]
+            prev_close = df["close"].iloc[-2]
+            stop_price = pos.get("stop_price", 0.0)
+            take_profit = pos.get("take_profit")
+            entry_date = pos.get("entry_date")
+
+            # Days held
+            days_held = 0
+            if entry_date:
+                if isinstance(entry_date, str):
+                    entry_date = datetime.fromisoformat(entry_date)
+                days_held = (df.index[-1] - pd.Timestamp(entry_date)).days
+
+            reason = None
+            details = None
+
+            # 1. Stop loss hit
+            if current_close <= stop_price:
+                reason = "stop_hit"
+                details = (
+                    f"{ticker} hit stop: close {current_close:.2f} <= stop {stop_price:.2f}, "
+                    f"held {days_held} days"
+                )
+
+            # 2. Profit target hit
+            elif (
+                self.profit_target_atr_mult > 0
+                and take_profit is not None
+                and current_close >= take_profit
+            ):
+                reason = "take_profit"
+                details = (
+                    f"{ticker} take profit: close {current_close:.2f} >= target {take_profit:.2f}, "
+                    f"held {days_held} days"
+                )
+
+            # 3. Time exit
+            elif days_held >= self.max_hold_days:
+                reason = "time_exit"
+                details = f"{ticker} time exit: held {days_held} days >= max {self.max_hold_days}"
+
+            # 4. Strength exit: bounce completed — close > previous close
+            elif self.exit_rule == "strength" and current_close > prev_close:
+                reason = "signal_exit"
+                details = (
+                    f"{ticker} strength exit: close {current_close:.2f} > prev_close {prev_close:.2f}, "
+                    f"held {days_held} days"
+                )
+
+            # 5. SMA exit: close crossed above short SMA
+            elif self.exit_rule == "sma":
+                sma = df["close"].rolling(self.sma_exit_period).mean()
+                sma_val = sma.iloc[-1]
+                if not pd.isna(sma_val) and current_close > sma_val:
+                    reason = "signal_exit"
+                    details = (
+                        f"{ticker} SMA exit: close {current_close:.2f} > SMA({self.sma_exit_period}) "
+                        f"{sma_val:.2f}, held {days_held} days"
+                    )
+
+            if reason:
+                exits.append({
+                    "ticker": ticker,
+                    "reason": reason,
+                    "exit_price": current_close,
+                    "details": details or reason,
+                })
+
+        self._logger.debug(f"ConsecutiveDownDays: {len(exits)} exit signals from {len(positions)} positions")
+        return exits
+
     def get_exit_signals(
         self,
         positions: List[Dict[str, Any]],

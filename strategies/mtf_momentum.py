@@ -40,10 +40,16 @@ class MTFMomentum(BaseStrategy):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         strat_cfg = config.get("strategies", {}).get("mtf_momentum", {})
-        # Weekly parameters
-        self.weekly_sma_period = strat_cfg.get("weekly_sma_period", 20)
+        # Weekly parameters — support "weekly_sma" as alias for "weekly_sma_period"
+        self.weekly_sma_period = strat_cfg.get(
+            "weekly_sma_period", strat_cfg.get("weekly_sma", 20)
+        )
         self.weekly_rsi_period = strat_cfg.get("weekly_rsi_period", 14)
         self.weekly_rsi_min = strat_cfg.get("weekly_rsi_min", 50)
+        # Minimum weekly confirmations required (default 3 = all must pass).
+        # When weekly data is limited the strategy falls back to daily indicators
+        # and automatically lowers this to min(2, min_weekly_confirmation).
+        self.min_weekly_confirmation = strat_cfg.get("min_weekly_confirmation", 3)
         # Daily parameters
         self.daily_rsi_period = strat_cfg.get("daily_rsi_period", 14)
         self.daily_rsi_max = strat_cfg.get("daily_rsi_max", 40)
@@ -117,7 +123,7 @@ class MTFMomentum(BaseStrategy):
                 if not isinstance(df.index, pd.DatetimeIndex):
                     continue
 
-                # Weekly trend check
+                # Weekly trend check — with graceful degradation when weekly data is sparse
                 weekly = self._resample_weekly(df)
                 if len(weekly) < self.weekly_sma_period:
                     continue
@@ -125,28 +131,80 @@ class MTFMomentum(BaseStrategy):
                 weekly_sma = weekly["close"].rolling(self.weekly_sma_period).mean()
                 weekly_rsi = calc_rsi(weekly["close"], self.weekly_rsi_period)
 
-                if weekly["close"].iloc[-1] <= weekly_sma.iloc[-1]:
-                    continue
-                if weekly_rsi.iloc[-1] < self.weekly_rsi_min:
-                    continue
+                valid_weekly_count = int(weekly_sma.notna().sum())
+                # Fall back to daily when fewer than 25 valid weekly SMA bars are available
+                # (typical when weekly_sma_period is large relative to history length).
+                use_daily_fallback = valid_weekly_count < 25
 
-                # Daily pullback check
+                # Always compute daily indicators — needed in both paths
                 daily_rsi = calc_rsi(df["close"], self.daily_rsi_period)
                 daily_sma = df["close"].rolling(self.daily_sma_period).mean()
                 atr_series = calc_atr(df["high"], df["low"], df["close"], self.atr_period)
                 current_atr = float(atr_series.iloc[-1])
-
-                if daily_rsi.iloc[-1] >= self.daily_rsi_max:
-                    continue
-
                 today_close = df["close"].iloc[-1]
                 sma_val = daily_sma.iloc[-1]
-                if pd.isna(sma_val) or pd.isna(current_atr):
+
+                if pd.isna(current_atr):
                     continue
 
-                pct_from_sma = abs(today_close - sma_val) / sma_val
-                if pct_from_sma > self.pullback_sma_pct:
-                    continue
+                if use_daily_fallback:
+                    # ── Daily-timeframe trend confirmation (fallback) ──────────────────────
+                    # Equivalent daily SMA lookback: weekly_sma_period weeks × 5 days/week
+                    fallback_period = min(self.weekly_sma_period * 5, len(df) - 1)
+                    daily_long_sma = df["close"].rolling(fallback_period).mean()
+
+                    self._logger.info(
+                        f"{ticker}: limited weekly data ({valid_weekly_count} valid bars for "
+                        f"SMA-{self.weekly_sma_period}), falling back to daily SMA-{fallback_period}"
+                    )
+
+                    # Score three daily-equivalent conditions (require ≥ 2 when data limited)
+                    score = 0
+
+                    # Condition 1: price above long-term daily SMA (trend)
+                    daily_long_val = daily_long_sma.iloc[-1]
+                    if not pd.isna(daily_long_val) and today_close > daily_long_val:
+                        score += 1
+
+                    # Condition 2: daily RSI indicates pullback / not overbought
+                    d_rsi = daily_rsi.iloc[-1]
+                    if not pd.isna(d_rsi) and d_rsi < self.daily_rsi_max:
+                        score += 1
+
+                    # Condition 3: price near short-term SMA support
+                    if not pd.isna(sma_val) and sma_val > 0:
+                        pct = abs(today_close - sma_val) / sma_val
+                        if pct <= self.pullback_sma_pct:
+                            score += 1
+
+                    required = min(2, self.min_weekly_confirmation)
+                    if score < required:
+                        continue
+
+                    # Use daily SMA as pct_from_sma for confidence calculation
+                    pct_from_sma = (
+                        abs(today_close - sma_val) / sma_val
+                        if not pd.isna(sma_val) and sma_val > 0
+                        else self.pullback_sma_pct
+                    )
+
+                else:
+                    # ── Normal weekly trend confirmation ────────────────────────────────────
+                    if weekly["close"].iloc[-1] <= weekly_sma.iloc[-1]:
+                        continue
+                    if weekly_rsi.iloc[-1] < self.weekly_rsi_min:
+                        continue
+
+                    # Daily pullback conditions (strict, full data)
+                    if daily_rsi.iloc[-1] >= self.daily_rsi_max:
+                        continue
+
+                    if pd.isna(sma_val):
+                        continue
+
+                    pct_from_sma = abs(today_close - sma_val) / sma_val
+                    if pct_from_sma > self.pullback_sma_pct:
+                        continue
 
                 vol_ratio = calc_volume_ratio(df["volume"])
                 if vol_ratio.iloc[-1] < self.vol_min_ratio:
@@ -171,28 +229,44 @@ class MTFMomentum(BaseStrategy):
                     continue
 
                 # Multi-factor confidence scoring (range ~0.65–0.95)
-                w_rsi_val = float(weekly_rsi.iloc[-1])
-                w_sma_val = float(weekly_sma.iloc[-1])
-                w_close = float(weekly["close"].iloc[-1])
-                d_rsi_val = float(daily_rsi.iloc[-1])
+                d_rsi_val = float(daily_rsi.iloc[-1]) if not pd.isna(daily_rsi.iloc[-1]) else 50.0
                 v_ratio = float(vol_ratio.iloc[-1])
 
                 # Base confidence
                 confidence = 0.65
 
-                # Factor 1: Weekly RSI strength — RSI from weekly_rsi_min to 80 → 0..0.10
-                weekly_rsi_bonus = 0.10 * min(1.0, (w_rsi_val - self.weekly_rsi_min) / 30.0)
-                confidence += weekly_rsi_bonus
+                if use_daily_fallback:
+                    # Fallback mode: use daily long-term SMA instead of weekly
+                    daily_long_val = daily_long_sma.iloc[-1] if not pd.isna(daily_long_sma.iloc[-1]) else today_close
+                    daily_ma_spread = (today_close - daily_long_val) / daily_long_val if daily_long_val > 0 else 0.0
 
-                # Factor 2: Weekly trend depth — price above weekly SMA, 0%→5% maps 0..0.08
-                weekly_ma_spread = (w_close - w_sma_val) / w_sma_val
-                confidence += 0.08 * min(1.0, weekly_ma_spread / 0.05)
+                    # Factor 1: Long-term daily trend depth (≡ weekly SMA spread)
+                    confidence += 0.10 * min(1.0, max(0.0, daily_ma_spread / 0.05))
+                    # Factor 2: Trend direction bonus (0.08 fixed for fallback)
+                    confidence += 0.08 * min(1.0, max(0.0, daily_ma_spread / 0.05))
+
+                    trend_desc = f"daily-SMA-{fallback_period} spread={daily_ma_spread*100:.1f}%"
+                else:
+                    w_rsi_val = float(weekly_rsi.iloc[-1]) if not pd.isna(weekly_rsi.iloc[-1]) else self.weekly_rsi_min
+                    w_sma_val = float(weekly_sma.iloc[-1]) if not pd.isna(weekly_sma.iloc[-1]) else today_close
+                    w_close = float(weekly["close"].iloc[-1])
+                    weekly_ma_spread = (w_close - w_sma_val) / w_sma_val if w_sma_val > 0 else 0.0
+
+                    # Factor 1: Weekly RSI strength — RSI from weekly_rsi_min to 80 → 0..0.10
+                    weekly_rsi_bonus = 0.10 * min(1.0, max(0.0, (w_rsi_val - self.weekly_rsi_min) / 30.0))
+                    confidence += weekly_rsi_bonus
+
+                    # Factor 2: Weekly trend depth — price above weekly SMA, 0%→5% → 0..0.08
+                    confidence += 0.08 * min(1.0, max(0.0, weekly_ma_spread / 0.05))
+
+                    trend_desc = f"weekly RSI={w_rsi_val:.1f}, spread={weekly_ma_spread*100:.1f}%"
 
                 # Factor 3: Daily pullback quality — lower RSI = more oversold → 0..0.10
                 confidence += 0.10 * max(0.0, 1.0 - d_rsi_val / self.daily_rsi_max)
 
                 # Factor 4: SMA proximity — closer to support = better → 0..0.07
-                confidence += 0.07 * max(0.0, 1.0 - pct_from_sma / self.pullback_sma_pct)
+                sma_pct_cap = max(self.pullback_sma_pct, 0.001)
+                confidence += 0.07 * max(0.0, 1.0 - pct_from_sma / sma_pct_cap)
 
                 # Factor 5: Volume confirmation — above minimum threshold → 0..0.07
                 vol_range = max(1.0, 2.0 - self.vol_min_ratio)
@@ -200,11 +274,15 @@ class MTFMomentum(BaseStrategy):
 
                 confidence = round(min(0.95, confidence), 4)
 
+                mode_note = " [daily-fallback]" if use_daily_fallback else ""
                 rationale = (
-                    f"{ticker} MTF momentum: weekly uptrend confirmed "
-                    f"(RSI={weekly_rsi.iloc[-1]:.1f}, {weekly_ma_spread*100:.1f}% above SMA), "
-                    f"daily pullback (RSI={daily_rsi.iloc[-1]:.1f}), near SMA support "
+                    f"{ticker} MTF momentum{mode_note}: trend confirmed ({trend_desc}), "
+                    f"daily pullback (RSI={d_rsi_val:.1f}), near SMA support "
                     f"({pct_from_sma*100:.2f}% from SMA). Confidence={confidence:.2f}."
+                )
+
+                w_rsi_feat = (
+                    float(weekly_rsi.iloc[-1]) if not pd.isna(weekly_rsi.iloc[-1]) else None
                 )
 
                 signal = Signal(
@@ -220,11 +298,12 @@ class MTFMomentum(BaseStrategy):
                     confidence=round(confidence, 4),
                     rationale=rationale,
                     features={
-                        "weekly_rsi": round(weekly_rsi.iloc[-1], 2),
-                        "daily_rsi": round(daily_rsi.iloc[-1], 2),
+                        "weekly_rsi": round(w_rsi_feat, 2) if w_rsi_feat is not None else None,
+                        "daily_rsi": round(d_rsi_val, 2),
                         "pct_from_sma": round(pct_from_sma, 4),
                         "atr": round(current_atr, 4),
                         "close": round(today_close, 4),
+                        "daily_fallback": use_daily_fallback,
                     },
                     timestamp=datetime.now(),
                 )

@@ -28,46 +28,18 @@ from strategies.opening_gap import OpeningGap
 DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / 'config' / 'active' / 'asx.json'
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / 'backtest' / 'results' / 'v92_oos_validation.json'
-SPLIT_DATE = '2025-06-01'
-WARMUP_DATE = '2025-03-01'  # 3-month overlap for indicator warmup
+# SPLIT_DATE and WARMUP_DATE are now computed dynamically in main() from data.
+# Kept as fallback defaults only.
+_FALLBACK_SPLIT_DATE = '2025-06-01'
 MIN_ROWS = 60
 N_PERTURBATION_TRIALS = 10
 PERTURB_MIN = 0.8
 PERTURB_MAX = 1.2
 RANDOM_SEED = 42
 
-# v9.2 optimized params (the params we are validating)
-OPTIMIZED_PARAMS = {
-    'mean_reversion': {
-        'rsi_oversold': 35,
-        'zscore_entry': -2.0,
-        'atr_stop_mult': 2.5,
-        'profit_target_atr_mult': 1.5,
-        'max_hold_days': 7,
-    },
-    'bb_squeeze': {
-        'bb_std': 3.0,
-        'kc_atr_mult': 2.0,
-        'momentum_period': 30,
-        'atr_stop_mult': 1.0,
-        'trailing_stop_atr_mult': 3.0,
-        'max_hold_days': 20,
-    },
-    'trend_following': {
-        'fast_ma': 20,
-        'slow_ma': 50,
-        'pullback_pct': 0.02,
-        'atr_stop_mult': 3.5,
-        'max_hold_days': 25,
-    },
-    'opening_gap': {
-        'gap_threshold': -0.01,
-        'ibs_confirm': 0.2,
-        'rsi14_max': 40,
-        'atr_stop_mult': 2.0,
-        'max_hold_days': 15,
-    },
-}
+# OPTIMIZED_PARAMS is no longer hardcoded — it is extracted from the validated
+# config file at runtime by extract_perturbable_params().  The old ASX-specific
+# dict has been removed to make the script market-agnostic.
 
 
 def load_data(market='asx'):
@@ -113,6 +85,15 @@ def parse_args():
         default=None,
         help='Output path for validation JSON (default: backtest/results/v92_oos_validation.json)',
     )
+    parser.add_argument(
+        '--market',
+        type=str,
+        default=None,
+        help=(
+            'Market identifier (e.g. asx, sp500). '
+            'Defaults to value in config JSON, then to market inferred from --config-path.'
+        ),
+    )
     return parser.parse_args()
 
 
@@ -120,6 +101,75 @@ def load_config(config_path):
     """Load config JSON."""
     with open(config_path) as f:
         return json.load(f)
+
+
+def detect_market(args_market, config_path, cfg):
+    """Determine the market identifier.
+
+    Priority:
+        1. --market CLI flag
+        2. cfg['market'] field in config JSON
+        3. Inferred from config path (directory or filename containing 'asx' / 'sp500')
+        4. Default: 'asx'
+    """
+    if args_market:
+        return args_market.lower()
+    if cfg.get('market'):
+        return cfg['market'].lower()
+    path_str = str(config_path).lower()
+    for candidate in ('sp500', 'asx', 'nasdaq', 'us', 'au'):
+        if candidate in path_str:
+            return candidate
+    return 'asx'
+
+
+def compute_split_dates(data_all):
+    """Derive IS/OOS split from data: use the last 20% of the date range.
+
+    Returns (split_date_str, warmup_date_str) where warmup_date is 90 days
+    before split_date.
+    """
+    all_dates = []
+    for df in data_all.values():
+        all_dates.extend(df.index.tolist())
+    if not all_dates:
+        warmup_ts = pd.Timestamp(_FALLBACK_SPLIT_DATE) - datetime.timedelta(days=90)
+        return _FALLBACK_SPLIT_DATE, warmup_ts.strftime('%Y-%m-%d')
+
+    min_date = min(all_dates)
+    max_date = max(all_dates)
+    total_days = (max_date - min_date).days
+    # Split at 80% of date range
+    split_offset = int(total_days * 0.80)
+    split_ts = min_date + datetime.timedelta(days=split_offset)
+    warmup_ts = split_ts - datetime.timedelta(days=90)
+    return split_ts.strftime('%Y-%m-%d'), warmup_ts.strftime('%Y-%m-%d')
+
+
+def extract_perturbable_params(cfg):
+    """Extract numeric strategy parameters from the config for perturbation.
+
+    Reads all enabled strategy sections from cfg['strategies'] and extracts
+    every top-level numeric (int/float) param, skipping booleans and 'enabled'.
+    Returns a dict compatible with the shape expected by perturb_params().
+    """
+    result = {}
+    for strat_name, strat_cfg in cfg.get('strategies', {}).items():
+        if not isinstance(strat_cfg, dict):
+            continue
+        if not strat_cfg.get('enabled', True):
+            continue
+        numeric_params = {}
+        for k, v in strat_cfg.items():
+            if k == 'enabled':
+                continue
+            if isinstance(v, bool):
+                continue
+            if isinstance(v, (int, float)):
+                numeric_params[k] = v
+        if numeric_params:
+            result[strat_name] = numeric_params
+    return result
 
 
 def make_strategies(cfg):
@@ -175,14 +225,28 @@ def extract_metrics(result):
     }
 
 
-def perturb_params(cfg, seed):
-    """Create a copy of cfg with randomly perturbed strategy parameters."""
+def perturb_params(cfg, seed, params_dict=None):
+    """Create a copy of cfg with randomly perturbed strategy parameters.
+
+    Args:
+        cfg: Full config dict.
+        seed: RNG seed for reproducibility.
+        params_dict: Dict of {strategy_name: {param_name: original_value}} to
+                     perturb.  Defaults to extract_perturbable_params(cfg) so
+                     that the params come from the config being validated rather
+                     than a hardcoded ASX-specific dict.
+    """
+    if params_dict is None:
+        params_dict = extract_perturbable_params(cfg)
+
     rng = random.Random(seed)
     cfg_new = copy.deepcopy(cfg)
     perturbed_log = {}
 
-    for strat_name, params in OPTIMIZED_PARAMS.items():
+    for strat_name, params in params_dict.items():
         strat_cfg = cfg_new.get('strategies', {}).get(strat_name, {})
+        if not isinstance(strat_cfg, dict):
+            continue
         perturbed_log[strat_name] = {}
         for param_name, orig_val in params.items():
             factor = rng.uniform(PERTURB_MIN, PERTURB_MAX)
@@ -259,23 +323,12 @@ def main():
     config_path = resolve_path(args.config_path, DEFAULT_CONFIG_PATH)
     output_path = resolve_path(args.output_path, DEFAULT_OUTPUT_PATH)
     overall_start = time.time()
-    results = {
-        'validation_type': 'v9.2_oos_validation',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'config_version': 'unknown',
-        'config_path': str(config_path),
-        'output_path': str(output_path),
-        'split_date': SPLIT_DATE,
-        'warmup_date': WARMUP_DATE,
-        'n_perturbation_trials': N_PERTURBATION_TRIALS,
-        'perturbation_range': [PERTURB_MIN, PERTURB_MAX],
-    }
 
     # ----------------------------------------------------------
-    # Load data
+    # Load config and detect market
     # ----------------------------------------------------------
     cfg = load_config(config_path)
-    market = cfg.get('market', 'asx')
+    market = detect_market(args.market, config_path, cfg)
 
     print("=" * 70)
     print(f"ATLAS {market.upper()} OUT-OF-SAMPLE VALIDATION")
@@ -285,12 +338,34 @@ def main():
     print(f"Loaded {len(data_all)} tickers")
     print(f"Config: {cfg.get('version', 'unknown')}")
     print(f"Config path: {config_path}")
-    print(f"Split date: {SPLIT_DATE}")
-    print(f"Warmup date for OOS: {WARMUP_DATE}")
+    print(f"Market: {market}")
+
+    # ----------------------------------------------------------
+    # Derive split and warmup dates from actual data date range
+    # ----------------------------------------------------------
+    SPLIT_DATE, WARMUP_DATE = compute_split_dates(data_all)
+    print(f"Split date (80/20): {SPLIT_DATE}")
+    print(f"Warmup date for OOS (split - 90d): {WARMUP_DATE}")
     print(f"Perturbation trials: {N_PERTURBATION_TRIALS}")
 
-    results['config_version'] = cfg.get('version', 'unknown')
+    # Extract perturbable params from config (not hardcoded)
+    optimized_params = extract_perturbable_params(cfg)
+    print(f"Perturbable strategy params: {list(optimized_params.keys())}")
 
+    results = {
+        'validation_type': 'v9.2_oos_validation',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'config_version': 'unknown',
+        'config_path': str(config_path),
+        'output_path': str(output_path),
+        'market': market,
+        'split_date': SPLIT_DATE,
+        'warmup_date': WARMUP_DATE,
+        'n_perturbation_trials': N_PERTURBATION_TRIALS,
+        'perturbation_range': [PERTURB_MIN, PERTURB_MAX],
+    }
+
+    # config_version already set inside results dict above; no-op here
     # Filter to minimally viable series once
     data_all = {k: v for k, v in data_all.items() if len(v) >= MIN_ROWS}
 
@@ -350,7 +425,7 @@ def main():
     perturb_trials = []
     for i in range(N_PERTURBATION_TRIALS):
         seed = RANDOM_SEED + i
-        cfg_perturbed, perturbation_log = perturb_params(cfg, seed)
+        cfg_perturbed, perturbation_log = perturb_params(cfg, seed, params_dict=optimized_params)
         result_p, elapsed_p = run_backtest(cfg_perturbed, data_all, label=f'PERTURB-{i+1}')
         m_p = extract_metrics(result_p)
         m_p['trial'] = i + 1
