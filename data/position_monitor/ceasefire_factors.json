@@ -1,10 +1,10 @@
 {
   "baseline": 12,
-  "probability": 9,
+  "probability": 2,
   "probability_label": "VERY UNLIKELY",
   "timeline": "4+ weeks",
   "portfolio_action": "Hold all positions. Thesis intact.",
-  "last_updated": "2026-03-10T16:03:52",
+  "last_updated": "2026-03-10T17:04:37",
   "change_log": [
     {
       "timestamp": "2026-03-05T14:05:22",
@@ -95,6 +95,15 @@
       "confidence": "medium",
       "reason": "Toggled via CLI",
       "source": "The Guardian March 9 2026"
+    },
+    {
+      "timestamp": "2026-03-10T17:04:31",
+      "factor_id": "oil_100",
+      "old_active": true,
+      "new_active": false,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "Argus Media + BusinessToday March 10 2026: Brent drops to 8 (-26% from Monday 00 high), not sustained above 00 for multiple days; Trump waiving oil sanctions"
     }
   ],
   "factors": [
@@ -495,10 +504,10 @@
       "label": "Brent crude sustains above $100/barrel \u2014 economic pain triggers political pressure",
       "weight": 8,
       "direction": "ceasefire",
-      "active": true,
+      "active": false,
       "confidence": "high",
-      "last_checked": "2026-03-09T21:04:03",
-      "source": "Reuters + NBC News + ABC7 March 9 2026: oil confirmed at 00+ heading toward 20",
+      "last_checked": "2026-03-10T17:04:31",
+      "source": "Argus Media + BusinessToday March 10 2026: Brent drops to 8 (-26% from Monday 00 high), not sustained above 00 for multiple days; Trump waiving oil sanctions",
       "description": "",
       "search_keywords": [
         "oil price $100 barrel",

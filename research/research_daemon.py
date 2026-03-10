@@ -19,6 +19,7 @@ import signal
 import sys
 import time
 import traceback
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -35,6 +36,18 @@ from research.models import (
 )
 
 logger = logging.getLogger("research_daemon")
+
+
+# ─── Module-level worker (must be top-level for ProcessPoolExecutor pickling)
+
+def _run_experiment_worker(experiment: dict) -> dict:
+    """Worker function for parallel execution. Must be top-level for pickling."""
+    # Each worker process needs its own imports
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from scripts.research_runner import run_experiment
+    return run_experiment(experiment, agent_id="research-daemon", dry_run=False)
 
 
 # ─── Constants ───────────────────────────────────────────────────────────────
@@ -118,9 +131,9 @@ class ResearchDaemon:
                     self._sleep(300)
                     continue
 
-                # Get next experiment
-                experiment = self._get_next_experiment()
-                if experiment is None:
+                # Collect batch of independent experiments
+                batch = self._collect_batch()
+                if not batch:
                     self._write_heartbeat("idle")
                     queue_depth = self._queue_depth()
                     if queue_depth == 0:
@@ -128,25 +141,26 @@ class ResearchDaemon:
                     self._sleep(IDLE_SLEEP_S)
                     continue
 
-                # Execute
-                exp_id = experiment.get("id", "unknown")
-                logger.info("Starting experiment: %s", exp_id)
-                self._write_heartbeat("running", current_experiment=exp_id)
+                # Execute batch (parallel if workers > 1)
+                batch_ids = [e.get("id", "?") for e in batch]
+                logger.info("Starting batch of %d experiments: %s", len(batch), batch_ids)
+                self._write_heartbeat("running", current_experiment=", ".join(batch_ids))
 
-                try:
-                    result = self._execute_experiment(experiment)
-                except Exception as e:
-                    self._handle_failure(experiment, e)
-                    continue
+                results = self._execute_batch(batch)
 
-                # Post-process: evaluate, vault, advance, journal
-                self._post_process(experiment, result)
+                # Post-process each result
+                for experiment, result in results:
+                    exp_id = experiment.get("id", "unknown")
+                    try:
+                        self._post_process(experiment, result)
+                    except Exception as e:
+                        logger.error("Post-processing failed for %s: %s", exp_id, e)
 
-                self.experiments_completed += 1
-                logger.info(
-                    "Experiment %s done (%d total, %d failed)",
-                    exp_id, self.experiments_completed, self.experiments_failed,
-                )
+                    self.experiments_completed += 1
+                    logger.info(
+                        "Experiment %s done (%d total, %d failed)",
+                        exp_id, self.experiments_completed, self.experiments_failed,
+                    )
 
                 # Signal agent on batch completion
                 if self.experiments_completed % AGENT_BATCH_SIZE == 0:
@@ -182,6 +196,54 @@ class ResearchDaemon:
             logger.error("Error getting next experiment: %s", e)
             return None
 
+    def _collect_batch(self) -> list:
+        """Collect up to self.workers independent experiments from queue."""
+        batch = []
+        for _ in range(self.workers):
+            exp = self._get_next_experiment()
+            if exp is None:
+                break
+            batch.append(exp)
+        return batch
+
+    def _execute_batch(self, experiments: list) -> list:
+        """Execute a batch of experiments, parallel if workers > 1.
+
+        Returns list of (experiment, result) tuples.
+        """
+        if len(experiments) <= 1 or self.workers <= 1 or self.dry_run:
+            # Sequential execution
+            results = []
+            for exp in experiments:
+                try:
+                    result = self._execute_experiment(exp)
+                except Exception as e:
+                    self._handle_failure(exp, e)
+                    result = {"verdict": "fail", "error": str(e)}
+                results.append((exp, result))
+            return results
+
+        # Parallel execution
+        logger.info("Executing %d experiments in parallel (workers=%d)", len(experiments), self.workers)
+        results = []
+        with ProcessPoolExecutor(max_workers=self.workers) as pool:
+            future_to_exp = {}
+            for exp in experiments:
+                future = pool.submit(_run_experiment_worker, exp)
+                future_to_exp[future] = exp
+
+            for future in as_completed(future_to_exp):
+                exp = future_to_exp[future]
+                exp_id = exp.get("id", "unknown")
+                try:
+                    result = future.result(timeout=3600)  # 1hr max per experiment
+                    results.append((exp, result))
+                except Exception as e:
+                    logger.error("Parallel experiment %s failed: %s", exp_id, e)
+                    results.append((exp, {"verdict": "fail", "error": str(e)}))
+
+        return results
+
     def _execute_experiment(self, experiment: dict) -> dict:
         """Run an experiment via research_runner.run_experiment()."""
         if self.dry_run:
@@ -210,17 +272,23 @@ class ResearchDaemon:
         except Exception as e:
             logger.error("Failed to write vault notes for %s: %s", exp_id, e)
 
-        # 2. Auto-advance or defer lifecycle
+        # 2. Write parameter insights
+        try:
+            self._write_parameter_insights(experiment, result)
+        except Exception as e:
+            logger.warning("Failed to write parameter insights for %s: %s", exp_id, e)
+
+        # 3. Auto-advance or defer lifecycle
         try:
             self._advance_lifecycle(experiment, result)
         except Exception as e:
             logger.error("Failed to advance lifecycle for %s: %s", exp_id, e)
 
-        # 3. Track failures
+        # 4. Track failures
         if verdict == "fail":
             self.experiments_failed += 1
 
-        # 4. Signal agent on promotion candidate
+        # 5. Signal agent on promotion candidate
         if verdict == "pass":
             stage = self._infer_stage(experiment)
             if stage == "oos":
@@ -271,6 +339,48 @@ class ResearchDaemon:
             vw.write_daily_log()
         except Exception as e:
             logger.warning("Failed to update daily log: %s", e)
+
+    def _write_parameter_insights(self, experiment: dict, result: dict):
+        """Extract parameter insights from experiment results and write to vault."""
+        params_override = experiment.get("params_override") or {}
+        param_grid = experiment.get("param_grid") or {}
+        strategy_name = experiment.get("strategy_name", "unknown")
+        exp_id = experiment.get("id", "unknown")
+
+        # Only write insights for param-testing experiments
+        if not params_override and not param_grid:
+            return
+
+        outputs = result.get("outputs", {})
+        metrics = outputs.get("metrics", {}) if isinstance(outputs, dict) else {}
+        sharpe = metrics.get("sharpe", 0)
+
+        vw = self.vault_writer
+
+        # For each overridden parameter, record what was tested and the outcome
+        for param_name, param_value in params_override.items():
+            findings = {
+                "optimal_value": param_value,
+                "tested_range": [param_value],
+                "sensitivity": "unknown",
+                "sharpe_result": sharpe,
+                "related_experiments": [exp_id],
+            }
+            vw.write_parameter_insight(strategy_name, param_name, findings)
+
+        # For param_grid experiments with best_params in output
+        best_params = outputs.get("best_params", {}) if isinstance(outputs, dict) else {}
+        if best_params:
+            for param_name, param_value in best_params.items():
+                tested_range = param_grid.get(param_name, [param_value])
+                findings = {
+                    "optimal_value": param_value,
+                    "tested_range": tested_range if isinstance(tested_range, list) else [tested_range],
+                    "sensitivity": "unknown",
+                    "sharpe_result": sharpe,
+                    "related_experiments": [exp_id],
+                }
+                vw.write_parameter_insight(strategy_name, param_name, findings)
 
     def _advance_lifecycle(self, experiment: dict, result: dict):
         """Auto-advance on pass, auto-defer on fail."""
