@@ -138,6 +138,15 @@ class ResearchDaemon:
                     queue_depth = self._queue_depth()
                     if queue_depth == 0:
                         self._signal_agent("queue_empty", "No experiments in queue")
+                        # Auto-refill from discovery engine
+                        try:
+                            from research.discovery import queue_discovery_batch
+                            refilled = queue_discovery_batch(max_count=5)
+                            if refilled > 0:
+                                logger.info("Auto-refilled queue with %d discovery experiments", refilled)
+                                continue  # Skip sleep, process new experiments immediately
+                        except Exception as e:
+                            logger.warning("Discovery auto-refill failed: %s", e)
                     self._sleep(IDLE_SLEEP_S)
                     continue
 
@@ -278,17 +287,30 @@ class ResearchDaemon:
         except Exception as e:
             logger.warning("Failed to write parameter insights for %s: %s", exp_id, e)
 
-        # 3. Auto-advance or defer lifecycle
+        # 3. Check hypotheses against this result
+        try:
+            self._check_hypotheses(experiment, result)
+        except Exception as e:
+            logger.warning("Failed to check hypotheses for %s: %s", exp_id, e)
+
+        # 4. Detect patterns periodically (every 10 experiments)
+        if self.experiments_completed > 0 and self.experiments_completed % 10 == 0:
+            try:
+                self._detect_and_flag_patterns()
+            except Exception as e:
+                logger.warning("Pattern detection failed: %s", e)
+
+        # 5. Auto-advance or defer lifecycle
         try:
             self._advance_lifecycle(experiment, result)
         except Exception as e:
             logger.error("Failed to advance lifecycle for %s: %s", exp_id, e)
 
-        # 4. Track failures
+        # 6. Track failures
         if verdict == "fail":
             self.experiments_failed += 1
 
-        # 5. Signal agent on promotion candidate
+        # 7. Signal agent on promotion candidate
         if verdict == "pass":
             stage = self._infer_stage(experiment)
             if stage == "oos":
@@ -339,6 +361,25 @@ class ResearchDaemon:
             vw.write_daily_log()
         except Exception as e:
             logger.warning("Failed to update daily log: %s", e)
+
+    def _check_hypotheses(self, experiment: dict, result: dict):
+        """Check if experiment results confirm/reject any hypotheses."""
+        from research.hypothesis_tracker import check_hypotheses_against_result
+        updates = check_hypotheses_against_result(result)
+        for update in updates:
+            logger.info("Hypothesis update: %s → %s", update.get("id"), update.get("new_status"))
+
+    def _detect_and_flag_patterns(self):
+        """Run mechanical pattern detection and flag for agent review."""
+        from research.hypothesis_tracker import detect_patterns
+        patterns = detect_patterns()
+        if patterns:
+            pattern_summary = "; ".join(p["description"][:80] for p in patterns[:3])
+            self._signal_agent(
+                "patterns_detected",
+                f"Found {len(patterns)} patterns: {pattern_summary}",
+            )
+            logger.info("Detected %d patterns — agent signaled", len(patterns))
 
     def _write_parameter_insights(self, experiment: dict, result: dict):
         """Extract parameter insights from experiment results and write to vault."""
