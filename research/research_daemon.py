@@ -83,6 +83,8 @@ class ResearchDaemon:
         self.wake_signal_path = Path("/tmp/research-agent-wake.json")
         self.lock_path = Path("/tmp/research-daemon.lock")
 
+        self.last_digest_date = None
+
         # Lazy-loaded modules (avoid import-time side effects)
         self._runner = None
         self._evaluator = None
@@ -123,6 +125,18 @@ class ResearchDaemon:
         try:
             while self.running:
                 self._maybe_write_heartbeat()
+
+                # Send daily digest (once per day, on first loop after date change)
+                today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+                if self.last_digest_date != today and self.experiments_completed > 0:
+                    try:
+                        from research.monitoring import send_daily_digest
+                        if send_daily_digest(self.last_digest_date):
+                            logger.info("Daily digest sent for %s", self.last_digest_date or "previous day")
+                        self.last_digest_date = today
+                    except Exception as e:
+                        logger.warning("Daily digest failed: %s", e)
+                        self.last_digest_date = today  # Don't retry all day
 
                 # Check data freshness
                 if not self._check_data_freshness():
@@ -178,6 +192,26 @@ class ResearchDaemon:
                         f"Completed {self.experiments_completed} experiments "
                         f"({self.experiments_failed} failed)",
                     )
+
+                # Refresh dashboard after each batch
+                try:
+                    self._refresh_dashboard()
+                except Exception as e:
+                    logger.warning("Dashboard refresh failed: %s", e)
+
+                # Periodic health checks (every 30 experiments)
+                if self.experiments_completed % 30 == 0:
+                    try:
+                        self._run_health_checks()
+                    except Exception as e:
+                        logger.warning("Health check failed: %s", e)
+
+                # Daily log rotation (every 100 experiments)
+                if self.experiments_completed % 100 == 0:
+                    try:
+                        self._rotate_logs()
+                    except Exception as e:
+                        logger.warning("Log rotation failed: %s", e)
 
         except KeyboardInterrupt:
             logger.info("Keyboard interrupt received")
@@ -361,6 +395,37 @@ class ResearchDaemon:
             vw.write_daily_log()
         except Exception as e:
             logger.warning("Failed to update daily log: %s", e)
+
+    def _refresh_dashboard(self):
+        """Update Dashboard.md and Coverage Map in vault."""
+        from research.monitoring import generate_dashboard, generate_coverage_map
+        generate_dashboard()
+        generate_coverage_map()
+
+    def _run_health_checks(self):
+        """Run health checks and alert on critical issues."""
+        from research.monitoring import run_health_checks
+        checks = run_health_checks()
+        critical = [c for c in checks if c["status"] == "critical"]
+        if critical:
+            issues = "; ".join(f"{c['check']}: {c['message']}" for c in critical)
+            self._signal_agent("health_critical", f"Critical issues: {issues}")
+            logger.error("CRITICAL health issues: %s", issues)
+            try:
+                from utils.telegram import send_message
+                send_message(
+                    f"🚨 <b>Atlas Research Health Alert</b>\n\n"
+                    + "\n".join(f"• <b>{c['check']}</b>: {c['message']}" for c in critical),
+                )
+            except Exception:
+                pass
+
+    def _rotate_logs(self):
+        """Rotate old logs and compress experiments."""
+        from research.monitoring import rotate_logs
+        result = rotate_logs()
+        if any(v > 0 for v in result.values()):
+            logger.info("Log rotation: %s", result)
 
     def _check_hypotheses(self, experiment: dict, result: dict):
         """Check if experiment results confirm/reject any hypotheses."""
