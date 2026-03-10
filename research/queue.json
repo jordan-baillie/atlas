@@ -1343,14 +1343,14 @@
     },
     "estimated_runtime_min": 15,
     "priority": "P2",
-    "status": "queued",
+    "status": "claimed",
     "strategy_name": null,
     "params_override": null,
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "research-daemon",
+    "claimed_at": "2026-03-10T06:48:33.892160+00:00",
     "created_at": "2026-03-08T23:09:24.545314+00:00",
-    "updated_at": "2026-03-10T03:08:20.644578+00:00",
+    "updated_at": "2026-03-10T06:48:33.892170+00:00",
     "tags": [
       "wave5",
       "oos",
@@ -1624,14 +1624,14 @@
     },
     "estimated_runtime_min": 20,
     "priority": "P2",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "consecutive_down_days",
     "params_override": null,
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-03-08T23:09:24.545371+00:00",
-    "updated_at": "2026-03-08T23:09:24.545372+00:00",
+    "updated_at": "2026-03-10T06:48:33.885276+00:00",
     "tags": [
       "wave5",
       "combined_test",
@@ -1641,7 +1641,7 @@
     "depends_on": [
       "wave5_cdd_opt"
     ],
-    "notes": "PATTERN: All 4 prior dormant strategies failed combined test due to position contention. CDD may succeed because: (a) fewer trades than MB/SR/STMR, (b) uncorrelated signal timing. If it fails, retry with allocation pools enabled."
+    "notes": "PATTERN: All 4 prior dormant strategies failed combined test due to position contention. CDD may succeed because: (a) fewer trades than MB/SR/STMR, (b) uncorrelated signal timing. If it fails, retry with allocation pools enabled.\n[auto-deferred] Dependency failed: ['wave5_cdd_opt']"
   },
   {
     "id": "wave5_cdd_oos",
@@ -1658,14 +1658,14 @@
     },
     "estimated_runtime_min": 15,
     "priority": "P2",
-    "status": "queued",
+    "status": "deferred",
     "strategy_name": "consecutive_down_days",
     "params_override": null,
     "config_snapshot": null,
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-03-08T23:09:24.545374+00:00",
-    "updated_at": "2026-03-08T23:09:24.545375+00:00",
+    "updated_at": "2026-03-10T06:48:33.899425+00:00",
     "tags": [
       "wave5",
       "oos",
@@ -1675,6 +1675,6 @@
     "depends_on": [
       "wave5_cdd_combined"
     ],
-    "notes": "Promotion candidate if combined test also passes. Both must pass for promotion."
+    "notes": "Promotion candidate if combined test also passes. Both must pass for promotion.\n[auto-deferred] Dependency failed: ['wave5_cdd_combined']"
   }
 ]
