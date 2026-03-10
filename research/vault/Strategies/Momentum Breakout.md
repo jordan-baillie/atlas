@@ -2,7 +2,7 @@
 strategy_id: momentum_breakout
 type: strategy
 status: dormant
-total_experiments: 4
+total_experiments: 6
 best_sharpe: 0.2995
 tags:
   - strategy
@@ -11,7 +11,7 @@ tags:
 
 # Momentum Breakout
 
-> **Status:** `DORMANT` | **Experiments:** 4 | **Promotions:** 0
+> **Status:** `DORMANT` | **Experiments:** 6 | **Promotions:** 0
 
 ## Overview
 
@@ -23,9 +23,9 @@ Research strategy `momentum_breakout`. See experiments below.
 |--------|-------|
 | Best Sharpe | 0.30 |
 | Worst Sharpe | -2.72 |
-| Avg Sharpe | -1.14 |
-| Total Experiments | 4 |
-| Pass / Partial / Fail | 2 / 1 / 1 |
+| Avg Sharpe | -1.57 |
+| Total Experiments | 6 |
+| Pass / Partial / Fail | 2 / 3 / 1 |
 | Promotions | 0 |
 
 ## Best Parameters
@@ -40,6 +40,8 @@ Research strategy `momentum_breakout`. See experiments below.
 | [[wave1_moment_opt]] | 1 | `pass` | 0.30 | 8.05% |  |
 | [[wave1_moment_comb]] | 1 | `fail` | -0.16 | 1.90% |  |
 | [[20260310_181024_9b3400]] | ? | `partial` | -2.72 | -0.59% |  |
+| [[20260310_183205_1eac79]] | ? | `partial` | -2.72 | -0.59% |  |
+| [[20260310_185801_dd443f]] | ? | `partial` | -1.75 | 1.10% |  |
 
 ## Key Learnings
 

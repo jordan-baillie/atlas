@@ -2,8 +2,8 @@
 strategy_id: short_term_mr
 type: strategy
 status: dormant
-total_experiments: 5
-best_sharpe: 0.2711
+total_experiments: 7
+best_sharpe: 0.3913
 tags:
   - strategy
   - "strategy/short-term-mr"
@@ -11,7 +11,7 @@ tags:
 
 # Short Term MR
 
-> **Status:** `DORMANT` | **Experiments:** 5 | **Promotions:** 0
+> **Status:** `DORMANT` | **Experiments:** 7 | **Promotions:** 0
 
 ## Overview
 
@@ -21,16 +21,12 @@ Research strategy `short_term_mr`. See experiments below.
 
 | Metric | Value |
 |--------|-------|
-| Best Sharpe | 0.27 |
+| Best Sharpe | 0.39 |
 | Worst Sharpe | -1.52 |
-| Avg Sharpe | -0.36 |
-| Total Experiments | 5 |
-| Pass / Partial / Fail | 2 / 2 / 1 |
+| Avg Sharpe | -0.11 |
+| Total Experiments | 7 |
+| Pass / Partial / Fail | 2 / 4 / 1 |
 | Promotions | 0 |
-
-## Best Parameters
-
-- `param_grid`: {'rsi_oversold': [5, 10, 15], 'ibs_oversold': [0.15, 0.25], 'atr_stop_mult': [1.0, 1.5, 2.0], 'max_hold_days': [3, 5, 7]}
 
 ## Experiment History
 
@@ -41,6 +37,8 @@ Research strategy `short_term_mr`. See experiments below.
 | [[wave1_short__comb]] | 1 | `partial` | 0.27 | 7.65% |  |
 | [[wave1_short__comb]] | 1 | `fail` | 0.30 | 7.69% |  |
 | [[20260310_181024_d14b81]] | ? | `partial` | -1.52 | -2.04% |  |
+| [[20260310_183205_f86e93]] | ? | `partial` | 0.39 | 39.71% |  |
+| [[20260310_185801_754a55]] | ? | `partial` | 0.39 | 39.71% |  |
 
 ## Key Learnings
 

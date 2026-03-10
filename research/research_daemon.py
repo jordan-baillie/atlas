@@ -5,7 +5,7 @@ Runs 24/7 as a systemd service. Pulls experiments from queue, runs backtests,
 evaluates results, writes to vault, and auto-advances the lifecycle pipeline.
 
 Usage:
-    python3 research/research_daemon.py [--workers 2] [--dry-run]
+    python3 research/research_daemon.py [--workers 6] [--dry-run]
 
 Systemd:
     /etc/systemd/system/atlas-research-daemon.service
@@ -698,9 +698,10 @@ def main():
         description="Atlas Research Daemon — continuous experiment execution engine",
     )
     parser.add_argument(
-        "--workers", type=int, default=2,
-        help="Number of parallel backtest workers (default: 2). "
-             "NOTE: v1 uses sequential execution; parallel planned for Phase 2.",
+        "--workers", type=int, default=6,
+        help="Number of parallel backtest workers (default: 6). "
+             "Each worker uses ~500MB RAM. 6 workers saturates 8 cores "
+             "while leaving headroom for OS and daemon main thread.",
     )
     parser.add_argument(
         "--dry-run", action="store_true",

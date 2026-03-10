@@ -1,0 +1,41 @@
+{
+  "experiment_id": "20260310_185801_dd443f",
+  "strategy": "momentum_breakout",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 199,
+  "config_version": "v2.2",
+  "timestamp": "2026-03-10T08:58:03.537021+00:00",
+  "solo": {
+    "total_trades": 208,
+    "cagr_pct": 1.1008,
+    "cagr_full_period_pct": 0.9323,
+    "sharpe": -1.7481,
+    "sortino": -2.4695,
+    "max_drawdown_pct": 2.6319,
+    "win_rate_pct": 52.88,
+    "profit_factor": 1.2498,
+    "total_pnl": 243.93,
+    "avg_trade": 1.17,
+    "final_equity": 4268.17,
+    "expectancy_r": 0.0642,
+    "avg_r": 0.0642,
+    "r_count": 208,
+    "edge_p_value": 0.227196,
+    "edge_significant": false,
+    "var_95_pct": 0.209,
+    "cvar_95_pct": 0.307,
+    "calmar": 0.4183,
+    "mc_p95_drawdown_pct": 5.14,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 208,
+        "total_pnl": 243.93,
+        "win_rate_pct": 52.9
+      }
+    }
+  },
+  "runtime_s": 280.7
+}

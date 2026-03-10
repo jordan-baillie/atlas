@@ -2,8 +2,8 @@
 strategy_id: bb_squeeze
 type: strategy
 status: dormant
-total_experiments: 5
-best_sharpe: -0.3791
+total_experiments: 6
+best_sharpe: 0.3981
 tags:
   - strategy
   - "strategy/bb-squeeze"
@@ -11,7 +11,7 @@ tags:
 
 # Bollinger Band Squeeze
 
-> **Status:** `DORMANT` | **Experiments:** 5 | **Promotions:** 0
+> **Status:** `DORMANT` | **Experiments:** 6 | **Promotions:** 0
 
 ## Overview
 
@@ -21,16 +21,12 @@ Research strategy `bb_squeeze`. See experiments below.
 
 | Metric | Value |
 |--------|-------|
-| Best Sharpe | -0.38 |
+| Best Sharpe | 0.40 |
 | Worst Sharpe | -1.68 |
-| Avg Sharpe | -1.03 |
-| Total Experiments | 5 |
-| Pass / Partial / Fail | 2 / 3 / 0 |
+| Avg Sharpe | -0.79 |
+| Total Experiments | 6 |
+| Pass / Partial / Fail | 2 / 4 / 0 |
 | Promotions | 0 |
-
-## Best Parameters
-
-- `param_grid`: {'bb_period': [15, 20, 25], 'bb_std': [1.5, 2.0, 2.5], 'kc_atr_mult': [1.0, 1.5, 2.0], 'momentum_period': [10, 15, 20], 'atr_stop_mult': [1.5, 2.0, 2.5], 'max_hold_days': [10, 15, 20, 25]}
 
 ## Experiment History
 
@@ -41,6 +37,7 @@ Research strategy `bb_squeeze`. See experiments below.
 | [[wave1_bb_squ_solo]] | 1 | `pass` | -1.68 | -12.27% |  |
 | [[wave1_bb_squ_opt]] | 1 | `partial` | -0.38 | -0.37% |  |
 | [[20260310_181024_f7508b]] | ? | `partial` | -1.05 | 0.82% |  |
+| [[20260310_185801_5ee089]] | ? | `partial` | 0.40 | 41.65% |  |
 
 ## Key Learnings
 
