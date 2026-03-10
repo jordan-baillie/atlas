@@ -3921,5 +3921,181 @@
     "promoted": false,
     "runtime_s": 691.0,
     "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_185804_730b2e",
+    "timestamp": "2026-03-10T09:19:13.989086+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "momentum_breakout",
+    "hypothesis": "Test if momentum_breakout is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 208,
+      "cagr_pct": 1.1008,
+      "cagr_full_period_pct": 0.9323,
+      "sharpe": -1.7481,
+      "sortino": -2.4695,
+      "max_drawdown_pct": 2.6319,
+      "win_rate_pct": 52.88,
+      "profit_factor": 1.2498,
+      "total_pnl": 243.93,
+      "avg_trade": 1.17,
+      "final_equity": 4268.17,
+      "expectancy_r": 0.0642,
+      "avg_r": 0.0642,
+      "r_count": 208,
+      "edge_p_value": 0.227196,
+      "edge_significant": false,
+      "var_95_pct": 0.209,
+      "cvar_95_pct": 0.307,
+      "calmar": 0.4183,
+      "mc_p95_drawdown_pct": 5.14,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 208,
+          "total_pnl": 243.93,
+          "win_rate_pct": 52.9
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 280.8,
+    "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_185804_9ff181",
+    "timestamp": "2026-03-10T09:22:11.044473+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "connors_rsi2",
+    "hypothesis": "Test if connors_rsi2 is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 673,
+      "cagr_pct": -0.5804,
+      "cagr_full_period_pct": -0.4923,
+      "sharpe": -2.3374,
+      "sortino": -3.2393,
+      "max_drawdown_pct": 8.8326,
+      "win_rate_pct": 58.1,
+      "profit_factor": 0.9168,
+      "total_pnl": -150.49,
+      "avg_trade": -0.22,
+      "final_equity": 3864.33,
+      "expectancy_r": -0.01,
+      "avg_r": -0.01,
+      "r_count": 673,
+      "edge_p_value": 0.556564,
+      "edge_significant": false,
+      "var_95_pct": 0.24,
+      "cvar_95_pct": 0.349,
+      "calmar": -0.0657,
+      "mc_p95_drawdown_pct": 9.28,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "connors_rsi2": {
+          "trades": 673,
+          "total_pnl": -150.49,
+          "win_rate_pct": 58.1
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 457.8,
+    "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_185804_7a6d6d",
+    "timestamp": "2026-03-10T09:25:16.998709+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "bb_squeeze",
+    "hypothesis": "Test if bb_squeeze is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 224,
+      "cagr_pct": 41.6477,
+      "cagr_full_period_pct": 34.3318,
+      "sharpe": 0.3981,
+      "sortino": 27.6688,
+      "max_drawdown_pct": 9.9951,
+      "win_rate_pct": 47.32,
+      "profit_factor": 4.9505,
+      "total_pnl": 27186.69,
+      "avg_trade": 121.37,
+      "final_equity": 31502.57,
+      "expectancy_r": 5.3951,
+      "avg_r": 5.3951,
+      "r_count": 224,
+      "edge_p_value": 0.307298,
+      "edge_significant": false,
+      "var_95_pct": 0.391,
+      "cvar_95_pct": 0.608,
+      "calmar": 4.1668,
+      "mc_p95_drawdown_pct": 48.21,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "bb_squeeze": {
+          "trades": 224,
+          "total_pnl": 27186.69,
+          "win_rate_pct": 47.3
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 643.8,
+    "agent_id": "research-daemon"
+  },
+  {
+    "experiment_id": "20260310_185804_461735",
+    "timestamp": "2026-03-10T09:25:44.049154+00:00",
+    "market": "sp500",
+    "category": "dormant",
+    "strategy": "short_term_mr",
+    "hypothesis": "Test if short_term_mr is viable as standalone strategy",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 791,
+      "cagr_pct": 39.7109,
+      "cagr_full_period_pct": 32.7732,
+      "sharpe": 0.3913,
+      "sortino": 27.7799,
+      "max_drawdown_pct": 9.4127,
+      "win_rate_pct": 57.9,
+      "profit_factor": 2.7702,
+      "total_pnl": 25170.11,
+      "avg_trade": 31.82,
+      "final_equity": 29033.88,
+      "expectancy_r": 1.6551,
+      "avg_r": 1.6551,
+      "r_count": 791,
+      "edge_p_value": 0.317754,
+      "edge_significant": false,
+      "var_95_pct": 0.476,
+      "cvar_95_pct": 0.76,
+      "calmar": 4.2189,
+      "mc_p95_drawdown_pct": 64.83,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "short_term_mr": {
+          "trades": 791,
+          "total_pnl": 25170.11,
+          "win_rate_pct": 57.9
+        }
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 670.8,
+    "agent_id": "research-daemon"
   }
 ]

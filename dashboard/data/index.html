@@ -262,7 +262,10 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .strat-opening_gap { background: var(--green-dim); color: var(--green); }
 .strat-momentum_breakout { background: var(--orange-dim); color: var(--orange); }
 .strat-short_term_mr { background: rgba(85,176,165,0.10); color: var(--cyan); }
-.strat-sector_rotation { background: var(--amber-dim); color: var(--amber); }
+.strat-sector_rotation, .strat-rotation { background: var(--amber-dim); color: var(--amber); }
+.strat-volatility, .strat-volatility_breakout { background: rgba(160,126,196,0.10); color: var(--purple); }
+.strat-event { background: var(--orange-dim); color: var(--orange); }
+.strat-sentiment { background: rgba(85,176,165,0.10); color: var(--cyan); }
 .strat-manual { background: rgba(99,90,76,0.12); color: var(--text-tertiary); }
 
 /* ── Market badges ── */
@@ -323,26 +326,6 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .market-btn .mkt-dot { width: 6px; height: 6px; border-radius: 50%; }
 
 /* ── Research ── */
-.research-hero { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
-.research-card {
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); padding: 16px 14px; text-align: center;
-}
-.research-card:hover { border-color: var(--border); }
-.research-card-value { font-family: var(--mono); font-size: 26px; font-weight: 800; line-height: 1.1; }
-.research-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-top: 4px; }
-.research-card-sub { font-family: var(--mono); font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
-.research-progress { margin-bottom: 20px; }
-.research-progress-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-tertiary); margin-bottom: 5px; }
-.queue-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface); border: 1px solid var(--border-subtle); }
-.queue-bar > div { height: 100%; }
-.queue-bar .bar-pass { background: var(--green); }
-.queue-bar .bar-fail { background: var(--red); }
-.queue-bar .bar-defer { background: var(--amber); }
-.queue-bar .bar-queued { background: var(--text-tertiary); opacity: 0.25; }
-.queue-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-tertiary); margin-top: 5px; }
-.queue-legend span { display: flex; align-items: center; gap: 4px; }
-.queue-legend .dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
 .research-badge { display: inline-flex; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px; }
 .badge-pass { background: var(--green-dim); color: var(--green); }
 .badge-fail { background: var(--red-dim); color: var(--red); }
@@ -353,6 +336,171 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .badge-running { background: var(--blue-dim); color: var(--blue); }
 .pri-p1 { color: var(--red); } .pri-p2 { color: var(--amber); }
 .pri-p3 { color: var(--blue); } .pri-p4, .pri-p5 { color: var(--text-tertiary); }
+
+/* Engine Status Banner */
+.engine-banner {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); padding: 12px 18px; margin-bottom: 16px;
+  font-size: 12px; position: relative; overflow: hidden;
+}
+.engine-banner::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  opacity: 0.4;
+}
+.engine-banner.daemon-running::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+.engine-banner.daemon-stale::before { background: linear-gradient(90deg, transparent, var(--amber), transparent); }
+.engine-banner.daemon-dead::before, .engine-banner.daemon-offline::before { background: linear-gradient(90deg, transparent, var(--red), transparent); }
+.engine-status-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.engine-status-dot.running { background: var(--green); box-shadow: 0 0 6px var(--green-dim); animation: pulse 2s ease-in-out infinite; }
+.engine-status-dot.stale { background: var(--amber); box-shadow: 0 0 6px var(--amber-dim); }
+.engine-status-dot.dead, .engine-status-dot.offline { background: var(--red); box-shadow: 0 0 4px var(--red-dim); }
+.engine-label { font-weight: 600; color: var(--text); }
+.engine-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.engine-detail { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; }
+.engine-detail .ed-label { color: var(--text-tertiary); font-weight: 500; }
+
+/* KPI Strip */
+.research-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+.rkpi {
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); padding: 14px 12px; text-align: center;
+}
+.rkpi:hover { border-color: var(--border); }
+.rkpi-value { font-family: var(--mono); font-size: 22px; font-weight: 800; line-height: 1.1; }
+.rkpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-top: 4px; }
+.rkpi-sub { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
+
+/* Pipeline */
+.pipeline-wrap { margin-bottom: 18px; }
+.pipeline-row {
+  display: flex; align-items: center; gap: 0; width: 100%;
+}
+.pipeline-node {
+  flex: 1; text-align: center; padding: 10px 6px; position: relative;
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  font-size: 11px; cursor: default;
+}
+.pipeline-node:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.pipeline-node:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.pipeline-node:not(:first-child) { border-left: none; }
+.pipeline-node:hover { background: var(--surface-hover); }
+.pipeline-node-count {
+  font-family: var(--mono); font-size: 18px; font-weight: 800; line-height: 1.2;
+}
+.pipeline-node-label {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-tertiary); margin-top: 2px;
+}
+.pipeline-arrow {
+  color: var(--text-tertiary); font-size: 10px; flex-shrink: 0;
+  width: 0; overflow: visible; text-align: center; position: relative; z-index: 1;
+}
+.pipeline-node.has-items .pipeline-node-count { color: var(--text); }
+.pipeline-node.empty .pipeline-node-count { color: var(--text-tertiary); opacity: 0.4; }
+
+/* Findings cards */
+.finding-card {
+  padding: 12px 14px; margin-bottom: 8px;
+  background: var(--surface-hover); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--green);
+}
+.finding-card:hover { border-color: var(--border); }
+.finding-card.impact-high { border-left-color: var(--green); }
+.finding-card.impact-medium { border-left-color: var(--amber); }
+.finding-card.impact-low { border-left-color: var(--text-tertiary); }
+.finding-card .fc-title {
+  font-size: 13px; font-weight: 600; margin-bottom: 4px;
+}
+.finding-card .fc-summary {
+  font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+}
+.finding-card .fc-meta {
+  display: flex; gap: 8px; align-items: center; margin-top: 6px;
+}
+
+/* Hypothesis cards */
+.hyp-card {
+  padding: 12px 14px; margin-bottom: 8px;
+  background: var(--surface-hover); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--blue);
+}
+.hyp-card:hover { border-color: var(--border); }
+.hyp-card.status-confirmed { border-left-color: var(--green); }
+.hyp-card.status-rejected { border-left-color: var(--red); }
+.hyp-card.status-testing { border-left-color: var(--amber); }
+.hyp-card.status-proposed { border-left-color: var(--blue); }
+.hyp-card .hc-title {
+  font-size: 13px; font-weight: 600; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.hyp-card .hc-text {
+  font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+}
+
+/* Activity Feed */
+.activity-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12px;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.activity-dot.v-pass { background: var(--green); }
+.activity-dot.v-fail { background: var(--red); }
+.activity-dot.v-partial { background: var(--amber); }
+.activity-dot.v-promoted { background: var(--green-bright); box-shadow: 0 0 6px var(--green-dim); }
+.activity-time { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); min-width: 52px; flex-shrink: 0; }
+.activity-strat { font-weight: 600; min-width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity-detail { color: var(--text-secondary); font-family: var(--mono); font-size: 11px; flex: 1; }
+.activity-expand {
+  font-size: 10px; color: var(--text-tertiary); cursor: pointer; padding: 2px 6px;
+  border: 1px solid var(--border-subtle); border-radius: 3px; flex-shrink: 0;
+}
+.activity-expand:hover { border-color: var(--border); color: var(--text-secondary); }
+.activity-learnings {
+  padding: 6px 12px 6px 28px; font-size: 11px; color: var(--text-secondary);
+  line-height: 1.6; border-bottom: 1px solid var(--border-subtle); display: none;
+}
+.activity-learnings.show { display: block; }
+
+/* Queue breakdown */
+.queue-breakdown {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden;
+  margin-bottom: 14px;
+}
+.qb-item { padding: 10px 12px; border-right: 1px solid var(--border-subtle); }
+.qb-item:last-child { border-right: none; }
+.qb-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
+.qb-value { font-family: var(--mono); font-size: 16px; font-weight: 700; margin-top: 2px; }
+
+/* Coverage matrix (compact) */
+.cov-matrix { width: 100%; border-collapse: collapse; font-size: 11px; }
+.cov-matrix th {
+  padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-tertiary); font-weight: 600; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg); text-align: center;
+}
+.cov-matrix th:first-child { text-align: left; }
+.cov-matrix td { padding: 5px 8px; border-bottom: 0.5px solid var(--border-subtle); text-align: center; font-size: 13px; }
+.cov-matrix td:first-child { text-align: left; font-size: 11px; }
+.cov-matrix tr:hover td { background: rgba(255,255,255,0.015); }
+.cov-matrix tr.untested td { opacity: 0.4; }
+.cov-icon { font-size: 13px; }
+
+@media (max-width: 1060px) {
+  .research-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 700px) {
+  .research-kpis { grid-template-columns: repeat(2, 1fr); }
+  .pipeline-node-label { font-size: 8px; }
+  .pipeline-node-count { font-size: 14px; }
+  .queue-breakdown { grid-template-columns: repeat(2, 1fr); }
+  .qb-item:nth-child(2) { border-right: none; }
+  .qb-item:nth-child(1), .qb-item:nth-child(2) { border-bottom: 1px solid var(--border-subtle); }
+}
 
 /* ── Daily insight ── */
 .insight-section { border-top-color: var(--amber); border-top-style: dashed; }
@@ -832,14 +980,44 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   <!-- ═══ RESEARCH TAB ═══ -->
   <div class="tab-content" id="tab-research">
 
-    <!-- Hero stats -->
-    <div class="research-hero" id="research-hero"></div>
+    <!-- Engine Status Banner -->
+    <div class="engine-banner" id="engine-banner"></div>
 
-    <!-- Queue progress -->
-    <div class="research-progress" id="research-progress"></div>
+    <!-- KPI Strip -->
+    <div class="research-kpis" id="research-kpis"></div>
+
+    <!-- Lifecycle Pipeline -->
+    <div class="pipeline-wrap" id="pipeline-wrap"></div>
+
+    <!-- Strategy Leaderboard -->
+    <div class="section" style="animation-delay:0.05s">
+      <div class="section-head" onclick="toggle('leaderboard')">
+        <div class="section-title">/Strategy Leaderboard <span class="section-count" id="leaderboard-count">0</span></div>
+        <span class="chevron down" id="chev-leaderboard">+</span>
+      </div>
+      <div class="section-body" id="body-leaderboard"></div>
+    </div>
+
+    <!-- Key Findings: Patterns + Hypotheses side by side -->
+    <div class="two-col">
+      <div class="section" style="animation-delay:0.10s">
+        <div class="section-head" onclick="toggle('rpatterns')">
+          <div class="section-title">/Discovered Patterns <span class="section-count" id="rpatterns-count">0</span></div>
+          <span class="chevron down" id="chev-rpatterns">+</span>
+        </div>
+        <div class="section-body" id="body-rpatterns"></div>
+      </div>
+      <div class="section" style="animation-delay:0.12s">
+        <div class="section-head" onclick="toggle('rhypotheses')">
+          <div class="section-title">/Hypotheses <span class="section-count" id="rhypotheses-count">0</span></div>
+          <span class="chevron down" id="chev-rhypotheses">+</span>
+        </div>
+        <div class="section-body" id="body-rhypotheses"></div>
+      </div>
+    </div>
 
     <!-- Daily Insight Chart -->
-    <div class="section insight-section" style="animation-delay:0.05s">
+    <div class="section insight-section" style="animation-delay:0.14s">
       <div class="section-head" onclick="toggle('insight')">
         <div class="section-title"><svg class="insight-spark" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.26L20.18 10l-6.09 1.74L12 18l-2.09-6.26L3.82 10l6.09-1.74z"/></svg> /Daily Insight</div>
         <span class="chevron down" id="chev-insight">+</span>
@@ -849,28 +1027,28 @@ tr:hover td { background: rgba(255,255,255,0.015); }
       </div>
     </div>
 
-    <!-- Recent results -->
-    <div class="section" style="animation-delay:0.10s">
-      <div class="section-head" onclick="toggle('rresults')">
-        <div class="section-title">/Experiment Results <span class="section-count" id="rresults-count">0</span></div>
-        <span class="chevron down" id="chev-rresults">+</span>
+    <!-- Activity Feed -->
+    <div class="section" style="animation-delay:0.16s">
+      <div class="section-head" onclick="toggle('ractivity')">
+        <div class="section-title">/Activity Feed <span class="section-count" id="ractivity-count">0</span></div>
+        <span class="chevron down" id="chev-ractivity">+</span>
       </div>
-      <div class="section-body" id="body-rresults"></div>
+      <div class="section-body" id="body-ractivity"></div>
     </div>
 
-    <!-- Experiment queue -->
-    <div class="section" style="animation-delay:0.15s">
+    <!-- Queue Overview -->
+    <div class="section" style="animation-delay:0.18s">
       <div class="section-head" onclick="toggle('rqueue')">
-        <div class="section-title">/Experiment Queue <span class="section-count" id="rqueue-count">0</span></div>
+        <div class="section-title">/Queue Overview <span class="section-count" id="rqueue-count">0</span></div>
         <span class="chevron down" id="chev-rqueue">+</span>
       </div>
       <div class="section-body" id="body-rqueue"></div>
     </div>
 
-    <!-- Strategy coverage -->
-    <div class="section" id="sec-coverage" style="animation-delay:0.20s">
+    <!-- Coverage Matrix -->
+    <div class="section" style="animation-delay:0.20s">
       <div class="section-head" onclick="toggle('rcoverage')">
-        <div class="section-title">/Strategy Coverage</div>
+        <div class="section-title">/Coverage Matrix</div>
         <span class="chevron down" id="chev-rcoverage">+</span>
       </div>
       <div class="section-body" id="body-rcoverage"></div>
@@ -2789,149 +2967,275 @@ function renderRadarSVG(insight) {
 // ── Research Tab ──
 function renderResearch(d) {
   var res = d.research || {};
-  var rq = res.queue || {};
-  var rs = res.statistics || {};
-  var rResults = res.recent_results || [];
-  var rCoverage = res.strategy_coverage || [];
-  var rItems = rq.items || [];
-  var rTotal = rq.total || 0;
+  var daemon = res.daemon || {};
+  var stats = res.statistics || {};
+  var lb = res.leaderboard || [];
+  var pipe = res.pipeline || {};
+  var pats = res.patterns || [];
+  var hyps = res.hypotheses || [];
+  var feed = res.activity_feed || [];
+  var qs = res.queue_summary || {};
+  var qbs = qs.by_status || {};
+  var qbp = qs.by_priority || {};
+  var pending = qs.pending_items || [];
 
   // Daily Insight
   renderDailyInsight(res.daily_insight);
-  var rCompleted = rq.completed || 0;
 
-  // Count statuses (MUST come before badge assignment)
-  var nPass = 0, nFail = 0, nDefer = 0, nQueued = 0, nRunning = 0;
-  rItems.forEach(function(e) {
-    if (e.status === 'passed' || e.status === 'promoted') nPass++;
-    else if (e.status === 'failed') nFail++;
-    else if (e.status === 'deferred') nDefer++;
-    else if (e.status === 'running' || e.status === 'claimed') nRunning++;
-    else nQueued++;
-  });
-
-  // Tab badge — show actual queued count (uses nQueued/nRunning computed above)
+  // Tab badge
   var badge = document.getElementById('research-tab-badge');
-  if (badge) badge.textContent = nQueued > 0 ? nQueued + ' queued' : (nRunning > 0 ? nRunning + ' running' : rs.total_experiments + ' done');
+  var nQueued = qbs.queued || 0;
+  var nRunning = (qbs.running || 0) + (qbs.claimed || 0);
+  if (badge) badge.textContent = daemon.status === 'running' ? (nRunning > 0 ? nRunning + ' running' : nQueued + ' queued') : stats.total_experiments + ' done';
 
-  // ── Hero cards ──
-  var hero = '';
-  hero += '<div class="research-card"><div class="research-card-value" style="color:var(--text)">' + rs.total_experiments + '</div><div class="research-card-label">Experiments</div><div class="research-card-sub">run to date</div></div>';
-  hero += '<div class="research-card"><div class="research-card-value" style="color:var(--green)">' + rs.passed + '</div><div class="research-card-label">Passed</div><div class="research-card-sub">' + (rs.pass_rate_pct || 0) + '% rate</div></div>';
-  hero += '<div class="research-card"><div class="research-card-value" style="color:var(--red)">' + rs.failed + '</div><div class="research-card-label">Failed</div></div>';
-  hero += '<div class="research-card"><div class="research-card-value" style="color:var(--green-bright)">' + rs.promoted + '</div><div class="research-card-label">Promoted</div><div class="research-card-sub">to live config</div></div>';
-  hero += '<div class="research-card"><div class="research-card-value" style="color:var(--blue)">' + nQueued + '</div><div class="research-card-label">In Queue</div><div class="research-card-sub">' + (nRunning > 0 ? nRunning + ' running' : 'idle') + '</div></div>';
-  document.getElementById('research-hero').innerHTML = hero;
-
-  // ── Progress bar ──
-  var pb = '';
-  if (rTotal > 0) {
-    var pPass = (nPass / rTotal * 100).toFixed(1);
-    var pFail = (nFail / rTotal * 100).toFixed(1);
-    var pDefer = (nDefer / rTotal * 100).toFixed(1);
-    var pQueued = ((nQueued + nRunning) / rTotal * 100).toFixed(1);
-    pb += '<div class="research-progress-header"><span>Wave 1 Progress</span><span>' + (nPass + nFail + nDefer) + ' / ' + rTotal + ' processed</span></div>';
-    pb += '<div class="queue-bar">';
-    pb += '<div class="bar-pass" style="width:' + pPass + '%"></div>';
-    pb += '<div class="bar-fail" style="width:' + pFail + '%"></div>';
-    pb += '<div class="bar-defer" style="width:' + pDefer + '%"></div>';
-    pb += '<div class="bar-queued" style="width:' + pQueued + '%"></div>';
-    pb += '</div>';
-    pb += '<div class="queue-legend">';
-    pb += '<span><span class="dot" style="background:var(--green)"></span> Passed ' + nPass + '</span>';
-    pb += '<span><span class="dot" style="background:var(--red)"></span> Failed ' + nFail + '</span>';
-    pb += '<span><span class="dot" style="background:var(--amber)"></span> Deferred ' + nDefer + '</span>';
-    pb += '<span><span class="dot" style="background:var(--text-tertiary);opacity:0.4"></span> Queued ' + nQueued + '</span>';
-    if (nRunning > 0) pb += '<span><span class="dot" style="background:var(--blue)"></span> Running ' + nRunning + '</span>';
-    pb += '</div>';
+  // ── Engine Status Banner ──
+  var ds = daemon.status || 'offline';
+  var eb = '<span class="engine-status-dot ' + ds + '"></span>';
+  eb += '<span class="engine-label">' + (ds === 'running' ? 'Engine Running' : ds === 'stale' ? 'Engine Stale' : ds === 'dead' ? 'Engine Dead' : 'Engine Offline') + '</span>';
+  if (ds === 'running' || ds === 'stale') {
+    eb += '<span class="engine-sep"></span>';
+    var uptH = (daemon.uptime_s || 0) / 3600;
+    eb += '<span class="engine-detail"><span class="ed-label">Uptime</span> ' + (uptH < 1 ? Math.round(uptH * 60) + 'm' : uptH.toFixed(1) + 'h') + '</span>';
+    eb += '<span class="engine-sep"></span>';
+    eb += '<span class="engine-detail"><span class="ed-label">Session</span> ' + (daemon.experiments_completed || 0) + ' done, ' + (daemon.experiments_failed || 0) + ' failed</span>';
+    eb += '<span class="engine-sep"></span>';
+    eb += '<span class="engine-detail"><span class="ed-label">Queue</span> ' + (daemon.queue_depth || 0) + ' pending</span>';
+    if (daemon.current_experiment && ds === 'running') {
+      eb += '<span class="engine-sep"></span>';
+      var curExps = String(daemon.current_experiment).split(',');
+      eb += '<span class="engine-detail"><span class="ed-label">Running</span> ' + curExps.length + ' experiment' + (curExps.length > 1 ? 's' : '') + '</span>';
+    }
   }
-  document.getElementById('research-progress').innerHTML = pb;
+  var bannerEl = document.getElementById('engine-banner');
+  bannerEl.className = 'engine-banner daemon-' + ds;
+  bannerEl.innerHTML = eb;
 
-  // ── Recent results table ──
-  document.getElementById('rresults-count').textContent = rResults.length;
-  if (rResults.length > 0) {
-    var rr = '<div class="table-scroll"><table id="tbl-research"><thead><tr>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',0,\'str\')">Experiment</th>';
-    rr += '<th>Strategy</th><th>Market</th><th>Verdict</th>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',4,\'num\')">Trades</th>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',5,\'num\')">Sharpe</th>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',6,\'num\')">CAGR</th>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',7,\'num\')">Max DD</th>';
-    rr += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-research\',8,\'num\')">Win Rate</th>';
-    rr += '<th>When</th>';
-    rr += '</tr></thead><tbody>';
-    rResults.forEach(function(r) {
-      var km = r.key_metrics || {};
-      var vc = r.verdict === 'pass' ? 'badge-pass' : r.verdict === 'fail' ? 'badge-fail' : 'badge-partial';
-      rr += '<tr>';
-      rr += '<td style="font-family:var(--mono);font-size:11px;white-space:nowrap" data-v="' + esc(r.experiment_id) + '">' + esc(r.experiment_id) + '</td>';
-      rr += '<td>' + strat(r.strategy) + '</td>';
-      rr += '<td style="font-size:11px;color:var(--text-secondary)">' + (r.market || '').toUpperCase() + '</td>';
-      rr += '<td><span class="research-badge ' + vc + '">' + esc(r.verdict) + '</span></td>';
-      rr += '<td class="mono" data-v="' + (km.total_trades||0) + '">' + (km.total_trades || '—') + '</td>';
-      rr += '<td class="mono ' + cls(km.sharpe||0) + '" data-v="' + (km.sharpe||0) + '">' + (km.sharpe != null ? km.sharpe.toFixed(2) : '—') + '</td>';
-      rr += '<td class="mono ' + cls(km.cagr_pct||0) + '" data-v="' + (km.cagr_pct||0) + '">' + (km.cagr_pct != null ? km.cagr_pct.toFixed(1) + '%' : '—') + '</td>';
-      rr += '<td class="mono" style="color:var(--red)" data-v="' + (km.max_drawdown_pct||0) + '">' + (km.max_drawdown_pct != null ? km.max_drawdown_pct.toFixed(1) + '%' : '—') + '</td>';
-      rr += '<td class="mono" data-v="' + (km.win_rate_pct||0) + '">' + (km.win_rate_pct != null ? km.win_rate_pct.toFixed(0) + '%' : '—') + '</td>';
-      rr += '<td style="font-size:11px;color:var(--text-tertiary);white-space:nowrap">' + ago(r.timestamp) + '</td>';
-      rr += '</tr>';
-    });
-    rr += '</tbody></table></div>';
-    document.getElementById('body-rresults').innerHTML = rr;
-  } else {
-    document.getElementById('body-rresults').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-tertiary)">No experiments run yet. First research cron at 09:00 AEST daily.</div>';
-  }
+  // ── KPI Strip ──
+  var kh = '';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text)">' + stats.total_experiments + '</div><div class="rkpi-label">Experiments</div><div class="rkpi-sub">' + stats.days_active + ' days</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green)">' + stats.passed + '</div><div class="rkpi-label">Passed</div><div class="rkpi-sub">' + (stats.pass_rate_pct || 0) + '% rate</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--red)">' + stats.failed + '</div><div class="rkpi-label">Failed</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green-bright)">' + stats.promoted + '</div><div class="rkpi-label">Promoted</div><div class="rkpi-sub">to live config</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + stats.strategies_tested + '</div><div class="rkpi-label">Tested</div><div class="rkpi-sub">of ' + stats.strategies_total + ' strategies</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--amber)">' + nQueued + '</div><div class="rkpi-label">Queued</div><div class="rkpi-sub">' + (nRunning > 0 ? nRunning + ' running' : 'idle') + '</div></div>';
+  document.getElementById('research-kpis').innerHTML = kh;
 
-  // ── Queue table ──
-  document.getElementById('rqueue-count').textContent = rTotal;
-  var qt = '<div class="table-scroll"><table id="tbl-queue"><thead><tr>';
-  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',0,\'str\')">ID</th>';
-  qt += '<th>Title</th>';
-  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',2,\'str\')">Priority</th>';
-  qt += '<th>Category</th><th>Market</th>';
-  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',5,\'str\')">Status</th>';
-  qt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-queue\',6,\'num\')">ETA</th>';
-  qt += '</tr></thead><tbody>';
-  rItems.forEach(function(e) {
-    var sc = 'badge-queued';
-    if (e.status === 'passed' || e.status === 'promoted') sc = 'badge-pass';
-    else if (e.status === 'failed') sc = 'badge-fail';
-    else if (e.status === 'deferred') sc = 'badge-deferred';
-    else if (e.status === 'running' || e.status === 'claimed') sc = 'badge-running';
-    var dim = (e.status !== 'queued' && e.status !== 'running') ? ' style="opacity:0.55"' : '';
-    qt += '<tr' + dim + '>';
-    qt += '<td style="font-family:var(--mono);font-size:10px;white-space:nowrap" data-v="' + esc(e.id) + '">' + esc(e.id) + '</td>';
-    qt += '<td style="font-size:12px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title) + '</td>';
-    qt += '<td class="pri-' + (e.priority||'').toLowerCase() + '" style="font-weight:700;font-size:12px" data-v="' + esc(e.priority) + '">' + esc(e.priority) + '</td>';
-    qt += '<td style="font-size:11px;color:var(--text-secondary)">' + esc(e.category) + '</td>';
-    qt += '<td style="font-size:11px;color:var(--text-secondary)">' + (e.market || '').toUpperCase() + '</td>';
-    qt += '<td data-v="' + esc(e.status) + '"><span class="research-badge ' + sc + '">' + esc(e.status) + '</span></td>';
-    qt += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)" data-v="' + (e.estimated_runtime_min||0) + '">' + (e.estimated_runtime_min > 0 ? '~' + e.estimated_runtime_min + 'm' : '—') + '</td>';
-    qt += '</tr>';
+  // ── Lifecycle Pipeline ──
+  var stages = [
+    { key: 'untested', label: 'Untested', color: 'var(--text-tertiary)' },
+    { key: 'screen', label: 'Screen', color: 'var(--text-secondary)' },
+    { key: 'solo', label: 'Solo', color: 'var(--blue)' },
+    { key: 'optimize', label: 'Optimize', color: 'var(--purple)' },
+    { key: 'combined', label: 'Combined', color: 'var(--amber)' },
+    { key: 'oos', label: 'OOS', color: 'var(--orange)' },
+    { key: 'promote', label: 'Promoted', color: 'var(--green)' },
+  ];
+  var ph = '<div class="pipeline-row">';
+  stages.forEach(function(s, i) {
+    var cnt = pipe[s.key] || 0;
+    var hasItems = cnt > 0;
+    ph += '<div class="pipeline-node ' + (hasItems ? 'has-items' : 'empty') + '">';
+    ph += '<div class="pipeline-node-count" style="color:' + (hasItems ? s.color : '') + '">' + cnt + '</div>';
+    ph += '<div class="pipeline-node-label">' + s.label + '</div>';
+    ph += '</div>';
+    if (i < stages.length - 1) ph += '<div class="pipeline-arrow">›</div>';
   });
-  qt += '</tbody></table></div>';
-  document.getElementById('body-rqueue').innerHTML = qt;
+  ph += '</div>';
+  document.getElementById('pipeline-wrap').innerHTML = ph;
 
-  // ── Strategy coverage ──
-  if (rCoverage.length > 0) {
-    var ct = '<div class="table-scroll"><table id="tbl-coverage"><thead><tr>';
-    ct += '<th>Strategy</th><th>Market</th><th>Last Tested</th><th>Verdict</th><th>Experiment</th>';
-    ct += '</tr></thead><tbody>';
-    rCoverage.forEach(function(c) {
-      var vc = c.verdict === 'pass' ? 'badge-pass' : c.verdict === 'fail' ? 'badge-fail' : 'badge-partial';
-      ct += '<tr>';
-      ct += '<td>' + strat(c.strategy) + '</td>';
-      ct += '<td style="font-size:11px;color:var(--text-secondary)">' + (c.market || '').toUpperCase() + '</td>';
-      ct += '<td style="font-size:11px;color:var(--text-tertiary)">' + ago(c.last_tested) + '</td>';
-      ct += '<td><span class="research-badge ' + vc + '">' + esc(c.verdict) + '</span></td>';
-      ct += '<td style="font-family:var(--mono);font-size:10px;color:var(--text-secondary)">' + esc(c.experiment_id) + '</td>';
-      ct += '</tr>';
+  // ── Strategy Leaderboard ──
+  var tested = lb.filter(function(s) { return s.total_experiments > 0; });
+  document.getElementById('leaderboard-count').textContent = tested.length + ' tested';
+  var lt = '<div class="table-scroll"><table id="tbl-lb"><thead><tr>';
+  lt += '<th style="width:28px">#</th>';
+  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',1,\'str\')">Strategy</th>';
+  lt += '<th>Type</th><th>Status</th>';
+  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',4,\'num\')">Sharpe</th>';
+  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',5,\'num\')">Win Rate</th>';
+  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',6,\'num\')">Trades</th>';
+  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',7,\'num\')">Exps</th>';
+  lt += '<th>Stage</th>';
+  lt += '<th style="text-align:center">Screen</th><th style="text-align:center">Solo</th>';
+  lt += '<th style="text-align:center">Opt</th><th style="text-align:center">Comb</th>';
+  lt += '<th style="text-align:center">OOS</th><th style="text-align:center">Prom</th>';
+  lt += '</tr></thead><tbody>';
+  var rank = 0;
+  lb.forEach(function(s) {
+    var isTested = s.total_experiments > 0;
+    rank++;
+    var trCls = isTested ? '' : ' class="untested"';
+    lt += '<tr' + trCls + ' style="' + (!isTested ? 'opacity:0.45' : '') + '">';
+    lt += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (isTested ? rank : '—') + '</td>';
+    lt += '<td>' + strat(s.id) + '</td>';
+    lt += '<td>' + strat(s.type) + '</td>';
+    // Status badge
+    var sc = 'badge-queued';
+    if (s.status === 'active') sc = 'badge-pass';
+    else if (s.status === 'dormant') sc = 'badge-partial';
+    else if (s.status === 'broken' || s.status === 'dead_end') sc = 'badge-fail';
+    else if (s.status === 'not_built') sc = 'badge-queued';
+    lt += '<td><span class="research-badge ' + sc + '">' + esc(s.status) + '</span></td>';
+    lt += '<td class="mono ' + cls(s.best_sharpe||0) + '" data-v="' + (s.best_sharpe||0) + '">' + (s.best_sharpe != null ? s.best_sharpe.toFixed(2) : '—') + '</td>';
+    lt += '<td class="mono" data-v="' + (s.best_win_rate||0) + '">' + (s.best_win_rate != null ? s.best_win_rate.toFixed(0) + '%' : '—') + '</td>';
+    lt += '<td class="mono" data-v="' + (s.best_trades||0) + '">' + (s.best_trades || '—') + '</td>';
+    lt += '<td class="mono" data-v="' + (s.total_experiments||0) + '">' + (s.total_experiments || '—') + '</td>';
+    // Stage badge
+    var stgCls = 'badge-queued';
+    if (s.stage === 'oos' || s.stage === 'promote') stgCls = 'badge-promoted';
+    else if (s.stage === 'optimize' || s.stage === 'combined') stgCls = 'badge-running';
+    else if (s.stage === 'solo') stgCls = 'badge-partial';
+    lt += '<td><span class="research-badge ' + stgCls + '">' + esc(s.stage) + '</span></td>';
+    // Coverage cells
+    var covStages = ['screen','solo','optimize','combined','oos','promote'];
+    var cov = s.coverage || {};
+    covStages.forEach(function(cs) {
+      var icon = cov[cs] || '—';
+      lt += '<td style="text-align:center;font-size:13px">' + icon + '</td>';
     });
-    ct += '</tbody></table></div>';
-    document.getElementById('body-rcoverage').innerHTML = ct;
+    lt += '</tr>';
+  });
+  lt += '</tbody></table></div>';
+  document.getElementById('body-leaderboard').innerHTML = lt;
+
+  // ── Patterns ──
+  document.getElementById('rpatterns-count').textContent = pats.length;
+  if (pats.length > 0) {
+    var pp = '';
+    pats.forEach(function(p) {
+      pp += '<div class="finding-card impact-' + esc(p.impact) + '">';
+      pp += '<div class="fc-title">' + esc(p.name) + '</div>';
+      if (p.summary) pp += '<div class="fc-summary">' + esc(p.summary) + '</div>';
+      pp += '<div class="fc-meta">';
+      pp += '<span class="research-badge badge-pass">' + esc(p.status) + '</span>';
+      pp += '<span class="research-badge" style="background:var(--surface);color:var(--text-tertiary)">' + esc(p.impact) + ' impact</span>';
+      pp += '</div></div>';
+    });
+    document.getElementById('body-rpatterns').innerHTML = pp;
   } else {
-    document.getElementById('sec-coverage').style.display = 'none';
+    document.getElementById('body-rpatterns').innerHTML = '<div class="empty">No patterns discovered yet</div>';
   }
+
+  // ── Hypotheses ──
+  document.getElementById('rhypotheses-count').textContent = hyps.length;
+  if (hyps.length > 0) {
+    var hh = '';
+    hyps.forEach(function(h) {
+      var statusIcon = h.status === 'confirmed' ? '✅' : h.status === 'rejected' ? '❌' : h.status === 'testing' ? '🔄' : '💡';
+      hh += '<div class="hyp-card status-' + esc(h.status) + '">';
+      hh += '<div class="hc-title"><span>' + statusIcon + '</span> ' + esc(h.title) + '</div>';
+      if (h.hypothesis) hh += '<div class="hc-text">' + esc(h.hypothesis) + '</div>';
+      hh += '<div class="fc-meta" style="margin-top:6px">';
+      hh += '<span class="research-badge badge-' + (h.status === 'confirmed' ? 'pass' : h.status === 'rejected' ? 'fail' : h.status === 'testing' ? 'running' : 'queued') + '">' + esc(h.status) + '</span>';
+      if (h.source) hh += '<span style="font-size:10px;color:var(--text-tertiary)">via ' + esc(h.source) + '</span>';
+      hh += '</div></div>';
+    });
+    document.getElementById('body-rhypotheses').innerHTML = hh;
+  } else {
+    document.getElementById('body-rhypotheses').innerHTML = '<div class="empty">No hypotheses yet — engine will generate them as patterns emerge</div>';
+  }
+
+  // ── Activity Feed ──
+  document.getElementById('ractivity-count').textContent = feed.length;
+  if (feed.length > 0) {
+    var af = '';
+    // Reverse: newest first
+    var feedRev = feed.slice().reverse();
+    feedRev.forEach(function(a, idx) {
+      var vc = a.verdict === 'pass' ? 'v-pass' : a.verdict === 'fail' ? 'v-fail' : a.verdict === 'promoted' ? 'v-promoted' : 'v-partial';
+      var detail = '';
+      if (a.sharpe != null) detail += 'Sharpe ' + a.sharpe.toFixed(2);
+      if (a.win_rate_pct != null) detail += (detail ? ', ' : '') + 'WR ' + a.win_rate_pct.toFixed(0) + '%';
+      if (a.total_trades) detail += (detail ? ', ' : '') + a.total_trades + ' trades';
+      af += '<div class="activity-item">';
+      af += '<span class="activity-dot ' + vc + '"></span>';
+      af += '<span class="activity-time">' + ago(a.timestamp) + '</span>';
+      af += '<span class="activity-strat">' + esc(a.strategy || 'N/A') + '</span>';
+      af += '<span class="research-badge badge-' + (a.verdict === 'pass' ? 'pass' : a.verdict === 'fail' ? 'fail' : a.verdict === 'promoted' ? 'promoted' : 'partial') + '">' + esc(a.verdict) + '</span>';
+      af += '<span class="activity-detail">' + detail + '</span>';
+      if (a.learnings && a.learnings.length > 0) {
+        af += '<span class="activity-expand" onclick="toggleLearning(' + idx + ')">+</span>';
+      }
+      af += '</div>';
+      if (a.learnings && a.learnings.length > 0) {
+        af += '<div class="activity-learnings" id="learning-' + idx + '">';
+        a.learnings.forEach(function(l) { af += '• ' + esc(l) + '<br>'; });
+        af += '</div>';
+      }
+    });
+    document.getElementById('body-ractivity').innerHTML = af;
+  } else {
+    document.getElementById('body-ractivity').innerHTML = '<div class="empty">No experiments run yet — daemon will populate as results come in</div>';
+  }
+
+  // ── Queue Overview ──
+  var nPending = (qbs.queued || 0) + (qbs.running || 0) + (qbs.claimed || 0);
+  document.getElementById('rqueue-count').textContent = nPending + ' pending';
+  var qo = '';
+  // Priority/status breakdown
+  qo += '<div class="queue-breakdown">';
+  qo += '<div class="qb-item"><div class="qb-label">P1 Critical</div><div class="qb-value" style="color:var(--red)">' + (qbp.P1 || 0) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">P2 High</div><div class="qb-value" style="color:var(--amber)">' + (qbp.P2 || 0) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">P3 Medium</div><div class="qb-value" style="color:var(--blue)">' + (qbp.P3 || 0) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">P4 Low</div><div class="qb-value" style="color:var(--text-tertiary)">' + (qbp.P4 || 0) + '</div></div>';
+  qo += '</div>';
+  // Status breakdown strip
+  qo += '<div class="queue-breakdown" style="margin-bottom:14px">';
+  qo += '<div class="qb-item"><div class="qb-label">Queued</div><div class="qb-value">' + (qbs.queued || 0) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">Running</div><div class="qb-value" style="color:var(--blue)">' + ((qbs.running || 0) + (qbs.claimed || 0)) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">Passed</div><div class="qb-value" style="color:var(--green)">' + (qbs.passed || 0) + '</div></div>';
+  qo += '<div class="qb-item"><div class="qb-label">Failed</div><div class="qb-value" style="color:var(--red)">' + (qbs.failed || 0) + '</div></div>';
+  qo += '</div>';
+  // Pending items table (only queued/running)
+  if (pending.length > 0) {
+    qo += '<div class="table-scroll" style="max-height:300px"><table id="tbl-queue"><thead><tr>';
+    qo += '<th>Priority</th><th>Strategy</th><th>Title</th><th>Category</th>';
+    qo += '<th>Status</th><th>ETA</th>';
+    qo += '</tr></thead><tbody>';
+    pending.forEach(function(e) {
+      var sc = e.status === 'running' || e.status === 'claimed' ? 'badge-running' : 'badge-queued';
+      qo += '<tr>';
+      qo += '<td class="pri-' + (e.priority||'').toLowerCase() + '" style="font-weight:700;font-size:12px">' + esc(e.priority) + '</td>';
+      qo += '<td>' + strat(e.strategy_name || '') + '</td>';
+      qo += '<td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title) + '</td>';
+      qo += '<td style="font-size:11px;color:var(--text-secondary)">' + esc(e.category) + '</td>';
+      qo += '<td><span class="research-badge ' + sc + '">' + esc(e.status) + '</span></td>';
+      qo += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (e.estimated_runtime_min > 0 ? '~' + e.estimated_runtime_min + 'm' : '—') + '</td>';
+      qo += '</tr>';
+    });
+    qo += '</tbody></table></div>';
+  }
+  document.getElementById('body-rqueue').innerHTML = qo;
+
+  // ── Coverage Matrix ──
+  var covStages = ['screen','solo','optimize','combined','oos','promote'];
+  var covLabels = ['Screen','Solo','Opt','Comb','OOS','Prom'];
+  var ct = '<div class="table-scroll" style="max-height:500px"><table class="cov-matrix"><thead><tr>';
+  ct += '<th style="min-width:130px">Strategy</th><th>Status</th>';
+  covLabels.forEach(function(l) { ct += '<th>' + l + '</th>'; });
+  ct += '</tr></thead><tbody>';
+  lb.forEach(function(s) {
+    var cov = s.coverage || {};
+    var hasCov = covStages.some(function(cs) { return cov[cs]; });
+    ct += '<tr class="' + (!hasCov ? 'untested' : '') + '">';
+    ct += '<td>' + strat(s.id) + '</td>';
+    var sc = 'badge-queued';
+    if (s.status === 'active') sc = 'badge-pass';
+    else if (s.status === 'dormant') sc = 'badge-partial';
+    else if (s.status === 'not_built') sc = 'badge-queued';
+    ct += '<td><span class="research-badge ' + sc + '" style="font-size:9px">' + esc(s.status) + '</span></td>';
+    covStages.forEach(function(cs) {
+      var icon = cov[cs] || '—';
+      ct += '<td class="cov-icon">' + icon + '</td>';
+    });
+    ct += '</tr>';
+  });
+  ct += '</tbody></table></div>';
+  document.getElementById('body-rcoverage').innerHTML = ct;
+}
+
+function toggleLearning(idx) {
+  var el = document.getElementById('learning-' + idx);
+  if (el) el.classList.toggle('show');
 }
 
 // ── Market Session Countdown ──

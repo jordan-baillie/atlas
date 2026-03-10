@@ -1,0 +1,41 @@
+{
+  "experiment_id": "20260310_185804_9ff181",
+  "strategy": "connors_rsi2",
+  "market": "sp500",
+  "mode": "solo",
+  "params_override": null,
+  "n_tickers": 199,
+  "config_version": "v2.2",
+  "timestamp": "2026-03-10T09:14:34.252215+00:00",
+  "solo": {
+    "total_trades": 673,
+    "cagr_pct": -0.5804,
+    "cagr_full_period_pct": -0.4923,
+    "sharpe": -2.3374,
+    "sortino": -3.2393,
+    "max_drawdown_pct": 8.8326,
+    "win_rate_pct": 58.1,
+    "profit_factor": 0.9168,
+    "total_pnl": -150.49,
+    "avg_trade": -0.22,
+    "final_equity": 3864.33,
+    "expectancy_r": -0.01,
+    "avg_r": -0.01,
+    "r_count": 673,
+    "edge_p_value": 0.556564,
+    "edge_significant": false,
+    "var_95_pct": 0.24,
+    "cvar_95_pct": 0.349,
+    "calmar": -0.0657,
+    "mc_p95_drawdown_pct": 9.28,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "connors_rsi2": {
+        "trades": 673,
+        "total_pnl": -150.49,
+        "win_rate_pct": 58.1
+      }
+    }
+  },
+  "runtime_s": 457.8
+}

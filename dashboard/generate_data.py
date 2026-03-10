@@ -1619,95 +1619,411 @@ def _pretty_strat(name: str) -> str:
     return (name or "unknown").replace("_", " ").title()
 
 
+def _parse_vault_frontmatter(path: Path) -> dict:
+    """Parse YAML frontmatter from a vault .md file. Returns dict of key-value pairs."""
+    try:
+        text = path.read_text()
+    except Exception:
+        return {}
+    if not text.startswith("---"):
+        return {}
+    end = text.find("---", 3)
+    if end < 0:
+        return {}
+    fm = {}
+    current_key = None
+    current_list = None
+    for line in text[3:end].splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        # List item under current key
+        if stripped.startswith("- ") and current_key:
+            val = stripped[2:].strip().strip('"').strip("'")
+            if current_list is None:
+                current_list = []
+            current_list.append(val)
+            fm[current_key] = current_list
+            continue
+        # Key-value pair
+        if ":" in stripped:
+            # Flush previous list
+            current_list = None
+            colon = stripped.index(":")
+            key = stripped[:colon].strip()
+            val = stripped[colon + 1:].strip().strip('"').strip("'")
+            current_key = key
+            if val == "":
+                # Could be a list following
+                continue
+            # Parse numbers
+            if val in ("true", "True"):
+                fm[key] = True
+            elif val in ("false", "False"):
+                fm[key] = False
+            elif val in ("null", "None", "~"):
+                fm[key] = None
+            else:
+                try:
+                    fm[key] = int(val)
+                except ValueError:
+                    try:
+                        fm[key] = float(val)
+                    except ValueError:
+                        fm[key] = val
+    return fm
+
+
+def _read_vault_strategies() -> list:
+    """Read all strategy cards from vault/Strategies/*.md frontmatter.
+
+    Falls back to STRATEGY_UNIVERSE from discovery.py for the 'type' field
+    since vault cards for tested strategies set type='strategy' (generic).
+    """
+    # Load strategy types from discovery engine (authoritative source)
+    type_map = {}
+    try:
+        from research.discovery import STRATEGY_UNIVERSE
+        for sid, info in STRATEGY_UNIVERSE.items():
+            type_map[sid] = info.get("type", "unknown")
+    except ImportError:
+        pass
+
+    strat_dir = PROJECT_ROOT / "research" / "vault" / "Strategies"
+    if not strat_dir.exists():
+        return []
+    strategies = []
+    for md in sorted(strat_dir.glob("*.md")):
+        fm = _parse_vault_frontmatter(md)
+        if not fm:
+            continue
+        sid = fm.get("strategy_id", md.stem.lower().replace(" ", "_"))
+        raw_type = fm.get("type", "unknown")
+        # Always prefer discovery engine type (authoritative); vault cards often
+        # have 'strategy' (generic) or abbreviated types like 'adx', 'demark'
+        strat_type = type_map.get(sid, raw_type)
+        strategies.append({
+            "id": sid,
+            "name": md.stem,
+            "status": fm.get("status", "unknown"),
+            "tier": fm.get("tier", 0),
+            "type": strat_type,
+            "total_experiments": fm.get("total_experiments", 0),
+            "best_sharpe": fm.get("best_sharpe", None),
+        })
+    return strategies
+
+
+def _read_vault_coverage() -> dict:
+    """Parse the coverage matrix from vault/Meta/Coverage Map.md.
+
+    Returns: {strategy_id: {stage: icon}} e.g. {"mean_reversion": {"solo": "✅", "oos": "❌"}}
+    """
+    cov_path = PROJECT_ROOT / "research" / "vault" / "Meta" / "Coverage Map.md"
+    if not cov_path.exists():
+        return {}
+    try:
+        text = cov_path.read_text()
+    except Exception:
+        return {}
+
+    # Find the table header to get column names
+    stages = ["screen", "quick", "solo", "optimize", "combined", "oos", "promote"]
+    result = {}
+    in_table = False
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("| Strategy"):
+            in_table = True
+            continue
+        if in_table and line.startswith("|---"):
+            continue
+        if in_table and line.startswith("|"):
+            cells = [c.strip() for c in line.split("|")[1:-1]]
+            if len(cells) >= 9:  # strategy + type + 7 stages
+                strat_id = cells[0].strip()
+                stage_map = {}
+                for i, stage in enumerate(stages):
+                    icon = cells[i + 2].strip()
+                    if icon != "—":
+                        stage_map[stage] = icon
+                if strat_id:
+                    result[strat_id] = stage_map
+        elif in_table and not line.startswith("|"):
+            break  # End of table
+    return result
+
+
+def _read_vault_patterns() -> list:
+    """Read confirmed patterns from vault/Patterns/*.md."""
+    pat_dir = PROJECT_ROOT / "research" / "vault" / "Patterns"
+    if not pat_dir.exists():
+        return []
+    patterns = []
+    for md in sorted(pat_dir.glob("*.md")):
+        fm = _parse_vault_frontmatter(md)
+        # Grab the first real paragraph after frontmatter closes
+        summary = ""
+        try:
+            text = md.read_text()
+            # Skip past frontmatter (--- ... ---)
+            parts = text.split("---", 2)
+            if len(parts) >= 3:
+                body = parts[2]
+            else:
+                body = text
+            # Find first non-empty, non-heading, non-blockquote line
+            for line in body.splitlines():
+                stripped = line.strip()
+                if not stripped or stripped.startswith("#") or stripped.startswith(">") or stripped.startswith("|") or stripped.startswith("-"):
+                    continue
+                summary = stripped
+                break
+        except Exception:
+            pass
+        patterns.append({
+            "name": md.stem,
+            "status": fm.get("status", "unknown"),
+            "impact": fm.get("impact", "unknown"),
+            "summary": summary[:120] if summary else "",
+        })
+    return patterns
+
+
+def _read_vault_hypotheses() -> list:
+    """Read hypotheses from vault/Hypotheses/*.md."""
+    hyp_dir = PROJECT_ROOT / "research" / "vault" / "Hypotheses"
+    if not hyp_dir.exists():
+        return []
+    hypotheses = []
+    for md in sorted(hyp_dir.glob("*.md")):
+        fm = _parse_vault_frontmatter(md)
+        # Grab hypothesis text from ## Hypothesis section
+        hyp_text = ""
+        try:
+            text = md.read_text()
+            in_section = False
+            for line in text.splitlines():
+                if line.strip().startswith("## Hypothesis"):
+                    in_section = True
+                    continue
+                if in_section and line.strip().startswith("## "):
+                    break
+                if in_section and line.strip():
+                    hyp_text = line.strip()
+                    break
+        except Exception:
+            pass
+        hypotheses.append({
+            "id": fm.get("id", md.stem),
+            "title": fm.get("title", md.stem),
+            "status": fm.get("status", "proposed"),
+            "source": fm.get("source", "unknown"),
+            "created": fm.get("created", ""),
+            "hypothesis": hyp_text[:150] if hyp_text else "",
+        })
+    return hypotheses
+
+
+def _read_daemon_status() -> dict:
+    """Read research daemon heartbeat from /tmp."""
+    hb_path = Path("/tmp/research-daemon-heartbeat.json")
+    hb = safe_json(hb_path, None)
+    if hb is None:
+        return {"status": "offline", "uptime_s": 0, "experiments_completed": 0,
+                "experiments_failed": 0, "queue_depth": 0, "current_experiment": None}
+    # Check staleness
+    ts = hb.get("timestamp", "")
+    status = hb.get("status", "unknown")
+    if ts:
+        try:
+            from datetime import timezone
+            hb_time = datetime.fromisoformat(ts)
+            if hb_time.tzinfo is None:
+                hb_time = hb_time.replace(tzinfo=timezone.utc)
+            age_min = (datetime.now(timezone.utc) - hb_time).total_seconds() / 60
+            if age_min > 30:
+                status = "dead"
+            elif age_min > 5:
+                status = "stale"
+            else:
+                status = "running"
+        except Exception:
+            status = "unknown"
+    return {
+        "status": status,
+        "uptime_s": hb.get("uptime_s", 0),
+        "experiments_completed": hb.get("experiments_completed", 0),
+        "experiments_failed": hb.get("experiments_failed", 0),
+        "queue_depth": hb.get("queue_depth", 0),
+        "current_experiment": hb.get("current_experiment"),
+        "timestamp": ts,
+    }
+
+
 def generate_research_data() -> dict:
     """Generate research section data for the dashboard.
 
-    Includes: queue status, recent results, cumulative impact,
-    strategy coverage matrix, and next scheduled session.
+    Reads primarily from the Obsidian vault (research/vault/) for
+    strategy cards, coverage, patterns, and hypotheses.
+    Supplements with queue.json, journal.json, and daemon heartbeat.
     """
     research_dir = PROJECT_ROOT / "research"
     queue_path = research_dir / "queue.json"
     journal_path = research_dir / "journal.json"
-    experiments_dir = research_dir / "experiments"
 
-    # Queue
+    # ── Vault data (primary source) ─────────────────────────────
+    strategies = _read_vault_strategies()
+    coverage = _read_vault_coverage()
+    patterns = _read_vault_patterns()
+    hypotheses = _read_vault_hypotheses()
+    daemon = _read_daemon_status()
+
+    # ── Queue (aggregated summary, not raw dump) ────────────────
     queue = safe_json(queue_path, [])
-    queued = [e for e in queue if e.get("status") == "queued"]
-    running = [e for e in queue if e.get("status") in ("claimed", "running")]
-    completed = [e for e in queue if e.get("status") in ("passed", "failed", "partial", "promoted", "rejected")]
+    queue_by_status = {}
+    queue_by_priority = {}
+    queue_by_category = {}
+    for e in queue:
+        st = e.get("status", "queued")
+        queue_by_status[st] = queue_by_status.get(st, 0) + 1
+        pri = e.get("priority", "P3")
+        queue_by_priority[pri] = queue_by_priority.get(pri, 0) + 1
+        cat = e.get("category", "unknown")
+        queue_by_category[cat] = queue_by_category.get(cat, 0) + 1
 
-    # Journal
+    # Queued items only (for the expandable table)
+    queued_items = [
+        {
+            "id": e.get("id", "?"),
+            "title": e.get("title", "?"),
+            "priority": e.get("priority", "?"),
+            "category": e.get("category", "?"),
+            "market": e.get("market", "?"),
+            "status": e.get("status", "?"),
+            "strategy_name": e.get("strategy_name", ""),
+            "estimated_runtime_min": e.get("estimated_runtime_min", 0),
+        }
+        for e in queue
+        if e.get("status") in ("queued", "claimed", "running")
+    ]
+
+    # ── Journal (activity feed — last 20) ───────────────────────
     journal = safe_json(journal_path, [])
-
-    # Recent results (last 10)
-    recent_results = []
-    for entry in journal[-10:]:
-        recent_results.append({
+    activity_feed = []
+    for entry in journal[-20:]:
+        km = entry.get("key_metrics", {})
+        activity_feed.append({
             "experiment_id": entry.get("experiment_id", "?"),
             "timestamp": entry.get("timestamp", ""),
-            "market": entry.get("market", "?"),
             "strategy": entry.get("strategy", "N/A"),
             "category": entry.get("category", "?"),
             "verdict": entry.get("verdict", "?"),
-            "key_metrics": entry.get("key_metrics", {}),
-            "delta_vs_baseline": entry.get("delta_vs_baseline", {}),
+            "sharpe": km.get("sharpe"),
+            "win_rate_pct": km.get("win_rate_pct"),
+            "total_trades": km.get("total_trades"),
+            "cagr_pct": km.get("cagr_pct"),
+            "max_drawdown_pct": km.get("max_drawdown_pct"),
             "promoted": entry.get("promoted", False),
-            "learnings": entry.get("learnings", []),
+            "learnings": entry.get("learnings", [])[:2],  # First 2 only
         })
 
-    # Cumulative impact from promoted experiments
-    promoted_entries = [e for e in journal if e.get("promoted")]
-    cumulative_sharpe_delta = sum(
-        e.get("delta_vs_baseline", {}).get("sharpe", 0)
-        for e in promoted_entries
-    )
-
-    # Strategy coverage matrix
-    all_strategies = set()
-    all_markets = set()
-    coverage = {}  # {strategy: {market: {last_tested, verdict, experiment_id}}}
-    for entry in journal:
-        strat = entry.get("strategy")
-        market = entry.get("market")
-        if strat and market:
-            all_strategies.add(strat)
-            all_markets.add(market)
-            key = f"{strat}:{market}"
-            coverage[key] = {
-                "strategy": strat,
-                "market": market,
-                "last_tested": entry.get("timestamp", ""),
-                "verdict": entry.get("verdict", "?"),
-                "experiment_id": entry.get("experiment_id", "?"),
-            }
-
-    # Experiment statistics
+    # ── Statistics (from journal) ───────────────────────────────
     total_experiments = len(journal)
     passed_count = sum(1 for e in journal if e.get("verdict") == "pass")
     failed_count = sum(1 for e in journal if e.get("verdict") == "fail")
     partial_count = sum(1 for e in journal if e.get("verdict") == "partial")
-    promoted_count = len(promoted_entries)
+    promoted_count = sum(1 for e in journal if e.get("verdict") == "promoted" or e.get("promoted"))
+
+    # Days active
+    days_active = 0
+    if journal:
+        first_ts = journal[0].get("timestamp", "")[:10]
+        try:
+            first_date = datetime.strptime(first_ts, "%Y-%m-%d")
+            days_active = (datetime.now() - first_date).days + 1
+        except ValueError:
+            days_active = 1
+
+    # ── Leaderboard (from vault strategy cards, enriched) ───────
+    leaderboard = []
+    for s in strategies:
+        sid = s["id"]
+        stages = coverage.get(sid, {})
+        # Determine highest lifecycle stage reached
+        stage_order = ["screen", "quick", "solo", "optimize", "combined", "oos", "promote"]
+        highest_stage = "—"
+        highest_icon = "—"
+        for stage in reversed(stage_order):
+            if stage in stages:
+                highest_stage = stage
+                highest_icon = stages[stage]
+                break
+
+        # Get win rate from journal (best experiment)
+        strat_entries = [e for e in journal if e.get("strategy") == sid]
+        best_wr = None
+        best_trades = 0
+        for e in strat_entries:
+            km = e.get("key_metrics", {})
+            wr = km.get("win_rate_pct")
+            trades = km.get("total_trades", 0)
+            sharpe = km.get("sharpe")
+            if sharpe is not None and s.get("best_sharpe") is not None:
+                if abs(sharpe - s["best_sharpe"]) < 0.01:
+                    best_wr = wr
+                    best_trades = trades
+            if wr is not None and (best_wr is None or wr > best_wr):
+                best_wr = wr
+            if trades > best_trades:
+                best_trades = trades
+
+        leaderboard.append({
+            "id": sid,
+            "name": s["name"],
+            "status": s["status"],
+            "tier": s["tier"],
+            "type": s["type"],
+            "total_experiments": s["total_experiments"],
+            "best_sharpe": s["best_sharpe"],
+            "best_win_rate": round(best_wr, 1) if best_wr is not None else None,
+            "best_trades": best_trades,
+            "stage": highest_stage,
+            "stage_icon": highest_icon,
+            "coverage": stages,
+        })
+    # Filter out meta-strategies (filters/combined — not directly tradable)
+    leaderboard = [s for s in leaderboard if s["status"] != "filter"]
+    # Sort: tested strategies with best Sharpe first, then untested
+    leaderboard.sort(key=lambda x: (
+        0 if x["best_sharpe"] is not None else 1,
+        -(x["best_sharpe"] or -999),
+    ))
+
+    # ── Lifecycle pipeline counts ───────────────────────────────
+    pipeline = {"untested": 0, "screen": 0, "quick": 0, "solo": 0,
+                "optimize": 0, "combined": 0, "oos": 0, "promote": 0}
+    for s in leaderboard:
+        stage = s["stage"]
+        if stage == "—":
+            pipeline["untested"] += 1
+        elif stage in pipeline:
+            pipeline[stage] += 1
 
     return {
-        "queue": {
+        "daemon": daemon,
+        "leaderboard": leaderboard,
+        "pipeline": pipeline,
+        "patterns": patterns,
+        "hypotheses": hypotheses,
+        "activity_feed": activity_feed,
+        "queue_summary": {
             "total": len(queue),
-            "queued": len(queued),
-            "running": len(running),
-            "completed": len(completed),
-            "items": [
-                {
-                    "id": e.get("id", "?"),
-                    "title": e.get("title", "?"),
-                    "priority": e.get("priority", "?"),
-                    "category": e.get("category", "?"),
-                    "market": e.get("market", "?"),
-                    "status": e.get("status", "?"),
-                    "estimated_runtime_min": e.get("estimated_runtime_min", 0),
-                }
-                for e in queue
-            ],
+            "by_status": queue_by_status,
+            "by_priority": queue_by_priority,
+            "by_category": queue_by_category,
+            "pending_items": queued_items,
         },
-        "recent_results": recent_results,
         "statistics": {
             "total_experiments": total_experiments,
             "passed": passed_count,
@@ -1715,14 +2031,10 @@ def generate_research_data() -> dict:
             "partial": partial_count,
             "promoted": promoted_count,
             "pass_rate_pct": round(passed_count / total_experiments * 100, 1) if total_experiments else 0,
+            "days_active": days_active,
+            "strategies_tested": len([s for s in strategies if s["total_experiments"] and s["total_experiments"] > 0]),
+            "strategies_total": len(strategies),
         },
-        "cumulative_impact": {
-            "sharpe_delta": round(cumulative_sharpe_delta, 4),
-            "promotions": promoted_count,
-        },
-        "strategy_coverage": list(coverage.values()),
-        "strategies_tested": sorted(all_strategies),
-        "markets_tested": sorted(all_markets),
         "daily_insight": generate_daily_insight(),
     }
 
