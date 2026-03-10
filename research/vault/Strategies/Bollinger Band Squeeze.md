@@ -2,8 +2,8 @@
 strategy_id: bb_squeeze
 type: strategy
 status: dormant
-total_experiments: 2
-best_sharpe: -0.38
+total_experiments: 5
+best_sharpe: -0.3791
 tags:
   - strategy
   - "strategy/bb-squeeze"
@@ -11,11 +11,11 @@ tags:
 
 # Bollinger Band Squeeze
 
-> **Status:** `DORMANT` | **Experiments:** 2 | **Promotions:** 0
+> **Status:** `DORMANT` | **Experiments:** 5 | **Promotions:** 0
 
 ## Overview
 
-Bollinger Band Squeeze (BB inside Keltner Channel). Identifies low-volatility regimes preceding explosive directional moves. Marginally viable after optimization; not currently in active portfolio.
+Research strategy `bb_squeeze`. See experiments below.
 
 ## Aggregate Metrics
 
@@ -24,13 +24,32 @@ Bollinger Band Squeeze (BB inside Keltner Channel). Identifies low-volatility re
 | Best Sharpe | -0.38 |
 | Worst Sharpe | -1.68 |
 | Avg Sharpe | -1.03 |
-| Total Experiments | 2 |
-| Pass / Partial / Fail | 1 / 1 / 0 |
+| Total Experiments | 5 |
+| Pass / Partial / Fail | 2 / 3 / 0 |
 | Promotions | 0 |
 
-## Experiments
+## Best Parameters
+
+- `param_grid`: {'bb_period': [15, 20, 25], 'bb_std': [1.5, 2.0, 2.5], 'kc_atr_mult': [1.0, 1.5, 2.0], 'momentum_period': [10, 15, 20], 'atr_stop_mult': [1.5, 2.0, 2.5], 'max_hold_days': [10, 15, 20, 25]}
+
+## Experiment History
 
 | Experiment | Wave | Verdict | Sharpe | CAGR | Promoted |
 |------------|------|---------|--------|------|----------|
 | [[wave1_bb_squ_solo]] | 1 | `pass` | -1.68 | -12.27% |  |
 | [[wave1_bb_squ_opt]] | 1 | `partial` | -0.38 | -0.37% |  |
+| [[wave1_bb_squ_solo]] | 1 | `pass` | -1.68 | -12.27% |  |
+| [[wave1_bb_squ_opt]] | 1 | `partial` | -0.38 | -0.37% |  |
+| [[20260310_181024_f7508b]] | ? | `partial` | -1.05 | 0.82% |  |
+
+## Key Learnings
+
+- BB Squeeze is viable: 322 trades, 45% WR, PF 0.74 with default params
+- Clearly unprofitable untuned (Sharpe -1.68, CAGR -12.3%) but signal generates enough trades
+- Passed to optimization phase
+- BB Squeeze improved dramatically: Sharpe -1.68 → -0.38, PF 0.74 → 1.04
+- Best params: bb_period=25, bb_std=1.5 (both changed from defaults)
+- But PF 1.04 still below 1.1 threshold, Sharpe still negative
+- Near breakeven after optimization is not good enough for portfolio addition
+- BB Squeeze on SP500 with current implementation is likely not viable
+- PATTERN: All 3 dormant strategies tried so far are individually marginal after optimization
