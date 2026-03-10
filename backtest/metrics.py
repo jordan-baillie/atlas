@@ -8,7 +8,7 @@ No side effects, no state.
 
 Usage:
     from backtest.metrics import (
-        calc_cagr, calc_max_drawdown, calc_sharpe, calc_sortino,
+        calc_cagr, calc_cagr_full_period, calc_max_drawdown, calc_sharpe, calc_sortino,
         calc_win_rate, calc_profit_factor, calc_avg_trade,
         calc_exposure, calc_turnover, calc_all_metrics,
         calc_r_multiples, calc_expectancy_r, calc_edge_ttest,
@@ -59,6 +59,55 @@ def calc_cagr(equity_curve: pd.Series) -> float:
 
     if days <= 0:
         return 0.0
+
+    years = days / 365.25
+    if years <= 0:
+        return 0.0
+
+    total_return = end_val / start_val
+    if total_return <= 0:
+        return -1.0  # total loss
+
+    cagr = total_return ** (1.0 / years) - 1.0
+    return round(cagr, 6)
+
+
+def calc_cagr_full_period(equity_curve: pd.Series, data_start_date, data_end_date) -> float:
+    """Calculate CAGR using the full data window as time denominator.
+
+    The standard calc_cagr() uses equity curve dates, which start after the
+    training window in walk-forward. This inflates CAGR because the denominator
+    is shorter than the actual data period.
+
+    Example: 3 years of data, 1 year training → equity curve covers 2 years.
+    Standard CAGR: (final/start)^(1/2) - 1 = inflated
+    Full-period CAGR: (final/start)^(1/3) - 1 = realistic
+
+    Args:
+        equity_curve: Series indexed by date with portfolio values.
+        data_start_date: Start date of the full data window (including training).
+        data_end_date: End date of the full data window.
+
+    Returns:
+        CAGR as a decimal (e.g., 0.12 = 12% per year).
+    """
+    if equity_curve is None or len(equity_curve) < 2:
+        return 0.0
+
+    start_val = equity_curve.iloc[0]
+    end_val = equity_curve.iloc[-1]
+
+    if start_val <= 0:
+        return 0.0
+
+    # Use the full data window as the time denominator
+    try:
+        days = (pd.Timestamp(data_end_date) - pd.Timestamp(data_start_date)).days
+    except Exception:
+        return calc_cagr(equity_curve)
+
+    if days <= 0:
+        return calc_cagr(equity_curve)
 
     years = days / 365.25
     if years <= 0:

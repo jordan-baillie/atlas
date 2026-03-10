@@ -287,9 +287,29 @@ def run_backtest(cfg: dict, data: dict, strategy_names: list = None) -> dict:
     cagr = m.get('cagr', 0)
     cagr_pct = cagr * 100 if abs(cagr) < 2 else cagr
 
+    # Full-period CAGR (realistic — uses full data window as denominator)
+    from backtest.metrics import calc_cagr_full_period
+    if result.equity_curve is not None and len(result.equity_curve) > 0:
+        # Get data date range from the loaded data
+        all_dates = set()
+        for ticker_df in data.values():
+            if hasattr(ticker_df, 'index') and len(ticker_df) > 0:
+                all_dates.add(ticker_df.index[0])
+                all_dates.add(ticker_df.index[-1])
+        if all_dates:
+            data_start = min(all_dates)
+            data_end = max(all_dates)
+            cagr_full = calc_cagr_full_period(result.equity_curve, data_start, data_end)
+            cagr_full_pct = cagr_full * 100 if abs(cagr_full) < 2 else cagr_full
+        else:
+            cagr_full_pct = cagr_pct  # fallback
+    else:
+        cagr_full_pct = 0.0
+
     metrics = {
         'total_trades': m.get('total_trades', 0),
         'cagr_pct': round(cagr_pct, 4),
+        'cagr_full_period_pct': round(cagr_full_pct, 4),
         'sharpe': round(m.get('sharpe', 0), 4),
         'sortino': round(m.get('sortino', 0), 4),
         'max_drawdown_pct': round(m.get('max_drawdown', 0) * 100, 4),
@@ -510,7 +530,7 @@ def _print_summary(result: dict):
 def _print_metrics(label: str, m: dict):
     print(f"\n  {label}:")
     print(f"    Trades: {m.get('total_trades', 0)}")
-    print(f"    CAGR: {m.get('cagr_pct', 0):.2f}%")
+    print(f"    CAGR (test): {m.get('cagr_pct', 0):.2f}% | CAGR (full): {m.get('cagr_full_period_pct', 0):.2f}%")
     print(f"    Sharpe: {m.get('sharpe', 0):.4f}")
     print(f"    Sortino: {m.get('sortino', 0):.4f}")
     print(f"    Max DD: {m.get('max_drawdown_pct', 0):.2f}%")
