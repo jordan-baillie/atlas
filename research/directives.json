@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "updated_at": "2026-03-11T05:48:00Z",
+  "updated_by": "system",
+  "_comment": "Written by Director agent. Read by Atlas/Nova/Sage at cycle start.",
+
+  "atlas": {
+    "focus": [],
+    "deprioritized": [],
+    "assignments": null,
+    "_notes": "Atlas runs partition 0 (even-indexed strategies) by default. Set 'assignments' (list of strategy names) to override. 'focus' bubbles named strategies to the front. 'deprioritized' removes them from this cycle."
+  },
+
+  "nova": {
+    "focus": [],
+    "deprioritized": [],
+    "assignments": null,
+    "_notes": "Nova runs partition 1 (odd-indexed strategies) by default. Same override semantics as atlas."
+  },
+
+  "sage": {
+    "create_priority": [],
+    "fix_priority": [],
+    "skip": [],
+    "_notes": "Sage screens strategies. Director promotes — Sage does NOT auto-promote. 'fix_priority' and 'create_priority' reorder Sage's LLM dispatch queue. 'skip' drops strategies from consideration entirely."
+  },
+
+  "pending_approvals": [],
+
+  "retirements": [],
+
+  "portfolio_notes": {
+    "max_correlation": 0.7,
+    "max_concurrent_strategies": 8,
+    "target_active_strategies": 6,
+    "_notes": "Maintain diversification. Correlation check (Lesson #7) required before Director approves any promotion. Control arm (Lesson #9) required alongside new strategy experiments."
+  }
+}

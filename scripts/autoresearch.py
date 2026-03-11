@@ -46,6 +46,9 @@ def parse_args():
 # Dynamic strategy queue — autoresearch reads active strategies from here each cycle
 QUEUE_PATH = PROJECT / "research" / "strategy_queue.json"
 
+# Directives — written by Director agent, consumed by Atlas/Nova to guide research focus
+DIRECTIVES_PATH = PROJECT / "research" / "directives.json"
+
 # Fallback strategy list used when QUEUE_PATH is missing or unreadable
 _FALLBACK_STRATEGIES = [
     "mean_reversion",
@@ -75,6 +78,72 @@ def load_strategies_from_queue() -> list[str]:
     except Exception as e:
         logger.error("QUEUE: Failed to load %s: %s — using fallback", QUEUE_PATH, e)
     return list(_FALLBACK_STRATEGIES)
+
+def load_directives() -> dict:
+    """Load research/directives.json. Returns empty dict on missing/error.
+
+    Directives are written by the Director agent to guide Atlas, Nova, and Sage.
+    Each agent reads its own section at cycle start.
+    """
+    try:
+        return json.loads(DIRECTIVES_PATH.read_text())
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        logger.warning("DIRECTIVES: Failed to load %s: %s", DIRECTIVES_PATH, e)
+        return {}
+
+
+def apply_directives_to_strategies(strategies: list[str]) -> list[str]:
+    """Apply Director directives to the strategy list.
+
+    Reads the appropriate agent section (atlas for partition 0 / solo,
+    nova for partition 1) and applies in order:
+      1. assignments  — if set, override the partition-split list entirely
+      2. deprioritized — filter these strategies out of this cycle
+      3. focus        — sort focused strategies to the front (preserving order)
+
+    Returns the modified strategy list.
+    """
+    directives = load_directives()
+    if not directives:
+        return strategies
+
+    # Determine which agent section to use
+    agent_key = "nova" if PARTITION == 1 else "atlas"
+    agent_dir = directives.get(agent_key, {})
+    if not agent_dir:
+        return strategies
+
+    # 1. Assignments override partition split
+    assignments = agent_dir.get("assignments")
+    if assignments and isinstance(assignments, list):
+        logger.info("DIRECTIVES: %s using Director-assigned strategies: %s",
+                    agent_key, assignments)
+        strategies = [s for s in assignments if s]
+
+    # 2. Filter deprioritized
+    deprioritized = set(agent_dir.get("deprioritized", []))
+    if deprioritized:
+        before = len(strategies)
+        strategies = [s for s in strategies if s not in deprioritized]
+        removed = before - len(strategies)
+        if removed:
+            logger.info("DIRECTIVES: Removed %d deprioritized strategies from %s cycle",
+                        removed, agent_key)
+
+    # 3. Sort by focus (focused strategies bubble to front, preserve declared order)
+    focus = agent_dir.get("focus", [])
+    if focus:
+        strat_set = set(strategies)
+        focused = [s for s in focus if s in strat_set]   # keep focus order
+        others  = [s for s in strategies if s not in set(focus)]
+        strategies = focused + others
+        logger.info("DIRECTIVES: Focus applied — %d focused, %d other strategies",
+                    len(focused), len(others))
+
+    return strategies
+
 
 SWEEP_TOP_N = 50
 SWEEP_WORKERS = max(1, os.cpu_count() - 2)
@@ -499,6 +568,9 @@ def main():
             STRATEGIES = [s for i, s in enumerate(_all) if i % 2 == PARTITION]
         else:
             STRATEGIES = list(_all)
+
+        # Apply Director directives: assignments override, deprioritized filter, focus sort
+        STRATEGIES = apply_directives_to_strategies(STRATEGIES)
         logger.info("Strategies this cycle: %s", ", ".join(STRATEGIES))
 
         write_heartbeat("cycle_start", "", cycle)

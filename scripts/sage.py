@@ -46,6 +46,7 @@ MAX_PROMOTIONS_PER_CYCLE = 2
 # Strategy creation constants
 QUEUE_PATH     = PROJECT / "research" / "strategy_queue.json"
 SANDBOX_DIR    = PROJECT / "research" / "strategies"
+DIRECTIVES_PATH = PROJECT / "research" / "directives.json"
 VAULT_DIR      = PROJECT / "research" / "vault" / "Strategies"
 SKILL_NAME     = "atlas-strategy-discovery"
 MAX_CREATES_PER_CYCLE = 2       # LLM calls are expensive — limit per cycle
@@ -142,6 +143,33 @@ def write_queue(data: dict) -> None:
     tmp = QUEUE_PATH.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, indent=2))
     tmp.rename(QUEUE_PATH)
+
+
+def load_directives() -> dict:
+    """Load research/directives.json. Returns empty dict on missing/error.
+
+    Directives are written by the Director agent to guide Atlas, Nova, and Sage.
+    Sage reads the 'sage' section to prioritise create/fix targets and skip lists.
+    """
+    try:
+        return json.loads(DIRECTIVES_PATH.read_text())
+    except FileNotFoundError:
+        return {}
+    except Exception as e:
+        logger.warning("DIRECTIVES: Failed to load %s: %s", DIRECTIVES_PATH, e)
+        return {}
+
+
+def _write_directives(directives: dict) -> None:
+    """Atomically write research/directives.json."""
+    directives["updated_at"] = datetime.now(timezone.utc).isoformat()
+    directives["updated_by"] = "sage"
+    tmp = DIRECTIVES_PATH.with_suffix(".tmp")
+    try:
+        tmp.write_text(json.dumps(directives, indent=2))
+        tmp.rename(DIRECTIVES_PATH)
+    except OSError as e:
+        logger.warning("DIRECTIVES: Write failed: %s", e)
 
 
 def queue_known_names() -> set[str]:
@@ -496,6 +524,38 @@ def run_create_phase(cycle: int, dry_run: bool) -> dict:
     if not targets:
         return {"targets_found": 0, "created": 0, "fixed": 0, "failed": 0}
 
+    # ── Apply sage directives: skip list + priority reordering ──
+    sage_dir = load_directives().get("sage", {})
+    skip_set       = set(sage_dir.get("skip", []))
+    fix_priority   = sage_dir.get("fix_priority", [])
+    create_priority = sage_dir.get("create_priority", [])
+
+    if skip_set:
+        before  = len(targets)
+        targets = [t for t in targets if t["name"] not in skip_set]
+        removed = before - len(targets)
+        if removed:
+            logger.info("DIRECTIVES: Skipped %d targets (skip list: %s)",
+                        removed, sorted(skip_set))
+
+    if fix_priority or create_priority:
+        fix_pri_set    = set(fix_priority)
+        create_pri_set = set(create_priority)
+
+        def _sort_key(t: dict) -> tuple:
+            name, action = t["name"], t["action"]
+            if action == "fix" and name in fix_pri_set:
+                return (0, fix_priority.index(name))
+            if action == "create" and name in create_pri_set:
+                return (1, create_priority.index(name))
+            if action == "fix":
+                return (2, 999)
+            return (3, 999)
+
+        targets.sort(key=_sort_key)
+        logger.info("DIRECTIVES: Priority order applied — fix_priority=%s, create_priority=%s",
+                    fix_priority, create_priority)
+
     created = fixed = failed = 0
     for target in targets[:MAX_CREATES_PER_CYCLE]:
         if should_stop():
@@ -551,81 +611,89 @@ def run_create_phase(cycle: int, dry_run: bool) -> dict:
 # ── Strategy Queue Promotion ──────────────────────────────────────────────
 
 def run_promote_phase(cycle: int, dry_run: bool) -> dict:
-    """Phase 2: Auto-promote top candidates from the queue to active.
+    """Phase 2: Screen candidates and flag qualifying ones for Director review.
 
-    Criteria: sharpe > 0.0 and trades >= 30 (stricter than sanity check).
-    Max 2 promotions per cycle.
+    Sage does NOT auto-promote. It re-runs sanity checks on all candidates,
+    identifies those that meet the promotion gate, and adds them to
+    research/directives.json:pending_approvals for the Director to act on.
+
+    Returns summary: {"screened", "new_pending", "candidates"}
     """
-    logger.info("── Promote phase (queue) ──")
+    logger.info("── Screen phase (queue) ── [Sage screens; Director promotes]")
     q = read_queue()
     candidates = q.get("candidates", [])
 
     if not candidates:
-        logger.info("No candidates to promote")
-        return {"promoted": 0, "candidates": 0}
+        logger.info("No candidates to screen")
+        return {"screened": 0, "new_pending": 0, "candidates": 0}
 
-    # Sort by sharpe descending
+    # Sort by sharpe descending for consistent logging
     candidates.sort(key=lambda c: c.get("sharpe", -999), reverse=True)
 
-    promoted = 0
     active_names = {e["name"] for e in q.get("active", []) if isinstance(e, dict)}
 
-    for cand in candidates[:]:
-        if promoted >= MAX_PROMOTIONS_PER_CYCLE:
-            break
-        name = cand.get("name", "")
-        sharpe = cand.get("sharpe", -999)
-        trades = cand.get("trades", 0)
+    # Load existing pending approvals to avoid duplicates
+    directives = load_directives()
+    existing_pending_names = {p["name"] for p in directives.get("pending_approvals", [])}
 
+    screened = 0
+    new_pending: list[dict] = []
+
+    for cand in candidates:
+        name = cand.get("name", "")
+        if not name:
+            continue
         if name in active_names:
-            # Already active, remove from candidates
-            candidates.remove(cand)
+            continue  # already active — skip silently
+        if name in existing_pending_names:
+            logger.info("SKIP screen %s: already in pending_approvals", name)
             continue
 
         # Re-run sanity check for freshness
         check = _run_sanity_check(name)
+        screened += 1
+
         if check.get("status") != "pass":
-            logger.info("SKIP promote %s: sanity re-check failed (%s)",
+            logger.info("SKIP %s: sanity re-check failed (%s)",
                         name, check.get("error", check.get("status")))
             continue
 
         fresh_sharpe = check.get("sharpe", -999)
         fresh_trades = check.get("trades", 0)
 
-        # Promotion gate: stricter than sanity pass
+        # Promotion gate (stricter than sanity): sharpe > 0.0, trades >= 30
         if fresh_sharpe < 0.0 or fresh_trades < 30:
-            logger.info("SKIP promote %s: sharpe=%.2f trades=%d (below promo threshold)",
+            logger.info("SKIP %s: sharpe=%.2f trades=%d (below promo threshold)",
                         name, fresh_sharpe, fresh_trades)
             continue
 
-        if dry_run:
-            logger.info("[DRY-RUN] Would promote %s (sharpe=%.2f)", name, fresh_sharpe)
-            promoted += 1
-            continue
-
-        # Promote: move from candidates → active
-        candidates.remove(cand)
-        q["active"].append({
+        logger.info("PENDING APPROVAL: %s (sharpe=%.2f, trades=%d) — Director review required",
+                    name, fresh_sharpe, fresh_trades)
+        new_pending.append({
             "name": name,
-            "added_by": "sage",
-            "since": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "added_at": datetime.now(timezone.utc).isoformat(),
             "sharpe": fresh_sharpe,
             "trades": fresh_trades,
+            "reason": "Passed sanity re-check. Awaiting Director correlation review (Lesson #7).",
         })
-        promoted += 1
-        active_names.add(name)
-        logger.info("PROMOTED to active: %s (sharpe=%.2f, trades=%d)",
-                     name, fresh_sharpe, fresh_trades)
-        send_telegram(
-            f"🚀 <b>Sage promoted to active</b>: <code>{name}</code>\n"
-            f"Sharpe: {fresh_sharpe:.2f}, Trades: {fresh_trades}\n"
-            f"Atlas & Nova will pick it up next cycle."
-        )
 
-    q["candidates"] = candidates
-    write_queue(q)
+    # Persist new pending approvals into directives.json
+    if new_pending and not dry_run:
+        directives = load_directives()
+        directives.setdefault("pending_approvals", []).extend(new_pending)
+        _write_directives(directives)
+        for p in new_pending:
+            send_telegram(
+                f"⏳ <b>Sage → pending approval</b>: <code>{p['name']}</code>\n"
+                f"Sharpe: {p['sharpe']:.2f}, Trades: {p['trades']}\n"
+                f"Director correlation review required before promotion."
+            )
+    elif new_pending and dry_run:
+        for p in new_pending:
+            logger.info("[DRY-RUN] Would add to pending_approvals: %s (sharpe=%.2f)",
+                        p["name"], p["sharpe"])
 
-    return {"promoted": promoted, "candidates": len(candidates)}
+    return {"screened": screened, "new_pending": len(new_pending), "candidates": len(candidates)}
 
 
 # ── Candidate Scanning ────────────────────────────────────────────────────
