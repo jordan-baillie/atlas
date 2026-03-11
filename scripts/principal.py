@@ -303,7 +303,187 @@ def gather_state() -> dict:
         len(state["recent_experiments"]),
         state["queue"]["total"],
     )
+
+    # Autoresearch reports (feedback from Atlas/Nova)
+    state["autoresearch_reports"] = {
+        "atlas": _read_json(Path("/tmp/autoresearch-report-0.json"), {}),
+        "nova": _read_json(Path("/tmp/autoresearch-report-1.json"), {}),
+    }
+
     return state
+
+
+# ── Promotion & Retirement ─────────────────────────────────────────────────
+
+def _promote_strategy(name: str, reason: str) -> bool:
+    """Move strategy from candidates to active in strategy_queue.json."""
+    q = _read_json(STRAT_QUEUE_PATH, {})
+    candidates = q.get("candidates", [])
+    active = q.get("active", [])
+
+    entry = None
+    for c in candidates:
+        if isinstance(c, dict) and c.get("name") == name:
+            entry = c
+            break
+    if not entry:
+        logger.warning("Cannot promote %s — not in candidates", name)
+        return False
+
+    candidates.remove(entry)
+    entry["promoted_by"] = "director"
+    entry["promoted_at"] = datetime.now(timezone.utc).isoformat()
+    entry["promotion_reason"] = reason
+    active.append(entry)
+
+    q["candidates"] = candidates
+    q["active"] = active
+
+    tmp = STRAT_QUEUE_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(q, indent=2))
+    tmp.rename(STRAT_QUEUE_PATH)
+    logger.info("PROMOTED %s to active: %s", name, reason)
+    _send_telegram(
+        f"🚀 <b>Director promoted</b> <code>{name}</code>\n{reason}"
+    )
+    return True
+
+
+def _retire_strategy(name: str, reason: str) -> bool:
+    """Move strategy from active to retired in strategy_queue.json."""
+    q = _read_json(STRAT_QUEUE_PATH, {})
+    active = q.get("active", [])
+
+    entry = None
+    for a in active:
+        if isinstance(a, dict) and a.get("name") == name:
+            entry = a
+            break
+    if not entry:
+        logger.warning("Cannot retire %s — not in active", name)
+        return False
+
+    active.remove(entry)
+    entry["retired_by"] = "director"
+    entry["retired_at"] = datetime.now(timezone.utc).isoformat()
+    entry["retirement_reason"] = reason
+    q.setdefault("retired", []).append(entry)
+    q["active"] = active
+
+    tmp = STRAT_QUEUE_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(q, indent=2))
+    tmp.rename(STRAT_QUEUE_PATH)
+    logger.info("RETIRED %s: %s", name, reason)
+    _send_telegram(
+        f"🗃️ <b>Director retired</b> <code>{name}</code>\n{reason}"
+    )
+    return True
+
+
+# ── Health Monitoring ──────────────────────────────────────────────────────
+
+def _health_check() -> list[str]:
+    """Check agent health, restart stale services. Returns actions taken."""
+    import shutil
+
+    actions = []
+    checks = [
+        ("atlas-autoresearch-0", "/tmp/autoresearch-parent-0-heartbeat.json", 45),
+        ("atlas-autoresearch-1", "/tmp/autoresearch-parent-1-heartbeat.json", 45),
+        ("atlas-sage", "/tmp/sage-heartbeat.json", 300),
+    ]
+    for svc, hb_path, max_age_min in checks:
+        svc_status = _service_status(svc)
+        if svc_status != "active":
+            logger.warning("Service %s is %s — restarting", svc, svc_status)
+            try:
+                subprocess.run(["systemctl", "restart", svc], timeout=30,
+                               capture_output=True)
+                actions.append(f"restarted {svc} (was {svc_status})")
+            except Exception as e:
+                actions.append(f"restart {svc} FAILED: {e}")
+            continue
+
+        hb = _read_json(Path(hb_path), {})
+        ts = hb.get("timestamp")
+        if ts:
+            try:
+                age_min = (datetime.now(timezone.utc) -
+                           datetime.fromisoformat(ts)).total_seconds() / 60
+                if age_min > max_age_min:
+                    logger.warning("Service %s heartbeat stale (%.0fmin) — restarting",
+                                   svc, age_min)
+                    subprocess.run(["systemctl", "restart", svc], timeout=30,
+                                   capture_output=True)
+                    actions.append(f"restarted {svc} (stale {age_min:.0f}min)")
+            except Exception:
+                pass
+
+    # Disk check
+    try:
+        usage = shutil.disk_usage("/")
+        pct = usage.used / usage.total * 100
+        if pct > 90:
+            logger.warning("Disk usage %.1f%% — running cleanup", pct)
+            subprocess.run(["find", "/tmp/sage-create-logs", "-mtime", "+7",
+                            "-delete"], timeout=30, capture_output=True)
+            subprocess.run(["find", str(PROJECT / "logs"), "-name", "*.log",
+                            "-size", "+10M", "-exec", "truncate", "-s", "1M",
+                            "{}", ";"], timeout=30, capture_output=True)
+            actions.append(f"disk cleanup (was {pct:.1f}%)")
+    except Exception as e:
+        logger.debug("Disk check error: %s", e)
+
+    if actions:
+        logger.info("Health actions: %s", actions)
+    return actions
+
+
+# ── Daily Brief ────────────────────────────────────────────────────────────
+
+_last_daily_brief: datetime | None = None
+
+
+def _maybe_send_daily_brief(state: dict) -> None:
+    """Send a daily research brief with charts once per day after 6am."""
+    global _last_daily_brief
+    now = datetime.now()
+    if _last_daily_brief and (now - _last_daily_brief).total_seconds() < 82800:
+        return
+    if now.hour < 6:
+        return
+
+    try:
+        from utils.charts import strategy_leaderboard_chart, research_progress_chart
+        from utils.telegram import send_photo
+    except ImportError:
+        logger.debug("Charts/telegram not available for daily brief")
+        return
+
+    sq = state.get("strategy_queue", {})
+    active_count = len(sq.get("active", []))
+    cand_count = len(sq.get("candidates", []))
+    best = state.get("best_results", {})
+
+    brief = f"📊 <b>Daily Research Brief</b>\n\n"
+    brief += f"Active: {active_count} strategies, {cand_count} candidates\n\n"
+    for name, info in sorted(best.items(),
+                              key=lambda x: x[1].get("sharpe") or 0,
+                              reverse=True):
+        s = info.get("sharpe")
+        if s is not None:
+            brief += f"• {name}: sharpe={s}\n"
+
+    chart = strategy_leaderboard_chart()
+    if chart:
+        send_photo(str(chart), caption=brief)
+
+    progress = research_progress_chart()
+    if progress:
+        send_photo(str(progress), caption="Research activity (14 days)")
+
+    _last_daily_brief = now
+    logger.info("Daily brief sent")
 
 
 # ── LLM Call ──────────────────────────────────────────────────────────────
@@ -630,31 +810,31 @@ def execute_actions(directive: dict, dry_run: bool = False) -> dict:
 
     # ── Promotion notifications ──────────────────────────────────────
 
+    promotions_done = 0
     for promo in directive.get("promote", []):
         strategy = promo.get("strategy", "?")
         reason   = promo.get("reason", "")
-        cfile    = promo.get("candidate_file", "")
-        msg = (
-            f"🏆 <b>Promotion Candidate</b>: {strategy}\n"
-            f"Reason: {reason}\n"
-            f"Candidate: {cfile}\n"
-            f"<i>Human approval required before promoting.</i>"
-        )
-        logger.info("PROMOTE CANDIDATE: %s — %s", strategy, reason)
+        logger.info("PROMOTING: %s — %s", strategy, reason)
         if not dry_run:
-            _send_telegram(msg)
+            if _promote_strategy(strategy, reason):
+                promotions_done += 1
+        else:
+            logger.info("[DRY RUN] Would promote %s", strategy)
+    results["promotions"] = promotions_done
 
-    # ── Retirement notifications ─────────────────────────────────────
+    # ── Retirements (Director directly retires) ──────────────────────
 
+    retirements_done = 0
     for retire in directive.get("retire", []):
         strategy = retire.get("strategy", "?")
         reason   = retire.get("reason", "")
-        logger.info("RETIRE RECOMMENDATION: %s — %s", strategy, reason)
-        # Retirement is advisory only — human must act on it
-        if not dry_run and retire.get("urgent"):
-            _send_telegram(
-                f"⚰️ <b>Director Retirement Recommendation</b>: {strategy}\n{reason}"
-            )
+        logger.info("RETIRING: %s — %s", strategy, reason)
+        if not dry_run:
+            if _retire_strategy(strategy, reason):
+                retirements_done += 1
+        else:
+            logger.info("[DRY RUN] Would retire %s", strategy)
+    results["retirements"] = retirements_done
 
     # ── Log summary ──────────────────────────────────────────────────
 
@@ -704,6 +884,16 @@ def run_cycle(cycle: int, dry_run: bool) -> bool:
     """Run one Director cycle. Returns True on success."""
     logger.info("=" * 60)
     logger.info("Director cycle %d starting", cycle)
+
+    # 0. Health check (before anything else)
+    write_heartbeat("health_check", cycle)
+    try:
+        health_actions = _health_check()
+        if health_actions:
+            logger.info("Health actions taken: %s", health_actions)
+    except Exception as e:
+        logger.warning("Health check error: %s", e)
+
     write_heartbeat("gathering_state", cycle)
 
     # 1. Gather state
@@ -712,6 +902,12 @@ def run_cycle(cycle: int, dry_run: bool) -> bool:
     except Exception as e:
         logger.error("State gathering failed: %s", e)
         return False
+
+    # 1b. Daily brief (once per day)
+    try:
+        _maybe_send_daily_brief(state)
+    except Exception as e:
+        logger.debug("Daily brief error: %s", e)
 
     write_heartbeat("calling_llm", cycle, queue_depth=state["queue"]["total"])
 
