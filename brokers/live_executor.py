@@ -545,6 +545,43 @@ class LiveExecutor:
                 "LIVE SELL: %s %d x $%.2f → order_id=%s [%s]",
                 ticker, qty, price, order_result.order_id, reason,
             )
+
+            # Poll for fill confirmation — LIMIT orders return fill_price=0
+            # at submission time. Wait up to 60s for the fill to come through.
+            if order_result.fill_price == 0 and order_result.order_id:
+                import time as _time
+                _poll_start = _time.time()
+                _max_wait = 60  # seconds
+                _poll_interval = 3  # seconds
+                logger.info("Waiting for fill on %s (order %s)...",
+                            ticker, order_result.order_id)
+                while _time.time() - _poll_start < _max_wait:
+                    _time.sleep(_poll_interval)
+                    status_result = self._broker.get_order_status(
+                        order_result.order_id)
+                    if status_result.fill_price > 0:
+                        result["fill_price"] = status_result.fill_price
+                        result["status"] = status_result.status.value
+                        logger.info(
+                            "Fill confirmed: %s @ $%.4f (waited %.0fs)",
+                            ticker, status_result.fill_price,
+                            _time.time() - _poll_start,
+                        )
+                        break
+                    if status_result.status.value in ("FAILED", "CANCELLED",
+                                                       "CANCELLED_ALL"):
+                        result["status"] = status_result.status.value
+                        result["message"] = f"Order {status_result.status.value}"
+                        logger.warning("Order %s for %s: %s",
+                                       order_result.order_id, ticker,
+                                       status_result.status.value)
+                        break
+                else:
+                    logger.warning(
+                        "Fill not confirmed for %s after %ds — "
+                        "fill_price remains 0. Check order %s manually.",
+                        ticker, _max_wait, order_result.order_id,
+                    )
         else:
             logger.error(
                 "LIVE SELL FAILED: %s — %s", ticker, order_result.message,

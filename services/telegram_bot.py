@@ -274,6 +274,13 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
                 ticker = exit_result.get("ticker", "")
                 pre_pos = next((p for p in live_pf.positions if p.ticker == ticker), None)
                 exit_price = exit_result.get("fill_price", exit_result.get("price", 0))
+                # Safety: if fill_price is 0 (order not yet filled when checked),
+                # fall back to the limit price. A fill at limit-1% is better than
+                # recording exit_price=0 which makes P&L show -100%.
+                if exit_price == 0:
+                    exit_price = exit_result.get("price", 0)
+                    logger.warning("Exit fill_price=0 for %s, using limit price $%.2f",
+                                   ticker, exit_price)
                 entry_price = pre_pos.entry_price if pre_pos else 0
                 shares = exit_result.get("qty", pre_pos.shares if pre_pos else 0)
                 entry_value = round(entry_price * shares, 2)
