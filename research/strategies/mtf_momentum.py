@@ -1,0 +1,398 @@
+"""
+Atlas Multi-Timeframe Momentum Strategy
+=============================================
+Identifies stocks in strong weekly uptrends that are pulling back on the
+daily timeframe, providing high-probability entries in the direction of
+the larger trend.
+
+Weekly Timeframe (trend confirmation):
+    - Price > 20-week SMA
+    - Weekly RSI(14) > configurable minimum (default 50)
+    - Optional: Positive weekly MACD histogram
+
+Daily Timeframe (pullback entry):
+    - Daily RSI(14) < configurable threshold (default 40)
+    - Price within X% of daily 20-SMA (near support)
+    - Volume not dried up (minimum volume ratio)
+
+Config Section: strategies.mtf_momentum
+
+Usage:
+    from strategies.mtf_momentum import MTFMomentum
+"""
+
+import logging
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+import pandas as pd
+
+from strategies.base import BaseStrategy, Signal
+from utils.helpers import calc_atr, calc_rsi, calc_position_size, calc_volume_ratio
+
+logger = logging.getLogger(__name__)
+
+
+class MTFMomentum(BaseStrategy):
+    """Multi-Timeframe Momentum: enter daily pullbacks within weekly uptrends."""
+
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        strat_cfg = config.get("strategies", {}).get("mtf_momentum", {})
+        # Weekly parameters — support "weekly_sma" as alias for "weekly_sma_period"
+        self.weekly_sma_period = strat_cfg.get(
+            "weekly_sma_period", strat_cfg.get("weekly_sma", 20)
+        )
+        self.weekly_rsi_period = strat_cfg.get("weekly_rsi_period", 14)
+        self.weekly_rsi_min = strat_cfg.get("weekly_rsi_min", 50)
+        # Minimum weekly confirmations required (default 3 = all must pass).
+        # When weekly data is limited the strategy falls back to daily indicators
+        # and automatically lowers this to min(2, min_weekly_confirmation).
+        self.min_weekly_confirmation = strat_cfg.get("min_weekly_confirmation", 3)
+        # Daily parameters
+        self.daily_rsi_period = strat_cfg.get("daily_rsi_period", 14)
+        self.daily_rsi_max = strat_cfg.get("daily_rsi_max", 40)
+        self.daily_sma_period = strat_cfg.get("daily_sma_period", 20)
+        self.pullback_sma_pct = strat_cfg.get("pullback_sma_pct", 0.03)
+        # Risk / exit parameters
+        self.atr_period = strat_cfg.get("atr_period", 14)
+        self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 2.5)
+        self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 3.0)
+        self.max_hold_days = strat_cfg.get("max_hold_days", 15)
+        # Filters
+        self.use_macd_filter = strat_cfg.get("use_macd_filter", True)
+        self.vol_min_ratio = strat_cfg.get("vol_min_ratio", 0.5)
+
+        self._logger.info(
+            "MTFMomentum initialized: weekly_sma=%d, weekly_rsi=%d(min=%d), "
+            "daily_rsi=%d(max=%d), daily_sma=%d, pullback=%.1f%%, "
+            "atr=%d, stop=%.1fx, trail=%.1fx, max_hold=%d, macd=%s",
+            self.weekly_sma_period, self.weekly_rsi_period, self.weekly_rsi_min,
+            self.daily_rsi_period, self.daily_rsi_max, self.daily_sma_period,
+            self.pullback_sma_pct * 100,
+            self.atr_period, self.atr_stop_mult, self.trailing_stop_atr_mult,
+            self.max_hold_days, self.use_macd_filter,
+        )
+
+    @property
+    def name(self) -> str:
+        return "mtf_momentum"
+
+    @staticmethod
+    def _resample_weekly(df: pd.DataFrame) -> pd.DataFrame:
+        """Resample daily OHLCV data to weekly bars.
+
+        Args:
+            df: Daily DataFrame with open, high, low, close, volume columns
+                and a DatetimeIndex.
+
+        Returns:
+            Weekly DataFrame with the same columns.  Incomplete trailing
+            weeks are included so the latest week is always present.
+        """
+        weekly = df.resample("W").agg({
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        }).dropna()
+
+        return weekly
+
+    def generate_signals(
+        self,
+        data: Dict[str, pd.DataFrame],
+        equity: float,
+        existing_positions: List[Dict[str, Any]],
+    ) -> List[Signal]:
+        """Generate MTF momentum signals.
+
+        Full implementation: weekly trend confirmation
+        with daily pullback entry logic.
+        """
+        signals: List[Signal] = []
+
+        for ticker, df in data.items():
+            try:
+                if len(df) < max(self.weekly_sma_period * 5, 100):
+                    continue
+
+                # Ensure DatetimeIndex
+                if not isinstance(df.index, pd.DatetimeIndex):
+                    continue
+
+                # Weekly trend check — with graceful degradation when weekly data is sparse
+                weekly = self._resample_weekly(df)
+                if len(weekly) < self.weekly_sma_period:
+                    continue
+
+                weekly_sma = weekly["close"].rolling(self.weekly_sma_period).mean()
+                weekly_rsi = calc_rsi(weekly["close"], self.weekly_rsi_period)
+
+                valid_weekly_count = int(weekly_sma.notna().sum())
+                # Fall back to daily when fewer than 25 valid weekly SMA bars are available
+                # (typical when weekly_sma_period is large relative to history length).
+                use_daily_fallback = valid_weekly_count < 25
+
+                # Always compute daily indicators — needed in both paths
+                daily_rsi = calc_rsi(df["close"], self.daily_rsi_period)
+                daily_sma = df["close"].rolling(self.daily_sma_period).mean()
+                atr_series = calc_atr(df["high"], df["low"], df["close"], self.atr_period)
+                current_atr = float(atr_series.iloc[-1])
+                today_close = df["close"].iloc[-1]
+                sma_val = daily_sma.iloc[-1]
+
+                if pd.isna(current_atr):
+                    continue
+
+                if use_daily_fallback:
+                    # ── Daily-timeframe trend confirmation (fallback) ──────────────────────
+                    # Equivalent daily SMA lookback: weekly_sma_period weeks × 5 days/week
+                    fallback_period = min(self.weekly_sma_period * 5, len(df) - 1)
+                    daily_long_sma = df["close"].rolling(fallback_period).mean()
+
+                    self._logger.info(
+                        f"{ticker}: limited weekly data ({valid_weekly_count} valid bars for "
+                        f"SMA-{self.weekly_sma_period}), falling back to daily SMA-{fallback_period}"
+                    )
+
+                    # Score three daily-equivalent conditions (require ≥ 2 when data limited)
+                    score = 0
+
+                    # Condition 1: price above long-term daily SMA (trend)
+                    daily_long_val = daily_long_sma.iloc[-1]
+                    if not pd.isna(daily_long_val) and today_close > daily_long_val:
+                        score += 1
+
+                    # Condition 2: daily RSI indicates pullback / not overbought
+                    d_rsi = daily_rsi.iloc[-1]
+                    if not pd.isna(d_rsi) and d_rsi < self.daily_rsi_max:
+                        score += 1
+
+                    # Condition 3: price near short-term SMA support
+                    if not pd.isna(sma_val) and sma_val > 0:
+                        pct = abs(today_close - sma_val) / sma_val
+                        if pct <= self.pullback_sma_pct:
+                            score += 1
+
+                    required = min(2, self.min_weekly_confirmation)
+                    if score < required:
+                        continue
+
+                    # Use daily SMA as pct_from_sma for confidence calculation
+                    pct_from_sma = (
+                        abs(today_close - sma_val) / sma_val
+                        if not pd.isna(sma_val) and sma_val > 0
+                        else self.pullback_sma_pct
+                    )
+
+                else:
+                    # ── Normal weekly trend confirmation ────────────────────────────────────
+                    if weekly["close"].iloc[-1] <= weekly_sma.iloc[-1]:
+                        continue
+                    if weekly_rsi.iloc[-1] < self.weekly_rsi_min:
+                        continue
+
+                    # Daily pullback conditions (strict, full data)
+                    if daily_rsi.iloc[-1] >= self.daily_rsi_max:
+                        continue
+
+                    if pd.isna(sma_val):
+                        continue
+
+                    pct_from_sma = abs(today_close - sma_val) / sma_val
+                    if pct_from_sma > self.pullback_sma_pct:
+                        continue
+
+                vol_ratio = calc_volume_ratio(df["volume"])
+                if vol_ratio.iloc[-1] < self.vol_min_ratio:
+                    continue
+
+                entry_price = today_close
+                stop_price = entry_price - self.atr_stop_mult * current_atr
+                take_profit = entry_price + 3.0 * current_atr
+
+                risk_pct = self.risk_config.get("max_risk_per_trade_pct", 0.005)
+                commission_per_trade = self.fees_config.get("commission_per_trade", 1.1)
+                commission_pct = self.fees_config.get("commission_pct", 0.001)
+                pos = calc_position_size(
+                    equity=equity,
+                    risk_pct=risk_pct,
+                    entry_price=entry_price,
+                    stop_price=stop_price,
+                    commission_per_trade=commission_per_trade,
+                    commission_pct=commission_pct,
+                )
+                if pos["shares"] < 1:
+                    continue
+
+                # Multi-factor confidence scoring (range ~0.65–0.95)
+                d_rsi_val = float(daily_rsi.iloc[-1]) if not pd.isna(daily_rsi.iloc[-1]) else 50.0
+                v_ratio = float(vol_ratio.iloc[-1])
+
+                # Base confidence
+                confidence = 0.65
+
+                if use_daily_fallback:
+                    # Fallback mode: use daily long-term SMA instead of weekly
+                    daily_long_val = daily_long_sma.iloc[-1] if not pd.isna(daily_long_sma.iloc[-1]) else today_close
+                    daily_ma_spread = (today_close - daily_long_val) / daily_long_val if daily_long_val > 0 else 0.0
+
+                    # Factor 1: Long-term daily trend depth (≡ weekly SMA spread)
+                    confidence += 0.10 * min(1.0, max(0.0, daily_ma_spread / 0.05))
+                    # Factor 2: Trend direction bonus (0.08 fixed for fallback)
+                    confidence += 0.08 * min(1.0, max(0.0, daily_ma_spread / 0.05))
+
+                    trend_desc = f"daily-SMA-{fallback_period} spread={daily_ma_spread*100:.1f}%"
+                else:
+                    w_rsi_val = float(weekly_rsi.iloc[-1]) if not pd.isna(weekly_rsi.iloc[-1]) else self.weekly_rsi_min
+                    w_sma_val = float(weekly_sma.iloc[-1]) if not pd.isna(weekly_sma.iloc[-1]) else today_close
+                    w_close = float(weekly["close"].iloc[-1])
+                    weekly_ma_spread = (w_close - w_sma_val) / w_sma_val if w_sma_val > 0 else 0.0
+
+                    # Factor 1: Weekly RSI strength — RSI from weekly_rsi_min to 80 → 0..0.10
+                    weekly_rsi_bonus = 0.10 * min(1.0, max(0.0, (w_rsi_val - self.weekly_rsi_min) / 30.0))
+                    confidence += weekly_rsi_bonus
+
+                    # Factor 2: Weekly trend depth — price above weekly SMA, 0%→5% → 0..0.08
+                    confidence += 0.08 * min(1.0, max(0.0, weekly_ma_spread / 0.05))
+
+                    trend_desc = f"weekly RSI={w_rsi_val:.1f}, spread={weekly_ma_spread*100:.1f}%"
+
+                # Factor 3: Daily pullback quality — lower RSI = more oversold → 0..0.10
+                confidence += 0.10 * max(0.0, 1.0 - d_rsi_val / self.daily_rsi_max)
+
+                # Factor 4: SMA proximity — closer to support = better → 0..0.07
+                sma_pct_cap = max(self.pullback_sma_pct, 0.001)
+                confidence += 0.07 * max(0.0, 1.0 - pct_from_sma / sma_pct_cap)
+
+                # Factor 5: Volume confirmation — above minimum threshold → 0..0.07
+                vol_range = max(1.0, 2.0 - self.vol_min_ratio)
+                confidence += 0.07 * min(1.0, max(0.0, (v_ratio - self.vol_min_ratio) / vol_range))
+
+                confidence = round(min(0.95, confidence), 4)
+
+                mode_note = " [daily-fallback]" if use_daily_fallback else ""
+                rationale = (
+                    f"{ticker} MTF momentum{mode_note}: trend confirmed ({trend_desc}), "
+                    f"daily pullback (RSI={d_rsi_val:.1f}), near SMA support "
+                    f"({pct_from_sma*100:.2f}% from SMA). Confidence={confidence:.2f}."
+                )
+
+                w_rsi_feat = (
+                    float(weekly_rsi.iloc[-1]) if not pd.isna(weekly_rsi.iloc[-1]) else None
+                )
+
+                signal = Signal(
+                    ticker=ticker,
+                    strategy=self.name,
+                    direction="long",
+                    entry_price=entry_price,
+                    stop_price=round(stop_price, 4),
+                    take_profit=round(take_profit, 4),
+                    position_size=pos["shares"],
+                    position_value=pos["position_value"],
+                    risk_amount=pos["total_risk"],
+                    confidence=round(confidence, 4),
+                    rationale=rationale,
+                    features={
+                        "weekly_rsi": round(w_rsi_feat, 2) if w_rsi_feat is not None else None,
+                        "daily_rsi": round(d_rsi_val, 2),
+                        "pct_from_sma": round(pct_from_sma, 4),
+                        "atr": round(current_atr, 4),
+                        "close": round(today_close, 4),
+                        "daily_fallback": use_daily_fallback,
+                    },
+                    timestamp=datetime.now(),
+                )
+                signals.append(signal)
+                self._logger.info(f"SIGNAL: {signal}")
+
+            except Exception as e:
+                self._logger.error(
+                    f"{ticker}: signal generation error: {e}", exc_info=True
+                )
+                continue
+
+        return signals
+
+    def check_exits(
+        self, data: Dict[str, pd.DataFrame], positions: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Check exit conditions for MTF momentum positions."""
+        exits: List[Dict[str, Any]] = []
+
+        for pos in positions:
+            if pos.get("strategy") != self.name:
+                continue
+
+            ticker = pos["ticker"]
+            try:
+                df = data.get(ticker)
+                if df is None or len(df) < self.atr_period + 1:
+                    continue
+
+                today_close = df["close"].iloc[-1]
+                entry_price = pos.get("entry_price", today_close)
+                entry_date = pd.Timestamp(pos.get("entry_date", df.index[-1]))
+                days_held = (df.index[-1] - entry_date).days
+
+                atr_series = calc_atr(df["high"], df["low"], df["close"], self.atr_period)
+                current_atr = float(atr_series.iloc[-1])
+                if pd.isna(current_atr):
+                    continue
+
+                stop_price = pos.get("stop_price", entry_price - self.atr_stop_mult * current_atr)
+
+                # 1. Stop loss
+                if today_close <= stop_price:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "stop_loss",
+                        "exit_price": today_close,
+                        "details": f"{ticker} hit stop at ${today_close:.2f} (stop=${stop_price:.2f})",
+                    })
+
+                # 2. Trailing stop
+                elif days_held >= 3:
+                    # Audit H3: trail from highest high since entry, not from today_close
+                    entry_ts = pd.Timestamp(entry_date)
+                    mask_since_entry = df.index >= entry_ts
+                    if mask_since_entry.any():
+                        highest = float(df.loc[mask_since_entry, "high"].max())
+                        trail_stop = highest - self.trailing_stop_atr_mult * current_atr
+                        if today_close <= trail_stop:
+                            exits.append({
+                                "ticker": ticker,
+                                "reason": "trailing_stop",
+                                "exit_price": today_close,
+                                "details": f"{ticker} trailing stop at ${today_close:.2f}",
+                            })
+
+                # 3. Take profit
+                elif pos.get("take_profit") and today_close >= pos["take_profit"]:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "take_profit",
+                        "exit_price": today_close,
+                        "details": f"{ticker} take profit at ${today_close:.2f}",
+                    })
+
+                # 4. Time exit
+                elif days_held >= self.max_hold_days:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "time_exit",
+                        "exit_price": today_close,
+                        "details": f"{ticker} time exit after {days_held} days",
+                    })
+
+            except Exception as e:
+                self._logger.error(
+                    f"{ticker}: exit check error: {e}", exc_info=True
+                )
+                continue
+
+        return exits

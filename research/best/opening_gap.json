@@ -1,0 +1,56 @@
+{
+  "strategy": "opening_gap",
+  "market": "sp500",
+  "params": {
+    "gap_threshold": -0.008,
+    "ibs_confirm": 0.7,
+    "rsi14_max": 35,
+    "vol_surge_threshold": 1.2,
+    "atr_period": 25,
+    "atr_stop_mult": 1.0,
+    "sma_exit_period": 7,
+    "ibs_exit_threshold": 0.8,
+    "max_hold_days": 10,
+    "sma200_filter": false,
+    "earnings_blackout": {
+      "enabled": false,
+      "days_before": 5,
+      "days_after": 1
+    }
+  },
+  "metrics": {
+    "total_trades": 257,
+    "cagr_pct": 11.5269,
+    "cagr_full_period_pct": 9.6851,
+    "sharpe": 0.3396,
+    "sortino": 2.8642,
+    "max_drawdown_pct": 7.9136,
+    "win_rate_pct": 61.87,
+    "profit_factor": 2.5942,
+    "total_pnl": 3607.53,
+    "avg_trade": 14.04,
+    "final_equity": 7636.6,
+    "expectancy_r": 0.6036,
+    "avg_r": 0.6036,
+    "r_count": 257,
+    "edge_p_value": 0.187112,
+    "edge_significant": false,
+    "var_95_pct": 0.352,
+    "cvar_95_pct": 0.628,
+    "calmar": 1.4566,
+    "mc_p95_drawdown_pct": 8.29,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "opening_gap": {
+        "trades": 257,
+        "total_pnl": 3607.53,
+        "win_rate_pct": 61.9
+      }
+    },
+    "runtime_s": 107.8
+  },
+  "description": "gap_threshold: -0.01\u2192-0.008 (shallower gap)",
+  "experiments_run": 60,
+  "experiments_kept": 13,
+  "updated_at": "2026-03-11T00:46:01.477984+00:00"
+}

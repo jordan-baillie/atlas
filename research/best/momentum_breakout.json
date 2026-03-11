@@ -1,0 +1,46 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "sp500",
+  "params": {
+    "atr_stop_mult": 2.0,
+    "max_hold_days": 15,
+    "lookback_days": 15,
+    "atr_period": 20,
+    "trend_ma_period": 20
+  },
+  "metrics": {
+    "total_trades": 279,
+    "cagr_pct": 59.0697,
+    "cagr_full_period_pct": 48.2121,
+    "sharpe": 0.792,
+    "sortino": 11.0998,
+    "max_drawdown_pct": 10.2643,
+    "win_rate_pct": 52.33,
+    "profit_factor": 4.6525,
+    "total_pnl": 58065.41,
+    "avg_trade": 208.12,
+    "final_equity": 62655.39,
+    "expectancy_r": 2.6219,
+    "avg_r": 2.6219,
+    "r_count": 279,
+    "edge_p_value": 0.030403,
+    "edge_significant": true,
+    "var_95_pct": 0.476,
+    "cvar_95_pct": 0.865,
+    "calmar": 5.7549,
+    "mc_p95_drawdown_pct": 48.67,
+    "mc_fragile": true,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 279,
+        "total_pnl": 58065.41,
+        "win_rate_pct": 52.3
+      }
+    },
+    "runtime_s": 67.4
+  },
+  "description": "trend_ma_period=20",
+  "experiments_run": 33,
+  "experiments_kept": 6,
+  "updated_at": "2026-03-11T01:46:35.043601+00:00"
+}

@@ -1,0 +1,46 @@
+{
+  "strategy": "bb_squeeze",
+  "market": "sp500",
+  "params": {
+    "bb_period": 10,
+    "max_hold_days": 15,
+    "kc_period": 4,
+    "atr_stop_mult": 1.2,
+    "bb_std": 2.5
+  },
+  "metrics": {
+    "total_trades": 345,
+    "cagr_pct": 15.0448,
+    "cagr_full_period_pct": 12.615,
+    "sharpe": 0.4626,
+    "sortino": 2.3527,
+    "max_drawdown_pct": 9.7429,
+    "win_rate_pct": 47.83,
+    "profit_factor": 1.7791,
+    "total_pnl": 5090.78,
+    "avg_trade": 14.76,
+    "final_equity": 9180.07,
+    "expectancy_r": 0.5669,
+    "avg_r": 0.5669,
+    "r_count": 345,
+    "edge_p_value": 0.113814,
+    "edge_significant": false,
+    "var_95_pct": 0.703,
+    "cvar_95_pct": 0.992,
+    "calmar": 1.5442,
+    "mc_p95_drawdown_pct": 21.47,
+    "mc_fragile": true,
+    "strategy_breakdown": {
+      "bb_squeeze": {
+        "trades": 345,
+        "total_pnl": 5090.78,
+        "win_rate_pct": 47.8
+      }
+    },
+    "runtime_s": 158.0
+  },
+  "description": "max_hold_days=15",
+  "experiments_run": 75,
+  "experiments_kept": 13,
+  "updated_at": "2026-03-11T02:15:11.682558+00:00"
+}

@@ -81,3 +81,5 @@ scripts/archive/
 monitor/archive/
 tasks/cleanup-plan.md
 tasks/plan-discovery-agent.md
+config/candidates/archive/
+config/versions/archive/
