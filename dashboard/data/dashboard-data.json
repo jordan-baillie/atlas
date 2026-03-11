@@ -1,77 +1,40 @@
 {
-  "timestamp": "2026-03-11T21:08:18.291288+10:00",
+  "timestamp": "2026-03-11T22:05:06.263741+10:00",
   "project": "Atlas",
   "markets": {
     "asx": {
-      "timestamp": "2026-03-11T21:08:11.394555+10:00",
+      "timestamp": "2026-03-11T22:05:06.101961+10:00",
       "config_version": "v1.0-passive",
       "project": "Atlas",
       "market_id": "asx",
       "currency": "AUD",
       "trading_mode": "offline",
-      "data_source": "cross-broker",
+      "data_source": "offline",
       "broker": "moomoo",
       "portfolio": {
-        "equity": 2654.08,
+        "equity": 0,
         "cash": 0,
-        "starting_equity": 2471.44,
-        "total_pnl": 182.64,
-        "total_pnl_pct": 7.39,
+        "starting_equity": 0,
+        "total_pnl": 0,
+        "total_pnl_pct": 0,
         "num_open": 0,
         "num_atlas": 0,
         "win_rate": 0,
         "commission_per_trade": 0,
         "total_commissions": 0,
-        "market_pnl": 182.64,
+        "market_pnl": 0,
         "realized_pnl": 0,
         "open_positions": [],
         "buying_power": 0,
-        "broker_equity": 2654.08,
-        "broker_cash": 0,
-        "today_pnl_by_ccy": {
-          "AUD": 3.96
-        }
+        "broker_equity": null,
+        "broker_cash": null,
+        "today_pnl_by_ccy": {}
       },
       "manual_positions": {
-        "positions": [
-          {
-            "ticker": "WHC.AX",
-            "strategy": "manual",
-            "entry_date": "",
-            "entry_price": 8.66,
-            "current_price": 8.71,
-            "shares": 172,
-            "pnl": 8.6,
-            "pnl_pct": 0.58,
-            "stop_price": 0,
-            "days_held": 0,
-            "sector": "Unknown",
-            "is_atlas": false,
-            "today_pnl": -5.16,
-            "currency": "AUD",
-            "market": "asx"
-          },
-          {
-            "ticker": "WDS.AX",
-            "strategy": "manual",
-            "entry_date": "",
-            "entry_price": 25.84,
-            "current_price": 30.42,
-            "shares": 38,
-            "pnl": 174.04,
-            "pnl_pct": 17.72,
-            "stop_price": 0,
-            "days_held": 0,
-            "sector": "Unknown",
-            "is_atlas": false,
-            "today_pnl": 9.12,
-            "currency": "AUD",
-            "market": "asx"
-          }
-        ],
-        "num_open": 2,
-        "unrealized_pnl": 182.64,
-        "market_value": 2654.08
+        "positions": [],
+        "num_open": 0,
+        "unrealized_pnl": 0,
+        "market_value": 0
       },
       "strategy_summary": [],
       "equity_curve": [
@@ -128,23 +91,23 @@
       "benchmark_curve": [
         {
           "date": "2026-03-05",
-          "equity": 2471.44
+          "equity": 0.0
         },
         {
           "date": "2026-03-06",
-          "equity": 2442.07
+          "equity": 0.0
         },
         {
           "date": "2026-03-09",
-          "equity": 2374.47
+          "equity": 0.0
         },
         {
           "date": "2026-03-11",
-          "equity": 2416.81
+          "equity": 0.0
         }
       ],
       "benchmark_ticker": "IOZ.AX",
-      "benchmark_return_pct": -2.21,
+      "benchmark_return_pct": 0,
       "plan": {
         "trade_date": "2026-03-03",
         "status": "APPROVED",
@@ -440,7 +403,7 @@
       },
       "closed_trades": [],
       "risk": {
-        "exposure_pct": 0.0,
+        "exposure_pct": 0,
         "max_positions": 0,
         "halted": false,
         "risk_per_trade": 0.005,
@@ -454,18 +417,18 @@
       "data_freshness": {
         "broker_connected": false,
         "broker_timestamp": null,
-        "data_source": "cross-broker",
+        "data_source": "offline",
         "cache_age_minutes": null,
         "equity_curve_last_date": "2026-03-11",
         "plan_date": "2026-03-03",
         "state_file_mtime": null
       },
-      "funded": true,
+      "funded": false,
       "stale_warning": null,
       "pending_orders": []
     },
     "hk": {
-      "timestamp": "2026-03-11T21:08:11.896019+10:00",
+      "timestamp": "2026-03-11T22:05:06.129025+10:00",
       "config_version": "unknown",
       "project": "Atlas",
       "market_id": "hk",
@@ -545,13 +508,13 @@
       "pending_orders": []
     },
     "sp500": {
-      "timestamp": "2026-03-11T21:08:11.897229+10:00",
+      "timestamp": "2026-03-11T22:05:06.130818+10:00",
       "config_version": "v2.2",
       "project": "Atlas",
       "market_id": "sp500",
       "currency": "USD",
       "trading_mode": "live",
-      "data_source": "broker",
+      "data_source": "cached",
       "broker": "moomoo",
       "portfolio": {
         "equity": 3990.82,
@@ -740,7 +703,8 @@
           "date": "2026-03-11",
           "equity": 8622.63,
           "pnl": 52.38,
-          "fx_rate": 1.3972
+          "fx_rate": 1.3967,
+          "estimated": true
         }
       ],
       "benchmark_curve": [
@@ -843,16 +807,16 @@
         "done": []
       },
       "data_freshness": {
-        "broker_connected": true,
-        "broker_timestamp": "2026-03-11T21:08:11.897229+10:00",
-        "data_source": "broker",
-        "cache_age_minutes": null,
+        "broker_connected": false,
+        "broker_timestamp": null,
+        "data_source": "cached",
+        "cache_age_minutes": 56.9,
         "equity_curve_last_date": "2026-03-11",
         "plan_date": "2026-03-11",
         "state_file_mtime": null
       },
       "funded": true,
-      "stale_warning": null,
+      "stale_warning": "Broker offline \u2014 showing data from 57m ago",
       "pending_orders": [
         {
           "order_id": "FA1C28F918E9970000",
@@ -897,15 +861,15 @@
     }
   },
   "exchange_rates": {
-    "AUDUSD": 0.71572,
-    "USDAUD": 1.3972
+    "AUDUSD": 0.71597,
+    "USDAUD": 1.3967
   },
   "ceasefire": {
     "probability": 2,
     "probability_label": "VERY UNLIKELY",
     "timeline": "4+ weeks",
     "portfolio_action": "Hold all positions. Thesis intact.",
-    "last_updated": "2026-03-11T21:07:15",
+    "last_updated": "2026-03-11T22:04:28",
     "active_ceasefire_count": 6,
     "active_escalation_count": 7,
     "factors": [
@@ -1545,16 +1509,16 @@
     "sp500": "v2.2"
   },
   "account": {
-    "equity": 12047.54,
-    "cash": 3716.27,
-    "buying_power": 3716.27,
+    "equity": 12043.23,
+    "cash": 3714.94,
+    "buying_power": 3714.94,
     "currency": "AUD"
   },
   "portfolio": {
-    "equity": 12047.54,
-    "cash": 3716.27,
-    "starting_equity": 5588.8,
-    "total_pnl": -12.83,
+    "equity": 12043.23,
+    "cash": 3714.94,
+    "starting_equity": 5586.8,
+    "total_pnl": -12.82,
     "total_pnl_pct": -0.23,
     "num_open": 1,
     "open_positions": [
@@ -1577,52 +1541,17 @@
       }
     ],
     "win_rate": 0.0,
-    "market_pnl": 169.81,
-    "realized_pnl": -322.17,
+    "market_pnl": -12.82,
+    "realized_pnl": -322.05,
     "total_commissions": 1.54,
     "commission_per_trade": 0,
     "today_pnl_by_ccy": {
-      "AUD": 3.96,
       "USD": -9.87
     },
-    "today_pnl_aud": -9.83
+    "today_pnl_aud": -13.79
   },
   "manual_positions": {
     "positions": [
-      {
-        "ticker": "WHC.AX",
-        "strategy": "manual",
-        "entry_date": "",
-        "entry_price": 8.66,
-        "current_price": 8.71,
-        "shares": 172,
-        "pnl": 8.6,
-        "pnl_pct": 0.58,
-        "stop_price": 0,
-        "days_held": 0,
-        "sector": "Unknown",
-        "is_atlas": false,
-        "today_pnl": -5.16,
-        "currency": "AUD",
-        "market": "asx"
-      },
-      {
-        "ticker": "WDS.AX",
-        "strategy": "manual",
-        "entry_date": "",
-        "entry_price": 25.84,
-        "current_price": 30.42,
-        "shares": 38,
-        "pnl": 174.04,
-        "pnl_pct": 17.72,
-        "stop_price": 0,
-        "days_held": 0,
-        "sector": "Unknown",
-        "is_atlas": false,
-        "today_pnl": 9.12,
-        "currency": "AUD",
-        "market": "asx"
-      },
       {
         "ticker": "XOP",
         "strategy": "manual",
@@ -1692,105 +1621,105 @@
         "market": "sp500"
       }
     ],
-    "num_open": 6,
-    "unrealized_pnl": 474.78,
-    "market_value": 6496.51
+    "num_open": 4,
+    "unrealized_pnl": 292.14,
+    "market_value": 3842.43
   },
   "strategy_summary": [
     {
       "strategy": "trend_following",
       "positions": 1,
-      "unrealized_pnl": -12.83,
-      "market_value": 306.27
+      "unrealized_pnl": -12.82,
+      "market_value": 306.16
     }
   ],
   "equity_curve": [
     {
       "date": "2026-02-27",
-      "equity": 5588.8,
+      "equity": 6743.9,
       "pnl": 0.0
     },
     {
       "date": "2026-03-03",
-      "equity": 10667.22,
-      "pnl": 242.39
+      "equity": 11820.5,
+      "pnl": 242.3
     },
     {
       "date": "2026-03-04",
-      "equity": 10605.61,
-      "pnl": 232.03
+      "equity": 11758.92,
+      "pnl": 231.95
     },
     {
       "date": "2026-03-05",
-      "equity": 10577.98,
-      "pnl": 429.9
+      "equity": 11731.29,
+      "pnl": 604.93
     },
     {
       "date": "2026-03-06",
-      "equity": 10575.53,
-      "pnl": 418.67
+      "equity": 11740.25,
+      "pnl": 605.1
     },
     {
       "date": "2026-03-07",
-      "equity": 10623.6,
-      "pnl": 462.85
+      "equity": 11788.29,
+      "pnl": 649.26
     },
     {
       "date": "2026-03-08",
-      "equity": 10623.6,
-      "pnl": 462.85
+      "equity": 11788.29,
+      "pnl": 649.26
     },
     {
       "date": "2026-03-09",
-      "equity": 12158.39,
-      "pnl": 506.43
+      "equity": 13345.72,
+      "pnl": 716.01
     },
     {
       "date": "2026-03-10",
-      "equity": 12082.54,
-      "pnl": 471.4
+      "equity": 14728.33,
+      "pnl": 649.91
     },
     {
       "date": "2026-03-11",
-      "equity": 12047.54,
-      "pnl": 73.19
+      "equity": 14697.31,
+      "pnl": 255.8
     }
   ],
   "benchmark_curve": [
     {
       "date": "2026-02-27",
-      "equity": 5588.8
+      "equity": 5586.8
     },
     {
       "date": "2026-03-02",
-      "equity": 5591.97
+      "equity": 5589.97
     },
     {
       "date": "2026-03-03",
-      "equity": 5542.69
+      "equity": 5540.71
     },
     {
       "date": "2026-03-04",
-      "equity": 5581.8
+      "equity": 5579.8
     },
     {
       "date": "2026-03-05",
-      "equity": 5550.67
+      "equity": 5548.68
     },
     {
       "date": "2026-03-06",
-      "equity": 5477.92
+      "equity": 5475.96
     },
     {
       "date": "2026-03-09",
-      "equity": 5525.9
+      "equity": 5523.92
     },
     {
       "date": "2026-03-10",
-      "equity": 5517.03
+      "equity": 5515.05
     }
   ],
-  "benchmark_ticker": "SPY",
+  "benchmark_ticker": "IOZ + SPY",
   "benchmark_return_pct": -1.28,
   "plan": {
     "trade_date": "2026-03-05",
@@ -1851,12 +1780,12 @@
   "research": {
     "daemon": {
       "status": "dead",
-      "uptime_s": 0.0,
-      "experiments_completed": 0,
+      "uptime_s": 121.0,
+      "experiments_completed": 18,
       "experiments_failed": 0,
       "queue_depth": 0,
-      "current_experiment": "mean_reversion",
-      "timestamp": "2026-03-11T10:25:22.865704+00:00"
+      "current_experiment": "",
+      "timestamp": "2026-03-11T11:33:36.042776+00:00"
     },
     "leaderboard": [
       {
@@ -2426,38 +2355,6 @@
     ],
     "activity_feed": [
       {
-        "experiment_id": "ar-20260311_145350",
-        "timestamp": "2026-03-11T04:53:50.670166+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": -0.5689,
-        "win_rate_pct": null,
-        "total_trades": 297,
-        "cagr_pct": 2.3374,
-        "max_drawdown_pct": 11.0228,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 atr_stop=1.8 (between 1.5 and 2.0)"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_145916",
-        "timestamp": "2026-03-11T04:59:16.747371+00:00",
-        "strategy": "mean_reversion",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.0792,
-        "win_rate_pct": null,
-        "total_trades": 388,
-        "cagr_pct": 5.2764,
-        "max_drawdown_pct": 12.1045,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 atr_stop_mult: 2.5\u21921.5"
-        ]
-      },
-      {
         "experiment_id": "ar-20260311_150658",
         "timestamp": "2026-03-11T05:06:58.402973+00:00",
         "strategy": "mean_reversion",
@@ -2743,6 +2640,38 @@
         "promoted": false,
         "learnings": [
           "autoresearch: keep \u2014 max_hold_days: 10\u219220"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_212959",
+        "timestamp": "2026-03-11T11:29:59.165597+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.3262,
+        "win_rate_pct": null,
+        "total_trades": 159,
+        "cagr_pct": 9.3964,
+        "max_drawdown_pct": 3.9558,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 rsi_period: 14\u219210"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_213036",
+        "timestamp": "2026-03-11T11:30:36.891809+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.3722,
+        "win_rate_pct": null,
+        "total_trades": 170,
+        "cagr_pct": 10.2548,
+        "max_drawdown_pct": 3.1621,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 zscore_lookback: 30\u219220"
         ]
       }
     ],
@@ -3265,12 +3194,12 @@
       ]
     },
     "statistics": {
-      "total_experiments": 129,
-      "passed": 36,
+      "total_experiments": 131,
+      "passed": 38,
       "failed": 42,
       "partial": 48,
       "promoted": 3,
-      "pass_rate_pct": 27.9,
+      "pass_rate_pct": 29.0,
       "days_active": 13,
       "strategies_tested": 15,
       "strategies_total": 33
@@ -3312,39 +3241,12 @@
     },
     "agents": [
       {
-        "id": "researcher-0",
+        "id": "researcher",
         "name": "Atlas",
         "type": "atlas",
-        "status": "reading",
-        "task": "Between strategies...",
-        "experiments_done": 0,
-        "progress": {}
-      },
-      {
-        "id": "researcher-1",
-        "name": "Nova",
-        "type": "nova",
-        "status": "reading",
-        "task": "Between strategies...",
-        "experiments_done": 0,
-        "progress": {}
-      },
-      {
-        "id": "sage",
-        "name": "Sage",
-        "type": "sage",
-        "status": "reading",
-        "task": "Discovering...",
-        "experiments_done": 0,
-        "progress": {}
-      },
-      {
-        "id": "principal",
-        "name": "Director",
-        "type": "principal",
-        "status": "reading",
-        "task": "Overseeing research",
-        "experiments_done": 0,
+        "status": "sleeping",
+        "task": "Engine offline",
+        "experiments_done": 18,
         "progress": {}
       }
     ],
@@ -3416,10 +3318,22 @@
         "detail": "Best params found after 20 experiments"
       },
       {
-        "text": "Mean Reversion: Sharpe 0.356, 59% WR, 202 trades",
+        "text": "Donchian Breakout: Sharpe 0.318, 53% WR, 91 trades",
         "type": "record",
         "impact": "medium",
-        "detail": "Best params found after 29 experiments"
+        "detail": "Best params found after 0 experiments"
+      },
+      {
+        "text": "Lower Band Reversion: Sharpe 0.416, 62% WR, 338 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 0 experiments"
+      },
+      {
+        "text": "Mean Reversion: Sharpe 0.372, 62% WR, 170 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 32 experiments"
       },
       {
         "text": "Opening Gap: Sharpe 0.340, 62% WR, 257 trades",
@@ -3429,5 +3343,7 @@
       }
     ]
   },
-  "stale_warnings": []
+  "stale_warnings": [
+    "Broker offline \u2014 showing data from 57m ago"
+  ]
 }

@@ -1,7 +1,7 @@
 """
 Atlas Keltner Reversion Strategy
 ========================================
-Price touches lower Keltner Channel (EMA ± ATR mult) → buy.
+Price touches lower Keltner Channel (EMA ± ATR mult) -> buy.
 Exit at middle band (EMA). Uptrend filter.
 
 Reference: Chester Keltner (1960), modernized by Linda Bradford Raschke
@@ -74,10 +74,8 @@ class KeltnerReversion(BaseStrategy):
             # Keltner Channel
             ema = close.ewm(span=self.ema_period, adjust=False).mean()
             atr = calc_atr(high, low, close, period=self.atr_period)
-
             lower_band = ema - self.atr_mult * atr
 
-            # Entry: close below lower Keltner band
             if pd.isna(lower_band.iloc[-1]) or pd.isna(atr.iloc[-1]):
                 continue
             if close.iloc[-1] >= lower_band.iloc[-1]:
@@ -90,13 +88,14 @@ class KeltnerReversion(BaseStrategy):
             if stop_price <= 0 or entry_price <= stop_price:
                 continue
 
-            shares = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            # FIX: calc_position_size returns dict -- extract shares from it
+            pos = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            shares = pos["shares"]
             if shares <= 0:
                 continue
 
-            # Score: how far below the lower band (deeper = better signal)
             depth = (lower_band.iloc[-1] - close.iloc[-1]) / atr_val
-            score = float(min(depth, 3.0))
+            confidence = float(min(0.65 + depth * 0.10, 0.95))
 
             signals.append(Signal(
                 ticker=ticker,
@@ -104,9 +103,16 @@ class KeltnerReversion(BaseStrategy):
                 direction="long",
                 entry_price=entry_price,
                 stop_price=stop_price,
-                shares=shares,
-                score=score,
-                metadata={
+                take_profit=None,
+                position_size=shares,
+                position_value=pos["position_value"],
+                risk_amount=pos["total_risk"],
+                confidence=confidence,
+                rationale=(
+                    f"{ticker}: close {entry_price:.2f} below lower Keltner band "
+                    f"{lower_band.iloc[-1]:.2f} by {depth:.2f} ATR"
+                ),
+                features={
                     "ema": float(ema.iloc[-1]),
                     "lower_band": float(lower_band.iloc[-1]),
                     "atr": atr_val,
@@ -114,7 +120,7 @@ class KeltnerReversion(BaseStrategy):
                 },
             ))
 
-        signals.sort(key=lambda s: s.score, reverse=True)
+        signals.sort(key=lambda s: s.confidence, reverse=True)
         self._logger.info(f"{self.name}: {len(signals)} signals from {len(data)} tickers")
         return signals
 
@@ -138,7 +144,6 @@ class KeltnerReversion(BaseStrategy):
             current_price = float(df["close"].iloc[-1])
             stop_price = pos.get("stop_price", 0)
 
-            # Stop hit
             if stop_price and current_price <= stop_price:
                 exits.append({
                     "ticker": ticker, "reason": "stop_hit",
@@ -147,7 +152,6 @@ class KeltnerReversion(BaseStrategy):
                 })
                 continue
 
-            # Time exit
             entry_date = pos.get("entry_date")
             if entry_date:
                 if isinstance(entry_date, str):
@@ -161,7 +165,6 @@ class KeltnerReversion(BaseStrategy):
                     })
                     continue
 
-            # EMA exit: price above middle band (mean reversion complete)
             close = df["close"]
             ema = close.ewm(span=self.ema_period, adjust=False).mean()
             if not pd.isna(ema.iloc[-1]) and current_price > ema.iloc[-1]:

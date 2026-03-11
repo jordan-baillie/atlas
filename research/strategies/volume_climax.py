@@ -67,18 +67,15 @@ class VolumeClimax(BaseStrategy):
             low = df["low"]
             volume = df["volume"]
 
-            # SMA-200 uptrend filter
             if self.sma200_filter:
                 sma200 = close.rolling(200).mean()
                 if pd.isna(sma200.iloc[-1]) or close.iloc[-1] <= sma200.iloc[-1]:
                     continue
 
-            # Volume ratio
             vol_ratio = calc_volume_ratio(volume, lookback=self.volume_lookback)
             if pd.isna(vol_ratio.iloc[-1]):
                 continue
 
-            # Conditions: volume spike on a down day
             is_down_day = close.iloc[-1] < open_.iloc[-1]
             is_volume_spike = vol_ratio.iloc[-1] >= self.volume_mult
 
@@ -96,11 +93,16 @@ class VolumeClimax(BaseStrategy):
             if stop_price <= 0 or entry_price <= stop_price:
                 continue
 
-            shares = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            # FIX: calc_position_size returns dict -- extract shares from it
+            pos = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            shares = pos["shares"]
             if shares <= 0:
                 continue
 
-            score = float(vol_ratio.iloc[-1]) / self.volume_mult
+            vol_ratio_val = float(vol_ratio.iloc[-1])
+            # Confidence: stronger volume spike = higher confidence in capitulation
+            confidence = float(min(0.65 + (vol_ratio_val / self.volume_mult - 1.0) * 0.10, 0.95))
+            down_pct = float((open_.iloc[-1] - close.iloc[-1]) / open_.iloc[-1] * 100)
 
             signals.append(Signal(
                 ticker=ticker,
@@ -108,16 +110,23 @@ class VolumeClimax(BaseStrategy):
                 direction="long",
                 entry_price=entry_price,
                 stop_price=stop_price,
-                shares=shares,
-                score=score,
-                metadata={
-                    "volume_ratio": float(vol_ratio.iloc[-1]),
+                take_profit=None,
+                position_size=shares,
+                position_value=pos["position_value"],
+                risk_amount=pos["total_risk"],
+                confidence=confidence,
+                rationale=(
+                    f"{ticker}: volume climax {vol_ratio_val:.1f}x avg on down day "
+                    f"({down_pct:.1f}% drop), potential capitulation"
+                ),
+                features={
+                    "volume_ratio": vol_ratio_val,
                     "atr": atr_val,
-                    "down_pct": float((open_.iloc[-1] - close.iloc[-1]) / open_.iloc[-1] * 100),
+                    "down_pct": down_pct,
                 },
             ))
 
-        signals.sort(key=lambda s: s.score, reverse=True)
+        signals.sort(key=lambda s: s.confidence, reverse=True)
         self._logger.info(f"{self.name}: {len(signals)} signals from {len(data)} tickers")
         return signals
 
@@ -141,7 +150,6 @@ class VolumeClimax(BaseStrategy):
             current_price = float(df["close"].iloc[-1])
             stop_price = pos.get("stop_price", 0)
 
-            # Stop hit
             if stop_price and current_price <= stop_price:
                 exits.append({
                     "ticker": ticker, "reason": "stop_hit",
@@ -150,7 +158,6 @@ class VolumeClimax(BaseStrategy):
                 })
                 continue
 
-            # Time exit
             entry_date = pos.get("entry_date")
             if entry_date:
                 if isinstance(entry_date, str):
@@ -164,12 +171,12 @@ class VolumeClimax(BaseStrategy):
                     })
                     continue
 
-            # Strength exit: first up close after entry
+            # Strength exit: first up close after capitulation
             if df["close"].iloc[-1] > df["open"].iloc[-1]:
                 exits.append({
                     "ticker": ticker, "reason": "strength_exit",
                     "exit_price": current_price,
-                    "details": f"Up close: {current_price:.2f} > open {df['open'].iloc[-1]:.2f}",
+                    "details": f"Up close: {current_price:.2f} > open {df["open"].iloc[-1]:.2f}",
                 })
 
         return exits

@@ -1,0 +1,40 @@
+{
+  "strategy": "keltner_reversion",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 3,
+    "cagr_pct": 0.0352,
+    "cagr_full_period_pct": 0.0299,
+    "sharpe": -18.5222,
+    "sortino": -29.3458,
+    "max_drawdown_pct": 0.3676,
+    "win_rate_pct": 66.67,
+    "profit_factor": 3.2622,
+    "total_pnl": 8.37,
+    "avg_trade": 2.79,
+    "final_equity": 4008.37,
+    "expectancy_r": 0.1463,
+    "avg_r": 0.1463,
+    "r_count": 3,
+    "edge_p_value": 1.0,
+    "edge_significant": false,
+    "var_95_pct": -0.0,
+    "cvar_95_pct": 0.001,
+    "calmar": 0.0958,
+    "mc_p95_drawdown_pct": 0.0,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "keltner_reversion": {
+        "trades": 3,
+        "total_pnl": 8.37,
+        "win_rate_pct": 66.7
+      }
+    },
+    "runtime_s": 9.0
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T12:16:08.569819+00:00"
+}

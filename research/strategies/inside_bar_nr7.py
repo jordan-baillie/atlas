@@ -1,7 +1,7 @@
 """
 Atlas Inside Bar NR7 Strategy
 ========================================
-NR7 (narrowest range of 7 days) → breakout entry.
+NR7 (narrowest range of 7 days) -> breakout entry.
 Enter when yesterday was NR7 day and today opens above yesterday's high.
 Exit: trailing ATR stop or time-based.
 
@@ -65,31 +65,26 @@ class InsideBarNr7(BaseStrategy):
             high = df["high"]
             low = df["low"]
 
-            # SMA-200 uptrend filter
             if self.sma200_filter:
                 sma200 = close.rolling(200).mean()
                 if pd.isna(sma200.iloc[-1]) or close.iloc[-1] <= sma200.iloc[-1]:
                     continue
 
-            # Calculate daily range
             daily_range = high - low
 
-            # Check if yesterday was NR7: yesterday's range is the smallest of last N days
             if len(daily_range) < self.nr_lookback + 1:
                 continue
 
             yesterday_range = float(daily_range.iloc[-2])
-            lookback_ranges = daily_range.iloc[-(self.nr_lookback + 1):-1]  # N days ending yesterday
+            lookback_ranges = daily_range.iloc[-(self.nr_lookback + 1):-1]
 
             if yesterday_range <= 0:
                 continue
 
             is_nr7 = yesterday_range <= lookback_ranges.min()
-
             if not is_nr7:
                 continue
 
-            # Breakout confirmation: today's close above yesterday's high
             yesterday_high = float(high.iloc[-2])
             if close.iloc[-1] <= yesterday_high:
                 continue
@@ -98,22 +93,23 @@ class InsideBarNr7(BaseStrategy):
             if pd.isna(atr.iloc[-1]):
                 continue
 
-            # Entry at yesterday's high (breakout level)
-            entry_price = yesterday_high
+            entry_price = float(close.iloc[-1])
             atr_val = float(atr.iloc[-1])
             stop_price = entry_price - self.atr_stop_mult * atr_val
 
             if stop_price <= 0 or entry_price <= stop_price:
                 continue
 
-            shares = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            # FIX: calc_position_size returns dict -- extract shares from it
+            pos = calc_position_size(equity, risk_pct, entry_price, stop_price)
+            shares = pos["shares"]
             if shares <= 0:
                 continue
 
-            # Score: narrower range = more compressed = stronger breakout potential
             avg_range = float(lookback_ranges.mean())
             compression = avg_range / yesterday_range if yesterday_range > 0 else 1.0
-            score = float(min(compression, 5.0))
+            # Confidence: higher compression = stronger breakout
+            confidence = float(min(0.65 + (compression - 1.0) * 0.05, 0.95))
 
             signals.append(Signal(
                 ticker=ticker,
@@ -121,9 +117,16 @@ class InsideBarNr7(BaseStrategy):
                 direction="long",
                 entry_price=entry_price,
                 stop_price=stop_price,
-                shares=shares,
-                score=score,
-                metadata={
+                take_profit=None,
+                position_size=shares,
+                position_value=pos["position_value"],
+                risk_amount=pos["total_risk"],
+                confidence=confidence,
+                rationale=(
+                    f"{ticker}: NR7 breakout, yesterday range {yesterday_range:.2f} "
+                    f"= narrowest of {self.nr_lookback}d, compression {compression:.2f}x"
+                ),
+                features={
                     "nr_range": yesterday_range,
                     "avg_range": avg_range,
                     "compression": compression,
@@ -132,7 +135,7 @@ class InsideBarNr7(BaseStrategy):
                 },
             ))
 
-        signals.sort(key=lambda s: s.score, reverse=True)
+        signals.sort(key=lambda s: s.confidence, reverse=True)
         self._logger.info(f"{self.name}: {len(signals)} signals from {len(data)} tickers")
         return signals
 
@@ -156,7 +159,6 @@ class InsideBarNr7(BaseStrategy):
             current_price = float(df["close"].iloc[-1])
             stop_price = pos.get("stop_price", 0)
 
-            # Stop hit
             if stop_price and current_price <= stop_price:
                 exits.append({
                     "ticker": ticker, "reason": "stop_hit",
@@ -165,7 +167,6 @@ class InsideBarNr7(BaseStrategy):
                 })
                 continue
 
-            # Time exit
             entry_date = pos.get("entry_date")
             if entry_date:
                 if isinstance(entry_date, str):
@@ -179,7 +180,6 @@ class InsideBarNr7(BaseStrategy):
                     })
                     continue
 
-            # Trailing stop: update stop using ATR
             high = df["high"]
             low = df["low"]
             close = df["close"]
