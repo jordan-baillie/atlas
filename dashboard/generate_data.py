@@ -2117,7 +2117,7 @@ def generate_research_data() -> dict:
         "daemon": daemon,
         "leaderboard": leaderboard,
         "pipeline": pipeline,
-        "strategy_pipeline": pipeline,  # alias for dashboard canvas
+        "strategy_pipeline": _build_strategy_pipeline(),
         "patterns": patterns,
         "hypotheses": hypotheses,
         "activity_feed": activity_feed,
@@ -2142,6 +2142,35 @@ def generate_research_data() -> dict:
         "daily_insight": generate_daily_insight(),
         "agents": _build_agents(daemon),
         "discoveries": _build_discoveries(patterns, hypotheses, journal),
+    }
+
+
+def _build_strategy_pipeline() -> dict:
+    """Build strategy pipeline counts from strategy_queue.json + sandbox dir."""
+    queue = safe_json(str(PROJECT_ROOT / "research" / "strategy_queue.json"), {})
+    active = queue.get("active", [])
+    candidates = queue.get("candidates", [])
+    rejected = queue.get("rejected", [])
+
+    # Count sandbox strategies not in any queue list
+    known = set()
+    for entry in active + candidates + rejected:
+        if isinstance(entry, dict):
+            known.add(entry.get("name", ""))
+        elif isinstance(entry, str):
+            known.add(entry)
+    sandbox_dir = PROJECT_ROOT / "research" / "strategies"
+    sandbox = 0
+    if sandbox_dir.exists():
+        for f in sandbox_dir.glob("*.py"):
+            if f.stem != "__init__" and f.stem not in known:
+                sandbox += 1
+
+    return {
+        "active": len(active),
+        "candidates": len(candidates),
+        "rejected": len(rejected),
+        "sandbox": sandbox,
     }
 
 
