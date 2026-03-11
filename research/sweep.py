@@ -50,6 +50,7 @@ from research.loop import (
     _increment_run_count,
     _print_metrics,
     leaderboard,
+    combined_test,
 )
 
 logger = logging.getLogger("autoresearch.sweep")
@@ -61,6 +62,7 @@ logger = logging.getLogger("autoresearch.sweep")
 # Values are ordered from most likely to least likely improvement.
 
 PARAM_GRIDS: Dict[str, Dict[str, list]] = {
+    # ── Tier 1 / Core ────────────────────────────────────────────────────
     "mean_reversion": {
         "rsi_period": [7, 10, 14, 21, 5],
         "rsi_oversold": [25, 30, 35, 40, 20],
@@ -93,6 +95,7 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "max_hold_days": [3, 5, 7, 10],
         "sma200_filter": [True, False],
     },
+    # ── Tier 2 / Dormant core ─────────────────────────────────────────────
     "connors_rsi2": {
         "rsi_period": [2, 3, 4, 5],
         "rsi_entry": [5, 10, 15, 20],
@@ -121,6 +124,146 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 10, 15],
     },
+    # ── Tier 3 / Research strategies ─────────────────────────────────────
+    "adx_trend_pullback": {
+        "adx_period": [7, 10, 14, 21],
+        "adx_threshold": [20.0, 25.0, 30.0, 35.0],
+        "ema_touch_pct": [0.005, 0.01, 0.015, 0.02],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "consecutive_down_days": {
+        "min_down_days": [2, 3, 4, 5],
+        "ibs_threshold": [0.2, 0.3, 0.5, 1.0],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
+    "demark_sequential": {
+        "setup_bars": [7, 9, 13],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "donchian_breakout": {
+        "entry_period": [10, 20, 30, 50],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [10, 15, 20, 30],
+        "sma200_filter": [True, False],
+    },
+    "stochastic_oversold": {
+        "stoch_period": [5, 10, 14, 21],
+        "stoch_smooth": [3, 5],
+        "stoch_entry": [10, 15, 20, 25],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "williams_percent_r": {
+        "wr_period": [10, 14, 21],
+        "wr_entry": [-80, -85, -90, -95],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "lower_band_reversion": {
+        "band_mult": [1.0, 1.5, 2.0, 2.5],
+        "ibs_threshold": [0.2, 0.3, 0.5],
+        "range_lookback": [10, 15, 20, 25],
+        "max_hold_days": [3, 5, 7, 10],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "sma200_filter": [True, False],
+    },
+    "triple_rsi": {
+        "rsi_period": [3, 5, 7],
+        "rsi_entry": [20, 25, 30, 35],
+        "decline_days": [2, 3, 4],
+        "max_hold_days": [3, 5, 7, 10],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "sma200_filter": [True, False],
+    },
+    "keltner_reversion": {
+        "ema_period": [10, 15, 20],
+        "atr_mult": [1.5, 2.0, 2.5],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "inside_bar_nr7": {
+        "nr_lookback": [5, 7, 10],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
+    "gap_and_go": {
+        "gap_threshold": [0.02, 0.03, 0.04, 0.05],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
+    "heikin_ashi_reversal": {
+        "reversal_bars": [1, 2, 3, 4],
+        "min_red_bars": [2, 3, 4, 5],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "macd_divergence": {
+        "macd_fast": [8, 12, 16],
+        "macd_slow": [20, 26, 30],
+        "macd_signal": [7, 9, 11],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "overnight_return": {
+        "ibs_min": [0.3, 0.4, 0.5, 0.6],
+        "momentum_min": [0.0, 0.005, 0.01, 0.015],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [1, 2, 3, 5],
+        "sma200_filter": [True, False],
+    },
+    "pead_earnings_drift": {
+        "min_jump_pct": [0.02, 0.03, 0.04, 0.05],
+        "max_days_after_event": [1, 2, 3],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [10, 15, 20, 30],
+        "sma200_filter": [True, False],
+    },
+    # ── Tier 4 / New Builder-1 strategies ────────────────────────────────
+    "relative_strength_pullback": {
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "rsi_divergence": {
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [5, 7, 10, 15],
+        "sma200_filter": [True, False],
+    },
+    "vwap_reversion": {
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
+    "monthly_rotation": {
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [10, 15, 20, 30],
+        "sma200_filter": [True, False],
+    },
+    "put_call_vix_proxy": {
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
+    "dividend_capture": {
+        "days_before_ex": [3, 5, 7, 10],
+        "days_after_ex": [3, 5, 7, 10],
+        "atr_stop_mult": [2.0, 2.5, 3.0, 3.5],
+        "max_hold_days": [10, 15, 20, 30],
+        "require_uptrend": [True, False],
+    },
 }
 
 # Strategy priority order (highest value first)
@@ -134,12 +277,36 @@ STRATEGY_ORDER = [
     "momentum_breakout",
     "short_term_mr",
     "bb_squeeze",
+    # Tier 3: Research strategies
+    "adx_trend_pullback",
+    "consecutive_down_days",
+    "demark_sequential",
+    "donchian_breakout",
+    "stochastic_oversold",
+    "williams_percent_r",
+    "lower_band_reversion",
+    "triple_rsi",
+    "keltner_reversion",
+    "inside_bar_nr7",
+    "gap_and_go",
+    "heikin_ashi_reversal",
+    "macd_divergence",
+    "overnight_return",
+    "pead_earnings_drift",
+    # Tier 4: New strategies (Builder-1)
+    "relative_strength_pullback",
+    "rsi_divergence",
+    "vwap_reversion",
+    "monthly_rotation",
+    "put_call_vix_proxy",
+    "dividend_capture",
 ]
 
 # ─── Heartbeat / Signals ─────────────────────────────────────────────────────
 
 HEARTBEAT_PATH = Path("/tmp/autoresearch-heartbeat.json")
 STOP_PATH = Path("/tmp/autoresearch-stop")
+PROMOTION_COOLDOWN_PATH = Path("/tmp/sweep-promotions.json")
 
 
 def _write_heartbeat(
@@ -180,6 +347,163 @@ def _send_telegram(message: str, level=None, category: str = "general") -> None:
 def _should_stop() -> bool:
     """Check for graceful stop signal."""
     return STOP_PATH.exists()
+
+
+# ─── Combined Test & Promotion ────────────────────────────────────────────────
+
+
+def _test_combined(
+    session: "ResearchSession",
+    improved_params: dict,
+    strategy_name: str,
+) -> bool:
+    """Test if improved params hurt the combined portfolio.
+
+    Runs combined portfolio test with the improved params and checks whether
+    the portfolio-level Sharpe degrades by more than 0.02.
+
+    Args:
+        session:         Active ResearchSession (provides market context).
+        improved_params: Merged strategy params after improvement.
+        strategy_name:   Strategy being tested.
+
+    Returns:
+        True  — safe to keep (Sharpe doesn't degrade by > 0.02).
+        False — revert; combined portfolio suffers.
+    """
+    try:
+        result = combined_test(strategy_name, improved_params, session.market)
+        delta_sharpe = result.get("delta", {}).get("sharpe", 0.0)
+        if delta_sharpe < -0.02:
+            logger.info(
+                "🚫 Combined test FAILED for %s: portfolio Sharpe delta %.4f (< -0.02)",
+                strategy_name, delta_sharpe,
+            )
+            return False
+        logger.info(
+            "✅ Combined test PASSED for %s: portfolio Sharpe delta %+.4f",
+            strategy_name, delta_sharpe,
+        )
+        return True
+    except Exception as e:
+        logger.warning(
+            "Combined test errored for %s: %s — assuming safe to keep.",
+            strategy_name, e,
+        )
+        return True  # Don't block keep on infrastructure failures
+
+
+def _check_promotions(cycle_results: List[dict]) -> None:
+    """Check if any strategy improved enough for promotion.
+
+    Criteria: Sharpe improvement > 0.05 from original cycle baseline.
+    On hit:
+      1. Writes candidate to config/candidates/sweep_{strategy}_{date}.json
+      2. Sends Telegram notification
+      3. Records 24h cooldown per strategy (persisted to PROMOTION_COOLDOWN_PATH)
+
+    Args:
+        cycle_results: List of per-strategy result dicts collected in run_sweep(),
+            each with keys: strategy, initial_sharpe, final_sharpe,
+            improved_params, improvements, market.
+    """
+    # Load persisted cooldowns
+    cooldowns: dict = {}
+    if PROMOTION_COOLDOWN_PATH.exists():
+        try:
+            cooldowns = json.loads(PROMOTION_COOLDOWN_PATH.read_text())
+        except Exception:
+            cooldowns = {}
+
+    now = datetime.now(timezone.utc)
+    promoted: List[dict] = []
+
+    for cr in cycle_results:
+        strategy = cr.get("strategy", "")
+        initial_sharpe = cr.get("initial_sharpe", 0.0)
+        final_sharpe = cr.get("final_sharpe", 0.0)
+        improved_params = cr.get("improved_params", {})
+        market = cr.get("market", "sp500")
+        improvements = cr.get("improvements", [])
+
+        if not improvements:
+            continue  # No improvements this cycle — skip
+
+        delta = final_sharpe - initial_sharpe
+        if delta <= 0.05:
+            continue  # Improvement threshold not met
+
+        # Check 24h cooldown
+        last_promoted_iso = cooldowns.get(strategy)
+        if last_promoted_iso:
+            try:
+                last_dt = datetime.fromisoformat(last_promoted_iso)
+                if (now - last_dt).total_seconds() < 86400:
+                    logger.info(
+                        "⏳ Promotion skipped for %s — 24h cooldown active "
+                        "(last promoted %s).",
+                        strategy, last_promoted_iso,
+                    )
+                    continue
+            except Exception:
+                pass  # Malformed timestamp — proceed
+
+        # Write candidate config
+        date_str = now.strftime("%Y%m%d")
+        candidate_name = f"sweep_{strategy}_{date_str}.json"
+        candidate_path = ATLAS_ROOT / "config" / "candidates" / candidate_name
+
+        try:
+            from utils.config import get_active_config
+            config = get_active_config(market)
+            # Inject improved params into strategy section
+            strat_section = config.setdefault("strategies", {}).setdefault(strategy, {})
+            strat_section.update(improved_params)
+            strat_section["enabled"] = True
+            config["_sweep_metadata"] = {
+                "promoted_at": now.isoformat(),
+                "strategy": strategy,
+                "initial_sharpe": initial_sharpe,
+                "final_sharpe": final_sharpe,
+                "delta_sharpe": round(delta, 6),
+                "sweep_improvements": improvements,
+            }
+            candidate_path.parent.mkdir(parents=True, exist_ok=True)
+            candidate_path.write_text(json.dumps(config, indent=2, default=str))
+            logger.info("📋 Promotion candidate written: %s", candidate_path)
+        except Exception as e:
+            logger.error(
+                "Failed to write promotion candidate for %s: %s", strategy, e,
+            )
+            continue
+
+        # Record cooldown
+        cooldowns[strategy] = now.isoformat()
+        promoted.append({
+            "strategy": strategy,
+            "delta_sharpe": delta,
+            "final_sharpe": final_sharpe,
+            "candidate": str(candidate_path),
+        })
+
+    # Persist updated cooldowns
+    try:
+        PROMOTION_COOLDOWN_PATH.write_text(json.dumps(cooldowns, indent=2, default=str))
+    except Exception as e:
+        logger.warning("Could not persist promotion cooldowns: %s", e)
+
+    # Send Telegram notification for each promotion
+    for p in promoted:
+        _send_telegram(
+            f"🎯 <b>Promotion candidate</b>: {p['strategy']}\n"
+            f"Sharpe: +{p['delta_sharpe']:.4f} → {p['final_sharpe']:.4f}\n"
+            f"Candidate: {Path(p['candidate']).name}",
+            category="promotion",
+        )
+        logger.info(
+            "🎯 Promoted %s — Sharpe +%.4f → %.4f",
+            p["strategy"], p["delta_sharpe"], p["final_sharpe"],
+        )
 
 
 # ─── Parallel Backtest Workers ────────────────────────────────────────────────
@@ -294,23 +618,32 @@ def _sweep_strategy_sequential(
             total_run += 1
 
             if result["recommendation"] == "keep":
-                session.keep()
-                total_kept += 1
-                consecutive_fails = 0
-                current_value = value
-                current_params = dict(session._best_params)
-                improvements.append({
-                    "param": param_name,
-                    "value": value,
-                    "delta_sharpe": result["delta"]["sharpe"],
-                    "new_sharpe": result["metrics"]["sharpe"],
-                })
-                logger.info(
-                    "✅ KEPT: %s (Sharpe %+.4f → %.4f)",
-                    description,
-                    result["delta"]["sharpe"],
-                    result["metrics"]["sharpe"],
-                )
+                # Combined portfolio gate: revert if portfolio-level Sharpe degrades
+                merged_params = session._last_experiment["merged_params"]
+                if not _test_combined(session, merged_params, session.strategy):
+                    session.discard()
+                    consecutive_fails += 1
+                    logger.info(
+                        "❌ DISCARD (combined test failed): %s", description,
+                    )
+                else:
+                    session.keep()
+                    total_kept += 1
+                    consecutive_fails = 0
+                    current_value = value
+                    current_params = dict(session._best_params)
+                    improvements.append({
+                        "param": param_name,
+                        "value": value,
+                        "delta_sharpe": result["delta"]["sharpe"],
+                        "new_sharpe": result["metrics"]["sharpe"],
+                    })
+                    logger.info(
+                        "✅ KEPT: %s (Sharpe %+.4f → %.4f)",
+                        description,
+                        result["delta"]["sharpe"],
+                        result["metrics"]["sharpe"],
+                    )
             else:
                 session.discard()
                 consecutive_fails += 1
@@ -409,9 +742,34 @@ def _sweep_strategy_parallel(
             if keepers:
                 best = max(keepers, key=lambda r: r["verdict"]["delta_sharpe"])
                 best_value = best["value"]
+                merged = {**current_params, param_name: best_value}
+
+                # Combined portfolio gate: revert if portfolio-level Sharpe degrades
+                if not _test_combined(session, merged, session.strategy):
+                    logger.info(
+                        "❌ DISCARD (combined test failed): %s=%s",
+                        param_name, best_value,
+                    )
+                    # Log all candidates as discards
+                    for r in results:
+                        _append_result(
+                            session.strategy, r["metrics"],
+                            f"{param_name}={r['value']}",
+                            "discard",
+                            f"{param_name}: {current_value}→{r['value']} (combined-fail)",
+                        )
+                    consecutive_param_fails += 1
+                    total_run += len(results)  # already added below but not here yet
+                    # Skip to next param
+                    if consecutive_param_fails >= max_consecutive_fails:
+                        logger.info(
+                            "Stopping %s — %d params in a row with no improvement",
+                            session.strategy, consecutive_param_fails,
+                        )
+                        break
+                    continue
 
                 # Update session state
-                merged = {**current_params, param_name: best_value}
                 session._best_params = merged
                 session._baseline_metrics = best["metrics"]
                 session._experiments_run += len(results)
@@ -544,6 +902,8 @@ def run_sweep(
 
         logger.info("=== Cycle %d ===", cycle_num)
 
+        cycle_results: List[dict] = []
+
         for strategy_name in strategy_list:
             if _should_stop():
                 break
@@ -569,9 +929,25 @@ def run_sweep(
                 logger.error("Failed to init %s: %s", strategy_name, e)
                 continue
 
+            # Capture baseline Sharpe BEFORE sweeping for promotion tracking
+            initial_sharpe = (session._baseline_metrics or {}).get("sharpe", 0.0)
+
             result = sweep_strategy(session, grid, max_consecutive_fails, workers)
             total_experiments += result["experiments_run"]
             total_kept += result["experiments_kept"]
+
+            # Capture final Sharpe AFTER all improvements
+            final_sharpe = (session._baseline_metrics or {}).get("sharpe", 0.0)
+
+            # Collect for end-of-cycle promotion check
+            cycle_results.append({
+                "strategy": strategy_name,
+                "initial_sharpe": initial_sharpe,
+                "final_sharpe": final_sharpe,
+                "improved_params": dict(session._best_params),
+                "improvements": result["improvements"],
+                "market": market,
+            })
 
             # Log summary
             summary = session.summary()
@@ -598,6 +974,10 @@ def run_sweep(
             "Cycle %d complete — %d experiments, %d kept, %.1f hours elapsed.",
             cycle_num, total_experiments, total_kept, elapsed_h,
         )
+
+        # Check for promotion candidates at end of each cycle
+        if cycle_results:
+            _check_promotions(cycle_results)
 
         # Between cycles: log leaderboard
         logger.info(leaderboard(market))
