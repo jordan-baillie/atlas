@@ -71,6 +71,7 @@ class MeanReversion(BaseStrategy):
         self.sma200_filter = strat_cfg.get("sma200_filter", False)
         # US-optimization: IBS confirmation filter (low IBS = selling exhaustion)
         self.ibs_max = strat_cfg.get("ibs_max", 1.0)  # 1.0 = disabled
+        self._precomputed = False
         self._logger.info(
             f"MeanReversion initialized: rsi_period={self.rsi_period}, "
             f"rsi_oversold={self.rsi_oversold}, "
@@ -84,6 +85,24 @@ class MeanReversion(BaseStrategy):
     @property
     def name(self) -> str:
         return "mean_reversion"
+
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicator columns once before the walk-forward loop."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_mr_rsi"] = calc_rsi(close, period=self.rsi_period)
+            df["_mr_zscore"] = calc_zscore(close, lookback=self.zscore_lookback)
+            df["_mr_atr"] = calc_atr(high, low, close, period=self.atr_period)
+            df["_mr_vol_ratio"] = calc_volume_ratio(volume, lookback=self.vol_lookback)
+            df["_mr_mean_target"] = close.rolling(self.zscore_lookback).mean()
+            if self.sma200_filter:
+                df["_mr_sma200"] = close.rolling(200).mean()
+            if self.ibs_max < 1.0:
+                df["_mr_ibs"] = calc_ibs(high, low, close)
+        self._precomputed = True
 
     def generate_signals(
         self,
@@ -129,11 +148,14 @@ class MeanReversion(BaseStrategy):
                 volume = df["volume"]
 
                 # Calculate indicators
-                rsi = calc_rsi(close, period=self.rsi_period)
-                zscore = calc_zscore(close, lookback=self.zscore_lookback)
-
-                current_rsi = rsi.iloc[-1]
-                current_zscore = zscore.iloc[-1]
+                if self._precomputed:
+                    current_rsi = df["_mr_rsi"].iloc[-1]
+                    current_zscore = df["_mr_zscore"].iloc[-1]
+                else:
+                    rsi = calc_rsi(close, period=self.rsi_period)
+                    zscore = calc_zscore(close, lookback=self.zscore_lookback)
+                    current_rsi = rsi.iloc[-1]
+                    current_zscore = zscore.iloc[-1]
 
                 if pd.isna(current_rsi) or pd.isna(current_zscore):
                     continue
@@ -147,8 +169,10 @@ class MeanReversion(BaseStrategy):
 
                 # SMA-200 trend filter: only buy if price is above 200-day SMA
                 if self.sma200_filter:
-                    sma200 = close.rolling(200).mean()
-                    sma200_val = sma200.iloc[-1]
+                    if self._precomputed:
+                        sma200_val = df["_mr_sma200"].iloc[-1]
+                    else:
+                        sma200_val = close.rolling(200).mean().iloc[-1]
                     if pd.isna(sma200_val) or close.iloc[-1] < sma200_val:
                         self._logger.debug(
                             f"{ticker}: below SMA(200) "
@@ -158,8 +182,11 @@ class MeanReversion(BaseStrategy):
 
                 # IBS confirmation filter: only buy if IBS is low (selling exhaustion)
                 if self.ibs_max < 1.0:
-                    ibs = calc_ibs(high, low, close)
-                    current_ibs = ibs.iloc[-1]
+                    if self._precomputed:
+                        current_ibs = df["_mr_ibs"].iloc[-1]
+                    else:
+                        ibs = calc_ibs(high, low, close)
+                        current_ibs = ibs.iloc[-1]
                     if pd.isna(current_ibs) or current_ibs > self.ibs_max:
                         self._logger.debug(
                             f"{ticker}: IBS={current_ibs:.3f} > max {self.ibs_max}, skipping"
@@ -186,8 +213,11 @@ class MeanReversion(BaseStrategy):
                         self._logger.debug(f"{ticker}: earnings check failed ({e}), proceeding")
 
                 # Phase 7A: Volume confirmation
-                vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
-                current_vol_ratio = vol_ratio.iloc[-1]
+                if self._precomputed:
+                    current_vol_ratio = df["_mr_vol_ratio"].iloc[-1]
+                else:
+                    vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
+                    current_vol_ratio = vol_ratio.iloc[-1]
 
                 if pd.isna(current_vol_ratio):
                     current_vol_ratio = 1.0  # Neutral if no data
@@ -202,8 +232,11 @@ class MeanReversion(BaseStrategy):
                 # Phase 7A: Volume noted for confidence adjustment
 
                 # Calculate ATR
-                atr = calc_atr(high, low, close, period=self.atr_period)
-                current_atr = atr.iloc[-1]
+                if self._precomputed:
+                    current_atr = df["_mr_atr"].iloc[-1]
+                else:
+                    atr = calc_atr(high, low, close, period=self.atr_period)
+                    current_atr = atr.iloc[-1]
 
                 if pd.isna(current_atr) or current_atr <= 0:
                     self._logger.debug(f"{ticker}: invalid ATR ({current_atr})")
@@ -242,7 +275,10 @@ class MeanReversion(BaseStrategy):
                     continue
 
                 # 20-day mean for reference
-                mean_20 = close.iloc[-self.zscore_lookback:].mean()
+                if self._precomputed:
+                    mean_20 = df["_mr_mean_target"].iloc[-1]
+                else:
+                    mean_20 = close.iloc[-self.zscore_lookback:].mean()
 
                 # Confidence: base 0.6 for meeting entry criteria + bonuses for depth
                 # RSI bonus: saturates when RSI is 15 below oversold threshold
@@ -357,7 +393,10 @@ class MeanReversion(BaseStrategy):
                 days_held = (today_date - entry_date).days
 
                 # 20-day moving average (mean reversion target)
-                mean_20 = close.iloc[-self.zscore_lookback:].mean()
+                if self._precomputed:
+                    mean_20 = df["_mr_mean_target"].iloc[-1]
+                else:
+                    mean_20 = close.iloc[-self.zscore_lookback:].mean()
 
                 # Check exit conditions (priority order)
                 # 1. Hard stop hit

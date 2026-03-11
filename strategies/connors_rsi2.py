@@ -72,6 +72,7 @@ class ConnorsRSI2(BaseStrategy):
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 3.0)  # Wide stop — MR needs room
 
+        self._precomputed = False
         self._logger.info(
             "ConnorsRSI2 initialized: rsi_period=%d, rsi_entry=%d, "
             "sma_trend=%d, sma_exit=%d, exit_mode=%s, max_hold=%d, "
@@ -87,6 +88,22 @@ class ConnorsRSI2(BaseStrategy):
     @property
     def name(self) -> str:
         return "connors_rsi2"
+
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicator columns once before the walk-forward loop."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_cr_rsi"] = calc_rsi(close, period=self.rsi_period)
+            df["_cr_sma_trend"] = close.rolling(self.sma_trend_period).mean()
+            df["_cr_atr"] = calc_atr(high, low, close, period=self.atr_period)
+            df["_cr_vol_ratio"] = calc_volume_ratio(volume, lookback=self.vol_lookback)
+            df["_cr_sma_exit"] = close.rolling(self.sma_exit_period).mean()
+            if getattr(self, 'ibs_filter_enabled', False):
+                df["_cr_ibs"] = calc_ibs(high, low, close)
+        self._precomputed = True
 
     def generate_signals(
         self,
@@ -123,28 +140,40 @@ class ConnorsRSI2(BaseStrategy):
 
                 # --- SMA-200 trend filter ---
                 if self.sma200_filter:
-                    sma200 = df["close"].rolling(self.sma_trend_period).mean().iloc[-1]
+                    if self._precomputed:
+                        sma200 = df["_cr_sma_trend"].iloc[-1]
+                    else:
+                        sma200 = df["close"].rolling(self.sma_trend_period).mean().iloc[-1]
                     if pd.isna(sma200) or close <= sma200:
                         continue
 
                 # --- RSI(2) extreme oversold ---
-                rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
-                if rsi_vals is None or len(rsi_vals) < 2:
-                    continue
-                current_rsi = rsi_vals.iloc[-1]
+                if self._precomputed:
+                    current_rsi = df["_cr_rsi"].iloc[-1]
+                else:
+                    rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
+                    if rsi_vals is None or len(rsi_vals) < 2:
+                        continue
+                    current_rsi = rsi_vals.iloc[-1]
                 if pd.isna(current_rsi) or current_rsi >= self.rsi_entry:
                     continue
 
                 # --- Volume filter ---
-                vol_series = calc_volume_ratio(df["volume"], self.vol_lookback)
-                vol_ratio = vol_series.iloc[-1] if vol_series is not None and len(vol_series) > 0 else None
+                if self._precomputed:
+                    vol_ratio = df["_cr_vol_ratio"].iloc[-1]
+                else:
+                    vol_series = calc_volume_ratio(df["volume"], self.vol_lookback)
+                    vol_ratio = vol_series.iloc[-1] if vol_series is not None and len(vol_series) > 0 else None
                 if vol_ratio is not None and not pd.isna(vol_ratio) and vol_ratio < self.vol_min_ratio:
                     continue
 
                 # --- IBS filter (optional) ---
                 if self.ibs_filter_enabled:
-                    ibs_series = calc_ibs(df["high"], df["low"], df["close"])
-                    ibs = ibs_series.iloc[-1] if ibs_series is not None and len(ibs_series) > 0 else None
+                    if self._precomputed:
+                        ibs = df["_cr_ibs"].iloc[-1]
+                    else:
+                        ibs_series = calc_ibs(df["high"], df["low"], df["close"])
+                        ibs = ibs_series.iloc[-1] if ibs_series is not None and len(ibs_series) > 0 else None
                     if ibs is None or pd.isna(ibs) or ibs > self.ibs_max:
                         continue
 
@@ -160,13 +189,16 @@ class ConnorsRSI2(BaseStrategy):
                 # Entry at next bar open (we detect signal at close, enter next open)
                 entry_price = close  # Approximation; actual entry at next open
 
-                atr_series = calc_atr(
-                    df["high"], df["low"], df["close"],
-                    period=self.atr_period,
-                )
-                if atr_series is None or atr_series.empty:
-                    continue
-                atr = atr_series.iloc[-1]
+                if self._precomputed:
+                    atr = df["_cr_atr"].iloc[-1]
+                else:
+                    atr_series = calc_atr(
+                        df["high"], df["low"], df["close"],
+                        period=self.atr_period,
+                    )
+                    if atr_series is None or atr_series.empty:
+                        continue
+                    atr = atr_series.iloc[-1]
                 if pd.isna(atr) or atr <= 0:
                     continue
 
@@ -289,7 +321,10 @@ class ConnorsRSI2(BaseStrategy):
 
                 # --- SMA exit (primary: close > SMA-5 = mean reversion complete) ---
                 if self.exit_mode in ("sma", "both"):
-                    sma_exit = df["close"].rolling(self.sma_exit_period).mean().iloc[-1]
+                    if self._precomputed:
+                        sma_exit = df["_cr_sma_exit"].iloc[-1]
+                    else:
+                        sma_exit = df["close"].rolling(self.sma_exit_period).mean().iloc[-1]
                     if not pd.isna(sma_exit) and close > sma_exit:
                         exits.append({
                             "ticker": ticker,
@@ -304,20 +339,22 @@ class ConnorsRSI2(BaseStrategy):
 
                 # --- RSI exit (alternative: RSI recovered above threshold) ---
                 if self.exit_mode in ("rsi", "both"):
-                    rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
-                    if rsi_vals is not None and len(rsi_vals) > 0:
-                        current_rsi = rsi_vals.iloc[-1]
-                        if not pd.isna(current_rsi) and current_rsi > self.rsi_exit:
-                            exits.append({
-                                "ticker": ticker,
-                                "reason": "signal_exit",
-                                "exit_price": close,
-                                "details": (
-                                    f"RSI({self.rsi_period})={current_rsi:.1f} > "
-                                    f"{self.rsi_exit} — oversold condition resolved"
-                                ),
-                            })
-                            continue
+                    if self._precomputed:
+                        current_rsi = df["_cr_rsi"].iloc[-1]
+                    else:
+                        rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
+                        current_rsi = rsi_vals.iloc[-1] if rsi_vals is not None and len(rsi_vals) > 0 else float("nan")
+                    if not pd.isna(current_rsi) and current_rsi > self.rsi_exit:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "signal_exit",
+                            "exit_price": close,
+                            "details": (
+                                f"RSI({self.rsi_period})={current_rsi:.1f} > "
+                                f"{self.rsi_exit} — oversold condition resolved"
+                            ),
+                        })
+                        continue
 
             except Exception as e:
                 self._logger.warning("ConnorsRSI2 exit error for %s: %s", ticker, e)

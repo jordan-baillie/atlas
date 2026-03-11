@@ -64,6 +64,7 @@ class ShortTermMR(BaseStrategy):
         self.earnings_blackout_before = earnings_cfg.get("days_before", 5)
         self.earnings_blackout_after = earnings_cfg.get("days_after", 1)
 
+        self._precomputed = False
         self._logger.info(
             "ShortTermMR initialized: rsi_period=%d, rsi_oversold=%d, "
             "ibs_oversold=%.2f, sma_period=%d, profit_target=%.1fx ATR, "
@@ -77,6 +78,20 @@ class ShortTermMR(BaseStrategy):
     @property
     def name(self) -> str:
         return "short_term_mr"
+
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicator columns once before the walk-forward loop."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_st_rsi"] = calc_rsi(close, period=self.rsi_period)
+            df["_st_ibs"] = calc_ibs(high, low, close)
+            df["_st_sma"] = close.rolling(window=self.sma_period).mean()
+            df["_st_atr"] = calc_atr(high, low, close, period=self.atr_period)
+            df["_st_vol_ratio"] = calc_volume_ratio(volume, lookback=self.vol_lookback)
+        self._precomputed = True
 
     def generate_signals(
         self,
@@ -123,14 +138,18 @@ class ShortTermMR(BaseStrategy):
                 volume = df["volume"]
 
                 # Calculate indicators
-                rsi = calc_rsi(close, period=self.rsi_period)
-                ibs = calc_ibs(high, low, close)
-                sma = close.rolling(window=self.sma_period).mean()
-
-                current_rsi = rsi.iloc[-1]
-                current_ibs = ibs.iloc[-1]
-                current_sma = sma.iloc[-1]
                 today_close = close.iloc[-1]
+                if self._precomputed:
+                    current_rsi = df["_st_rsi"].iloc[-1]
+                    current_ibs = df["_st_ibs"].iloc[-1]
+                    current_sma = df["_st_sma"].iloc[-1]
+                else:
+                    rsi = calc_rsi(close, period=self.rsi_period)
+                    ibs = calc_ibs(high, low, close)
+                    sma = close.rolling(window=self.sma_period).mean()
+                    current_rsi = rsi.iloc[-1]
+                    current_ibs = ibs.iloc[-1]
+                    current_sma = sma.iloc[-1]
 
                 if pd.isna(current_rsi) or pd.isna(current_sma):
                     continue
@@ -164,15 +183,21 @@ class ShortTermMR(BaseStrategy):
                         )
 
                 # Volume confirmation (noted for confidence, no hard filter)
-                vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
-                current_vol_ratio = vol_ratio.iloc[-1]
+                if self._precomputed:
+                    current_vol_ratio = df["_st_vol_ratio"].iloc[-1]
+                else:
+                    vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
+                    current_vol_ratio = vol_ratio.iloc[-1]
 
                 if pd.isna(current_vol_ratio):
                     current_vol_ratio = 1.0  # Neutral if no data
 
                 # Calculate ATR
-                atr = calc_atr(high, low, close, period=self.atr_period)
-                current_atr = atr.iloc[-1]
+                if self._precomputed:
+                    current_atr = df["_st_atr"].iloc[-1]
+                else:
+                    atr = calc_atr(high, low, close, period=self.atr_period)
+                    current_atr = atr.iloc[-1]
 
                 if pd.isna(current_atr) or current_atr <= 0:
                     self._logger.debug("%s: invalid ATR (%s)", ticker, current_atr)
@@ -328,10 +353,14 @@ class ShortTermMR(BaseStrategy):
                 days_held = (today_date - entry_date).days
 
                 # Calculate RSI(2) and SMA for exit checks
-                rsi = calc_rsi(close, period=self.rsi_period)
-                sma = close.rolling(window=self.sma_period).mean()
-                current_rsi = rsi.iloc[-1] if not rsi.empty else 50
-                current_sma = sma.iloc[-1] if not sma.empty else today_close
+                if self._precomputed:
+                    current_rsi = df["_st_rsi"].iloc[-1]
+                    current_sma = df["_st_sma"].iloc[-1]
+                else:
+                    rsi = calc_rsi(close, period=self.rsi_period)
+                    sma = close.rolling(window=self.sma_period).mean()
+                    current_rsi = rsi.iloc[-1] if not rsi.empty else 50
+                    current_sma = sma.iloc[-1] if not sma.empty else today_close
 
                 # 1. Hard stop hit
                 if today_close <= stop_price:
