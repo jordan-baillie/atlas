@@ -3244,7 +3244,7 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
   var canvas = document.getElementById('agent-canvas');
   if (canvas) {
     var hasDirector = (agents || []).some(function(a) { return a.type === 'principal'; });
-    var newH = hasDirector ? '320px' : '220px';
+    var newH = hasDirector ? '360px' : '220px';
     if (canvas.style.height !== newH) {
       canvas.style.height = newH;
       setTimeout(_resizeAgentCanvas, 50);
@@ -3813,31 +3813,53 @@ function drawAgentFloor() {
   // Offset left so the director doesn't sit directly above center team member
   if (directors.length > 0) {
     var dirY = wallH + 2;
-    var dirX = team.length === 3 ? W * 0.35 : W / 2;
+    var dirX = team.length === 3 ? W * 0.42 : W / 2;
     directors.forEach(function(agent) {
       _drawAgentAt(ctx, f, tc, agent, dirX, dirY, animFrame);
     });
 
-    // Subtle dashed separator between director and team rows
+    // Org-chart connector lines from Director down to each team member
     if (team.length > 0) {
-      var sepY = wallH + 78;
+      var lineStartY = wallH + 62;
+      var lineEndY = wallH + 76;
+      var teamSpacing = Math.min(220, W / (team.length + 1));
+      var teamStartX = (W - teamSpacing * (team.length - 1)) / 2;
+      if (team.length === 1) teamStartX = W / 2;
+
       ctx.save();
-      ctx.strokeStyle = tc.border;
-      ctx.globalAlpha = 0.18;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = tc.textTertiary;
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = 1.5;
+
+      // Vertical line down from Director
       ctx.beginPath();
-      ctx.moveTo(60, sepY);
-      ctx.lineTo(W - 60, sepY);
+      ctx.moveTo(dirX, lineStartY);
+      ctx.lineTo(dirX, lineStartY + 10);
       ctx.stroke();
-      ctx.setLineDash([]);
+
+      // Horizontal bar across team
+      var leftX = teamStartX;
+      var rightX = teamStartX + teamSpacing * (team.length - 1);
+      ctx.beginPath();
+      ctx.moveTo(leftX, lineStartY + 10);
+      ctx.lineTo(rightX, lineStartY + 10);
+      ctx.stroke();
+
+      // Vertical drops to each team member
+      for (var ti = 0; ti < team.length; ti++) {
+        var tx = teamStartX + ti * teamSpacing;
+        ctx.beginPath();
+        ctx.moveTo(tx, lineStartY + 10);
+        ctx.lineTo(tx, lineEndY);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }
 
   // ── Team row: evenly spaced, well below director when present ──
   if (team.length > 0) {
-    var teamBaseY = directors.length > 0 ? wallH + 86 : wallH + 8;
+    var teamBaseY = directors.length > 0 ? wallH + 110 : wallH + 8;
     var spacing = Math.min(220, W / (team.length + 1));
     var startX = (W - spacing * (team.length - 1)) / 2;
     if (team.length === 1) startX = W / 2;
