@@ -51,6 +51,23 @@ class BBSqueeze(BaseStrategy):
         self.vol_surge_threshold = strat_cfg.get("vol_surge_threshold", 1.5)
         self.earnings_blackout = strat_cfg.get("earnings_blackout", {})
 
+        self._precomputed = False
+
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicators as DataFrame columns (called once before walk-forward loop)."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_bb_ma"] = close.rolling(self.bb_period).mean()
+            df["_bb_std"] = close.rolling(self.bb_period).std()
+            df["_bb_kc_ma"] = close.ewm(span=self.kc_period, adjust=False).mean()
+            df["_bb_kc_atr"] = calc_atr(high, low, close, self.kc_period)
+            df["_bb_atr"] = calc_atr(high, low, close, self.atr_period)
+            df["_bb_vol_ratio"] = calc_volume_ratio(volume, 20)
+        self._precomputed = True
+
     @property
     def name(self) -> str:
         return "bb_squeeze"
@@ -85,17 +102,22 @@ class BBSqueeze(BaseStrategy):
                 low = df["low"]
                 volume = df["volume"]
 
-                # Bollinger Bands
-                bb_ma = close.rolling(self.bb_period).mean()
-                bb_std_val = close.rolling(self.bb_period).std()
+                # Bollinger Bands and Keltner Channels
+                if self._precomputed:
+                    bb_ma = df["_bb_ma"]
+                    bb_std_val = df["_bb_std"]
+                    kc_ma = df["_bb_kc_ma"]
+                    kc_atr = df["_bb_kc_atr"]
+                else:
+                    bb_ma = close.rolling(self.bb_period).mean()
+                    bb_std_val = close.rolling(self.bb_period).std()
+                    kc_ma = close.ewm(span=self.kc_period, adjust=False).mean()
+                    kc_atr = calc_atr(high, low, close, self.kc_period)
+
                 bb_upper = bb_ma + self.bb_std * bb_std_val
                 bb_lower = bb_ma - self.bb_std * bb_std_val
-
-                # Keltner Channels
-                kc_ma = close.ewm(span=self.kc_period, adjust=False).mean()
-                atr = calc_atr(high, low, close, self.kc_period)
-                kc_upper = kc_ma + self.kc_atr_mult * atr
-                kc_lower = kc_ma - self.kc_atr_mult * atr
+                kc_upper = kc_ma + self.kc_atr_mult * kc_atr
+                kc_lower = kc_ma - self.kc_atr_mult * kc_atr
 
                 # Squeeze detection
                 squeeze_on = (bb_lower > kc_lower) & (bb_upper < kc_upper)
@@ -120,8 +142,10 @@ class BBSqueeze(BaseStrategy):
                     continue
 
                 # ATR for stops
-                atr_val = calc_atr(high, low, close, self.atr_period)
-                current_atr = float(atr_val.iloc[curr])
+                if self._precomputed:
+                    current_atr = float(df["_bb_atr"].iloc[curr])
+                else:
+                    current_atr = float(calc_atr(high, low, close, self.atr_period).iloc[curr])
                 if np.isnan(current_atr) or current_atr <= 0:
                     continue
 
@@ -145,7 +169,10 @@ class BBSqueeze(BaseStrategy):
                 confidence += min(abs(norm_slope) * 100, 0.15)
 
                 # Volume surge bonus
-                vol_ratio = calc_volume_ratio(volume, 20)
+                if self._precomputed:
+                    vol_ratio = df["_bb_vol_ratio"]
+                else:
+                    vol_ratio = calc_volume_ratio(volume, 20)
                 if float(vol_ratio.iloc[curr]) > self.vol_surge_threshold:
                     confidence += 0.10
 
@@ -235,8 +262,10 @@ class BBSqueeze(BaseStrategy):
                     pos["highest_price"] = highest_price
 
                 # ATR for stops
-                atr_vals = calc_atr(high, low, close, self.atr_period)
-                current_atr = atr_vals.iloc[-1]
+                if self._precomputed:
+                    current_atr = df["_bb_atr"].iloc[-1]
+                else:
+                    current_atr = calc_atr(high, low, close, self.atr_period).iloc[-1]
                 if np.isnan(current_atr) or current_atr <= 0:
                     current_atr = entry_price * 0.02  # fallback 2%
 
