@@ -69,6 +69,17 @@ fi
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 
+# ─── Pre-flight cleanup ─────────────────────────────────────────────────────
+
+# Kill any orphaned python workers from a previously killed research window.
+# systemd's SIGKILL sometimes misses ProcessPoolExecutor children.
+for pid in $(pgrep -f "research/sweep.py|_backtest_worker" 2>/dev/null); do
+    if [ "$pid" != "$$" ]; then
+        echo "Killing orphaned research process: PID $pid"
+        kill -9 "$pid" 2>/dev/null || true
+    fi
+done
+
 # ─── Run ─────────────────────────────────────────────────────────────────────
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') — Research cron starting ($PROFILE profile)"

@@ -1821,17 +1821,17 @@
     },
     "estimated_runtime_min": 5,
     "priority": "P2",
-    "status": "claimed",
+    "status": "queued",
     "strategy_name": "bb_squeeze",
     "params_override": null,
     "config_snapshot": null,
-    "claimed_by": "atlas",
-    "claimed_at": "2026-03-11T10:25:21.566981+00:00",
+    "claimed_by": null,
+    "claimed_at": null,
     "created_at": "2026-03-10T08:32:05.673600+00:00",
-    "updated_at": "2026-03-11T09:54:12.083034+00:00",
+    "updated_at": "2026-03-11T23:05:22.489935+00:00",
     "tags": [],
     "depends_on": [],
-    "notes": "\n[zombie_reset 2026-03-11] Was claimed for >24h with no completion. Reset to queued."
+    "notes": "\n[zombie_reset 2026-03-11] Was claimed for >24h with no completion. Reset to queued. | Auto-reset from claimed after 13h (zombie cleanup 2026-03-11 23:05)"
   },
   {
     "id": "20260310_183205_1eac79",
@@ -3310,11 +3310,13 @@
     "priority": "P1",
     "hypothesis": "trend_following with best observed Sharpe 0.5795 (ar-20260311_152317) clears the solo pass threshold (\u22650.3). Combined portfolio test will determine whether it holds Sharpe \u22650.3 with \u226550 trades and max_dd \u226410% alongside MR and OG in a live-weight portfolio \u2014 required by RULE-1 before any promotion consideration.",
     "params_override": {},
-    "status": "claimed",
+    "status": "queued",
     "created_at": "2026-03-11T07:35:37.269535+00:00",
-    "claimed_by": "nova",
-    "claimed_at": "2026-03-11T09:16:42.606263+00:00",
-    "market": "sp500"
+    "claimed_by": null,
+    "claimed_at": null,
+    "market": "sp500",
+    "updated_at": "2026-03-11T23:05:22.489935+00:00",
+    "notes": " | Auto-reset from claimed after 14h (zombie cleanup 2026-03-11 23:05)"
   },
   {
     "id": "director_mean_reversion_control_20260311",
@@ -3324,11 +3326,13 @@
     "priority": "P2",
     "hypothesis": "Mean reversion autoresearch best observed Sharpe is 0.2742 \u2014 below solo threshold of 0.3. A control run at default parameters establishes whether the strategy is parameter-trapped below threshold or can reach 0.3+ with a focused sweep. Expects Sharpe near 0.25\u20130.30 at baseline; if not, sweep range should be widened (per RULE-2).",
     "params_override": {},
-    "status": "claimed",
+    "status": "queued",
     "created_at": "2026-03-11T07:35:37.307960+00:00",
-    "claimed_by": "atlas",
-    "claimed_at": "2026-03-11T10:25:21.567025+00:00",
-    "market": "sp500"
+    "claimed_by": null,
+    "claimed_at": null,
+    "market": "sp500",
+    "updated_at": "2026-03-11T23:05:22.489935+00:00",
+    "notes": " | Auto-reset from claimed after 13h (zombie cleanup 2026-03-11 23:05)"
   },
   {
     "id": "director_mean_reversion_combined_20260311",
@@ -3338,11 +3342,13 @@
     "priority": "P1",
     "hypothesis": "mean_reversion annealing crossed the solo threshold: Sharpe trajectory 0.2043\u21920.2375\u21920.2525\u21920.2734\u21920.3564. Combined test will determine if this marginal solo pass (0.3564 vs 0.30 threshold) holds under position contention with trend_following and opening_gap. Solo was borderline \u2014 combined outcome is uncertain and must be run before any promotion discussion.",
     "params_override": {},
-    "status": "claimed",
+    "status": "queued",
     "created_at": "2026-03-11T08:43:40.239276+00:00",
-    "claimed_by": "atlas",
-    "claimed_at": "2026-03-11T10:25:21.567029+00:00",
-    "market": "sp500"
+    "claimed_by": null,
+    "claimed_at": null,
+    "market": "sp500",
+    "updated_at": "2026-03-11T23:05:22.489935+00:00",
+    "notes": " | Auto-reset from claimed after 13h (zombie cleanup 2026-03-11 23:05)"
   },
   {
     "id": "director_trend_following_combined_20260311A",

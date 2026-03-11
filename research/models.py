@@ -15,6 +15,7 @@ File Ownership Boundaries:
 
 import json
 import fcntl
+import logging
 import os
 import time
 import uuid
@@ -23,6 +24,8 @@ from datetime import datetime, timezone
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 from enum import Enum
+
+logger = logging.getLogger("atlas.research.models")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESEARCH_DIR = PROJECT_ROOT / "research"
@@ -393,6 +396,56 @@ def update_queue_entry(entry_id: str, updates: Dict[str, Any]):
             item["updated_at"] = datetime.now(timezone.utc).isoformat()
             break
     _locked_write(QUEUE_PATH, queue)
+
+
+def cleanup_stale_claims(timeout_h: float = 2.0) -> int:
+    """Reset experiments stuck in claimed/running status back to queued.
+
+    Should be called on startup by any research runner (sweep.py, daemon, etc.)
+    to recover from crashes that leave orphaned claims.
+
+    Args:
+        timeout_h: Hours after which a claim is considered stale.
+
+    Returns:
+        Number of entries reset.
+    """
+    queue = _locked_read(QUEUE_PATH)
+    now = datetime.now(timezone.utc)
+    timeout_s = timeout_h * 3600
+    resets = []
+
+    for entry in queue:
+        if entry.get("status") not in ("claimed", "running",
+                                        ExperimentStatus.CLAIMED, ExperimentStatus.RUNNING):
+            continue
+        claimed_at_str = entry.get("claimed_at")
+        if not claimed_at_str:
+            continue
+        try:
+            claimed_at = datetime.fromisoformat(claimed_at_str)
+            age_s = (now - claimed_at).total_seconds()
+            if age_s > timeout_s:
+                resets.append(entry["id"])
+                entry["status"] = ExperimentStatus.QUEUED
+                entry["claimed_by"] = None
+                entry["claimed_at"] = None
+                entry["updated_at"] = now.isoformat()
+                prev_notes = entry.get("notes") or ""
+                entry["notes"] = prev_notes + (
+                    f" | Auto-reset from stale claim after {age_s/3600:.0f}h"
+                    f" ({now.strftime('%Y-%m-%d %H:%M')})"
+                )
+        except (ValueError, TypeError):
+            pass
+
+    if resets:
+        _locked_write(QUEUE_PATH, queue)
+        logger.info(
+            "Stale claim cleanup: reset %d experiment(s): %s",
+            len(resets), ", ".join(resets),
+        )
+    return len(resets)
 
 
 def claim_experiment(entry_id: str, agent_id: str = "atlas-research") -> Optional[dict]:

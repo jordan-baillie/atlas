@@ -313,6 +313,7 @@ STRATEGY_ORDER = [
 
 HEARTBEAT_PATH = Path("/tmp/autoresearch-heartbeat.json")
 STOP_PATH = Path("/tmp/autoresearch-stop")
+_stop_event = None  # Set to threading.Event in main() for fast SIGTERM response
 PROMOTION_COOLDOWN_PATH = Path("/tmp/sweep-promotions.json")
 
 
@@ -352,7 +353,9 @@ def _send_telegram(message: str, level=None, category: str = "general") -> None:
 
 
 def _should_stop() -> bool:
-    """Check for graceful stop signal."""
+    """Check for graceful stop signal (file or threading event)."""
+    if _stop_event is not None and _stop_event.is_set():
+        return True
     return STOP_PATH.exists()
 
 
@@ -892,6 +895,17 @@ def run_sweep(
     cycle_num = 0
     deadline = (session_start + max_runtime) if max_runtime > 0 else 0
 
+    # Clean up stale claims from crashed previous sessions before starting.
+    # Without this, experiments orphaned by a killed sweep stay "claimed" forever
+    # because sweep.py doesn't use the research_daemon's periodic cleanup.
+    try:
+        from research.models import cleanup_stale_claims
+        n_reset = cleanup_stale_claims(timeout_h=2.0)
+        if n_reset:
+            logger.info("Cleaned up %d stale claimed experiment(s) on startup", n_reset)
+    except Exception as e:
+        logger.warning("Stale claim cleanup failed: %s", e)
+
     # NOTE: No start notification here — parent (autoresearch.py) handles it.
     # sweep.py runs as a subprocess per-strategy, so sending "started" here
     # would spam 7× per cycle.
@@ -1049,10 +1063,17 @@ def main():
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
-    # Signal handling
+    # Signal handling — use both a file AND a threading event for fast response.
+    # The file persists across function boundaries; the event wakes up any
+    # ProcessPoolExecutor.as_completed() call that's blocking.
+    import threading
+    global _stop_event
+    _stop_event = threading.Event()
+
     def _shutdown(signum, frame):
-        logger.info("Received signal %s — creating stop file.", signum)
+        logger.info("Received signal %s — initiating shutdown.", signum)
         STOP_PATH.touch()
+        _stop_event.set()
 
     signal.signal(signal.SIGTERM, _shutdown)
     signal.signal(signal.SIGINT, _shutdown)

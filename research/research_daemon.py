@@ -30,6 +30,7 @@ sys.path.insert(0, str(ATLAS_ROOT))
 from research.models import (
     ExperimentStatus,
     claim_experiment,
+    cleanup_stale_claims,
     get_next_queued,
     read_queue,
     update_queue_entry,
@@ -551,93 +552,26 @@ class ResearchDaemon:
         return None
 
     def _cleanup_zombies(self, claim_timeout_h: float = 2.0) -> int:
-        """Proactively reset stale claimed experiments back to queued.
-
-        The passive stale-claim mechanism in claim_experiment() only fires when
-        another worker tries to pick up the *same* experiment ID — if the queue
-        moves on to different IDs, the zombie stays claimed forever.
-
-        This method scans ALL claimed entries on startup and every 30 minutes,
-        resetting any that have been claimed longer than *claim_timeout_h* hours.
-
-        Args:
-            claim_timeout_h: How many hours a claim may sit without completion
-                             before it is considered a zombie (default: 2h).
-
-        Returns:
-            Number of entries reset.
-        """
+        """Delegate to shared cleanup_stale_claims in models.py."""
         try:
-            queue = read_queue()
+            return cleanup_stale_claims(timeout_h=claim_timeout_h)
         except Exception as e:
-            logger.error("Zombie cleanup: could not read queue: %s", e)
+            logger.error("Zombie cleanup failed: %s", e)
             return 0
-
-        now = datetime.now(timezone.utc)
-        timeout_s = claim_timeout_h * 3600
-        resets = []
-
-        STUCK_STATES = {ExperimentStatus.CLAIMED, ExperimentStatus.RUNNING, "claimed", "running"}
-        for entry in queue:
-            if entry.get("status") not in STUCK_STATES:
-                continue
-            claimed_at_str = entry.get("claimed_at")
-            if not claimed_at_str:
-                continue
-            try:
-                claimed_at = datetime.fromisoformat(claimed_at_str)
-                age_s = (now - claimed_at).total_seconds()
-                if age_s > timeout_s:
-                    resets.append((entry["id"], age_s / 3600))
-            except (ValueError, TypeError):
-                pass
-
-        if not resets:
-            return 0
-
-        logger.warning(
-            "ZOMBIE CLEANUP: resetting %d stale claimed experiment(s) back to queued: %s",
-            len(resets),
-            ", ".join(f"{eid} ({age:.1f}h)" for eid, age in resets),
-        )
-
-        reset_count = 0
-        now_iso = now.isoformat()
-        for entry_id, age_h in resets:
-            try:
-                # Read current notes first so we can append
-                q2 = read_queue()
-                current_notes = ""
-                for e in q2:
-                    if e["id"] == entry_id:
-                        current_notes = (e.get("notes") or "").rstrip()
-                        break
-
-                update_queue_entry(entry_id, {
-                    "status": ExperimentStatus.QUEUED,
-                    "claimed_by": None,
-                    "claimed_at": None,
-                    "notes": (
-                        current_notes
-                        + f"\n[zombie_reset {now_iso[:10]}] "
-                        f"Claimed for {age_h:.1f}h with no completion — reset to queued."
-                    ),
-                })
-                reset_count += 1
-                logger.warning("  → reset zombie: %s (was claimed %.1fh ago)", entry_id, age_h)
-            except Exception as e:
-                logger.error("Failed to reset zombie %s: %s", entry_id, e)
-
-        return reset_count
 
     def _handle_failure(self, experiment: dict, error: Exception):
         """Handle an experiment execution failure."""
         exp_id = experiment.get("id", "unknown")
+        error_msg = f"{type(error).__name__}: {error}"
         logger.error("Experiment %s failed: %s\n%s", exp_id, error, traceback.format_exc())
         self.experiments_failed += 1
 
         try:
-            update_queue_entry(exp_id, {"status": ExperimentStatus.FAILED})
+            update_queue_entry(exp_id, {
+                "status": ExperimentStatus.FAILED,
+                "error": error_msg[:500],
+                "failed_at": datetime.now(timezone.utc).isoformat(),
+            })
         except Exception:
             pass
 
