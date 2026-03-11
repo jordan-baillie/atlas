@@ -3240,11 +3240,15 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
   _agentFloor.stats = stats || {};
   _agentFloor.leaderboard = leaderboard || [];
   _agentFloor.strategyPipeline = strategyPipeline || {};
-  // Adjust canvas height: 280px when Director (principal) is present, else 220px
+  // Adjust canvas height when Director is present
   var canvas = document.getElementById('agent-canvas');
   if (canvas) {
     var hasDirector = (agents || []).some(function(a) { return a.type === 'principal'; });
-    canvas.style.height = hasDirector ? '280px' : '220px';
+    var newH = hasDirector ? '320px' : '220px';
+    if (canvas.style.height !== newH) {
+      canvas.style.height = newH;
+      setTimeout(_resizeAgentCanvas, 50);
+    }
   }
   if (!_agentFloor.inited) initAgentFloor();
   // Force resize when agents update (tab may have just become visible)
@@ -3706,12 +3710,13 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
   var nameLabel = agent.name;
   if (prog.label) nameLabel += '  ' + prog.label;
   if (prog.cycle > 1) nameLabel += '  ↻' + prog.cycle;
-  ctx.fillText(nameLabel, cx, deskY + deskH + 14);
+  var labelY = deskY + deskH + 14;
+  ctx.fillText(nameLabel, cx, labelY);
 
   // Status dot
   var dotColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'idle' ? tc.amber : tc.red;
   ctx.beginPath();
-  ctx.arc(cx, deskY + deskH + 24, 3, 0, Math.PI * 2);
+  ctx.arc(cx, labelY + 10, 3, 0, Math.PI * 2);
   ctx.fillStyle = dotColor;
   ctx.fill();
 
@@ -3742,8 +3747,9 @@ function drawAgentFloor() {
   var tc = _themeColors;
 
   // ── Background: wall + floor ──
-  // Upper 40% = wall, lower 60% = floor
-  var wallH = Math.round(H * 0.46);
+  // Taller canvas (director present) → smaller wall ratio so floor has room for 2 rows
+  var wallPct = (H > 250) ? 0.34 : 0.46;
+  var wallH = Math.round(H * wallPct);
 
   // Wall — subtle gradient
   var wallGrad = ctx.createLinearGradient(0, 0, 0, wallH);
@@ -3803,32 +3809,35 @@ function drawAgentFloor() {
 
   var animFrame = Math.floor(f.frame / 30) % 2;
 
-  // ── Director row: centered, elevated right below the wall ──
+  // ── Director row: left of center, right below the wall ──
+  // Offset left so the director doesn't sit directly above center team member
   if (directors.length > 0) {
+    var dirY = wallH + 2;
+    var dirX = team.length === 3 ? W * 0.35 : W / 2;
     directors.forEach(function(agent) {
-      _drawAgentAt(ctx, f, tc, agent, W / 2, wallH + 4, animFrame);
+      _drawAgentAt(ctx, f, tc, agent, dirX, dirY, animFrame);
     });
 
     // Subtle dashed separator between director and team rows
     if (team.length > 0) {
-      var sepY = wallH + 52;
+      var sepY = wallH + 78;
       ctx.save();
       ctx.strokeStyle = tc.border;
-      ctx.globalAlpha = 0.25;
+      ctx.globalAlpha = 0.18;
       ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([4, 6]);
       ctx.beginPath();
-      ctx.moveTo(40, sepY);
-      ctx.lineTo(W - 40, sepY);
+      ctx.moveTo(60, sepY);
+      ctx.lineTo(W - 60, sepY);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
     }
   }
 
-  // ── Team row: evenly spaced, pushed down when director is present ──
+  // ── Team row: evenly spaced, well below director when present ──
   if (team.length > 0) {
-    var teamBaseY = directors.length > 0 ? wallH + 58 : wallH + 8;
+    var teamBaseY = directors.length > 0 ? wallH + 86 : wallH + 8;
     var spacing = Math.min(220, W / (team.length + 1));
     var startX = (W - spacing * (team.length - 1)) / 2;
     if (team.length === 1) startX = W / 2;
