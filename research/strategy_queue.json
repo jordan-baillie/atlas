@@ -43,6 +43,18 @@
       "rejected_by": "sage",
       "since": "2026-03-11",
       "reason": "llm_fix_failed: timeout (600s)"
+    },
+    {
+      "name": "consecutive_down_days",
+      "rejected_by": "sage",
+      "since": "2026-03-11",
+      "reason": "llm_fix_failed: timeout (600s)"
+    },
+    {
+      "name": "demark_sequential",
+      "rejected_by": "sage",
+      "since": "2026-03-11",
+      "reason": "llm_fix_failed: timeout (600s)"
     }
   ]
 }

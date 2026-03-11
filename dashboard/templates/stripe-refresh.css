@@ -1513,3 +1513,231 @@ html[data-theme="light"] .activity-item-alt { background: rgba(0, 0, 0, 0.025); 
 .disc-icon-test  { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(176,138,230,0.2); }
 .disc-icon-trend { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(232,138,85,0.2);  }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE OPTIMISATION
+   Three breakpoints: 900px (tablet), 700px (phone/small tablet), 480px (small phone)
+   Strategy: shrink chrome → horizontal-scroll instead of wrap → stack late.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ≤900px: Tablet ──────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  /* Monitor position cards — narrower min-width on tablets */
+  html body #monitor-positions {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  }
+}
+
+/* ── ≤700px: Phones & small tablets ─────────────────────────────────────── */
+@media (max-width: 700px) {
+  /* Shell — tighter edge padding */
+  html body .shell { padding: 10px 12px 40px; }
+
+  /* ── Header ── */
+  html body .header {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  html body .header-left { gap: 8px; flex: 1; min-width: 0; }
+  html body .header-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    padding-bottom: 2px; /* room for scrollbar on iOS */
+  }
+  html body .header-right::-webkit-scrollbar { display: none; }
+  html body .logo { font-size: 22px; letter-spacing: -0.5px; }
+  html body .atlas-globe { width: 24px !important; height: 24px !important; }
+  /* Version pill wastes space — hide it */
+  html body .version { display: none !important; }
+
+  /* ── Market clocks — single scrollable row, no wrapping ── */
+  html body .market-clocks {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  html body .market-clocks::-webkit-scrollbar { display: none; }
+
+  /* ── Tab nav — full-width, evenly distributed ── */
+  html body .tab-nav { display: flex; width: 100%; }
+  html body .tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 10px;
+    letter-spacing: 0;
+    gap: 4px;
+    text-align: center;
+  }
+  /* Hotkey hints [T] [R] [M] — useless on touch, hide them */
+  html body .tab-btn .hotkey-hint { display: none; }
+  html body .tab-btn .tab-badge { font-size: 9px; padding: 0 4px; }
+
+  /* ── Market selector — horizontal scroll instead of wrap ── */
+  html body .market-selector {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    gap: 4px;
+  }
+  html body .market-selector::-webkit-scrollbar { display: none; }
+  html body .market-btn { white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: 10px; }
+
+  /* ── Chart range buttons — scrollable row ── */
+  html body .chart-ranges {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  html body .chart-ranges::-webkit-scrollbar { display: none; }
+
+  /* ── Monitor: override inline styles ── */
+  /* Summary KPIs: 4-col → 2-col */
+  html body #monitor-cards { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Position cards: single column on mobile */
+  html body #monitor-positions { grid-template-columns: 1fr !important; }
+
+  /* Monitor sort/eval controls */
+  html body #monitor-sort-btns { display: flex; gap: 2px; }
+  html body #monitor-sort-btns .chart-range-btn { padding: 4px 8px; font-size: 9px; }
+  html body #monitor-eval-btn { font-size: 10px !important; padding: 5px 10px !important; }
+
+  /* ── Leaderboard — tighten widths ── */
+  html body .lb-name { width: 90px; }
+  html body .lb-value { width: 38px; font-size: 10px; }
+  html body .lb-meta { display: none; }
+
+  /* ── Activity feed — compact time/strategy cols ── */
+  html body .activity-time { min-width: 40px; font-size: 9px; }
+  html body .activity-strat { min-width: 70px; font-size: 11px; }
+
+  /* ── Research KPI strip — already 2-col, tighten gap ── */
+  html body .research-kpis { gap: 8px; }
+
+  /* ── KPI cards — slightly smaller value text ── */
+  html body .card-value { font-size: 20px; }
+  html body .card { padding: 14px 14px; }
+
+  /* ── Decorative plus-row markers — remove on mobile (save vertical space) ── */
+  html body .plus-row { display: none; }
+
+  /* ── Section heads — tighter ── */
+  html body .section-head { padding: 0 0 6px; margin-bottom: 10px; }
+  html body .section-body { padding-bottom: 10px; }
+
+  /* ── Agent canvas — shorter ── */
+  html body #agent-canvas { height: 140px; }
+}
+
+/* ── ≤480px: Small phones ─────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  html body .shell { padding: 8px 10px 32px; }
+
+  /* ── Header — stack top-bar and controls vertically ── */
+  html body .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  html body .header-left { width: 100%; }
+  html body .header-right { width: 100%; }
+  html body .logo { font-size: 18px; letter-spacing: -0.5px; }
+  html body .atlas-globe { width: 18px !important; height: 18px !important; }
+
+  /* Market clock labels overflow on tiny screens — hide them (dots + time enough) */
+  html body .market-clock-label { display: none !important; }
+
+  /* ── Tab buttons — even more compact ── */
+  html body .tab-btn { font-size: 9px; padding: 7px 4px; letter-spacing: 0; }
+  /* Badge takes too much room at this size */
+  html body .tab-btn .tab-badge { display: none; }
+
+  /* ── KPI cards — 1 column ── */
+  html body .cards { grid-template-columns: 1fr; }
+  /* Single-col cards can afford bigger value text */
+  html body .card-value { font-size: 24px; }
+  html body .card { padding: 14px 16px; }
+
+  /* ── Monitor ── */
+  html body #monitor-cards { grid-template-columns: repeat(2, 1fr) !important; }
+  html body #monitor-positions { grid-template-columns: 1fr !important; }
+
+  /* ── Monitor detail modal — reduce top margin to fit small screens ── */
+  html body #monitor-modal > div { margin: 12px auto !important; padding: 0 10px !important; }
+
+  /* ── PnL grid: already 2-col from 700px rule, fix border leakage ── */
+  html body .pnl-item:nth-child(2) { border-right: none; }
+  html body .pnl-item:nth-child(1),
+  html body .pnl-item:nth-child(2) { border-bottom: 1px dotted var(--border-dotted); }
+
+  /* ── Metrics: already 2-col from 700px rule ── */
+
+  /* ── Tasks: already 1-col from 700px ── */
+
+  /* ── Plan risk grid — 2×2 ── */
+  html body .plan-risk { grid-template-columns: repeat(2, 1fr); }
+  html body .plan-risk-item:nth-child(2n) { border-right: none; }
+  html body .plan-risk-item:nth-child(1),
+  html body .plan-risk-item:nth-child(2) { border-bottom: 1px dotted var(--border-dotted); }
+
+  /* ── Leaderboard — smallest useful widths ── */
+  html body .lb-row { gap: 6px; }
+  html body .lb-rank { width: 14px; }
+  html body .lb-name { width: 70px; font-size: 11px; }
+  html body .lb-value { width: 34px; font-size: 10px; }
+
+  /* ── Activity feed — wrap to 2 lines: [time strat] / [detail] ── */
+  html body .activity-item { flex-wrap: wrap; gap: 3px; padding: 6px 0; }
+  html body .activity-dot { align-self: flex-start; margin-top: 4px; }
+  html body .activity-detail { width: 100%; padding-left: 18px; white-space: normal; font-size: 10px; line-height: 1.4; }
+
+  /* ── Research KPI tiles — reduce padding ── */
+  html body .rkpi { padding: 10px 8px; }
+  html body .rkpi-value { font-size: 18px; }
+
+  /* ── Agent canvas — short on small phones ── */
+  html body #agent-canvas { height: 100px; }
+
+  /* ── Status pills — compact ── */
+  html body .status-pill { font-size: 10px; padding: 4px 8px; gap: 5px; }
+
+  /* ── Theme toggle — slightly smaller buttons ── */
+  html body .theme-btn { width: 24px; height: 22px; }
+
+  /* ── Touch targets — ensure minimum 36px height for interactive elements ── */
+  html body .plan-btn { min-height: 40px; }
+  html body .market-btn { min-height: 36px; }
+  html body .chart-range-btn { min-height: 36px; }
+  html body .section-head { min-height: 36px; align-items: center; }
+
+  /* ── Confirm box — full-width on tiny screens ── */
+  html body .confirm-box { padding: 20px 16px; }
+  html body .confirm-box-actions { flex-wrap: wrap; }
+  html body .confirm-box-actions .plan-btn { flex: 1; justify-content: center; }
+
+  /* ── Section body scroll area label ── */
+  .table-scroll::after {
+    content: '← scroll →' !important;
+  }
+}
+
+/* ── Light mode adjustments for mobile ──────────────────────────────────── */
+@media (max-width: 700px) {
+  html[data-theme="light"] body .header-right { scrollbar-width: none; }
+  html[data-theme="light"] body .market-selector::-webkit-scrollbar { display: none; }
+  html[data-theme="light"] body .market-clocks::-webkit-scrollbar { display: none; }
+}
+

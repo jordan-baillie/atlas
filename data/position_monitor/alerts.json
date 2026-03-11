@@ -1204,5 +1204,37 @@
     "value": null,
     "source": "iran_monitor_agent",
     "timestamp": "2026-03-10T16:07:31"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_spx5d",
+    "condition_label": "S&P 500 5-day trend declining",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-11T20:09:10"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 608.57,
+    "timestamp": "2026-03-11T20:10:38"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-11T20:11:20"
   }
 ]

@@ -1039,40 +1039,8 @@ async def _check_job_completion(ctx: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error("Failed to send job completion: %s", e)
 
-    # Send proof-of-work charts for successful jobs
-    if job["status"] == "done":
-        try:
-            await _send_proof_charts(ctx.bot, chat_id, job)
-        except Exception as e:
-            logger.warning("Failed to send proof charts: %s", e)
-
     # Stop the repeating check
     ctx.job.schedule_removal()
-
-
-async def _send_proof_charts(bot, chat_id: int, job: dict):
-    """Generate and send relevant charts after job completion.
-
-    Runs chart generation in a thread (matplotlib is blocking).
-    """
-    loop = asyncio.get_event_loop()
-
-    def _gen_charts():
-        from utils.charts import generate_all_charts
-        return generate_all_charts()
-
-    charts = await loop.run_in_executor(None, _gen_charts)
-
-    if not charts:
-        return
-
-    # Send charts as photos (first with caption, rest silent)
-    from utils.telegram import send_photo as _send_photo
-    for i, chart_path in enumerate(charts):
-        cap = "📊 <b>Proof-of-Work</b> — auto-generated charts" if i == 0 else ""
-        await loop.run_in_executor(
-            None, _send_photo, str(chart_path), cap, True,
-        )
 
 
 # ── Helpers ──────────────────────────────────────────────────

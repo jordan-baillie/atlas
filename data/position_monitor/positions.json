@@ -5,7 +5,7 @@
     "asset_type": "ETF",
     "entry_price": 142.49,
     "entry_date": "2026-02-26",
-    "quantity": 8,
+    "quantity": 5,
     "direction": "long",
     "thesis": "Oil E&P geopolitical upside. WTI <$65 = geopolitical premium unwound = invalidation. Breakeven stop at cost basis on remaining shares.",
     "timeframe": "6-12 months",
@@ -29,8 +29,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 88.56,
-        "last_checked": "2026-03-10T16:06:50",
+        "current_value": 88.54,
+        "last_checked": "2026-03-11T20:10:19",
         "notes": "<$65 = INVALIDATION (geopolitical premium unwound)"
       },
       {
@@ -43,8 +43,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 161.1,
-        "last_checked": "2026-03-10T16:06:50",
+        "current_value": 158.97,
+        "last_checked": "2026-03-11T20:10:19",
         "notes": "<$142 = BREAKEVEN STOP. >$155 = green"
       },
       {
@@ -58,7 +58,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:50",
+        "last_checked": "2026-03-11T20:10:19",
         "notes": "Green=closed/restricted, Amber=partial escorts, Red=fully reopened"
       },
       {
@@ -72,7 +72,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:50",
+        "last_checked": "2026-03-11T20:10:19",
         "notes": "Green=backwardation, Amber=flat, Red=contango"
       },
       {
@@ -85,8 +85,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 161.1,
-        "last_checked": "2026-03-10T16:06:50",
+        "current_value": 158.97,
+        "last_checked": "2026-03-11T20:10:19",
         "notes": ""
       },
       {
@@ -100,14 +100,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:50",
+        "last_checked": "2026-03-11T20:10:19",
         "notes": "Green=escalating/holding, Amber=stalemate, Red=de-escalation confirmed"
       }
     ],
     "health_score": 10.0,
-    "current_price": 161.1,
-    "unrealized_pnl": 148.88,
-    "unrealized_pnl_pct": 13.06,
+    "current_price": 158.97,
+    "unrealized_pnl": 82.4,
+    "unrealized_pnl_pct": 11.57,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -264,10 +264,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-02T18:39:39",
-    "updated_at": "2026-03-10T16:06:52",
+    "updated_at": "2026-03-11T20:10:30",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -303,7 +307,7 @@
         "weight": 3,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:52",
+        "last_checked": "2026-03-11T20:10:31",
         "notes": "Green=no ceasefire, Amber=backchannel talks reported, Red=formal ceasefire announced. Red \u2260 auto-exit \u2192 trim to 3 shares."
       },
       {
@@ -316,8 +320,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 208.29,
-        "last_checked": "2026-03-10T16:06:52",
+        "current_value": 206.96,
+        "last_checked": "2026-03-11T20:10:31",
         "notes": "<$195 = INVALIDATION. $185 = full exit."
       },
       {
@@ -331,7 +335,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:52",
+        "last_checked": "2026-03-11T20:10:31",
         "notes": "Green=supplemental appropriations/budget increase, Amber=no change, Red=budget cuts proposed"
       },
       {
@@ -344,8 +348,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 208.29,
-        "last_checked": "2026-03-10T16:06:52",
+        "current_value": 206.96,
+        "last_checked": "2026-03-11T20:10:31",
         "notes": ""
       },
       {
@@ -359,7 +363,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:52",
+        "last_checked": "2026-03-11T20:10:31",
         "notes": "Green=<4wk ongoing, Amber=4-8wk (munition depletion thesis strengthens), Red=>8wk (broader market drag)"
       },
       {
@@ -373,14 +377,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:52",
+        "last_checked": "2026-03-11T20:10:31",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 8.5,
-    "current_price": 208.29,
-    "unrealized_pnl": 4.2,
-    "unrealized_pnl_pct": 0.34,
+    "current_price": 206.96,
+    "unrealized_pnl": -3.78,
+    "unrealized_pnl_pct": -0.3,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -533,10 +537,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-10T16:06:53",
+    "updated_at": "2026-03-11T20:10:32",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -575,7 +583,7 @@
         "weight": 4,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=closed (<20% normal traffic), Amber=partial (20-60% normal, escorted), Red=open (>60%) = IMMEDIATE EXIT. Never sit at amber >1 cycle."
       },
       {
@@ -589,7 +597,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=>$300k/day, Amber=$150-300k/day, Red=<$150k/day"
       },
       {
@@ -603,7 +611,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=cancelled/suspended in Gulf, Amber=elevated premiums (>5x normal), Red=reinstated at normal rates"
       },
       {
@@ -617,7 +625,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=above, Amber=within 3% of trigger, Red=below = IMMEDIATE EXIT. Agent: check 30d high from price data."
       },
       {
@@ -631,7 +639,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=filled at target, Amber=filled but gapped up >10%, Red=not yet filled"
       },
       {
@@ -645,14 +653,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 9.0,
-    "current_price": 75.69,
-    "unrealized_pnl": -30.17,
-    "unrealized_pnl_pct": -5.39,
+    "current_price": 73.26,
+    "unrealized_pnl": -47.18,
+    "unrealized_pnl_pct": -8.42,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -813,10 +821,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-10T16:06:53",
+    "updated_at": "2026-03-11T20:10:33",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -852,8 +864,8 @@
         "direction": "above",
         "weight": 3,
         "status": "warning",
-        "current_value": 5187.2,
-        "last_checked": "2026-03-10T16:06:53",
+        "current_value": 5195.2,
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "<$4800 (3 consecutive closes) = INVALIDATION"
       },
       {
@@ -866,8 +878,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 117.01,
-        "last_checked": "2026-03-10T16:06:53",
+        "current_value": 118.87,
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "<$100 = INVALIDATION"
       },
       {
@@ -881,7 +893,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=cuts priced in (dovish), Amber=hold (neutral), Red=hikes priced in (hawkish)"
       },
       {
@@ -894,8 +906,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 117.01,
-        "last_checked": "2026-03-10T16:06:53",
+        "current_value": 118.87,
+        "last_checked": "2026-03-11T20:10:33",
         "notes": ""
       },
       {
@@ -909,7 +921,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=continued/accelerating, Amber=stable, Red=net selling reported"
       },
       {
@@ -923,7 +935,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=falling, Amber=flat, Red=rising >2.5%"
       },
       {
@@ -937,14 +949,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:53",
+        "last_checked": "2026-03-11T20:10:33",
         "notes": "Green=rising (gold outpacing oil), Amber=neutral, Red=falling (oil outpacing gold \u2192 stagflation shift). If this + real yields both red \u2192 trim."
       }
     ],
     "health_score": 6.0,
-    "current_price": 117.01,
-    "unrealized_pnl": -25.75,
-    "unrealized_pnl_pct": -4.22,
+    "current_price": 118.87,
+    "unrealized_pnl": -16.45,
+    "unrealized_pnl_pct": -2.69,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1097,10 +1109,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-10T16:06:55",
+    "updated_at": "2026-03-11T20:10:36",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1137,7 +1153,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:55",
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "Green=elevated/active incidents, Amber=stable/background, Red=significantly reduced post-ceasefire"
       },
       {
@@ -1150,8 +1166,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 66.2,
-        "last_checked": "2026-03-10T16:06:55",
+        "current_value": 65.82,
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "$55-59 = amber, <$55 = red"
       },
       {
@@ -1164,8 +1180,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 66.2,
-        "last_checked": "2026-03-10T16:06:55",
+        "current_value": 65.82,
+        "last_checked": "2026-03-11T20:10:36",
         "notes": ""
       },
       {
@@ -1179,7 +1195,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:55",
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "Green=still understaffed (<50%), Amber=partial restoration, Red=fully restored"
       },
       {
@@ -1193,7 +1209,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:55",
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "Green=beat + raised guidance, Amber=in-line, Red=miss + lowered"
       },
       {
@@ -1207,7 +1223,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:55",
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "Green=accelerating, Amber=stable, Red=decelerating"
       },
       {
@@ -1221,14 +1237,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:55",
+        "last_checked": "2026-03-11T20:10:36",
         "notes": "Green=filled at target, Amber=filled but gapped, Red=not yet filled"
       }
     ],
     "health_score": 8.0,
-    "current_price": 66.2,
-    "unrealized_pnl": 42.0,
-    "unrealized_pnl_pct": 6.77,
+    "current_price": 65.82,
+    "unrealized_pnl": 38.2,
+    "unrealized_pnl_pct": 6.16,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1385,10 +1401,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-10T16:06:56",
+    "updated_at": "2026-03-11T20:10:38",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1424,8 +1444,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 25.5,
-        "last_checked": "2026-03-10T16:06:56",
+        "current_value": 26.1,
+        "last_checked": "2026-03-11T20:10:38",
         "notes": "<18 = hedge unnecessary, EXIT. 18-25 amber. >25 green."
       },
       {
@@ -1438,8 +1458,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 607.24,
-        "last_checked": "2026-03-10T16:07:31",
+        "current_value": 608.57,
+        "last_checked": "2026-03-11T20:11:20",
         "notes": "Agent: INVERT this \u2014 QQQ below MA = GREEN for PSQ, above = RED. Set toggle accordingly."
       },
       {
@@ -1451,9 +1471,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 2,
-        "status": "warning",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:56",
+        "last_checked": "2026-03-11T20:10:38",
         "notes": "Green=declining, Amber=flat, Red=rising (hedge is a drag). Agent: check ^GSPC 5d change."
       },
       {
@@ -1467,7 +1487,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:56",
+        "last_checked": "2026-03-11T20:10:38",
         "notes": "Green=escalating, Amber=stalemate, Red=de-escalating"
       },
       {
@@ -1481,7 +1501,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:56",
+        "last_checked": "2026-03-11T20:10:38",
         "notes": "Green=rising (inflationary pressure on tech), Amber=flat, Red=falling. Agent: check CL=F 5d change."
       },
       {
@@ -1495,14 +1515,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:56",
+        "last_checked": "2026-03-11T20:10:38",
         "notes": "Green=<10 days, Amber=10-20 days, Red=>20 days (decay risk). Agent: calculate from entry_date."
       }
     ],
-    "health_score": 9.0,
-    "current_price": 30.78,
-    "unrealized_pnl": -13.86,
-    "unrealized_pnl_pct": -1.35,
+    "health_score": 10.0,
+    "current_price": 30.71,
+    "unrealized_pnl": -16.17,
+    "unrealized_pnl_pct": -1.57,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -1651,10 +1671,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-10T16:07:31",
+    "updated_at": "2026-03-11T20:11:20",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1691,8 +1715,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 88.56,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 88.49,
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "<$60 = red, $60-70 = amber, >$70 = green"
       },
       {
@@ -1705,8 +1729,8 @@
         "direction": "above",
         "weight": 2,
         "status": "warning",
-        "current_value": 30.18,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 30.42,
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "<$30 = green (within 10% of $27 target), $30-33 = amber, >$33 = red (overextended >20%)"
       },
       {
@@ -1719,8 +1743,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 30.18,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 30.42,
+        "last_checked": "2026-03-11T20:10:40",
         "notes": ""
       },
       {
@@ -1734,7 +1758,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "Green=>$15/MMBtu, Amber=$10-15, Red=<$10"
       },
       {
@@ -1748,7 +1772,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "Green=Qatar exports disrupted, Amber=partially restored, Red=fully restored"
       },
       {
@@ -1762,7 +1786,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "Green=<40%, Amber=40-55%, Red=>55% = CONCENTRATION WARNING. Includes XOP+WDS+INSW (tanker is energy-adjacent). Agent: read portfolio_checks.energy_tickers."
       },
       {
@@ -1776,14 +1800,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:40",
         "notes": "Green=weakening AUD (boosts USD earnings), Amber=stable, Red=strengthening AUD"
       }
     ],
     "health_score": 7.5,
-    "current_price": 30.18,
-    "unrealized_pnl": 164.92,
-    "unrealized_pnl_pct": 16.8,
+    "current_price": 30.42,
+    "unrealized_pnl": 174.04,
+    "unrealized_pnl_pct": 17.72,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -1932,10 +1956,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-01T00:00:00",
-    "updated_at": "2026-03-10T16:06:57",
+    "updated_at": "2026-03-11T20:10:43",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1970,8 +1998,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 222.84,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 219.31,
+        "last_checked": "2026-03-11T20:10:43",
         "notes": "<$200 = structural break (red)"
       },
       {
@@ -1984,8 +2012,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 222.84,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 219.31,
+        "last_checked": "2026-03-11T20:10:43",
         "notes": "<$180 = INVALIDATION"
       },
       {
@@ -1999,7 +2027,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:43",
         "notes": "Green=capex declining, Amber=flat, Red=increasing (thesis broken). Quarterly check only."
       },
       {
@@ -2012,8 +2040,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 222.84,
-        "last_checked": "2026-03-10T16:06:57",
+        "current_value": 219.31,
+        "last_checked": "2026-03-11T20:10:43",
         "notes": ""
       },
       {
@@ -2027,7 +2055,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:43",
         "notes": "Green=losses moderating/gains, Amber=stable losses, Red=accelerating losses"
       },
       {
@@ -2041,14 +2069,14 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-10T16:06:57",
+        "last_checked": "2026-03-11T20:10:43",
         "notes": "Green=>1.5M net adds annualized, Amber=1-1.5M, Red=<1M (growth stalling)"
       }
     ],
     "health_score": 9.0,
-    "current_price": 222.84,
-    "unrealized_pnl": -5.54,
-    "unrealized_pnl_pct": -2.43,
+    "current_price": 219.31,
+    "unrealized_pnl": -9.07,
+    "unrealized_pnl_pct": -3.97,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -2197,10 +2225,14 @@
       {
         "timestamp": "2026-03-10 16:06",
         "text": "[4h update 16:00 AEST] 8 new developments since 12:00 AEST. (1) Oil bouncing: WTI $88.08 (+3.0% vs 12:00 $85.54), Brent $92.28 (+3.7%), spread $4.20 -- Brent premium widening = geopolitical premium re-loading; (2) Iran explicitly refusing ceasefire -- Siasat: Tehran refuses negotiations -- rtx_ceasefire/xop_geopol GREEN confirmed; (3) DW: US threatens 'twenty times harder' if Hormuz oil flow stops -- escalatory, no off-ramp; (4) Hindustan Times: India weighing Hormuz escort options for 'choked' strait -- blockade intact <20% traffic, insw_hormuz/xop_hormuz GREEN; (5) Trump: 'Iran had new nuclear site' (CP24) -- escalatory, no diplomatic signal; (6) UAE Consulate in Iraq reportedly targeted by drone (newkerala.com -- NOT Reuters/AP, NOT formally recorded, watch only); (7) Israeli forces advance in S Lebanon buffer zone; (8) ~28h since last confirmed escalation (Saudi evac CNBC) -- gap widening BUT Iran still refusing talks + US 20x threat = operational escalation ongoing. No Reuters/AP military events to record this window. TOGGLE CHANGES: (1) psq_qqq_ma warning->passing (QQQ $607.76 < MA50 $614.97 = GREEN for inverted PSQ; correcting recurring auto-evaluator inversion); (2) wds_audusd warning->failing (AUD/USD 0.71 at 30d high, +1.61%d = strengthening AUD = RED for WDS USD earnings). NEM paradox: goldoil FAILING (ratio 58.84 vs 68.5 5d = falling -14%) + ryield AMBER -- trim NOT triggered (need BOTH red). VIX 25.5 still >18, QQQ below MA50. Energy 44.31%, kill switch 0/4 clear. Ceasefire 9% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-11 20:09",
+        "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-02-27T00:00:00",
-    "updated_at": "2026-03-10T16:06:58",
+    "updated_at": "2026-03-11T20:10:45",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,

@@ -441,15 +441,27 @@ def _health_check() -> list[str]:
 
 # ── Daily Brief ────────────────────────────────────────────────────────────
 
-_last_daily_brief: datetime | None = None
+_DAILY_BRIEF_STAMP = Path("/tmp/atlas-daily-brief-sent.txt")
 
 
 def _maybe_send_daily_brief(state: dict) -> None:
-    """Send a daily research brief with charts once per day after 6am."""
-    global _last_daily_brief
+    """Send a daily research brief with charts once per day after 6am.
+
+    Uses a disk-persisted stamp file so restarts / --once runs don't
+    re-fire the brief within the same calendar day.
+    """
     now = datetime.now()
-    if _last_daily_brief and (now - _last_daily_brief).total_seconds() < 82800:
-        return
+    today = now.strftime("%Y-%m-%d")
+
+    # Skip if we already sent today (survives process restarts)
+    if _DAILY_BRIEF_STAMP.exists():
+        try:
+            last_sent = _DAILY_BRIEF_STAMP.read_text().strip()
+            if last_sent == today:
+                return
+        except Exception:
+            pass
+
     if now.hour < 6:
         return
 
@@ -482,7 +494,10 @@ def _maybe_send_daily_brief(state: dict) -> None:
     if progress:
         send_photo(str(progress), caption="Research activity (14 days)")
 
-    _last_daily_brief = now
+    try:
+        _DAILY_BRIEF_STAMP.write_text(today)
+    except Exception as e:
+        logger.warning("Could not write daily brief stamp: %s", e)
     logger.info("Daily brief sent")
 
 
