@@ -1779,15 +1779,35 @@
   },
   "research": {
     "daemon": {
-      "status": "dead",
-      "uptime_s": 121.0,
-      "experiments_completed": 18,
+      "status": "stale",
+      "uptime_s": 1000,
+      "experiments_completed": 0,
       "experiments_failed": 0,
       "queue_depth": 0,
-      "current_experiment": "",
-      "timestamp": "2026-03-11T11:33:36.042776+00:00"
+      "current_experiment": "mean_reversion",
+      "timestamp": "2026-03-11T13:10:29.355516+00:00"
     },
     "leaderboard": [
+      {
+        "id": "momentum_breakout",
+        "name": "Momentum Breakout",
+        "status": "dormant",
+        "tier": 0,
+        "type": "momentum",
+        "total_experiments": 97,
+        "best_sharpe": 0.792,
+        "best_win_rate": 52.3,
+        "best_trades": 279,
+        "stage": "solo",
+        "stage_icon": "\u2705",
+        "coverage": {
+          "solo": "\u2705"
+        },
+        "description": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
+        "reference": "Atlas original",
+        "best_cagr": 59.0697,
+        "best_pf": 4.6525
+      },
       {
         "id": "lower_band_reversion",
         "name": "Lower Band Reversion",
@@ -1804,7 +1824,29 @@
           "solo": "\u2705"
         },
         "description": "IBS-based lower band reversion (Quantitativo LBR). Published Sharpe 2.11 on SPY. On individual stocks: Sharpe -2.08. Classic ETF-to-stock adaptation failure.",
-        "reference": "Bollinger lower band"
+        "reference": "Bollinger lower band",
+        "best_cagr": 42.3274,
+        "best_pf": 6.8171
+      },
+      {
+        "id": "trend_following",
+        "name": "Trend Following",
+        "status": "active",
+        "tier": 0,
+        "type": "trend_following",
+        "total_experiments": 339,
+        "best_sharpe": 0.6618,
+        "best_win_rate": 51.3,
+        "best_trades": 228,
+        "stage": "solo",
+        "stage_icon": "\u26a0\ufe0f",
+        "coverage": {
+          "solo": "\u26a0\ufe0f"
+        },
+        "description": "Fast/slow MA crossover trend following with pullback entries. Core active strategy. Enters higher-probability pullbacks within confirmed uptrends.",
+        "reference": "Atlas original",
+        "best_cagr": 47.3126,
+        "best_pf": 6.6877
       },
       {
         "id": "mean_reversion",
@@ -1812,7 +1854,7 @@
         "status": "active",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 9,
+        "total_experiments": 93,
         "best_sharpe": 0.6424,
         "best_win_rate": 51.5,
         "best_trades": 388,
@@ -1824,25 +1866,9 @@
           "oos": "\u274c"
         },
         "description": "RSI(14) + z-score mean reversion on individual SP500 stocks. Core active strategy. Enters oversold reversals with ATR-based stop losses. Optimized via coordinate descent to Sharpe 1.04, CAGR 15.69% (v",
-        "reference": "Atlas original"
-      },
-      {
-        "id": "trend_following",
-        "name": "Trend Following",
-        "status": "active",
-        "tier": 0,
-        "type": "trend_following",
-        "total_experiments": 2,
-        "best_sharpe": 0.62,
-        "best_win_rate": null,
-        "best_trades": 297,
-        "stage": "solo",
-        "stage_icon": "\u26a0\ufe0f",
-        "coverage": {
-          "solo": "\u26a0\ufe0f"
-        },
-        "description": "Fast/slow MA crossover trend following with pullback entries. Core active strategy. Enters higher-probability pullbacks within confirmed uptrends.",
-        "reference": "Atlas original"
+        "reference": "Atlas original",
+        "best_cagr": 7.9436,
+        "best_pf": 2.3698
       },
       {
         "id": "opening_gap",
@@ -1850,7 +1876,7 @@
         "status": "active",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 2,
+        "total_experiments": 227,
         "best_sharpe": 0.6183,
         "best_win_rate": null,
         "best_trades": 0,
@@ -1860,7 +1886,49 @@
           "solo": "\u26a0\ufe0f"
         },
         "description": "Gap-and-fill strategy targeting gap-down opens with IBS confirmation. Core active strategy. Short holding periods (2-7 days).",
-        "reference": "Atlas original"
+        "reference": "Atlas original",
+        "best_cagr": 11.5269,
+        "best_pf": 2.5942
+      },
+      {
+        "id": "short_term_mr",
+        "name": "Short Term MR",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 80,
+        "best_sharpe": 0.5091,
+        "best_win_rate": 59.1,
+        "best_trades": 728,
+        "stage": "solo",
+        "stage_icon": "\u2705",
+        "coverage": {
+          "solo": "\u2705"
+        },
+        "description": "RSI(2)/IBS short-term mean reversion. Captures rapid 1\u20135 day reversals that standard MR (RSI 14) misses.",
+        "reference": "Atlas original",
+        "best_cagr": 76.5046,
+        "best_pf": 6.1706
+      },
+      {
+        "id": "bb_squeeze",
+        "name": "Bollinger Band Squeeze",
+        "status": "dormant",
+        "tier": 0,
+        "type": "volatility",
+        "total_experiments": 117,
+        "best_sharpe": 0.4626,
+        "best_win_rate": 47.8,
+        "best_trades": 345,
+        "stage": "solo",
+        "stage_icon": "\u2705",
+        "coverage": {
+          "solo": "\u2705"
+        },
+        "description": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
+        "reference": "Bollinger Band Squeeze",
+        "best_cagr": 15.0448,
+        "best_pf": 1.7791
       },
       {
         "id": "sector_rotation",
@@ -1881,58 +1949,80 @@
         "reference": "0 trades in backtest"
       },
       {
-        "id": "bb_squeeze",
-        "name": "Bollinger Band Squeeze",
-        "status": "dormant",
-        "tier": 0,
-        "type": "volatility",
-        "total_experiments": 6,
-        "best_sharpe": 0.3981,
-        "best_win_rate": 47.3,
-        "best_trades": 224,
-        "stage": "solo",
-        "stage_icon": "\u2705",
-        "coverage": {
-          "solo": "\u2705"
-        },
-        "description": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
-        "reference": "Bollinger Band Squeeze"
-      },
-      {
-        "id": "short_term_mr",
-        "name": "Short Term MR",
+        "id": "connors_rsi2",
+        "name": "ConnorsRSI2",
         "status": "dormant",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 7,
-        "best_sharpe": 0.3913,
-        "best_win_rate": 57.9,
-        "best_trades": 791,
+        "total_experiments": 135,
+        "best_sharpe": 0.4148,
+        "best_win_rate": 59.2,
+        "best_trades": 942,
         "stage": "solo",
-        "stage_icon": "\u2705",
+        "stage_icon": "\u26a0\ufe0f",
         "coverage": {
-          "solo": "\u2705"
+          "solo": "\u26a0\ufe0f"
         },
-        "description": "RSI(2)/IBS short-term mean reversion. Captures rapid 1\u20135 day reversals that standard MR (RSI 14) misses.",
-        "reference": "Atlas original"
+        "description": "ConnorsRSI2 mean reversion strategy designed for ETFs. Fails on individual SP500 stocks. Not viable as-designed \u2014 see ETF Adaptation Fails pattern.",
+        "reference": "Connors 2008",
+        "best_cagr": 55.5064,
+        "best_pf": 3.3421
       },
       {
-        "id": "momentum_breakout",
-        "name": "Momentum Breakout",
+        "id": "donchian_breakout",
+        "name": "Donchian Breakout",
+        "status": "not_built",
+        "tier": 1,
+        "type": "trend_following",
+        "total_experiments": 4,
+        "best_sharpe": 0.3181,
+        "best_win_rate": 52.8,
+        "best_trades": 91,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "Buy on 20-day high breakout, sell on 10-day low. Classic trend following. ATR position sizing.",
+        "reference": "Richard Donchian, Turtle Traders (1983)",
+        "best_cagr": 10.1507,
+        "best_pf": 5.5054
+      },
+      {
+        "id": "consecutive_down_days",
+        "name": "Consecutive Down Days",
         "status": "dormant",
         "tier": 0,
-        "type": "momentum",
-        "total_experiments": 6,
-        "best_sharpe": 0.2995,
-        "best_win_rate": 52.9,
-        "best_trades": 460,
+        "type": "mean_reversion",
+        "total_experiments": 11,
+        "best_sharpe": 0.108,
+        "best_win_rate": 58.1,
+        "best_trades": 222,
         "stage": "solo",
-        "stage_icon": "\u2705",
+        "stage_icon": "\u274c",
         "coverage": {
-          "solo": "\u2705"
+          "solo": "\u274c"
         },
-        "description": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
-        "reference": "Atlas original"
+        "description": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
+        "reference": "Quantified Strategies",
+        "best_cagr": 5.7032,
+        "best_pf": 3.2642
+      },
+      {
+        "id": "williams_percent_r",
+        "name": "Williams Percent R",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 4,
+        "best_sharpe": 0.081,
+        "best_win_rate": 51.6,
+        "best_trades": 190,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "Williams %R oversold (<-80) with trend filter. Exit on %R > -20 or time stop.",
+        "reference": "Larry Williams 'How I Made $1M' (1979)",
+        "best_cagr": 5.3518,
+        "best_pf": 2.0402
       },
       {
         "id": "triple_rsi",
@@ -1940,35 +2030,163 @@
         "status": "dormant",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 1,
-        "best_sharpe": -2.119,
-        "best_win_rate": null,
-        "best_trades": 0,
+        "total_experiments": 3,
+        "best_sharpe": -0.1003,
+        "best_win_rate": 67.2,
+        "best_trades": 58,
         "stage": "solo",
         "stage_icon": "\u26a0\ufe0f",
         "coverage": {
           "solo": "\u26a0\ufe0f"
         },
         "description": "Triple RSI (modified Connors R3): RSI(5)<30 + 3 consecutive declining days. Published 90% WR, PF 4.0 on SPY. Testing on individual stocks in Wave 3.",
-        "reference": "Multi-period RSI"
+        "reference": "Multi-period RSI",
+        "best_cagr": 3.7528,
+        "best_pf": 4.8858
       },
       {
-        "id": "connors_rsi2",
-        "name": "ConnorsRSI2",
-        "status": "dormant",
-        "tier": 0,
+        "id": "adx_trend_pullback",
+        "name": "Adx Trend Pullback",
+        "status": "not_built",
+        "tier": 1,
+        "type": "trend_following",
+        "total_experiments": 4,
+        "best_sharpe": -0.9127,
+        "best_win_rate": 49.3,
+        "best_trades": 205,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "ADX > 25 (strong trend) + pullback to 20-EMA. Enter on bounce from EMA. Exit: trailing ATR stop.",
+        "reference": "Welles Wilder 'New Concepts in Technical Trading' (1978)",
+        "best_cagr": 1.7321,
+        "best_pf": 1.3151
+      },
+      {
+        "id": "stochastic_oversold",
+        "name": "Stochastic Oversold",
+        "status": "not_built",
+        "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 1,
-        "best_sharpe": -2.63,
-        "best_win_rate": 58.1,
-        "best_trades": 673,
-        "stage": "solo",
-        "stage_icon": "\u26a0\ufe0f",
-        "coverage": {
-          "solo": "\u26a0\ufe0f"
-        },
-        "description": "ConnorsRSI2 mean reversion strategy designed for ETFs. Fails on individual SP500 stocks. Not viable as-designed \u2014 see ETF Adaptation Fails pattern.",
-        "reference": "Connors 2008"
+        "total_experiments": 4,
+        "best_sharpe": -2.0382,
+        "best_win_rate": 41.1,
+        "best_trades": 168,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "Stochastic %K < 20 and %D < 20 in uptrend (>SMA200). Exit on %K > 80 or time stop.",
+        "reference": "George Lane (1950s), quantified by Connors",
+        "best_cagr": 0.4526,
+        "best_pf": 1.1422
+      },
+      {
+        "id": "dividend_capture",
+        "name": "Dividend Capture",
+        "status": "research",
+        "tier": 0,
+        "type": "unknown",
+        "total_experiments": 2,
+        "best_sharpe": -3.9152,
+        "best_win_rate": 56.5,
+        "best_trades": 23,
+        "best_cagr": 0.0232,
+        "best_pf": 1.0275,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "",
+        "reference": ""
+      },
+      {
+        "id": "demark_sequential",
+        "name": "Demark Sequential",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 3,
+        "best_sharpe": -5.429,
+        "best_win_rate": 63.6,
+        "best_trades": 11,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "TD Sequential buy setup: 9 consecutive closes below close 4 bars earlier. Enter on bar 9. Exit on TD sell setup or time.",
+        "reference": "Tom DeMark 'The New Science of Technical Analysis' (1994)",
+        "best_cagr": -0.2637,
+        "best_pf": 0.6721
+      },
+      {
+        "id": "keltner_reversion",
+        "name": "Keltner Reversion",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 3,
+        "best_sharpe": -18.5222,
+        "best_win_rate": 66.7,
+        "best_trades": 3,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "Price touches lower Keltner Channel (EMA \u00b1 ATR mult) \u2192 buy. Exit at middle band (EMA). Uptrend filter.",
+        "reference": "Chester Keltner (1960), modernized by Linda Bradford Raschke",
+        "best_cagr": 0.0352,
+        "best_pf": 3.2622
+      },
+      {
+        "id": "inside_bar_nr7",
+        "name": "Inside Bar Nr7",
+        "status": "not_built",
+        "tier": 1,
+        "type": "volatility_breakout",
+        "total_experiments": 3,
+        "best_sharpe": -58.2065,
+        "best_win_rate": 0.0,
+        "best_trades": 1,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "NR7 (narrowest range of 7 days) or inside bar \u2192 breakout entry. Enter on break of NR7 high/low. Exit: trailing stop or time-based (3-5 days).",
+        "reference": "Toby Crabel 'Day Trading with Short Term Price Patterns' (1990)",
+        "best_cagr": -0.0231,
+        "best_pf": 0.0
+      },
+      {
+        "id": "gap_and_go",
+        "name": "Gap And Go",
+        "status": "not_built",
+        "tier": 1,
+        "type": "momentum",
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
+        "best_trades": 0,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "Buy stocks that gap UP > 2% at open with volume confirmation. Ride momentum. Exit: intraday trailing stop or close.",
+        "reference": "Quantified Strategies gap research, related to Opening Gap",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
+      },
+      {
+        "id": "heikin_ashi_reversal",
+        "name": "Heikin Ashi Reversal",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
+        "best_trades": 0,
+        "stage": "\u2014",
+        "stage_icon": "\u2014",
+        "coverage": {},
+        "description": "3+ red Heikin-Ashi candles followed by green doji/reversal in uptrend. Enter long. Exit on 2 red HA candles.",
+        "reference": "Japanese candlestick patterns, quantified by Quantified Strategies",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "mtf_momentum",
@@ -1989,150 +2207,22 @@
         "reference": "Multi-timeframe"
       },
       {
-        "id": "adx_trend_pullback",
-        "name": "Adx Trend Pullback",
-        "status": "not_built",
-        "tier": 1,
-        "type": "trend_following",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "ADX > 25 (strong trend) + pullback to 20-EMA. Enter on bounce from EMA. Exit: trailing ATR stop.",
-        "reference": "Welles Wilder 'New Concepts in Technical Trading' (1978)"
-      },
-      {
-        "id": "consecutive_down_days",
-        "name": "Consecutive Down Days",
-        "status": "dormant",
-        "tier": 0,
-        "type": "mean_reversion",
-        "total_experiments": 1,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "solo",
-        "stage_icon": "\u274c",
-        "coverage": {
-          "solo": "\u274c"
-        },
-        "description": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
-        "reference": "Quantified Strategies"
-      },
-      {
-        "id": "demark_sequential",
-        "name": "Demark Sequential",
-        "status": "not_built",
-        "tier": 1,
-        "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "TD Sequential buy setup: 9 consecutive closes below close 4 bars earlier. Enter on bar 9. Exit on TD sell setup or time.",
-        "reference": "Tom DeMark 'The New Science of Technical Analysis' (1994)"
-      },
-      {
-        "id": "donchian_breakout",
-        "name": "Donchian Breakout",
-        "status": "not_built",
-        "tier": 1,
-        "type": "trend_following",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "Buy on 20-day high breakout, sell on 10-day low. Classic trend following. ATR position sizing.",
-        "reference": "Richard Donchian, Turtle Traders (1983)"
-      },
-      {
-        "id": "gap_and_go",
-        "name": "Gap And Go",
-        "status": "not_built",
-        "tier": 1,
-        "type": "momentum",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "Buy stocks that gap UP > 2% at open with volume confirmation. Ride momentum. Exit: intraday trailing stop or close.",
-        "reference": "Quantified Strategies gap research, related to Opening Gap"
-      },
-      {
-        "id": "heikin_ashi_reversal",
-        "name": "Heikin Ashi Reversal",
-        "status": "not_built",
-        "tier": 1,
-        "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "3+ red Heikin-Ashi candles followed by green doji/reversal in uptrend. Enter long. Exit on 2 red HA candles.",
-        "reference": "Japanese candlestick patterns, quantified by Quantified Strategies"
-      },
-      {
-        "id": "inside_bar_nr7",
-        "name": "Inside Bar Nr7",
-        "status": "not_built",
-        "tier": 1,
-        "type": "volatility_breakout",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "NR7 (narrowest range of 7 days) or inside bar \u2192 breakout entry. Enter on break of NR7 high/low. Exit: trailing stop or time-based (3-5 days).",
-        "reference": "Toby Crabel 'Day Trading with Short Term Price Patterns' (1990)"
-      },
-      {
-        "id": "keltner_reversion",
-        "name": "Keltner Reversion",
-        "status": "not_built",
-        "tier": 1,
-        "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "Price touches lower Keltner Channel (EMA \u00b1 ATR mult) \u2192 buy. Exit at middle band (EMA). Uptrend filter.",
-        "reference": "Chester Keltner (1960), modernized by Linda Bradford Raschke"
-      },
-      {
         "id": "macd_divergence",
         "name": "Macd Divergence",
         "status": "not_built",
         "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Price makes new low but MACD histogram makes higher low. Enter long. Exit on MACD crossover or time stop.",
-        "reference": "Gerald Appel (1979), MACD divergence patterns"
+        "reference": "Gerald Appel (1979), MACD divergence patterns",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "monthly_rotation",
@@ -2140,15 +2230,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "rotation",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 3,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Monthly rebalance: rank sectors/stocks by 6-month momentum. Hold top N. Rotate monthly. Cash filter: below SMA-200 \u2192 cash.",
-        "reference": "Faber 'A Quantitative Approach to TAA' (2007), Antonacci dual momentum"
+        "reference": "Faber 'A Quantitative Approach to TAA' (2007), Antonacci dual momentum",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "overnight_return",
@@ -2156,15 +2248,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Buy at close, sell at open. Captures overnight premium. Filter: strong recent performers only.",
-        "reference": "Cliff et al. 'Overnight Return' (2019), Quantpedia #53"
+        "reference": "Cliff et al. 'Overnight Return' (2019), Quantpedia #53",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "pead_earnings_drift",
@@ -2172,15 +2266,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "event",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Post-Earnings Announcement Drift. Buy after positive earnings surprise, hold 20-60 days. Needs earnings data.",
-        "reference": "Ball & Brown (1968), Bernard & Thomas (1989)"
+        "reference": "Ball & Brown (1968), Bernard & Thomas (1989)",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "put_call_vix_proxy",
@@ -2188,15 +2284,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "sentiment",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "VIX > 30 or VIX spike > 20% in 1 day \u2192 buy SPY/broad market. Exit when VIX drops below 20. Contrarian sentiment play.",
-        "reference": "VIX fear gauge research, CBOE put/call ratio studies"
+        "reference": "VIX fear gauge research, CBOE put/call ratio studies",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "relative_strength_pullback",
@@ -2204,15 +2302,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "momentum",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 3,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Stocks with relative strength rank > 80th percentile that pull back to 10-EMA. Enter on bounce. Exit: trailing stop.",
-        "reference": "O'Neil CANSLIM (1988), Minervini 'Trade Like a Stock Market Wizard'"
+        "reference": "O'Neil CANSLIM (1988), Minervini 'Trade Like a Stock Market Wizard'",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "rsi_divergence",
@@ -2220,31 +2320,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Price makes new low but RSI makes higher low (bullish divergence). Enter long. Exit on RSI > 60 or time.",
-        "reference": "Andrew Cardwell RSI divergence methodology"
-      },
-      {
-        "id": "stochastic_oversold",
-        "name": "Stochastic Oversold",
-        "status": "not_built",
-        "tier": 1,
-        "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "Stochastic %K < 20 and %D < 20 in uptrend (>SMA200). Exit on %K > 80 or time stop.",
-        "reference": "George Lane (1950s), quantified by Connors"
+        "reference": "Andrew Cardwell RSI divergence methodology",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "volume_climax",
@@ -2252,15 +2338,17 @@
         "status": "not_built",
         "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Extreme volume spike (>3x avg) on a down day in uptrend = capitulation selling. Buy reversal. Exit: time or strength.",
-        "reference": "Quantified Strategies volume research, Wyckoff method"
+        "reference": "Quantified Strategies volume research, Wyckoff method",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       },
       {
         "id": "vwap_reversion",
@@ -2268,35 +2356,21 @@
         "status": "not_built",
         "tier": 1,
         "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
+        "total_experiments": 4,
+        "best_sharpe": 0.0,
+        "best_win_rate": 0.0,
         "best_trades": 0,
         "stage": "\u2014",
         "stage_icon": "\u2014",
         "coverage": {},
         "description": "Price > 2 std below daily VWAP in uptrending stock. Enter long. Exit at VWAP or above. Needs intraday-proxy via daily estimate.",
-        "reference": "Institutional VWAP trading, Quantified Strategies"
-      },
-      {
-        "id": "williams_percent_r",
-        "name": "Williams Percent R",
-        "status": "not_built",
-        "tier": 1,
-        "type": "mean_reversion",
-        "total_experiments": 0,
-        "best_sharpe": null,
-        "best_win_rate": null,
-        "best_trades": 0,
-        "stage": "\u2014",
-        "stage_icon": "\u2014",
-        "coverage": {},
-        "description": "Williams %R oversold (<-80) with trend filter. Exit on %R > -20 or time stop.",
-        "reference": "Larry Williams 'How I Made $1M' (1979)"
+        "reference": "Institutional VWAP trading, Quantified Strategies",
+        "best_cagr": 0.0,
+        "best_pf": 0.0
       }
     ],
     "pipeline": {
-      "untested": 18,
+      "untested": 19,
       "screen": 0,
       "quick": 0,
       "solo": 11,
@@ -2309,7 +2383,14 @@
       "active": 7,
       "candidates": 0,
       "rejected": 3,
-      "sandbox": 21
+      "sandbox": 21,
+      "sweep": {
+        "untested": 21,
+        "screen": 0,
+        "quick": 2,
+        "solo": 3,
+        "optimize": 3
+      }
     },
     "patterns": [
       {
@@ -2354,38 +2435,6 @@
       }
     ],
     "activity_feed": [
-      {
-        "experiment_id": "ar-20260311_150658",
-        "timestamp": "2026-03-11T05:06:58.402973+00:00",
-        "strategy": "mean_reversion",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.1672,
-        "win_rate_pct": null,
-        "total_trades": 360,
-        "cagr_pct": 6.59,
-        "max_drawdown_pct": 11.738,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 max_hold_days: 10\u219220"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_150729",
-        "timestamp": "2026-03-11T05:07:29.740372+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": -0.5403,
-        "win_rate_pct": null,
-        "total_trades": 294,
-        "cagr_pct": 2.6117,
-        "max_drawdown_pct": 8.5827,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 atr_stop=1.9 (just below 2.0)"
-        ]
-      },
       {
         "experiment_id": "ar-20260311_151649",
         "timestamp": "2026-03-11T05:16:49.708815+00:00",
@@ -2672,6 +2721,38 @@
         "promoted": false,
         "learnings": [
           "autoresearch: keep \u2014 zscore_lookback: 30\u219220"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_231123",
+        "timestamp": "2026-03-11T13:11:23.643315+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.2398,
+        "win_rate_pct": null,
+        "total_trades": 155,
+        "cagr_pct": 7.9436,
+        "max_drawdown_pct": 6.8356,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 rsi_period: 10\u219214"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_231130",
+        "timestamp": "2026-03-11T13:11:30.760466+00:00",
+        "strategy": "consecutive_down_days",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.108,
+        "win_rate_pct": null,
+        "total_trades": 222,
+        "cagr_pct": 5.7032,
+        "max_drawdown_pct": 1.7757,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 min_down_days: None\u21922"
         ]
       }
     ],
@@ -3194,15 +3275,19 @@
       ]
     },
     "statistics": {
-      "total_experiments": 131,
-      "passed": 38,
+      "total_experiments": 1175,
+      "passed": 40,
       "failed": 42,
       "partial": 48,
       "promoted": 3,
-      "pass_rate_pct": 29.0,
+      "pass_rate_pct": 30.1,
       "days_active": 13,
       "strategies_tested": 15,
-      "strategies_total": 33
+      "strategies_total": 33,
+      "sweep_strategies": 29,
+      "sweep_experiments": 1175,
+      "sweep_window_active": false,
+      "next_window": "Trigger: n/a"
     },
     "daily_insight": {
       "type": "fee_waterfall",
@@ -3243,10 +3328,10 @@
       {
         "id": "researcher",
         "name": "Atlas",
-        "type": "atlas",
-        "status": "sleeping",
-        "task": "Engine offline",
-        "experiments_done": 18,
+        "type": "sweep",
+        "status": "idle",
+        "task": "Cycle complete",
+        "experiments_done": 0,
         "progress": {}
       }
     ],
@@ -3328,12 +3413,6 @@
         "type": "record",
         "impact": "medium",
         "detail": "Best params found after 0 experiments"
-      },
-      {
-        "text": "Mean Reversion: Sharpe 0.372, 62% WR, 170 trades",
-        "type": "record",
-        "impact": "medium",
-        "detail": "Best params found after 32 experiments"
       },
       {
         "text": "Opening Gap: Sharpe 0.340, 62% WR, 257 trades",
