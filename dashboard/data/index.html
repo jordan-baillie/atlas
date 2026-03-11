@@ -3932,22 +3932,83 @@ function drawAgentFloor() {
     return; // Props + whiteboard already rendered, just no agents
   }
 
-  // ── When idle/sleeping: draw empty room + idle status text (no agents) ──
+  // ── When idle/sleeping: draw empty room + countdown clock ──
   if (isSleeping) {
-    // "Lights off" text in the floor area
-    ctx.fillStyle = tc.textTertiary;
-    ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.015) * 0.08;
-    ctx.font = '11px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    var idleMsg = 'Research engine idle — next sweep window pending';
-    ctx.fillText(idleMsg, W / 2, wallH + (H - wallH) / 2);
-    // Pulsing standby dot
-    ctx.beginPath();
-    ctx.arc(W / 2, wallH + (H - wallH) / 2 + 18, 3, 0, Math.PI * 2);
-    ctx.fillStyle = tc.amber;
-    ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.03) * 0.2;
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
+    var floorCY = wallH + (H - wallH) / 2;
+
+    // ── Countdown clock to next research window ──
+    var nextIso = (f.stats || {}).next_window_iso || '';
+    var countdownStr = '';
+    var countdownLabel = '';
+    if (nextIso) {
+      var nextTime = new Date(nextIso);
+      var now = new Date();
+      var diffMs = nextTime - now;
+      if (diffMs > 0) {
+        var totalSec = Math.floor(diffMs / 1000);
+        var hrs = Math.floor(totalSec / 3600);
+        var mins = Math.floor((totalSec % 3600) / 60);
+        var secs = totalSec % 60;
+        countdownStr = (hrs > 0 ? hrs + 'h ' : '') + (mins < 10 ? '0' : '') + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+        countdownLabel = 'NEXT SWEEP WINDOW';
+      } else {
+        countdownStr = 'STARTING...';
+        countdownLabel = 'SWEEP WINDOW';
+      }
+    }
+
+    if (countdownStr) {
+      // Countdown digits — large, monospace, ticking
+      ctx.fillStyle = tc.amber;
+      ctx.globalAlpha = 0.5 + Math.sin(f.frame * 0.02) * 0.1;
+      ctx.font = 'bold 28px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(countdownStr, W / 2, floorCY - 2);
+      ctx.globalAlpha = 1.0;
+
+      // Label above countdown
+      ctx.fillStyle = tc.textTertiary;
+      ctx.globalAlpha = 0.35;
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillText(countdownLabel, W / 2, floorCY - 24);
+      ctx.globalAlpha = 1.0;
+
+      // Pulsing colon separator blink (visual tick)
+      var blinkOn = (f.frame % 60) < 40;
+      if (!blinkOn) {
+        // Redraw countdown with dimmed separators for blink effect
+        // (The visible tick is the separators fading in/out)
+      }
+
+      // Small progress ring around a standby dot
+      ctx.beginPath();
+      ctx.arc(W / 2, floorCY + 18, 5, 0, Math.PI * 2);
+      ctx.strokeStyle = tc.border;
+      ctx.globalAlpha = 0.2;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Partial fill based on countdown (visual progress to next window)
+      if (nextIso) {
+        // Assume 1h between windows → estimate fraction elapsed
+        var fracElapsed = 1 - Math.min(1, (new Date(nextIso) - new Date()) / (60 * 60 * 1000));
+        ctx.beginPath();
+        ctx.arc(W / 2, floorCY + 18, 5, -Math.PI / 2, -Math.PI / 2 + fracElapsed * Math.PI * 2);
+        ctx.strokeStyle = tc.amber;
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+    } else {
+      // No countdown data — fallback message
+      ctx.fillStyle = tc.textTertiary;
+      ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.015) * 0.08;
+      ctx.font = '11px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Research engine idle', W / 2, floorCY);
+      ctx.globalAlpha = 1.0;
+    }
+
     return; // Don't draw agents or desks
   }
 

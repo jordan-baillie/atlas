@@ -1779,13 +1779,13 @@
   },
   "research": {
     "daemon": {
-      "status": "stale",
-      "uptime_s": 1000,
-      "experiments_completed": 0,
+      "status": "stopped",
+      "uptime_s": 2191.0,
+      "experiments_completed": 18,
       "experiments_failed": 0,
       "queue_depth": 0,
-      "current_experiment": "mean_reversion",
-      "timestamp": "2026-03-11T13:10:29.355516+00:00"
+      "current_experiment": "",
+      "timestamp": "2026-03-11T13:30:30.092546+00:00"
     },
     "leaderboard": [
       {
@@ -1854,7 +1854,7 @@
         "status": "active",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 93,
+        "total_experiments": 105,
         "best_sharpe": 0.6424,
         "best_win_rate": 51.5,
         "best_trades": 388,
@@ -1867,8 +1867,8 @@
         },
         "description": "RSI(14) + z-score mean reversion on individual SP500 stocks. Core active strategy. Enters oversold reversals with ATR-based stop losses. Optimized via coordinate descent to Sharpe 1.04, CAGR 15.69% (v",
         "reference": "Atlas original",
-        "best_cagr": 7.9436,
-        "best_pf": 2.3698
+        "best_cagr": 9.9383,
+        "best_pf": 3.0199
       },
       {
         "id": "opening_gap",
@@ -1969,6 +1969,26 @@
         "best_pf": 3.3421
       },
       {
+        "id": "consecutive_down_days",
+        "name": "Consecutive Down Days",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 25,
+        "best_sharpe": 0.4078,
+        "best_win_rate": 54.2,
+        "best_trades": 524,
+        "stage": "solo",
+        "stage_icon": "\u274c",
+        "coverage": {
+          "solo": "\u274c"
+        },
+        "description": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
+        "reference": "Quantified Strategies",
+        "best_cagr": 40.5437,
+        "best_pf": 5.6703
+      },
+      {
         "id": "donchian_breakout",
         "name": "Donchian Breakout",
         "status": "not_built",
@@ -1985,26 +2005,6 @@
         "reference": "Richard Donchian, Turtle Traders (1983)",
         "best_cagr": 10.1507,
         "best_pf": 5.5054
-      },
-      {
-        "id": "consecutive_down_days",
-        "name": "Consecutive Down Days",
-        "status": "dormant",
-        "tier": 0,
-        "type": "mean_reversion",
-        "total_experiments": 11,
-        "best_sharpe": 0.108,
-        "best_win_rate": 58.1,
-        "best_trades": 222,
-        "stage": "solo",
-        "stage_icon": "\u274c",
-        "coverage": {
-          "solo": "\u274c"
-        },
-        "description": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
-        "reference": "Quantified Strategies",
-        "best_cagr": 5.7032,
-        "best_pf": 3.2642
       },
       {
         "id": "williams_percent_r",
@@ -2387,8 +2387,8 @@
       "sweep": {
         "untested": 21,
         "screen": 0,
-        "quick": 2,
-        "solo": 3,
+        "quick": 0,
+        "solo": 5,
         "optimize": 3
       }
     },
@@ -2435,38 +2435,6 @@
       }
     ],
     "activity_feed": [
-      {
-        "experiment_id": "ar-20260311_151649",
-        "timestamp": "2026-03-11T05:16:49.708815+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.5687,
-        "win_rate_pct": null,
-        "total_trades": 292,
-        "cagr_pct": 38.9932,
-        "max_drawdown_pct": 10.6403,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 fast_ma: 25\u219250"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_152116",
-        "timestamp": "2026-03-11T05:21:16.984764+00:00",
-        "strategy": "mean_reversion",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.221,
-        "win_rate_pct": null,
-        "total_trades": 352,
-        "cagr_pct": 7.5652,
-        "max_drawdown_pct": 9.017,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 Asymmetric risk: 1.5x stop, 3x target"
-        ]
-      },
       {
         "experiment_id": "ar-20260311_152317",
         "timestamp": "2026-03-11T05:23:17.461582+00:00",
@@ -2753,6 +2721,38 @@
         "promoted": false,
         "learnings": [
           "autoresearch: keep \u2014 min_down_days: None\u21922"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_232235",
+        "timestamp": "2026-03-11T13:22:35.668577+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.3627,
+        "win_rate_pct": null,
+        "total_trades": 159,
+        "cagr_pct": 9.9383,
+        "max_drawdown_pct": 4.0231,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 zscore_lookback: 20\u219230"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_233005",
+        "timestamp": "2026-03-11T13:30:05.357058+00:00",
+        "strategy": "consecutive_down_days",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4078,
+        "win_rate_pct": null,
+        "total_trades": 524,
+        "cagr_pct": 40.5437,
+        "max_drawdown_pct": 5.321,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 ibs_threshold: None\u21921.0"
         ]
       }
     ],
@@ -3275,19 +3275,20 @@
       ]
     },
     "statistics": {
-      "total_experiments": 1175,
-      "passed": 40,
+      "total_experiments": 1201,
+      "passed": 42,
       "failed": 42,
       "partial": 48,
       "promoted": 3,
-      "pass_rate_pct": 30.1,
+      "pass_rate_pct": 31.1,
       "days_active": 13,
       "strategies_tested": 15,
       "strategies_total": 33,
       "sweep_strategies": 29,
-      "sweep_experiments": 1175,
+      "sweep_experiments": 1201,
       "sweep_window_active": false,
-      "next_window": "Trigger: n/a"
+      "next_window": "Next: Thu 09:30",
+      "next_window_iso": "2026-03-12T09:30:00"
     },
     "daily_insight": {
       "type": "fee_waterfall",
@@ -3329,9 +3330,9 @@
         "id": "researcher",
         "name": "Atlas",
         "type": "sweep",
-        "status": "idle",
-        "task": "Cycle complete",
-        "experiments_done": 0,
+        "status": "sleeping",
+        "task": "Engine offline",
+        "experiments_done": 18,
         "progress": {}
       }
     ],
@@ -3403,6 +3404,12 @@
         "detail": "Best params found after 20 experiments"
       },
       {
+        "text": "Consecutive Down Days: Sharpe 0.408, 54% WR, 524 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 3 experiments"
+      },
+      {
         "text": "Donchian Breakout: Sharpe 0.318, 53% WR, 91 trades",
         "type": "record",
         "impact": "medium",
@@ -3415,10 +3422,10 @@
         "detail": "Best params found after 0 experiments"
       },
       {
-        "text": "Opening Gap: Sharpe 0.340, 62% WR, 257 trades",
+        "text": "Mean Reversion: Sharpe 0.363, 60% WR, 159 trades",
         "type": "record",
         "impact": "medium",
-        "detail": "Best params found after 60 experiments"
+        "detail": "Best params found after 34 experiments"
       }
     ]
   },

@@ -2,41 +2,42 @@
   "strategy": "consecutive_down_days",
   "market": "sp500",
   "params": {
-    "min_down_days": 2
+    "min_down_days": 2,
+    "ibs_threshold": 1.0
   },
   "metrics": {
-    "total_trades": 222,
-    "cagr_pct": 5.7032,
-    "cagr_full_period_pct": 4.8208,
-    "sharpe": 0.108,
-    "sortino": 1.3373,
-    "max_drawdown_pct": 1.7757,
-    "win_rate_pct": 58.11,
-    "profit_factor": 3.2642,
-    "total_pnl": 1559.54,
-    "avg_trade": 7.02,
-    "final_equity": 5559.54,
-    "expectancy_r": 0.3375,
-    "avg_r": 0.3375,
-    "r_count": 222,
-    "edge_p_value": 0.19801,
+    "total_trades": 524,
+    "cagr_pct": 40.5437,
+    "cagr_full_period_pct": 33.4971,
+    "sharpe": 0.4078,
+    "sortino": 46.6132,
+    "max_drawdown_pct": 5.321,
+    "win_rate_pct": 54.2,
+    "profit_factor": 5.6703,
+    "total_pnl": 26151.85,
+    "avg_trade": 49.91,
+    "final_equity": 30159.1,
+    "expectancy_r": 2.0061,
+    "avg_r": 2.0061,
+    "r_count": 524,
+    "edge_p_value": 0.295003,
     "edge_significant": false,
-    "var_95_pct": 0.116,
-    "cvar_95_pct": 0.23,
-    "calmar": 3.2118,
-    "mc_p95_drawdown_pct": 3.05,
-    "mc_fragile": false,
+    "var_95_pct": 0.254,
+    "cvar_95_pct": 0.39,
+    "calmar": 7.6196,
+    "mc_p95_drawdown_pct": 27.13,
+    "mc_fragile": true,
     "strategy_breakdown": {
       "consecutive_down_days": {
-        "trades": 222,
-        "total_pnl": 1559.54,
-        "win_rate_pct": 58.1
+        "trades": 524,
+        "total_pnl": 26151.85,
+        "win_rate_pct": 54.2
       }
     },
-    "runtime_s": 7.5
+    "runtime_s": 8.5
   },
-  "description": "min_down_days=2",
-  "experiments_run": 2,
-  "experiments_kept": 2,
-  "updated_at": "2026-03-11T13:11:30.759605+00:00"
+  "description": "ibs_threshold=1.0",
+  "experiments_run": 3,
+  "experiments_kept": 3,
+  "updated_at": "2026-03-11T13:30:05.356499+00:00"
 }

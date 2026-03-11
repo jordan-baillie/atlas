@@ -1963,27 +1963,76 @@ def _read_daemon_status() -> dict:
 
 
 def _get_sweep_window_status() -> dict:
-    """Check atlas-research-window.service/timer status for dashboard stats (1d)."""
+    """Check atlas-research-window.service/timer status for dashboard stats."""
     import subprocess as _sp
     sweep_window_active = False
     next_window = ""
+    next_window_iso = ""
     try:
         r = _sp.run(["systemctl", "is-active", "atlas-research-window"],
                     capture_output=True, text=True, timeout=3)
         sweep_window_active = r.stdout.strip() == "active"
     except Exception:
         pass
+
+    # Get the next trigger time from systemd timer
     try:
-        r = _sp.run(["systemctl", "status", "atlas-research-window.timer"],
+        r = _sp.run(["systemctl", "list-timers", "atlas-research-window.timer", "--no-pager"],
                     capture_output=True, text=True, timeout=3)
         for line in r.stdout.splitlines():
             stripped = line.strip()
-            if "Trigger:" in stripped or "Next elapse:" in stripped:
-                next_window = stripped
-                break
+            if "atlas-research-window" in stripped and stripped[0:3] not in ("NEX", "---", ""):
+                # Parse the NEXT column — e.g. "Thu 2026-03-12 09:30:00 AEST"
+                parts = stripped.split()
+                if len(parts) >= 4:
+                    try:
+                        from datetime import datetime as _dt
+                        # systemd format: "Thu 2026-03-12 09:30:00 AEST"
+                        dt_str = parts[0] + " " + parts[1] + " " + parts[2]
+                        dt = _dt.strptime(dt_str, "%a %Y-%m-%d %H:%M:%S")
+                        next_window_iso = dt.isoformat()
+                        next_window = f"Next: {parts[0]} {parts[2]}"
+                    except (ValueError, IndexError):
+                        pass
     except Exception:
         pass
-    return {"sweep_window_active": sweep_window_active, "next_window": next_window}
+
+    # Fallback: compute next window from known schedule if timer didn't give us one
+    if not next_window_iso and not sweep_window_active:
+        try:
+            from datetime import datetime as _dt, timedelta
+            now = _dt.now()
+            wd = now.weekday()  # 0=Mon, 6=Sun
+            if wd < 5:  # Weekday
+                windows = [(9, 30), (12, 30), (15, 30), (20, 0), (23, 0)]
+            else:  # Weekend
+                windows = [(9, 0), (12, 0), (15, 0), (20, 0)]
+
+            # Find next window today
+            for h, m in windows:
+                candidate = now.replace(hour=h, minute=m, second=0, microsecond=0)
+                if candidate > now:
+                    next_window_iso = candidate.isoformat()
+                    next_window = f"Next: {candidate.strftime('%H:%M')}"
+                    break
+
+            # If none today, find first window tomorrow
+            if not next_window_iso:
+                tomorrow = now + timedelta(days=1)
+                twd = tomorrow.weekday()
+                wins = [(9, 30), (12, 30), (15, 30), (20, 0), (23, 0)] if twd < 5 else [(9, 0), (12, 0), (15, 0), (20, 0)]
+                h, m = wins[0]
+                candidate = tomorrow.replace(hour=h, minute=m, second=0, microsecond=0)
+                next_window_iso = candidate.isoformat()
+                next_window = f"Next: {candidate.strftime('%a %H:%M')}"
+        except Exception:
+            pass
+
+    return {
+        "sweep_window_active": sweep_window_active,
+        "next_window": next_window,
+        "next_window_iso": next_window_iso,
+    }
 
 
 def generate_research_data() -> dict:
