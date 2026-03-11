@@ -83,3 +83,4 @@ timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
 2026-03-11T11:32:38	0.1335	101	5.26	2.7067	6.15	zscore_lookback=10	discard	zscore_lookback: 20→10
 2026-03-11T11:41:11	-0.5036	205	10.40	1.3001	2.63		keep	baseline
 2026-03-11T11:41:33	-0.5036	205	10.40	1.3001	2.63		keep	baseline
+2026-03-11T13:00:38	-0.5036	205	10.40	1.3001	2.63		keep	baseline
