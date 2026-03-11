@@ -235,6 +235,7 @@ def _run_sanity_check(strategy_name: str, market: str = "sp500") -> dict:
 
 
 SANITY_CACHE_PATH = Path("/tmp/sage-sanity-cache.json")
+_current_cycle = 0  # updated by run_cycle for heartbeat access
 
 
 def _load_sanity_cache() -> dict:
@@ -308,6 +309,8 @@ def _find_creation_targets(max_checks: int = 4) -> list[dict]:
             continue
         checks_run += 1
         logger.info("Sanity checking: %s (%d/%d)", name, checks_run, max_checks)
+        write_heartbeat(f"checking {name}", _current_cycle,
+                        strategy=name, checks=f"{checks_run}/{max_checks}")
 
         check = _run_sanity_check(name)
         cache[name] = check  # cache result
@@ -851,6 +854,8 @@ def run_cycle(cycle: int, market: str | None, dry_run: bool,
 
     Returns summary dict.
     """
+    global _current_cycle
+    _current_cycle = cycle
     logger.info("══ Sage cycle %d started (market=%s, dry_run=%s) ══",
                 cycle, market or "all", dry_run)
 

@@ -2248,7 +2248,35 @@ def _build_agents(daemon: dict) -> list:
 
         # Determine status + task
         if svc_running:
-            if strategy:
+            if agent_type == "sage":
+                # Sage-specific phase mapping
+                if phase.startswith("checking "):
+                    strat_label = phase[9:].replace("_", " ").title()
+                    status = "reading"
+                    task = f"Checking {strat_label}"
+                elif phase.startswith("creating_"):
+                    strat_label = phase[9:].replace("_", " ").title()
+                    status = "typing"
+                    task = f"Creating {strat_label}"
+                elif phase == "create_scan":
+                    status = "reading"
+                    task = "Scanning strategies..."
+                elif phase in ("promote", "legacy_scan"):
+                    status = "typing"
+                    task = "Promoting candidates"
+                elif phase == "sleep":
+                    status = "idle"
+                    task = "Sleeping until next cycle"
+                elif phase == "stopped":
+                    status = "sleeping"
+                    task = "Stopped"
+                elif strategy:
+                    status = "reading"
+                    task = strategy.replace("_", " ").title()
+                else:
+                    status = "reading"
+                    task = "Discovering..."
+            elif strategy:
                 strat_label = strategy.replace("_", " ").title()
                 if phase == "agent":
                     status = "typing"
