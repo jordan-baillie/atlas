@@ -1,40 +1,77 @@
 {
-  "timestamp": "2026-03-11T22:05:06.263741+10:00",
+  "timestamp": "2026-03-12T09:34:19.817816+10:00",
   "project": "Atlas",
   "markets": {
     "asx": {
-      "timestamp": "2026-03-11T22:05:06.101961+10:00",
+      "timestamp": "2026-03-12T09:34:18.952386+10:00",
       "config_version": "v1.0-passive",
       "project": "Atlas",
       "market_id": "asx",
       "currency": "AUD",
       "trading_mode": "offline",
-      "data_source": "offline",
+      "data_source": "cross-broker",
       "broker": "moomoo",
       "portfolio": {
-        "equity": 0,
+        "equity": 2732.54,
         "cash": 0,
-        "starting_equity": 0,
-        "total_pnl": 0,
-        "total_pnl_pct": 0,
+        "starting_equity": 2471.44,
+        "total_pnl": 261.1,
+        "total_pnl_pct": 10.56,
         "num_open": 0,
         "num_atlas": 0,
         "win_rate": 0,
         "commission_per_trade": 0,
         "total_commissions": 0,
-        "market_pnl": 0,
+        "market_pnl": 261.1,
         "realized_pnl": 0,
         "open_positions": [],
         "buying_power": 0,
-        "broker_equity": null,
-        "broker_cash": null,
-        "today_pnl_by_ccy": {}
+        "broker_equity": 2732.54,
+        "broker_cash": 0,
+        "today_pnl_by_ccy": {
+          "AUD": 78.46
+        }
       },
       "manual_positions": {
-        "positions": [],
-        "num_open": 0,
-        "unrealized_pnl": 0,
-        "market_value": 0
+        "positions": [
+          {
+            "ticker": "WHC.AX",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 8.66,
+            "current_price": 9.08,
+            "shares": 172,
+            "pnl": 72.24,
+            "pnl_pct": 4.85,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": 63.64,
+            "currency": "AUD",
+            "market": "asx"
+          },
+          {
+            "ticker": "WDS.AX",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 25.84,
+            "current_price": 30.81,
+            "shares": 38,
+            "pnl": 188.86,
+            "pnl_pct": 19.23,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": 14.82,
+            "currency": "AUD",
+            "market": "asx"
+          }
+        ],
+        "num_open": 2,
+        "unrealized_pnl": 261.1,
+        "market_value": 2732.54
       },
       "strategy_summary": [],
       "equity_curve": [
@@ -86,28 +123,39 @@
           "pnl": 182.64,
           "fx_rate": 1.0,
           "cross_broker": true
+        },
+        {
+          "date": "2026-03-12",
+          "equity": 2732.54,
+          "pnl": 261.1,
+          "fx_rate": 1.0,
+          "cross_broker": true
         }
       ],
       "benchmark_curve": [
         {
           "date": "2026-03-05",
-          "equity": 0.0
+          "equity": 2471.44
         },
         {
           "date": "2026-03-06",
-          "equity": 0.0
+          "equity": 2442.07
         },
         {
           "date": "2026-03-09",
-          "equity": 0.0
+          "equity": 2374.47
         },
         {
           "date": "2026-03-11",
-          "equity": 0.0
+          "equity": 2416.81
+        },
+        {
+          "date": "2026-03-12",
+          "equity": 2394.95
         }
       ],
       "benchmark_ticker": "IOZ.AX",
-      "benchmark_return_pct": 0,
+      "benchmark_return_pct": -3.09,
       "plan": {
         "trade_date": "2026-03-03",
         "status": "APPROVED",
@@ -403,9 +451,9 @@
       },
       "closed_trades": [],
       "risk": {
-        "exposure_pct": 0,
+        "exposure_pct": 0.0,
         "max_positions": 0,
-        "halted": false,
+        "halted": true,
         "risk_per_trade": 0.005,
         "max_portfolio_risk": 0.05
       },
@@ -417,18 +465,18 @@
       "data_freshness": {
         "broker_connected": false,
         "broker_timestamp": null,
-        "data_source": "offline",
+        "data_source": "cross-broker",
         "cache_age_minutes": null,
-        "equity_curve_last_date": "2026-03-11",
+        "equity_curve_last_date": "2026-03-12",
         "plan_date": "2026-03-03",
         "state_file_mtime": null
       },
-      "funded": false,
+      "funded": true,
       "stale_warning": null,
       "pending_orders": []
     },
     "hk": {
-      "timestamp": "2026-03-11T22:05:06.129025+10:00",
+      "timestamp": "2026-03-12T09:34:19.687972+10:00",
       "config_version": "unknown",
       "project": "Atlas",
       "market_id": "hk",
@@ -485,7 +533,7 @@
       "risk": {
         "exposure_pct": 0,
         "max_positions": 10,
-        "halted": false,
+        "halted": true,
         "risk_per_trade": 0.005,
         "max_portfolio_risk": 0.05
       },
@@ -508,51 +556,33 @@
       "pending_orders": []
     },
     "sp500": {
-      "timestamp": "2026-03-11T22:05:06.130818+10:00",
+      "timestamp": "2026-03-12T09:34:19.689623+10:00",
       "config_version": "v2.2",
       "project": "Atlas",
       "market_id": "sp500",
       "currency": "USD",
       "trading_mode": "live",
-      "data_source": "cached",
+      "data_source": "broker",
       "broker": "moomoo",
       "portfolio": {
-        "equity": 3990.82,
-        "cash": 3771.62,
+        "equity": 4000,
+        "cash": 4000,
         "starting_equity": 4000,
-        "total_pnl": -9.18,
-        "total_pnl_pct": -0.23,
-        "num_open": 1,
-        "num_atlas": 1,
+        "total_pnl": 0,
+        "total_pnl_pct": 0.0,
+        "num_open": 0,
+        "num_atlas": 0,
         "win_rate": 0.0,
         "commission_per_trade": 1.1,
-        "total_commissions": 1.1,
-        "market_pnl": -9.18,
+        "total_commissions": 0.0,
+        "market_pnl": 0,
         "realized_pnl": -230.58,
-        "open_positions": [
-          {
-            "ticker": "CHTR",
-            "strategy": "trend_following",
-            "entry_date": "2026-02-27",
-            "entry_price": 228.38,
-            "current_price": 219.2,
-            "shares": 1,
-            "pnl": -9.18,
-            "pnl_pct": -4.02,
-            "stop_price": 211.8972,
-            "days_held": 12,
-            "sector": "Unknown",
-            "is_atlas": true,
-            "today_pnl": -0.13,
-            "currency": "USD",
-            "market": "sp500"
-          }
-        ],
-        "buying_power": 2652.95,
-        "broker_equity": 8622.63,
-        "broker_cash": 2659.8,
+        "open_positions": [],
+        "buying_power": 2872.28,
+        "broker_equity": 8716.97,
+        "broker_cash": 2878.1,
         "today_pnl_by_ccy": {
-          "USD": -9.87
+          "USD": 39.02
         }
       },
       "manual_positions": {
@@ -562,15 +592,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 127.429,
-            "current_price": 186.23,
+            "current_price": 193.768,
             "shares": 5,
-            "pnl": 294.0,
-            "pnl_pct": 46.14,
+            "pnl": 331.69,
+            "pnl_pct": 52.06,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": -6.47,
+            "today_pnl": 31.22,
             "currency": "USD",
             "market": "sp500"
           },
@@ -579,15 +609,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 207.59,
-            "current_price": 206.28,
+            "current_price": 206.52,
             "shares": 6,
-            "pnl": -7.86,
-            "pnl_pct": -0.63,
+            "pnl": -6.42,
+            "pnl_pct": -0.52,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": -4.32,
+            "today_pnl": -2.88,
             "currency": "USD",
             "market": "sp500"
           },
@@ -596,15 +626,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 31.2,
-            "current_price": 30.7,
+            "current_price": 31.01,
             "shares": 33,
-            "pnl": -16.5,
-            "pnl_pct": -1.6,
+            "pnl": -6.27,
+            "pnl_pct": -0.61,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": -1.65,
+            "today_pnl": 8.58,
             "currency": "USD",
             "market": "sp500"
           },
@@ -613,31 +643,24 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 63.8,
-            "current_price": 66.05,
+            "current_price": 65.99,
             "shares": 10,
-            "pnl": 22.5,
-            "pnl_pct": 3.53,
+            "pnl": 21.9,
+            "pnl_pct": 3.43,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": 2.7,
+            "today_pnl": 2.1,
             "currency": "USD",
             "market": "sp500"
           }
         ],
         "num_open": 4,
-        "unrealized_pnl": 292.14,
-        "market_value": 3842.43
+        "unrealized_pnl": 340.9,
+        "market_value": 3891.19
       },
-      "strategy_summary": [
-        {
-          "strategy": "trend_following",
-          "positions": 1,
-          "unrealized_pnl": -9.18,
-          "market_value": 219.2
-        }
-      ],
+      "strategy_summary": [],
       "equity_curve": [
         {
           "date": "2026-02-27",
@@ -705,6 +728,13 @@
           "pnl": 52.38,
           "fx_rate": 1.3967,
           "estimated": true
+        },
+        {
+          "date": "2026-03-12",
+          "equity": 8716.97,
+          "pnl": 110.32,
+          "fx_rate": 1.4012,
+          "estimated": true
         }
       ],
       "benchmark_curve": [
@@ -739,10 +769,14 @@
         {
           "date": "2026-03-10",
           "equity": 3948.63
+        },
+        {
+          "date": "2026-03-11",
+          "equity": 3943.67
         }
       ],
       "benchmark_ticker": "SPY",
-      "benchmark_return_pct": -1.28,
+      "benchmark_return_pct": -1.41,
       "plan": {
         "trade_date": "2026-03-11",
         "status": "APPROVED",
@@ -795,7 +829,7 @@
         }
       ],
       "risk": {
-        "exposure_pct": 94.7,
+        "exposure_pct": 88.8,
         "max_positions": 15,
         "halted": false,
         "risk_per_trade": 0.005,
@@ -807,16 +841,16 @@
         "done": []
       },
       "data_freshness": {
-        "broker_connected": false,
-        "broker_timestamp": null,
-        "data_source": "cached",
-        "cache_age_minutes": 56.9,
-        "equity_curve_last_date": "2026-03-11",
+        "broker_connected": true,
+        "broker_timestamp": "2026-03-12T09:34:19.689623+10:00",
+        "data_source": "broker",
+        "cache_age_minutes": null,
+        "equity_curve_last_date": "2026-03-12",
         "plan_date": "2026-03-11",
         "state_file_mtime": null
       },
       "funded": true,
-      "stale_warning": "Broker offline \u2014 showing data from 57m ago",
+      "stale_warning": null,
       "pending_orders": [
         {
           "order_id": "FA1C28F918E9970000",
@@ -825,7 +859,7 @@
           "qty": 7,
           "price": 0.0,
           "order_type": "TRAILING_STOP_LIMIT",
-          "status": "WAITING_SUBMIT",
+          "status": "FAILED",
           "created": "2026-03-04 05:42:45.740",
           "filled_qty": 0,
           "fill_price": 0.0,
@@ -838,8 +872,8 @@
           "qty": 1,
           "price": 0.0,
           "order_type": "STOP",
-          "status": "WAITING_SUBMIT",
-          "created": "2026-03-11 05:15:23",
+          "status": "CANCELLED_ALL",
+          "created": "2026-03-11 05:15:23.928",
           "filled_qty": 0,
           "fill_price": 0.0,
           "market": "US"
@@ -851,25 +885,25 @@
           "qty": 1,
           "price": 217.14,
           "order_type": "NORMAL",
-          "status": "WAITING_SUBMIT",
+          "status": "FILLED_ALL",
           "created": "2026-03-11 05:46:54.124",
-          "filled_qty": 0,
-          "fill_price": 0.0,
+          "filled_qty": 1,
+          "fill_price": 219.33,
           "market": "US"
         }
       ]
     }
   },
   "exchange_rates": {
-    "AUDUSD": 0.71597,
-    "USDAUD": 1.3967
+    "AUDUSD": 0.71367,
+    "USDAUD": 1.4012
   },
   "ceasefire": {
     "probability": 2,
     "probability_label": "VERY UNLIKELY",
     "timeline": "4+ weeks",
     "portfolio_action": "Hold all positions. Thesis intact.",
-    "last_updated": "2026-03-11T22:04:28",
+    "last_updated": "2026-03-12T09:05:28",
     "active_ceasefire_count": 6,
     "active_escalation_count": 7,
     "factors": [
@@ -1509,63 +1543,80 @@
     "sp500": "v2.2"
   },
   "account": {
-    "equity": 12043.23,
-    "cash": 3714.94,
-    "buying_power": 3714.94,
+    "equity": 12214.22,
+    "cash": 4032.79,
+    "buying_power": 4032.79,
     "currency": "AUD"
   },
   "portfolio": {
-    "equity": 12043.23,
-    "cash": 3714.94,
-    "starting_equity": 5586.8,
-    "total_pnl": -12.82,
-    "total_pnl_pct": -0.23,
-    "num_open": 1,
-    "open_positions": [
-      {
-        "ticker": "CHTR",
-        "strategy": "trend_following",
-        "entry_date": "2026-02-27",
-        "entry_price": 228.38,
-        "current_price": 219.2,
-        "shares": 1,
-        "pnl": -9.18,
-        "pnl_pct": -4.02,
-        "stop_price": 211.8972,
-        "days_held": 12,
-        "sector": "Unknown",
-        "is_atlas": true,
-        "today_pnl": -0.13,
-        "currency": "USD",
-        "market": "sp500"
-      }
-    ],
+    "equity": 12214.22,
+    "cash": 4032.79,
+    "starting_equity": 5604.8,
+    "total_pnl": 0.0,
+    "total_pnl_pct": 0.0,
+    "num_open": 0,
+    "open_positions": [],
     "win_rate": 0.0,
-    "market_pnl": -12.82,
-    "realized_pnl": -322.05,
-    "total_commissions": 1.54,
+    "market_pnl": 261.1,
+    "realized_pnl": -323.09,
+    "total_commissions": 0.0,
     "commission_per_trade": 0,
     "today_pnl_by_ccy": {
-      "USD": -9.87
+      "AUD": 78.46,
+      "USD": 39.02
     },
-    "today_pnl_aud": -13.79
+    "today_pnl_aud": 133.13
   },
   "manual_positions": {
     "positions": [
+      {
+        "ticker": "WHC.AX",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 8.66,
+        "current_price": 9.08,
+        "shares": 172,
+        "pnl": 72.24,
+        "pnl_pct": 4.85,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": 63.64,
+        "currency": "AUD",
+        "market": "asx"
+      },
+      {
+        "ticker": "WDS.AX",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 25.84,
+        "current_price": 30.81,
+        "shares": 38,
+        "pnl": 188.86,
+        "pnl_pct": 19.23,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": 14.82,
+        "currency": "AUD",
+        "market": "asx"
+      },
       {
         "ticker": "XOP",
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 127.429,
-        "current_price": 186.23,
+        "current_price": 193.768,
         "shares": 5,
-        "pnl": 294.0,
-        "pnl_pct": 46.14,
+        "pnl": 331.69,
+        "pnl_pct": 52.06,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": -6.47,
+        "today_pnl": 31.22,
         "currency": "USD",
         "market": "sp500"
       },
@@ -1574,15 +1625,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 207.59,
-        "current_price": 206.28,
+        "current_price": 206.52,
         "shares": 6,
-        "pnl": -7.86,
-        "pnl_pct": -0.63,
+        "pnl": -6.42,
+        "pnl_pct": -0.52,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": -4.32,
+        "today_pnl": -2.88,
         "currency": "USD",
         "market": "sp500"
       },
@@ -1591,15 +1642,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 31.2,
-        "current_price": 30.7,
+        "current_price": 31.01,
         "shares": 33,
-        "pnl": -16.5,
-        "pnl_pct": -1.6,
+        "pnl": -6.27,
+        "pnl_pct": -0.61,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": -1.65,
+        "today_pnl": 8.58,
         "currency": "USD",
         "market": "sp500"
       },
@@ -1608,119 +1659,121 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 63.8,
-        "current_price": 66.05,
+        "current_price": 65.99,
         "shares": 10,
-        "pnl": 22.5,
-        "pnl_pct": 3.53,
+        "pnl": 21.9,
+        "pnl_pct": 3.43,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": 2.7,
+        "today_pnl": 2.1,
         "currency": "USD",
         "market": "sp500"
       }
     ],
-    "num_open": 4,
-    "unrealized_pnl": 292.14,
-    "market_value": 3842.43
+    "num_open": 6,
+    "unrealized_pnl": 602.0,
+    "market_value": 6623.73
   },
-  "strategy_summary": [
-    {
-      "strategy": "trend_following",
-      "positions": 1,
-      "unrealized_pnl": -12.82,
-      "market_value": 306.16
-    }
-  ],
+  "strategy_summary": [],
   "equity_curve": [
     {
       "date": "2026-02-27",
-      "equity": 6743.9,
+      "equity": 5604.8,
       "pnl": 0.0
     },
     {
       "date": "2026-03-03",
-      "equity": 11820.5,
-      "pnl": 242.3
+      "equity": 10697.76,
+      "pnl": 243.08
     },
     {
       "date": "2026-03-04",
-      "equity": 11758.92,
-      "pnl": 231.95
+      "equity": 10635.98,
+      "pnl": 232.7
     },
     {
       "date": "2026-03-05",
-      "equity": 11731.29,
-      "pnl": 604.93
+      "equity": 10608.26,
+      "pnl": 431.14
     },
     {
       "date": "2026-03-06",
-      "equity": 11740.25,
-      "pnl": 605.1
+      "equity": 10605.81,
+      "pnl": 419.87
     },
     {
       "date": "2026-03-07",
-      "equity": 11788.29,
-      "pnl": 649.26
+      "equity": 10654.01,
+      "pnl": 464.18
     },
     {
       "date": "2026-03-08",
-      "equity": 11788.29,
-      "pnl": 649.26
+      "equity": 10654.01,
+      "pnl": 464.18
     },
     {
       "date": "2026-03-09",
-      "equity": 13345.72,
-      "pnl": 716.01
+      "equity": 12193.2,
+      "pnl": 507.88
     },
     {
       "date": "2026-03-10",
-      "equity": 14728.33,
-      "pnl": 649.91
+      "equity": 12117.13,
+      "pnl": 472.75
     },
     {
       "date": "2026-03-11",
-      "equity": 14697.31,
-      "pnl": 255.8
+      "equity": 12082.03,
+      "pnl": 73.39
+    },
+    {
+      "date": "2026-03-12",
+      "equity": 12214.22,
+      "pnl": 154.58
     }
   ],
   "benchmark_curve": [
     {
       "date": "2026-02-27",
-      "equity": 5586.8
+      "equity": 5604.8
     },
     {
       "date": "2026-03-02",
-      "equity": 5589.97
+      "equity": 5607.98
     },
     {
       "date": "2026-03-03",
-      "equity": 5540.71
+      "equity": 5558.56
     },
     {
       "date": "2026-03-04",
-      "equity": 5579.8
+      "equity": 5597.78
     },
     {
       "date": "2026-03-05",
-      "equity": 5548.68
+      "equity": 5566.56
     },
     {
       "date": "2026-03-06",
-      "equity": 5475.96
+      "equity": 5493.6
     },
     {
       "date": "2026-03-09",
-      "equity": 5523.92
+      "equity": 5541.72
     },
     {
       "date": "2026-03-10",
-      "equity": 5515.05
+      "equity": 5532.82
+    },
+    {
+      "date": "2026-03-11",
+      "equity": 5525.87
     }
   ],
-  "benchmark_ticker": "IOZ + SPY",
-  "benchmark_return_pct": -1.28,
+  "benchmark_ticker": "SPY",
+  "benchmark_return_pct": -1.41,
   "plan": {
     "trade_date": "2026-03-05",
     "status": "PENDING_APPROVAL",
@@ -1766,9 +1819,9 @@
     }
   ],
   "risk": {
-    "exposure_pct": 2.54,
+    "exposure_pct": 0.0,
     "max_positions": 25,
-    "halted": false,
+    "halted": true,
     "risk_per_trade": "varies",
     "max_portfolio_risk": 0.05
   },
@@ -1779,35 +1832,15 @@
   },
   "research": {
     "daemon": {
-      "status": "stopped",
-      "uptime_s": 2191.0,
-      "experiments_completed": 18,
+      "status": "running",
+      "uptime_s": 0.0,
+      "experiments_completed": 0,
       "experiments_failed": 0,
       "queue_depth": 0,
-      "current_experiment": "",
-      "timestamp": "2026-03-11T13:30:30.092546+00:00"
+      "current_experiment": "mean_reversion",
+      "timestamp": "2026-03-11T23:30:06.326248+00:00"
     },
     "leaderboard": [
-      {
-        "id": "momentum_breakout",
-        "name": "Momentum Breakout",
-        "status": "dormant",
-        "tier": 0,
-        "type": "momentum",
-        "total_experiments": 97,
-        "best_sharpe": 0.792,
-        "best_win_rate": 52.3,
-        "best_trades": 279,
-        "stage": "solo",
-        "stage_icon": "\u2705",
-        "coverage": {
-          "solo": "\u2705"
-        },
-        "description": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
-        "reference": "Atlas original",
-        "best_cagr": 59.0697,
-        "best_pf": 4.6525
-      },
       {
         "id": "lower_band_reversion",
         "name": "Lower Band Reversion",
@@ -1829,12 +1862,32 @@
         "best_pf": 6.8171
       },
       {
+        "id": "momentum_breakout",
+        "name": "Momentum Breakout",
+        "status": "dormant",
+        "tier": 0,
+        "type": "momentum",
+        "total_experiments": 111,
+        "best_sharpe": 0.6928,
+        "best_win_rate": 52.4,
+        "best_trades": 370,
+        "stage": "solo",
+        "stage_icon": "\u2705",
+        "coverage": {
+          "solo": "\u2705"
+        },
+        "description": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
+        "reference": "Atlas original",
+        "best_cagr": 46.9486,
+        "best_pf": 3.1771
+      },
+      {
         "id": "trend_following",
         "name": "Trend Following",
         "status": "active",
         "tier": 0,
         "type": "trend_following",
-        "total_experiments": 339,
+        "total_experiments": 356,
         "best_sharpe": 0.6618,
         "best_win_rate": 51.3,
         "best_trades": 228,
@@ -1854,7 +1907,7 @@
         "status": "active",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 105,
+        "total_experiments": 120,
         "best_sharpe": 0.6424,
         "best_win_rate": 51.5,
         "best_trades": 388,
@@ -1867,8 +1920,8 @@
         },
         "description": "RSI(14) + z-score mean reversion on individual SP500 stocks. Core active strategy. Enters oversold reversals with ATR-based stop losses. Optimized via coordinate descent to Sharpe 1.04, CAGR 15.69% (v",
         "reference": "Atlas original",
-        "best_cagr": 9.9383,
-        "best_pf": 3.0199
+        "best_cagr": 0.7667,
+        "best_pf": 1.2631
       },
       {
         "id": "opening_gap",
@@ -1876,7 +1929,7 @@
         "status": "active",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 227,
+        "total_experiments": 246,
         "best_sharpe": 0.6183,
         "best_win_rate": null,
         "best_trades": 0,
@@ -1896,7 +1949,7 @@
         "status": "dormant",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 80,
+        "total_experiments": 95,
         "best_sharpe": 0.5091,
         "best_win_rate": 59.1,
         "best_trades": 728,
@@ -1916,10 +1969,10 @@
         "status": "dormant",
         "tier": 0,
         "type": "volatility",
-        "total_experiments": 117,
-        "best_sharpe": 0.4626,
-        "best_win_rate": 47.8,
-        "best_trades": 345,
+        "total_experiments": 129,
+        "best_sharpe": 0.4859,
+        "best_win_rate": 50.1,
+        "best_trades": 331,
         "stage": "solo",
         "stage_icon": "\u2705",
         "coverage": {
@@ -1927,8 +1980,8 @@
         },
         "description": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
         "reference": "Bollinger Band Squeeze",
-        "best_cagr": 15.0448,
-        "best_pf": 1.7791
+        "best_cagr": 68.7716,
+        "best_pf": 7.8184
       },
       {
         "id": "sector_rotation",
@@ -1954,7 +2007,7 @@
         "status": "dormant",
         "tier": 0,
         "type": "mean_reversion",
-        "total_experiments": 135,
+        "total_experiments": 149,
         "best_sharpe": 0.4148,
         "best_win_rate": 59.2,
         "best_trades": 942,
@@ -2050,7 +2103,7 @@
         "status": "not_built",
         "tier": 1,
         "type": "trend_following",
-        "total_experiments": 4,
+        "total_experiments": 5,
         "best_sharpe": -0.9127,
         "best_win_rate": 49.3,
         "best_trades": 205,
@@ -2386,9 +2439,9 @@
       "sandbox": 21,
       "sweep": {
         "untested": 21,
-        "screen": 0,
+        "screen": 1,
         "quick": 0,
-        "solo": 5,
+        "solo": 4,
         "optimize": 3
       }
     },
@@ -2435,118 +2488,6 @@
       }
     ],
     "activity_feed": [
-      {
-        "experiment_id": "ar-20260311_152317",
-        "timestamp": "2026-03-11T05:23:17.461582+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.5795,
-        "win_rate_pct": null,
-        "total_trades": 293,
-        "cagr_pct": 39.3289,
-        "max_drawdown_pct": 10.6719,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 atr_period: 14\u219220"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_152720",
-        "timestamp": "2026-03-11T05:27:20.657597+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": -0.2466,
-        "win_rate_pct": null,
-        "total_trades": 290,
-        "cagr_pct": 3.8238,
-        "max_drawdown_pct": 10.2343,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 trail=2.8 (between 2.5 and 3.0)"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_153100",
-        "timestamp": "2026-03-11T05:31:00.857846+00:00",
-        "strategy": "mean_reversion",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.2742,
-        "win_rate_pct": null,
-        "total_trades": 332,
-        "cagr_pct": 8.4796,
-        "max_drawdown_pct": 7.1122,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 RSI period 8 \u2014 between grid points"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_172526",
-        "timestamp": "2026-03-11T07:25:26.649580+00:00",
-        "strategy": "mean_reversion",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.1506,
-        "win_rate_pct": null,
-        "total_trades": 273,
-        "cagr_pct": 6.4122,
-        "max_drawdown_pct": 4.7575,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 zscore lookback 10\u21927: even faster"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_173539",
-        "timestamp": "2026-03-11T07:35:39.020213+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.4557,
-        "win_rate_pct": null,
-        "total_trades": 293,
-        "cagr_pct": 27.9558,
-        "max_drawdown_pct": 11.5484,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 fast_ma: 25\u219250"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_173736",
-        "timestamp": "2026-03-11T07:37:36.418815+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.4709,
-        "win_rate_pct": null,
-        "total_trades": 237,
-        "cagr_pct": 21.1858,
-        "max_drawdown_pct": 8.7473,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 slow_ma: 175\u219220"
-        ]
-      },
-      {
-        "experiment_id": "ar-20260311_173914",
-        "timestamp": "2026-03-11T07:39:14.507482+00:00",
-        "strategy": "trend_following",
-        "category": "autoresearch",
-        "verdict": "pass",
-        "sharpe": 0.4891,
-        "win_rate_pct": null,
-        "total_trades": 219,
-        "cagr_pct": 22.3066,
-        "max_drawdown_pct": 7.3923,
-        "promoted": false,
-        "learnings": [
-          "autoresearch: keep \u2014 pullback_pct: 0.05\u21920.06"
-        ]
-      },
       {
         "experiment_id": "ar-20260311_174025",
         "timestamp": "2026-03-11T07:40:25.473075+00:00",
@@ -2754,6 +2695,118 @@
         "learnings": [
           "autoresearch: keep \u2014 ibs_threshold: None\u21921.0"
         ]
+      },
+      {
+        "experiment_id": "ar-20260311_233403",
+        "timestamp": "2026-03-11T13:34:03.851282+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.3838,
+        "win_rate_pct": null,
+        "total_trades": 143,
+        "cagr_pct": 10.2683,
+        "max_drawdown_pct": 4.5243,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 profit_target_atr_mult: 1.5\u21922.5"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_234534",
+        "timestamp": "2026-03-11T13:45:34.434242+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4059,
+        "win_rate_pct": null,
+        "total_trades": 141,
+        "cagr_pct": 10.8496,
+        "max_drawdown_pct": 3.9065,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 ibs_max: 1.0\u21920.7"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260312_000417",
+        "timestamp": "2026-03-11T14:04:17.115508+00:00",
+        "strategy": "momentum_breakout",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.6603,
+        "win_rate_pct": null,
+        "total_trades": 294,
+        "cagr_pct": 44.4662,
+        "max_drawdown_pct": 12.0998,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 atr_stop_mult: 2.0\u21921.5"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260312_001727",
+        "timestamp": "2026-03-11T14:17:27.592333+00:00",
+        "strategy": "momentum_breakout",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.6928,
+        "win_rate_pct": null,
+        "total_trades": 370,
+        "cagr_pct": 46.9486,
+        "max_drawdown_pct": 13.604,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 max_hold_days: 15\u219210"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260312_003716",
+        "timestamp": "2026-03-11T14:37:16.242086+00:00",
+        "strategy": "bb_squeeze",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.421,
+        "win_rate_pct": null,
+        "total_trades": 362,
+        "cagr_pct": 62.2793,
+        "max_drawdown_pct": 18.9927,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 bb_std: 2.5\u21921.5"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260312_005338",
+        "timestamp": "2026-03-11T14:53:38.055727+00:00",
+        "strategy": "bb_squeeze",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4859,
+        "win_rate_pct": null,
+        "total_trades": 331,
+        "cagr_pct": 68.7716,
+        "max_drawdown_pct": 9.6731,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21922.0"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260312_091855",
+        "timestamp": "2026-03-11T23:18:55.555996+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -1.4426,
+        "win_rate_pct": null,
+        "total_trades": 65,
+        "cagr_pct": 0.7667,
+        "max_drawdown_pct": 6.5688,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep \u2014 rsi_period: 14\u21927"
+        ]
       }
     ],
     "queue_summary": {
@@ -2763,8 +2816,7 @@
         "deferred": 15,
         "partial": 20,
         "passed": 2,
-        "queued": 45,
-        "claimed": 4
+        "queued": 49
       },
       "by_priority": {
         "P2": 45,
@@ -2798,7 +2850,7 @@
           "priority": "P2",
           "category": "dormant",
           "market": "sp500",
-          "status": "claimed",
+          "status": "queued",
           "strategy_name": "bb_squeeze",
           "estimated_runtime_min": 5
         },
@@ -3228,7 +3280,7 @@
           "priority": "P1",
           "category": "active",
           "market": "sp500",
-          "status": "claimed",
+          "status": "queued",
           "strategy_name": "trend_following",
           "estimated_runtime_min": 0
         },
@@ -3238,7 +3290,7 @@
           "priority": "P2",
           "category": "active",
           "market": "sp500",
-          "status": "claimed",
+          "status": "queued",
           "strategy_name": "mean_reversion",
           "estimated_runtime_min": 0
         },
@@ -3248,7 +3300,7 @@
           "priority": "P1",
           "category": "active",
           "market": "sp500",
-          "status": "claimed",
+          "status": "queued",
           "strategy_name": "mean_reversion",
           "estimated_runtime_min": 0
         },
@@ -3275,52 +3327,56 @@
       ]
     },
     "statistics": {
-      "total_experiments": 1201,
-      "passed": 42,
+      "total_experiments": 1308,
+      "passed": 49,
       "failed": 42,
       "partial": 48,
       "promoted": 3,
-      "pass_rate_pct": 31.1,
-      "days_active": 13,
+      "pass_rate_pct": 34.5,
+      "days_active": 14,
       "strategies_tested": 15,
       "strategies_total": 33,
       "sweep_strategies": 29,
-      "sweep_experiments": 1201,
+      "sweep_experiments": 1308,
       "sweep_window_active": false,
-      "next_window": "Next: Thu 09:30",
-      "next_window_iso": "2026-03-12T09:30:00"
+      "next_window": "Next: 12:30",
+      "next_window_iso": "2026-03-12T12:30:00"
     },
     "daily_insight": {
-      "type": "fee_waterfall",
-      "chart": "waterfall",
-      "title": "Fee drag: 0.8pp CAGR lost to real trading costs",
-      "subtitle": "Moomoo US: ~$1.09/order \u00b7 7 trades filtered",
-      "steps": [
+      "type": "fee_compare",
+      "chart": "grouped_bar",
+      "title": "Real fees reduce CAGR by 0.8pp but strategy still beats benchmark",
+      "subtitle": "Moomoo US: ~$1.09/order",
+      "labels": [
+        "CAGR",
+        "Sharpe",
+        "Win Rate",
+        "Profit Factor"
+      ],
+      "series": [
         {
-          "label": "Gross CAGR",
-          "value": 12.68,
-          "type": "start"
+          "name": "Zero Fee",
+          "values": [
+            12.68,
+            0.84,
+            58.8,
+            1.553
+          ],
+          "color": "secondary"
         },
         {
-          "label": "Commission",
-          "value": -0.46799999999999997
-        },
-        {
-          "label": "Slippage",
-          "value": -0.23399999999999999
-        },
-        {
-          "label": "Filtering",
-          "value": -0.07800000000000001
-        },
-        {
-          "label": "Net CAGR",
-          "value": 0,
-          "type": "total"
+          "name": "Real Fee",
+          "values": [
+            11.9,
+            0.79,
+            57.8,
+            1.54
+          ],
+          "color": "primary"
         }
       ],
       "annotation": {
-        "text": "Net 11.9% still beats SPY 11.7%",
+        "text": "Strategy CAGR 11.9% vs SPY 11.7%",
         "color": "green"
       },
       "date": "20260226"
@@ -3330,9 +3386,9 @@
         "id": "researcher",
         "name": "Atlas",
         "type": "sweep",
-        "status": "sleeping",
-        "task": "Engine offline",
-        "experiments_done": 18,
+        "status": "typing",
+        "task": "Sweeping Mean Reversion",
+        "experiments_done": 0,
         "progress": {}
       }
     ],
@@ -3368,10 +3424,10 @@
         "detail": "VIX filter is counterproductive for MR-heavy portfolio because MR needs high-VIX panic periods."
       },
       {
-        "text": "Momentum Breakout: Sharpe 0.792, 52% WR, 279 trades",
+        "text": "Momentum Breakout: Sharpe 0.693, 52% WR, 370 trades",
         "type": "record",
         "impact": "high",
-        "detail": "Best params found after 33 experiments"
+        "detail": "Best params found after 35 experiments"
       },
       {
         "text": "Short Term Mr: Sharpe 0.509, 59% WR, 728 trades",
@@ -3392,10 +3448,10 @@
         "detail": "Volume filter improves MR signal quality"
       },
       {
-        "text": "Bb Squeeze: Sharpe 0.463, 48% WR, 345 trades",
+        "text": "Bb Squeeze: Sharpe 0.486, 50% WR, 331 trades",
         "type": "record",
         "impact": "medium",
-        "detail": "Best params found after 77 experiments"
+        "detail": "Best params found after 79 experiments"
       },
       {
         "text": "Connors Rsi2: Sharpe 0.415, 59% WR, 942 trades",
@@ -3422,14 +3478,12 @@
         "detail": "Best params found after 0 experiments"
       },
       {
-        "text": "Mean Reversion: Sharpe 0.363, 60% WR, 159 trades",
+        "text": "Opening Gap: Sharpe 0.340, 62% WR, 257 trades",
         "type": "record",
         "impact": "medium",
-        "detail": "Best params found after 34 experiments"
+        "detail": "Best params found after 60 experiments"
       }
     ]
   },
-  "stale_warnings": [
-    "Broker offline \u2014 showing data from 57m ago"
-  ]
+  "stale_warnings": []
 }

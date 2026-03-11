@@ -116,3 +116,6 @@ timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
 2026-03-11T13:45:34	0.4059	141	3.91	3.2471	10.85	ibs_max=0.7	keep	ibs_max: 1.0→0.7 (best of 3)
 2026-03-11T13:45:34	0.2984	132	3.58	2.9392	8.86	ibs_max=0.3	discard	ibs_max: 1.0→0.3
 2026-03-11T13:45:34	0.3962	140	3.58	3.2797	10.72	ibs_max=0.5	discard	ibs_max: 1.0→0.5
+2026-03-11T23:08:21	-1.6160	42	4.91	1.6329	1.07		keep	baseline
+2026-03-11T23:18:55	-1.4426	65	6.57	1.2631	0.77	rsi_period=7	keep	rsi_period: 14→7
+2026-03-11T23:30:22	0.1869	210	11.44	1.7547	7.02		keep	baseline
