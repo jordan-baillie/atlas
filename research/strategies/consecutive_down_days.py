@@ -230,7 +230,7 @@ class ConsecutiveDownDays(BaseStrategy):
                     take_profit=round(take_profit, 2) if take_profit else None,
                     position_size=shares,
                     position_value=round(shares * entry_price, 2),
-                    risk_amount=round(pos_result["risk_amount"], 2),
+                    risk_amount=round(pos_result["total_risk"], 2),
                     confidence=round(confidence, 3),
                     rationale=rationale,
                     features={
@@ -239,7 +239,7 @@ class ConsecutiveDownDays(BaseStrategy):
                         "atr": round(atr_val, 3),
                         "vol_ratio": round(vol_ratio.iloc[-1], 3),
                     },
-                    market_id=self.market_id,
+                    market_id="",
                 ))
 
             except Exception as e:
