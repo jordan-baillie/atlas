@@ -400,7 +400,7 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
   content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, var(--border), transparent); opacity: 0.3;
 }
-#agent-canvas { display: block; width: 100%; height: 220px; image-rendering: pixelated; }
+#agent-canvas { display: block; width: 100%; height: 340px; image-rendering: pixelated; }
 
 /* KPI Strip */
 .research-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
@@ -458,7 +458,7 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 @media (max-width: 700px) {
   .research-kpis { grid-template-columns: repeat(2, 1fr); }
   .lb-name { width: 100px; }
-  #agent-canvas { height: 120px; }
+  #agent-canvas { height: 200px; }
 }
 
 /* ── P&L breakdown ── */
@@ -3279,7 +3279,7 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
   var canvas = document.getElementById('agent-canvas');
   if (canvas) {
     var hasDirector = (agents || []).some(function(a) { return a.type === 'principal'; });
-    var newH = hasDirector ? '360px' : '220px';
+    var newH = hasDirector ? '440px' : '340px';
     if (canvas.style.height !== newH) {
       canvas.style.height = newH;
       setTimeout(_resizeAgentCanvas, 50);
@@ -3291,7 +3291,7 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
 }
 
 // ── Room Props ──────────────────────────────────────────────────
-function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, strategyPipeline) {
+function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, strategyPipeline, isActive, isSleeping) {
   // All props drawn with theme colors, positioned relative to canvas edges
 
   // FIX 7: Server rack — larger, more readable frame + bigger LED dots
@@ -3307,54 +3307,71 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
     ctx.beginPath(); ctx.moveTo(rackX, rackY + ui * 9); ctx.lineTo(rackX + rackW, rackY + ui * 9); ctx.stroke();
   }
   ctx.globalAlpha = 1.0;
-  // LEDs — bigger circles for readability
+  // LEDs — active: blinking green+blue. Idle: dim red standby.
   for (var li = 0; li < 5; li++) {
-    var blinkOn = ((frame + li * 17) % 60) < 40;
     var ledY = rackY + 5 + li * 9;
-    // Green status LED
-    ctx.beginPath();
-    ctx.arc(rackX + 6, ledY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = blinkOn ? tc.green : tc.border;
-    ctx.globalAlpha = blinkOn ? 0.9 : 0.3;
-    ctx.fill();
-    // Blue activity LED
-    ctx.beginPath();
-    ctx.arc(rackX + 16, ledY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = ((frame + li * 23) % 80) < 50 ? tc.blue : tc.border;
-    ctx.fill();
+    if (isActive) {
+      var blinkOn = ((frame + li * 17) % 60) < 40;
+      ctx.beginPath();
+      ctx.arc(rackX + 6, ledY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = blinkOn ? tc.green : tc.border;
+      ctx.globalAlpha = blinkOn ? 0.9 : 0.3;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rackX + 16, ledY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = ((frame + li * 23) % 80) < 50 ? tc.blue : tc.border;
+      ctx.fill();
+    } else {
+      // Standby: single dim amber LED, no blinking
+      ctx.beginPath();
+      ctx.arc(rackX + 6, ledY, 2, 0, Math.PI * 2);
+      ctx.fillStyle = isSleeping ? tc.red : tc.amber;
+      ctx.globalAlpha = isSleeping ? 0.2 : 0.35;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rackX + 16, ledY, 2, 0, Math.PI * 2);
+      ctx.fillStyle = tc.border;
+      ctx.globalAlpha = 0.15;
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1.0;
 
   // FIX 8: Plant anchored to floor (was floating at wallH boundary)
   var plantX = W - 38, potW = 12, potH = 10;
   var potY = H - potH - 3; // anchor to floor
-  ctx.fillStyle = tc.amber; ctx.globalAlpha = 0.6;
+  ctx.fillStyle = tc.amber; ctx.globalAlpha = isSleeping ? 0.25 : 0.6;
   ctx.fillRect(plantX, potY, potW, potH);
   ctx.fillRect(plantX + 2, potY + potH, potW - 4, 3);
   ctx.globalAlpha = 1.0;
-  ctx.fillStyle = tc.green; ctx.globalAlpha = 0.7;
+  ctx.fillStyle = tc.green; ctx.globalAlpha = isSleeping ? 0.25 : 0.7;
   var leafCx = plantX + potW / 2;
-  var sway = Math.sin(frame * 0.02) * 1.5;
+  var sway = isActive ? Math.sin(frame * 0.02) * 1.5 : 0; // No sway when idle
   ctx.fillRect(leafCx - 5 + sway, potY - 10, 4, 4);
   ctx.fillRect(leafCx + 2 - sway, potY - 12, 4, 4);
   ctx.fillRect(leafCx - 1, potY - 7, 4, 4);
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = isSleeping ? 0.15 : 0.5;
   ctx.fillRect(leafCx, potY - 5, 2, 7);
   ctx.globalAlpha = 1.0;
 
-  // ── Coffee mug (right floor) ──
+  // ── Coffee mug (right floor) — no steam when idle ──
   var mugX = W - 90, mugY = H - 20;
   if (W > 500) {
     ctx.fillStyle = tc.surfaceRaised;
+    ctx.globalAlpha = isSleeping ? 0.4 : 1.0;
     ctx.fillRect(mugX, mugY, 7, 9);
     ctx.strokeStyle = tc.border; ctx.lineWidth = 1;
     ctx.strokeRect(mugX, mugY, 7, 9);
     ctx.beginPath(); ctx.arc(mugX + 9, mugY + 4, 3, -Math.PI/2, Math.PI/2); ctx.stroke();
-    ctx.globalAlpha = 0.2 + Math.sin(frame * 0.05) * 0.1;
-    ctx.fillStyle = tc.textTertiary;
-    ctx.fillRect(mugX + 2, mugY - 4 - Math.sin(frame * 0.03) * 2, 1, 3);
-    ctx.fillRect(mugX + 4, mugY - 5 - Math.cos(frame * 0.04) * 2, 1, 3);
     ctx.globalAlpha = 1.0;
+    // Steam only when active
+    if (isActive) {
+      ctx.globalAlpha = 0.2 + Math.sin(frame * 0.05) * 0.1;
+      ctx.fillStyle = tc.textTertiary;
+      ctx.fillRect(mugX + 2, mugY - 4 - Math.sin(frame * 0.03) * 2, 1, 3);
+      ctx.fillRect(mugX + 4, mugY - 5 - Math.cos(frame * 0.04) * 2, 1, 3);
+      ctx.globalAlpha = 1.0;
+    }
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -3362,54 +3379,69 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
   // ════════════════════════════════════════════════════════════════
   if (W < 350) return; // Too narrow to render
 
-  var wbPad = 8;
-  var wbW = Math.min(W - 100, 560);
+  var wbPad = 10;
+  var wbW = Math.min(W - 80, 720);
   var wbX = (W - wbW) / 2;
   var wbY = 3;
-  var wbH = wallH - 16;
+  var wbH = wallH - 10;
 
-  // Board background — bright white/cream
+  // Board background — brighter when active, dim glow when idle
   ctx.fillStyle = tc.text;
-  ctx.globalAlpha = 0.07;
+  ctx.globalAlpha = isActive ? 0.10 : isSleeping ? 0.04 : 0.07;
   ctx.beginPath();
-  ctx.roundRect(wbX, wbY, wbW, wbH, 3);
+  ctx.roundRect(wbX, wbY, wbW, wbH, 4);
   ctx.fill();
   ctx.globalAlpha = 1.0;
 
+  // Active: subtle green glow around whiteboard edges
+  if (isActive) {
+    ctx.shadowColor = tc.green;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = tc.green;
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(wbX, wbY, wbW, wbH, 4);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1.0;
+  }
+
   // Board border
-  ctx.strokeStyle = tc.border;
+  ctx.strokeStyle = isSleeping ? tc.borderSubtle : tc.border;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.roundRect(wbX, wbY, wbW, wbH, 3);
+  ctx.roundRect(wbX, wbY, wbW, wbH, 4);
   ctx.stroke();
 
   // ── Header ──
   ctx.fillStyle = tc.textSecondary;
-  ctx.globalAlpha = 0.7;
-  ctx.font = 'bold 8px "JetBrains Mono", monospace';
+  ctx.globalAlpha = 0.85;
+  ctx.font = 'bold 10px "JetBrains Mono", monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('RESEARCH LAB', wbX + wbPad, wbY + 11);
+  ctx.fillText('RESEARCH LAB', wbX + wbPad, wbY + 14);
   ctx.globalAlpha = 1.0;
 
   // Divider line under header
   ctx.strokeStyle = tc.border;
   ctx.globalAlpha = 0.4;
   ctx.beginPath();
-  ctx.moveTo(wbX + wbPad, wbY + 15);
-  ctx.lineTo(wbX + wbW - wbPad, wbY + 15);
+  ctx.moveTo(wbX + wbPad, wbY + 18);
+  ctx.lineTo(wbX + wbW - wbPad, wbY + 18);
   ctx.stroke();
   ctx.globalAlpha = 1.0;
 
   // ── Stats row (right-aligned in header) ──
-  var exp = stats.total_experiments || 0;
+  var exp = stats.sweep_experiments || stats.total_experiments || 0;
   var passRate = stats.pass_rate_pct || 0;
   var promoted = stats.promoted || 0;
-  ctx.font = '7px "JetBrains Mono", monospace';
+  var sweepCount = stats.sweep_strategies || 0;
+  ctx.font = '9px "JetBrains Mono", monospace';
   ctx.textAlign = 'right';
   ctx.fillStyle = tc.textTertiary;
-  ctx.globalAlpha = 0.7;
-  var statsStr = exp + ' exp  ' + passRate.toFixed(0) + '% pass  ' + promoted + ' promoted';
-  ctx.fillText(statsStr, wbX + wbW - wbPad, wbY + 11);
+  ctx.globalAlpha = 0.8;
+  var statsStr = exp + ' exp · ' + sweepCount + ' strategies · ' + promoted + ' promoted';
+  ctx.fillText(statsStr, wbX + wbW - wbPad, wbY + 14);
   ctx.globalAlpha = 1.0;
 
   // ── Strategy list with status indicators ──
@@ -3441,9 +3473,9 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
     if (s.best_sharpe != null) bestSharpe[sid] = s.best_sharpe;
   });
 
-  var colY = wbY + 19;
-  var lineH = 8;
-  var numCols = wbW > 500 ? 3 : wbW > 350 ? 2 : 1;
+  var colY = wbY + 23;
+  var lineH = 10;
+  var numCols = wbW > 600 ? 3 : wbW > 400 ? 2 : 1;
   var colW = (wbW - wbPad * 2) / numCols;
 
   ctx.textAlign = 'left';
@@ -3458,7 +3490,7 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
 
     var label = strat.replace(/_/g, ' ');
     label = label.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-    if (label.length > 14) label = label.substring(0, 12) + '..';
+    if (label.length > 16) label = label.substring(0, 14) + '..';
 
     var activeAgent = agentTasks[strat];
     var sharpe = bestSharpe[strat];
@@ -3469,49 +3501,64 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
       ctx.fillStyle = tc.green;
       ctx.globalAlpha = 0.6 + Math.sin(frame * 0.1 + idx) * 0.3;
       ctx.beginPath();
-      ctx.arc(dotX + 2, ly + 3, 2.5, 0, Math.PI * 2);
+      ctx.arc(dotX + 3, ly + 4, 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1.0;
     } else if (sharpe && sharpe > 0.3) {
       ctx.strokeStyle = tc.green;
-      ctx.globalAlpha = 0.6; ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(dotX, ly + 3);
-      ctx.lineTo(dotX + 2, ly + 5);
-      ctx.lineTo(dotX + 5, ly);
+      ctx.moveTo(dotX, ly + 4);
+      ctx.lineTo(dotX + 3, ly + 7);
+      ctx.lineTo(dotX + 7, ly + 1);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    } else if (sharpe && sharpe > 0) {
+      ctx.fillStyle = tc.amber;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.arc(dotX + 3, ly + 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    } else if (sharpe != null && sharpe < 0) {
+      ctx.strokeStyle = tc.red;
+      ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(dotX, ly + 1); ctx.lineTo(dotX + 6, ly + 7);
+      ctx.moveTo(dotX + 6, ly + 1); ctx.lineTo(dotX, ly + 7);
       ctx.stroke();
       ctx.globalAlpha = 1.0;
     } else {
       ctx.strokeStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.3; ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(dotX + 2, ly + 3, 2, 0, Math.PI * 2);
+      ctx.arc(dotX + 3, ly + 4, 2.5, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1.0;
     }
 
     // Strategy name
-    ctx.font = '7px "JetBrains Mono", monospace';
-    ctx.fillStyle = activeAgent ? tc.text : tc.textSecondary;
-    ctx.globalAlpha = activeAgent ? 0.9 : 0.5;
-    ctx.fillText(label, dotX + 8, ly + 5);
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.fillStyle = activeAgent ? tc.text : sharpe > 0.3 ? tc.text : tc.textSecondary;
+    ctx.globalAlpha = activeAgent ? 1.0 : sharpe > 0 ? 0.75 : 0.5;
+    ctx.fillText(label, dotX + 10, ly + 7);
     ctx.globalAlpha = 1.0;
 
     // Sharpe value
     if (sharpe != null) {
-      ctx.fillStyle = sharpe > 0.5 ? tc.green : sharpe > 0.2 ? tc.amber : sharpe < 0 ? tc.red || '#d05858' : tc.textTertiary;
-      ctx.globalAlpha = 0.7;
-      ctx.font = '7px "JetBrains Mono", monospace';
-      ctx.fillText(sharpe.toFixed(2), dotX + colW - 50, ly + 5);
+      ctx.fillStyle = sharpe > 0.5 ? tc.green : sharpe > 0.2 ? tc.amber : sharpe > 0 ? tc.textSecondary : tc.red;
+      ctx.globalAlpha = sharpe > 0 ? 0.85 : 0.45;
+      ctx.font = '9px "JetBrains Mono", monospace';
+      ctx.fillText(sharpe.toFixed(2), dotX + colW - 50, ly + 7);
       ctx.globalAlpha = 1.0;
     }
 
-    // Agent tag
+    // Agent tag (when actively working on this strategy)
     if (activeAgent) {
       ctx.fillStyle = activeAgent.type === 'nova' ? '#7a4a8a' : tc.green;
-      ctx.globalAlpha = 0.8;
-      ctx.font = '7px "Inter", sans-serif';
-      ctx.fillText('← ' + activeAgent.name, dotX + colW - 40, ly + 5);
+      ctx.globalAlpha = 0.9;
+      ctx.font = '8px "Inter", sans-serif';
+      ctx.fillText('← ' + activeAgent.name, dotX + colW - 35, ly + 7);
       ctx.globalAlpha = 1.0;
     }
   });
@@ -3537,9 +3584,9 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
       ctx.globalAlpha = 1.0;
 
       // "PIPELINE" label
-      ctx.font = '6px "JetBrains Mono", monospace';
+      ctx.font = '8px "JetBrains Mono", monospace';
       ctx.fillStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = 0.6;
       ctx.textAlign = 'left';
       ctx.fillText('PIPELINE', wbX + wbPad, pipeY);
       ctx.globalAlpha = 1.0;
@@ -3555,12 +3602,12 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
         var bx2 = px + si * stageSpacing;
         if (bx2 + stageSpacing > wbX + wbW - wbPad) break;
 
-        ctx.font = '6px "JetBrains Mono", monospace';
+        ctx.font = '8px "JetBrains Mono", monospace';
         ctx.fillStyle = stageVal > 0 ? stageColor : tc.textTertiary;
-        ctx.globalAlpha = stageVal > 0 ? 0.8 : 0.2;
+        ctx.globalAlpha = stageVal > 0 ? 0.85 : 0.25;
         ctx.textAlign = 'center';
         ctx.fillText(stageLabel, bx2, pipeY - 4);
-        ctx.fillText(stageVal, bx2, pipeY + 2);
+        ctx.fillText(stageVal, bx2, pipeY + 4);
         ctx.globalAlpha = 1.0;
       }
       ctx.textAlign = 'left';
@@ -3711,11 +3758,12 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     });
   });
 
-  // Speech bubble (theme-aware)
+  // Speech bubble (theme-aware) — positioned below name label, never overlaps whiteboard
   var bubbleText = agent.task || '';
   if (bubbleText) {
     if (bubbleText.length > 28) bubbleText = bubbleText.substring(0, 25) + '...';
-    var bubbleY = charY - 24;
+    // Place bubble below the agent (below desk + name) to avoid whiteboard overlap
+    var bubbleY = deskY + deskH + 28;
     ctx.font = '10px "JetBrains Mono", monospace';
     var textW = ctx.measureText(bubbleText).width;
     var padX = 8, padY = 4;
@@ -3740,13 +3788,13 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     ctx.roundRect(bx, by, bw, bh, 4);
     ctx.stroke();
 
-    // Tail
+    // Tail — points UP toward the agent
     ctx.fillStyle = tc.surfaceRaised;
     ctx.globalAlpha = 0.95;
     ctx.beginPath();
-    ctx.moveTo(cx - 4, by + bh);
-    ctx.lineTo(cx + 4, by + bh);
-    ctx.lineTo(cx, by + bh + 5);
+    ctx.moveTo(cx - 4, by);
+    ctx.lineTo(cx + 4, by);
+    ctx.lineTo(cx, by - 5);
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
@@ -3800,12 +3848,21 @@ function drawAgentFloor() {
   _readThemeColors();
   var tc = _themeColors;
 
+  // ── Detect active vs idle state ──
+  var agents = f.agents || [];
+  var isActive = agents.some(function(a) {
+    return a.status === 'typing' || a.status === 'reading';
+  });
+  var isSleeping = !isActive && agents.every(function(a) {
+    return a.status === 'sleeping' || a.status === 'idle';
+  });
+
   // ── Background: wall + floor ──
-  // Taller canvas (director present) → smaller wall ratio so floor has room for 2 rows
-  var wallPct = (H > 250) ? 0.34 : 0.46;
+  // Wall takes up more space now for bigger whiteboard
+  var wallPct = (H > 350) ? 0.42 : 0.50;
   var wallH = Math.round(H * wallPct);
 
-  // Wall — subtle gradient
+  // Wall — subtle gradient (dimmer when idle)
   var wallGrad = ctx.createLinearGradient(0, 0, 0, wallH);
   wallGrad.addColorStop(0, tc.surfaceRaised);
   wallGrad.addColorStop(1, tc.surfaceHover);
@@ -3819,6 +3876,17 @@ function drawAgentFloor() {
   // Floor — warm wood-plank effect
   ctx.fillStyle = tc.surfaceHover;
   ctx.fillRect(0, wallH, W, H - wallH);
+
+  // ── Idle room dimming: dark overlay on floor area ──
+  if (isSleeping) {
+    ctx.fillStyle = '#000000';
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(0, wallH, W, H - wallH);
+    // Dim the wall too but less
+    ctx.globalAlpha = 0.2;
+    ctx.fillRect(0, 0, W, wallH);
+    ctx.globalAlpha = 1.0;
+  }
 
   // Plank lines (horizontal, subtle)
   var plankH = 12;
@@ -3846,18 +3914,41 @@ function drawAgentFloor() {
   ctx.globalAlpha = 1.0;
 
   // ── Props (placed at fixed positions relative to canvas) ──
-  _drawProps(ctx, W, H, wallH, tc, f.frame, f.agents, f.stats || {}, f.leaderboard || [], f.strategyPipeline || {});
+  _drawProps(ctx, W, H, wallH, tc, f.frame, agents, f.stats || {}, f.leaderboard || [], f.strategyPipeline || {}, isActive, isSleeping);
 
-  var agents = f.agents;
+  // ── Ceiling light effect — illuminates when active, off when idle ──
+  if (isActive) {
+    // Warm overhead light cone
+    var lgx = W / 2, lgy = 0;
+    var lightGrad = ctx.createRadialGradient(lgx, lgy, 10, lgx, lgy, H * 0.7);
+    lightGrad.addColorStop(0, 'rgba(212,168,74,0.06)');
+    lightGrad.addColorStop(0.4, 'rgba(212,168,74,0.02)');
+    lightGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lightGrad;
+    ctx.fillRect(0, 0, W, H);
+  }
   // FIX 20: Show loading state when no agent data yet
   if (!agents || !agents.length) {
-    var isDark2 = document.documentElement.getAttribute('data-theme') !== 'light';
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = isDark2 ? '#555555' : '#8d8d8d';
-    ctx.font = '12px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(f.inited ? 'No agents active' : 'Loading agents...', W / 2, H / 2);
-    return;
+    return; // Props + whiteboard already rendered, just no agents
+  }
+
+  // ── When idle/sleeping: draw empty room + idle status text (no agents) ──
+  if (isSleeping) {
+    // "Lights off" text in the floor area
+    ctx.fillStyle = tc.textTertiary;
+    ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.015) * 0.08;
+    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    var idleMsg = 'Research engine idle — next sweep window pending';
+    ctx.fillText(idleMsg, W / 2, wallH + (H - wallH) / 2);
+    // Pulsing standby dot
+    ctx.beginPath();
+    ctx.arc(W / 2, wallH + (H - wallH) / 2 + 18, 3, 0, Math.PI * 2);
+    ctx.fillStyle = tc.amber;
+    ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.03) * 0.2;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+    return; // Don't draw agents or desks
   }
 
   // Split into director (principal) row and team row
