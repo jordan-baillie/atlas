@@ -338,8 +338,11 @@ class BacktestEngine:
         if day_idx <= 0:
             return equity
         yesterday = trading_dates[day_idx - 1]
-        exit_data = {t: df.loc[df.index <= yesterday] for t, df in data.items()
-                     if (df.index <= yesterday).any()}
+        exit_data = {}
+        for t, df in data.items():
+            n = df.index.searchsorted(yesterday, side='right')
+            if n > 0:
+                exit_data[t] = df.iloc[:n]
 
         for strategy in strategies:
             exit_recs = strategy.check_exits(exit_data, open_positions)
@@ -688,9 +691,9 @@ class BacktestEngine:
             # Build data windows up to yesterday for signal generation
             signal_data = {}
             for ticker, df in data.items():
-                mask = df.index <= yesterday
-                if mask.any() and mask.sum() >= self.min_history:
-                    signal_data[ticker] = df.loc[mask]
+                n = df.index.searchsorted(yesterday, side='right')
+                if n >= self.min_history:
+                    signal_data[ticker] = df.iloc[:n]
 
             for strategy in strategies:
                 if len(open_positions) >= self.max_positions:
@@ -1281,6 +1284,10 @@ class BacktestEngine:
                 logger.warning(f"Macro regime setup failed: {e} — continuing without macro")
                 macro_signals_df = None
 
+        # Pre-compute strategy indicators once on full data
+        for strategy in strategies:
+            strategy.precompute(data)
+
         # Walk-forward loop
         window_start = 0
         window_num = 0
@@ -1497,6 +1504,10 @@ class BacktestEngine:
         """
         if offsets is None:
             offsets = [i * 5 for i in range(n_offsets)]  # [0, 5, 10, 15, 20]
+
+        # Pre-compute strategy indicators once on full data
+        for strategy in strategies:
+            strategy.precompute(data)
 
         per_offset: List[Dict[str, Any]] = []
 

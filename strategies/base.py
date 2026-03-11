@@ -115,11 +115,24 @@ class BaseStrategy(ABC):
         self.risk_config = config.get("risk", {})
         self.fees_config = config.get("fees", {})
         self._logger = logging.getLogger(f"{__name__}.{self.name}")
+        self._precomputed = False
 
     @property
     def name(self) -> str:
         """Return the strategy name. Defaults to class name."""
         return self.__class__.__name__
+
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute indicators as DataFrame columns. Override in subclasses.
+
+        Called once before backtesting. Adds indicator columns to each ticker's
+        DataFrame so generate_signals/check_exits can read them instead of
+        recomputing every day. Column names MUST be prefixed with strategy
+        abbreviation (e.g., '_mr_rsi', '_tf_fast_ma') to avoid collisions.
+
+        After adding columns, set self._precomputed = True.
+        """
+        pass
 
     @abstractmethod
     def generate_signals(
