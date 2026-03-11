@@ -3175,6 +3175,8 @@ var _AGENT_COLORS = {
   sweep:      { B: '#7a6a3a', H: '#5a3010', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
   // Sage — teal shirt, grey hair, neutral skin (the long-cycle promotion agent)
   sage:       { B: '#3a7a7a', H: '#8a8a8a', P: '#2a3040', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#6a7a7a' },
+  // Principal/Director — dark navy shirt, warm skin tone
+  principal:  { B: '#2a3a5a', H: '#2a2020', P: '#1a1a2a', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#3a4a5a' },
   // Fallback
   researcher: { B: '#5a7a3a', H: '#6B4E0A', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
 };
@@ -3238,6 +3240,12 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
   _agentFloor.stats = stats || {};
   _agentFloor.leaderboard = leaderboard || [];
   _agentFloor.strategyPipeline = strategyPipeline || {};
+  // Adjust canvas height: 280px when Director (principal) is present, else 220px
+  var canvas = document.getElementById('agent-canvas');
+  if (canvas) {
+    var hasDirector = (agents || []).some(function(a) { return a.type === 'principal'; });
+    canvas.style.height = hasDirector ? '280px' : '220px';
+  }
   if (!_agentFloor.inited) initAgentFloor();
   // Force resize when agents update (tab may have just become visible)
   setTimeout(_resizeAgentCanvas, 50);
@@ -3503,6 +3511,224 @@ function _drawProps(ctx, W, H, wallH, tc, frame, agents, stats, leaderboard, str
   }
 }
 
+// ── Per-agent pixel character renderer ──────────────────────────
+// Draws a single agent (desk, monitor, sprite, bubble, label) at (cx, baseY).
+// Extracted so the director row and team row can share the same drawing logic.
+function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
+  var scale = f.scale;
+
+  // Draw desk (theme-aware)
+  var deskW = 36 * scale / 3;
+  var deskH = 6 * scale / 3;
+  var deskY = baseY + 16 * scale - 4;
+  ctx.fillStyle = tc.surfaceRaised;
+  ctx.fillRect(cx - deskW, deskY, deskW * 2, deskH);
+  ctx.fillStyle = tc.border;
+  ctx.fillRect(cx - deskW, deskY, deskW * 2, 1);
+  ctx.fillRect(cx - deskW, deskY + deskH - 1, deskW * 2, 1);
+
+  // ── Monitor (to the left of character) ──
+  var monPxW = 28, monPxH = 22;
+  var monPx = cx - deskW + 2;
+  var monPy = deskY - monPxH - 3;
+  // Bezel
+  ctx.fillStyle = tc.surfaceRaised;
+  ctx.fillRect(monPx, monPy, monPxW, monPxH);
+  ctx.strokeStyle = tc.border;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(monPx, monPy, monPxW, monPxH);
+  // Stand
+  var monCx = monPx + monPxW / 2;
+  ctx.fillStyle = tc.border;
+  ctx.fillRect(monCx - 2, monPy + monPxH, 4, 3);
+  ctx.fillRect(monCx - 5, deskY - 1, 10, 2);
+
+  // Screen inset
+  var screenX = monPx + 2;
+  var screenY = monPy + 2;
+  var screenW = monPxW - 4;
+  var screenH = monPxH - 4;
+  var glowColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.border;
+
+  // Screen bg
+  ctx.fillStyle = tc.bg;
+  ctx.fillRect(screenX, screenY, screenW, screenH);
+
+  // Progress bar on screen
+  var prog = agent.progress || {};
+  if (prog.pct !== undefined && prog.pct >= 0) {
+    // Scrolling code lines (upper area)
+    ctx.fillStyle = glowColor;
+    ctx.globalAlpha = 0.35;
+    var lineY = screenY + 2;
+    for (var tl = 0; tl < 5 && lineY < screenY + screenH - 9; tl++) {
+      var indent = (tl % 3 === 0) ? 0 : 3;
+      var lw = (screenW - 6 - indent) * (0.3 + ((tl * 37 + f.frame * 0.5) % 50) / 80);
+      ctx.fillRect(screenX + 2 + indent, lineY, Math.min(lw, screenW - 4 - indent), 1);
+      lineY += 3;
+    }
+    ctx.globalAlpha = 1.0;
+
+    // Progress bar at bottom of screen
+    var barY = screenY + screenH - 5;
+    var barH = 3;
+    // Track
+    ctx.fillStyle = tc.border;
+    ctx.fillRect(screenX + 1, barY, screenW - 2, barH);
+    // Fill
+    var fillW = Math.max(1, (screenW - 2) * prog.pct / 100);
+    ctx.fillStyle = glowColor;
+    ctx.fillRect(screenX + 1, barY, fillW, barH);
+    // Pulsing tip
+    if (prog.pct > 0 && prog.pct < 100) {
+      ctx.globalAlpha = 0.4 + Math.sin(f.frame * 0.12) * 0.35;
+      ctx.fillRect(screenX + 1 + fillW - 1, barY, 2, barH);
+      ctx.globalAlpha = 1.0;
+    }
+    // Percentage text if monitor is big enough
+    if (screenW > 20) {
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.7;
+      ctx.font = '7px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(prog.pct + '%', screenX + screenW - 2, barY - 2);
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 1.0;
+    }
+  } else {
+    // No progress — gentle screen glow
+    ctx.fillStyle = glowColor;
+    ctx.globalAlpha = 0.12;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ── Tally marks on desk (strategies completed this cycle) ──
+  if (prog.pct !== undefined && prog.label) {
+    var parts = prog.label.split('/');
+    var done = parseInt(parts[0]) - 1; // current is in-progress, not done
+    var total = parseInt(parts[1]);
+    if (done > 0 || total > 0) {
+      var tallyX = cx - deskW + 6;
+      var tallyY0 = deskY + 1;
+      var tallyH = deskH - 2;
+      ctx.lineWidth = 1.5;
+      for (var ti = 0; ti < total; ti++) {
+        var tx = tallyX + ti * 5;
+        if (tx > cx + deskW - 6) break;
+        var isDone = ti < done;
+        ctx.strokeStyle = isDone ? tc.green : tc.textTertiary;
+        ctx.globalAlpha = isDone ? 0.85 : 0.2;
+        ctx.beginPath();
+        // Every 5th mark crosses diagonally
+        if ((ti + 1) % 5 === 0 && ti > 0) {
+          ctx.moveTo(tx - 16, tallyY0 + tallyH + 1);
+          ctx.lineTo(tx + 2, tallyY0 - 1);
+        } else {
+          ctx.moveTo(tx, tallyY0);
+          ctx.lineTo(tx, tallyY0 + tallyH);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+    }
+  }
+
+  // Get sprite frames
+  var state = agent.status || 'idle';
+  var templateFrames = _SPRITE_TEMPLATE[state] || _SPRITE_TEMPLATE.idle;
+  var frames = _colorizeSprite(templateFrames, agent.type || 'researcher');
+  var spriteFrame = frames[animFrame % frames.length];
+
+  // Draw character
+  var spriteW = 12;
+  var charX = cx - (spriteW * scale / 2);
+  var charY = baseY - 2;
+
+  spriteFrame.forEach(function(row, sy) {
+    row.forEach(function(px, sx) {
+      if (px && px !== '') {
+        ctx.fillStyle = px;
+        ctx.fillRect(charX + sx * scale, charY + sy * scale, scale, scale);
+      }
+    });
+  });
+
+  // Speech bubble (theme-aware)
+  var bubbleText = agent.task || '';
+  if (bubbleText) {
+    if (bubbleText.length > 28) bubbleText = bubbleText.substring(0, 25) + '...';
+    var bubbleY = charY - 24;
+    ctx.font = '10px "JetBrains Mono", monospace';
+    var textW = ctx.measureText(bubbleText).width;
+    var padX = 8, padY = 4;
+
+    var bx = cx - textW / 2 - padX;
+    var by = bubbleY - padY;
+    var bw = textW + padX * 2;
+    var bh = 14 + padY * 2;
+
+    // Bubble bg
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+
+    // Border
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 4);
+    ctx.stroke();
+
+    // Tail
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, by + bh);
+    ctx.lineTo(cx + 4, by + bh);
+    ctx.lineTo(cx, by + bh + 5);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+
+    // Text color from status
+    ctx.fillStyle = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'sleeping' ? tc.textTertiary : tc.text;
+    ctx.textAlign = 'center';
+    ctx.fillText(bubbleText, cx, bubbleY + 7);
+  }
+
+  // Name label + progress
+  ctx.fillStyle = tc.textTertiary;
+  ctx.font = '10px "Inter", sans-serif';
+  ctx.textAlign = 'center';
+  var nameLabel = agent.name;
+  if (prog.label) nameLabel += '  ' + prog.label;
+  if (prog.cycle > 1) nameLabel += '  ↻' + prog.cycle;
+  ctx.fillText(nameLabel, cx, deskY + deskH + 14);
+
+  // Status dot
+  var dotColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'idle' ? tc.amber : tc.red;
+  ctx.beginPath();
+  ctx.arc(cx, deskY + deskH + 24, 3, 0, Math.PI * 2);
+  ctx.fillStyle = dotColor;
+  ctx.fill();
+
+  // Sleeping ZZZ
+  if (agent.status === 'sleeping') {
+    var zOffset = (f.frame % 90) / 90;
+    ctx.globalAlpha = 1 - zOffset * 0.7;
+    ctx.fillStyle = tc.textTertiary;
+    ctx.font = (10 + zOffset * 4) + 'px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('z', cx + 20 + zOffset * 8, charY - zOffset * 20);
+    ctx.fillText('z', cx + 28 + zOffset * 10, charY - 10 - zOffset * 18);
+    ctx.fillText('Z', cx + 34 + zOffset * 12, charY - 22 - zOffset * 16);
+    ctx.globalAlpha = 1.0;
+  }
+}
+
 function drawAgentFloor() {
   var f = _agentFloor;
   if (!f.ctx || !f.canvas) return;
@@ -3571,229 +3797,47 @@ function drawAgentFloor() {
     return;
   }
 
-  // Position agents evenly, centered in the floor area
-  var spacing = Math.min(220, W / (agents.length + 1));
-  var startX = (W - spacing * (agents.length - 1)) / 2;
-  if (agents.length === 1) startX = W / 2;
+  // Split into director (principal) row and team row
+  var directors = agents.filter(function(a) { return a.type === 'principal'; });
+  var team = agents.filter(function(a) { return a.type !== 'principal'; });
 
   var animFrame = Math.floor(f.frame / 30) % 2;
 
-  agents.forEach(function(agent, i) {
-    var cx = startX + i * spacing;
-    var baseY = wallH + 8; // Characters sit just below the wall
-
-    // Draw desk (theme-aware)
-    var deskW = 36 * scale / 3;
-    var deskH = 6 * scale / 3;
-    var deskY = baseY + 16 * scale - 4;
-    ctx.fillStyle = tc.surfaceRaised;
-    ctx.fillRect(cx - deskW, deskY, deskW * 2, deskH);
-    ctx.fillStyle = tc.border;
-    ctx.fillRect(cx - deskW, deskY, deskW * 2, 1);
-    ctx.fillRect(cx - deskW, deskY + deskH - 1, deskW * 2, 1);
-
-    // ── Monitor (to the left of character) ──
-    var monPxW = 28, monPxH = 22;
-    var monPx = cx - deskW + 2;
-    var monPy = deskY - monPxH - 3;
-    // Bezel
-    ctx.fillStyle = tc.surfaceRaised;
-    ctx.fillRect(monPx, monPy, monPxW, monPxH);
-    ctx.strokeStyle = tc.border;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(monPx, monPy, monPxW, monPxH);
-    // Stand
-    var monCx = monPx + monPxW / 2;
-    ctx.fillStyle = tc.border;
-    ctx.fillRect(monCx - 2, monPy + monPxH, 4, 3);
-    ctx.fillRect(monCx - 5, deskY - 1, 10, 2);
-
-    // Screen inset
-    var screenX = monPx + 2;
-    var screenY = monPy + 2;
-    var screenW = monPxW - 4;
-    var screenH = monPxH - 4;
-    var glowColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.border;
-
-    // Screen bg
-    ctx.fillStyle = tc.bg;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-
-    // Progress bar on screen
-    var prog = agent.progress || {};
-    if (prog.pct !== undefined && prog.pct >= 0) {
-      // Scrolling code lines (upper area)
-      ctx.fillStyle = glowColor;
-      ctx.globalAlpha = 0.35;
-      var lineY = screenY + 2;
-      for (var tl = 0; tl < 5 && lineY < screenY + screenH - 9; tl++) {
-        var indent = (tl % 3 === 0) ? 0 : 3;
-        var lw = (screenW - 6 - indent) * (0.3 + ((tl * 37 + f.frame * 0.5) % 50) / 80);
-        ctx.fillRect(screenX + 2 + indent, lineY, Math.min(lw, screenW - 4 - indent), 1);
-        lineY += 3;
-      }
-      ctx.globalAlpha = 1.0;
-
-      // Progress bar at bottom of screen
-      var barY = screenY + screenH - 5;
-      var barH = 3;
-      // Track
-      ctx.fillStyle = tc.border;
-      ctx.fillRect(screenX + 1, barY, screenW - 2, barH);
-      // Fill
-      var fillW = Math.max(1, (screenW - 2) * prog.pct / 100);
-      ctx.fillStyle = glowColor;
-      ctx.fillRect(screenX + 1, barY, fillW, barH);
-      // Pulsing tip
-      if (prog.pct > 0 && prog.pct < 100) {
-        ctx.globalAlpha = 0.4 + Math.sin(f.frame * 0.12) * 0.35;
-        ctx.fillRect(screenX + 1 + fillW - 1, barY, 2, barH);
-        ctx.globalAlpha = 1.0;
-      }
-      // Percentage text if monitor is big enough
-      if (screenW > 20) {
-        ctx.fillStyle = glowColor;
-        ctx.globalAlpha = 0.7;
-        ctx.font = '7px "JetBrains Mono", monospace';
-        ctx.textAlign = 'right';
-        ctx.fillText(prog.pct + '%', screenX + screenW - 2, barY - 2);
-        ctx.textAlign = 'center';
-        ctx.globalAlpha = 1.0;
-      }
-    } else {
-      // No progress — gentle screen glow
-      ctx.fillStyle = glowColor;
-      ctx.globalAlpha = 0.12;
-      ctx.fillRect(screenX, screenY, screenW, screenH);
-      ctx.globalAlpha = 1.0;
-    }
-
-    // ── Tally marks on desk (strategies completed this cycle) ──
-    if (prog.pct !== undefined && prog.label) {
-      var parts = prog.label.split('/');
-      var done = parseInt(parts[0]) - 1; // current is in-progress, not done
-      var total = parseInt(parts[1]);
-      if (done > 0 || total > 0) {
-        var tallyX = cx - deskW + 6;
-        var tallyY0 = deskY + 1;
-        var tallyH = deskH - 2;
-        ctx.lineWidth = 1.5;
-        for (var ti = 0; ti < total; ti++) {
-          var tx = tallyX + ti * 5;
-          if (tx > cx + deskW - 6) break;
-          var isDone = ti < done;
-          ctx.strokeStyle = isDone ? tc.green : tc.textTertiary;
-          ctx.globalAlpha = isDone ? 0.85 : 0.2;
-          ctx.beginPath();
-          // Every 5th mark crosses diagonally
-          if ((ti + 1) % 5 === 0 && ti > 0) {
-            ctx.moveTo(tx - 16, tallyY0 + tallyH + 1);
-            ctx.lineTo(tx + 2, tallyY0 - 1);
-          } else {
-            ctx.moveTo(tx, tallyY0);
-            ctx.lineTo(tx, tallyY0 + tallyH);
-          }
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1.0;
-      }
-    }
-
-    // Get sprite frames
-    var state = agent.status || 'idle';
-    var templateFrames = _SPRITE_TEMPLATE[state] || _SPRITE_TEMPLATE.idle;
-    var frames = _colorizeSprite(templateFrames, agent.type || 'researcher');
-    var spriteFrame = frames[animFrame % frames.length];
-
-    // Draw character
-    var spriteW = 12;
-    var spriteH = 16;
-    var charX = cx - (spriteW * scale / 2);
-    var charY = baseY - 2;
-
-    spriteFrame.forEach(function(row, sy) {
-      row.forEach(function(px, sx) {
-        if (px && px !== '') {
-          ctx.fillStyle = px;
-          ctx.fillRect(charX + sx * scale, charY + sy * scale, scale, scale);
-        }
-      });
+  // ── Director row: centered, elevated right below the wall ──
+  if (directors.length > 0) {
+    directors.forEach(function(agent) {
+      _drawAgentAt(ctx, f, tc, agent, W / 2, wallH + 4, animFrame);
     });
 
-    // Speech bubble (theme-aware)
-    var bubbleText = agent.task || '';
-    if (bubbleText) {
-      if (bubbleText.length > 28) bubbleText = bubbleText.substring(0, 25) + '...';
-      var bubbleY = charY - 24;
-      ctx.font = '10px "JetBrains Mono", monospace';
-      var textW = ctx.measureText(bubbleText).width;
-      var padX = 8, padY = 4;
-
-      var bx = cx - textW / 2 - padX;
-      var by = bubbleY - padY;
-      var bw = textW + padX * 2;
-      var bh = 14 + padY * 2;
-
-      // Bubble bg
-      ctx.fillStyle = tc.surfaceRaised;
-      ctx.globalAlpha = 0.95;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, 4);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-
-      // Border
+    // Subtle dashed separator between director and team rows
+    if (team.length > 0) {
+      var sepY = wallH + 52;
+      ctx.save();
       ctx.strokeStyle = tc.border;
+      ctx.globalAlpha = 0.25;
       ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, 4);
+      ctx.moveTo(40, sepY);
+      ctx.lineTo(W - 40, sepY);
       ctx.stroke();
-
-      // Tail
-      ctx.fillStyle = tc.surfaceRaised;
-      ctx.globalAlpha = 0.95;
-      ctx.beginPath();
-      ctx.moveTo(cx - 4, by + bh);
-      ctx.lineTo(cx + 4, by + bh);
-      ctx.lineTo(cx, by + bh + 5);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-
-      // Text color from status
-      ctx.fillStyle = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'sleeping' ? tc.textTertiary : tc.text;
-      ctx.textAlign = 'center';
-      ctx.fillText(bubbleText, cx, bubbleY + 7);
+      ctx.setLineDash([]);
+      ctx.restore();
     }
+  }
 
-    // Name label + progress
-    ctx.fillStyle = tc.textTertiary;
-    ctx.font = '10px "Inter", sans-serif';
-    ctx.textAlign = 'center';
-    var nameLabel = agent.name;
-    if (prog.label) nameLabel += '  ' + prog.label;
-    if (prog.cycle > 1) nameLabel += '  ↻' + prog.cycle;
-    ctx.fillText(nameLabel, cx, deskY + deskH + 14);
+  // ── Team row: evenly spaced, pushed down when director is present ──
+  if (team.length > 0) {
+    var teamBaseY = directors.length > 0 ? wallH + 58 : wallH + 8;
+    var spacing = Math.min(220, W / (team.length + 1));
+    var startX = (W - spacing * (team.length - 1)) / 2;
+    if (team.length === 1) startX = W / 2;
 
-    // Status dot
-    var dotColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'idle' ? tc.amber : tc.red;
-    ctx.beginPath();
-    ctx.arc(cx, deskY + deskH + 24, 3, 0, Math.PI * 2);
-    ctx.fillStyle = dotColor;
-    ctx.fill();
-
-    // Sleeping ZZZ
-    if (agent.status === 'sleeping') {
-      var zOffset = (f.frame % 90) / 90;
-      ctx.globalAlpha = 1 - zOffset * 0.7;
-      ctx.fillStyle = tc.textTertiary;
-      ctx.font = (10 + zOffset * 4) + 'px "JetBrains Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('z', cx + 20 + zOffset * 8, charY - zOffset * 20);
-      ctx.fillText('z', cx + 28 + zOffset * 10, charY - 10 - zOffset * 18);
-      ctx.fillText('Z', cx + 34 + zOffset * 12, charY - 22 - zOffset * 16);
-      ctx.globalAlpha = 1.0;
-    }
-  });
+    team.forEach(function(agent, i) {
+      var cx = startX + i * spacing;
+      _drawAgentAt(ctx, f, tc, agent, cx, teamBaseY, animFrame);
+    });
+  }
 }
 
 // ── Market Session Countdown ──

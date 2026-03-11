@@ -2197,6 +2197,7 @@ def _build_agents(daemon: dict) -> list:
         ("atlas-autoresearch",   "/tmp/autoresearch-parent-heartbeat.json",   "researcher",   "Atlas",  "atlas"),
         ("atlas-research-daemon", "/tmp/research-daemon-heartbeat.json",      "researcher",   "Atlas",  "atlas"),
         ("atlas-sage",            "/tmp/sage-heartbeat.json",                 "sage",         "Sage",   "sage"),
+        ("atlas-principal",       "/tmp/principal-heartbeat.json",            "principal",    "Director", "principal"),
     ]
 
     found_any = False
@@ -2248,7 +2249,24 @@ def _build_agents(daemon: dict) -> list:
 
         # Determine status + task
         if svc_running:
-            if agent_type == "sage":
+            if agent_type == "principal":
+                # Principal/Director-specific phase mapping
+                if phase == "gathering":
+                    status = "reading"
+                    task = "Gathering research state"
+                elif phase == "reviewing":
+                    status = "reading"
+                    task = "Reviewing experiments"
+                elif phase == "executing":
+                    status = "typing"
+                    task = "Issuing directives"
+                elif phase == "sleep":
+                    status = "idle"
+                    task = "Sleeping until next review"
+                else:
+                    status = "reading"
+                    task = "Overseeing research"
+            elif agent_type == "sage":
                 # Sage-specific phase mapping
                 if phase.startswith("checking "):
                     strat_label = phase[9:].replace("_", " ").title()
