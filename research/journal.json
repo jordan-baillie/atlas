@@ -4626,5 +4626,51 @@
     "promoted": false,
     "runtime_s": 393.4,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260311_212959",
+    "timestamp": "2026-03-11T11:29:59.165597+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "mean_reversion",
+    "hypothesis": "rsi_period: 14\u219210",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.3262,
+      "cagr_pct": 9.3964,
+      "max_drawdown_pct": 3.9558,
+      "total_trades": 159,
+      "profit_factor": 2.7543
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 14\u219210"
+    ],
+    "promoted": false,
+    "runtime_s": 8.9,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260311_213036",
+    "timestamp": "2026-03-11T11:30:36.891809+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "mean_reversion",
+    "hypothesis": "zscore_lookback: 30\u219220",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.3722,
+      "cagr_pct": 10.2548,
+      "max_drawdown_pct": 3.1621,
+      "total_trades": 170,
+      "profit_factor": 2.8637
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 zscore_lookback: 30\u219220"
+    ],
+    "promoted": false,
+    "runtime_s": 9.1,
+    "agent_id": "autoresearch"
   }
 ]

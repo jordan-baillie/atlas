@@ -3299,7 +3299,8 @@
     "created_at": "2026-03-11T05:53:09.270732+00:00",
     "claimed_by": "atlas",
     "claimed_at": "2026-03-11T07:31:33.112130+00:00",
-    "updated_at": "2026-03-11T09:10:48.004922+00:00"
+    "updated_at": "2026-03-11T09:10:48.004922+00:00",
+    "market": "sp500"
   },
   {
     "id": "director_trend_following_combined_20260311",
@@ -3312,7 +3313,8 @@
     "status": "claimed",
     "created_at": "2026-03-11T07:35:37.269535+00:00",
     "claimed_by": "nova",
-    "claimed_at": "2026-03-11T09:16:42.606263+00:00"
+    "claimed_at": "2026-03-11T09:16:42.606263+00:00",
+    "market": "sp500"
   },
   {
     "id": "director_mean_reversion_control_20260311",
@@ -3325,7 +3327,8 @@
     "status": "claimed",
     "created_at": "2026-03-11T07:35:37.307960+00:00",
     "claimed_by": "atlas",
-    "claimed_at": "2026-03-11T10:25:21.567025+00:00"
+    "claimed_at": "2026-03-11T10:25:21.567025+00:00",
+    "market": "sp500"
   },
   {
     "id": "director_mean_reversion_combined_20260311",
@@ -3338,6 +3341,35 @@
     "status": "claimed",
     "created_at": "2026-03-11T08:43:40.239276+00:00",
     "claimed_by": "atlas",
-    "claimed_at": "2026-03-11T10:25:21.567029+00:00"
+    "claimed_at": "2026-03-11T10:25:21.567029+00:00",
+    "market": "sp500"
+  },
+  {
+    "id": "director_trend_following_combined_20260311A",
+    "strategy_name": "trend_following",
+    "method": "combined_portfolio_test",
+    "market": "sp500",
+    "category": "active",
+    "priority": "P1",
+    "hypothesis": "Trend_following solo peaked at Sharpe=0.6618 today (ar-20260311_174215). Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
+    "params_override": {},
+    "status": "queued",
+    "created_at": "2026-03-11T11:00:57.992505+00:00",
+    "claimed_by": null,
+    "claimed_at": null
+  },
+  {
+    "id": "director_mean_reversion_combined_20260311B",
+    "strategy_name": "mean_reversion",
+    "method": "combined_portfolio_test",
+    "market": "sp500",
+    "category": "active",
+    "priority": "P1",
+    "hypothesis": "Mean_reversion solo Sharpe improved monotonically across 6 runs today: 0.1506 \u2192 0.3564. Optimization appears converged. Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
+    "params_override": {},
+    "status": "queued",
+    "created_at": "2026-03-11T11:00:58.491471+00:00",
+    "claimed_by": null,
+    "claimed_at": null
   }
 ]

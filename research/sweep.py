@@ -502,6 +502,7 @@ def run_sweep(
     max_consecutive_fails: int = 5,
     cycles: int = 0,
     workers: int = 1,
+    max_runtime: int = 0,
 ) -> None:
     """Run the full autonomous sweep loop.
 
@@ -517,12 +518,14 @@ def run_sweep(
         max_consecutive_fails: Stop a strategy after this many discards.
         cycles:                Number of full cycles (0 = infinite).
         workers:               Parallel backtest workers (1 = sequential).
+        max_runtime:           Max seconds to run (0 = unlimited).
     """
     strategy_list = strategies or STRATEGY_ORDER
     session_start = time.time()
     total_experiments = 0
     total_kept = 0
     cycle_num = 0
+    deadline = (session_start + max_runtime) if max_runtime > 0 else 0
 
     # NOTE: No start notification here — parent (autoresearch.py) handles it.
     # sweep.py runs as a subprocess per-strategy, so sending "started" here
@@ -535,11 +538,17 @@ def run_sweep(
         if _should_stop():
             logger.info("Stop signal received — exiting cleanly.")
             break
+        if deadline and time.time() >= deadline:
+            logger.info("Max runtime (%ds) reached — exiting cleanly.", max_runtime)
+            break
 
         logger.info("=== Cycle %d ===", cycle_num)
 
         for strategy_name in strategy_list:
             if _should_stop():
+                break
+            if deadline and time.time() >= deadline:
+                logger.info("Max runtime reached mid-cycle — stopping.")
                 break
 
             grid = PARAM_GRIDS.get(strategy_name, {})
@@ -631,6 +640,10 @@ def main():
         help="Parallel backtest workers (default: ncpus-2, min 1)",
     )
     parser.add_argument(
+        "--max-runtime", type=int, default=0,
+        help="Max runtime in seconds (0=unlimited, default: 0)",
+    )
+    parser.add_argument(
         "--log-file", type=str, default=None,
         help="Log file path (default: stdout)",
     )
@@ -673,6 +686,7 @@ def main():
         max_consecutive_fails=args.max_fails,
         cycles=args.cycles,
         workers=workers,
+        max_runtime=args.max_runtime,
     )
 
 

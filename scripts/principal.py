@@ -665,6 +665,14 @@ def _write_directive(agent: str, action: str, experiments: list, reasoning: str)
 def _add_queue_entry(entry: dict) -> bool:
     """Append a new experiment to queue.json."""
     import fcntl
+    # Guard: Director sometimes omits market — default to sp500 so load_market_data
+    # doesn't try to open data/cache/None/ and return an empty dict.
+    if not entry.get("market"):
+        logger.warning(
+            "Queue entry %s missing market — defaulting to sp500",
+            entry.get("id", "?"),
+        )
+        entry["market"] = "sp500"
     try:
         with open(QUEUE_PATH, "r+") as f:
             fcntl.flock(f, fcntl.LOCK_EX)

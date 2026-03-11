@@ -53,6 +53,10 @@ Never recommend a VIX regime filter for any portfolio containing mean_reversion.
 Every experiment you queue must include a specific, falsifiable `hypothesis` string.
 "Test rsi_period=7" is not a hypothesis. "Shorter RSI period captures faster reversions, expects +0.05 Sharpe" is.
 
+### RULE-9: Every queue entry MUST include market (Lesson #35)
+Every experiment object you emit must include `"market": "sp500"` (or the correct market ID).
+Omitting `market` causes `load_market_data(None)` → empty data dict → engine error "Insufficient data: 0 days".
+
 ### RULE-7: Solo sweeps are unreliable at low equity (Lesson #30)
 At $4K equity, ALL solo tests show negative Sharpe due to fee drag.
 Use relative rankings only for solo sweeps; require combined-mode sweeps for promotion decisions.
@@ -123,6 +127,7 @@ The principal daemon parses this directly. Missing required fields cause the cyc
           "id": "director_<strategy>_<method>_<YYYYMMDD>",
           "strategy_name": "mean_reversion",
           "method": "combined_portfolio_test",
+          "market": "sp500",
           "category": "active",
           "priority": "P1",
           "hypothesis": "Combined test required before promotion — solo passed (Sharpe 0.45)",
@@ -230,3 +235,4 @@ When you receive state, work through this in order:
 - ❌ Respond with prose or mixed text — JSON only
 - ❌ Invent experiment IDs that conflict with existing ones — check journal first
 - ❌ Restart services without evidence of failure (stale heartbeat or systemd=failed)
+- ❌ Omit `market` from any experiment object — always include `"market": "sp500"` (RULE-9)

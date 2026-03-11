@@ -46,3 +46,38 @@ timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
 2026-03-11T08:39:46	0.3135	200	4.51	2.3316	9.04	ibs_max=0.7	discard	ibs_max: 1.0→0.7
 2026-03-11T08:44:14	0.3564	202	3.83	2.4900	9.89		keep	baseline
 2026-03-11T10:24:48	0.3064	129	4.27	3.1945	9.09		keep	baseline
+2026-03-11T10:52:13	0.3564	202	3.83	2.4907	9.89		keep	baseline
+2026-03-11T11:01:03	0.3064	129	4.27	3.1945	9.09		keep	baseline
+2026-03-11T11:18:41	0.3564	202	3.83	2.4907	9.89		keep	baseline
+2026-03-11T11:19:22	0.3064	129	4.27	3.1945	9.09		keep	baseline
+2026-03-11T11:27:21	0.3064	129	4.27	3.1945	9.09		keep	baseline
+2026-03-11T11:29:41	0.3064	129	4.27	3.1945	9.09		keep	baseline
+2026-03-11T11:29:59	0.3262	159	3.96	2.7543	9.40	rsi_period=10	keep	rsi_period: 14→10 (best of 4)
+2026-03-11T11:29:59	0.2536	185	6.90	2.1654	8.14	rsi_period=7	discard	rsi_period: 14→7
+2026-03-11T11:29:59	-1.6849	77	6.22	1.0259	0.11	rsi_period=21	discard	rsi_period: 14→21
+2026-03-11T11:29:59	0.3144	198	6.76	2.3326	9.23	rsi_period=5	discard	rsi_period: 14→5
+2026-03-11T11:30:19	-1.4112	86	5.85	1.1755	0.67	rsi_oversold=25	discard	rsi_oversold: 35→25
+2026-03-11T11:30:19	0.2959	134	4.93	3.0100	8.90	rsi_oversold=30	discard	rsi_oversold: 35→30
+2026-03-11T11:30:19	-2.1546	39	2.55	1.8513	1.11	rsi_oversold=20	discard	rsi_oversold: 35→20
+2026-03-11T11:30:19	0.2346	188	7.42	2.0996	7.87	rsi_oversold=40	discard	rsi_oversold: 35→40
+2026-03-11T11:30:36	0.3722	170	3.16	2.8637	10.25	zscore_lookback=20	keep	zscore_lookback: 30→20 (best of 3)
+2026-03-11T11:30:36	0.2745	166	8.43	2.3862	8.43	zscore_lookback=15	discard	zscore_lookback: 30→15
+2026-03-11T11:30:36	0.1335	101	5.26	2.7067	6.15	zscore_lookback=10	discard	zscore_lookback: 30→10
+2026-03-11T11:30:54	-0.9248	93	5.38	1.5745	2.04	zscore_entry=-2.5	discard	zscore_entry: -2.0→-2.5
+2026-03-11T11:30:54	-0.7989	222	9.89	1.1381	1.37	zscore_entry=-1.5	discard	zscore_entry: -2.0→-1.5
+2026-03-11T11:30:54	0.1306	271	11.08	1.4208	6.06	zscore_entry=-1.0	discard	zscore_entry: -2.0→-1.0
+2026-03-11T11:31:13	-0.2371	166	4.52	1.6698	3.97	atr_period=10	discard	atr_period: 20→10
+2026-03-11T11:31:13	-0.2189	166	4.55	1.6548	4.03	atr_period=14	discard	atr_period: 20→14
+2026-03-11T11:31:13	-0.3497	160	4.52	1.6598	3.61	atr_period=7	discard	atr_period: 20→7
+2026-03-11T11:31:46	0.3722	170	3.16	2.8637	10.25		keep	baseline
+2026-03-11T11:32:04	0.2675	119	3.98	3.0991	8.32	rsi_period=14	discard	rsi_period: 10→14
+2026-03-11T11:32:04	-0.6870	208	7.25	1.2183	1.96	rsi_period=7	discard	rsi_period: 10→7
+2026-03-11T11:32:04	-1.5563	59	3.21	1.3915	0.93	rsi_period=21	discard	rsi_period: 10→21
+2026-03-11T11:32:04	-0.7558	240	11.02	1.1369	1.48	rsi_period=5	discard	rsi_period: 10→5
+2026-03-11T11:32:21	-1.5566	71	5.79	1.3382	0.97	rsi_oversold=25	discard	rsi_oversold: 35→25
+2026-03-11T11:32:21	-0.7555	126	7.70	1.4502	2.29	rsi_oversold=30	discard	rsi_oversold: 35→30
+2026-03-11T11:32:21	-2.7711	27	2.62	2.0460	0.85	rsi_oversold=20	discard	rsi_oversold: 35→20
+2026-03-11T11:32:21	-0.5914	201	8.78	1.2719	2.35	rsi_oversold=40	discard	rsi_oversold: 35→40
+2026-03-11T11:32:38	0.3262	159	3.96	2.7543	9.40	zscore_lookback=30	discard	zscore_lookback: 20→30
+2026-03-11T11:32:38	0.2745	166	8.43	2.3862	8.43	zscore_lookback=15	discard	zscore_lookback: 20→15
+2026-03-11T11:32:38	0.1335	101	5.26	2.7067	6.15	zscore_lookback=10	discard	zscore_lookback: 20→10

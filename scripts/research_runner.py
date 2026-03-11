@@ -79,7 +79,10 @@ def dispatch_experiment(entry: dict, agent_id: str, dry_run: bool = False) -> di
     """Route an experiment to the correct execution method. Returns result dict."""
     exp_type = entry.get('method', '')
     exp_id = entry['id']
-    market = entry['market']
+    market = entry.get('market') or 'sp500'   # guard: Director sometimes omits market
+    if not entry.get('market'):
+        logger.warning("Experiment %s has no market — defaulting to sp500", exp_id)
+        entry['market'] = market
     strategy = entry.get('strategy_name')
     params = entry.get('params_override')
 
