@@ -4233,7 +4233,7 @@ var _pollTimer = null;
 function startPoll() {
   if (_pollTimer) return;
   load();
-  _pollTimer = setInterval(load, 60000);
+  _pollTimer = setInterval(load, 10000);
 }
 function stopPoll() {
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
@@ -4785,8 +4785,8 @@ switchTab = function(tab) {
 (function() {
   'use strict';
 
-  var POLL_INTERVAL = 15000;     // 15s always (covers pre/post market)
-  var POLL_INTERVAL_SLOW = 15000; // same — pre/post market matters too
+  var POLL_INTERVAL = 10000;     // 10s — matches backend refresh cycle
+  var POLL_INTERVAL_SLOW = 10000; // same — pre/post market matters too
   var _liveTimer = null;
   var _lastLiveUpdate = null;
   var _liveQuotes = {};
