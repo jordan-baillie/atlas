@@ -104,22 +104,35 @@ class PutCallVixProxy(BaseStrategy):
         commission_per_trade = self.fees_config.get("commission_per_trade", 5.0)
         commission_pct = self.fees_config.get("commission_pct", 0.0008)
 
-        # Check VIX data availability
+        # Check VIX data availability — fall back to realized vol proxy
         vix_df = self._get_vix_data(data)
-        if vix_df is None:
-            # Fallback: use market-wide drawdown as VIX proxy
-            # If no VIX data, generate no signals (strategy is specifically VIX-based)
-            self._logger.debug(f"{self.name}: no VIX data in data dict — no signals generated")
-            return signals
-
-        # Check if we are in a fear regime
-        if not self._is_vix_fear_regime(vix_df):
-            self._logger.debug(f"{self.name}: VIX not in fear regime — no signals")
-            return signals
-
-        current_vix = float(vix_df["close"].iloc[-1])
-        prev_vix = float(vix_df["close"].iloc[-2])
-        vix_spike = (current_vix - prev_vix) / prev_vix if prev_vix > 0 else 0.0
+        if vix_df is not None:
+            if not self._is_vix_fear_regime(vix_df):
+                self._logger.debug(f"{self.name}: VIX not in fear regime — no signals")
+                return signals
+            current_vix = float(vix_df["close"].iloc[-1])
+            prev_vix = float(vix_df["close"].iloc[-2])
+            vix_spike = (current_vix - prev_vix) / prev_vix if prev_vix > 0 else 0.0
+        else:
+            # Fallback: use realized volatility of the market as VIX proxy
+            # Annualized 20-day realized vol across all tickers
+            rvol_vals = []
+            for _t, _df in data.items():
+                if len(_df) >= 25 and "close" in _df.columns:
+                    rets = _df["close"].pct_change().dropna().iloc[-20:]
+                    if len(rets) >= 15:
+                        rvol_vals.append(float(rets.std()) * np.sqrt(252) * 100)
+            if not rvol_vals:
+                self._logger.debug(f"{self.name}: no data for realized vol proxy — no signals")
+                return signals
+            current_vix = float(np.median(rvol_vals))  # median annualized vol %
+            # Check if market vol is in fear territory
+            if current_vix < self.vix_fear_threshold:
+                self._logger.debug(f"{self.name}: realized vol proxy {current_vix:.1f} < {self.vix_fear_threshold} — no signals")
+                return signals
+            prev_vix = current_vix  # no spike data for proxy
+            vix_spike = 0.0
+            self._logger.info(f"{self.name}: using realized vol proxy VIX={current_vix:.1f}")
 
         min_rows = max(
             200 if self.sma200_filter else 0,

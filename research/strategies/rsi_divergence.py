@@ -31,7 +31,7 @@ class RsiDivergence(BaseStrategy):
 
         # RSI parameters
         self.rsi_period = strat_cfg.get("rsi_period", 14)
-        self.rsi_oversold_max = strat_cfg.get("rsi_oversold_max", 45)   # RSI must be below this (oversold)
+        self.rsi_oversold_max = strat_cfg.get("rsi_oversold_max", 55)   # RSI must be below this (oversold)
         self.rsi_exit_level = strat_cfg.get("rsi_exit_level", 60)        # Exit when RSI recovers here
 
         # Divergence detection

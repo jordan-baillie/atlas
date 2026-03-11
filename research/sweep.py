@@ -196,6 +196,12 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "max_hold_days": [3, 5, 7, 10],
         "sma200_filter": [True, False],
     },
+    "volume_climax": {
+        "volume_mult": [1.5, 2.0, 2.5, 3.0, 4.0],
+        "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
+        "max_hold_days": [3, 5, 7, 10],
+        "sma200_filter": [True, False],
+    },
     "gap_and_go": {
         "gap_threshold": [0.02, 0.03, 0.04, 0.05],
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
@@ -288,6 +294,7 @@ STRATEGY_ORDER = [
     "triple_rsi",
     "keltner_reversion",
     "inside_bar_nr7",
+    "volume_climax",
     "gap_and_go",
     "heikin_ashi_reversal",
     "macd_divergence",

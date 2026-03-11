@@ -27,7 +27,7 @@ class VolumeClimax(BaseStrategy):
         super().__init__(config)
         strat_cfg = config.get("strategies", {}).get("volume_climax", {})
 
-        self.volume_mult = strat_cfg.get("volume_mult", 3.0)
+        self.volume_mult = strat_cfg.get("volume_mult", 2.0)
         self.volume_lookback = strat_cfg.get("volume_lookback", 20)
         self.sma200_filter = strat_cfg.get("sma200_filter", True)
         self.atr_period = strat_cfg.get("atr_period", 14)

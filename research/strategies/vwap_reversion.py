@@ -34,14 +34,14 @@ class VwapReversion(BaseStrategy):
         self.std_period = strat_cfg.get("std_period", 20)            # Period for std deviation
 
         # Entry trigger: how many std devs below VWAP
-        self.std_threshold = strat_cfg.get("std_threshold", 2.0)     # e.g. 2.0 std below VWAP
+        self.std_threshold = strat_cfg.get("std_threshold", 1.0)     # std devs below VWAP to trigger
 
         # Optional momentum filter
         self.rsi_period = strat_cfg.get("rsi_period", 14)
-        self.rsi_oversold = strat_cfg.get("rsi_oversold", 40)        # RSI must be below this
+        self.rsi_oversold = strat_cfg.get("rsi_oversold", 50)        # RSI must be below this
 
         # Trend filter
-        self.sma200_filter = strat_cfg.get("sma200_filter", True)
+        self.sma200_filter = strat_cfg.get("sma200_filter", False)
         self.trend_sma = strat_cfg.get("trend_sma", 50)
 
         # Risk management
@@ -125,11 +125,6 @@ class VwapReversion(BaseStrategy):
                     sma200 = float(close.rolling(200).mean().iloc[-1])
                     if pd.isna(sma200) or current_close < sma200:
                         continue
-
-                # Trend SMA filter (shorter-term trend)
-                trend_sma_val = float(close.rolling(self.trend_sma).mean().iloc[-1])
-                if pd.isna(trend_sma_val) or current_close < trend_sma_val:
-                    continue  # Not in uptrend — don't catch falling knives
 
                 # Calculate rolling VWAP proxy
                 vwap = self._calc_rolling_vwap(df)
