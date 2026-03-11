@@ -64,6 +64,20 @@ class TrendFollowing(BaseStrategy):
     def name(self) -> str:
         return "trend_following"
 
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicators as DataFrame columns (called once before walk-forward)."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_tf_fast_ma"] = close.rolling(window=self.fast_ma_period).mean()
+            df["_tf_slow_ma"] = close.rolling(window=self.slow_ma_period).mean()
+            df["_tf_ma_diff"] = df["_tf_fast_ma"] - df["_tf_slow_ma"]
+            df["_tf_atr"] = calc_atr(high, low, close, period=self.atr_period)
+            df["_tf_vol_ratio"] = calc_volume_ratio(volume, lookback=self.vol_lookback)
+        self._precomputed = True
+
     def generate_signals(
         self,
         data: Dict[str, pd.DataFrame],
@@ -108,9 +122,9 @@ class TrendFollowing(BaseStrategy):
                 low = df["low"]
                 volume = df["volume"]
 
-                # Calculate moving averages
-                fast_ma = close.rolling(window=self.fast_ma_period).mean()
-                slow_ma = close.rolling(window=self.slow_ma_period).mean()
+                # Use pre-computed moving averages
+                fast_ma = df["_tf_fast_ma"]
+                slow_ma = df["_tf_slow_ma"]
 
                 current_fast = fast_ma.iloc[-1]
                 current_slow = slow_ma.iloc[-1]
@@ -125,7 +139,7 @@ class TrendFollowing(BaseStrategy):
 
                 # Find the recent high within the uptrend
                 # Look back to find where fast_ma first crossed above slow_ma
-                ma_diff = fast_ma - slow_ma
+                ma_diff = df["_tf_ma_diff"]
                 # Find how long the uptrend has been active (max lookback_days bars)
                 lookback_limit = min(len(ma_diff), 60)  # cap at 60 bars
                 trend_bars = 0
@@ -154,8 +168,8 @@ class TrendFollowing(BaseStrategy):
                 if today_close < current_slow:
                     continue
 
-                # Phase 7A: Volume confirmation
-                vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
+                # Phase 7A: Volume confirmation (pre-computed)
+                vol_ratio = df["_tf_vol_ratio"]
                 current_vol_ratio = vol_ratio.iloc[-1]
 
                 if pd.isna(current_vol_ratio):
@@ -163,8 +177,8 @@ class TrendFollowing(BaseStrategy):
 
                 # Phase 7A: Volume noted for confidence adjustment (no hard filter)
 
-                # Calculate ATR
-                atr = calc_atr(high, low, close, period=self.atr_period)
+                # Use pre-computed ATR
+                atr = df["_tf_atr"]
                 current_atr = atr.iloc[-1]
 
                 if pd.isna(current_atr) or current_atr <= 0:
@@ -308,14 +322,14 @@ class TrendFollowing(BaseStrategy):
                 # Days held
                 days_held = (today_date - entry_date).days
 
-                # Calculate MAs
-                fast_ma = close.rolling(window=self.fast_ma_period).mean()
-                slow_ma = close.rolling(window=self.slow_ma_period).mean()
+                # Use pre-computed MAs
+                fast_ma = df["_tf_fast_ma"]
+                slow_ma = df["_tf_slow_ma"]
                 current_fast = fast_ma.iloc[-1]
                 current_slow = slow_ma.iloc[-1]
 
-                # Calculate current ATR
-                atr = calc_atr(high, low, close, period=self.atr_period)
+                # Use pre-computed ATR
+                atr = df["_tf_atr"]
                 current_atr = atr.iloc[-1]
                 if pd.isna(current_atr):
                     current_atr = abs(entry_price - stop_price) / self.atr_stop_mult

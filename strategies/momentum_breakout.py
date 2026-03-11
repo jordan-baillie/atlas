@@ -60,6 +60,19 @@ class MomentumBreakout(BaseStrategy):
     def name(self) -> str:
         return "momentum_breakout"
 
+    def precompute(self, data: Dict[str, pd.DataFrame]) -> None:
+        """Pre-compute all indicators as DataFrame columns (called once before walk-forward)."""
+        for ticker, df in data.items():
+            close = df["close"]
+            high = df["high"]
+            low = df["low"]
+            volume = df["volume"]
+            df["_mb_trend_ma"] = close.rolling(window=self.trend_ma_period).mean()
+            df["_mb_lookback_high"] = close.rolling(self.lookback_days).max().shift(1)
+            df["_mb_avg_vol"] = volume.rolling(20).mean().shift(1)
+            df["_mb_atr"] = calc_atr(high, low, close, period=self.atr_period)
+        self._precomputed = True
+
     def generate_signals(
         self,
         data: Dict[str, pd.DataFrame],
@@ -94,27 +107,29 @@ class MomentumBreakout(BaseStrategy):
                 today_close = close.iloc[-1]
                 today_volume = volume.iloc[-1]
 
-                # N-day high (excluding today)
-                lookback_high = close.iloc[-(self.lookback_days + 1):-1].max()
+                # N-day high (excluding today) — pre-computed
+                lookback_high = df["_mb_lookback_high"].iloc[-1]
+                if pd.isna(lookback_high):
+                    continue
 
                 # Breakout condition
                 if today_close <= lookback_high:
                     continue
 
-                # Trend alignment: price above slow MA
-                trend_ma = close.rolling(window=self.trend_ma_period).mean()
+                # Trend alignment: price above slow MA — pre-computed
+                trend_ma = df["_mb_trend_ma"]
                 current_trend_ma = trend_ma.iloc[-1]
                 if pd.isna(current_trend_ma):
                     continue
                 if today_close <= current_trend_ma:
                     continue
 
-                # Volume info-only (Phase 7A lesson: no hard filter)
-                avg_volume_20 = volume.iloc[-21:-1].mean()
-                volume_ratio = today_volume / avg_volume_20 if avg_volume_20 > 0 else 0
+                # Volume info-only (Phase 7A lesson: no hard filter) — pre-computed
+                avg_volume_20 = df["_mb_avg_vol"].iloc[-1]
+                volume_ratio = today_volume / avg_volume_20 if (not pd.isna(avg_volume_20) and avg_volume_20 > 0) else 0
 
-                # ATR for stop placement
-                atr = calc_atr(high, low, close, period=self.atr_period)
+                # ATR for stop placement — pre-computed
+                atr = df["_mb_atr"]
                 current_atr = atr.iloc[-1]
                 if pd.isna(current_atr) or current_atr <= 0:
                     continue
@@ -241,8 +256,8 @@ class MomentumBreakout(BaseStrategy):
 
                 days_held = (today_date - entry_date).days
 
-                atr = calc_atr(high, low, close, period=self.atr_period)
-                current_atr = atr.iloc[-1]
+                # Use pre-computed ATR
+                current_atr = df["_mb_atr"].iloc[-1]
                 if pd.isna(current_atr):
                     current_atr = abs(entry_price - stop_price) / self.atr_stop_mult
 
