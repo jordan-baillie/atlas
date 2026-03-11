@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -126,6 +127,7 @@ class JobManager:
             "completed_at": None,
             "exit_code": None,
             "result_summary": None,
+            "notified_at": None,
         }
 
         self._save_job(job)
@@ -163,19 +165,24 @@ class JobManager:
         pi_cmd_parts = [
             "pi", "--print", "--no-session",
             "--model", "claude-sonnet-4-6",
+            "--append-system-prompt",
         ]
+        # System prompt must be quoted as a single shell argument
+        system_prompt = "After completing your work, always end with a concise 2-3 sentence summary of exactly what was done and any key findings."
         if job.get("skill"):
             pi_cmd_parts.extend(["--skill", job["skill"]])
 
-        # The launcher reads the prompt from file, runs pi, captures exit code.
-        # Pi's --print mode writes to stdout. We redirect to the log file
-        # and use script(1) to capture output from the pseudo-terminal.
+        # The launcher captures pi output into a variable first, then writes
+        # to the log file. This avoids issues with stdout buffering in tmux
+        # where the redirect sometimes produces empty files.
+        # We also capture tmux pane content as a fallback.
         launcher.write_text(
             f"#!/bin/bash\n"
             f"cd {PROJECT_ROOT}\n"
             f"PROMPT=$(cat {prompt_file})\n"
-            f"{' '.join(pi_cmd_parts)} \"$PROMPT\" > {log_file} 2>&1\n"
+            f"OUTPUT=$({' '.join(pi_cmd_parts)} {shlex.quote(system_prompt)} \"$PROMPT\" 2>&1)\n"
             f"EXIT_CODE=$?\n"
+            f"echo \"$OUTPUT\" > {log_file}\n"
             f"echo \"__JOB_EXIT_CODE__=$EXIT_CODE\" >> {log_file}\n"
             f"exit $EXIT_CODE\n"
         )
@@ -444,17 +451,40 @@ class JobManager:
     def _extract_summary(self, job: dict) -> str:
         """Extract a brief summary from the job's log output.
 
-        Looks for common patterns like "completed", "error", final metrics, etc.
+        Tries the log file first, falls back to tmux pane capture.
+        Strips ANSI escape codes and pi harness noise.
         """
+        text = ""
+
+        # Try log file first
         log_path = Path(job["log_file"])
-        if not log_path.exists():
+        if log_path.exists():
+            try:
+                text = log_path.read_text(errors="replace")
+            except Exception:
+                pass
+
+        # Fallback: capture from tmux pane (if session still exists briefly)
+        if not text.strip():
+            session_name = job["tmux_session"].replace("job-", "")
+            try:
+                result = subprocess.run(
+                    [str(DRIVE_SH), "read", session_name, "100"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    text = result.stdout
+            except Exception:
+                pass
+
+        if not text.strip():
             return "No output captured."
 
-        try:
-            text = log_path.read_text(errors="replace")
-            lines = text.splitlines()
-        except Exception:
-            return "Could not read log."
+        # Strip ANSI escape codes
+        text = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
+        text = re.sub(r'\x1b\].*?\x07', '', text)  # OSC sequences
+
+        lines = text.splitlines()
 
         # Filter out noise — keep substantive lines
         meaningful = []
@@ -462,19 +492,19 @@ class JobManager:
             stripped = line.strip()
             if not stripped:
                 continue
-            # Skip pi harness noise
+            # Skip pi harness noise and job markers
             if any(skip in stripped for skip in (
-                "╭", "╰", "│", "───", "⏎", "Tool:",
+                "╭", "╰", "│", "───", "⏎",
                 "__JOB_EXIT_CODE__", "Session '",
             )):
                 continue
             meaningful.append(stripped)
 
         if not meaningful:
-            return "Job produced no readable output."
+            return "Job completed but produced no readable output."
 
-        # Return last 15 meaningful lines as summary
-        tail = meaningful[-15:]
+        # Return last 20 meaningful lines as summary
+        tail = meaningful[-20:]
         return "\n".join(tail)[-2000:]  # Cap at 2000 chars
 
 

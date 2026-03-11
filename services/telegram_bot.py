@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
 from typing import Optional
@@ -44,6 +44,44 @@ from brokers.plan import TradePlanGenerator
 from utils.telegram import _load_credentials, _esc, _build_portfolio_snapshot
 
 logger = logging.getLogger("atlas.telegram_bot")
+
+
+def _md_to_telegram_html(text: str) -> str:
+    """Convert markdown-ish text to Telegram HTML.
+
+    Handles: **bold**, *italic*, `code`, ```code blocks```,
+    - bullet lists, numbered lists. Escapes HTML entities first.
+    """
+    import re
+
+    # Escape HTML entities first
+    text = _esc(text)
+
+    # Code blocks (``` ... ```) → <pre>
+    text = re.sub(r'```(?:\w+)?\n?(.*?)```', r'<pre>\1</pre>', text, flags=re.DOTALL)
+
+    # Inline code (`...`) → <code>
+    text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+
+    # Bold (**...**) → <b>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+
+    # Italic (*...*) — but not inside <b> tags from bold conversion
+    text = re.sub(r'(?<!\w)\*([^*]+?)\*(?!\w)', r'<i>\1</i>', text)
+
+    # Heading lines (### ... or ## ... or # ...) → bold
+    text = re.sub(r'^#{1,3}\s+(.+)$', r'<b>\1</b>', text, flags=re.MULTILINE)
+
+    # Bullet lists (- item or * item) → • item
+    text = re.sub(r'^[\s]*[-*]\s+', '• ', text, flags=re.MULTILINE)
+
+    # Horizontal rules (--- or ===) → empty line
+    text = re.sub(r'^[-=]{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # Clean up multiple blank lines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text.strip()
 
 # ═══════════════════════════════════════════════════════════════
 # Configuration
@@ -843,30 +881,42 @@ async def cmd_job(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     }
     icon = status_icons.get(job["status"], "❓")
 
+    skill_tag = f" @{_esc(job['skill_name'])}" if job.get("skill_name") else ""
+
     lines = [
-        f"{icon} <b>Job {_esc(job['id'])}</b>",
+        f"{icon} <b>Job {_esc(job['id'])}</b>{skill_tag}",
         "",
         f"<b>Status:</b> {job['status']}",
         f"<b>Prompt:</b> {_esc((job.get('prompt') or '')[:300])}",
     ]
 
-    if job.get("skill_name"):
-        lines.append(f"<b>Skill:</b> {_esc(job['skill_name'])}")
     if job.get("spec"):
         lines.append(f"<b>Spec:</b> {_esc(job['spec'])}")
-    lines.append(f"<b>Created:</b> {_esc(_fmt_time(job.get('created_at')))}")
+
+    # Timing info on one line
+    timing = []
     if job.get("started_at"):
-        lines.append(f"<b>Started:</b> {_esc(_fmt_time(job['started_at']))}")
+        timing.append(f"start {_esc(_fmt_time(job['started_at']))}")
     if job.get("completed_at"):
-        lines.append(f"<b>Completed:</b> {_esc(_fmt_time(job['completed_at']))}")
-    lines.append(f"<b>Elapsed:</b> {_job_elapsed(job)}")
+        timing.append(f"end {_esc(_fmt_time(job['completed_at']))}")
+    timing.append(f"elapsed {_job_elapsed(job)}")
+    lines.append(f"<b>Time:</b> {' → '.join(timing)}")
 
-    if job.get("exit_code") is not None:
-        lines.append(f"<b>Exit code:</b> {job['exit_code']}")
+    if job.get("exit_code") is not None and job["exit_code"] != 0:
+        lines.append(f"⚠️ <b>Exit code:</b> {job['exit_code']}")
 
-    if job.get("result_summary"):
-        summary = job["result_summary"][:1500]
-        lines.extend(["", "<b>Summary:</b>", f"<pre>{_esc(summary)}</pre>"])
+    # Result summary — markdown → HTML
+    summary = (job.get("result_summary") or "").strip()
+    if summary and summary not in (
+        "No output captured.",
+        "Job produced no readable output.",
+        "Job completed but produced no readable output.",
+        "Could not read log.",
+    ):
+        formatted = _md_to_telegram_html(summary[:2000])
+        lines.extend(["", "<b>Result:</b>", formatted])
+    elif job["status"] in ("done", "failed"):
+        lines.append(f"\n📄 <code>/logs {_esc(job['id'])}</code> for output")
 
     await update.message.reply_text("\n".join(lines), parse_mode="HTML")
 
@@ -999,36 +1049,73 @@ async def cmd_specs(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def _check_job_completion(ctx: ContextTypes.DEFAULT_TYPE):
     """Periodic callback to check if a job has completed.
 
-    When complete, sends result notification with charts and removes the repeating job.
+    When complete, sends result notification and removes the repeating job.
+    Uses notified_at flag to prevent duplicate alerts across bot restarts.
     """
     data = ctx.job.data
     job_id = data["job_id"]
     chat_id = data["chat_id"]
 
     from services.job_server import get_manager
-    job = get_manager().get_job(job_id)
+    mgr = get_manager()
+    # Run the blocking job lookup (subprocess + file I/O) in a thread pool
+    # to avoid blocking the asyncio event loop.
+    loop = asyncio.get_event_loop()
+    job = await loop.run_in_executor(None, mgr.get_job, job_id)
 
     if not job or job["status"] == "running":
         return  # Still running, check again later
+
+    # Stop the repeating check first (whether or not we send the notification)
+    ctx.job.schedule_removal()
+
+    # Guard against duplicate notifications (e.g. from bot restart + restore)
+    if job.get("notified_at"):
+        logger.info("Job %s already notified at %s — skipping duplicate", job_id, job["notified_at"])
+        return
+
+    # Mark as notified before sending (prevents race with concurrent monitors)
+    job["notified_at"] = datetime.now(timezone.utc).isoformat()
+    await loop.run_in_executor(None, mgr._save_job, job)
 
     # Job finished — send notification
     status_icons = {
         "done": "✅", "failed": "❌", "killed": "🛑", "timeout": "⏰",
     }
     icon = status_icons.get(job["status"], "❓")
+    skill_tag = f" @{_esc(job['skill_name'])}" if job.get("skill_name") else ""
+    prompt_brief = _esc((job.get("prompt") or "")[:100].replace("\n", " "))
 
     lines = [
-        f"{icon} <b>Job completed: {_esc(job['id'])}</b>",
-        f"<b>Status:</b> {job['status']}",
-        f"<b>Elapsed:</b> {_job_elapsed(job)}",
+        f"{icon} <b>Job Complete</b>{skill_tag}",
+        f"{_esc(job['id'])}  •  {_job_elapsed(job)}",
     ]
 
-    if job.get("exit_code") is not None:
-        lines.append(f"<b>Exit code:</b> {job['exit_code']}")
+    # Show prompt context (brief)
+    if prompt_brief:
+        lines.append(f"<i>{prompt_brief}</i>")
 
-    if job.get("result_summary"):
-        summary = job["result_summary"][:1500]
-        lines.extend(["", "<b>Result:</b>", f"<pre>{_esc(summary)}</pre>"])
+    # Show exit code only if non-zero (failure)
+    if job.get("exit_code") and job["exit_code"] != 0:
+        lines.append(f"\n⚠️ <b>Exit code:</b> {job['exit_code']}")
+
+    # Result summary — convert markdown to HTML, don't use <pre>
+    summary = (job.get("result_summary") or "").strip()
+    if summary and summary not in (
+        "No output captured.",
+        "Job produced no readable output.",
+        "Job completed but produced no readable output.",
+        "Could not read log.",
+    ):
+        formatted = _md_to_telegram_html(summary[:2000])
+        lines.extend(["", formatted])
+    elif job["status"] == "done":
+        lines.append("\n✅ Completed successfully (no summary produced)")
+    else:
+        lines.append(f"\n⚠️ No output captured")
+
+    # Always offer /logs for full output
+    lines.append(f"\n📄 <code>/logs {_esc(job['id'])}</code>")
 
     try:
         await ctx.bot.send_message(
@@ -1038,9 +1125,6 @@ async def _check_job_completion(ctx: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.error("Failed to send job completion: %s", e)
-
-    # Stop the repeating check
-    ctx.job.schedule_removal()
 
 
 # ── Helpers ──────────────────────────────────────────────────
@@ -1097,6 +1181,44 @@ def _job_elapsed(job: dict) -> str:
 # Main — run the bot
 # ═══════════════════════════════════════════════════════════════
 
+async def _restore_job_monitors(app) -> None:
+    """Re-register job monitors for jobs that were running when the bot last stopped.
+
+    Called during post_init so the job queue is ready. Handles bot-restart recovery:
+    without this, any job running across a restart never gets a completion notification.
+    """
+    try:
+        from services.job_server import get_manager
+        mgr = get_manager()
+        running_jobs = mgr.list_jobs(status="running")
+        if not running_jobs:
+            return
+
+        try:
+            _, owner_chat_id = _load_credentials()
+        except Exception:
+            logger.warning("Could not load credentials for job monitor restore — skipping")
+            return
+
+        logger.info("Restoring completion monitors for %d running job(s) after restart", len(running_jobs))
+        for job in running_jobs:
+            job_id = job["id"]
+            monitor_name = f"job_monitor_{job_id}"
+            # Don't double-register if already scheduled (shouldn't happen on startup, but safe)
+            if app.job_queue.get_jobs_by_name(monitor_name):
+                continue
+            app.job_queue.run_repeating(
+                _check_job_completion,
+                interval=30,
+                first=10,  # check quickly after restart
+                data={"job_id": job_id, "chat_id": int(owner_chat_id)},
+                name=monitor_name,
+            )
+            logger.info("Restored monitor for job %s", job_id)
+    except Exception as e:
+        logger.error("Failed to restore job monitors on startup: %s", e)
+
+
 def main():
     from utils.logging_config import setup_logging
     setup_logging("telegram_bot", extra_log_file="telegram_bot", telegram_errors=False)
@@ -1109,7 +1231,7 @@ def main():
 
     logger.info("Starting Atlas Telegram Bot (chat_id=%s)", chat_id)
 
-    app = Application.builder().token(token).build()
+    app = Application.builder().token(token).post_init(_restore_job_monitors).build()
 
     # Command handlers
     app.add_handler(CommandHandler("status", cmd_status))
