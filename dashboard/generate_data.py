@@ -727,8 +727,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             else:
                 broker_positions = all_broker_pos
             broker_ok = True
-        else:
+        elif broker_cache is None:
+            # broker_cache=None means standalone call (not from generate()) — try connecting.
+            # broker_cache={"ok": False} means upstream already tried and failed — skip retry.
             broker_acct, broker_positions, broker_ok, _orders = get_live_broker_data(config)
+        # else: broker_cache is {"ok": False} — upstream tried and failed, skip re-connect.
     elif broker_cache and broker_cache.get("ok"):
         # Not in live mode, but we have shared broker data (cross-broker).
         # Extract positions that belong to THIS market as manual holdings.
@@ -2959,6 +2962,8 @@ def generate():
                               f"{len(cached['positions'])} positions)")
                     else:
                         print(f"  {mid}: broker connect FAILED ({broker_name}), no cache available")
+                        # Sentinel: tells generate_market() not to retry — upstream already tried.
+                        broker_caches[mid] = {"ok": False}
 
     # Share Moomoo positions with markets that don't have their own live broker
     # but DO have positions on Moomoo (e.g. ASX stocks held on Moomoo account).

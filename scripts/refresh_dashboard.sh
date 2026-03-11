@@ -12,7 +12,7 @@ if [ -f "$LOG" ] && [ "$(wc -l < "$LOG")" -gt 5000 ]; then
 fi
 
 # ── Run with timeout — don't let IBKR hang the entire cron ───
-timeout 120 python3 dashboard/generate_data.py 2>&1
+timeout 180 python3 dashboard/generate_data.py 2>&1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
