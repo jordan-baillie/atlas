@@ -1236,5 +1236,38 @@
     "value": null,
     "source": "iran_monitor_agent",
     "timestamp": "2026-03-11T20:11:20"
+  },
+  {
+    "position_id": "0a70124996f3",
+    "ticker": "INSW",
+    "condition_id": "insw_trail",
+    "condition_label": "INSW within 10% trailing stop of highest close",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-12T00:05:37"
+  },
+  {
+    "position_id": "0053ac1a7b04",
+    "ticker": "RTX",
+    "condition_id": "rtx_sector",
+    "condition_label": "Defence sector momentum (ITA/XAR)",
+    "old_status": "failing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-12T00:05:42"
+  },
+  {
+    "position_id": "20a45fa0c57c",
+    "ticker": "WDS.AX",
+    "condition_id": "wds_conc",
+    "condition_label": "Combined energy exposure (XOP+WDS) <55%",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-12T00:05:46"
   }
 ]

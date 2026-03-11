@@ -268,6 +268,10 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-02T18:39:39",
@@ -375,13 +379,13 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "failing",
+        "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-11T20:10:31",
+        "last_checked": "2026-03-12T00:05:42",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
-    "health_score": 8.5,
+    "health_score": 9.0,
     "current_price": 206.96,
     "unrealized_pnl": -3.78,
     "unrealized_pnl_pct": -0.3,
@@ -541,10 +545,14 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-11T20:10:32",
+    "updated_at": "2026-03-12T00:05:42",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -623,9 +631,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "passing",
+        "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-11T20:10:33",
+        "last_checked": "2026-03-12T00:05:37",
         "notes": "Green=above, Amber=within 3% of trigger, Red=below = IMMEDIATE EXIT. Agent: check 30d high from price data."
       },
       {
@@ -657,7 +665,7 @@
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
-    "health_score": 9.0,
+    "health_score": 8.5,
     "current_price": 73.26,
     "unrealized_pnl": -47.18,
     "unrealized_pnl_pct": -8.42,
@@ -825,10 +833,14 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-11T20:10:33",
+    "updated_at": "2026-03-12T00:05:37",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1113,6 +1125,10 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
@@ -1405,6 +1421,10 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
@@ -1675,6 +1695,10 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-04T10:00:00",
@@ -1784,9 +1808,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "warning",
+        "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-11T20:10:40",
+        "last_checked": "2026-03-12T00:05:46",
         "notes": "Green=<40%, Amber=40-55%, Red=>55% = CONCENTRATION WARNING. Includes XOP+WDS+INSW (tanker is energy-adjacent). Agent: read portfolio_checks.energy_tickers."
       },
       {
@@ -1804,7 +1828,7 @@
         "notes": "Green=weakening AUD (boosts USD earnings), Amber=stable, Red=strengthening AUD"
       }
     ],
-    "health_score": 7.5,
+    "health_score": 8.0,
     "current_price": 30.42,
     "unrealized_pnl": 174.04,
     "unrealized_pnl_pct": 17.72,
@@ -1960,10 +1984,14 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-03-01T00:00:00",
-    "updated_at": "2026-03-11T20:10:43",
+    "updated_at": "2026-03-12T00:05:46",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -2229,6 +2257,10 @@
       {
         "timestamp": "2026-03-11 20:09",
         "text": "[4h update 20:00 AEST] 5 key new devs since 16:00 AEST. LEAD: US destroys 16 Iranian mine-laying ships near Hormuz (NBC News/Guardian) - Hegseth declares most intense day of strikes (day 12). Cargo ship struck in Hormuz crew evacuating (Asharq Al-Awsat). OIL: WTI 8.36 (+5.88%d) Brent 8.31 (+0.58%d) Spread -/bin/bash.05; CNBC reports oil back above 0 despite IEA record reserves release proposal - market shrugging off supply response. HORMUZ: Reuters confirms no US Navy escort possible; gCaptain Strait shut to all non-Iran-linked ships; Dubai airport hit by Iranian drones (Persian Gulf zone - no new zone expansion). IRAN: official says prepared for ten-year war (Israel National News); new supreme leader reportedly wounded/in hiding (Ynet). US-Israel at odds over war timing/goals (Ynet) - strategic disagreement only, not ceasefire signal. RTX: Johnson rejects nation building = no post-war planning = no imminent ceasefire. TOGGLE: psq_spx5d warning->passing (SPX 5d -1.28% = declining = green for PSQ). NEM paradox: goldoil FAILING (ratio 58.85 vs 62.53 5d = oil outpacing gold) + ryield AMBER - trim NOT triggered (need BOTH red). VIX 25.86 >18, QQQ 07.77 below MA50 14.64. Energy 44.1%, kill switch 0/4 clear (fresh escalations reset 52h cooling timer). Ceasefire 2% VERY UNLIKELY (4+wk)."
+      },
+      {
+        "timestamp": "2026-03-12 00:06",
+        "text": "[4h update 00:00 AEST] 10 new results in 4h window, 6 substantive developments. (1) Sky News: ONLY shadow fleet/dark ships crossing Hormuz \u2014 legitimate commercial traffic halted; confirms insw_hormuz/xop_hormuz thesis; (2) CNN: 'more vessels attacked near Strait of Hormuz' (plural) \u2014 active targeting cycle continues, hours_since_escalation ~4h; (3) WSJ: IEA proposes largest-ever strategic reserve release \u2014 market shrugging off (WTI 85.36 vs 88.36 prior, -3 easing; still +5.4%5d, well above 65 invalidation); (4) Middle East Monitor: Houthi/Hezbollah-linked group threatens Barakah nuclear facility Abu Dhabi \u2014 NOT Reuters/AP, watch-only, remains Persian Gulf zone; (5) Al Jazeera: '12 days: Iran blueprint trapped US, Israel in longer war' \u2014 confirms rtx_duration AMBER (4-8wk framing); (6) NYT: gas prices rising 11th straight day \u2014 approaching but still below 5 political trigger; (7) Brent/WTI spread normalised: Brent 86.75 > WTI 85.36 = 1.39 Brent premium (was -0.05 inverted last cycle). TOGGLE CHANGES: (A) insw_trail: passing->warning \u2014 INSW 70.97, trailing stop trigger 68.85, only 3% buffer \u2014 WATCH CLOSELY; (B) rtx_sector: failing->warning \u2014 defence_sector_5d -0.98% is technically amber per formula (>-1%); (C) wds_conc: warning->passing \u2014 energy concentration 39.88% now below 40% threshold. No Reuters/AP escalation events to record. No VLCC rate data in news. Geographic scope: 2 zones (Persian Gulf, Hormuz) CONTAINED. NEM paradox: goldoil FAILING (ratio 60.52 vs 62.53 5d) + ryield AMBER \u2014 trim NOT triggered (need BOTH red). Ceasefire 2% VERY UNLIKELY (4+wk)."
       }
     ],
     "created_at": "2026-02-27T00:00:00",

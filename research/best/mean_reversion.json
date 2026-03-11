@@ -8,10 +8,10 @@
     "zscore_entry": -2.0,
     "atr_period": 20,
     "atr_stop_mult": 1.5,
-    "profit_target_atr_mult": 1.5,
+    "profit_target_atr_mult": 2.5,
     "max_hold_days": 20,
     "sma200_filter": false,
-    "ibs_max": 1.0,
+    "ibs_max": 0.7,
     "volume": {
       "lookback": 20,
       "min_ratio": 0.5,
@@ -40,38 +40,38 @@
     }
   },
   "metrics": {
-    "total_trades": 159,
-    "cagr_pct": 9.9383,
-    "cagr_full_period_pct": 8.3597,
-    "sharpe": 0.3627,
-    "sortino": 2.1896,
-    "max_drawdown_pct": 4.0231,
-    "win_rate_pct": 60.38,
-    "profit_factor": 3.0199,
-    "total_pnl": 3017.46,
-    "avg_trade": 18.98,
-    "final_equity": 7014.03,
-    "expectancy_r": 0.8324,
-    "avg_r": 0.8324,
-    "r_count": 159,
-    "edge_p_value": 0.092466,
+    "total_trades": 141,
+    "cagr_pct": 10.8496,
+    "cagr_full_period_pct": 9.1204,
+    "sharpe": 0.4059,
+    "sortino": 2.3465,
+    "max_drawdown_pct": 3.9065,
+    "win_rate_pct": 56.74,
+    "profit_factor": 3.2471,
+    "total_pnl": 3372.64,
+    "avg_trade": 23.92,
+    "final_equity": 7365.8,
+    "expectancy_r": 1.0042,
+    "avg_r": 1.0042,
+    "r_count": 141,
+    "edge_p_value": 0.072923,
     "edge_significant": false,
-    "var_95_pct": 0.336,
-    "cvar_95_pct": 0.544,
-    "calmar": 2.4703,
-    "mc_p95_drawdown_pct": 5.72,
+    "var_95_pct": 0.352,
+    "cvar_95_pct": 0.578,
+    "calmar": 2.7773,
+    "mc_p95_drawdown_pct": 6.04,
     "mc_fragile": false,
     "strategy_breakdown": {
       "mean_reversion": {
-        "trades": 159,
-        "total_pnl": 3017.46,
-        "win_rate_pct": 60.4
+        "trades": 141,
+        "total_pnl": 3372.64,
+        "win_rate_pct": 56.7
       }
     },
-    "runtime_s": 13.7
+    "runtime_s": 13.2
   },
-  "description": "zscore_lookback=30",
-  "experiments_run": 34,
-  "experiments_kept": 20,
-  "updated_at": "2026-03-11T13:22:35.667975+00:00"
+  "description": "ibs_max=0.7",
+  "experiments_run": 36,
+  "experiments_kept": 22,
+  "updated_at": "2026-03-11T13:45:34.433384+00:00"
 }

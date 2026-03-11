@@ -21,7 +21,12 @@ class DynamicSizer:
     def __init__(self, config: dict):
         ds_cfg = config.get("dynamic_sizing", {})
         self.enabled = ds_cfg.get("enabled", False)
-        self.base_risk_pct = ds_cfg.get("base_risk_pct", 0.005)
+        # base_risk_pct: use dynamic_sizing.base_risk_pct if set,
+        # otherwise fall back to risk.max_risk_per_trade_pct for consistency.
+        # This ensures the engine's position sizing matches the config when
+        # dynamic sizing is disabled.
+        risk_cfg_pct = config.get("risk", {}).get("max_risk_per_trade_pct", 0.005)
+        self.base_risk_pct = ds_cfg.get("base_risk_pct", risk_cfg_pct)
         self.min_risk_pct = ds_cfg.get("min_risk_pct", 0.003)
         self.max_risk_pct = ds_cfg.get("max_risk_pct", 0.008)
 
