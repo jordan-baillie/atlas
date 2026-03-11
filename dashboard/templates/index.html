@@ -1784,7 +1784,7 @@ function paintChart() {
   ctx.fillStyle = panelLabelColor;
   ctx.font = '600 8px "JetBrains Mono", monospace';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('RETURN %', ml + 4, mt + 3);
+  ctx.fillText('RETURN \u0025 (cumulative)', ml + 4, mt + 3);
   if (showDrawdown) ctx.fillText('DRAWDOWN', ml + 4, ddTop + 3);
 
   // ── Low-data annotation (< 5 data points) ──
