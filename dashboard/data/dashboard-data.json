@@ -1,0 +1,3379 @@
+{
+  "timestamp": "2026-03-11T17:15:07.211650+10:00",
+  "project": "Atlas",
+  "markets": {
+    "asx": {
+      "timestamp": "2026-03-11T17:15:05.729647+10:00",
+      "config_version": "v1.0-passive",
+      "project": "Atlas",
+      "market_id": "asx",
+      "currency": "AUD",
+      "trading_mode": "offline",
+      "data_source": "cross-broker",
+      "broker": "moomoo",
+      "portfolio": {
+        "equity": 2654.08,
+        "cash": 0,
+        "starting_equity": 2471.44,
+        "total_pnl": 182.64,
+        "total_pnl_pct": 7.39,
+        "num_open": 0,
+        "num_atlas": 0,
+        "win_rate": 0,
+        "commission_per_trade": 0,
+        "total_commissions": 0,
+        "market_pnl": 182.64,
+        "realized_pnl": 0,
+        "open_positions": [],
+        "buying_power": 0,
+        "broker_equity": 2654.08,
+        "broker_cash": 0,
+        "today_pnl_by_ccy": {
+          "AUD": 3.96
+        }
+      },
+      "manual_positions": {
+        "positions": [
+          {
+            "ticker": "WHC.AX",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 8.66,
+            "current_price": 8.71,
+            "shares": 172,
+            "pnl": 8.6,
+            "pnl_pct": 0.58,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": -5.16,
+            "currency": "AUD",
+            "market": "asx"
+          },
+          {
+            "ticker": "WDS.AX",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 25.84,
+            "current_price": 30.42,
+            "shares": 38,
+            "pnl": 174.04,
+            "pnl_pct": 17.72,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": 9.12,
+            "currency": "AUD",
+            "market": "asx"
+          }
+        ],
+        "num_open": 2,
+        "unrealized_pnl": 182.64,
+        "market_value": 2654.08
+      },
+      "strategy_summary": [],
+      "equity_curve": [
+        {
+          "date": "2026-03-05",
+          "equity": 1157.1,
+          "fx_rate": 1.0,
+          "cross_broker": true,
+          "pnl": 175.18
+        },
+        {
+          "date": "2026-03-06",
+          "equity": 1168.5,
+          "pnl": 186.58,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        },
+        {
+          "date": "2026-03-07",
+          "equity": 1168.5,
+          "pnl": 186.58,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        },
+        {
+          "date": "2026-03-08",
+          "equity": 1168.5,
+          "pnl": 186.58,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        },
+        {
+          "date": "2026-03-09",
+          "equity": 1191.68,
+          "pnl": 209.76,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        },
+        {
+          "date": "2026-03-10",
+          "equity": 2650.12,
+          "pnl": 178.68,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        },
+        {
+          "date": "2026-03-11",
+          "equity": 2654.08,
+          "pnl": 182.64,
+          "fx_rate": 1.0,
+          "cross_broker": true
+        }
+      ],
+      "benchmark_curve": [
+        {
+          "date": "2026-03-05",
+          "equity": 2471.44
+        },
+        {
+          "date": "2026-03-06",
+          "equity": 2442.07
+        },
+        {
+          "date": "2026-03-09",
+          "equity": 2374.47
+        },
+        {
+          "date": "2026-03-11",
+          "equity": 2416.81
+        }
+      ],
+      "benchmark_ticker": "IOZ.AX",
+      "benchmark_return_pct": -2.21,
+      "plan": {
+        "trade_date": "2026-03-03",
+        "status": "APPROVED",
+        "market_id": "asx",
+        "entries": [
+          {
+            "ticker": "REH.AX",
+            "strategy": "trend_following",
+            "entry_price": 15.640000343322754,
+            "stop_price": 14.3943,
+            "take_profit": null,
+            "position_size": 36,
+            "position_value": 563.04,
+            "risk_amount": 44.85,
+            "confidence": 1.0,
+            "rationale": "REH.AX in uptrend (fast MA $15.10 > slow MA $14.48, spread 4.3%). Price pulled back 6.0% from recent high of $16.64 to $15.64. Trend active for 59 bars. Volume 0.8x avg. ATR=0.62, stop at $14.39.",
+            "features": {
+              "fast_ma": 15.096,
+              "slow_ma": 14.4795,
+              "ma_spread_pct": 4.26,
+              "pullback_pct": 6.01,
+              "recent_high": 16.64,
+              "trend_bars": 59,
+              "atr": 0.6228,
+              "close": 15.64,
+              "volume_ratio": 0.77,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 1.0,
+              "rs_percentile": 88.7,
+              "rs_score": 23.81,
+              "rs_momentum": 0.0,
+              "roc_20": 6.76,
+              "roc_60": 26.54,
+              "roc_120": 47.27
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "AGL.AX",
+            "strategy": "trend_following",
+            "entry_price": 9.829999923706055,
+            "stop_price": 9.3636,
+            "take_profit": null,
+            "position_size": 57,
+            "position_value": 560.31,
+            "risk_amount": 26.58,
+            "confidence": 0.9600000000000001,
+            "rationale": "AGL.AX in uptrend (fast MA $10.21 > slow MA $9.40, spread 8.7%). Price pulled back 7.3% from recent high of $10.60 to $9.83. Trend active for 13 bars. Volume 0.7x avg. ATR=0.23, stop at $9.36.",
+            "features": {
+              "fast_ma": 10.209,
+              "slow_ma": 9.3957,
+              "ma_spread_pct": 8.66,
+              "pullback_pct": 7.26,
+              "recent_high": 10.6,
+              "trend_bars": 13,
+              "atr": 0.2332,
+              "close": 9.83,
+              "volume_ratio": 0.67,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 0.93,
+              "rs_percentile": 76.1,
+              "rs_score": 9.81,
+              "rs_momentum": 0.0,
+              "roc_20": 7.67,
+              "roc_60": 5.47,
+              "roc_120": 19.3
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "NXT.AX",
+            "strategy": "trend_following",
+            "entry_price": 13.350000381469727,
+            "stop_price": 12.1928,
+            "take_profit": null,
+            "position_size": 42,
+            "position_value": 560.7,
+            "risk_amount": 48.6,
+            "confidence": 0.95,
+            "rationale": "NXT.AX in uptrend (fast MA $13.80 > slow MA $13.27, spread 3.9%). Price pulled back 6.9% from recent high of $14.34 to $13.35. Trend active for 24 bars. Volume 0.9x avg. ATR=0.58, stop at $12.19.",
+            "features": {
+              "fast_ma": 13.795,
+              "slow_ma": 13.2728,
+              "ma_spread_pct": 3.93,
+              "pullback_pct": 6.9,
+              "recent_high": 14.34,
+              "trend_bars": 24,
+              "atr": 0.5786,
+              "close": 13.35,
+              "volume_ratio": 0.86,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 1.0,
+              "rs_percentile": 44.0,
+              "rs_score": -4.63,
+              "rs_momentum": 0.0,
+              "roc_20": 2.61,
+              "roc_60": -1.4,
+              "roc_120": -20.72,
+              "rs_confidence_adj": -0.05,
+              "rs_confidence_orig": 1.0
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "ADH.AX",
+            "strategy": "trend_following",
+            "entry_price": 1.8700000047683716,
+            "stop_price": 1.7076,
+            "take_profit": null,
+            "position_size": 304,
+            "position_value": 568.48,
+            "risk_amount": 49.37,
+            "confidence": 0.95,
+            "rationale": "ADH.AX in uptrend (fast MA $1.87 > slow MA $1.83, spread 2.1%). Price pulled back 7.0% from recent high of $2.01 to $1.87. Trend active for 17 bars. Volume 0.5x avg (LOW). ATR=0.08, stop at $1.71.",
+            "features": {
+              "fast_ma": 1.866,
+              "slow_ma": 1.8271,
+              "ma_spread_pct": 2.13,
+              "pullback_pct": 6.97,
+              "recent_high": 2.01,
+              "trend_bars": 17,
+              "atr": 0.0812,
+              "close": 1.87,
+              "volume_ratio": 0.47,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 0.97,
+              "rs_percentile": 43.4,
+              "rs_score": -5.06,
+              "rs_momentum": 0.0,
+              "roc_20": 3.89,
+              "roc_60": 1.36,
+              "roc_120": -28.35,
+              "rs_confidence_adj": -0.05,
+              "rs_confidence_orig": 1.0
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "PDN.AX",
+            "strategy": "trend_following",
+            "entry_price": 13.5600004196167,
+            "stop_price": 12.2725,
+            "take_profit": null,
+            "position_size": 42,
+            "position_value": 569.52,
+            "risk_amount": 54.08,
+            "confidence": 0.9351,
+            "rationale": "PDN.AX in uptrend (fast MA $13.27 > slow MA $12.34, spread 7.5%). Price pulled back 4.1% from recent high of $14.14 to $13.56. Trend active for 54 bars. Volume 0.5x avg (LOW). ATR=0.64, stop at $12.27.",
+            "features": {
+              "fast_ma": 13.269,
+              "slow_ma": 12.341,
+              "ma_spread_pct": 7.52,
+              "pullback_pct": 4.1,
+              "recent_high": 14.14,
+              "trend_bars": 54,
+              "atr": 0.6438,
+              "close": 13.56,
+              "volume_ratio": 0.48,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 0.9051,
+              "rs_percentile": 97.5,
+              "rs_score": 41.55,
+              "rs_momentum": 0.0,
+              "roc_20": 3.43,
+              "roc_60": 68.24,
+              "roc_120": 65.16
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "ANZ.AX",
+            "strategy": "trend_following",
+            "entry_price": 39.33000183105469,
+            "stop_price": 37.6245,
+            "take_profit": null,
+            "position_size": 14,
+            "position_value": 550.62,
+            "risk_amount": 23.88,
+            "confidence": 0.9208000000000001,
+            "rationale": "ANZ.AX in uptrend (fast MA $39.77 > slow MA $37.68, spread 5.5%). Price pulled back 3.8% from recent high of $40.89 to $39.33. Trend active for 46 bars. Volume 0.8x avg. ATR=0.85, stop at $37.62.",
+            "features": {
+              "fast_ma": 39.765,
+              "slow_ma": 37.682,
+              "ma_spread_pct": 5.53,
+              "pullback_pct": 3.82,
+              "recent_high": 40.89,
+              "trend_bars": 46,
+              "atr": 0.8528,
+              "close": 39.33,
+              "volume_ratio": 0.81,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 0.8908,
+              "rs_percentile": 81.8,
+              "rs_score": 12.94,
+              "rs_momentum": 0.0,
+              "roc_20": 7.02,
+              "roc_60": 14.93,
+              "roc_120": 19.62
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          },
+          {
+            "ticker": "ORA.AX",
+            "strategy": "trend_following",
+            "entry_price": 2.1700000762939453,
+            "stop_price": 2.0056,
+            "take_profit": null,
+            "position_size": 262,
+            "position_value": 568.54,
+            "risk_amount": 43.07,
+            "confidence": 0.92,
+            "rationale": "ORA.AX in uptrend (fast MA $2.24 > slow MA $2.17, spread 3.2%). Price pulled back 7.3% from recent high of $2.34 to $2.17. Trend active for 9 bars. Volume 1.2x avg. ATR=0.08, stop at $2.01.",
+            "features": {
+              "fast_ma": 2.239,
+              "slow_ma": 2.1686,
+              "ma_spread_pct": 3.25,
+              "pullback_pct": 7.26,
+              "recent_high": 2.34,
+              "trend_bars": 9,
+              "atr": 0.0822,
+              "close": 2.17,
+              "volume_ratio": 1.16,
+              "breadth_pct_above_50ma": 45.6,
+              "breadth_pct_above_200ma": 44.4,
+              "breadth_ad_ratio": 0.76,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 3.8,
+              "breadth_confidence_adj": 0.03,
+              "breadth_confidence_orig": 0.89,
+              "rs_percentile": 65.4,
+              "rs_score": 4.78,
+              "rs_momentum": 0.0,
+              "roc_20": 9.32,
+              "roc_60": -2.69,
+              "roc_120": 7.96
+            },
+            "sector": "Unknown",
+            "market_id": ""
+          }
+        ],
+        "exits": [],
+        "risk_summary": {
+          "total_proposed_cost": 3941.21,
+          "total_proposed_risk": 290.43,
+          "risk_pct_of_equity": 7.26,
+          "positions_after": 7,
+          "cash_after_entries": 57.79,
+          "portfolio_exposure_pct": 98.55
+        }
+      },
+      "closed_trades": [],
+      "risk": {
+        "exposure_pct": 0.0,
+        "max_positions": 0,
+        "halted": false,
+        "risk_per_trade": 0.005,
+        "max_portfolio_risk": 0.05
+      },
+      "tasks": {
+        "upcoming": [],
+        "in_progress": [],
+        "done": []
+      },
+      "data_freshness": {
+        "broker_connected": false,
+        "broker_timestamp": null,
+        "data_source": "cross-broker",
+        "cache_age_minutes": null,
+        "equity_curve_last_date": "2026-03-11",
+        "plan_date": "2026-03-03",
+        "state_file_mtime": null
+      },
+      "funded": true,
+      "stale_warning": null,
+      "pending_orders": []
+    },
+    "hk": {
+      "timestamp": "2026-03-11T17:15:05.765736+10:00",
+      "config_version": "unknown",
+      "project": "Atlas",
+      "market_id": "hk",
+      "currency": "HKD",
+      "trading_mode": "offline",
+      "data_source": "offline",
+      "broker": "moomoo",
+      "portfolio": {
+        "equity": 0,
+        "cash": 0,
+        "starting_equity": 0,
+        "total_pnl": 0,
+        "total_pnl_pct": 0,
+        "num_open": 0,
+        "num_atlas": 0,
+        "win_rate": 0,
+        "commission_per_trade": 3.0,
+        "total_commissions": 0.0,
+        "market_pnl": 0,
+        "realized_pnl": 0,
+        "open_positions": [],
+        "buying_power": 0,
+        "broker_equity": null,
+        "broker_cash": null,
+        "today_pnl_by_ccy": {}
+      },
+      "manual_positions": {
+        "positions": [],
+        "num_open": 0,
+        "unrealized_pnl": 0,
+        "market_value": 0
+      },
+      "strategy_summary": [],
+      "equity_curve": [],
+      "benchmark_curve": [],
+      "benchmark_ticker": "SPY",
+      "benchmark_return_pct": 0,
+      "plan": {
+        "trade_date": "2026-03-05",
+        "status": "PENDING_APPROVAL",
+        "market_id": "hk",
+        "entries": [],
+        "exits": [],
+        "risk_summary": {
+          "total_proposed_cost": 0,
+          "total_proposed_risk": 0,
+          "risk_pct_of_equity": 0,
+          "positions_after": 0,
+          "cash_after_entries": 0.0,
+          "portfolio_exposure_pct": 0
+        }
+      },
+      "closed_trades": [],
+      "risk": {
+        "exposure_pct": 0,
+        "max_positions": 10,
+        "halted": false,
+        "risk_per_trade": 0.005,
+        "max_portfolio_risk": 0.05
+      },
+      "tasks": {
+        "upcoming": [],
+        "in_progress": [],
+        "done": []
+      },
+      "data_freshness": {
+        "broker_connected": false,
+        "broker_timestamp": null,
+        "data_source": "offline",
+        "cache_age_minutes": null,
+        "equity_curve_last_date": null,
+        "plan_date": "2026-03-05",
+        "state_file_mtime": null
+      },
+      "funded": false,
+      "stale_warning": null,
+      "pending_orders": []
+    },
+    "sp500": {
+      "timestamp": "2026-03-11T17:15:05.819282+10:00",
+      "config_version": "v2.2",
+      "project": "Atlas",
+      "market_id": "sp500",
+      "currency": "USD",
+      "trading_mode": "offline",
+      "data_source": "offline",
+      "broker": "moomoo",
+      "portfolio": {
+        "equity": 3990.82,
+        "cash": 3771.62,
+        "starting_equity": 4000,
+        "total_pnl": -9.18,
+        "total_pnl_pct": -0.23,
+        "num_open": 1,
+        "num_atlas": 1,
+        "win_rate": 0,
+        "commission_per_trade": 1.1,
+        "total_commissions": 1.1,
+        "market_pnl": -9.18,
+        "realized_pnl": 0,
+        "open_positions": [
+          {
+            "ticker": "CHTR",
+            "strategy": "trend_following",
+            "entry_date": "2026-02-27",
+            "entry_price": 228.38,
+            "current_price": 219.2,
+            "shares": 1,
+            "pnl": -9.18,
+            "pnl_pct": -4.02,
+            "stop_price": 211.8972,
+            "days_held": 12,
+            "sector": "Unknown",
+            "is_atlas": true,
+            "today_pnl": -0.13,
+            "currency": "USD",
+            "market": "sp500"
+          }
+        ],
+        "buying_power": 2653.95,
+        "broker_equity": 8634.02,
+        "broker_cash": 2659.81,
+        "today_pnl_by_ccy": {
+          "USD": -2.18
+        }
+      },
+      "manual_positions": {
+        "positions": [
+          {
+            "ticker": "XOP",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 127.429,
+            "current_price": 186.924,
+            "shares": 5,
+            "pnl": 297.48,
+            "pnl_pct": 46.69,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": -3.0,
+            "currency": "USD",
+            "market": "sp500"
+          },
+          {
+            "ticker": "RTX",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 207.59,
+            "current_price": 207.0,
+            "shares": 6,
+            "pnl": -3.54,
+            "pnl_pct": -0.28,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": 0.0,
+            "currency": "USD",
+            "market": "sp500"
+          },
+          {
+            "ticker": "PSQ",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 31.2,
+            "current_price": 30.7,
+            "shares": 33,
+            "pnl": -16.5,
+            "pnl_pct": -1.6,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": -1.65,
+            "currency": "USD",
+            "market": "sp500"
+          },
+          {
+            "ticker": "CIBR",
+            "strategy": "manual",
+            "entry_date": "",
+            "entry_price": 63.8,
+            "current_price": 66.04,
+            "shares": 10,
+            "pnl": 22.4,
+            "pnl_pct": 3.51,
+            "stop_price": 0,
+            "days_held": 0,
+            "sector": "Unknown",
+            "is_atlas": false,
+            "today_pnl": 2.6,
+            "currency": "USD",
+            "market": "sp500"
+          }
+        ],
+        "num_open": 4,
+        "unrealized_pnl": 299.84,
+        "market_value": 3850.12
+      },
+      "strategy_summary": [
+        {
+          "strategy": "trend_following",
+          "positions": 1,
+          "unrealized_pnl": -9.18,
+          "market_value": 219.2
+        }
+      ],
+      "equity_curve": [
+        {
+          "date": "2026-02-27",
+          "equity": 4000.0,
+          "fx_rate": 1.4081,
+          "note": "Initial deposit (USD)",
+          "pnl": 0,
+          "pnl_estimated": true
+        },
+        {
+          "date": "2026-03-03",
+          "equity": 7634.71,
+          "fx_rate": 1.4073,
+          "note": "backfilled from eod_summary",
+          "pnl": 173.48,
+          "pnl_estimated": true
+        },
+        {
+          "date": "2026-03-04",
+          "equity": 7590.62,
+          "fx_rate": 1.4203,
+          "note": "backfilled from eod_summary",
+          "pnl": 166.07,
+          "pnl_estimated": true
+        },
+        {
+          "date": "2026-03-05",
+          "equity": 7570.84,
+          "fx_rate": 1.4188,
+          "pnl": 307.69
+        },
+        {
+          "date": "2026-03-06",
+          "equity": 7569.09,
+          "pnl": 299.65,
+          "fx_rate": 1.4271
+        },
+        {
+          "date": "2026-03-07",
+          "equity": 7603.49,
+          "pnl": 331.27,
+          "fx_rate": 1.4219
+        },
+        {
+          "date": "2026-03-08",
+          "equity": 7603.49,
+          "pnl": 331.27,
+          "fx_rate": 1.4219
+        },
+        {
+          "date": "2026-03-09",
+          "equity": 8701.97,
+          "pnl": 362.46,
+          "fx_rate": 1.4245
+        },
+        {
+          "date": "2026-03-10",
+          "equity": 8647.68,
+          "pnl": 337.39,
+          "fx_rate": 1.4055
+        },
+        {
+          "date": "2026-03-11",
+          "equity": 8634.02,
+          "pnl": 290.66,
+          "fx_rate": 1.3931
+        }
+      ],
+      "benchmark_curve": [
+        {
+          "date": "2026-02-27",
+          "equity": 4000.0
+        },
+        {
+          "date": "2026-03-02",
+          "equity": 4002.27
+        },
+        {
+          "date": "2026-03-03",
+          "equity": 3967.0
+        },
+        {
+          "date": "2026-03-04",
+          "equity": 3994.99
+        },
+        {
+          "date": "2026-03-05",
+          "equity": 3972.71
+        },
+        {
+          "date": "2026-03-06",
+          "equity": 3920.64
+        },
+        {
+          "date": "2026-03-09",
+          "equity": 3954.98
+        },
+        {
+          "date": "2026-03-10",
+          "equity": 3948.63
+        }
+      ],
+      "benchmark_ticker": "SPY",
+      "benchmark_return_pct": -1.28,
+      "plan": {
+        "trade_date": "2026-03-09",
+        "status": "PENDING_APPROVAL",
+        "market_id": "sp500",
+        "entries": [
+          {
+            "ticker": "UPS",
+            "strategy": "mean_reversion",
+            "entry_price": 102.36000061035156,
+            "stop_price": 93.8885,
+            "take_profit": 107.4429,
+            "position_size": 2,
+            "position_value": 204.72,
+            "risk_amount": 16.94,
+            "confidence": 0.8126,
+            "rationale": "UPS is oversold with RSI=30.2 (threshold 35) and Z-score=-2.74 (threshold -2.0). Price $102.36 is 2.7 std devs below 20-day mean of $114.83. Volume surge 1.5x avg (capitulation +conf). Target reversion to $107.44 (+1.5x ATR), stop at $93.89.",
+            "features": {
+              "rsi": 30.21,
+              "zscore": -2.7441,
+              "mean_20": 114.829,
+              "atr": 3.3886,
+              "close": 102.36,
+              "volume_ratio": 1.53,
+              "breadth_pct_above_50ma": 49.5,
+              "breadth_pct_above_200ma": 65.5,
+              "breadth_ad_ratio": 0.42,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 1.0,
+              "rs_percentile": 47.2,
+              "rs_score": 2.96,
+              "rs_momentum": 0.0,
+              "roc_20": -12.18,
+              "roc_60": 7.13,
+              "roc_120": 21.35,
+              "sector": "Industrials"
+            },
+            "sector": "Industrials",
+            "market_id": ""
+          },
+          {
+            "ticker": "ON",
+            "strategy": "mean_reversion",
+            "entry_price": 56.869998931884766,
+            "stop_price": 49.4698,
+            "take_profit": 61.3101,
+            "position_size": 2,
+            "position_value": 113.74,
+            "risk_amount": 14.8,
+            "confidence": 0.7808,
+            "rationale": "ON is oversold with RSI=30.4 (threshold 35) and Z-score=-2.60 (threshold -2.0). Price $56.87 is 2.6 std devs below 20-day mean of $67.27. Volume 1.2x avg. Target reversion to $61.31 (+1.5x ATR), stop at $49.47.",
+            "features": {
+              "rsi": 30.43,
+              "zscore": -2.599,
+              "mean_20": 67.2745,
+              "atr": 2.9601,
+              "close": 56.87,
+              "volume_ratio": 1.16,
+              "breadth_pct_above_50ma": 49.5,
+              "breadth_pct_above_200ma": 65.5,
+              "breadth_ad_ratio": 0.42,
+              "breadth_thrust": 0.0,
+              "breadth_momentum": 0.0,
+              "breadth_net_new_highs_pct": 1.0,
+              "rs_percentile": 42.2,
+              "rs_score": 0.82,
+              "rs_momentum": 0.0,
+              "roc_20": -9.87,
+              "roc_60": 0.87,
+              "roc_120": 17.84,
+              "sector": "Technology"
+            },
+            "sector": "Technology",
+            "market_id": ""
+          }
+        ],
+        "exits": [
+          {
+            "ticker": "CHTR",
+            "reason": "signal_exit",
+            "exit_price": 232.24000549316406,
+            "details": "CHTR 2-day confirmed reversal: fast MA $232.10 crossed below slow MA $233.91. Close=$232.24, held -3 days."
+          }
+        ],
+        "risk_summary": {
+          "total_proposed_cost": 318.46,
+          "total_proposed_risk": 31.74,
+          "risk_pct_of_equity": 0.79,
+          "positions_after": 2,
+          "cash_after_entries": 1792.3,
+          "portfolio_exposure_pct": 55.24
+        }
+      },
+      "closed_trades": [],
+      "risk": {
+        "exposure_pct": 94.7,
+        "max_positions": 15,
+        "halted": false,
+        "risk_per_trade": 0.005,
+        "max_portfolio_risk": 0.05
+      },
+      "tasks": {
+        "upcoming": [],
+        "in_progress": [],
+        "done": []
+      },
+      "data_freshness": {
+        "broker_connected": true,
+        "broker_timestamp": "2026-03-11T17:15:05.819282+10:00",
+        "data_source": "broker",
+        "cache_age_minutes": null,
+        "equity_curve_last_date": "2026-03-11",
+        "plan_date": "2026-03-09",
+        "state_file_mtime": null
+      },
+      "funded": true,
+      "stale_warning": null,
+      "pending_orders": [
+        {
+          "order_id": "FA1C28F918E9970000",
+          "ticker": "INSW",
+          "side": "SELL",
+          "qty": 7,
+          "price": 0.0,
+          "order_type": "TRAILING_STOP_LIMIT",
+          "status": "WAITING_SUBMIT",
+          "created": "2026-03-04 05:42:45.740",
+          "filled_qty": 0,
+          "fill_price": 0.0,
+          "market": "US"
+        }
+      ]
+    }
+  },
+  "exchange_rates": {
+    "AUDUSD": 0.71782,
+    "USDAUD": 1.3931
+  },
+  "ceasefire": {
+    "probability": 2,
+    "probability_label": "VERY UNLIKELY",
+    "timeline": "4+ weeks",
+    "portfolio_action": "Hold all positions. Thesis intact.",
+    "last_updated": "2026-03-11T17:05:40",
+    "active_ceasefire_count": 6,
+    "active_escalation_count": 7,
+    "factors": [
+      {
+        "id": "supreme_leader",
+        "category": "diplomatic",
+        "label": "New Iranian supreme leader selected AND signals willingness to negotiate",
+        "weight": 18,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": "2026-03-05T12:53:22",
+        "source": "revert",
+        "description": "",
+        "search_keywords": [
+          "iran supreme leader successor",
+          "assembly of experts iran",
+          "iran negotiate talks",
+          "khamenei successor",
+          "iran new leadership diplomacy"
+        ]
+      },
+      {
+        "id": "backchannel",
+        "category": "diplomatic",
+        "label": "Confirmed backchannel talks (Oman/Qatar mediation, both sides participating)",
+        "weight": 14,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": "2026-03-05T12:53:22",
+        "source": "revert",
+        "description": "",
+        "search_keywords": [
+          "iran backchannel talks",
+          "iran secret negotiations",
+          "oman iran mediation",
+          "iran US indirect talks",
+          "qatar iran diplomacy"
+        ]
+      },
+      {
+        "id": "trump_tone",
+        "category": "diplomatic",
+        "label": "Trump publicly signals desire for off-ramp / deal with Iran",
+        "weight": 12,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "trump iran ceasefire deal",
+          "trump iran negotiations",
+          "trump deescalate iran",
+          "trump iran offer",
+          "trump iran end war"
+        ]
+      },
+      {
+        "id": "war_powers_house",
+        "category": "diplomatic",
+        "label": "House passes War Powers Resolution to limit Iran operations",
+        "weight": 5,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "war powers resolution house iran",
+          "congress iran war authorization",
+          "house vote iran war",
+          "house war powers act iran"
+        ]
+      },
+      {
+        "id": "coalition_fracture",
+        "category": "diplomatic",
+        "label": "Key US coalition partner publicly withdraws support / calls for ceasefire",
+        "weight": 8,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "US coalition fracture iran",
+          "ally withdraw iran war",
+          "coalition ceasefire call iran",
+          "partner opposition iran strikes",
+          "europe ceasefire iran"
+        ]
+      },
+      {
+        "id": "un_resolution",
+        "category": "diplomatic",
+        "label": "UN Security Council passes binding ceasefire resolution",
+        "weight": 4,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "UN security council iran ceasefire resolution",
+          "UN vote iran war",
+          "UN binding resolution iran",
+          "security council iran vote"
+        ]
+      },
+      {
+        "id": "iran_collapse",
+        "category": "military",
+        "label": "Iran conventional military capability severely degraded (missiles, drones, air defence)",
+        "weight": 15,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T13:18:19",
+        "source": "CENTCOM Gen. Caine: missiles -86%, drones -73% as of March 4",
+        "description": "Missiles down 86%, drones 73%",
+        "search_keywords": [
+          "iran military capability degraded",
+          "iran missile stockpile depleted",
+          "iran drone capability losses",
+          "iran air defence destroyed",
+          "iran military attrition"
+        ]
+      },
+      {
+        "id": "navy_destroyed",
+        "category": "military",
+        "label": "IRGC Navy substantially destroyed / port infrastructure degraded",
+        "weight": 8,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T13:18:19",
+        "source": "White House: 20+ ships sunk incl top submarine, zero Iranian warships in Gulf",
+        "description": "20+ ships sunk",
+        "search_keywords": [
+          "iran navy destroyed",
+          "IRGC navy sunk",
+          "iran warship losses",
+          "iran naval port attack",
+          "iran fast boat sunk"
+        ]
+      },
+      {
+        "id": "ground_troops",
+        "category": "military",
+        "label": "US ground troops deployed into Iran or neighbouring territory for invasion",
+        "weight": -15,
+        "direction": "escalation",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "US ground troops iran",
+          "US invasion iran",
+          "troops deployed iran ground",
+          "US soldiers iran territory"
+        ]
+      },
+      {
+        "id": "kurdish_front",
+        "category": "military",
+        "label": "Kurdish militias or PKK open second front against Iran / Turkish involvement",
+        "weight": -10,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-06T01:04:35",
+        "source": "i24NEWS + US official + Guardian March 4 2026",
+        "description": "",
+        "search_keywords": [
+          "kurdish iran conflict",
+          "PKK iran attack",
+          "iran kurdistan military",
+          "kurdish militia iran front",
+          "turkey iran kurdish"
+        ]
+      },
+      {
+        "id": "hezbollah_major",
+        "category": "military",
+        "label": "Hezbollah launches major offensive (hundreds of rockets, multi-front attack)",
+        "weight": -12,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T13:18:20",
+        "source": "Rockets on Haifa, IDF ground troops in Lebanon, 60 Hezbollah sites struck",
+        "description": "Hezbollah active offensive ongoing",
+        "search_keywords": [
+          "hezbollah attack rockets",
+          "hezbollah offensive major",
+          "hezbollah escalation",
+          "lebanon hezbollah strike",
+          "hezbollah barrage"
+        ]
+      },
+      {
+        "id": "houthi_red_sea",
+        "category": "military",
+        "label": "Houthis actively attacking Red Sea shipping (Bab el-Mandeb disrupted)",
+        "weight": -8,
+        "direction": "escalation",
+        "active": false,
+        "confidence": "high",
+        "last_checked": "2026-03-06T00:05:14",
+        "source": "ISW March 3, UK Parliament Briefing March 5, Wikipedia Red Sea crisis: 'As of 4 March, hostilities have not resumed — internal Houthi debate over response'",
+        "description": "Houthi Red Sea attacks ongoing",
+        "search_keywords": [
+          "houthi red sea attack",
+          "houthi ship attack",
+          "bab el mandeb disruption",
+          "houthi missile shipping",
+          "red sea shipping disruption houthi"
+        ]
+      },
+      {
+        "id": "us_casualties_spike",
+        "category": "military",
+        "label": "Sudden spike in US military casualties triggers domestic political backlash",
+        "weight": 10,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "US military casualties iran spike",
+          "american soldiers killed iran",
+          "US casualty count iran war",
+          "domestic backlash US war iran"
+        ]
+      },
+      {
+        "id": "nato_engaged",
+        "category": "military",
+        "label": "NATO formally invoked or NATO member directly engages militarily",
+        "weight": -10,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T21:05:00",
+        "source": "Reuters/NYT/Bloomberg March 4 2026: NATO air defences destroyed Iranian ballistic missile targeting Turkey/Incirlik — first direct NATO engagement",
+        "description": "",
+        "search_keywords": [
+          "NATO iran war",
+          "NATO article 5 iran",
+          "NATO military action iran",
+          "NATO engaged iran conflict",
+          "NATO member attack iran"
+        ]
+      },
+      {
+        "id": "extended_timeline",
+        "category": "military",
+        "label": "US officials publicly state conflict duration exceeds 4 weeks",
+        "weight": -6,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T13:00:00",
+        "source": "Hegseth March 4 Pentagon briefing: war could last 3, 4, 6, or 8 weeks",
+        "description": "Longer stated timeline = longer supply disruption = lower ceasefire probability in near term",
+        "search_keywords": [
+          "hegseth weeks iran",
+          "trump timeline iran weeks",
+          "iran war duration"
+        ]
+      },
+      {
+        "id": "war_powers_dead",
+        "category": "political",
+        "label": "Senate kills War Powers Resolution — Congress signals support for operations",
+        "weight": -8,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T13:18:21",
+        "source": "Senate vote 47-53 March 4, War Powers Resolution defeated",
+        "description": "Senate 47-53 March 4",
+        "search_keywords": [
+          "senate war powers iran vote",
+          "war powers resolution failed senate",
+          "congress iran war support",
+          "senate defeat iran war powers"
+        ]
+      },
+      {
+        "id": "gas_prices",
+        "category": "political",
+        "label": "US retail gasoline exceeds $5/gallon — political pressure on administration",
+        "weight": 6,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "high",
+        "last_checked": "2026-03-05T14:05:22",
+        "source": "AAA March 5: national avg .11/gal — well below  threshold. California highest at .74. GasBuddy  source was erroneous.",
+        "description": "$5/gal",
+        "search_keywords": [
+          "US gas prices $5 gallon",
+          "gasoline prices spike",
+          "fuel prices high US",
+          "gas prices political pressure",
+          "pump prices record"
+        ]
+      },
+      {
+        "id": "maga_split",
+        "category": "political",
+        "label": "MAGA base splits on Iran war — visible Republican dissent in Congress",
+        "weight": 5,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "medium",
+        "last_checked": "2026-03-05T20:06:57",
+        "source": "AP/TIME March 4-5 2026: Massie R-KY leads House war powers bill; 2 senators broke party lines; broad MAGA dissent",
+        "description": "",
+        "search_keywords": [
+          "MAGA split iran war",
+          "republican oppose iran war",
+          "GOP dissent iran",
+          "trump base war iran opposition",
+          "republican anti-war iran"
+        ]
+      },
+      {
+        "id": "poll_collapse",
+        "category": "political",
+        "label": "Trump approval collapses below 40% directly tied to Iran war",
+        "weight": 7,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "medium",
+        "last_checked": "2026-03-05T20:06:54",
+        "source": "YouGov/Economist poll March 2 2026: 38% approval second term low / Daily Beast March 4 2026",
+        "description": "",
+        "search_keywords": [
+          "trump approval poll decline iran",
+          "trump poll collapse iran war",
+          "american opposition iran war poll",
+          "war unpopular polls US"
+        ]
+      },
+      {
+        "id": "iran_regime_falls",
+        "category": "political",
+        "label": "Iranian regime collapses / is overthrown — new government signals ceasefire",
+        "weight": 20,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "iran regime collapse",
+          "iran government overthrown",
+          "iran revolution 2026",
+          "iran regime change",
+          "iran new government ceasefire"
+        ]
+      },
+      {
+        "id": "assassination_personal",
+        "category": "political",
+        "label": "Assassination or personal attack on US official / ally — retaliation cycle escalates",
+        "weight": -5,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "medium",
+        "last_checked": "2026-03-05T13:18:22",
+        "source": "Hegseth: killing of Trump assassination plot leader, 'Trump got the last laugh'",
+        "description": "Assassination retaliation risk active",
+        "search_keywords": [
+          "assassination US official iran",
+          "iran assassination plot",
+          "retaliation assassination cycle",
+          "iran target US diplomat",
+          "iran assassination threat"
+        ]
+      },
+      {
+        "id": "oil_100",
+        "category": "economic",
+        "label": "Brent crude sustains above $100/barrel — economic pain triggers political pressure",
+        "weight": 8,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "high",
+        "last_checked": "2026-03-10T17:04:31",
+        "source": "Argus Media + BusinessToday March 10 2026: Brent drops to 8 (-26% from Monday 00 high), not sustained above 00 for multiple days; Trump waiving oil sanctions",
+        "description": "",
+        "search_keywords": [
+          "oil price $100 barrel",
+          "brent crude $100",
+          "WTI $100",
+          "oil price spike $100",
+          "crude oil triple digits"
+        ]
+      },
+      {
+        "id": "hormuz_escort",
+        "category": "economic",
+        "label": "US Navy establishes formal convoy escort system through Strait of Hormuz",
+        "weight": 10,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "US navy hormuz escort convoy",
+          "strait of hormuz naval escort",
+          "hormuz shipping convoy US",
+          "navy protect tanker hormuz",
+          "hormuz convoy system"
+        ]
+      },
+      {
+        "id": "insurance_restored",
+        "category": "economic",
+        "label": "War risk insurance premiums return to normal / Lloyd's reopens cover",
+        "weight": 12,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "war risk insurance restored",
+          "lloyd's shipping insurance iran",
+          "marine insurance premium normal",
+          "shipping insurance cover resumed",
+          "war risk premium decline"
+        ]
+      },
+      {
+        "id": "qatar_restart",
+        "category": "economic",
+        "label": "Qatar resumes LNG deliveries to Asia / restarts energy diplomacy with Iran",
+        "weight": 8,
+        "direction": "ceasefire",
+        "active": false,
+        "confidence": "low",
+        "last_checked": null,
+        "source": "",
+        "description": "",
+        "search_keywords": [
+          "qatar LNG restart",
+          "qatar energy resumption",
+          "qatar diplomacy iran restart",
+          "qatar mediation energy",
+          "qatar LNG delivery resume"
+        ]
+      },
+      {
+        "id": "recession_fears",
+        "category": "economic",
+        "label": "Recession fears spike (PMI <45, unemployment rising) — pressure to end war",
+        "weight": 5,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "medium",
+        "last_checked": "2026-03-07T04:05:58",
+        "source": "NYT/CNBC/Guardian March 6 2026: -92k Feb jobs, unemployment 4.4%, Dow -800pts, recession fears spike tied to Iran war oil surge",
+        "description": "",
+        "search_keywords": [
+          "recession fears iran war economy",
+          "economic recession war pressure",
+          "PMI decline recession",
+          "unemployment rising recession fears",
+          "economic cost iran war"
+        ]
+      },
+      {
+        "id": "storage_crisis",
+        "category": "economic",
+        "label": "Gulf producers hitting storage limits — forced production shutdowns",
+        "weight": -6,
+        "direction": "escalation",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-05T15:05:49",
+        "source": "Reuters March 4 2026 — Iraq cut 1.1mb/d due to storage limits; IEA confirms forced production shutdowns across Gulf",
+        "description": "Shipping problem becomes supply destruction — harder to restart, deepens crisis. JPMorgan: 25-day limit from Feb 28 = watch ~March 20-25.",
+        "search_keywords": [
+          "gulf oil storage full",
+          "saudi storage capacity",
+          "production shutdown storage limit"
+        ]
+      },
+      {
+        "id": "storage_pressure",
+        "category": "economic",
+        "label": "Gulf producers actively pressuring US/Iran to reopen Hormuz due to storage",
+        "weight": 6,
+        "direction": "ceasefire",
+        "active": true,
+        "confidence": "high",
+        "last_checked": "2026-03-07T16:05:01",
+        "source": "Reuters/FT/BBC/Al Jazeera March 6 2026: Qatar Energy Minister Saad al-Kaabi warns war will force all Gulf exports to halt within weeks, predicts 50/bbl — active pressure on US/Iran to reopen Hormuz",
+        "description": "Economic self-interest of Gulf states creates diplomatic pressure for resolution",
+        "search_keywords": [
+          "saudi pressure ceasefire",
+          "gulf states demand hormuz",
+          "opec emergency meeting hormuz"
+        ]
+      }
+    ],
+    "change_log": [
+      {
+        "timestamp": "2026-03-05T14:05:22",
+        "factor_id": "gas_prices",
+        "old_active": true,
+        "new_active": false,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "AAA March 5: national avg .11/gal — well below  threshold. California highest at .74. GasBuddy  source was erroneous."
+      },
+      {
+        "timestamp": "2026-03-05T15:05:49",
+        "factor_id": "storage_crisis",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "Reuters March 4 2026 — Iraq cut 1.1mb/d due to storage limits; IEA confirms forced production shutdowns across Gulf"
+      },
+      {
+        "timestamp": "2026-03-05T20:06:54",
+        "factor_id": "poll_collapse",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "medium",
+        "reason": "Toggled via CLI",
+        "source": "YouGov/Economist poll March 2 2026: 38% approval second term low / Daily Beast March 4 2026"
+      },
+      {
+        "timestamp": "2026-03-05T20:06:57",
+        "factor_id": "maga_split",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "medium",
+        "reason": "Toggled via CLI",
+        "source": "AP/TIME March 4-5 2026: Massie R-KY leads House war powers bill; 2 senators broke party lines; broad MAGA dissent"
+      },
+      {
+        "timestamp": "2026-03-05T21:05:00",
+        "factor_id": "nato_engaged",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "Reuters/NYT/Bloomberg March 4 2026: NATO air defences destroyed Iranian ballistic missile targeting Turkey/Incirlik — first direct NATO engagement"
+      },
+      {
+        "timestamp": "2026-03-06T00:05:14",
+        "factor_id": "houthi_red_sea",
+        "old_active": true,
+        "new_active": false,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "ISW March 3, UK Parliament Briefing March 5, Wikipedia Red Sea crisis: 'As of 4 March, hostilities have not resumed — internal Houthi debate over response'"
+      },
+      {
+        "timestamp": "2026-03-06T01:04:35",
+        "factor_id": "kurdish_front",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "i24NEWS + US official + Guardian March 4 2026"
+      },
+      {
+        "timestamp": "2026-03-07T04:05:58",
+        "factor_id": "recession_fears",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "medium",
+        "reason": "Toggled via CLI",
+        "source": "NYT/CNBC/Guardian March 6 2026: -92k Feb jobs, unemployment 4.4%, Dow -800pts, recession fears spike tied to Iran war oil surge"
+      },
+      {
+        "timestamp": "2026-03-07T16:05:01",
+        "factor_id": "storage_pressure",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "Reuters/FT/BBC/Al Jazeera March 6 2026: Qatar Energy Minister Saad al-Kaabi warns war will force all Gulf exports to halt within weeks, predicts 50/bbl — active pressure on US/Iran to reopen Hormuz"
+      },
+      {
+        "timestamp": "2026-03-09T09:03:43",
+        "factor_id": "oil_100",
+        "old_active": false,
+        "new_active": true,
+        "confidence": "medium",
+        "reason": "Toggled via CLI",
+        "source": "The Guardian March 9 2026"
+      },
+      {
+        "timestamp": "2026-03-10T17:04:31",
+        "factor_id": "oil_100",
+        "old_active": true,
+        "new_active": false,
+        "confidence": "high",
+        "reason": "Toggled via CLI",
+        "source": "Argus Media + BusinessToday March 10 2026: Brent drops to 8 (-26% from Monday 00 high), not sustained above 00 for multiple days; Trump waiving oil sanctions"
+      }
+    ]
+  },
+  "trading_mode": "offline",
+  "data_source": "offline",
+  "broker": {
+    "asx": "moomoo",
+    "hk": "moomoo",
+    "sp500": "moomoo"
+  },
+  "config_version": {
+    "asx": "v1.0-passive",
+    "hk": "unknown",
+    "sp500": "v2.2"
+  },
+  "account": {
+    "equity": 12028.05,
+    "cash": 3705.38,
+    "buying_power": 3705.38,
+    "currency": "AUD"
+  },
+  "portfolio": {
+    "equity": 12028.05,
+    "cash": 3705.38,
+    "starting_equity": 5572.4,
+    "total_pnl": -12.79,
+    "total_pnl_pct": -0.23,
+    "num_open": 1,
+    "open_positions": [
+      {
+        "ticker": "CHTR",
+        "strategy": "trend_following",
+        "entry_date": "2026-02-27",
+        "entry_price": 228.38,
+        "current_price": 219.2,
+        "shares": 1,
+        "pnl": -9.18,
+        "pnl_pct": -4.02,
+        "stop_price": 211.8972,
+        "days_held": 12,
+        "sector": "Unknown",
+        "is_atlas": true,
+        "today_pnl": -0.13,
+        "currency": "USD",
+        "market": "sp500"
+      }
+    ],
+    "win_rate": 0,
+    "market_pnl": 169.85,
+    "realized_pnl": 0.0,
+    "total_commissions": 1.53,
+    "commission_per_trade": 0,
+    "today_pnl_by_ccy": {
+      "AUD": 3.96,
+      "USD": -2.18
+    },
+    "today_pnl_aud": 0.92
+  },
+  "manual_positions": {
+    "positions": [
+      {
+        "ticker": "WHC.AX",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 8.66,
+        "current_price": 8.71,
+        "shares": 172,
+        "pnl": 8.6,
+        "pnl_pct": 0.58,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": -5.16,
+        "currency": "AUD",
+        "market": "asx"
+      },
+      {
+        "ticker": "WDS.AX",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 25.84,
+        "current_price": 30.42,
+        "shares": 38,
+        "pnl": 174.04,
+        "pnl_pct": 17.72,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": 9.12,
+        "currency": "AUD",
+        "market": "asx"
+      },
+      {
+        "ticker": "XOP",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 127.429,
+        "current_price": 186.924,
+        "shares": 5,
+        "pnl": 297.48,
+        "pnl_pct": 46.69,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": -3.0,
+        "currency": "USD",
+        "market": "sp500"
+      },
+      {
+        "ticker": "RTX",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 207.59,
+        "current_price": 207.0,
+        "shares": 6,
+        "pnl": -3.54,
+        "pnl_pct": -0.28,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": 0.0,
+        "currency": "USD",
+        "market": "sp500"
+      },
+      {
+        "ticker": "PSQ",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 31.2,
+        "current_price": 30.7,
+        "shares": 33,
+        "pnl": -16.5,
+        "pnl_pct": -1.6,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": -1.65,
+        "currency": "USD",
+        "market": "sp500"
+      },
+      {
+        "ticker": "CIBR",
+        "strategy": "manual",
+        "entry_date": "",
+        "entry_price": 63.8,
+        "current_price": 66.04,
+        "shares": 10,
+        "pnl": 22.4,
+        "pnl_pct": 3.51,
+        "stop_price": 0,
+        "days_held": 0,
+        "sector": "Unknown",
+        "is_atlas": false,
+        "today_pnl": 2.6,
+        "currency": "USD",
+        "market": "sp500"
+      }
+    ],
+    "num_open": 6,
+    "unrealized_pnl": 482.48,
+    "market_value": 6504.2
+  },
+  "strategy_summary": [
+    {
+      "strategy": "trend_following",
+      "positions": 1,
+      "unrealized_pnl": -12.79,
+      "market_value": 305.37
+    }
+  ],
+  "equity_curve": [
+    {
+      "date": "2026-02-27",
+      "equity": 5572.4,
+      "pnl": 0.0
+    },
+    {
+      "date": "2026-03-03",
+      "equity": 10635.91,
+      "pnl": 241.67
+    },
+    {
+      "date": "2026-03-04",
+      "equity": 10574.49,
+      "pnl": 231.35
+    },
+    {
+      "date": "2026-03-05",
+      "equity": 10546.94,
+      "pnl": 428.64
+    },
+    {
+      "date": "2026-03-06",
+      "equity": 10544.5,
+      "pnl": 417.44
+    },
+    {
+      "date": "2026-03-07",
+      "equity": 10592.42,
+      "pnl": 461.49
+    },
+    {
+      "date": "2026-03-08",
+      "equity": 10592.42,
+      "pnl": 461.49
+    },
+    {
+      "date": "2026-03-09",
+      "equity": 12122.71,
+      "pnl": 504.94
+    },
+    {
+      "date": "2026-03-10",
+      "equity": 12047.08,
+      "pnl": 470.02
+    },
+    {
+      "date": "2026-03-11",
+      "equity": 12028.05,
+      "pnl": 404.92
+    }
+  ],
+  "benchmark_curve": [
+    {
+      "date": "2026-02-27",
+      "equity": 5572.4
+    },
+    {
+      "date": "2026-03-02",
+      "equity": 5575.56
+    },
+    {
+      "date": "2026-03-03",
+      "equity": 5526.43
+    },
+    {
+      "date": "2026-03-04",
+      "equity": 5565.42
+    },
+    {
+      "date": "2026-03-05",
+      "equity": 5534.38
+    },
+    {
+      "date": "2026-03-06",
+      "equity": 5461.84
+    },
+    {
+      "date": "2026-03-09",
+      "equity": 5509.68
+    },
+    {
+      "date": "2026-03-10",
+      "equity": 5500.84
+    }
+  ],
+  "benchmark_ticker": "SPY",
+  "benchmark_return_pct": -1.28,
+  "plan": {
+    "trade_date": "2026-03-05",
+    "status": "PENDING_APPROVAL",
+    "market_id": "hk",
+    "entries": [],
+    "exits": [],
+    "risk_summary": {
+      "total_proposed_cost": 0,
+      "total_proposed_risk": 0,
+      "risk_pct_of_equity": 0,
+      "positions_after": 0,
+      "cash_after_entries": 0.0,
+      "portfolio_exposure_pct": 0
+    }
+  },
+  "closed_trades": [],
+  "risk": {
+    "exposure_pct": 2.54,
+    "max_positions": 25,
+    "halted": false,
+    "risk_per_trade": "varies",
+    "max_portfolio_risk": 0.05
+  },
+  "tasks": {
+    "upcoming": [],
+    "in_progress": [],
+    "done": []
+  },
+  "research": {
+    "daemon": {
+      "status": "stale",
+      "uptime_s": 0.0,
+      "experiments_completed": 0,
+      "experiments_failed": 0,
+      "queue_depth": 0,
+      "current_experiment": "mean_reversion",
+      "timestamp": "2026-03-11T07:00:16.579835+00:00"
+    },
+    "leaderboard": [
+      {
+        "id": "lower_band_reversion",
+        "name": "Lower Band Reversion",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 5,
+        "best_sharpe": 0.707,
+        "best_win_rate": 62.4,
+        "best_trades": 282,
+        "stage": "solo",
+        "stage_icon": "✅",
+        "coverage": {
+          "solo": "✅"
+        },
+        "description": "IBS-based lower band reversion (Quantitativo LBR). Published Sharpe 2.11 on SPY. On individual stocks: Sharpe -2.08. Classic ETF-to-stock adaptation failure.",
+        "reference": "Bollinger lower band"
+      },
+      {
+        "id": "mean_reversion",
+        "name": "Mean Reversion",
+        "status": "active",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 9,
+        "best_sharpe": 0.6424,
+        "best_win_rate": 51.5,
+        "best_trades": 388,
+        "stage": "oos",
+        "stage_icon": "❌",
+        "coverage": {
+          "solo": "⚠️",
+          "combined": "✅",
+          "oos": "❌"
+        },
+        "description": "RSI(14) + z-score mean reversion on individual SP500 stocks. Core active strategy. Enters oversold reversals with ATR-based stop losses. Optimized via coordinate descent to Sharpe 1.04, CAGR 15.69% (v",
+        "reference": "Atlas original"
+      },
+      {
+        "id": "trend_following",
+        "name": "Trend Following",
+        "status": "active",
+        "tier": 0,
+        "type": "trend_following",
+        "total_experiments": 2,
+        "best_sharpe": 0.62,
+        "best_win_rate": null,
+        "best_trades": 297,
+        "stage": "solo",
+        "stage_icon": "⚠️",
+        "coverage": {
+          "solo": "⚠️"
+        },
+        "description": "Fast/slow MA crossover trend following with pullback entries. Core active strategy. Enters higher-probability pullbacks within confirmed uptrends.",
+        "reference": "Atlas original"
+      },
+      {
+        "id": "opening_gap",
+        "name": "Opening Gap",
+        "status": "active",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 2,
+        "best_sharpe": 0.6183,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "solo",
+        "stage_icon": "⚠️",
+        "coverage": {
+          "solo": "⚠️"
+        },
+        "description": "Gap-and-fill strategy targeting gap-down opens with IBS confirmation. Core active strategy. Short holding periods (2-7 days).",
+        "reference": "Atlas original"
+      },
+      {
+        "id": "sector_rotation",
+        "name": "Sector Rotation",
+        "status": "dormant",
+        "tier": 0,
+        "type": "rotation",
+        "total_experiments": 3,
+        "best_sharpe": 0.43,
+        "best_win_rate": 44.3,
+        "best_trades": 339,
+        "stage": "solo",
+        "stage_icon": "✅",
+        "coverage": {
+          "solo": "✅"
+        },
+        "description": "Top-down momentum sector rotation. Selects strongest GICS sectors by momentum, buys strongest stocks within them. Passes solo (Sharpe 0.43) but degrades combined portfolio.",
+        "reference": "0 trades in backtest"
+      },
+      {
+        "id": "bb_squeeze",
+        "name": "Bollinger Band Squeeze",
+        "status": "dormant",
+        "tier": 0,
+        "type": "volatility",
+        "total_experiments": 6,
+        "best_sharpe": 0.3981,
+        "best_win_rate": 47.3,
+        "best_trades": 224,
+        "stage": "solo",
+        "stage_icon": "✅",
+        "coverage": {
+          "solo": "✅"
+        },
+        "description": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
+        "reference": "Bollinger Band Squeeze"
+      },
+      {
+        "id": "short_term_mr",
+        "name": "Short Term MR",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 7,
+        "best_sharpe": 0.3913,
+        "best_win_rate": 57.9,
+        "best_trades": 791,
+        "stage": "solo",
+        "stage_icon": "✅",
+        "coverage": {
+          "solo": "✅"
+        },
+        "description": "RSI(2)/IBS short-term mean reversion. Captures rapid 1–5 day reversals that standard MR (RSI 14) misses.",
+        "reference": "Atlas original"
+      },
+      {
+        "id": "momentum_breakout",
+        "name": "Momentum Breakout",
+        "status": "dormant",
+        "tier": 0,
+        "type": "momentum",
+        "total_experiments": 6,
+        "best_sharpe": 0.2995,
+        "best_win_rate": 52.9,
+        "best_trades": 460,
+        "stage": "solo",
+        "stage_icon": "✅",
+        "coverage": {
+          "solo": "✅"
+        },
+        "description": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
+        "reference": "Atlas original"
+      },
+      {
+        "id": "triple_rsi",
+        "name": "Triple RSI",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 1,
+        "best_sharpe": -2.119,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "solo",
+        "stage_icon": "⚠️",
+        "coverage": {
+          "solo": "⚠️"
+        },
+        "description": "Triple RSI (modified Connors R3): RSI(5)<30 + 3 consecutive declining days. Published 90% WR, PF 4.0 on SPY. Testing on individual stocks in Wave 3.",
+        "reference": "Multi-period RSI"
+      },
+      {
+        "id": "connors_rsi2",
+        "name": "ConnorsRSI2",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 1,
+        "best_sharpe": -2.63,
+        "best_win_rate": 58.1,
+        "best_trades": 673,
+        "stage": "solo",
+        "stage_icon": "⚠️",
+        "coverage": {
+          "solo": "⚠️"
+        },
+        "description": "ConnorsRSI2 mean reversion strategy designed for ETFs. Fails on individual SP500 stocks. Not viable as-designed — see ETF Adaptation Fails pattern.",
+        "reference": "Connors 2008"
+      },
+      {
+        "id": "mtf_momentum",
+        "name": "MTF Momentum",
+        "status": "dormant",
+        "tier": 0,
+        "type": "momentum",
+        "total_experiments": 7,
+        "best_sharpe": 0.0,
+        "best_win_rate": 40.0,
+        "best_trades": 15,
+        "stage": "solo",
+        "stage_icon": "⚠️",
+        "coverage": {
+          "solo": "⚠️"
+        },
+        "description": "Multi-timeframe momentum: weekly trend confirmation + daily entry timing. Combines fast and slow momentum signals.",
+        "reference": "Multi-timeframe"
+      },
+      {
+        "id": "adx_trend_pullback",
+        "name": "Adx Trend Pullback",
+        "status": "not_built",
+        "tier": 1,
+        "type": "trend_following",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "ADX > 25 (strong trend) + pullback to 20-EMA. Enter on bounce from EMA. Exit: trailing ATR stop.",
+        "reference": "Welles Wilder 'New Concepts in Technical Trading' (1978)"
+      },
+      {
+        "id": "consecutive_down_days",
+        "name": "Consecutive Down Days",
+        "status": "dormant",
+        "tier": 0,
+        "type": "mean_reversion",
+        "total_experiments": 1,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "solo",
+        "stage_icon": "❌",
+        "coverage": {
+          "solo": "❌"
+        },
+        "description": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
+        "reference": "Quantified Strategies"
+      },
+      {
+        "id": "demark_sequential",
+        "name": "Demark Sequential",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "TD Sequential buy setup: 9 consecutive closes below close 4 bars earlier. Enter on bar 9. Exit on TD sell setup or time.",
+        "reference": "Tom DeMark 'The New Science of Technical Analysis' (1994)"
+      },
+      {
+        "id": "donchian_breakout",
+        "name": "Donchian Breakout",
+        "status": "not_built",
+        "tier": 1,
+        "type": "trend_following",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Buy on 20-day high breakout, sell on 10-day low. Classic trend following. ATR position sizing.",
+        "reference": "Richard Donchian, Turtle Traders (1983)"
+      },
+      {
+        "id": "gap_and_go",
+        "name": "Gap And Go",
+        "status": "not_built",
+        "tier": 1,
+        "type": "momentum",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Buy stocks that gap UP > 2% at open with volume confirmation. Ride momentum. Exit: intraday trailing stop or close.",
+        "reference": "Quantified Strategies gap research, related to Opening Gap"
+      },
+      {
+        "id": "heikin_ashi_reversal",
+        "name": "Heikin Ashi Reversal",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "3+ red Heikin-Ashi candles followed by green doji/reversal in uptrend. Enter long. Exit on 2 red HA candles.",
+        "reference": "Japanese candlestick patterns, quantified by Quantified Strategies"
+      },
+      {
+        "id": "inside_bar_nr7",
+        "name": "Inside Bar Nr7",
+        "status": "not_built",
+        "tier": 1,
+        "type": "volatility_breakout",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "NR7 (narrowest range of 7 days) or inside bar → breakout entry. Enter on break of NR7 high/low. Exit: trailing stop or time-based (3-5 days).",
+        "reference": "Toby Crabel 'Day Trading with Short Term Price Patterns' (1990)"
+      },
+      {
+        "id": "keltner_reversion",
+        "name": "Keltner Reversion",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Price touches lower Keltner Channel (EMA ± ATR mult) → buy. Exit at middle band (EMA). Uptrend filter.",
+        "reference": "Chester Keltner (1960), modernized by Linda Bradford Raschke"
+      },
+      {
+        "id": "macd_divergence",
+        "name": "Macd Divergence",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Price makes new low but MACD histogram makes higher low. Enter long. Exit on MACD crossover or time stop.",
+        "reference": "Gerald Appel (1979), MACD divergence patterns"
+      },
+      {
+        "id": "monthly_rotation",
+        "name": "Monthly Rotation",
+        "status": "not_built",
+        "tier": 1,
+        "type": "rotation",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Monthly rebalance: rank sectors/stocks by 6-month momentum. Hold top N. Rotate monthly. Cash filter: below SMA-200 → cash.",
+        "reference": "Faber 'A Quantitative Approach to TAA' (2007), Antonacci dual momentum"
+      },
+      {
+        "id": "overnight_return",
+        "name": "Overnight Return",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Buy at close, sell at open. Captures overnight premium. Filter: strong recent performers only.",
+        "reference": "Cliff et al. 'Overnight Return' (2019), Quantpedia #53"
+      },
+      {
+        "id": "pead_earnings_drift",
+        "name": "Pead Earnings Drift",
+        "status": "not_built",
+        "tier": 1,
+        "type": "event",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Post-Earnings Announcement Drift. Buy after positive earnings surprise, hold 20-60 days. Needs earnings data.",
+        "reference": "Ball & Brown (1968), Bernard & Thomas (1989)"
+      },
+      {
+        "id": "put_call_vix_proxy",
+        "name": "Put Call Vix Proxy",
+        "status": "not_built",
+        "tier": 1,
+        "type": "sentiment",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "VIX > 30 or VIX spike > 20% in 1 day → buy SPY/broad market. Exit when VIX drops below 20. Contrarian sentiment play.",
+        "reference": "VIX fear gauge research, CBOE put/call ratio studies"
+      },
+      {
+        "id": "relative_strength_pullback",
+        "name": "Relative Strength Pullback",
+        "status": "not_built",
+        "tier": 1,
+        "type": "momentum",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Stocks with relative strength rank > 80th percentile that pull back to 10-EMA. Enter on bounce. Exit: trailing stop.",
+        "reference": "O'Neil CANSLIM (1988), Minervini 'Trade Like a Stock Market Wizard'"
+      },
+      {
+        "id": "rsi_divergence",
+        "name": "Rsi Divergence",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Price makes new low but RSI makes higher low (bullish divergence). Enter long. Exit on RSI > 60 or time.",
+        "reference": "Andrew Cardwell RSI divergence methodology"
+      },
+      {
+        "id": "stochastic_oversold",
+        "name": "Stochastic Oversold",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Stochastic %K < 20 and %D < 20 in uptrend (>SMA200). Exit on %K > 80 or time stop.",
+        "reference": "George Lane (1950s), quantified by Connors"
+      },
+      {
+        "id": "volume_climax",
+        "name": "Volume Climax",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Extreme volume spike (>3x avg) on a down day in uptrend = capitulation selling. Buy reversal. Exit: time or strength.",
+        "reference": "Quantified Strategies volume research, Wyckoff method"
+      },
+      {
+        "id": "vwap_reversion",
+        "name": "Vwap Reversion",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Price > 2 std below daily VWAP in uptrending stock. Enter long. Exit at VWAP or above. Needs intraday-proxy via daily estimate.",
+        "reference": "Institutional VWAP trading, Quantified Strategies"
+      },
+      {
+        "id": "williams_percent_r",
+        "name": "Williams Percent R",
+        "status": "not_built",
+        "tier": 1,
+        "type": "mean_reversion",
+        "total_experiments": 0,
+        "best_sharpe": null,
+        "best_win_rate": null,
+        "best_trades": 0,
+        "stage": "—",
+        "stage_icon": "—",
+        "coverage": {},
+        "description": "Williams %R oversold (<-80) with trend filter. Exit on %R > -20 or time stop.",
+        "reference": "Larry Williams 'How I Made $1M' (1979)"
+      }
+    ],
+    "pipeline": {
+      "untested": 18,
+      "screen": 0,
+      "quick": 0,
+      "solo": 11,
+      "optimize": 0,
+      "combined": 0,
+      "oos": 1,
+      "promote": 0
+    },
+    "strategy_pipeline": {
+      "active": 7,
+      "candidates": 0,
+      "rejected": 3,
+      "sandbox": 21
+    },
+    "patterns": [
+      {
+        "name": "ETF Strategy Adaptation Fails",
+        "status": "confirmed",
+        "impact": "high",
+        "summary": "ConnorsRSI2 and LBR designed for ETFs fail on individual stocks. Don't adapt ETF strategies to stocks."
+      },
+      {
+        "name": "Fee Drag at Low Equity",
+        "status": "confirmed",
+        "impact": "high",
+        "summary": "At $4K equity, Moomoo fees ($1.10/trade) eat 74% of gross profit. Need ~$10K for viable Moomoo or switch to Alpaca ($0 c"
+      },
+      {
+        "name": "Position Slot Contention",
+        "status": "confirmed",
+        "impact": "high",
+        "summary": "All 4 dormant strategies fail combined portfolio due to slot contention at max_positions=10. Need allocation pools befor"
+      },
+      {
+        "name": "SMA-200 Filter Win",
+        "status": "confirmed",
+        "impact": "high",
+        "summary": "Biggest filter win: +0.28 Sharpe improvement, promoted to v2.1 config."
+      },
+      {
+        "name": "VIX Filter Counterproductive",
+        "status": "confirmed",
+        "impact": "high",
+        "summary": "VIX filter is counterproductive for MR-heavy portfolio because MR needs high-VIX panic periods."
+      }
+    ],
+    "hypotheses": [
+      {
+        "id": "H1",
+        "title": "RSI period transfer test",
+        "status": "proposed",
+        "source": "agent",
+        "created": "2026-03-10",
+        "hypothesis": "RSI(2) works for ConnorsRSI2, does it also work for Williams %R?"
+      }
+    ],
+    "activity_feed": [
+      {
+        "experiment_id": "20260310_185804_461735",
+        "timestamp": "2026-03-10T09:25:44.049154+00:00",
+        "strategy": "short_term_mr",
+        "category": "dormant",
+        "verdict": "partial",
+        "sharpe": 0.3913,
+        "win_rate_pct": 57.9,
+        "total_trades": 791,
+        "cagr_pct": 39.7109,
+        "max_drawdown_pct": 9.4127,
+        "promoted": false,
+        "learnings": []
+      },
+      {
+        "experiment_id": "ar-20260311_144117",
+        "timestamp": "2026-03-11T04:41:17.238771+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.0592,
+        "win_rate_pct": null,
+        "total_trades": 332,
+        "cagr_pct": 4.0652,
+        "max_drawdown_pct": 6.8984,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — Disable SMA200 filter — trade in all conditions"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_144909",
+        "timestamp": "2026-03-11T04:49:09.517609+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.0875,
+        "win_rate_pct": null,
+        "total_trades": 164,
+        "cagr_pct": 3.9241,
+        "max_drawdown_pct": 3.2,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — zscore_lookback: 20→10"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_145315",
+        "timestamp": "2026-03-11T04:53:15.014600+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.0758,
+        "win_rate_pct": null,
+        "total_trades": 340,
+        "cagr_pct": 3.9777,
+        "max_drawdown_pct": 5.97,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — zscore_entry: -2.0→-1.0"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_145350",
+        "timestamp": "2026-03-11T04:53:50.670166+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.5689,
+        "win_rate_pct": null,
+        "total_trades": 297,
+        "cagr_pct": 2.3374,
+        "max_drawdown_pct": 11.0228,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_stop=1.8 (between 1.5 and 2.0)"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_145916",
+        "timestamp": "2026-03-11T04:59:16.747371+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.0792,
+        "win_rate_pct": null,
+        "total_trades": 388,
+        "cagr_pct": 5.2764,
+        "max_drawdown_pct": 12.1045,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_stop_mult: 2.5→1.5"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_150658",
+        "timestamp": "2026-03-11T05:06:58.402973+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.1672,
+        "win_rate_pct": null,
+        "total_trades": 360,
+        "cagr_pct": 6.59,
+        "max_drawdown_pct": 11.738,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — max_hold_days: 10→20"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_150729",
+        "timestamp": "2026-03-11T05:07:29.740372+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.5403,
+        "win_rate_pct": null,
+        "total_trades": 294,
+        "cagr_pct": 2.6117,
+        "max_drawdown_pct": 8.5827,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_stop=1.9 (just below 2.0)"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_151649",
+        "timestamp": "2026-03-11T05:16:49.708815+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.5687,
+        "win_rate_pct": null,
+        "total_trades": 292,
+        "cagr_pct": 38.9932,
+        "max_drawdown_pct": 10.6403,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — fast_ma: 25→50"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_152116",
+        "timestamp": "2026-03-11T05:21:16.984764+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.221,
+        "win_rate_pct": null,
+        "total_trades": 352,
+        "cagr_pct": 7.5652,
+        "max_drawdown_pct": 9.017,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — Asymmetric risk: 1.5x stop, 3x target"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_152317",
+        "timestamp": "2026-03-11T05:23:17.461582+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.5795,
+        "win_rate_pct": null,
+        "total_trades": 293,
+        "cagr_pct": 39.3289,
+        "max_drawdown_pct": 10.6719,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_period: 14→20"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_152720",
+        "timestamp": "2026-03-11T05:27:20.657597+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": -0.2466,
+        "win_rate_pct": null,
+        "total_trades": 290,
+        "cagr_pct": 3.8238,
+        "max_drawdown_pct": 10.2343,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — trail=2.8 (between 2.5 and 3.0)"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_153100",
+        "timestamp": "2026-03-11T05:31:00.857846+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.2742,
+        "win_rate_pct": null,
+        "total_trades": 332,
+        "cagr_pct": 8.4796,
+        "max_drawdown_pct": 7.1122,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — RSI period 8 — between grid points"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_164527",
+        "timestamp": "2026-03-11T06:45:27.329755+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4557,
+        "win_rate_pct": null,
+        "total_trades": 293,
+        "cagr_pct": 27.9558,
+        "max_drawdown_pct": 11.5484,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — fast_ma: 25→50"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_164843",
+        "timestamp": "2026-03-11T06:48:43.247980+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4709,
+        "win_rate_pct": null,
+        "total_trades": 237,
+        "cagr_pct": 21.1858,
+        "max_drawdown_pct": 8.7473,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — slow_ma: 175→20"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_165129",
+        "timestamp": "2026-03-11T06:51:29.783391+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.4891,
+        "win_rate_pct": null,
+        "total_trades": 219,
+        "cagr_pct": 22.3066,
+        "max_drawdown_pct": 7.3923,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — pullback_pct: 0.05→0.06"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_165307",
+        "timestamp": "2026-03-11T06:53:07.189512+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.5028,
+        "win_rate_pct": null,
+        "total_trades": 221,
+        "cagr_pct": 23.4706,
+        "max_drawdown_pct": 7.061,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_period: 14→10"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_165349",
+        "timestamp": "2026-03-11T06:53:49.329883+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.3014,
+        "win_rate_pct": null,
+        "total_trades": 350,
+        "cagr_pct": 8.8299,
+        "max_drawdown_pct": 5.2186,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — Disable both SMA200 and earnings — max signal count"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_165521",
+        "timestamp": "2026-03-11T06:55:21.051236+00:00",
+        "strategy": "trend_following",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.6618,
+        "win_rate_pct": null,
+        "total_trades": 228,
+        "cagr_pct": 47.3126,
+        "max_drawdown_pct": 7.8781,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — atr_stop_mult: 1.9→1.5"
+        ]
+      },
+      {
+        "experiment_id": "ar-20260311_171211",
+        "timestamp": "2026-03-11T07:12:11.027471+00:00",
+        "strategy": "mean_reversion",
+        "category": "autoresearch",
+        "verdict": "pass",
+        "sharpe": 0.2264,
+        "win_rate_pct": null,
+        "total_trades": 214,
+        "cagr_pct": 7.5837,
+        "max_drawdown_pct": 7.1477,
+        "promoted": false,
+        "learnings": [
+          "autoresearch: keep — rsi_period: 8→14"
+        ]
+      }
+    ],
+    "queue_summary": {
+      "total": 101,
+      "by_status": {
+        "failed": 19,
+        "deferred": 15,
+        "partial": 20,
+        "passed": 2,
+        "claimed": 4,
+        "running": 2,
+        "queued": 39
+      },
+      "by_priority": {
+        "P2": 44,
+        "P3": 53,
+        "P4": 3,
+        "P1": 1
+      },
+      "by_category": {
+        "filter": 6,
+        "new_strategy": 28,
+        "portfolio": 3,
+        "param_drift": 14,
+        "dormant": 24,
+        "portfolio_sweep": 25,
+        "active": 1
+      },
+      "pending_items": [
+        {
+          "id": "wave5_reopt_oos",
+          "title": "OOS validation of reoptimized SP500 config",
+          "priority": "P2",
+          "category": "param_drift",
+          "market": "sp500",
+          "status": "claimed",
+          "strategy_name": null,
+          "estimated_runtime_min": 15
+        },
+        {
+          "id": "20260310_183205_89aefa",
+          "title": "Solo test: bb_squeeze",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "claimed",
+          "strategy_name": "bb_squeeze",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_183205_472ede",
+          "title": "Solo test: mtf_momentum",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "running",
+          "strategy_name": "mtf_momentum",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185801_43ea23",
+          "title": "Solo test: mtf_momentum",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "running",
+          "strategy_name": "mtf_momentum",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185804_d3464a",
+          "title": "Solo test: mtf_momentum",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "claimed",
+          "strategy_name": "mtf_momentum",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185804_7d7973",
+          "title": "Solo test: consecutive_down_days",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "consecutive_down_days",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185804_baa267",
+          "title": "Solo test: lower_band_reversion",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "lower_band_reversion",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185804_7753f7",
+          "title": "Solo test: triple_rsi",
+          "priority": "P2",
+          "category": "dormant",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "triple_rsi",
+          "estimated_runtime_min": 5
+        },
+        {
+          "id": "20260310_185804_65e83e",
+          "title": "Build + screen: inside_bar_nr7",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "inside_bar_nr7",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_0e2193",
+          "title": "Build + screen: monthly_rotation",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "monthly_rotation",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_6b1100",
+          "title": "Build + screen: put_call_vix_proxy",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "put_call_vix_proxy",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_bc2aba",
+          "title": "Build + screen: donchian_breakout",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "donchian_breakout",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_9b4d5f",
+          "title": "Build + screen: adx_trend_pullback",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "adx_trend_pullback",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_dcd1d8",
+          "title": "Build + screen: pead_earnings_drift",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "pead_earnings_drift",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_15ddfa",
+          "title": "Build + screen: gap_and_go",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "gap_and_go",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_692ddb",
+          "title": "Build + screen: relative_strength_pullback",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "relative_strength_pullback",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_fccc11",
+          "title": "Build + screen: williams_percent_r",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "williams_percent_r",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_f326aa",
+          "title": "Build + screen: stochastic_oversold",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "stochastic_oversold",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_586951",
+          "title": "Build + screen: overnight_return",
+          "priority": "P3",
+          "category": "new_strategy",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "overnight_return",
+          "estimated_runtime_min": 10
+        },
+        {
+          "id": "20260310_185804_254e89",
+          "title": "Max positions sweep: 5 positions — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_845ad5",
+          "title": "Max positions sweep: 10 positions — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_dfa24a",
+          "title": "Max positions sweep: 15 positions — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_570178",
+          "title": "Max positions sweep: 20 positions — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_4ffe84",
+          "title": "Max positions sweep: 25 positions — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_21fdff",
+          "title": "Risk per trade sweep: 0.25% — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_408ba0",
+          "title": "Risk per trade sweep: 0.50% — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_32c7ce",
+          "title": "Risk per trade sweep: 1.00% — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_e03021",
+          "title": "Risk per trade sweep: 1.50% — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_14467e",
+          "title": "Risk per trade sweep: 2.00% — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_efb6c6",
+          "title": "Fee sensitivity: $0.00/trade — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_25a51f",
+          "title": "Fee sensitivity: $1.00/trade — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_b7e813",
+          "title": "Fee sensitivity: $2.20/trade — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_a80f31",
+          "title": "Fee sensitivity: $5.00/trade — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_e56dfb",
+          "title": "Fee sensitivity: $10.00/trade — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_063c4a",
+          "title": "Starting equity sweep: $2,000 — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_473641",
+          "title": "Starting equity sweep: $4,000 — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_6dd09e",
+          "title": "Starting equity sweep: $10,000 — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_688082",
+          "title": "Starting equity sweep: $25,000 — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_e1d36b",
+          "title": "Starting equity sweep: $50,000 — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_f9d954",
+          "title": "Walk-forward window sweep: 126d (~6mo) — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_c8eeb4",
+          "title": "Walk-forward window sweep: 189d (~9mo) — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_dd380a",
+          "title": "Walk-forward window sweep: 252d (~12mo) — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_f60ee1",
+          "title": "Walk-forward window sweep: 378d (~18mo) — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "20260310_185804_250f42",
+          "title": "Walk-forward window sweep: 504d (~24mo) — SP500",
+          "priority": "P3",
+          "category": "portfolio_sweep",
+          "market": "sp500",
+          "status": "queued",
+          "strategy_name": "portfolio",
+          "estimated_runtime_min": 25
+        },
+        {
+          "id": "director_mr_combined_20260311",
+          "title": "?",
+          "priority": "P1",
+          "category": "active",
+          "market": "?",
+          "status": "claimed",
+          "strategy_name": "mean_reversion",
+          "estimated_runtime_min": 0
+        }
+      ]
+    },
+    "statistics": {
+      "total_experiments": 125,
+      "passed": 32,
+      "failed": 42,
+      "partial": 48,
+      "promoted": 3,
+      "pass_rate_pct": 25.6,
+      "days_active": 13,
+      "strategies_tested": 15,
+      "strategies_total": 33
+    },
+    "daily_insight": {
+      "type": "fee_waterfall",
+      "chart": "waterfall",
+      "title": "Fee drag: 0.8pp CAGR lost to real trading costs",
+      "subtitle": "Moomoo US: ~$1.09/order · 7 trades filtered",
+      "steps": [
+        {
+          "label": "Gross CAGR",
+          "value": 12.68,
+          "type": "start"
+        },
+        {
+          "label": "Commission",
+          "value": -0.46799999999999997
+        },
+        {
+          "label": "Slippage",
+          "value": -0.23399999999999999
+        },
+        {
+          "label": "Filtering",
+          "value": -0.07800000000000001
+        },
+        {
+          "label": "Net CAGR",
+          "value": 0,
+          "type": "total"
+        }
+      ],
+      "annotation": {
+        "text": "Net 11.9% still beats SPY 11.7%",
+        "color": "green"
+      },
+      "date": "20260226"
+    },
+    "agents": [
+      {
+        "id": "researcher-0",
+        "name": "Atlas",
+        "type": "atlas",
+        "status": "reading",
+        "task": "Between strategies...",
+        "experiments_done": 0,
+        "progress": {}
+      },
+      {
+        "id": "researcher-1",
+        "name": "Nova",
+        "type": "nova",
+        "status": "typing",
+        "task": "Analyzing Trend Following",
+        "experiments_done": 0,
+        "progress": {
+          "pct": 17,
+          "label": "1/3",
+          "cycle": 1
+        }
+      },
+      {
+        "id": "sage",
+        "name": "Sage",
+        "type": "sage",
+        "status": "reading",
+        "task": "Discovering...",
+        "experiments_done": 0,
+        "progress": {}
+      },
+      {
+        "id": "principal",
+        "name": "Director",
+        "type": "principal",
+        "status": "reading",
+        "task": "Overseeing research",
+        "experiments_done": 0,
+        "progress": {}
+      }
+    ],
+    "discoveries": [
+      {
+        "text": "ETF Strategy Adaptation Fails",
+        "type": "pattern",
+        "impact": "high",
+        "detail": "ConnorsRSI2 and LBR designed for ETFs fail on individual stocks. Don't adapt ETF strategies to stocks."
+      },
+      {
+        "text": "Fee Drag at Low Equity",
+        "type": "pattern",
+        "impact": "high",
+        "detail": "At $4K equity, Moomoo fees ($1.10/trade) eat 74% of gross profit. Need ~$10K for viable Moomoo or switch to Alpaca ($0 c"
+      },
+      {
+        "text": "Position Slot Contention",
+        "type": "pattern",
+        "impact": "high",
+        "detail": "All 4 dormant strategies fail combined portfolio due to slot contention at max_positions=10. Need allocation pools befor"
+      },
+      {
+        "text": "SMA-200 Filter Win",
+        "type": "pattern",
+        "impact": "high",
+        "detail": "Biggest filter win: +0.28 Sharpe improvement, promoted to v2.1 config."
+      },
+      {
+        "text": "VIX Filter Counterproductive",
+        "type": "pattern",
+        "impact": "high",
+        "detail": "VIX filter is counterproductive for MR-heavy portfolio because MR needs high-VIX panic periods."
+      },
+      {
+        "text": "Momentum Breakout: Sharpe 0.792, 52% WR, 279 trades",
+        "type": "record",
+        "impact": "high",
+        "detail": "Best params found after 33 experiments"
+      },
+      {
+        "text": "Short Term Mr: Sharpe 0.509, 59% WR, 728 trades",
+        "type": "record",
+        "impact": "high",
+        "detail": "Best params found after 32 experiments"
+      },
+      {
+        "text": "Trend Following: Sharpe 0.662, 51% WR, 228 trades",
+        "type": "record",
+        "impact": "high",
+        "detail": "Best params found after 63 experiments"
+      },
+      {
+        "text": "Mean Reversion: Sharpe -0.02 → 0.38 (+0.40)",
+        "type": "improvement",
+        "impact": "high",
+        "detail": "Volume filter improves MR signal quality"
+      },
+      {
+        "text": "Bb Squeeze: Sharpe 0.463, 48% WR, 345 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 77 experiments"
+      },
+      {
+        "text": "Connors Rsi2: Sharpe 0.415, 59% WR, 942 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 20 experiments"
+      },
+      {
+        "text": "Opening Gap: Sharpe 0.340, 62% WR, 257 trades",
+        "type": "record",
+        "impact": "medium",
+        "detail": "Best params found after 60 experiments"
+      }
+    ]
+  },
+  "stale_warnings": []
+}
