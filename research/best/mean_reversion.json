@@ -71,7 +71,7 @@
     "runtime_s": 9.1
   },
   "description": "zscore_lookback=20",
-  "experiments_run": 31,
+  "experiments_run": 32,
   "experiments_kept": 18,
   "updated_at": "2026-03-11T11:30:36.890993+00:00"
 }

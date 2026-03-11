@@ -1,0 +1,40 @@
+{
+  "strategy": "donchian_breakout",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 91,
+    "cagr_pct": 10.1507,
+    "cagr_full_period_pct": 8.5529,
+    "sharpe": 0.3181,
+    "sortino": 2.9624,
+    "max_drawdown_pct": 6.0384,
+    "win_rate_pct": 52.75,
+    "profit_factor": 5.5054,
+    "total_pnl": 3100.38,
+    "avg_trade": 34.07,
+    "final_equity": 7100.38,
+    "expectancy_r": 1.538,
+    "avg_r": 1.538,
+    "r_count": 91,
+    "edge_p_value": 0.200843,
+    "edge_significant": false,
+    "var_95_pct": 0.187,
+    "cvar_95_pct": 0.357,
+    "calmar": 1.681,
+    "mc_p95_drawdown_pct": 4.5,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "donchian_breakout": {
+        "trades": 91,
+        "total_pnl": 3100.38,
+        "win_rate_pct": 52.7
+      }
+    },
+    "runtime_s": 6.7
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:44:58.350385+00:00"
+}

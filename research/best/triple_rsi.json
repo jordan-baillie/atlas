@@ -1,0 +1,40 @@
+{
+  "strategy": "triple_rsi",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 58,
+    "cagr_pct": 3.7528,
+    "cagr_full_period_pct": 3.1767,
+    "sharpe": -0.1003,
+    "sortino": -1.2257,
+    "max_drawdown_pct": 1.7294,
+    "win_rate_pct": 67.24,
+    "profit_factor": 4.8858,
+    "total_pnl": 977.71,
+    "avg_trade": 16.86,
+    "final_equity": 4977.71,
+    "expectancy_r": 0.8196,
+    "avg_r": 0.8196,
+    "r_count": 58,
+    "edge_p_value": 0.272429,
+    "edge_significant": false,
+    "var_95_pct": 0.059,
+    "cvar_95_pct": 0.162,
+    "calmar": 2.17,
+    "mc_p95_drawdown_pct": 2.4,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "triple_rsi": {
+        "trades": 58,
+        "total_pnl": 977.71,
+        "win_rate_pct": 67.2
+      }
+    },
+    "runtime_s": 8.1
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:49:01.078126+00:00"
+}

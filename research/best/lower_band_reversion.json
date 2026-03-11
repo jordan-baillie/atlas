@@ -1,0 +1,40 @@
+{
+  "strategy": "lower_band_reversion",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 338,
+    "cagr_pct": 42.3274,
+    "cagr_full_period_pct": 34.9339,
+    "sharpe": 0.4161,
+    "sortino": 45.3089,
+    "max_drawdown_pct": 5.2808,
+    "win_rate_pct": 61.83,
+    "profit_factor": 6.8171,
+    "total_pnl": 29163.98,
+    "avg_trade": 86.28,
+    "final_equity": 32503.35,
+    "expectancy_r": 3.1186,
+    "avg_r": 3.1186,
+    "r_count": 338,
+    "edge_p_value": 0.283697,
+    "edge_significant": false,
+    "var_95_pct": 0.273,
+    "cvar_95_pct": 0.402,
+    "calmar": 8.0153,
+    "mc_p95_drawdown_pct": 22.7,
+    "mc_fragile": true,
+    "strategy_breakdown": {
+      "lower_band_reversion": {
+        "trades": 338,
+        "total_pnl": 29163.98,
+        "win_rate_pct": 61.8
+      }
+    },
+    "runtime_s": 8.8
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:45:38.063526+00:00"
+}

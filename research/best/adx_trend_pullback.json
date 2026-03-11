@@ -1,0 +1,40 @@
+{
+  "strategy": "adx_trend_pullback",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 205,
+    "cagr_pct": 1.7321,
+    "cagr_full_period_pct": 1.4684,
+    "sharpe": -0.9127,
+    "sortino": -1.3855,
+    "max_drawdown_pct": 5.3332,
+    "win_rate_pct": 49.27,
+    "profit_factor": 1.3151,
+    "total_pnl": 429.23,
+    "avg_trade": 2.09,
+    "final_equity": 4429.23,
+    "expectancy_r": 0.0916,
+    "avg_r": 0.0916,
+    "r_count": 205,
+    "edge_p_value": 0.203485,
+    "edge_significant": false,
+    "var_95_pct": 0.301,
+    "cvar_95_pct": 0.474,
+    "calmar": 0.3248,
+    "mc_p95_drawdown_pct": 6.67,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "adx_trend_pullback": {
+        "trades": 205,
+        "total_pnl": 429.23,
+        "win_rate_pct": 49.3
+      }
+    },
+    "runtime_s": 16.2
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:44:37.614754+00:00"
+}

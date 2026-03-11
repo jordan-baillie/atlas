@@ -1,0 +1,40 @@
+{
+  "strategy": "demark_sequential",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 11,
+    "cagr_pct": -0.2637,
+    "cagr_full_period_pct": -0.2239,
+    "sharpe": -5.429,
+    "sortino": -6.2629,
+    "max_drawdown_pct": 4.2116,
+    "win_rate_pct": 63.64,
+    "profit_factor": 0.6721,
+    "total_pnl": -49.54,
+    "avg_trade": -4.5,
+    "final_equity": 3937.8,
+    "expectancy_r": -0.2551,
+    "avg_r": -0.2551,
+    "r_count": 11,
+    "edge_p_value": 0.654393,
+    "edge_significant": false,
+    "var_95_pct": -0.0,
+    "cvar_95_pct": 0.005,
+    "calmar": -0.0626,
+    "mc_p95_drawdown_pct": 3.68,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "demark_sequential": {
+        "trades": 11,
+        "total_pnl": -49.54,
+        "win_rate_pct": 63.6
+      }
+    },
+    "runtime_s": 5.2
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:48:24.981698+00:00"
+}

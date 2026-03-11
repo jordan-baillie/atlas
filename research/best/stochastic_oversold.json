@@ -1,0 +1,40 @@
+{
+  "strategy": "stochastic_oversold",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 168,
+    "cagr_pct": 0.4526,
+    "cagr_full_period_pct": 0.384,
+    "sharpe": -2.0382,
+    "sortino": -2.9561,
+    "max_drawdown_pct": 5.5308,
+    "win_rate_pct": 41.07,
+    "profit_factor": 1.1422,
+    "total_pnl": 108.66,
+    "avg_trade": 0.65,
+    "final_equity": 4108.66,
+    "expectancy_r": 0.0362,
+    "avg_r": 0.0362,
+    "r_count": 168,
+    "edge_p_value": 0.526677,
+    "edge_significant": false,
+    "var_95_pct": 0.201,
+    "cvar_95_pct": 0.358,
+    "calmar": 0.0818,
+    "mc_p95_drawdown_pct": 5.12,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "stochastic_oversold": {
+        "trades": 168,
+        "total_pnl": 108.66,
+        "win_rate_pct": 41.1
+      }
+    },
+    "runtime_s": 11.7
+  },
+  "description": "baseline",
+  "experiments_run": 0,
+  "experiments_kept": 1,
+  "updated_at": "2026-03-11T11:45:10.807428+00:00"
+}
