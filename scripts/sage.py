@@ -377,19 +377,69 @@ def _find_creation_targets(max_checks: int = 4) -> list[dict]:
     return targets
 
 
+def _run_correlation_check(name: str) -> dict:
+    """Run scripts/correlation_check.py for a candidate strategy.
+
+    Returns the parsed JSON result, or a default pass dict if the script
+    is unavailable (graceful degradation during roll-out).
+    """
+    script = PROJECT / "scripts" / "correlation_check.py"
+    if not script.exists():
+        logger.debug("correlation_check.py not found — skipping for %s", name)
+        return {"strategy": name, "verdict": "skipped", "reason": "script not available"}
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(script), "--strategy", name, "--market", "sp500"],
+            capture_output=True, text=True,
+            timeout=120,  # generous but bounded
+            cwd=str(PROJECT),
+        )
+        stdout = result.stdout.strip()
+        # Look for JSON output (last line, or full stdout if it starts with '{')
+        if stdout.startswith("{"):
+            return json.loads(stdout)
+        for line in reversed(stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                return json.loads(line)
+        logger.warning("correlation_check.py produced no JSON for %s: %s", name, stdout[:200])
+        return {"strategy": name, "verdict": "skipped", "reason": "no json output"}
+    except subprocess.TimeoutExpired:
+        logger.warning("correlation_check.py timed out for %s", name)
+        return {"strategy": name, "verdict": "skipped", "reason": "timeout"}
+    except Exception as e:
+        logger.warning("correlation_check.py error for %s: %s", name, e)
+        return {"strategy": name, "verdict": "skipped", "reason": str(e)}
+
+
 def _add_to_candidates(name: str, sanity_result: dict) -> None:
-    """Add a passing strategy to candidates in the queue file."""
+    """Add a passing strategy to candidates in the queue file.
+
+    Runs a correlation check first and embeds the result in the candidate entry
+    so the Director has the data it needs to decide whether to promote.
+    """
     q = read_queue()
     # Don't double-add
     if any(e.get("name") == name for e in q.get("candidates", [])):
         return
-    q.setdefault("candidates", []).append({
-        "name": name,
-        "added_by": "sage",
-        "since": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "sharpe": sanity_result.get("sharpe"),
-        "trades": sanity_result.get("trades"),
-    })
+
+    # Run correlation check (best-effort — doesn't block promotion)
+    corr = _run_correlation_check(name)
+    logger.info(
+        "Correlation check for %s: verdict=%s reason=%s",
+        name, corr.get("verdict", "?"), corr.get("reason", ""),
+    )
+
+    entry: dict = {
+        "name":               name,
+        "added_by":           "sage",
+        "since":              datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "sharpe":             sanity_result.get("sharpe"),
+        "trades":             sanity_result.get("trades"),
+        "correlation_check":  corr,
+    }
+    q.setdefault("candidates", []).append(entry)
     write_queue(q)
 
 
