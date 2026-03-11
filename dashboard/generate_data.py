@@ -1962,6 +1962,30 @@ def _read_daemon_status() -> dict:
     }
 
 
+def _get_sweep_window_status() -> dict:
+    """Check atlas-research-window.service/timer status for dashboard stats (1d)."""
+    import subprocess as _sp
+    sweep_window_active = False
+    next_window = ""
+    try:
+        r = _sp.run(["systemctl", "is-active", "atlas-research-window"],
+                    capture_output=True, text=True, timeout=3)
+        sweep_window_active = r.stdout.strip() == "active"
+    except Exception:
+        pass
+    try:
+        r = _sp.run(["systemctl", "status", "atlas-research-window.timer"],
+                    capture_output=True, text=True, timeout=3)
+        for line in r.stdout.splitlines():
+            stripped = line.strip()
+            if "Trigger:" in stripped or "Next elapse:" in stripped:
+                next_window = stripped
+                break
+    except Exception:
+        pass
+    return {"sweep_window_active": sweep_window_active, "next_window": next_window}
+
+
 def generate_research_data() -> dict:
     """Generate research section data for the dashboard.
 
@@ -2095,6 +2119,75 @@ def generate_research_data() -> dict:
             "description": s.get("description", ""),
             "reference": s.get("reference", ""),
         })
+    # ── Enrich leaderboard from research/best/*.json (1a) ──────
+    best_dir = research_dir / "best"
+    lb_index = {entry["id"]: i for i, entry in enumerate(leaderboard)}
+    if best_dir.exists():
+        for f in sorted(best_dir.glob("*.json")):
+            try:
+                data = json.loads(f.read_text())
+            except Exception:
+                continue
+            sid = data.get("strategy", f.stem)
+            metrics = data.get("metrics", {})
+            b_sharpe = metrics.get("sharpe")
+            b_wr = metrics.get("win_rate_pct")
+            b_trades = metrics.get("total_trades", 0)
+            b_cagr = metrics.get("cagr_pct")
+            b_pf = metrics.get("profit_factor")
+            exps_run = data.get("experiments_run", 0) or 0
+            if sid in lb_index:
+                entry = leaderboard[lb_index[sid]]
+                existing = entry.get("best_sharpe")
+                if b_sharpe is not None and (existing is None or b_sharpe > existing):
+                    entry["best_sharpe"] = b_sharpe
+                    entry["best_win_rate"] = round(b_wr, 1) if b_wr is not None else None
+                    entry["best_trades"] = int(b_trades) if b_trades else 0
+                if b_cagr is not None:
+                    entry["best_cagr"] = b_cagr
+                if b_pf is not None:
+                    entry["best_pf"] = b_pf
+                if exps_run > (entry.get("total_experiments") or 0):
+                    entry["total_experiments"] = exps_run
+            else:
+                # New research-only strategy not in vault
+                name = sid.replace("_", " ").title()
+                leaderboard.append({
+                    "id": sid,
+                    "name": name,
+                    "status": "research",
+                    "tier": 0,
+                    "type": "unknown",
+                    "total_experiments": exps_run,
+                    "best_sharpe": b_sharpe,
+                    "best_win_rate": round(b_wr, 1) if b_wr is not None else None,
+                    "best_trades": int(b_trades) if b_trades else 0,
+                    "best_cagr": b_cagr,
+                    "best_pf": b_pf,
+                    "stage": "—",
+                    "stage_icon": "—",
+                    "coverage": {},
+                    "description": "",
+                    "reference": "",
+                })
+                lb_index[sid] = len(leaderboard) - 1
+
+    # ── Enrich experiment counts from research/results/*.tsv (1b) ─
+    results_dir = research_dir / "results"
+    tsv_total = 0
+    if results_dir.exists():
+        for tsv_f in sorted(results_dir.glob("*.tsv")):
+            sid = tsv_f.stem
+            try:
+                lines = tsv_f.read_text().splitlines()
+                exp_count = max(0, len(lines) - 1)  # Subtract header row
+            except Exception:
+                exp_count = 0
+            tsv_total += exp_count
+            if sid in lb_index:
+                entry = leaderboard[lb_index[sid]]
+                entry["total_experiments"] = max(entry.get("total_experiments") or 0, exp_count)
+
     # Filter out meta-strategies (filters/combined — not directly tradable)
     leaderboard = [s for s in leaderboard if s["status"] != "filter"]
     # Sort: tested strategies with best Sharpe first, then untested
@@ -2129,7 +2222,7 @@ def generate_research_data() -> dict:
             "pending_items": queued_items,
         },
         "statistics": {
-            "total_experiments": total_experiments,
+            "total_experiments": tsv_total if tsv_total > 0 else total_experiments,
             "passed": passed_count,
             "failed": failed_count,
             "partial": partial_count,
@@ -2138,6 +2231,9 @@ def generate_research_data() -> dict:
             "days_active": days_active,
             "strategies_tested": len([s for s in strategies if s["total_experiments"] and s["total_experiments"] > 0]),
             "strategies_total": len(strategies),
+            "sweep_strategies": len(list(best_dir.glob("*.json"))) if best_dir.exists() else 0,
+            "sweep_experiments": tsv_total,
+            **_get_sweep_window_status(),
         },
         "daily_insight": generate_daily_insight(),
         "agents": _build_agents(daemon),
@@ -2166,11 +2262,36 @@ def _build_strategy_pipeline() -> dict:
             if f.stem != "__init__" and f.stem not in known:
                 sandbox += 1
 
+    # ── Enrich with research/best/*.json sweep stage counts (1e) ─
+    sweep_stages: dict = {"untested": 0, "screen": 0, "quick": 0,
+                          "solo": 0, "optimize": 0}
+    best_dir = PROJECT_ROOT / "research" / "best"
+    if best_dir.exists():
+        for f in best_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text())
+                metrics = data.get("metrics", {})
+                sharpe = metrics.get("sharpe") or 0
+                exps = data.get("experiments_run", 0) or 0
+                if exps == 0:
+                    sweep_stages["untested"] += 1
+                elif sharpe > 0.5:
+                    sweep_stages["optimize"] += 1
+                elif sharpe > 0.3:
+                    sweep_stages["solo"] += 1
+                elif sharpe > 0:
+                    sweep_stages["quick"] += 1
+                else:
+                    sweep_stages["screen"] += 1
+            except Exception:
+                pass
+
     return {
         "active": len(active),
         "candidates": len(candidates),
         "rejected": len(rejected),
         "sandbox": sandbox,
+        "sweep": sweep_stages,
     }
 
 
@@ -2192,6 +2313,9 @@ def _build_agents(daemon: dict) -> list:
     # Detect which services are active
     _RESEARCHER_SERVICES = [
         # (service_name, heartbeat_path, agent_id, display_name, agent_type)
+        # Active sweep window service (sweep.py heartbeat format)
+        ("atlas-research-window", "/tmp/autoresearch-heartbeat.json",         "researcher",   "Atlas",  "sweep"),
+        # Legacy/archived services kept for backward compatibility
         ("atlas-autoresearch-0", "/tmp/autoresearch-parent-0-heartbeat.json", "researcher-0", "Atlas",  "atlas"),
         ("atlas-autoresearch-1", "/tmp/autoresearch-parent-1-heartbeat.json", "researcher-1", "Nova",   "nova"),
         ("atlas-autoresearch",   "/tmp/autoresearch-parent-heartbeat.json",   "researcher",   "Atlas",  "atlas"),
@@ -2248,7 +2372,32 @@ def _build_agents(daemon: dict) -> list:
         found_any = True
 
         # Determine status + task
-        if svc_running:
+        # sweep type: heartbeat "status" field is authoritative regardless of
+        # whether the service is currently running (window services stop between runs)
+        if agent_type == "sweep":
+            # sweep.py heartbeat format: uses "status" field (not "phase")
+            # Fields: timestamp, status, pid, strategy, experiments_total,
+            #         experiments_kept, uptime_s
+            sw_status = (hb.get("status") or "").strip() if hb else ""
+            sw_strategy = (hb.get("strategy") or "").strip() if hb else ""
+            if sw_status == "running":
+                if sw_strategy:
+                    strat_label = sw_strategy.replace("_", " ").title()
+                    status = "typing"
+                    task = f"Sweeping {strat_label}"
+                else:
+                    status = "reading"
+                    task = "Between strategies..."
+            elif sw_status in ("idle", "cycle_done"):
+                status = "idle"
+                task = "Cycle complete"
+            elif svc_running:
+                status = "reading"
+                task = "Sweeping..."
+            else:
+                status = "sleeping"
+                task = "Engine offline"
+        elif svc_running:
             if agent_type == "principal":
                 # Principal/Director-specific phase mapping
                 if phase == "gathering":
