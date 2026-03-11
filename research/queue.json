@@ -3286,5 +3286,18 @@
     ],
     "depends_on": [],
     "notes": "Tier 2 sweep. Tests backtest.train_window_days=504 (504d (~24mo)). Informational \u2014 longer windows are more stable but slower to adapt; shorter windows are adaptive but overfit-prone."
+  },
+  {
+    "id": "director_mr_combined_20260311",
+    "strategy_name": "mean_reversion",
+    "method": "combined_portfolio_test",
+    "category": "active",
+    "priority": "P1",
+    "hypothesis": "Solo passed Sharpe 0.45 \u2014 combined test is promotion blocker",
+    "params_override": {},
+    "status": "queued",
+    "created_at": "2026-03-11T05:53:09.270732+00:00",
+    "claimed_by": null,
+    "claimed_at": null
   }
 ]
