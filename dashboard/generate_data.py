@@ -1875,38 +1875,90 @@ def _read_vault_hypotheses() -> list:
 
 
 def _read_daemon_status() -> dict:
-    """Read research daemon heartbeat from /tmp."""
-    hb_path = Path("/tmp/research-daemon-heartbeat.json")
-    hb = safe_json(hb_path, None)
-    if hb is None:
-        return {"status": "offline", "uptime_s": 0, "experiments_completed": 0,
-                "experiments_failed": 0, "queue_depth": 0, "current_experiment": None}
-    # Check staleness
-    ts = hb.get("timestamp", "")
-    status = hb.get("status", "unknown")
-    if ts:
+    """Read research engine heartbeat from /tmp.
+
+    Checks both heartbeat files (research daemon and autoresearch)
+    and returns the status of whichever is most recently active.
+    Falls back to systemctl if heartbeats are stale.
+    """
+    import subprocess as _sp
+
+    heartbeat_files = [
+        Path("/tmp/research-daemon-heartbeat.json"),
+        Path("/tmp/autoresearch-heartbeat.json"),
+    ]
+
+    best_hb = None
+    best_ts = None
+
+    for hb_path in heartbeat_files:
+        hb = safe_json(hb_path, None)
+        if hb is None:
+            continue
+        ts_str = hb.get("timestamp", "")
+        if not ts_str:
+            continue
         try:
             from datetime import timezone
-            hb_time = datetime.fromisoformat(ts)
+            hb_time = datetime.fromisoformat(ts_str)
             if hb_time.tzinfo is None:
                 hb_time = hb_time.replace(tzinfo=timezone.utc)
-            age_min = (datetime.now(timezone.utc) - hb_time).total_seconds() / 60
-            if age_min > 30:
-                status = "dead"
-            elif age_min > 5:
-                status = "stale"
-            else:
-                status = "running"
+            if best_ts is None or hb_time > best_ts:
+                best_ts = hb_time
+                best_hb = hb
         except Exception:
-            status = "unknown"
+            continue
+
+    if best_hb is None:
+        # No heartbeat files — check if service is running via systemctl
+        for svc in ("atlas-autoresearch", "atlas-research-daemon"):
+            try:
+                r = _sp.run(["systemctl", "is-active", svc],
+                            capture_output=True, text=True, timeout=5)
+                if r.stdout.strip() == "active":
+                    return {"status": "running", "uptime_s": 0,
+                            "experiments_completed": 0, "experiments_failed": 0,
+                            "queue_depth": 0, "current_experiment": None,
+                            "source": svc}
+            except Exception:
+                pass
+        return {"status": "offline", "uptime_s": 0, "experiments_completed": 0,
+                "experiments_failed": 0, "queue_depth": 0, "current_experiment": None}
+
+    # Determine staleness from best heartbeat
+    from datetime import timezone
+    age_min = (datetime.now(timezone.utc) - best_ts).total_seconds() / 60
+    hb_status = best_hb.get("status", "unknown")
+
+    # Heartbeat says "stopped" but maybe a new process took over
+    if hb_status == "stopped" or age_min > 30:
+        # Check if either service is actually running
+        for svc in ("atlas-autoresearch", "atlas-research-daemon"):
+            try:
+                r = _sp.run(["systemctl", "is-active", svc],
+                            capture_output=True, text=True, timeout=5)
+                if r.stdout.strip() == "active":
+                    status = "running"
+                    break
+            except Exception:
+                pass
+        else:
+            status = "dead" if age_min > 30 else "stopped"
+    elif age_min > 5:
+        status = "stale"
+    else:
+        status = "running"
+
     return {
         "status": status,
-        "uptime_s": hb.get("uptime_s", 0),
-        "experiments_completed": hb.get("experiments_completed", 0),
-        "experiments_failed": hb.get("experiments_failed", 0),
-        "queue_depth": hb.get("queue_depth", 0),
-        "current_experiment": hb.get("current_experiment"),
-        "timestamp": ts,
+        "uptime_s": best_hb.get("uptime_s", 0),
+        "experiments_completed": best_hb.get("experiments_completed",
+                                              best_hb.get("experiments_total", 0)),
+        "experiments_failed": best_hb.get("experiments_failed", 0),
+        "queue_depth": best_hb.get("queue_depth", 0),
+        "current_experiment": best_hb.get("current_experiment",
+                                           best_hb.get("strategy")),
+        "timestamp": best_hb.get("timestamp", ""),
     }
 
 
@@ -2087,7 +2139,247 @@ def generate_research_data() -> dict:
             "strategies_total": len(strategies),
         },
         "daily_insight": generate_daily_insight(),
+        "agents": _build_agents(daemon),
+        "discoveries": _build_discoveries(patterns, hypotheses, journal),
     }
+
+
+def _build_agents(daemon: dict) -> list:
+    """Build agents list for the pixel-agents canvas.
+
+    Sources:
+      - Autoresearch partition heartbeats → researcher agents (0, 1, or solo)
+      - systemctl is-active → ground truth for running state
+      - Running jobs from job_server → job agents
+    """
+    import subprocess as _sp
+    agents = []
+    from datetime import timezone as _tz
+    now_utc = datetime.now(_tz.utc)
+    experiments_done = daemon.get("experiments_completed", 0)
+
+    # ── Researcher agents (partitioned or solo) ─────────────────
+    # Detect which services are active
+    _RESEARCHER_SERVICES = [
+        # (service_name, heartbeat_path, agent_id, display_name)
+        ("atlas-autoresearch-0", "/tmp/autoresearch-parent-0-heartbeat.json", "researcher-0", "Researcher A"),
+        ("atlas-autoresearch-1", "/tmp/autoresearch-parent-1-heartbeat.json", "researcher-1", "Researcher B"),
+        ("atlas-autoresearch",   "/tmp/autoresearch-parent-heartbeat.json",   "researcher",   "Researcher"),
+        ("atlas-research-daemon", "/tmp/research-daemon-heartbeat.json",      "researcher",   "Researcher"),
+    ]
+
+    found_any = False
+    for svc_name, hb_path, agent_id, display_name in _RESEARCHER_SERVICES:
+        # Check if service is running
+        svc_running = False
+        try:
+            r = _sp.run(["systemctl", "is-active", svc_name],
+                        capture_output=True, text=True, timeout=3)
+            if r.stdout.strip() == "active":
+                svc_running = True
+        except Exception:
+            pass
+
+        # Read heartbeat
+        hb = safe_json(hb_path, None)
+        strategy = ""
+        phase = ""
+        strat_index = -1
+        strat_total = 0
+        cycle_num = 0
+
+        if hb:
+            ts_str = hb.get("timestamp", "")
+            try:
+                hb_time = datetime.fromisoformat(ts_str)
+                if hb_time.tzinfo is None:
+                    hb_time = hb_time.replace(tzinfo=_tz.utc)
+                age_min = (now_utc - hb_time).total_seconds() / 60
+            except Exception:
+                age_min = 999
+            if age_min < 30:
+                phase = (hb.get("phase") or "").strip()
+                s = (hb.get("strategy") or "").strip()
+                if s:
+                    strategy = s.replace("_", " ")
+                strat_index = hb.get("strategy_index", -1)
+                strat_total = hb.get("strategy_total", 0)
+                cycle_num = hb.get("cycle", 0)
+
+            ed = hb.get("experiments_total", 0) or hb.get("experiments_completed", 0)
+            if ed and ed > experiments_done:
+                experiments_done = ed
+
+        if not svc_running and not hb:
+            continue  # Service not active and no heartbeat — skip
+
+        found_any = True
+
+        # Determine status + task
+        if svc_running:
+            if strategy:
+                strat_label = strategy.replace("_", " ").title()
+                if phase == "agent":
+                    status = "typing"
+                    task = f"Analyzing {strat_label}"
+                elif phase == "sweep":
+                    status = "typing"
+                    task = f"Sweeping {strat_label}"
+                else:
+                    status = "typing"
+                    task = strat_label
+            else:
+                if phase == "cycle_start":
+                    status = "reading"
+                    task = "Starting new cycle..."
+                elif phase == "cycle_done":
+                    status = "idle"
+                    task = "Cycle complete"
+                else:
+                    status = "reading"
+                    task = "Between strategies..."
+        else:
+            status = "sleeping"
+            task = "Engine offline"
+
+        progress = {}
+        if strat_total > 0 and strat_index >= 0:
+            sub = 0 if phase == "sweep" else 1
+            done_steps = strat_index * 2 + sub
+            total_steps = strat_total * 2
+            progress = {
+                "pct": round(done_steps / total_steps * 100),
+                "label": f"{strat_index + 1}/{strat_total}",
+                "cycle": cycle_num,
+            }
+
+        agents.append({
+            "id": agent_id,
+            "name": display_name,
+            "type": "researcher",
+            "status": status,
+            "task": task,
+            "experiments_done": experiments_done,
+            "progress": progress,
+        })
+
+    # Fallback: if nothing found, show a sleeping researcher
+    if not found_any:
+        agents.append({
+            "id": "researcher",
+            "name": "Researcher",
+            "type": "researcher",
+            "status": "sleeping",
+            "task": "Engine offline",
+            "experiments_done": experiments_done,
+            "progress": {},
+        })
+
+    # ── Job agents (from /task dispatches) ──────────────────────
+    try:
+        sys.path.insert(0, str(PROJECT_ROOT))
+        from services.job_server import get_manager
+        mgr = get_manager()
+        for job in mgr.list_jobs():
+            if job.get("status") != "running":
+                continue
+            spec = job.get("spec") or ""
+            skill = job.get("skill") or ""
+            prompt = (job.get("prompt") or "")[:40]
+            if spec:
+                task = f"#{spec}"
+            elif skill:
+                task = f"@{skill}"
+            elif prompt:
+                task = prompt
+            else:
+                task = "Working..."
+            agents.append({
+                "id": f"job-{job['id']}",
+                "name": "Job Agent",
+                "type": "job",
+                "status": "typing",
+                "task": task,
+            })
+    except Exception as e:
+        logger.debug("Could not read job agents: %s", e)
+
+    return agents
+
+
+def _build_discoveries(patterns: list, hypotheses: list, journal: list) -> list:
+    """Build consolidated discoveries list from patterns, hypotheses, and best results.
+
+    Merges multiple sources into a simple list of notable findings.
+    """
+    discoveries = []
+
+    # ── Patterns → discoveries ──────────────────────────────────
+    for p in patterns:
+        discoveries.append({
+            "text": p.get("name", "Unknown pattern"),
+            "type": "pattern",
+            "impact": p.get("impact", "medium"),
+            "detail": p.get("summary", ""),
+        })
+
+    # ── Confirmed hypotheses → discoveries ──────────────────────
+    for h in hypotheses:
+        if h.get("status") in ("confirmed", "testing"):
+            discoveries.append({
+                "text": h.get("title", "Unknown hypothesis"),
+                "type": "hypothesis",
+                "impact": "high" if h.get("status") == "confirmed" else "medium",
+                "detail": h.get("hypothesis", ""),
+            })
+
+    # ── Best results from research/best/ → discoveries ──────────
+    best_dir = PROJECT_ROOT / "research" / "best"
+    if best_dir.exists():
+        for f in sorted(best_dir.glob("*.json")):
+            try:
+                data = json.loads(f.read_text())
+                metrics = data.get("metrics", {})
+                sharpe = metrics.get("sharpe", 0)
+                if sharpe and sharpe > 0.3:
+                    name = data.get("strategy", f.stem).replace("_", " ").title()
+                    wr = metrics.get("win_rate_pct", 0)
+                    trades = metrics.get("total_trades", 0)
+                    discoveries.append({
+                        "text": f"{name}: Sharpe {sharpe:.3f}, {wr:.0f}% WR, {trades} trades",
+                        "type": "record",
+                        "impact": "high" if sharpe > 0.5 else "medium",
+                        "detail": f"Best params found after {data.get('experiments_run', '?')} experiments",
+                    })
+            except Exception:
+                pass
+
+    # ── Key findings from journal (pass experiments with before/after) ──
+    for e in journal:
+        km = e.get("key_metrics", {})
+        base = km.get("baseline_sharpe")
+        best = km.get("best_sharpe")
+        if base is not None and best is not None and e.get("verdict") == "pass":
+            improvement = best - base
+            if improvement > 0.1:
+                strat = (e.get("strategy") or "?").replace("_", " ").title()
+                discoveries.append({
+                    "text": f"{strat}: Sharpe {base:.2f} → {best:.2f} (+{improvement:.2f})",
+                    "type": "improvement",
+                    "impact": "high" if improvement > 0.2 else "medium",
+                    "detail": (e.get("hypothesis") or "")[:120],
+                })
+
+    # Sort by impact (high first), deduplicate by text
+    seen = set()
+    unique = []
+    for d in discoveries:
+        if d["text"] not in seen:
+            seen.add(d["text"])
+            unique.append(d)
+    unique.sort(key=lambda x: 0 if x["impact"] == "high" else 1)
+
+    return unique[:15]  # Cap at 15
 
 
 def _merge_equity_curves(market_data: dict, exchange_rates: dict) -> list:

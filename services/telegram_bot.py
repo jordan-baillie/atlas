@@ -696,6 +696,436 @@ def send_plan_for_approval(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Job dispatch handlers (/task, /jobs, /job, /kill, /logs, /specs)
+# ═══════════════════════════════════════════════════════════════
+
+async def cmd_task(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /task command — dispatch a Pi agent job.
+
+    Usage:
+        /task <prompt>                    Run with any prompt
+        /task @healthz                    Run a named skill
+        /task @healthz check disk space   Skill + extra instructions
+        /task #weekly-reopt               Run a named spec file
+    """
+    if not _authorized(update.effective_chat.id):
+        return
+
+    raw = (update.message.text or "").strip()
+    # Strip /task prefix
+    body = raw.split(None, 1)[1] if len(raw.split(None, 1)) > 1 else ""
+
+    if not body:
+        await update.message.reply_text(
+            "📋 <b>Usage:</b>\n"
+            "  <code>/task &lt;prompt&gt;</code> — run any task\n"
+            "  <code>/task @healthz</code> — run a named skill\n"
+            "  <code>/task @healthz fix disk</code> — skill + instructions\n"
+            "  <code>/task #weekly-reopt</code> — run a named spec\n\n"
+            f"<b>Available skills:</b> {', '.join(sorted(_get_skill_aliases()))}\n"
+            f"<b>Available specs:</b> {', '.join(_get_spec_names()) or 'none yet'}",
+            parse_mode="HTML",
+        )
+        return
+
+    # Parse skill reference (@name) and spec reference (#name)
+    skill = None
+    spec = None
+    prompt = body
+
+    if body.startswith("@"):
+        parts = body.split(None, 1)
+        skill = parts[0][1:]  # strip @
+        prompt = parts[1] if len(parts) > 1 else ""
+        if not prompt:
+            prompt = f"Run the {skill} skill and report results."
+    elif body.startswith("#"):
+        parts = body.split(None, 1)
+        spec = parts[0][1:]  # strip #
+        prompt = parts[1] if len(parts) > 1 else ""
+
+    # Create and start job
+    from services.job_server import get_manager
+    mgr = get_manager()
+
+    try:
+        job = mgr.create_job(prompt=prompt, skill=skill, spec=spec)
+    except ValueError as e:
+        await update.message.reply_text(f"❌ {_esc(str(e))}", parse_mode="HTML")
+        return
+
+    try:
+        job = mgr.start_job(job["id"])
+    except ValueError as e:
+        await update.message.reply_text(f"❌ {_esc(str(e))}", parse_mode="HTML")
+        return
+
+    skill_tag = f" [{_esc(skill)}]" if skill else ""
+    spec_tag = f" [spec: {_esc(spec)}]" if spec else ""
+
+    await update.message.reply_text(
+        f"🚀 <b>Job dispatched</b>{skill_tag}{spec_tag}\n"
+        f"<b>ID:</b> <code>{_esc(job['id'])}</code>\n"
+        f"<b>Prompt:</b> {_esc(prompt[:200])}\n\n"
+        f"Track: <code>/job {_esc(job['id'])}</code>\n"
+        f"Logs: <code>/logs {_esc(job['id'])}</code>\n"
+        f"Kill: <code>/kill {_esc(job['id'])}</code>",
+        parse_mode="HTML",
+    )
+
+    # Schedule completion check (polls every 30s until job finishes)
+    try:
+        if ctx.job_queue:
+            ctx.job_queue.run_repeating(
+                _check_job_completion,
+                interval=30,
+                first=30,
+                data={"job_id": job["id"], "chat_id": update.effective_chat.id},
+                name=f"job_monitor_{job['id']}",
+            )
+    except Exception as e:
+        logger.warning("Failed to schedule job monitor (will still run, no auto-notify): %s", e)
+
+
+async def cmd_jobs(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /jobs — list active and recent jobs."""
+    if not _authorized(update.effective_chat.id):
+        return
+
+    from services.job_server import get_manager
+    mgr = get_manager()
+    jobs = mgr.list_jobs(limit=10)
+
+    if not jobs:
+        await update.message.reply_text("📋 No jobs found.")
+        return
+
+    lines = ["📋 <b>Recent Jobs</b>", ""]
+    status_icons = {
+        "running": "🔄", "queued": "⏳", "done": "✅",
+        "failed": "❌", "killed": "🛑", "timeout": "⏰",
+    }
+
+    for j in jobs:
+        icon = status_icons.get(j["status"], "❓")
+        prompt_brief = (j.get("prompt") or "")[:60].replace("\n", " ")
+        skill_tag = f" @{j['skill_name']}" if j.get("skill_name") else ""
+        elapsed = _job_elapsed(j)
+        lines.append(
+            f"{icon} <code>{_esc(j['id'])}</code>{skill_tag}\n"
+            f"    {_esc(prompt_brief)}…  ({elapsed})"
+        )
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+async def cmd_job(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /job <id> — detailed job status."""
+    if not _authorized(update.effective_chat.id):
+        return
+
+    args = (update.message.text or "").split()
+    if len(args) < 2:
+        await update.message.reply_text("Usage: <code>/job &lt;id&gt;</code>", parse_mode="HTML")
+        return
+
+    job_id = args[1]
+    from services.job_server import get_manager
+    job = get_manager().get_job(job_id)
+
+    if not job:
+        await update.message.reply_text(f"❌ Job <code>{_esc(job_id)}</code> not found.", parse_mode="HTML")
+        return
+
+    status_icons = {
+        "running": "🔄", "queued": "⏳", "done": "✅",
+        "failed": "❌", "killed": "🛑", "timeout": "⏰",
+    }
+    icon = status_icons.get(job["status"], "❓")
+
+    lines = [
+        f"{icon} <b>Job {_esc(job['id'])}</b>",
+        "",
+        f"<b>Status:</b> {job['status']}",
+        f"<b>Prompt:</b> {_esc((job.get('prompt') or '')[:300])}",
+    ]
+
+    if job.get("skill_name"):
+        lines.append(f"<b>Skill:</b> {_esc(job['skill_name'])}")
+    if job.get("spec"):
+        lines.append(f"<b>Spec:</b> {_esc(job['spec'])}")
+    lines.append(f"<b>Created:</b> {_esc(_fmt_time(job.get('created_at')))}")
+    if job.get("started_at"):
+        lines.append(f"<b>Started:</b> {_esc(_fmt_time(job['started_at']))}")
+    if job.get("completed_at"):
+        lines.append(f"<b>Completed:</b> {_esc(_fmt_time(job['completed_at']))}")
+    lines.append(f"<b>Elapsed:</b> {_job_elapsed(job)}")
+
+    if job.get("exit_code") is not None:
+        lines.append(f"<b>Exit code:</b> {job['exit_code']}")
+
+    if job.get("result_summary"):
+        summary = job["result_summary"][:1500]
+        lines.extend(["", "<b>Summary:</b>", f"<pre>{_esc(summary)}</pre>"])
+
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+async def cmd_kill(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /kill <id> — kill a running job."""
+    if not _authorized(update.effective_chat.id):
+        return
+
+    args = (update.message.text or "").split()
+    if len(args) < 2:
+        await update.message.reply_text("Usage: <code>/kill &lt;id&gt;</code>", parse_mode="HTML")
+        return
+
+    job_id = args[1]
+    from services.job_server import get_manager
+
+    try:
+        job = get_manager().kill_job(job_id)
+        await update.message.reply_text(
+            f"🛑 Job <code>{_esc(job_id)}</code> killed.",
+            parse_mode="HTML",
+        )
+    except ValueError as e:
+        await update.message.reply_text(f"❌ {_esc(str(e))}", parse_mode="HTML")
+
+
+async def cmd_logs(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /logs <id> [lines] — show job output."""
+    if not _authorized(update.effective_chat.id):
+        return
+
+    args = (update.message.text or "").split()
+    if len(args) < 2:
+        await update.message.reply_text("Usage: <code>/logs &lt;id&gt; [lines]</code>", parse_mode="HTML")
+        return
+
+    job_id = args[1]
+    lines = int(args[2]) if len(args) > 2 and args[2].isdigit() else 30
+
+    from services.job_server import get_manager
+    logs = get_manager().get_logs(job_id, lines=lines)
+
+    if len(logs) > 3800:
+        logs = logs[-3800:]
+
+    await update.message.reply_text(
+        f"📄 <b>Logs: {_esc(job_id)}</b>\n\n<pre>{_esc(logs)}</pre>",
+        parse_mode="HTML",
+    )
+
+
+async def cmd_charts(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /charts — generate and send current status charts.
+
+    Usage: /charts              All standard charts
+           /charts leaderboard  Strategy leaderboard only
+           /charts research     Research progress only
+           /charts equity       Equity curve only
+    """
+    if not _authorized(update.effective_chat.id):
+        return
+
+    args = (update.message.text or "").split()
+    chart_type = args[1].lower() if len(args) > 1 else "all"
+
+    await update.message.reply_text("📊 Generating charts…")
+
+    loop = asyncio.get_event_loop()
+
+    def _gen():
+        from utils.charts import (
+            equity_chart, strategy_leaderboard_chart,
+            research_progress_chart, generate_all_charts,
+        )
+        if chart_type == "all":
+            return generate_all_charts()
+        elif chart_type in ("leaderboard", "lb", "strategies"):
+            c = strategy_leaderboard_chart()
+            return [c] if c else []
+        elif chart_type in ("research", "progress"):
+            c = research_progress_chart()
+            return [c] if c else []
+        elif chart_type in ("equity", "eq", "portfolio"):
+            c = equity_chart()
+            return [c] if c else []
+        else:
+            return generate_all_charts()
+
+    charts = await loop.run_in_executor(None, _gen)
+
+    if not charts:
+        await update.message.reply_text("⚠️ No chart data available.")
+        return
+
+    from utils.telegram import send_photo as _send_photo
+    for i, chart_path in enumerate(charts):
+        cap = f"📊 <b>Atlas Charts</b> ({len(charts)} total)" if i == 0 else ""
+        await loop.run_in_executor(
+            None, _send_photo, str(chart_path), cap, False,
+        )
+
+
+async def cmd_specs(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle /specs — list available task specs."""
+    if not _authorized(update.effective_chat.id):
+        return
+
+    from services.job_server import get_manager
+    specs = get_manager().list_specs()
+
+    if not specs:
+        await update.message.reply_text(
+            "📋 No specs found.\n"
+            f"Add <code>.md</code> files to <code>{_esc(str(SPECS_DIR))}</code>",
+            parse_mode="HTML",
+        )
+        return
+
+    lines = ["📋 <b>Available Specs</b>", ""]
+    for s in specs:
+        lines.append(f"  <code>#{_esc(s['name'])}</code> — {_esc(s['title'])}")
+
+    lines.extend(["", "Run with: <code>/task #spec-name</code>"])
+    await update.message.reply_text("\n".join(lines), parse_mode="HTML")
+
+
+# ── Job monitoring (background) ──────────────────────────────
+
+async def _check_job_completion(ctx: ContextTypes.DEFAULT_TYPE):
+    """Periodic callback to check if a job has completed.
+
+    When complete, sends result notification with charts and removes the repeating job.
+    """
+    data = ctx.job.data
+    job_id = data["job_id"]
+    chat_id = data["chat_id"]
+
+    from services.job_server import get_manager
+    job = get_manager().get_job(job_id)
+
+    if not job or job["status"] == "running":
+        return  # Still running, check again later
+
+    # Job finished — send notification
+    status_icons = {
+        "done": "✅", "failed": "❌", "killed": "🛑", "timeout": "⏰",
+    }
+    icon = status_icons.get(job["status"], "❓")
+
+    lines = [
+        f"{icon} <b>Job completed: {_esc(job['id'])}</b>",
+        f"<b>Status:</b> {job['status']}",
+        f"<b>Elapsed:</b> {_job_elapsed(job)}",
+    ]
+
+    if job.get("exit_code") is not None:
+        lines.append(f"<b>Exit code:</b> {job['exit_code']}")
+
+    if job.get("result_summary"):
+        summary = job["result_summary"][:1500]
+        lines.extend(["", "<b>Result:</b>", f"<pre>{_esc(summary)}</pre>"])
+
+    try:
+        await ctx.bot.send_message(
+            chat_id=chat_id,
+            text="\n".join(lines),
+            parse_mode="HTML",
+        )
+    except Exception as e:
+        logger.error("Failed to send job completion: %s", e)
+
+    # Send proof-of-work charts for successful jobs
+    if job["status"] == "done":
+        try:
+            await _send_proof_charts(ctx.bot, chat_id, job)
+        except Exception as e:
+            logger.warning("Failed to send proof charts: %s", e)
+
+    # Stop the repeating check
+    ctx.job.schedule_removal()
+
+
+async def _send_proof_charts(bot, chat_id: int, job: dict):
+    """Generate and send relevant charts after job completion.
+
+    Runs chart generation in a thread (matplotlib is blocking).
+    """
+    loop = asyncio.get_event_loop()
+
+    def _gen_charts():
+        from utils.charts import generate_all_charts
+        return generate_all_charts()
+
+    charts = await loop.run_in_executor(None, _gen_charts)
+
+    if not charts:
+        return
+
+    # Send charts as photos (first with caption, rest silent)
+    from utils.telegram import send_photo as _send_photo
+    for i, chart_path in enumerate(charts):
+        cap = "📊 <b>Proof-of-Work</b> — auto-generated charts" if i == 0 else ""
+        await loop.run_in_executor(
+            None, _send_photo, str(chart_path), cap, True,
+        )
+
+
+# ── Helpers ──────────────────────────────────────────────────
+
+SPECS_DIR = PROJECT_ROOT / "specs"
+
+
+def _get_skill_aliases() -> list[str]:
+    """Get available skill alias names."""
+    from services.job_server import SKILL_ALIASES
+    return list(SKILL_ALIASES.keys())
+
+
+def _get_spec_names() -> list[str]:
+    """Get available spec file names."""
+    return [p.stem for p in SPECS_DIR.glob("*.md")] if SPECS_DIR.exists() else []
+
+
+def _fmt_time(iso_str: Optional[str]) -> str:
+    """Format ISO timestamp for display."""
+    if not iso_str:
+        return "—"
+    try:
+        dt = datetime.fromisoformat(iso_str)
+        return dt.strftime("%H:%M:%S")
+    except Exception:
+        return iso_str[:19]
+
+
+def _job_elapsed(job: dict) -> str:
+    """Format job elapsed time."""
+    start = job.get("started_at")
+    end = job.get("completed_at")
+    if not start:
+        return "not started"
+    try:
+        t0 = datetime.fromisoformat(start)
+        if t0.tzinfo is None:
+            t0 = t0.replace(tzinfo=timezone.utc)
+        t1 = datetime.fromisoformat(end) if end else datetime.now(timezone.utc)
+        if t1.tzinfo is None:
+            t1 = t1.replace(tzinfo=timezone.utc)
+        secs = int((t1 - t0).total_seconds())
+        if secs < 60:
+            return f"{secs}s"
+        if secs < 3600:
+            return f"{secs // 60}m {secs % 60}s"
+        return f"{secs // 3600}h {(secs % 3600) // 60}m"
+    except Exception:
+        return "?"
+
+
+# ═══════════════════════════════════════════════════════════════
 # Main — run the bot
 # ═══════════════════════════════════════════════════════════════
 
@@ -719,6 +1149,15 @@ def main():
     app.add_handler(CommandHandler("halt", cmd_halt))
     app.add_handler(CommandHandler("unhalt", cmd_unhalt))
 
+    # Job dispatch handlers
+    app.add_handler(CommandHandler("task", cmd_task))
+    app.add_handler(CommandHandler("jobs", cmd_jobs))
+    app.add_handler(CommandHandler("job", cmd_job))
+    app.add_handler(CommandHandler("kill", cmd_kill))
+    app.add_handler(CommandHandler("logs", cmd_logs))
+    app.add_handler(CommandHandler("specs", cmd_specs))
+    app.add_handler(CommandHandler("charts", cmd_charts))
+
     # Callback handler for plan inline buttons (with optional :market suffix)
     app.add_handler(CallbackQueryHandler(
         handle_approval_callback,
@@ -731,7 +1170,7 @@ def main():
         pattern=r"^research:.+:(approve|reject):\w+$",
     ))
 
-    logger.info("Bot polling started. Commands: /status /plan /halt /unhalt")
+    logger.info("Bot polling started. Commands: /status /plan /halt /unhalt /task /jobs /job /kill /logs /specs")
     app.run_polling(drop_pending_updates=True)
 
 

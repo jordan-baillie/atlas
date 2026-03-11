@@ -384,39 +384,26 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 .badge-fail { background: var(--red-dim); color: var(--red); }
 .badge-partial { background: var(--amber-dim); color: var(--amber); }
 .badge-queued { background: rgba(99,90,76,0.12); color: var(--text-tertiary); }
-.badge-deferred { background: var(--amber-dim); color: var(--amber); }
 .badge-promoted { background: var(--green-dim); color: var(--green-bright); }
 .badge-running { background: var(--blue-dim); color: var(--blue); }
-.pri-p1 { color: var(--red); } .pri-p2 { color: var(--amber); }
-.pri-p3 { color: var(--blue); } .pri-p4, .pri-p5 { color: var(--text-tertiary); }
 
-/* Engine Status Banner */
-.engine-banner {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius); padding: 12px 18px; margin-bottom: 16px;
-  font-size: 12px; position: relative; overflow: hidden;
+/* Agent Floor */
+.agent-floor-wrap {
+  background: var(--bg); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius); margin-bottom: 16px; position: relative; overflow: hidden;
 }
-.engine-banner::before {
+.agent-floor-wrap::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  opacity: 0.4;
+  background: linear-gradient(90deg, transparent, var(--green), transparent); opacity: 0.4; z-index: 1;
 }
-.engine-banner.daemon-running::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
-.engine-banner.daemon-stale::before { background: linear-gradient(90deg, transparent, var(--amber), transparent); }
-.engine-banner.daemon-dead::before, .engine-banner.daemon-offline::before { background: linear-gradient(90deg, transparent, var(--red), transparent); }
-.engine-status-dot {
-  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+.agent-floor-wrap::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent); opacity: 0.3;
 }
-.engine-status-dot.running { background: var(--green); box-shadow: 0 0 6px var(--green-dim); animation: pulse 2s ease-in-out infinite; }
-.engine-status-dot.stale { background: var(--amber); box-shadow: 0 0 6px var(--amber-dim); }
-.engine-status-dot.dead, .engine-status-dot.offline { background: var(--red); box-shadow: 0 0 4px var(--red-dim); }
-.engine-label { font-weight: 600; color: var(--text); }
-.engine-sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
-.engine-detail { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 5px; }
-.engine-detail .ed-label { color: var(--text-tertiary); font-weight: 500; }
+#agent-canvas { display: block; width: 100%; height: 180px; image-rendering: pixelated; }
 
 /* KPI Strip */
-.research-kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+.research-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
 .rkpi {
   background: var(--surface); border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm); padding: 14px 12px; text-align: center;
@@ -425,73 +412,6 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 .rkpi-value { font-family: var(--mono); font-size: 22px; font-weight: 800; line-height: 1.1; }
 .rkpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-top: 4px; }
 .rkpi-sub { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
-
-/* Pipeline */
-.pipeline-wrap { margin-bottom: 18px; }
-.pipeline-row {
-  display: flex; align-items: center; gap: 0; width: 100%;
-}
-.pipeline-node {
-  flex: 1; text-align: center; padding: 10px 6px; position: relative;
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  font-size: 11px; cursor: default;
-}
-.pipeline-node:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.pipeline-node:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.pipeline-node:not(:first-child) { border-left: none; }
-.pipeline-node:hover { background: var(--surface-hover); }
-.pipeline-node-count {
-  font-family: var(--mono); font-size: 18px; font-weight: 800; line-height: 1.2;
-}
-.pipeline-node-label {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--text-tertiary); margin-top: 2px;
-}
-.pipeline-arrow {
-  color: var(--text-tertiary); font-size: 10px; flex-shrink: 0;
-  width: 0; overflow: visible; text-align: center; position: relative; z-index: 1;
-}
-.pipeline-node.has-items .pipeline-node-count { color: var(--text); }
-.pipeline-node.empty .pipeline-node-count { color: var(--text-tertiary); opacity: 0.4; }
-
-/* Findings cards */
-.finding-card {
-  padding: 12px 14px; margin-bottom: 8px;
-  background: var(--surface-hover); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); border-left: 3px solid var(--green);
-}
-.finding-card:hover { border-color: var(--border); }
-.finding-card.impact-high { border-left-color: var(--green); }
-.finding-card.impact-medium { border-left-color: var(--amber); }
-.finding-card.impact-low { border-left-color: var(--text-tertiary); }
-.finding-card .fc-title {
-  font-size: 13px; font-weight: 600; margin-bottom: 4px;
-}
-.finding-card .fc-summary {
-  font-size: 11px; color: var(--text-secondary); line-height: 1.5;
-}
-.finding-card .fc-meta {
-  display: flex; gap: 8px; align-items: center; margin-top: 6px;
-}
-
-/* Hypothesis cards */
-.hyp-card {
-  padding: 12px 14px; margin-bottom: 8px;
-  background: var(--surface-hover); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); border-left: 3px solid var(--blue);
-}
-.hyp-card:hover { border-color: var(--border); }
-.hyp-card.status-confirmed { border-left-color: var(--green); }
-.hyp-card.status-rejected { border-left-color: var(--red); }
-.hyp-card.status-testing { border-left-color: var(--amber); }
-.hyp-card.status-proposed { border-left-color: var(--blue); }
-.hyp-card .hc-title {
-  font-size: 13px; font-weight: 600; margin-bottom: 4px;
-  display: flex; align-items: center; gap: 8px;
-}
-.hyp-card .hc-text {
-  font-size: 11px; color: var(--text-secondary); line-height: 1.5;
-}
 
 /* Activity Feed */
 .activity-item {
@@ -505,81 +425,41 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 .activity-dot.v-partial { background: var(--amber); }
 .activity-dot.v-promoted { background: var(--green-bright); box-shadow: 0 0 6px var(--green-dim); }
 .activity-time { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); min-width: 52px; flex-shrink: 0; }
-.activity-strat { font-weight: 600; min-width: 110px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activity-strat { font-weight: 600; min-width: 100px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .activity-detail { color: var(--text-secondary); font-family: var(--mono); font-size: 11px; flex: 1; }
-.activity-expand {
-  font-size: 10px; color: var(--text-tertiary); cursor: pointer; padding: 2px 6px;
-  border: 1px solid var(--border-subtle); border-radius: 3px; flex-shrink: 0;
-}
-.activity-expand:hover { border-color: var(--border); color: var(--text-secondary); }
-.activity-learnings {
-  padding: 6px 12px 6px 28px; font-size: 11px; color: var(--text-secondary);
-  line-height: 1.6; border-bottom: 1px solid var(--border-subtle); display: none;
-}
-.activity-learnings.show { display: block; }
 
-/* Queue breakdown */
-.queue-breakdown {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden;
-  margin-bottom: 14px;
+/* Discoveries */
+.discovery-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; margin-bottom: 6px;
+  background: var(--surface-hover); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); border-left: 3px solid var(--green);
 }
-.qb-item { padding: 10px 12px; border-right: 1px solid var(--border-subtle); }
-.qb-item:last-child { border-right: none; }
-.qb-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
-.qb-value { font-family: var(--mono); font-size: 16px; font-weight: 700; margin-top: 2px; }
+.discovery-item:hover { border-color: var(--border); }
+.discovery-item.impact-medium { border-left-color: var(--amber); }
+.discovery-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.discovery-text { font-size: 12px; font-weight: 500; line-height: 1.4; }
+.discovery-detail { font-size: 11px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
 
-/* Coverage matrix (compact) */
-.cov-matrix { width: 100%; border-collapse: collapse; font-size: 11px; }
-.cov-matrix th {
-  padding: 6px 8px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--text-tertiary); font-weight: 600; border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; background: var(--bg); text-align: center;
-}
-.cov-matrix th:first-child { text-align: left; }
-.cov-matrix td { padding: 5px 8px; border-bottom: 0.5px solid var(--border-subtle); text-align: center; font-size: 13px; }
-.cov-matrix td:first-child { text-align: left; font-size: 11px; }
-.cov-matrix tr:hover td { background: rgba(255,255,255,0.015); }
-.cov-matrix tr.untested td { opacity: 0.4; }
-.cov-icon { font-size: 13px; }
+/* Leaderboard bars */
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.lb-rank { font-family: var(--mono); font-size: 11px; color: var(--text-tertiary); width: 20px; text-align: right; flex-shrink: 0; }
+.lb-name { font-size: 12px; font-weight: 600; width: 170px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-bar-wrap { flex: 1; height: 18px; background: var(--surface); border-radius: 3px; overflow: hidden; position: relative; }
+.lb-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+.lb-value { font-family: var(--mono); font-size: 11px; font-weight: 600; width: 44px; text-align: right; flex-shrink: 0; }
+.lb-meta { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); width: 80px; flex-shrink: 0; }
 
 @media (max-width: 1060px) {
-  .research-kpis { grid-template-columns: repeat(3, 1fr); }
+  .research-kpis { grid-template-columns: repeat(2, 1fr); }
+  .lb-name { width: 120px; }
+  .lb-meta { display: none; }
 }
 @media (max-width: 700px) {
   .research-kpis { grid-template-columns: repeat(2, 1fr); }
-  .pipeline-node-label { font-size: 8px; }
-  .pipeline-node-count { font-size: 14px; }
-  .queue-breakdown { grid-template-columns: repeat(2, 1fr); }
-  .qb-item:nth-child(2) { border-right: none; }
-  .qb-item:nth-child(1), .qb-item:nth-child(2) { border-bottom: 1px solid var(--border-subtle); }
+  .lb-name { width: 100px; }
+  #agent-canvas { height: 120px; }
 }
-
-/* ── Daily insight ── */
-.insight-section { border-top-color: var(--amber); border-top-style: dashed; }
-.insight-spark { display: inline-block; margin-right: 4px; vertical-align: middle; color: var(--green); opacity: 0.8; }
-.insight-card {
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius); padding: 24px 28px; position: relative; overflow: hidden;
-}
-.insight-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, var(--green), var(--blue)); opacity: 0.5;
-}
-.insight-header { margin-bottom: 18px; }
-.insight-title { font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; }
-.insight-subtitle { font-family: var(--mono); font-size: 11px; color: var(--text-tertiary); }
-.insight-chart-area { position: relative; width: 100%; }
-.insight-annotation {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: 12px; font-weight: 600;
-  padding: 5px 11px; border-radius: var(--radius-xs); margin-top: 14px;
-}
-.insight-annotation.green { background: var(--green-dim); color: var(--green-bright); }
-.insight-annotation.red { background: var(--red-dim); color: var(--red); }
-.insight-annotation.amber { background: var(--amber-dim); color: var(--amber); }
-.insight-date { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); text-align: right; margin-top: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
-.insight-chart-area svg { width: 100%; display: block; }
 
 /* ── P&L breakdown ── */
 .pnl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
@@ -1033,78 +913,39 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
   <!-- ═══ RESEARCH TAB ═══ -->
   <div class="tab-content" id="tab-research">
 
-    <!-- Engine Status Banner -->
-    <div class="engine-banner" id="engine-banner"></div>
+    <!-- Agent Floor (pixel-agents canvas) -->
+    <div class="agent-floor-wrap">
+      <canvas id="agent-canvas"></canvas>
+    </div>
 
-    <!-- KPI Strip -->
+    <!-- KPI Strip (4 metrics) -->
     <div class="research-kpis" id="research-kpis"></div>
 
-    <!-- Lifecycle Pipeline -->
-    <div class="pipeline-wrap" id="pipeline-wrap"></div>
-
-    <!-- Strategy Leaderboard -->
+    <!-- Activity Feed (always visible) -->
     <div class="section" style="animation-delay:0.05s">
+      <div class="section-head" onclick="toggle('ractivity')">
+        <div class="section-title">/Live Activity <span class="section-count" id="ractivity-count">0</span></div>
+        <span class="chevron down" id="chev-ractivity">+</span>
+      </div>
+      <div class="section-body show" id="body-ractivity"></div>
+    </div>
+
+    <!-- Discoveries (consolidated findings) -->
+    <div class="section" style="animation-delay:0.10s">
+      <div class="section-head" onclick="toggle('discoveries')">
+        <div class="section-title">/Discoveries <span class="section-count" id="discoveries-count">0</span></div>
+        <span class="chevron down" id="chev-discoveries">+</span>
+      </div>
+      <div class="section-body show" id="body-discoveries"></div>
+    </div>
+
+    <!-- Leaderboard (compact bar chart) -->
+    <div class="section" style="animation-delay:0.15s">
       <div class="section-head" onclick="toggle('leaderboard')">
         <div class="section-title">/Strategy Leaderboard <span class="section-count" id="leaderboard-count">0</span></div>
         <span class="chevron down" id="chev-leaderboard">+</span>
       </div>
-      <div class="section-body" id="body-leaderboard"></div>
-    </div>
-
-    <!-- Key Findings: Patterns + Hypotheses side by side -->
-    <div class="two-col">
-      <div class="section" style="animation-delay:0.10s">
-        <div class="section-head" onclick="toggle('rpatterns')">
-          <div class="section-title">/Discovered Patterns <span class="section-count" id="rpatterns-count">0</span></div>
-          <span class="chevron down" id="chev-rpatterns">+</span>
-        </div>
-        <div class="section-body" id="body-rpatterns"></div>
-      </div>
-      <div class="section" style="animation-delay:0.12s">
-        <div class="section-head" onclick="toggle('rhypotheses')">
-          <div class="section-title">/Hypotheses <span class="section-count" id="rhypotheses-count">0</span></div>
-          <span class="chevron down" id="chev-rhypotheses">+</span>
-        </div>
-        <div class="section-body" id="body-rhypotheses"></div>
-      </div>
-    </div>
-
-    <!-- Daily Insight Chart -->
-    <div class="section insight-section" style="animation-delay:0.14s">
-      <div class="section-head" onclick="toggle('insight')">
-        <div class="section-title"><svg class="insight-spark" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.09 6.26L20.18 10l-6.09 1.74L12 18l-2.09-6.26L3.82 10l6.09-1.74z"/></svg> /Daily Insight</div>
-        <span class="chevron down" id="chev-insight">+</span>
-      </div>
-      <div class="section-body" id="body-insight">
-        <div id="insight-chart-container"></div>
-      </div>
-    </div>
-
-    <!-- Activity Feed -->
-    <div class="section" style="animation-delay:0.16s">
-      <div class="section-head" onclick="toggle('ractivity')">
-        <div class="section-title">/Activity Feed <span class="section-count" id="ractivity-count">0</span></div>
-        <span class="chevron down" id="chev-ractivity">+</span>
-      </div>
-      <div class="section-body" id="body-ractivity"></div>
-    </div>
-
-    <!-- Queue Overview -->
-    <div class="section" style="animation-delay:0.18s">
-      <div class="section-head" onclick="toggle('rqueue')">
-        <div class="section-title">/Queue Overview <span class="section-count" id="rqueue-count">0</span></div>
-        <span class="chevron down" id="chev-rqueue">+</span>
-      </div>
-      <div class="section-body" id="body-rqueue"></div>
-    </div>
-
-    <!-- Coverage Matrix -->
-    <div class="section" style="animation-delay:0.20s">
-      <div class="section-head" onclick="toggle('rcoverage')">
-        <div class="section-title">/Coverage Matrix</div>
-        <span class="chevron down" id="chev-rcoverage">+</span>
-      </div>
-      <div class="section-body" id="body-rcoverage"></div>
+      <div class="section-body show" id="body-leaderboard"></div>
     </div>
 
   </div><!-- /tab-research -->
@@ -1404,6 +1245,10 @@ function switchTab(tab) {
   var btn = document.getElementById('tab-btn-' + tab);
   if (content) content.classList.add('active');
   if (btn) btn.classList.add('active');
+  // Resize agent canvas when research tab becomes visible
+  if (tab === 'research' && typeof _resizeAgentCanvas === 'function') {
+    setTimeout(_resizeAgentCanvas, 100);
+  }
 }
 
 function toggle(id) {
@@ -3018,203 +2863,37 @@ function renderRadarSVG(insight) {
 }
 
 // ── Research Tab ──
-// Strategy tooltip helper — builds a badge with hover description
-var _stratDescMap = {};
-function stratTip(id) {
-  if (!id) return '';
-  var info = _stratDescMap[id];
-  if (!info || !info.desc) return strat(id);
-  var html = '<span class="strat-tip">' + strat(id);
-  html += '<span class="strat-tiptext">';
-  html += '<div class="tip-name">' + esc(info.name || id.replace(/_/g, ' ')) + '</div>';
-  html += esc(info.desc);
-  if (info.ref) html += '<div class="tip-ref">' + esc(info.ref) + '</div>';
-  html += '</span></span>';
-  return html;
-}
 
 function renderResearch(d) {
   var res = d.research || {};
-  var daemon = res.daemon || {};
   var stats = res.statistics || {};
   var lb = res.leaderboard || [];
-  var pipe = res.pipeline || {};
-  var pats = res.patterns || [];
-  var hyps = res.hypotheses || [];
   var feed = res.activity_feed || [];
-  var qs = res.queue_summary || {};
-  var qbs = qs.by_status || {};
-  var qbp = qs.by_priority || {};
-  var pending = qs.pending_items || [];
+  var agents = res.agents || [];
+  var discoveries = res.discoveries || [];
 
-  // Build strategy description lookup
-  _stratDescMap = {};
-  lb.forEach(function(s) {
-    _stratDescMap[s.id] = { name: s.name, desc: s.description || '', ref: s.reference || '' };
-  });
+  // Update agents canvas
+  updateAgentFloor(agents);
 
-  // Daily Insight
-  renderDailyInsight(res.daily_insight);
-
-  // Tab badge
+  // Tab badge — show active agent count or total experiments
   var badge = document.getElementById('research-tab-badge');
-  var nQueued = qbs.queued || 0;
-  var nRunning = (qbs.running || 0) + (qbs.claimed || 0);
-  if (badge) badge.textContent = daemon.status === 'running' ? (nRunning > 0 ? nRunning + ' running' : nQueued + ' queued') : stats.total_experiments + ' done';
+  var activeAgents = agents.filter(function(a) { return a.status === 'typing' || a.status === 'reading'; });
+  if (badge) badge.textContent = activeAgents.length > 0 ? activeAgents.length + ' active' : stats.total_experiments + ' done';
 
-  // ── Engine Status Banner ──
-  var ds = daemon.status || 'offline';
-  var eb = '<span class="engine-status-dot ' + ds + '"></span>';
-  eb += '<span class="engine-label">' + (ds === 'running' ? 'Engine Running' : ds === 'stale' ? 'Engine Stale' : ds === 'dead' ? 'Engine Dead' : 'Engine Offline') + '</span>';
-  if (ds === 'running' || ds === 'stale') {
-    eb += '<span class="engine-sep"></span>';
-    var uptH = (daemon.uptime_s || 0) / 3600;
-    eb += '<span class="engine-detail"><span class="ed-label">Uptime</span> ' + (uptH < 1 ? Math.round(uptH * 60) + 'm' : uptH.toFixed(1) + 'h') + '</span>';
-    eb += '<span class="engine-sep"></span>';
-    eb += '<span class="engine-detail"><span class="ed-label">Session</span> ' + (daemon.experiments_completed || 0) + ' done, ' + (daemon.experiments_failed || 0) + ' failed</span>';
-    eb += '<span class="engine-sep"></span>';
-    eb += '<span class="engine-detail"><span class="ed-label">Queue</span> ' + (daemon.queue_depth || 0) + ' pending</span>';
-    if (daemon.current_experiment && ds === 'running') {
-      eb += '<span class="engine-sep"></span>';
-      var curExps = String(daemon.current_experiment).split(',');
-      eb += '<span class="engine-detail"><span class="ed-label">Running</span> ' + curExps.length + ' experiment' + (curExps.length > 1 ? 's' : '') + '</span>';
-    }
-  }
-  var bannerEl = document.getElementById('engine-banner');
-  bannerEl.className = 'engine-banner daemon-' + ds;
-  bannerEl.innerHTML = eb;
-
-  // ── KPI Strip ──
+  // ── KPI Strip (4 metrics) ──
   var kh = '';
   kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text)">' + stats.total_experiments + '</div><div class="rkpi-label">Experiments</div><div class="rkpi-sub">' + stats.days_active + ' days</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green)">' + stats.passed + '</div><div class="rkpi-label">Passed</div><div class="rkpi-sub">' + (stats.pass_rate_pct || 0) + '% rate</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--red)">' + stats.failed + '</div><div class="rkpi-label">Failed</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green)">' + (stats.pass_rate_pct || 0) + '%</div><div class="rkpi-label">Pass Rate</div><div class="rkpi-sub">' + stats.passed + ' passed</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + stats.strategies_tested + '</div><div class="rkpi-label">Strategies</div><div class="rkpi-sub">of ' + stats.strategies_total + ' total</div></div>';
   kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green-bright)">' + stats.promoted + '</div><div class="rkpi-label">Promoted</div><div class="rkpi-sub">to live config</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + stats.strategies_tested + '</div><div class="rkpi-label">Tested</div><div class="rkpi-sub">of ' + stats.strategies_total + ' strategies</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--amber)">' + nQueued + '</div><div class="rkpi-label">Queued</div><div class="rkpi-sub">' + (nRunning > 0 ? nRunning + ' running' : 'idle') + '</div></div>';
   document.getElementById('research-kpis').innerHTML = kh;
-
-  // ── Lifecycle Pipeline ──
-  var stages = [
-    { key: 'untested', label: 'Untested', color: 'var(--text-tertiary)' },
-    { key: 'screen', label: 'Screen', color: 'var(--text-secondary)' },
-    { key: 'solo', label: 'Solo', color: 'var(--blue)' },
-    { key: 'optimize', label: 'Optimize', color: 'var(--purple)' },
-    { key: 'combined', label: 'Combined', color: 'var(--amber)' },
-    { key: 'oos', label: 'OOS', color: 'var(--orange)' },
-    { key: 'promote', label: 'Promoted', color: 'var(--green)' },
-  ];
-  var ph = '<div class="pipeline-row">';
-  stages.forEach(function(s, i) {
-    var cnt = pipe[s.key] || 0;
-    var hasItems = cnt > 0;
-    ph += '<div class="pipeline-node ' + (hasItems ? 'has-items' : 'empty') + '">';
-    ph += '<div class="pipeline-node-count" style="color:' + (hasItems ? s.color : '') + '">' + cnt + '</div>';
-    ph += '<div class="pipeline-node-label">' + s.label + '</div>';
-    ph += '</div>';
-    if (i < stages.length - 1) ph += '<div class="pipeline-arrow">›</div>';
-  });
-  ph += '</div>';
-  document.getElementById('pipeline-wrap').innerHTML = ph;
-
-  // ── Strategy Leaderboard ──
-  var tested = lb.filter(function(s) { return s.total_experiments > 0; });
-  document.getElementById('leaderboard-count').textContent = tested.length + ' tested';
-  var lt = '<div class="table-scroll"><table id="tbl-lb"><thead><tr>';
-  lt += '<th style="width:28px">#</th>';
-  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',1,\'str\')">Strategy</th>';
-  lt += '<th>Type</th><th>Status</th>';
-  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',4,\'num\')">Sharpe</th>';
-  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',5,\'num\')">Win Rate</th>';
-  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',6,\'num\')">Trades</th>';
-  lt += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-lb\',7,\'num\')">Exps</th>';
-  lt += '<th>Stage</th>';
-  lt += '<th style="text-align:center">Screen</th><th style="text-align:center">Solo</th>';
-  lt += '<th style="text-align:center">Opt</th><th style="text-align:center">Comb</th>';
-  lt += '<th style="text-align:center">OOS</th><th style="text-align:center">Prom</th>';
-  lt += '</tr></thead><tbody>';
-  var rank = 0;
-  lb.forEach(function(s) {
-    var isTested = s.total_experiments > 0;
-    rank++;
-    var trCls = isTested ? '' : ' class="untested"';
-    lt += '<tr' + trCls + ' style="' + (!isTested ? 'opacity:0.45' : '') + '">';
-    lt += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (isTested ? rank : '—') + '</td>';
-    lt += '<td>' + stratTip(s.id) + '</td>';
-    lt += '<td>' + strat(s.type) + '</td>';
-    // Status badge
-    var sc = 'badge-queued';
-    if (s.status === 'active') sc = 'badge-pass';
-    else if (s.status === 'dormant') sc = 'badge-partial';
-    else if (s.status === 'broken' || s.status === 'dead_end') sc = 'badge-fail';
-    else if (s.status === 'not_built') sc = 'badge-queued';
-    lt += '<td><span class="research-badge ' + sc + '">' + esc(s.status) + '</span></td>';
-    lt += '<td class="mono ' + cls(s.best_sharpe||0) + '" data-v="' + (s.best_sharpe||0) + '">' + (s.best_sharpe != null ? s.best_sharpe.toFixed(2) : '—') + '</td>';
-    lt += '<td class="mono" data-v="' + (s.best_win_rate||0) + '">' + (s.best_win_rate != null ? s.best_win_rate.toFixed(0) + '%' : '—') + '</td>';
-    lt += '<td class="mono" data-v="' + (s.best_trades||0) + '">' + (s.best_trades || '—') + '</td>';
-    lt += '<td class="mono" data-v="' + (s.total_experiments||0) + '">' + (s.total_experiments || '—') + '</td>';
-    // Stage badge
-    var stgCls = 'badge-queued';
-    if (s.stage === 'oos' || s.stage === 'promote') stgCls = 'badge-promoted';
-    else if (s.stage === 'optimize' || s.stage === 'combined') stgCls = 'badge-running';
-    else if (s.stage === 'solo') stgCls = 'badge-partial';
-    lt += '<td><span class="research-badge ' + stgCls + '">' + esc(s.stage) + '</span></td>';
-    // Coverage cells
-    var covStages = ['screen','solo','optimize','combined','oos','promote'];
-    var cov = s.coverage || {};
-    covStages.forEach(function(cs) {
-      var icon = cov[cs] || '—';
-      lt += '<td style="text-align:center;font-size:13px">' + icon + '</td>';
-    });
-    lt += '</tr>';
-  });
-  lt += '</tbody></table></div>';
-  document.getElementById('body-leaderboard').innerHTML = lt;
-
-  // ── Patterns ──
-  document.getElementById('rpatterns-count').textContent = pats.length;
-  if (pats.length > 0) {
-    var pp = '';
-    pats.forEach(function(p) {
-      pp += '<div class="finding-card impact-' + esc(p.impact) + '">';
-      pp += '<div class="fc-title">' + esc(p.name) + '</div>';
-      if (p.summary) pp += '<div class="fc-summary">' + esc(p.summary) + '</div>';
-      pp += '<div class="fc-meta">';
-      pp += '<span class="research-badge badge-pass">' + esc(p.status) + '</span>';
-      pp += '<span class="research-badge" style="background:var(--surface);color:var(--text-tertiary)">' + esc(p.impact) + ' impact</span>';
-      pp += '</div></div>';
-    });
-    document.getElementById('body-rpatterns').innerHTML = pp;
-  } else {
-    document.getElementById('body-rpatterns').innerHTML = '<div class="empty">No patterns discovered yet</div>';
-  }
-
-  // ── Hypotheses ──
-  document.getElementById('rhypotheses-count').textContent = hyps.length;
-  if (hyps.length > 0) {
-    var hh = '';
-    hyps.forEach(function(h) {
-      var statusIcon = h.status === 'confirmed' ? '✅' : h.status === 'rejected' ? '❌' : h.status === 'testing' ? '🔄' : '💡';
-      hh += '<div class="hyp-card status-' + esc(h.status) + '">';
-      hh += '<div class="hc-title"><span>' + statusIcon + '</span> ' + esc(h.title) + '</div>';
-      if (h.hypothesis) hh += '<div class="hc-text">' + esc(h.hypothesis) + '</div>';
-      hh += '<div class="fc-meta" style="margin-top:6px">';
-      hh += '<span class="research-badge badge-' + (h.status === 'confirmed' ? 'pass' : h.status === 'rejected' ? 'fail' : h.status === 'testing' ? 'running' : 'queued') + '">' + esc(h.status) + '</span>';
-      if (h.source) hh += '<span style="font-size:10px;color:var(--text-tertiary)">via ' + esc(h.source) + '</span>';
-      hh += '</div></div>';
-    });
-    document.getElementById('body-rhypotheses').innerHTML = hh;
-  } else {
-    document.getElementById('body-rhypotheses').innerHTML = '<div class="empty">No hypotheses yet — engine will generate them as patterns emerge</div>';
-  }
 
   // ── Activity Feed ──
   document.getElementById('ractivity-count').textContent = feed.length;
   if (feed.length > 0) {
     var af = '';
-    // Reverse: newest first
     var feedRev = feed.slice().reverse();
-    feedRev.forEach(function(a, idx) {
+    feedRev.forEach(function(a) {
       var vc = a.verdict === 'pass' ? 'v-pass' : a.verdict === 'fail' ? 'v-fail' : a.verdict === 'promoted' ? 'v-promoted' : 'v-partial';
       var detail = '';
       if (a.sharpe != null) detail += 'Sharpe ' + a.sharpe.toFixed(2);
@@ -3223,93 +2902,784 @@ function renderResearch(d) {
       af += '<div class="activity-item">';
       af += '<span class="activity-dot ' + vc + '"></span>';
       af += '<span class="activity-time">' + ago(a.timestamp) + '</span>';
-      af += '<span class="activity-strat">' + stratTip(a.strategy || '') + '</span>';
+      af += '<span class="activity-strat">' + strat(a.strategy || '') + '</span>';
       af += '<span class="research-badge badge-' + (a.verdict === 'pass' ? 'pass' : a.verdict === 'fail' ? 'fail' : a.verdict === 'promoted' ? 'promoted' : 'partial') + '">' + esc(a.verdict) + '</span>';
       af += '<span class="activity-detail">' + detail + '</span>';
-      if (a.learnings && a.learnings.length > 0) {
-        af += '<span class="activity-expand" onclick="toggleLearning(' + idx + ')">+</span>';
-      }
       af += '</div>';
-      if (a.learnings && a.learnings.length > 0) {
-        af += '<div class="activity-learnings" id="learning-' + idx + '">';
-        a.learnings.forEach(function(l) { af += '• ' + esc(l) + '<br>'; });
-        af += '</div>';
-      }
     });
     document.getElementById('body-ractivity').innerHTML = af;
   } else {
-    document.getElementById('body-ractivity').innerHTML = '<div class="empty">No experiments run yet — daemon will populate as results come in</div>';
+    document.getElementById('body-ractivity').innerHTML = '<div class="empty">No experiments yet</div>';
   }
 
-  // ── Queue Overview ──
-  var nPending = (qbs.queued || 0) + (qbs.running || 0) + (qbs.claimed || 0);
-  document.getElementById('rqueue-count').textContent = nPending + ' pending';
-  var qo = '';
-  // Priority/status breakdown
-  qo += '<div class="queue-breakdown">';
-  qo += '<div class="qb-item"><div class="qb-label">P1 Critical</div><div class="qb-value" style="color:var(--red)">' + (qbp.P1 || 0) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">P2 High</div><div class="qb-value" style="color:var(--amber)">' + (qbp.P2 || 0) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">P3 Medium</div><div class="qb-value" style="color:var(--blue)">' + (qbp.P3 || 0) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">P4 Low</div><div class="qb-value" style="color:var(--text-tertiary)">' + (qbp.P4 || 0) + '</div></div>';
-  qo += '</div>';
-  // Status breakdown strip
-  qo += '<div class="queue-breakdown" style="margin-bottom:14px">';
-  qo += '<div class="qb-item"><div class="qb-label">Queued</div><div class="qb-value">' + (qbs.queued || 0) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">Running</div><div class="qb-value" style="color:var(--blue)">' + ((qbs.running || 0) + (qbs.claimed || 0)) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">Passed</div><div class="qb-value" style="color:var(--green)">' + (qbs.passed || 0) + '</div></div>';
-  qo += '<div class="qb-item"><div class="qb-label">Failed</div><div class="qb-value" style="color:var(--red)">' + (qbs.failed || 0) + '</div></div>';
-  qo += '</div>';
-  // Pending items table (only queued/running)
-  if (pending.length > 0) {
-    qo += '<div class="table-scroll" style="max-height:300px"><table id="tbl-queue"><thead><tr>';
-    qo += '<th>Priority</th><th>Strategy</th><th>Title</th><th>Category</th>';
-    qo += '<th>Status</th><th>ETA</th>';
-    qo += '</tr></thead><tbody>';
-    pending.forEach(function(e) {
-      var sc = e.status === 'running' || e.status === 'claimed' ? 'badge-running' : 'badge-queued';
-      qo += '<tr>';
-      qo += '<td class="pri-' + (e.priority||'').toLowerCase() + '" style="font-weight:700;font-size:12px">' + esc(e.priority) + '</td>';
-      qo += '<td>' + stratTip(e.strategy_name || '') + '</td>';
-      qo += '<td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(e.title) + '</td>';
-      qo += '<td style="font-size:11px;color:var(--text-secondary)">' + esc(e.category) + '</td>';
-      qo += '<td><span class="research-badge ' + sc + '">' + esc(e.status) + '</span></td>';
-      qo += '<td class="mono" style="font-size:11px;color:var(--text-tertiary)">' + (e.estimated_runtime_min > 0 ? '~' + e.estimated_runtime_min + 'm' : '—') + '</td>';
-      qo += '</tr>';
+  // ── Discoveries ──
+  document.getElementById('discoveries-count').textContent = discoveries.length;
+  if (discoveries.length > 0) {
+    var dd = '';
+    discoveries.forEach(function(d) {
+      var icon = d.type === 'pattern' ? '🔬' : d.type === 'improvement' ? '📈' : d.type === 'record' ? '⭐' : d.type === 'hypothesis' ? '💡' : '📋';
+      var impactCls = d.impact === 'high' ? '' : ' impact-medium';
+      dd += '<div class="discovery-item' + impactCls + '">';
+      dd += '<span class="discovery-icon">' + icon + '</span>';
+      dd += '<div><div class="discovery-text">' + esc(d.text) + '</div>';
+      if (d.detail) dd += '<div class="discovery-detail">' + esc(d.detail) + '</div>';
+      dd += '</div></div>';
     });
-    qo += '</tbody></table></div>';
+    document.getElementById('body-discoveries').innerHTML = dd;
+  } else {
+    document.getElementById('body-discoveries').innerHTML = '<div class="empty">No discoveries yet</div>';
   }
-  document.getElementById('body-rqueue').innerHTML = qo;
 
-  // ── Coverage Matrix ──
-  var covStages = ['screen','solo','optimize','combined','oos','promote'];
-  var covLabels = ['Screen','Solo','Opt','Comb','OOS','Prom'];
-  var ct = '<div class="table-scroll" style="max-height:500px"><table class="cov-matrix"><thead><tr>';
-  ct += '<th style="min-width:130px">Strategy</th><th>Status</th>';
-  covLabels.forEach(function(l) { ct += '<th>' + l + '</th>'; });
-  ct += '</tr></thead><tbody>';
-  lb.forEach(function(s) {
-    var cov = s.coverage || {};
-    var hasCov = covStages.some(function(cs) { return cov[cs]; });
-    ct += '<tr class="' + (!hasCov ? 'untested' : '') + '">';
-    ct += '<td>' + stratTip(s.id) + '</td>';
-    var sc = 'badge-queued';
-    if (s.status === 'active') sc = 'badge-pass';
-    else if (s.status === 'dormant') sc = 'badge-partial';
-    else if (s.status === 'not_built') sc = 'badge-queued';
-    ct += '<td><span class="research-badge ' + sc + '" style="font-size:9px">' + esc(s.status) + '</span></td>';
-    covStages.forEach(function(cs) {
-      var icon = cov[cs] || '—';
-      ct += '<td class="cov-icon">' + icon + '</td>';
+  // ── Strategy Leaderboard (compact bars) ──
+  var tested = lb.filter(function(s) { return (s.best_sharpe || 0) > 0; });
+  tested.sort(function(a, b) { return (b.best_sharpe || 0) - (a.best_sharpe || 0); });
+  var top = tested.slice(0, 10);
+  document.getElementById('leaderboard-count').textContent = tested.length + ' with results';
+  if (top.length > 0) {
+    var maxSharpe = top[0].best_sharpe || 1;
+    var lh = '';
+    top.forEach(function(s, i) {
+      var pct = Math.round(((s.best_sharpe || 0) / maxSharpe) * 100);
+      var barColors = ['#7fb858','#5a93c0','#d4a84a','#a07ec4','#55b0a5','#d97a55','#d05858','#9dd672','#5a93c0','#d4a84a'];
+      var color = barColors[i % barColors.length];
+      var wr = s.best_win_rate != null ? s.best_win_rate.toFixed(0) + '% WR' : '';
+      var trades = s.best_trades ? s.best_trades + ' trades' : '';
+      var meta = [wr, trades].filter(Boolean).join(', ');
+      lh += '<div class="lb-row">';
+      lh += '<span class="lb-rank">' + (i + 1) + '</span>';
+      lh += '<span class="lb-name">' + esc(s.name) + '</span>';
+      lh += '<span class="lb-bar-wrap"><span class="lb-bar" style="width:' + pct + '%;background:' + color + ';opacity:0.85"></span></span>';
+      lh += '<span class="lb-value" style="color:' + color + '">' + (s.best_sharpe || 0).toFixed(3) + '</span>';
+      lh += '<span class="lb-meta">' + meta + '</span>';
+      lh += '</div>';
     });
-    ct += '</tr>';
-  });
-  ct += '</tbody></table></div>';
-  document.getElementById('body-rcoverage').innerHTML = ct;
+    document.getElementById('body-leaderboard').innerHTML = lh;
+  } else {
+    document.getElementById('body-leaderboard').innerHTML = '<div class="empty">No strategy results yet</div>';
+  }
 }
 
-function toggleLearning(idx) {
-  var el = document.getElementById('learning-' + idx);
-  if (el) el.classList.toggle('show');
+// ═══════════════════════════════════════════════════════════════
+// PIXEL AGENT FLOOR — Canvas-based character visualization
+// ═══════════════════════════════════════════════════════════════
+
+var _agentFloor = {
+  canvas: null,
+  ctx: null,
+  agents: [],      // agent data from dashboard JSON
+  characters: [],  // rendered character state
+  frame: 0,
+  animId: null,
+  inited: false,
+  scale: 4,        // pixel scale (each sprite pixel = 4 CSS px)
+};
+
+// 12x16 pixel sprite frames — front-facing characters
+// Each is a 2D array of hex color strings ('' = transparent)
+// 'S' = skin, 'H' = hair, 'B' = body color (replaced per agent type)
+var _SPRITE_TEMPLATE = {
+  typing: [
+    // Frame 0: typing, hands down
+    [
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','E','S','S','E','S','','','',
+      '','','','S','S','S','S','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','','','','S','S','','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','S','','B','B','B','B','B','B','','S','',
+      '','S','','','B','B','B','B','','','S','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+    // Frame 1: typing, hands up (on keyboard)
+    [
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','E','S','S','E','S','','','',
+      '','','','S','S','S','S','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','','','','S','S','','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','','S','B','B','B','B','B','B','S','','',
+      '','','','S','B','B','B','B','S','','','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+  ],
+  reading: [
+    // Frame 0: head slightly tilted
+    [
+      '','','','','H','H','H','H','H','','','',
+      '','','','H','H','H','H','H','H','H','','',
+      '','','','H','S','S','S','S','S','H','','',
+      '','','','','S','E','S','E','S','','','',
+      '','','','','S','S','S','S','S','','','',
+      '','','','','','S','S','S','','','','',
+      '','','','','','','S','S','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','','S','B','B','B','B','B','B','S','','',
+      '','','','S','B','B','B','B','S','','','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+    // Frame 1: head other direction
+    [
+      '','','H','H','H','H','H','','','','','',
+      '','H','H','H','H','H','H','H','','','','',
+      '','H','S','S','S','S','S','H','','','','',
+      '','','S','E','S','E','S','','','','','',
+      '','','S','S','S','S','S','','','','','',
+      '','','','S','S','S','','','','','','',
+      '','','','','S','S','','','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','B','B','B','B','B','B','B','B','B','B','',
+      '','','S','B','B','B','B','B','B','S','','',
+      '','','','S','B','B','B','B','S','','','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+  ],
+  idle: [
+    // Frame 0: standing, arms at side
+    [
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','E','S','S','E','S','','','',
+      '','','','S','S','M','M','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','','','','S','S','','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','S','S','B','B','B','B','B','B','S','S','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+    // Frame 1: slight bob
+    [
+      '','','','','','','','','','','','',
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','E','S','S','E','S','','','',
+      '','','','S','S','M','M','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','','','','S','S','','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','S','S','B','B','B','B','B','B','S','S','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+  ],
+  sleeping: [
+    // Single frame — slumped
+    [
+      '','','','','','','','','','','','',
+      '','','','','','','','','','','','',
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','X','S','S','X','S','','','',
+      '','','','S','S','S','S','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','S','S','B','B','B','B','B','B','S','S','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+    [
+      '','','','','','','','','','','','',
+      '','','','','','','','','','','','',
+      '','','','H','H','H','H','H','H','','','',
+      '','','H','H','H','H','H','H','H','H','','',
+      '','','H','S','S','S','S','S','S','H','','',
+      '','','','S','X','S','S','X','S','','','',
+      '','','','S','S','S','S','S','S','','','',
+      '','','','','S','S','S','S','','','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','','B','B','B','B','B','B','B','B','','',
+      '','S','S','B','B','B','B','B','B','S','S','',
+      '','','','','B','B','B','B','','','','',
+      '','','','','B','','','B','','','','',
+      '','','','P','P','','','P','P','','','',
+      '','','','P','P','','','P','P','','','',
+    ],
+  ],
+};
+
+// Read CSS variables for theme-aware rendering
+var _themeColors = {};
+function _readThemeColors() {
+  var s = getComputedStyle(document.documentElement);
+  _themeColors = {
+    bg: s.getPropertyValue('--bg').trim() || '#0d0c0a',
+    surface: s.getPropertyValue('--surface').trim() || '#151310',
+    surfaceHover: s.getPropertyValue('--surface-hover').trim() || '#1c1914',
+    surfaceRaised: s.getPropertyValue('--surface-raised').trim() || '#231f18',
+    border: s.getPropertyValue('--border').trim() || '#2a2419',
+    borderSubtle: s.getPropertyValue('--border-subtle').trim() || '#1e1a13',
+    text: s.getPropertyValue('--text').trim() || '#e8e4da',
+    textSecondary: s.getPropertyValue('--text-secondary').trim() || '#b0a494',
+    textTertiary: s.getPropertyValue('--text-tertiary').trim() || '#8a7e70',
+    green: s.getPropertyValue('--green').trim() || '#7fb858',
+    greenBright: s.getPropertyValue('--green-bright').trim() || '#9dd672',
+    red: s.getPropertyValue('--red').trim() || '#d05858',
+    amber: s.getPropertyValue('--amber').trim() || '#d4a84a',
+    blue: s.getPropertyValue('--blue').trim() || '#5a93c0',
+    purple: s.getPropertyValue('--purple').trim() || '#a07ec4',
+  };
+}
+
+// Agent type → color map (uses theme-aware skin/hair tones)
+var _AGENT_COLORS = {
+  researcher: { B: '#5a7a3a', H: '#6B4E0A', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
+  job:        { B: '#3a5a7a', H: '#4a3020', P: '#3a3020', E: '#e8e4da', S: '#c8a080', M: '#b08060', X: '#8a7e70' },
+  sweep:      { B: '#7a6a3a', H: '#5a3010', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
+};
+
+function _colorizeSprite(templateFrames, agentType) {
+  var colors = _AGENT_COLORS[agentType] || _AGENT_COLORS.researcher;
+  // Each frame is a flat array of 192 pixels (12 wide × 16 tall)
+  // Convert to 2D and colorize
+  var W = 12;
+  return templateFrames.map(function(flat) {
+    var rows = [];
+    for (var r = 0; r < 16; r++) {
+      var row = [];
+      for (var c = 0; c < W; c++) {
+        var px = flat[r * W + c] || '';
+        row.push(colors[px] || px);
+      }
+      rows.push(row);
+    }
+    return rows;
+  });
+}
+
+// Desk colors derived from theme at render time
+
+function _resizeAgentCanvas() {
+  var canvas = _agentFloor.canvas;
+  if (!canvas) return;
+  var rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return; // Tab hidden
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  _agentFloor.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  _agentFloor.ctx.imageSmoothingEnabled = false;
+}
+
+function initAgentFloor() {
+  var canvas = document.getElementById('agent-canvas');
+  if (!canvas) return;
+  _agentFloor.canvas = canvas;
+  _agentFloor.ctx = canvas.getContext('2d');
+  _agentFloor.inited = true;
+
+  _resizeAgentCanvas();
+  window.addEventListener('resize', _resizeAgentCanvas);
+
+  // Start animation loop
+  function tick() {
+    _agentFloor.frame++;
+    // Re-check canvas size each frame (handles tab switch)
+    if (_agentFloor.canvas.width === 0) _resizeAgentCanvas();
+    drawAgentFloor();
+    _agentFloor.animId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function updateAgentFloor(agents) {
+  _agentFloor.agents = agents;
+  if (!_agentFloor.inited) initAgentFloor();
+  // Force resize when agents update (tab may have just become visible)
+  setTimeout(_resizeAgentCanvas, 50);
+}
+
+// ── Room Props ──────────────────────────────────────────────────
+function _drawProps(ctx, W, H, wallH, tc, frame) {
+  // All props drawn with theme colors, positioned relative to canvas edges
+
+  // ── Server rack (left side, against wall) ──
+  var rackX = 28, rackY = wallH - 38, rackW = 18, rackH = 38;
+  ctx.fillStyle = tc.surfaceRaised;
+  ctx.fillRect(rackX, rackY, rackW, rackH);
+  ctx.strokeStyle = tc.border;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(rackX, rackY, rackW, rackH);
+  // Blink lights
+  for (var li = 0; li < 4; li++) {
+    var blinkOn = ((frame + li * 17) % 60) < 40;
+    ctx.fillStyle = blinkOn ? tc.green : tc.border;
+    ctx.globalAlpha = blinkOn ? 0.9 : 0.3;
+    ctx.fillRect(rackX + 4, rackY + 6 + li * 8, 3, 2);
+    ctx.fillStyle = ((frame + li * 23) % 80) < 50 ? tc.blue : tc.border;
+    ctx.fillRect(rackX + 10, rackY + 6 + li * 8, 3, 2);
+  }
+  ctx.globalAlpha = 1.0;
+
+  // ── Plant (right side) ──
+  var plantX = W - 52, potY = wallH - 8, potW = 14, potH = 10;
+  // Pot
+  ctx.fillStyle = tc.amber;
+  ctx.globalAlpha = 0.6;
+  ctx.fillRect(plantX, potY, potW, potH);
+  ctx.fillRect(plantX + 2, potY + potH, potW - 4, 3);
+  ctx.globalAlpha = 1.0;
+  // Leaves (little pixel circles)
+  ctx.fillStyle = tc.green;
+  ctx.globalAlpha = 0.7;
+  var leafCx = plantX + potW / 2;
+  var sway = Math.sin(frame * 0.02) * 1.5;
+  ctx.fillRect(leafCx - 6 + sway, potY - 12, 5, 5);
+  ctx.fillRect(leafCx + 2 - sway, potY - 14, 5, 5);
+  ctx.fillRect(leafCx - 2, potY - 8, 5, 5);
+  ctx.fillRect(leafCx - 8 + sway, potY - 6, 4, 4);
+  ctx.fillRect(leafCx + 5 - sway, potY - 8, 4, 4);
+  // Stem
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(leafCx, potY - 6, 2, 8);
+  ctx.globalAlpha = 1.0;
+
+  // ── Whiteboard on wall (center-right) ──
+  var wbX = W - 180, wbY = 10, wbW = 70, wbH = wallH - 26;
+  if (wbW > 0 && wbH > 10 && W > 400) {
+    ctx.fillStyle = tc.surface || tc.surfaceRaised;
+    ctx.globalAlpha = 0.4;
+    ctx.fillRect(wbX, wbY, wbW, wbH);
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(wbX, wbY, wbW, wbH);
+    // Scribble lines
+    ctx.strokeStyle = tc.textTertiary;
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 1;
+    for (var sl = 0; sl < 4; sl++) {
+      ctx.beginPath();
+      ctx.moveTo(wbX + 6, wbY + 8 + sl * Math.floor(wbH / 5));
+      ctx.lineTo(wbX + wbW - 6 - (sl % 2) * 15, wbY + 8 + sl * Math.floor(wbH / 5));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ── Small bookshelf on wall (left of center) ──
+  var bsX = 80, bsY = 8, bsW = 40, bsH = wallH - 22;
+  if (bsH > 10 && W > 500) {
+    // Shelf frame
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(bsX, bsY, bsW, bsH);
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bsX, bsY, bsW, bsH);
+    // Shelf divider
+    var shelfMid = bsY + Math.floor(bsH / 2);
+    ctx.fillStyle = tc.border;
+    ctx.fillRect(bsX + 1, shelfMid, bsW - 2, 1);
+    // Books (colored blocks)
+    var bookColors = [tc.green, tc.blue, tc.amber, tc.purple, tc.red];
+    var bx = bsX + 3;
+    for (var bi = 0; bi < 5; bi++) {
+      var bw = 4 + (bi % 3);
+      var bh = Math.floor(bsH / 2) - 6 - (bi % 2) * 2;
+      ctx.fillStyle = bookColors[bi % bookColors.length];
+      ctx.globalAlpha = 0.45;
+      ctx.fillRect(bx, bsY + 3 + (bi % 2), bw, bh);
+      bx += bw + 1;
+    }
+    // Bottom shelf books
+    bx = bsX + 4;
+    for (var bi2 = 0; bi2 < 4; bi2++) {
+      var bw2 = 5 + (bi2 % 2) * 2;
+      var bh2 = Math.floor(bsH / 2) - 6 - (bi2 % 2) * 3;
+      ctx.fillStyle = bookColors[(bi2 + 2) % bookColors.length];
+      ctx.fillRect(bx, shelfMid + 3 + (bi2 % 2), bw2, bh2);
+      bx += bw2 + 1;
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ── Coffee mug on floor (between agents and plant) ──
+  var mugX = W - 120, mugY = H - 22;
+  if (W > 600) {
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.fillRect(mugX, mugY, 8, 10);
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mugX, mugY, 8, 10);
+    // Handle
+    ctx.beginPath();
+    ctx.arc(mugX + 10, mugY + 5, 3, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+    // Steam (animated)
+    ctx.globalAlpha = 0.2 + Math.sin(frame * 0.05) * 0.1;
+    ctx.fillStyle = tc.textTertiary;
+    ctx.fillRect(mugX + 2, mugY - 4 - Math.sin(frame * 0.03) * 2, 1, 3);
+    ctx.fillRect(mugX + 5, mugY - 5 - Math.cos(frame * 0.04) * 2, 1, 3);
+    ctx.globalAlpha = 1.0;
+  }
+
+  // ── Clock on wall (small, far left) ──
+  var clkX = W / 2, clkY = 14, clkR = 8;
+  if (W > 400) {
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(clkX, clkY, clkR, 0, Math.PI * 2);
+    ctx.stroke();
+    // Clock fill
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.globalAlpha = 0.3;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+    // Hands
+    var now = new Date();
+    var hourAngle = ((now.getHours() % 12) / 12) * Math.PI * 2 - Math.PI / 2;
+    var minAngle = (now.getMinutes() / 60) * Math.PI * 2 - Math.PI / 2;
+    ctx.strokeStyle = tc.text;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(clkX, clkY);
+    ctx.lineTo(clkX + Math.cos(hourAngle) * 4, clkY + Math.sin(hourAngle) * 4);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(clkX, clkY);
+    ctx.lineTo(clkX + Math.cos(minAngle) * 6, clkY + Math.sin(minAngle) * 6);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+function drawAgentFloor() {
+  var f = _agentFloor;
+  if (!f.ctx || !f.canvas) return;
+  var ctx = f.ctx;
+  var W = f.canvas.getBoundingClientRect().width;
+  var H = f.canvas.getBoundingClientRect().height;
+  var scale = f.scale;
+
+  // Read theme colors once per frame
+  _readThemeColors();
+  var tc = _themeColors;
+
+  // ── Background: wall + floor ──
+  // Upper 40% = wall, lower 60% = floor
+  var wallH = Math.round(H * 0.38);
+
+  // Wall — subtle gradient
+  var wallGrad = ctx.createLinearGradient(0, 0, 0, wallH);
+  wallGrad.addColorStop(0, tc.surfaceRaised);
+  wallGrad.addColorStop(1, tc.surfaceHover);
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, 0, W, wallH);
+
+  // Baseboard line
+  ctx.fillStyle = tc.border;
+  ctx.fillRect(0, wallH - 1, W, 2);
+
+  // Floor — warm wood-plank effect
+  ctx.fillStyle = tc.surfaceHover;
+  ctx.fillRect(0, wallH, W, H - wallH);
+
+  // Plank lines (horizontal, subtle)
+  var plankH = 12;
+  ctx.strokeStyle = tc.border;
+  ctx.globalAlpha = 0.25;
+  ctx.lineWidth = 1;
+  for (var py = wallH + plankH; py < H; py += plankH) {
+    ctx.beginPath();
+    ctx.moveTo(0, py);
+    ctx.lineTo(W, py);
+    ctx.stroke();
+  }
+  // Vertical plank seams (staggered)
+  var plankW = 80;
+  for (var pr = 0; pr < Math.ceil((H - wallH) / plankH); pr++) {
+    var seam_y = wallH + pr * plankH;
+    var offset = (pr % 2) * (plankW / 2);
+    for (var sx = offset; sx < W; sx += plankW) {
+      ctx.beginPath();
+      ctx.moveTo(sx, seam_y);
+      ctx.lineTo(sx, seam_y + plankH);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1.0;
+
+  // ── Props (placed at fixed positions relative to canvas) ──
+  _drawProps(ctx, W, H, wallH, tc, f.frame);
+
+  var agents = f.agents;
+  if (!agents.length) {
+    ctx.fillStyle = tc.textTertiary;
+    ctx.font = '12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No agents active', W / 2, H / 2 + 10);
+    return;
+  }
+
+  // Position agents evenly, centered in the floor area
+  var spacing = Math.min(220, W / (agents.length + 1));
+  var startX = (W - spacing * (agents.length - 1)) / 2;
+  if (agents.length === 1) startX = W / 2;
+
+  var animFrame = Math.floor(f.frame / 30) % 2;
+
+  agents.forEach(function(agent, i) {
+    var cx = startX + i * spacing;
+    var baseY = wallH + 4; // Characters sit just below the wall
+
+    // Draw desk (theme-aware)
+    var deskW = 36 * scale / 3;
+    var deskH = 6 * scale / 3;
+    var deskY = baseY + 16 * scale - 4;
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.fillRect(cx - deskW, deskY, deskW * 2, deskH);
+    ctx.fillStyle = tc.border;
+    ctx.fillRect(cx - deskW, deskY, deskW * 2, 1);
+    ctx.fillRect(cx - deskW, deskY + deskH - 1, deskW * 2, 1);
+
+    // ── Monitor (to the left of character) ──
+    var monPxW = 28, monPxH = 22;
+    var monPx = cx - deskW + 2;
+    var monPy = deskY - monPxH - 3;
+    // Bezel
+    ctx.fillStyle = tc.surfaceRaised;
+    ctx.fillRect(monPx, monPy, monPxW, monPxH);
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(monPx, monPy, monPxW, monPxH);
+    // Stand
+    var monCx = monPx + monPxW / 2;
+    ctx.fillStyle = tc.border;
+    ctx.fillRect(monCx - 2, monPy + monPxH, 4, 3);
+    ctx.fillRect(monCx - 5, deskY - 1, 10, 2);
+
+    // Screen inset
+    var screenX = monPx + 2;
+    var screenY = monPy + 2;
+    var screenW = monPxW - 4;
+    var screenH = monPxH - 4;
+    var glowColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.border;
+
+    // Screen bg
+    ctx.fillStyle = tc.bg;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+
+    // Progress bar on screen
+    var prog = agent.progress || {};
+    if (prog.pct !== undefined && prog.pct >= 0) {
+      // Scrolling code lines (upper area)
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.35;
+      var lineY = screenY + 2;
+      for (var tl = 0; tl < 5 && lineY < screenY + screenH - 9; tl++) {
+        var indent = (tl % 3 === 0) ? 0 : 3;
+        var lw = (screenW - 6 - indent) * (0.3 + ((tl * 37 + f.frame * 0.5) % 50) / 80);
+        ctx.fillRect(screenX + 2 + indent, lineY, Math.min(lw, screenW - 4 - indent), 1);
+        lineY += 3;
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Progress bar at bottom of screen
+      var barY = screenY + screenH - 5;
+      var barH = 3;
+      // Track
+      ctx.fillStyle = tc.border;
+      ctx.fillRect(screenX + 1, barY, screenW - 2, barH);
+      // Fill
+      var fillW = Math.max(1, (screenW - 2) * prog.pct / 100);
+      ctx.fillStyle = glowColor;
+      ctx.fillRect(screenX + 1, barY, fillW, barH);
+      // Pulsing tip
+      if (prog.pct > 0 && prog.pct < 100) {
+        ctx.globalAlpha = 0.4 + Math.sin(f.frame * 0.12) * 0.35;
+        ctx.fillRect(screenX + 1 + fillW - 1, barY, 2, barH);
+        ctx.globalAlpha = 1.0;
+      }
+      // Percentage text if monitor is big enough
+      if (screenW > 20) {
+        ctx.fillStyle = glowColor;
+        ctx.globalAlpha = 0.7;
+        ctx.font = '7px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(prog.pct + '%', screenX + screenW - 2, barY - 2);
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 1.0;
+      }
+    } else {
+      // No progress — gentle screen glow
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(screenX, screenY, screenW, screenH);
+      ctx.globalAlpha = 1.0;
+    }
+
+    // ── Tally marks on desk (strategies completed this cycle) ──
+    if (prog.pct !== undefined && prog.label) {
+      var parts = prog.label.split('/');
+      var done = parseInt(parts[0]) - 1; // current is in-progress, not done
+      var total = parseInt(parts[1]);
+      if (done > 0 || total > 0) {
+        var tallyX = cx - deskW + 6;
+        var tallyY0 = deskY + 1;
+        var tallyH = deskH - 2;
+        ctx.lineWidth = 1.5;
+        for (var ti = 0; ti < total; ti++) {
+          var tx = tallyX + ti * 5;
+          if (tx > cx + deskW - 6) break;
+          var isDone = ti < done;
+          ctx.strokeStyle = isDone ? tc.green : tc.textTertiary;
+          ctx.globalAlpha = isDone ? 0.85 : 0.2;
+          ctx.beginPath();
+          // Every 5th mark crosses diagonally
+          if ((ti + 1) % 5 === 0 && ti > 0) {
+            ctx.moveTo(tx - 16, tallyY0 + tallyH + 1);
+            ctx.lineTo(tx + 2, tallyY0 - 1);
+          } else {
+            ctx.moveTo(tx, tallyY0);
+            ctx.lineTo(tx, tallyY0 + tallyH);
+          }
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+      }
+    }
+
+    // Get sprite frames
+    var state = agent.status || 'idle';
+    var templateFrames = _SPRITE_TEMPLATE[state] || _SPRITE_TEMPLATE.idle;
+    var frames = _colorizeSprite(templateFrames, agent.type || 'researcher');
+    var spriteFrame = frames[animFrame % frames.length];
+
+    // Draw character
+    var spriteW = 12;
+    var spriteH = 16;
+    var charX = cx - (spriteW * scale / 2);
+    var charY = baseY - 2;
+
+    spriteFrame.forEach(function(row, sy) {
+      row.forEach(function(px, sx) {
+        if (px && px !== '') {
+          ctx.fillStyle = px;
+          ctx.fillRect(charX + sx * scale, charY + sy * scale, scale, scale);
+        }
+      });
+    });
+
+    // Speech bubble (theme-aware)
+    var bubbleText = agent.task || '';
+    if (bubbleText) {
+      if (bubbleText.length > 28) bubbleText = bubbleText.substring(0, 25) + '...';
+      var bubbleY = charY - 22;
+      ctx.font = '10px "JetBrains Mono", monospace';
+      var textW = ctx.measureText(bubbleText).width;
+      var padX = 8, padY = 4;
+
+      var bx = cx - textW / 2 - padX;
+      var by = bubbleY - padY;
+      var bw = textW + padX * 2;
+      var bh = 14 + padY * 2;
+
+      // Bubble bg
+      ctx.fillStyle = tc.surfaceRaised;
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 4);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // Border
+      ctx.strokeStyle = tc.border;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 4);
+      ctx.stroke();
+
+      // Tail
+      ctx.fillStyle = tc.surfaceRaised;
+      ctx.globalAlpha = 0.95;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, by + bh);
+      ctx.lineTo(cx + 4, by + bh);
+      ctx.lineTo(cx, by + bh + 5);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      // Text color from status
+      ctx.fillStyle = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'sleeping' ? tc.textTertiary : tc.text;
+      ctx.textAlign = 'center';
+      ctx.fillText(bubbleText, cx, bubbleY + 7);
+    }
+
+    // Name label + progress
+    ctx.fillStyle = tc.textTertiary;
+    ctx.font = '10px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    var nameLabel = agent.name;
+    if (prog.label) nameLabel += '  ' + prog.label;
+    if (prog.cycle > 1) nameLabel += '  ↻' + prog.cycle;
+    ctx.fillText(nameLabel, cx, deskY + deskH + 14);
+
+    // Status dot
+    var dotColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'idle' ? tc.amber : tc.red;
+    ctx.beginPath();
+    ctx.arc(cx, deskY + deskH + 24, 3, 0, Math.PI * 2);
+    ctx.fillStyle = dotColor;
+    ctx.fill();
+
+    // Sleeping ZZZ
+    if (agent.status === 'sleeping') {
+      var zOffset = (f.frame % 90) / 90;
+      ctx.globalAlpha = 1 - zOffset * 0.7;
+      ctx.fillStyle = tc.textTertiary;
+      ctx.font = (10 + zOffset * 4) + 'px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('z', cx + 20 + zOffset * 8, charY - zOffset * 20);
+      ctx.fillText('z', cx + 28 + zOffset * 10, charY - 10 - zOffset * 18);
+      ctx.fillText('Z', cx + 34 + zOffset * 12, charY - 22 - zOffset * 16);
+      ctx.globalAlpha = 1.0;
+    }
+  });
 }
 
 // ── Market Session Countdown ──

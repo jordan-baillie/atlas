@@ -33,6 +33,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import time as _time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -775,3 +776,359 @@ def send_research_complete(market_id: str = "sp500") -> bool:
         f"{journal_summary}"
     )
     return send_message(msg)
+
+
+# ---------------------------------------------------------------------------
+# Photo & Document Delivery (our "AirDrop" equivalent)
+# ---------------------------------------------------------------------------
+
+def send_photo(image_path: str, caption: str = "", silent: bool = False) -> bool:
+    """Send a photo (PNG/JPG) to the configured Telegram chat.
+
+    Args:
+        image_path: Path to the image file.
+        caption: Optional caption (HTML, max 1024 chars).
+        silent: If True, send without notification sound.
+
+    Returns True if sent successfully.
+    """
+    try:
+        token, chat_id = _load_credentials()
+    except ValueError as e:
+        logger.error("Telegram send_photo failed: %s", e)
+        return False
+
+    image_path = Path(image_path)
+    if not image_path.exists():
+        logger.error("Image not found: %s", image_path)
+        return False
+
+    # Multipart form upload
+    boundary = f"----AtlasBoundary{os.urandom(8).hex()}"
+    parts = []
+
+    # chat_id field
+    parts.append(
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n"
+        f"{chat_id}\r\n"
+    )
+
+    # caption field
+    if caption:
+        caption = caption[:1024]
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"caption\"\r\n\r\n"
+            f"{caption}\r\n"
+        )
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"parse_mode\"\r\n\r\n"
+            f"HTML\r\n"
+        )
+
+    # silent
+    if silent:
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"disable_notification\"\r\n\r\n"
+            f"true\r\n"
+        )
+
+    # photo file
+    photo_header = (
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"photo\"; filename=\"{image_path.name}\"\r\n"
+        f"Content-Type: image/png\r\n\r\n"
+    )
+
+    photo_data = image_path.read_bytes()
+    ending = f"\r\n--{boundary}--\r\n"
+
+    body = "".join(parts).encode() + photo_header.encode() + photo_data + ending.encode()
+
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+            if result.get("ok"):
+                logger.info("Photo sent: %s (%d KB)", image_path.name,
+                            len(photo_data) // 1024)
+                return True
+            logger.warning("Telegram sendPhoto ok=false: %s", result)
+            return False
+    except Exception as e:
+        logger.error("Telegram send_photo error: %s", e)
+        return False
+
+
+def send_document(file_path: str, caption: str = "", silent: bool = False) -> bool:
+    """Send a file as a Telegram document.
+
+    Args:
+        file_path: Path to the file.
+        caption: Optional caption (HTML, max 1024 chars).
+        silent: If True, send without notification sound.
+
+    Returns True if sent successfully.
+    """
+    try:
+        token, chat_id = _load_credentials()
+    except ValueError as e:
+        logger.error("Telegram send_document failed: %s", e)
+        return False
+
+    file_path = Path(file_path)
+    if not file_path.exists():
+        logger.error("File not found: %s", file_path)
+        return False
+
+    boundary = f"----AtlasBoundary{os.urandom(8).hex()}"
+    parts = []
+
+    parts.append(
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n"
+        f"{chat_id}\r\n"
+    )
+    if caption:
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"caption\"\r\n\r\n"
+            f"{caption[:1024]}\r\n"
+        )
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"parse_mode\"\r\n\r\n"
+            f"HTML\r\n"
+        )
+    if silent:
+        parts.append(
+            f"--{boundary}\r\n"
+            f"Content-Disposition: form-data; name=\"disable_notification\"\r\n\r\n"
+            f"true\r\n"
+        )
+
+    file_data = file_path.read_bytes()
+    doc_header = (
+        f"--{boundary}\r\n"
+        f"Content-Disposition: form-data; name=\"document\"; filename=\"{file_path.name}\"\r\n"
+        f"Content-Type: application/octet-stream\r\n\r\n"
+    )
+    ending = f"\r\n--{boundary}--\r\n"
+
+    body = "".join(parts).encode() + doc_header.encode() + file_data + ending.encode()
+
+    url = f"https://api.telegram.org/bot{token}/sendDocument"
+    req = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+            if result.get("ok"):
+                logger.info("Document sent: %s (%d KB)", file_path.name,
+                            len(file_data) // 1024)
+                return True
+            logger.warning("Telegram sendDocument ok=false: %s", result)
+            return False
+    except Exception as e:
+        logger.error("Telegram send_document error: %s", e)
+        return False
+
+
+def send_charts(charts: list, caption: str = "", silent: bool = True) -> bool:
+    """Send multiple chart images to Telegram.
+
+    Sends the first chart with caption, rest silently.
+    Returns True if all sent successfully.
+    """
+    if not charts:
+        return True
+
+    from pathlib import Path as _P
+    ok = True
+    for i, chart in enumerate(charts):
+        cap = caption if i == 0 else ""
+        if not send_photo(str(chart), caption=cap, silent=silent):
+            ok = False
+    return ok
+
+
+# ---------------------------------------------------------------------------
+# Smart Notification System
+# ---------------------------------------------------------------------------
+# Prevents notification spam via rate limiting + batching.
+#
+# Priority levels:
+#   CRITICAL  — always send immediately (errors, health alerts)
+#   IMPORTANT — send immediately, rate-limited per category (30min cooldown)
+#   INFO      — accumulated into periodic digest
+#   SILENT    — suppressed (log only)
+#
+# Usage:
+#   from utils.telegram import notify, flush_digest, CRITICAL, IMPORTANT, INFO
+#   notify("Engine started", level=IMPORTANT, category="session")
+#   notify("Strategy improved", level=INFO, category="improvement")
+#   flush_digest()  # send accumulated INFO messages as one digest
+# ---------------------------------------------------------------------------
+
+CRITICAL = 0
+IMPORTANT = 1
+INFO = 2
+SILENT = 3
+
+_NOTIFY_STATE_PATH = Path("/tmp/atlas-notify-state.json")
+_DIGEST_INTERVAL_S = 7200    # auto-flush digest every 2 hours
+_RATE_LIMIT_S = 1800          # 30 min cooldown for IMPORTANT per category
+_MAX_QUEUED = 200             # cap queued messages to prevent unbounded growth
+
+
+def _load_notify_state() -> dict:
+    """Load notification state from disk (cross-process safe)."""
+    try:
+        if _NOTIFY_STATE_PATH.exists():
+            with open(_NOTIFY_STATE_PATH) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {"last_sent": {}, "queued": [], "last_digest": 0}
+
+
+def _save_notify_state(state: dict) -> None:
+    """Persist notification state to disk."""
+    try:
+        # Trim queue if too large
+        if len(state.get("queued", [])) > _MAX_QUEUED:
+            state["queued"] = state["queued"][-_MAX_QUEUED:]
+        _NOTIFY_STATE_PATH.write_text(json.dumps(state, indent=2))
+    except Exception as e:
+        logger.warning("Failed to save notify state: %s", e)
+
+
+def notify(text: str, level: int = INFO, category: str = "general",
+           silent: bool = False) -> bool:
+    """Smart notification with rate limiting and batching.
+
+    Args:
+        text: Message body (HTML).
+        level: CRITICAL, IMPORTANT, INFO, or SILENT.
+        category: Grouping key for rate limiting and digest sections.
+        silent: If True, send without notification sound.
+
+    Returns:
+        True if sent/queued successfully.
+    """
+    if level == SILENT:
+        logger.debug("Notification suppressed [%s]: %s", category, text[:80])
+        return True
+
+    if level == CRITICAL:
+        return send_message(text, silent=silent)
+
+    now = _time.time()
+    state = _load_notify_state()
+
+    if level == IMPORTANT:
+        last = state.get("last_sent", {}).get(category, 0)
+        if now - last < _RATE_LIMIT_S:
+            # Rate-limited — queue for digest instead of dropping
+            logger.info("Rate-limited [%s] — queued for digest", category)
+            state.setdefault("queued", []).append({
+                "text": text, "category": category, "ts": now,
+            })
+            _save_notify_state(state)
+            return True
+        state.setdefault("last_sent", {})[category] = now
+        _save_notify_state(state)
+        return send_message(text, silent=silent)
+
+    # INFO — batch into digest
+    state.setdefault("queued", []).append({
+        "text": text, "category": category, "ts": now,
+    })
+    _save_notify_state(state)
+
+    # Auto-flush if digest interval has passed (but not on first-ever message)
+    last_digest = state.get("last_digest", 0)
+    if last_digest > 0 and now - last_digest > _DIGEST_INTERVAL_S:
+        return flush_digest()
+
+    return True
+
+
+def flush_digest() -> bool:
+    """Send all accumulated INFO messages as a single digest.
+
+    Groups messages by category, shows most recent per category,
+    and clears the queue. Call this at natural boundaries (end of
+    cycle, end of session, etc.).
+
+    Returns True if sent or nothing to send.
+    """
+    state = _load_notify_state()
+    queued = state.get("queued", [])
+    if not queued:
+        return True
+
+    now = _time.time()
+
+    # Group by category
+    by_cat: dict[str, list[dict]] = {}
+    for msg in queued:
+        cat = msg.get("category", "general")
+        by_cat.setdefault(cat, []).append(msg)
+
+    # Category display order and icons
+    _ICONS = {
+        "improvement": "📈",
+        "cycle": "🔄",
+        "sweep": "🔬",
+        "session": "🚀",
+        "general": "📋",
+    }
+
+    n_total = len(queued)
+    oldest = min(m.get("ts", now) for m in queued)
+    span_min = (now - oldest) / 60
+
+    lines = [
+        f"📋 <b>Atlas Research Digest</b>",
+        f"<i>{n_total} updates over {span_min:.0f} min</i>",
+        "",
+    ]
+
+    for cat, msgs in sorted(by_cat.items()):
+        icon = _ICONS.get(cat, "•")
+        cat_label = cat.replace("_", " ").title()
+        lines.append(f"{icon} <b>{_esc(cat_label)} ({len(msgs)})</b>")
+
+        # Show last 5 messages per category (most recent first)
+        for msg in msgs[-5:]:
+            # Extract a brief summary — strip outer HTML bold tags
+            brief = msg["text"]
+            # Remove leading emoji + bold tag for digest brevity
+            for prefix in ("🔬 ", "📈 ", "🔄 ", "📊 "):
+                brief = brief.removeprefix(prefix)
+            brief = brief.replace("<b>", "").replace("</b>", "")
+            # Take first line only, truncate
+            first_line = brief.split("\n")[0][:120]
+            lines.append(f"  • {first_line}")
+
+        if len(msgs) > 5:
+            lines.append(f"  <i>… +{len(msgs) - 5} more</i>")
+        lines.append("")
+
+    state["queued"] = []
+    state["last_digest"] = now
+    _save_notify_state(state)
+
+    return send_message("\n".join(lines), silent=True)
