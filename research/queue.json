@@ -15,7 +15,7 @@
     "estimated_runtime_min": 20,
     "priority": "P2",
     "status": "failed",
-    "strategy_name": null,
+    "strategy_name": "mean_reversion",
     "params_override": {
       "filter_param": "volume_entry_min",
       "variants": [
@@ -349,7 +349,7 @@
       "opening_gap"
     ],
     "depends_on": [],
-    "notes": "Gap fills are fast events. Shorter holds reduce exposure risk."
+    "notes": "Gap fills are fast events. Shorter holds reduce exposure risk. [INFRA-AUDIT 2026-03-12] Not an infra bug \u2014 OG generates exactly 10 trades regardless of max_hold_days because all trades exit on signal_exit/stop first. Strategy is too restrictive for param sweep to matter."
   },
   {
     "id": "wave2_chandelier_tf",
@@ -438,7 +438,7 @@
       "exploratory"
     ],
     "depends_on": [],
-    "notes": "Quantpedia, QuantifiedStrategies, and academic research (Etula et al 2020) confirm TOM effect is robust across 34+ countries and 100+ years. Mechanism: pension fund rebalancing + payroll cash flows at month-end."
+    "notes": "Quantpedia, QuantifiedStrategies, and academic research (Etula et al 2020) confirm TOM effect is robust across 34+ countries and 100+ years. Mechanism: pension fund rebalancing + payroll cash flows at month-end. [INFRA-AUDIT 2026-03-12] TOM infrastructure verified working. TOM=true reduces trades 256\u2192209. Ready to rerun."
   },
   {
     "id": "wave3_ibs_sweep",

@@ -158,7 +158,8 @@
       "enabled": false
     },
     "mtf_momentum": {
-      "enabled": false
+      "enabled": false,
+      "min_confidence": 0.6
     },
     "dividend_capture": {
       "enabled": false

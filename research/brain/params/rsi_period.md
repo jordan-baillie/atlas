@@ -40,3 +40,10 @@
 | 2026-03-12 05:30 | mean_reversion | 14 → 5 | ❌ discard | -0.1652 | 0.0949 |
 | 2026-03-12 05:30 | mean_reversion | 14 → 10 | ❌ discard | -0.0317 | 0.2284 |
 | 2026-03-12 05:30 | mean_reversion | 14 → 7 | ❌ discard | -0.2168 | 0.0433 |
+| 2026-03-12 05:35 | connors_rsi2 | 4 → 5 | ❌ discard | -0.5096 | -0.0979 |
+| 2026-03-12 05:35 | connors_rsi2 | 4 → 3 | ❌ discard | -0.3873 | 0.0244 |
+| 2026-03-12 05:35 | connors_rsi2 | 4 → 2 | ❌ discard | -0.3603 | 0.0514 |
+| 2026-03-12 05:39 | short_term_mr | None → 5 | ❌ discard | +0.0071 | 0.4172 |
+| 2026-03-12 05:39 | short_term_mr | None → 4 | ❌ discard | +0.0024 | 0.4125 |
+| 2026-03-12 05:39 | short_term_mr | None → 3 | ❌ discard | -0.0012 | 0.4089 |
+| 2026-03-12 05:39 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.4101 |

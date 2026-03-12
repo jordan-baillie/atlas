@@ -26,7 +26,7 @@ from strategies.opening_gap import OpeningGap
 # CONSTANTS
 # ============================================================
 DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
-DEFAULT_CONFIG_PATH = PROJECT_ROOT / 'config' / 'active' / 'asx.json'
+DEFAULT_CONFIG_PATH = PROJECT_ROOT / 'config' / 'active' / 'sp500.json'
 DEFAULT_OUTPUT_PATH = PROJECT_ROOT / 'backtest' / 'results' / 'v92_oos_validation.json'
 # SPLIT_DATE and WARMUP_DATE are now computed dynamically in main() from data.
 # Kept as fallback defaults only.
@@ -42,16 +42,21 @@ RANDOM_SEED = 42
 # dict has been removed to make the script market-agnostic.
 
 
-def load_data(market='asx'):
+def load_data(market='sp500'):
     """Load all parquet data files for the given market."""
     data_dir = DATA_DIR / market if market else DATA_DIR
     if not data_dir.exists():
         data_dir = DATA_DIR  # fallback to legacy flat layout
     data_dict = {}
     for pf in sorted(data_dir.glob('*.parquet')):
-        if pf.stem == 'IOZ_AX':
-            continue
-        ticker = pf.stem.replace('_AX', '.AX')
+        stem = pf.stem
+        # Market-aware ticker conversion
+        if market in ('asx', 'au'):
+            if stem == 'IOZ_AX':
+                continue
+            ticker = stem.replace('_AX', '.AX')
+        else:
+            ticker = stem
         df = pd.read_parquet(pf)
         df.columns = [c.lower() for c in df.columns]
         if 'date' in df.columns:
@@ -117,10 +122,10 @@ def detect_market(args_market, config_path, cfg):
     if cfg.get('market'):
         return cfg['market'].lower()
     path_str = str(config_path).lower()
-    for candidate in ('sp500', 'asx', 'nasdaq', 'us', 'au'):
+    for candidate in ('sp500', 'nasdaq', 'us', 'asx', 'au'):
         if candidate in path_str:
             return candidate
-    return 'asx'
+    return 'sp500'
 
 
 def compute_split_dates(data_all):

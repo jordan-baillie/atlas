@@ -1,0 +1,10 @@
+# pullback_pct
+
+> Parameter tested across strategies. Shows what values work and where.
+
+| Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
+|------|----------|--------|--------|----------|------------|
+| 2026-03-12 05:33 | trend_following | 0.06 → 0.04 | ❌ discard | -0.1817 | 0.4404 |
+| 2026-03-12 05:33 | trend_following | 0.06 → 0.05 | ❌ discard | -0.0178 | 0.6043 |
+| 2026-03-12 05:33 | trend_following | 0.06 → 0.03 | ❌ discard | -0.3278 | 0.2943 |
+| 2026-03-12 05:33 | trend_following | 0.06 → 0.02 | ❌ discard | -0.3253 | 0.2968 |
