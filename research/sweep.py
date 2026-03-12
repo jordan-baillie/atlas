@@ -324,7 +324,7 @@ STRATEGY_ORDER = [
 HEARTBEAT_PATH = Path("/tmp/autoresearch-heartbeat.json")
 STOP_PATH = Path("/tmp/autoresearch-stop")
 _stop_event = None  # Set to threading.Event in main() for fast SIGTERM response
-PROMOTION_COOLDOWN_PATH = Path("/tmp/sweep-promotions.json")
+# PROMOTION_COOLDOWN_PATH removed — cooldown now managed by research/promoter.py
 
 
 def _write_heartbeat(
@@ -427,117 +427,8 @@ def _test_combined(
         return True  # Don't block keep on infrastructure failures
 
 
-def _check_promotions(cycle_results: List[dict]) -> None:
-    """Check if any strategy improved enough for promotion.
-
-    Criteria: Sharpe improvement > 0.05 from original cycle baseline.
-    On hit:
-      1. Writes candidate to config/candidates/sweep_{strategy}_{date}.json
-      2. Sends Telegram notification
-      3. Records 24h cooldown per strategy (persisted to PROMOTION_COOLDOWN_PATH)
-
-    Args:
-        cycle_results: List of per-strategy result dicts collected in run_sweep(),
-            each with keys: strategy, initial_sharpe, final_sharpe,
-            improved_params, improvements, market.
-    """
-    # Load persisted cooldowns
-    cooldowns: dict = {}
-    if PROMOTION_COOLDOWN_PATH.exists():
-        try:
-            cooldowns = json.loads(PROMOTION_COOLDOWN_PATH.read_text())
-        except Exception:
-            cooldowns = {}
-
-    now = datetime.now(timezone.utc)
-    promoted: List[dict] = []
-
-    for cr in cycle_results:
-        strategy = cr.get("strategy", "")
-        initial_sharpe = cr.get("initial_sharpe", 0.0)
-        final_sharpe = cr.get("final_sharpe", 0.0)
-        improved_params = cr.get("improved_params", {})
-        market = cr.get("market", "sp500")
-        improvements = cr.get("improvements", [])
-
-        if not improvements:
-            continue  # No improvements this cycle — skip
-
-        delta = final_sharpe - initial_sharpe
-        if delta <= 0.05:
-            continue  # Improvement threshold not met
-
-        # Check 24h cooldown
-        last_promoted_iso = cooldowns.get(strategy)
-        if last_promoted_iso:
-            try:
-                last_dt = datetime.fromisoformat(last_promoted_iso)
-                if (now - last_dt).total_seconds() < 86400:
-                    logger.info(
-                        "⏳ Promotion skipped for %s — 24h cooldown active "
-                        "(last promoted %s).",
-                        strategy, last_promoted_iso,
-                    )
-                    continue
-            except Exception:
-                pass  # Malformed timestamp — proceed
-
-        # Write candidate config
-        date_str = now.strftime("%Y%m%d")
-        candidate_name = f"sweep_{strategy}_{date_str}.json"
-        candidate_path = ATLAS_ROOT / "config" / "candidates" / candidate_name
-
-        try:
-            from utils.config import get_active_config
-            config = get_active_config(market)
-            # Inject improved params into strategy section
-            strat_section = config.setdefault("strategies", {}).setdefault(strategy, {})
-            strat_section.update(improved_params)
-            strat_section["enabled"] = True
-            config["_sweep_metadata"] = {
-                "promoted_at": now.isoformat(),
-                "strategy": strategy,
-                "initial_sharpe": initial_sharpe,
-                "final_sharpe": final_sharpe,
-                "delta_sharpe": round(delta, 6),
-                "sweep_improvements": improvements,
-            }
-            candidate_path.parent.mkdir(parents=True, exist_ok=True)
-            candidate_path.write_text(json.dumps(config, indent=2, default=str))
-            logger.info("📋 Promotion candidate written: %s", candidate_path)
-        except Exception as e:
-            logger.error(
-                "Failed to write promotion candidate for %s: %s", strategy, e,
-            )
-            continue
-
-        # Record cooldown
-        cooldowns[strategy] = now.isoformat()
-        promoted.append({
-            "strategy": strategy,
-            "delta_sharpe": delta,
-            "final_sharpe": final_sharpe,
-            "candidate": str(candidate_path),
-        })
-
-    # Persist updated cooldowns
-    try:
-        PROMOTION_COOLDOWN_PATH.write_text(json.dumps(cooldowns, indent=2, default=str))
-    except Exception as e:
-        logger.warning("Could not persist promotion cooldowns: %s", e)
-
-    # Send Telegram notification for each promotion
-    for p in promoted:
-        _send_telegram(
-            f"🎯 <b>Promotion candidate</b>: {p['strategy']}\n"
-            f"Sharpe: +{p['delta_sharpe']:.4f} → {p['final_sharpe']:.4f}\n"
-            f"Candidate: {Path(p['candidate']).name}",
-            category="promotion",
-        )
-        logger.info(
-            "🎯 Promoted %s — Sharpe +%.4f → %.4f",
-            p["strategy"], p["delta_sharpe"], p["final_sharpe"],
-        )
+# _check_promotions() removed — replaced by research/promoter.py::auto_promote()
+# Sweep cycle now calls auto_promote() directly for each improved strategy result.
 
 
 # ─── Parallel Backtest Workers ────────────────────────────────────────────────
@@ -1111,9 +1002,25 @@ def run_sweep(
             cycle_num, total_experiments, total_kept, elapsed_h,
         )
 
-        # Check for promotion candidates at end of each cycle
+        # Auto-promote strategies that improved beyond threshold
         if cycle_results:
-            _check_promotions(cycle_results)
+            from research.promoter import auto_promote
+            for cr in cycle_results:
+                if cr.get("improvements"):
+                    try:
+                        auto_promote(
+                            strategy=cr["strategy"],
+                            improved_params=cr.get("improved_params", {}),
+                            initial_sharpe=cr.get("initial_sharpe", 0.0),
+                            final_sharpe=cr.get("final_sharpe", 0.0),
+                            improvements=cr["improvements"],
+                            market=cr.get("market", market),
+                        )
+                    except Exception as _promo_exc:
+                        logger.warning(
+                            "auto_promote failed for %s: %s",
+                            cr.get("strategy", "?"), _promo_exc,
+                        )
 
         # Between cycles: log leaderboard
         logger.info(leaderboard(market))

@@ -655,6 +655,73 @@ async def handle_research_promotion_callback(update: Update, ctx: ContextTypes.D
 
 
 # ═══════════════════════════════════════════════════════════════
+# Auto-promotion rollback callback handler
+# ═══════════════════════════════════════════════════════════════
+
+def _do_rollback(version: str, market_id: str) -> str:
+    """Execute rollback in a thread (blocking I/O)."""
+    from research.promoter import rollback
+    result = rollback(market_id)
+    if result.get("success"):
+        restored = result.get("version_restored", "?")
+        return (
+            f"↩️ <b>Rolled back!</b>\n\n"
+            f"Market: {_esc(market_id.upper())}\n"
+            f"Restored version: <code>{_esc(str(restored))}</code>\n"
+            f"Was on: <code>{_esc(version)}</code>\n\n"
+            f"Active config updated."
+        )
+    else:
+        return (
+            f"❌ <b>Rollback failed</b>\n\n"
+            f"{_esc(result.get('message', 'Unknown error'))}"
+        )
+
+
+async def handle_rollback_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle rollback button presses sent by auto-promotion notifications.
+
+    Callback data format: promote:{version}:rollback:{market}
+    """
+    query = update.callback_query
+    await query.answer()
+
+    if not _authorized(query.message.chat_id):
+        await query.edit_message_reply_markup(reply_markup=None)
+        return
+
+    data = query.data  # e.g. "promote:v2.3:rollback:sp500"
+    parts = data.split(":")
+    if len(parts) < 4 or parts[0] != "promote" or parts[2] != "rollback":
+        return
+
+    version = parts[1]
+    market_id = parts[3]
+
+    await query.edit_message_text(
+        query.message.text_html + "\n\n⏳ <b>Rolling back…</b>",
+        parse_mode="HTML",
+    )
+    try:
+        loop = asyncio.get_event_loop()
+        result_text = await loop.run_in_executor(
+            None,
+            partial(_do_rollback, version, market_id),
+        )
+    except Exception as e:
+        logger.error("Rollback failed: %s", e, exc_info=True)
+        result_text = (
+            f"❌ <b>Rollback failed</b>\n\n"
+            f"<pre>{_esc(traceback.format_exc()[-500:])}</pre>"
+        )
+
+    await query.edit_message_text(
+        query.message.text_html.replace("⏳ <b>Rolling back…</b>", result_text),
+        parse_mode="HTML",
+    )
+
+
+# ═══════════════════════════════════════════════════════════════
 # External API — called by cron/scripts to send plan for approval
 # ═══════════════════════════════════════════════════════════════
 
@@ -1265,6 +1332,12 @@ def main():
     app.add_handler(CallbackQueryHandler(
         handle_research_promotion_callback,
         pattern=r"^research:.+:(approve|reject):\w+$",
+    ))
+
+    # Callback handler for auto-promotion rollback buttons
+    app.add_handler(CallbackQueryHandler(
+        handle_rollback_callback,
+        pattern=r"^promote:.+:rollback:\w+$",
     ))
 
     logger.info("Bot polling started. Commands: /status /plan /halt /unhalt /task /jobs /job /kill /logs /specs")
