@@ -287,10 +287,10 @@ def _regression_check(candidate_config: dict, market: str) -> dict:
         logger.warning("Regression: drawdown increased by %.2fpp", dd_increase)
 
     # Trade count — drop > 20% blocks promotion
-    b_trades = int(baseline.get("num_trades") or 0)
-    c_trades = int(candidate.get("num_trades") or 0)
+    b_trades = int(baseline.get("total_trades") or baseline.get("num_trades") or 0)
+    c_trades = int(candidate.get("total_trades") or candidate.get("num_trades") or 0)
     trade_drop_pct = ((b_trades - c_trades) / b_trades * 100) if b_trades > 0 else 0.0
-    comparisons["num_trades"] = {
+    comparisons["total_trades"] = {
         "baseline": b_trades,
         "candidate": c_trades,
         "delta": c_trades - b_trades,
@@ -323,7 +323,7 @@ def _sanity_check(metrics: dict) -> dict:
     """
     sharpe = float(metrics.get("sharpe") or 0)
     cagr = float(metrics.get("cagr_pct") or 0)
-    trades = int(metrics.get("num_trades") or 0)
+    trades = int(metrics.get("total_trades") or metrics.get("num_trades") or 0)
 
     if sharpe <= 0:
         return {"pass": False, "reason": f"Sharpe {sharpe:.4f} ≤ 0"}
