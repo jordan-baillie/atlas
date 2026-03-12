@@ -507,6 +507,90 @@ def rebuild_root_index() -> None:
     _atomic_write(BRAIN_ROOT / "INDEX.md", content)
 
 
+# ─── Promotion records ───────────────────────────────────────────────────────
+
+def record_promotion(
+    strategy: str,
+    market: str,
+    prev_version: str,
+    new_version: str,
+    delta_sharpe: float,
+    metrics_comparison: dict,
+    auto: bool = True,
+) -> None:
+    """Write a promotion decision record to decisions/promotion_{strategy}_{date}.md.
+
+    Args:
+        strategy: Strategy name that was promoted (e.g. 'mean_reversion').
+        market: Market the promotion applies to (e.g. 'sp500').
+        prev_version: Config version before promotion (e.g. 'v2.2').
+        new_version: Config version after promotion (e.g. 'v2.3').
+        delta_sharpe: Change in Sharpe (+ve means improvement).
+        metrics_comparison: Dict with 'candidate' and 'active' sub-dicts,
+            each containing keys: sharpe, cagr_pct, max_drawdown_pct,
+            sortino, profit_factor, total_trades (all optional — missing keys
+            are rendered as '—').
+        auto: True if promoted automatically (no human approval).
+    """
+    ts_file = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    ts_human = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    filename = f"promotion_{strategy}_{ts_file}.md"
+    path = BRAIN_ROOT / "decisions" / filename
+
+    mode = "auto" if auto else "manual"
+    direction = "promoted" if delta_sharpe >= 0 else "demoted"
+    summary = (
+        f"{strategy} {direction} on {market}: "
+        f"{prev_version} → {new_version}, Sharpe Δ {delta_sharpe:+.4f} ({mode})"
+    )
+
+    # Build metrics comparison table
+    candidate = metrics_comparison.get("candidate", {})
+    active = metrics_comparison.get("active", {})
+
+    def _fmt(d: dict, key: str, fmt: str = ".4f") -> str:
+        v = d.get(key)
+        if v is None:
+            return "—"
+        try:
+            return format(float(v), fmt)
+        except (TypeError, ValueError):
+            return str(v)
+
+    metrics_rows = [
+        f"| Sharpe | {_fmt(active, 'sharpe')} | {_fmt(candidate, 'sharpe')} | {delta_sharpe:+.4f} |",
+        f"| CAGR % | {_fmt(active, 'cagr_pct', '.1f')} | {_fmt(candidate, 'cagr_pct', '.1f')} | — |",
+        f"| Max DD % | {_fmt(active, 'max_drawdown_pct', '.1f')} | {_fmt(candidate, 'max_drawdown_pct', '.1f')} | — |",
+        f"| Sortino | {_fmt(active, 'sortino')} | {_fmt(candidate, 'sortino')} | — |",
+        f"| Profit Factor | {_fmt(active, 'profit_factor', '.2f')} | {_fmt(candidate, 'profit_factor', '.2f')} | — |",
+        f"| Total Trades | {_fmt(active, 'total_trades', '.0f')} | {_fmt(candidate, 'total_trades', '.0f')} | — |",
+    ]
+
+    content = f"""# Promotion: {strategy} → {new_version}
+
+> {summary}
+
+## Summary
+
+- **Strategy:** {strategy}
+- **Market:** {market}
+- **Mode:** {mode}
+- **Timestamp:** {ts_human}
+- **Versions:** {prev_version} → {new_version}
+- **Sharpe Δ:** {delta_sharpe:+.4f}
+
+## Metrics Comparison
+
+| Metric | Active ({prev_version}) | Candidate ({new_version}) | Delta |
+|--------|------------------------|--------------------------|-------|
+{chr(10).join(metrics_rows)}
+"""
+
+    _atomic_write(path, content)
+    # Rebuild decisions index so the new entry appears immediately
+    rebuild_simple_index("decisions", "Decisions")
+
+
 # ─── Convenience: rebuild all indexes ────────────────────────────────────────
 
 def rebuild_all_indexes() -> None:
