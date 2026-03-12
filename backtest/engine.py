@@ -322,6 +322,7 @@ class BacktestEngine:
             "stop_price": pos.get("stop_price", 0.0),
             "confidence": pos.get("confidence", 0.0),
             "features": pos.get("features", {}),
+            "entry_regime": pos.get("entry_regime", "neutral"),
         }
         trade["r_multiple"] = calc_r_multiple(trade)
         return trade
@@ -500,10 +501,13 @@ class BacktestEngine:
         self, today: pd.Timestamp, data: Dict[str, pd.DataFrame],
         breadth_series: Optional[pd.DataFrame],
     ) -> tuple:
-        """Compute regime filter state. Returns (regime_str, regime_scale)."""
+        """Compute regime filter state. Returns (regime_str, regime_scale).
+
+        Always classifies regime (bull/neutral/bear) for trade tagging.
+        Only applies scaling when regime_filter.enabled is True.
+        """
         _rf_cfg = self.config.get("regime_filter", {})
-        if not _rf_cfg.get("enabled", False):
-            return "neutral", 1.0
+        filter_enabled = _rf_cfg.get("enabled", False)
 
         # Phase 3: 3-state regime (Bull/Neutral/Bear) using benchmark MA + breadth.
         regime, regime_scale = "neutral", 1.0
@@ -543,7 +547,12 @@ class BacktestEngine:
                 regime = "neutral"
         elif bench_above_ma is not None:
             regime = "bull" if bench_above_ma else "bear"
-        regime_scale = scales[regime]
+
+        # Only apply scaling when filter is enabled; otherwise info-only
+        if filter_enabled:
+            regime_scale = scales[regime]
+        else:
+            regime_scale = 1.0
 
         b200_str = f"{breadth_pct200:.1f}%" if breadth_pct200 is not None else "N/A"
         logger.debug(
@@ -997,6 +1006,7 @@ class BacktestEngine:
                         "features": signal.features if hasattr(signal, 'features') else {},
                         "mae": 0.0,
                         "mfe": 0.0,
+                        "entry_regime": regime,
                     }
                     open_positions.append(position)
 
@@ -1062,6 +1072,7 @@ class BacktestEngine:
                 "stop_price": pos.get("stop_price", 0.0),
                 "confidence": pos.get("confidence", 0.0),
                 "features": pos.get("features", {}),
+                "entry_regime": pos.get("entry_regime", "neutral"),
             }
             trade["r_multiple"] = calc_r_multiple(trade)
             closed_trades.append(trade)
@@ -1284,6 +1295,21 @@ class BacktestEngine:
                 logger.warning(f"Macro regime setup failed: {e} — continuing without macro")
                 macro_signals_df = None
 
+        # Inject benchmark ticker into data dict for regime classification
+        if self.benchmark_ticker and self.benchmark_ticker not in data:
+            try:
+                bench_df = download_ticker(
+                    self.benchmark_ticker, use_cache=True, market_id=self.market_id
+                )
+                if bench_df is not None and not bench_df.empty:
+                    data[self.benchmark_ticker] = bench_df
+                    logger.info(
+                        f"Loaded benchmark {self.benchmark_ticker} for regime "
+                        f"classification ({len(bench_df)} rows)"
+                    )
+            except Exception as e:
+                logger.warning(f"Could not load benchmark {self.benchmark_ticker}: {e}")
+
         # Pre-compute strategy indicators once on full data
         for strategy in strategies:
             strategy.precompute(data)
@@ -1504,6 +1530,21 @@ class BacktestEngine:
         """
         if offsets is None:
             offsets = [i * 5 for i in range(n_offsets)]  # [0, 5, 10, 15, 20]
+
+        # Inject benchmark ticker into data dict for regime classification
+        if self.benchmark_ticker and self.benchmark_ticker not in data:
+            try:
+                bench_df = download_ticker(
+                    self.benchmark_ticker, use_cache=True, market_id=self.market_id
+                )
+                if bench_df is not None and not bench_df.empty:
+                    data[self.benchmark_ticker] = bench_df
+                    logger.info(
+                        f"Loaded benchmark {self.benchmark_ticker} for regime "
+                        f"classification ({len(bench_df)} rows)"
+                    )
+            except Exception as e:
+                logger.warning(f"Could not load benchmark {self.benchmark_ticker}: {e}")
 
         # Pre-compute strategy indicators once on full data
         for strategy in strategies:

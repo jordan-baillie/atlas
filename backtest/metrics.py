@@ -839,4 +839,66 @@ def calc_all_metrics(
     metrics["mc_fragile"] = mc["fragile"]
     metrics["monte_carlo"] = mc
 
+    # Per-regime metrics (Task #84)
+    metrics["regime_metrics"] = calc_regime_metrics(trades)
+
     return metrics
+
+
+def calc_regime_metrics(trades: List[Dict]) -> Dict:
+    """Compute per-regime performance metrics.
+
+    Groups trades by entry_regime (bull/neutral/bear) and computes
+    Sharpe approximation, win rate, profit factor, avg trade, and count.
+
+    Returns dict keyed by regime name with sub-metrics.
+    """
+    from collections import defaultdict
+
+    regime_trades = defaultdict(list)
+    for t in trades:
+        regime = t.get("entry_regime", "neutral")
+        regime_trades[regime].append(t)
+
+    result = {}
+    for regime, rtrades in sorted(regime_trades.items()):
+        pnls = [t.get("pnl", 0) for t in rtrades]
+        wins = [p for p in pnls if p > 0]
+        losses = [p for p in pnls if p <= 0]
+        n = len(pnls)
+        if n == 0:
+            continue
+
+        win_rate = len(wins) / n
+        avg_trade = sum(pnls) / n
+        total_pnl = sum(pnls)
+        gross_profit = sum(wins) if wins else 0
+        gross_loss = abs(sum(losses)) if losses else 0
+        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (
+            float("inf") if gross_profit > 0 else 0
+        )
+
+        # Sharpe approximation from trade PnLs
+        if n > 1:
+            import numpy as np
+            pnl_arr = np.array(pnls)
+            std = pnl_arr.std(ddof=1)
+            sharpe_approx = round((pnl_arr.mean() / std) if std > 0 else 0, 4)
+        else:
+            sharpe_approx = 0
+
+        # R-multiple stats if available
+        r_vals = [t.get("r_multiple", 0) for t in rtrades if t.get("r_multiple") is not None]
+        avg_r = round(sum(r_vals) / len(r_vals), 4) if r_vals else 0
+
+        result[regime] = {
+            "trades": n,
+            "win_rate_pct": round(win_rate * 100, 1),
+            "avg_trade": round(avg_trade, 2),
+            "total_pnl": round(total_pnl, 2),
+            "profit_factor": round(profit_factor, 4),
+            "sharpe_approx": sharpe_approx,
+            "avg_r": avg_r,
+        }
+
+    return result

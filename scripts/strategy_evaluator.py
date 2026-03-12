@@ -351,6 +351,10 @@ def run_backtest(cfg: dict, data: dict, strategy_names: list = None) -> dict:
             }
         metrics['strategy_breakdown'] = breakdown
 
+    # Per-regime metrics (Task #84) — from calc_all_metrics via engine
+    if m.get('regime_metrics'):
+        metrics['regime_metrics'] = m['regime_metrics']
+
     return metrics
 
 
