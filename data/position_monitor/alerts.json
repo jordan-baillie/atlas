@@ -1389,5 +1389,33 @@
     "new_status": "warning",
     "value": 607.04,
     "timestamp": "2026-03-12T12:05:51"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-12T16:04:35"
+  },
+  {
+    "position_id": "0a70124996f3",
+    "ticker": "INSW",
+    "type": "invalidation_breach",
+    "message": "Price $70.38 breached invalidation $72.00",
+    "timestamp": "2026-03-12T16:04:53"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 607.04,
+    "timestamp": "2026-03-12T16:04:56"
   }
 ]

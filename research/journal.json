@@ -5746,5 +5746,28 @@
     "promoted": false,
     "runtime_s": 13.9,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260312_170031",
+    "timestamp": "2026-03-12T07:00:31.046540+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "ema_touch_pct: None\u21920.015",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5045,
+      "cagr_pct": 20.3368,
+      "max_drawdown_pct": 6.9755,
+      "total_trades": 403,
+      "profit_factor": 3.2863
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 ema_touch_pct: None\u21920.015"
+    ],
+    "promoted": false,
+    "runtime_s": 68.3,
+    "agent_id": "autoresearch"
   }
 ]
