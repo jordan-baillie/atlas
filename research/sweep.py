@@ -333,6 +333,13 @@ def _write_heartbeat(
     experiments: int = 0,
     kept: int = 0,
     session_start: float = 0,
+    activity: str = "",
+    detail: str = "",
+    param: str = "",
+    param_value: str = "",
+    candidates: int = 0,
+    last_result: str = "",
+    last_delta: float = 0.0,
 ) -> None:
     try:
         HEARTBEAT_PATH.write_text(json.dumps({
@@ -343,6 +350,13 @@ def _write_heartbeat(
             "experiments_total": experiments,
             "experiments_kept": kept,
             "uptime_s": round(time.time() - session_start, 0) if session_start else 0,
+            "activity": activity,
+            "detail": detail,
+            "param": param,
+            "param_value": str(param_value),
+            "candidates": candidates,
+            "last_result": last_result,
+            "last_delta": round(last_delta, 4),
         }, indent=2))
     except OSError:
         pass
@@ -726,6 +740,16 @@ def _sweep_strategy_parallel(
                 param_name, len(candidates), n_workers,
             )
 
+            # Heartbeat: testing parameter
+            _write_heartbeat(
+                "running", session.strategy,
+                total_run, total_kept, 0,
+                activity="testing",
+                detail=f"Testing {param_name}",
+                param=param_name,
+                candidates=len(candidates),
+            )
+
             # Build tasks: (strategy_name, full merged params)
             tasks = []
             for v in candidates:
@@ -835,6 +859,18 @@ def _sweep_strategy_parallel(
                     len(candidates),
                 )
 
+                # Heartbeat: kept result
+                _write_heartbeat(
+                    "running", session.strategy,
+                    total_run, total_kept, 0,
+                    activity="kept",
+                    detail=f"{param_name}={best_value}",
+                    param=param_name,
+                    param_value=str(best_value),
+                    last_result="kept",
+                    last_delta=best["verdict"]["delta_sharpe"],
+                )
+
                 # Brain: record kept result
                 try:
                     _delta = best["verdict"]["delta_sharpe"]
@@ -902,6 +938,16 @@ def _sweep_strategy_parallel(
                 logger.info(
                     "❌ No improvement for %s (%d values tried)",
                     param_name, len(results),
+                )
+
+                # Heartbeat: discarded
+                _write_heartbeat(
+                    "running", session.strategy,
+                    total_run, total_kept, 0,
+                    activity="discarded",
+                    detail=f"{param_name} ({len(results)} values tried)",
+                    param=param_name,
+                    last_result="discarded",
                 )
 
             if consecutive_param_fails >= max_consecutive_fails:
@@ -1004,10 +1050,16 @@ def run_sweep(
             _write_heartbeat(
                 "running", strategy_name,
                 total_experiments, total_kept, session_start,
+                activity="loading", detail=f"Loading {strategy_name} data",
             )
 
             try:
                 session = ResearchSession(strategy_name, market, top_n=top_n)
+                _write_heartbeat(
+                    "running", strategy_name,
+                    total_experiments, total_kept, session_start,
+                    activity="baseline", detail=f"Running baseline backtest",
+                )
                 session.baseline()
             except Exception as e:
                 logger.error("Failed to init %s: %s", strategy_name, e)
@@ -1068,6 +1120,11 @@ def run_sweep(
 
     # Flush brain session + rebuild indexes
     try:
+        _write_heartbeat(
+            "running", "",
+            total_experiments, total_kept, session_start,
+            activity="writing", detail="Updating brain indexes",
+        )
         runtime = time.time() - session_start
         if _brain_session:
             _brain_session.flush(runtime_s=runtime)

@@ -2444,14 +2444,43 @@ def _build_agents(daemon: dict) -> list:
         # sweep type: heartbeat "status" field is authoritative regardless of
         # whether the service is currently running (window services stop between runs)
         if agent_type == "sweep":
-            # sweep.py heartbeat format: uses "status" field (not "phase")
-            # Fields: timestamp, status, pid, strategy, experiments_total,
-            #         experiments_kept, uptime_s
+            # sweep.py heartbeat format: status, strategy, activity, detail,
+            # param, param_value, candidates, last_result, last_delta
             sw_status = (hb.get("status") or "").strip() if hb else ""
             sw_strategy = (hb.get("strategy") or "").strip() if hb else ""
+            sw_activity = (hb.get("activity") or "").strip() if hb else ""
+            sw_detail = (hb.get("detail") or "").strip() if hb else ""
+            sw_param = (hb.get("param") or "").strip() if hb else ""
+            sw_last_result = (hb.get("last_result") or "").strip() if hb else ""
+            sw_last_delta = hb.get("last_delta", 0) if hb else 0
+
             if sw_status == "running":
-                if sw_strategy:
-                    strat_label = sw_strategy.replace("_", " ").title()
+                strat_label = sw_strategy.replace("_", " ").title() if sw_strategy else ""
+
+                # Map activity to rich status
+                if sw_activity == "loading":
+                    status = "reading"
+                    task = f"Loading {strat_label} data"
+                elif sw_activity == "baseline":
+                    status = "reading"
+                    task = f"Running {strat_label} baseline"
+                elif sw_activity == "testing":
+                    status = "typing"
+                    n_cand = hb.get("candidates", 0)
+                    task = f"Testing {sw_param} ({n_cand} values)"
+                elif sw_activity == "kept":
+                    status = "typing"
+                    task = f"✅ Kept {sw_detail}"
+                elif sw_activity == "discarded":
+                    status = "typing"
+                    task = f"❌ {sw_detail}"
+                elif sw_activity == "writing":
+                    status = "typing"
+                    task = "Writing brain indexes"
+                elif sw_activity == "evaluating":
+                    status = "reading"
+                    task = f"Evaluating {sw_detail}"
+                elif strat_label:
                     status = "typing"
                     task = f"Sweeping {strat_label}"
                 else:
@@ -2548,6 +2577,18 @@ def _build_agents(daemon: dict) -> list:
                 "cycle": cycle_num,
             }
 
+        # Build activity detail for canvas rendering
+        activity_data = {}
+        if agent_type == "sweep" and hb:
+            activity_data = {
+                "activity": (hb.get("activity") or ""),
+                "param": (hb.get("param") or ""),
+                "param_value": (hb.get("param_value") or ""),
+                "candidates": hb.get("candidates", 0),
+                "last_result": (hb.get("last_result") or ""),
+                "last_delta": hb.get("last_delta", 0),
+            }
+
         agents.append({
             "id": agent_id,
             "name": display_name,
@@ -2556,6 +2597,7 @@ def _build_agents(daemon: dict) -> list:
             "task": task,
             "experiments_done": experiments_done,
             "progress": progress,
+            "activity": activity_data,
         })
 
     # Fallback: if nothing found, show a sleeping Atlas

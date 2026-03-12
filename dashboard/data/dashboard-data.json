@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-03-12T13:14:36.938553+10:00",
+  "timestamp": "2026-03-12T13:22:37.274106+10:00",
   "project": "Atlas",
   "markets": {
     "asx": {
-      "timestamp": "2026-03-12T13:14:36.206828+10:00",
+      "timestamp": "2026-03-12T13:22:36.570979+10:00",
       "config_version": "v1.0-passive",
       "project": "Atlas",
       "market_id": "asx",
@@ -12,24 +12,24 @@
       "data_source": "cross-broker",
       "broker": "moomoo",
       "portfolio": {
-        "equity": 2762.48,
+        "equity": 2760.5,
         "cash": 0,
         "starting_equity": 2471.44,
-        "total_pnl": 291.04,
-        "total_pnl_pct": 11.78,
+        "total_pnl": 289.06,
+        "total_pnl_pct": 11.7,
         "num_open": 0,
         "num_atlas": 0,
         "win_rate": 0,
         "commission_per_trade": 0,
         "total_commissions": 0,
-        "market_pnl": 291.04,
+        "market_pnl": 289.06,
         "realized_pnl": 0,
         "open_positions": [],
         "buying_power": 0,
-        "broker_equity": 2762.48,
+        "broker_equity": 2760.5,
         "broker_cash": 0,
         "today_pnl_by_ccy": {
-          "AUD": 108.4
+          "AUD": 106.42
         }
       },
       "manual_positions": {
@@ -39,15 +39,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 8.66,
-            "current_price": 9.19,
+            "current_price": 9.205,
             "shares": 172,
-            "pnl": 91.16,
-            "pnl_pct": 6.12,
+            "pnl": 93.74,
+            "pnl_pct": 6.29,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": 82.56,
+            "today_pnl": 85.14,
             "currency": "AUD",
             "market": "asx"
           },
@@ -56,22 +56,22 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 25.84,
-            "current_price": 31.1,
+            "current_price": 30.98,
             "shares": 38,
-            "pnl": 199.88,
-            "pnl_pct": 20.36,
+            "pnl": 195.32,
+            "pnl_pct": 19.89,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": 25.84,
+            "today_pnl": 21.28,
             "currency": "AUD",
             "market": "asx"
           }
         ],
         "num_open": 2,
-        "unrealized_pnl": 291.04,
-        "market_value": 2762.48
+        "unrealized_pnl": 289.06,
+        "market_value": 2760.5
       },
       "strategy_summary": [],
       "equity_curve": [
@@ -126,8 +126,8 @@
         },
         {
           "date": "2026-03-12",
-          "equity": 2762.48,
-          "pnl": 291.04,
+          "equity": 2760.5,
+          "pnl": 289.06,
           "fx_rate": 1.0,
           "cross_broker": true
         }
@@ -151,11 +151,11 @@
         },
         {
           "date": "2026-03-12",
-          "equity": 2379.25
+          "equity": 2378.56
         }
       ],
       "benchmark_ticker": "IOZ.AX",
-      "benchmark_return_pct": -3.73,
+      "benchmark_return_pct": -3.76,
       "plan": {
         "trade_date": "2026-03-03",
         "status": "APPROVED",
@@ -466,7 +466,7 @@
         "broker_connected": false,
         "broker_timestamp": null,
         "data_source": "cross-broker",
-        "cache_age_minutes": 9.5,
+        "cache_age_minutes": 0.1,
         "equity_curve_last_date": "2026-03-12",
         "plan_date": "2026-03-03",
         "state_file_mtime": null
@@ -476,7 +476,7 @@
       "pending_orders": []
     },
     "hk": {
-      "timestamp": "2026-03-12T13:14:36.796584+10:00",
+      "timestamp": "2026-03-12T13:22:37.135815+10:00",
       "config_version": "unknown",
       "project": "Atlas",
       "market_id": "hk",
@@ -556,7 +556,7 @@
       "pending_orders": []
     },
     "sp500": {
-      "timestamp": "2026-03-12T13:14:36.798131+10:00",
+      "timestamp": "2026-03-12T13:22:37.137388+10:00",
       "config_version": "v2.2",
       "project": "Atlas",
       "market_id": "sp500",
@@ -579,10 +579,10 @@
         "realized_pnl": -11.25,
         "open_positions": [],
         "buying_power": 2872.28,
-        "broker_equity": 8747.46,
+        "broker_equity": 8745.61,
         "broker_cash": 2878.11,
         "today_pnl_by_ccy": {
-          "USD": 14.64
+          "USD": 14.85
         }
       },
       "manual_positions": {
@@ -592,15 +592,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 127.429,
-            "current_price": 195.54,
+            "current_price": 195.27,
             "shares": 5,
-            "pnl": 340.55,
-            "pnl_pct": 53.45,
+            "pnl": 339.21,
+            "pnl_pct": 53.24,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": 9.64,
+            "today_pnl": 8.29,
             "currency": "USD",
             "market": "sp500"
           },
@@ -609,15 +609,15 @@
             "strategy": "manual",
             "entry_date": "",
             "entry_price": 207.59,
-            "current_price": 206.8,
+            "current_price": 207.06,
             "shares": 6,
-            "pnl": -4.74,
-            "pnl_pct": -0.38,
+            "pnl": -3.18,
+            "pnl_pct": -0.26,
             "stop_price": 0,
             "days_held": 0,
             "sector": "Unknown",
             "is_atlas": false,
-            "today_pnl": -2.76,
+            "today_pnl": -1.2,
             "currency": "USD",
             "market": "sp500"
           },
@@ -657,8 +657,8 @@
           }
         ],
         "num_open": 4,
-        "unrealized_pnl": 348.32,
-        "market_value": 3898.61
+        "unrealized_pnl": 348.54,
+        "market_value": 3898.82
       },
       "strategy_summary": [],
       "equity_curve": [
@@ -731,8 +731,8 @@
         },
         {
           "date": "2026-03-12",
-          "equity": 8747.46,
-          "pnl": 337.07,
+          "equity": 8745.61,
+          "pnl": 337.29,
           "fx_rate": 1.4012,
           "estimated": true
         }
@@ -844,7 +844,7 @@
         "broker_connected": false,
         "broker_timestamp": null,
         "data_source": "cached",
-        "cache_age_minutes": 9.5,
+        "cache_age_minutes": 0.1,
         "equity_curve_last_date": "2026-03-12",
         "plan_date": "2026-03-11",
         "state_file_mtime": null
@@ -1543,13 +1543,13 @@
     "sp500": "v2.2"
   },
   "account": {
-    "equity": 12256.94,
+    "equity": 12254.35,
     "cash": 4032.81,
     "buying_power": 4032.81,
     "currency": "AUD"
   },
   "portfolio": {
-    "equity": 12256.94,
+    "equity": 12254.35,
     "cash": 4032.81,
     "starting_equity": 5604.8,
     "total_pnl": 0.0,
@@ -1557,15 +1557,15 @@
     "num_open": 0,
     "open_positions": [],
     "win_rate": 0.0,
-    "market_pnl": 291.04,
+    "market_pnl": 289.06,
     "realized_pnl": -15.76,
     "total_commissions": 0.0,
     "commission_per_trade": 0,
     "today_pnl_by_ccy": {
-      "AUD": 108.4,
-      "USD": 14.64
+      "AUD": 106.42,
+      "USD": 14.85
     },
-    "today_pnl_aud": 128.91
+    "today_pnl_aud": 127.23
   },
   "manual_positions": {
     "positions": [
@@ -1574,15 +1574,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 8.66,
-        "current_price": 9.19,
+        "current_price": 9.205,
         "shares": 172,
-        "pnl": 91.16,
-        "pnl_pct": 6.12,
+        "pnl": 93.74,
+        "pnl_pct": 6.29,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": 82.56,
+        "today_pnl": 85.14,
         "currency": "AUD",
         "market": "asx"
       },
@@ -1591,15 +1591,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 25.84,
-        "current_price": 31.1,
+        "current_price": 30.98,
         "shares": 38,
-        "pnl": 199.88,
-        "pnl_pct": 20.36,
+        "pnl": 195.32,
+        "pnl_pct": 19.89,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": 25.84,
+        "today_pnl": 21.28,
         "currency": "AUD",
         "market": "asx"
       },
@@ -1608,15 +1608,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 127.429,
-        "current_price": 195.54,
+        "current_price": 195.27,
         "shares": 5,
-        "pnl": 340.55,
-        "pnl_pct": 53.45,
+        "pnl": 339.21,
+        "pnl_pct": 53.24,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": 9.64,
+        "today_pnl": 8.29,
         "currency": "USD",
         "market": "sp500"
       },
@@ -1625,15 +1625,15 @@
         "strategy": "manual",
         "entry_date": "",
         "entry_price": 207.59,
-        "current_price": 206.8,
+        "current_price": 207.06,
         "shares": 6,
-        "pnl": -4.74,
-        "pnl_pct": -0.38,
+        "pnl": -3.18,
+        "pnl_pct": -0.26,
         "stop_price": 0,
         "days_held": 0,
         "sector": "Unknown",
         "is_atlas": false,
-        "today_pnl": -2.76,
+        "today_pnl": -1.2,
         "currency": "USD",
         "market": "sp500"
       },
@@ -1673,8 +1673,8 @@
       }
     ],
     "num_open": 6,
-    "unrealized_pnl": 639.36,
-    "market_value": 6661.09
+    "unrealized_pnl": 637.6,
+    "market_value": 6659.32
   },
   "strategy_summary": [],
   "equity_curve": [
@@ -1730,8 +1730,8 @@
     },
     {
       "date": "2026-03-12",
-      "equity": 12256.94,
-      "pnl": 472.3
+      "equity": 12254.35,
+      "pnl": 472.61
     }
   ],
   "benchmark_curve": [
@@ -3241,7 +3241,7 @@
       "sweep_strategies": 29,
       "sweep_experiments": 1609,
       "sweep_window_active": false,
-      "next_window": "Next: 15:30",
+      "next_window": "Next: Thu 15:30:00",
       "next_window_iso": "2026-03-12T15:30:00"
     },
     "daily_insight": {
@@ -3291,7 +3291,15 @@
         "status": "sleeping",
         "task": "Engine offline",
         "experiments_done": 8,
-        "progress": {}
+        "progress": {},
+        "activity": {
+          "activity": "",
+          "param": "",
+          "param_value": "",
+          "candidates": 0,
+          "last_result": "",
+          "last_delta": 0
+        }
       }
     ],
     "discoveries": [

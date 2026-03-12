@@ -404,6 +404,23 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 }
 #agent-canvas { display: block; width: 100%; height: 340px; image-rendering: pixelated; }
 
+/* Activity Ticker */
+.agent-ticker {
+  font: 11px/1.6 "JetBrains Mono", monospace; color: var(--text-secondary);
+  padding: 6px 12px; margin-bottom: 12px; min-height: 20px;
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm); overflow: hidden; white-space: nowrap;
+  opacity: 0.85; transition: opacity 0.3s;
+}
+.agent-ticker:empty { display: none; }
+.agent-ticker .tick-icon { margin-right: 6px; }
+.agent-ticker .tick-kept { color: var(--green); }
+.agent-ticker .tick-disc { color: var(--red); opacity: 0.7; }
+.agent-ticker .tick-test { color: var(--amber); }
+.agent-ticker .tick-write { color: var(--purple); }
+.agent-ticker .tick-load { color: var(--blue); }
+.agent-ticker .tick-time { color: var(--text-tertiary); font-size: 10px; margin-left: 8px; }
+
 /* KPI Strip */
 .research-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
 .rkpi {
@@ -923,6 +940,9 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
     <div class="agent-floor-wrap">
       <canvas id="agent-canvas"></canvas>
     </div>
+
+    <!-- Live Activity Ticker (below canvas) -->
+    <div id="agent-ticker" class="agent-ticker"></div>
 
     <!-- KPI Strip (4 metrics) -->
     <div class="research-kpis" id="research-kpis"></div>
@@ -2900,6 +2920,9 @@ function renderResearch(d) {
   // Update agents canvas (pass stats + leaderboard + pipeline for whiteboard)
   updateAgentFloor(agents, stats, lb, res.strategy_pipeline || res.pipeline || {});
 
+  // Update activity ticker
+  _updateAgentTicker(agents);
+
   // FIX 14: Research tab badge — experiment count (was ambiguous "4 ACTIVE")
   var badge = document.getElementById('research-tab-badge');
   if (badge) {
@@ -3668,16 +3691,109 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
   var screenY = monPy + 2;
   var screenW = monPxW - 4;
   var screenH = monPxH - 4;
-  var glowColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.border;
+  var act = agent.activity || {};
+  var actType = act.activity || '';
+
+  // Activity-aware glow color
+  var glowColor = tc.border;
+  if (actType === 'testing' || actType === 'baseline') glowColor = tc.amber;
+  else if (actType === 'kept') glowColor = tc.green;
+  else if (actType === 'discarded') glowColor = tc.red;
+  else if (actType === 'writing') glowColor = tc.purple;
+  else if (actType === 'loading' || actType === 'evaluating') glowColor = tc.blue;
+  else if (agent.status === 'typing') glowColor = tc.green;
+  else if (agent.status === 'reading') glowColor = tc.blue;
 
   // Screen bg
   ctx.fillStyle = tc.bg;
   ctx.fillRect(screenX, screenY, screenW, screenH);
 
-  // Progress bar on screen
+  // Activity-specific screen content
   var prog = agent.progress || {};
-  if (prog.pct !== undefined && prog.pct >= 0) {
-    // Scrolling code lines (upper area)
+
+  if (actType === 'testing') {
+    // Running backtests — show animated compute bars
+    var nBars = act.candidates || 4;
+    nBars = Math.min(nBars, 6);
+    var barSpacing = Math.floor(screenH / (nBars + 1));
+    for (var bi = 0; bi < nBars; bi++) {
+      var by = screenY + barSpacing * (bi + 1) - 1;
+      var phase = ((f.frame * 2 + bi * 40) % 200) / 200;
+      var bw = screenW - 4;
+      // Track
+      ctx.fillStyle = tc.border;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(screenX + 2, by, bw, 2);
+      // Running fill (each bar at different phase)
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(screenX + 2, by, bw * phase, 2);
+      ctx.globalAlpha = 1.0;
+    }
+  } else if (actType === 'kept') {
+    // Success flash — green screen pulse
+    ctx.fillStyle = tc.green;
+    ctx.globalAlpha = 0.15 + Math.sin(f.frame * 0.15) * 0.08;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 1.0;
+    // Checkmark
+    ctx.strokeStyle = tc.green;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.8;
+    var chkCx = screenX + screenW / 2;
+    var chkCy = screenY + screenH / 2;
+    ctx.beginPath();
+    ctx.moveTo(chkCx - 5, chkCy);
+    ctx.lineTo(chkCx - 1, chkCy + 4);
+    ctx.lineTo(chkCx + 5, chkCy - 4);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  } else if (actType === 'discarded') {
+    // Red dim
+    ctx.fillStyle = tc.red;
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 1.0;
+    // X mark
+    ctx.strokeStyle = tc.red;
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.5;
+    var xCx = screenX + screenW / 2;
+    var xCy = screenY + screenH / 2;
+    ctx.beginPath();
+    ctx.moveTo(xCx - 4, xCy - 4); ctx.lineTo(xCx + 4, xCy + 4);
+    ctx.moveTo(xCx + 4, xCy - 4); ctx.lineTo(xCx - 4, xCy + 4);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+  } else if (actType === 'writing') {
+    // Writing to brain — purple scrolling lines
+    ctx.fillStyle = tc.purple;
+    ctx.globalAlpha = 0.1;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 0.5;
+    var wLineY = screenY + 2;
+    for (var wl = 0; wl < 6 && wLineY < screenY + screenH - 2; wl++) {
+      var wIndent = (wl % 2 === 0) ? 0 : 4;
+      var scrollOff = (f.frame * 0.8 + wl * 20) % 60;
+      var wLen = (screenW - 4 - wIndent) * (0.2 + scrollOff / 80);
+      ctx.fillRect(screenX + 2 + wIndent, wLineY, Math.min(wLen, screenW - 4 - wIndent), 1);
+      wLineY += 3;
+    }
+    ctx.globalAlpha = 1.0;
+  } else if (actType === 'loading' || actType === 'baseline') {
+    // Loading data — blue pulsing bar
+    ctx.fillStyle = tc.blue;
+    ctx.globalAlpha = 0.08;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 1.0;
+    var loadW = ((f.frame * 1.5) % (screenW * 2));
+    if (loadW > screenW) loadW = screenW * 2 - loadW;
+    ctx.fillStyle = tc.blue;
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(screenX + 1, screenY + screenH / 2 - 1, loadW, 2);
+    ctx.globalAlpha = 1.0;
+  } else if (prog.pct !== undefined && prog.pct >= 0) {
+    // Generic progress — scrolling code lines + progress bar
     ctx.fillStyle = glowColor;
     ctx.globalAlpha = 0.35;
     var lineY = screenY + 2;
@@ -3688,35 +3804,15 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
       lineY += 3;
     }
     ctx.globalAlpha = 1.0;
-
-    // Progress bar at bottom of screen
+    // Progress bar
     var barY = screenY + screenH - 5;
-    var barH = 3;
-    // Track
     ctx.fillStyle = tc.border;
-    ctx.fillRect(screenX + 1, barY, screenW - 2, barH);
-    // Fill
+    ctx.fillRect(screenX + 1, barY, screenW - 2, 3);
     var fillW = Math.max(1, (screenW - 2) * prog.pct / 100);
     ctx.fillStyle = glowColor;
-    ctx.fillRect(screenX + 1, barY, fillW, barH);
-    // Pulsing tip
-    if (prog.pct > 0 && prog.pct < 100) {
-      ctx.globalAlpha = 0.4 + Math.sin(f.frame * 0.12) * 0.35;
-      ctx.fillRect(screenX + 1 + fillW - 1, barY, 2, barH);
-      ctx.globalAlpha = 1.0;
-    }
-    // Percentage text if monitor is big enough
-    if (screenW > 20) {
-      ctx.fillStyle = glowColor;
-      ctx.globalAlpha = 0.7;
-      ctx.font = '7px "JetBrains Mono", monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(prog.pct + '%', screenX + screenW - 2, barY - 2);
-      ctx.textAlign = 'center';
-      ctx.globalAlpha = 1.0;
-    }
+    ctx.fillRect(screenX + 1, barY, fillW, 3);
   } else {
-    // No progress — gentle screen glow
+    // Idle — gentle screen glow
     ctx.fillStyle = glowColor;
     ctx.globalAlpha = 0.12;
     ctx.fillRect(screenX, screenY, screenW, screenH);
@@ -3726,7 +3822,7 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
   // ── Tally marks on desk (strategies completed this cycle) ──
   if (prog.pct !== undefined && prog.label) {
     var parts = prog.label.split('/');
-    var done = parseInt(parts[0]) - 1; // current is in-progress, not done
+    var done = parseInt(parts[0]) - 1;
     var total = parseInt(parts[1]);
     if (done > 0 || total > 0) {
       var tallyX = cx - deskW + 6;
@@ -3740,7 +3836,6 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
         ctx.strokeStyle = isDone ? tc.green : tc.textTertiary;
         ctx.globalAlpha = isDone ? 0.85 : 0.2;
         ctx.beginPath();
-        // Every 5th mark crosses diagonally
         if ((ti + 1) % 5 === 0 && ti > 0) {
           ctx.moveTo(tx - 16, tallyY0 + tallyH + 1);
           ctx.lineTo(tx + 2, tallyY0 - 1);
@@ -3774,26 +3869,41 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     });
   });
 
-  // Speech bubble (theme-aware) — positioned below name label, never overlaps whiteboard
+  // Speech bubble — activity-aware, positioned below name label
   var bubbleText = agent.task || '';
   if (bubbleText) {
-    if (bubbleText.length > 28) bubbleText = bubbleText.substring(0, 25) + '...';
-    // Place bubble below the agent (below desk + name) to avoid whiteboard overlap
+    if (bubbleText.length > 32) bubbleText = bubbleText.substring(0, 29) + '...';
     var bubbleY = deskY + deskH + 28;
     ctx.font = '10px "JetBrains Mono", monospace';
     var textW = ctx.measureText(bubbleText).width;
     var padX = 8, padY = 4;
 
-    var bx = cx - textW / 2 - padX;
+    var bx = cx - textW / 2 - padX - 8; // extra space for activity dot
     var by = bubbleY - padY;
-    var bw = textW + padX * 2;
+    var bw = textW + padX * 2 + 12;
     var bh = 14 + padY * 2;
+
+    // Activity-colored left border
+    var bubbleBorderColor = tc.border;
+    if (actType === 'testing') bubbleBorderColor = tc.amber;
+    else if (actType === 'kept') bubbleBorderColor = tc.green;
+    else if (actType === 'discarded') bubbleBorderColor = tc.red;
+    else if (actType === 'writing') bubbleBorderColor = tc.purple;
+    else if (actType === 'loading' || actType === 'baseline') bubbleBorderColor = tc.blue;
 
     // Bubble bg
     ctx.fillStyle = tc.surfaceRaised;
     ctx.globalAlpha = 0.95;
     ctx.beginPath();
     ctx.roundRect(bx, by, bw, bh, 4);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+
+    // Left accent bar
+    ctx.fillStyle = bubbleBorderColor;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, 3, bh, [4, 0, 0, 4]);
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
@@ -3804,7 +3914,7 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     ctx.roundRect(bx, by, bw, bh, 4);
     ctx.stroke();
 
-    // Tail — points UP toward the agent
+    // Tail
     ctx.fillStyle = tc.surfaceRaised;
     ctx.globalAlpha = 0.95;
     ctx.beginPath();
@@ -3814,10 +3924,13 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
-    // Text color from status
-    ctx.fillStyle = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'sleeping' ? tc.textTertiary : tc.text;
+    // Text — color from activity
+    ctx.fillStyle = bubbleBorderColor !== tc.border ? bubbleBorderColor :
+      (agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.text);
+    ctx.globalAlpha = 0.9;
     ctx.textAlign = 'center';
-    ctx.fillText(bubbleText, cx, bubbleY + 7);
+    ctx.fillText(bubbleText, cx + 2, bubbleY + 7);
+    ctx.globalAlpha = 1.0;
   }
 
   // Name label + progress
@@ -3838,6 +3951,23 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
   ctx.fillStyle = dotColor;
   ctx.fill();
 
+  // Sparkle effect when a result is kept
+  if (actType === 'kept' && agent.status !== 'sleeping') {
+    var sparkleCount = 5;
+    for (var si = 0; si < sparkleCount; si++) {
+      var sparkPhase = ((f.frame * 3 + si * 60) % 180) / 180;
+      if (sparkPhase < 0.8) {
+        var sx = cx + Math.sin(si * 2.5 + f.frame * 0.05) * 25;
+        var sy = charY + 20 - sparkPhase * 40;
+        var sparkSize = (1 - sparkPhase) * 3;
+        ctx.fillStyle = tc.green;
+        ctx.globalAlpha = (1 - sparkPhase) * 0.7;
+        ctx.fillRect(sx - sparkSize/2, sy - sparkSize/2, sparkSize, sparkSize);
+        ctx.globalAlpha = 1.0;
+      }
+    }
+  }
+
   // Sleeping ZZZ
   if (agent.status === 'sleeping') {
     var zOffset = (f.frame % 90) / 90;
@@ -3850,6 +3980,83 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     ctx.fillText('Z', cx + 34 + zOffset * 12, charY - 22 - zOffset * 16);
     ctx.globalAlpha = 1.0;
   }
+}
+
+// ── Activity Ticker — shows what the research engine is doing right now ──
+var _tickerHistory = [];
+var _lastTickerActivity = '';
+
+function _updateAgentTicker(agents) {
+  var el = document.getElementById('agent-ticker');
+  if (!el) return;
+
+  // Find the sweep agent
+  var sweep = null;
+  (agents || []).forEach(function(a) {
+    if (a.type === 'sweep' && a.status !== 'sleeping') sweep = a;
+  });
+
+  if (!sweep || !sweep.activity) {
+    // Check if sleeping with countdown
+    if (!sweep || sweep.status === 'sleeping') {
+      el.innerHTML = '';
+      return;
+    }
+    el.innerHTML = '<span class="tick-icon">🔬</span>' + (sweep.task || 'Idle');
+    return;
+  }
+
+  var act = sweep.activity;
+  var actType = act.activity || '';
+  var key = actType + ':' + (act.param || '') + ':' + (act.param_value || '');
+
+  // Only update on state change
+  if (key === _lastTickerActivity) return;
+  _lastTickerActivity = key;
+
+  // Build ticker entry
+  var icon = '🔬';
+  var cls = '';
+  var text = sweep.task || '';
+  var time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  if (actType === 'testing') {
+    icon = '⚡'; cls = 'tick-test';
+    text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
+  } else if (actType === 'kept') {
+    icon = '✅'; cls = 'tick-kept';
+    var delta = act.last_delta || 0;
+    text = 'Kept ' + (act.param || '') + '=' + (act.param_value || '') +
+           ' (Sharpe ' + (delta >= 0 ? '+' : '') + delta.toFixed(4) + ')';
+  } else if (actType === 'discarded') {
+    icon = '❌'; cls = 'tick-disc';
+    text = 'Discarded ' + (act.param || '') + ' — no improvement';
+  } else if (actType === 'writing') {
+    icon = '📝'; cls = 'tick-write';
+    text = 'Writing brain indexes';
+  } else if (actType === 'loading') {
+    icon = '📂'; cls = 'tick-load';
+    text = 'Loading strategy data';
+  } else if (actType === 'baseline') {
+    icon = '📊'; cls = 'tick-load';
+    text = 'Running baseline backtest';
+  }
+
+  // Add to history (keep last 5)
+  _tickerHistory.unshift({ icon: icon, cls: cls, text: text, time: time });
+  if (_tickerHistory.length > 5) _tickerHistory.pop();
+
+  // Render
+  var html = _tickerHistory.map(function(t, i) {
+    var opacity = i === 0 ? 1 : (0.6 - i * 0.1);
+    return '<span style="opacity:' + opacity + '">' +
+      '<span class="tick-icon">' + t.icon + '</span>' +
+      '<span class="' + t.cls + '">' + t.text + '</span>' +
+      '<span class="tick-time">' + t.time + '</span>' +
+      '</span>';
+  }).join(' · ');
+
+  el.innerHTML = html;
 }
 
 function drawAgentFloor() {
