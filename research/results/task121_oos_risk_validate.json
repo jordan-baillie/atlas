@@ -1,0 +1,308 @@
+{
+  "task": "task_121_oos_risk_validate",
+  "timestamp": "2026-03-12T12:42:34",
+  "verdicts": {
+    "multioffset": "True",
+    "time_split": "True",
+    "perturbation": "False",
+    "alt_window": "True"
+  },
+  "tests_passed": 3,
+  "tests_total": 4,
+  "promote": true,
+  "details": {
+    "multioffset": {
+      "0.35%": [
+        {
+          "risk_pct": 0.0035,
+          "sharpe": 0.2584,
+          "cagr_pct": 8.48,
+          "max_dd_pct": 5.34,
+          "total_trades": 256,
+          "win_rate_pct": 51.6,
+          "profit_factor": 2.935,
+          "calmar": 1.5889,
+          "avg_trade": 9.69,
+          "total_pnl": 2479.49
+        },
+        {
+          "risk_pct": 0.0035,
+          "sharpe": 0.2029,
+          "cagr_pct": 7.45,
+          "max_dd_pct": 6.62,
+          "total_trades": 259,
+          "win_rate_pct": 49.8,
+          "profit_factor": 2.6229,
+          "calmar": 1.1256,
+          "avg_trade": 8.21,
+          "total_pnl": 2127.68
+        },
+        {
+          "risk_pct": 0.0035,
+          "sharpe": 0.2577,
+          "cagr_pct": 8.46,
+          "max_dd_pct": 5.17,
+          "total_trades": 256,
+          "win_rate_pct": 48.4,
+          "profit_factor": 2.8965,
+          "calmar": 1.635,
+          "avg_trade": 9.69,
+          "total_pnl": 2480.18
+        },
+        {
+          "risk_pct": 0.0035,
+          "sharpe": 0.2297,
+          "cagr_pct": 7.97,
+          "max_dd_pct": 6.4,
+          "total_trades": 259,
+          "win_rate_pct": 48.6,
+          "profit_factor": 2.7109,
+          "calmar": 1.2449,
+          "avg_trade": 8.89,
+          "total_pnl": 2303.61
+        },
+        {
+          "risk_pct": 0.0035,
+          "sharpe": 0.2441,
+          "cagr_pct": 8.23,
+          "max_dd_pct": 6.81,
+          "total_trades": 254,
+          "win_rate_pct": 49.6,
+          "profit_factor": 2.83,
+          "calmar": 1.2082,
+          "avg_trade": 9.26,
+          "total_pnl": 2351.79
+        }
+      ],
+      "0.50%": [
+        {
+          "risk_pct": 0.005,
+          "sharpe": -0.9818,
+          "cagr_pct": 1.68,
+          "max_dd_pct": 4.44,
+          "total_trades": 271,
+          "win_rate_pct": 51.7,
+          "profit_factor": 1.2593,
+          "calmar": 0.378,
+          "avg_trade": 1.52,
+          "total_pnl": 412.44
+        },
+        {
+          "risk_pct": 0.005,
+          "sharpe": -1.2071,
+          "cagr_pct": 0.94,
+          "max_dd_pct": 7.1,
+          "total_trades": 271,
+          "win_rate_pct": 49.5,
+          "profit_factor": 1.1393,
+          "calmar": 0.133,
+          "avg_trade": 0.85,
+          "total_pnl": 230.1
+        },
+        {
+          "risk_pct": 0.005,
+          "sharpe": 0.3739,
+          "cagr_pct": 12.53,
+          "max_dd_pct": 4.68,
+          "total_trades": 272,
+          "win_rate_pct": 50.7,
+          "profit_factor": 2.809,
+          "calmar": 2.6792,
+          "avg_trade": 14.9,
+          "total_pnl": 4053.81
+        },
+        {
+          "risk_pct": 0.005,
+          "sharpe": -1.3383,
+          "cagr_pct": 0.57,
+          "max_dd_pct": 6.22,
+          "total_trades": 271,
+          "win_rate_pct": 49.1,
+          "profit_factor": 1.081,
+          "calmar": 0.0913,
+          "avg_trade": 0.5,
+          "total_pnl": 136.25
+        },
+        {
+          "risk_pct": 0.005,
+          "sharpe": -1.2716,
+          "cagr_pct": 0.8,
+          "max_dd_pct": 6.47,
+          "total_trades": 264,
+          "win_rate_pct": 50.0,
+          "profit_factor": 1.1174,
+          "calmar": 0.1238,
+          "avg_trade": 0.73,
+          "total_pnl": 191.72
+        }
+      ]
+    },
+    "time_split": {
+      "0.35%": {
+        "first_half": {
+          "risk_pct": 0.0035,
+          "sharpe": -2.0149,
+          "cagr_pct": 0.2,
+          "max_dd_pct": 3.47,
+          "total_trades": 108,
+          "win_rate_pct": 46.3,
+          "profit_factor": 1.0097,
+          "calmar": 0.0585,
+          "avg_trade": 0.05,
+          "total_pnl": 5.37
+        },
+        "second_half": {
+          "risk_pct": 0.0035,
+          "sharpe": 0.6336,
+          "cagr_pct": 20.93,
+          "max_dd_pct": 2.77,
+          "total_trades": 104,
+          "win_rate_pct": 53.9,
+          "profit_factor": 4.8648,
+          "calmar": 7.5691,
+          "avg_trade": 22.5,
+          "total_pnl": 2340.03
+        }
+      },
+      "0.50%": {
+        "first_half": {
+          "risk_pct": 0.005,
+          "sharpe": -2.0992,
+          "cagr_pct": 0.21,
+          "max_dd_pct": 3.06,
+          "total_trades": 119,
+          "win_rate_pct": 52.1,
+          "profit_factor": 1.0651,
+          "calmar": 0.0689,
+          "avg_trade": 0.39,
+          "total_pnl": 46.72
+        },
+        "second_half": {
+          "risk_pct": 0.005,
+          "sharpe": -0.7606,
+          "cagr_pct": 2.38,
+          "max_dd_pct": 4.17,
+          "total_trades": 106,
+          "win_rate_pct": 49.1,
+          "profit_factor": 1.3483,
+          "calmar": 0.5701,
+          "avg_trade": 2.22,
+          "total_pnl": 235.04
+        }
+      }
+    },
+    "perturbation": {
+      "0.25%": {
+        "risk_pct": 0.0025,
+        "sharpe": 0.1699,
+        "cagr_pct": 6.48,
+        "max_dd_pct": 3.57,
+        "total_trades": 212,
+        "win_rate_pct": 49.1,
+        "profit_factor": 3.323,
+        "calmar": 1.8152,
+        "avg_trade": 8.49,
+        "total_pnl": 1800.71
+      },
+      "0.30%": {
+        "risk_pct": 0.003,
+        "sharpe": 0.2285,
+        "cagr_pct": 7.63,
+        "max_dd_pct": 3.96,
+        "total_trades": 240,
+        "win_rate_pct": 51.7,
+        "profit_factor": 3.0784,
+        "calmar": 1.9257,
+        "avg_trade": 9.1,
+        "total_pnl": 2183.6
+      },
+      "0.33%": {
+        "risk_pct": 0.0033,
+        "sharpe": 0.2406,
+        "cagr_pct": 7.99,
+        "max_dd_pct": 3.94,
+        "total_trades": 248,
+        "win_rate_pct": 51.2,
+        "profit_factor": 3.0064,
+        "calmar": 2.0265,
+        "avg_trade": 9.3,
+        "total_pnl": 2307.62
+      },
+      "0.35%": {
+        "risk_pct": 0.0035,
+        "sharpe": 0.2584,
+        "cagr_pct": 8.48,
+        "max_dd_pct": 5.34,
+        "total_trades": 256,
+        "win_rate_pct": 51.6,
+        "profit_factor": 2.935,
+        "calmar": 1.5889,
+        "avg_trade": 9.69,
+        "total_pnl": 2479.49
+      },
+      "0.37%": {
+        "risk_pct": 0.0037,
+        "sharpe": 0.2299,
+        "cagr_pct": 8.02,
+        "max_dd_pct": 4.51,
+        "total_trades": 262,
+        "win_rate_pct": 50.4,
+        "profit_factor": 2.6459,
+        "calmar": 1.7784,
+        "avg_trade": 8.84,
+        "total_pnl": 2315.73
+      },
+      "0.40%": {
+        "risk_pct": 0.004,
+        "sharpe": -1.5714,
+        "cagr_pct": 0.91,
+        "max_dd_pct": 3.74,
+        "total_trades": 257,
+        "win_rate_pct": 50.2,
+        "profit_factor": 1.1724,
+        "calmar": 0.244,
+        "avg_trade": 0.86,
+        "total_pnl": 220.01
+      },
+      "0.45%": {
+        "risk_pct": 0.0045,
+        "sharpe": -1.0345,
+        "cagr_pct": 1.82,
+        "max_dd_pct": 3.59,
+        "total_trades": 267,
+        "win_rate_pct": 50.9,
+        "profit_factor": 1.3079,
+        "calmar": 0.507,
+        "avg_trade": 1.68,
+        "total_pnl": 449.71
+      }
+    },
+    "alt_window": {
+      "0.35%": {
+        "risk_pct": 0.0035,
+        "sharpe": 0.2874,
+        "cagr_pct": 9.26,
+        "max_dd_pct": 6.09,
+        "total_trades": 231,
+        "win_rate_pct": 50.2,
+        "profit_factor": 2.9319,
+        "calmar": 1.5198,
+        "avg_trade": 10.05,
+        "total_pnl": 2322.21
+      },
+      "0.50%": {
+        "risk_pct": 0.005,
+        "sharpe": -1.0909,
+        "cagr_pct": 1.32,
+        "max_dd_pct": 6.5,
+        "total_trades": 242,
+        "win_rate_pct": 50.4,
+        "profit_factor": 1.1823,
+        "calmar": 0.2035,
+        "avg_trade": 1.13,
+        "total_pnl": 272.52
+      }
+    }
+  },
+  "runtime_s": 5130.4
+}
