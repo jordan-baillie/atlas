@@ -50,10 +50,18 @@ class MomentumBreakout(BaseStrategy):
         self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 4.0)
         self.max_hold_days = strat_cfg.get("max_hold_days", 20)
         self.trend_ma_period = strat_cfg.get("trend_ma_period", 50)
+        # Risk-adjusted / idiosyncratic momentum signal modes
+        self.signal_mode = strat_cfg.get("signal_mode", "raw")
+        self.momentum_lookback = strat_cfg.get("momentum_lookback", 252)
+        self.momentum_skip = strat_cfg.get("momentum_skip", 21)
         self._logger.info(
             f"MomentumBreakout initialized: lookback={self.lookback_days}, "
             f"atr_stop={self.atr_stop_mult}, trailing={self.trailing_stop_atr_mult}, "
             f"trend_ma={self.trend_ma_period}"
+        )
+        self._logger.info(
+            f"MomentumBreakout: signal_mode={self.signal_mode}, "
+            f"lookback={self.momentum_lookback}, skip={self.momentum_skip}"
         )
 
     @property
@@ -169,6 +177,61 @@ class MomentumBreakout(BaseStrategy):
                 confidence = min(1.0, 0.6 + 0.2 * breakout_bonus + 0.2 * trend_bonus)
                 confidence = max(0.1, confidence)
 
+                # --- Risk-adjusted / idiosyncratic signal mode ---
+                extra_features: Dict[str, Any] = {}
+                effective_mode = self.signal_mode
+
+                # Need enough history for momentum_lookback calculation
+                if effective_mode != "raw" and len(close) < self.momentum_lookback + self.momentum_skip + 5:
+                    effective_mode = "raw"
+
+                if effective_mode == "risk_adjusted":
+                    # Return over momentum_lookback, skipping recent momentum_skip days to avoid reversal
+                    skip = self.momentum_skip
+                    lbk = self.momentum_lookback
+                    ret_end_idx = -1 - skip          # e.g. index -22 (skipping last 21)
+                    ret_start_idx = -lbk             # e.g. index -252
+                    # Guard against out-of-range slicing
+                    if len(close) > lbk + skip:
+                        ret = (close.iloc[ret_end_idx] / close.iloc[ret_start_idx]) - 1
+                        vol_series = close.pct_change().iloc[ret_start_idx:ret_end_idx]
+                        vol = vol_series.std() * np.sqrt(252)
+                        risk_adj_score = ret / vol if vol > 1e-8 else 0.0
+                        extra_features["risk_adj_score"] = round(risk_adj_score, 4)
+                        # Top-quartile risk-adjusted score boosts confidence
+                        if risk_adj_score > 0.5:
+                            confidence = min(0.95, confidence + 0.05)
+                    else:
+                        effective_mode = "raw"
+
+                elif effective_mode == "idiosyncratic":
+                    spy_df = data.get("SPY")
+                    if spy_df is not None and not spy_df.empty and len(spy_df) >= self.momentum_lookback + self.momentum_skip + 5:
+                        skip = self.momentum_skip
+                        lbk = self.momentum_lookback
+                        # Align SPY to same slice as stock
+                        stock_ret = close.pct_change().iloc[-lbk:-skip] if skip > 0 else close.pct_change().iloc[-lbk:]
+                        spy_close = spy_df["close"]
+                        spy_ret = spy_close.pct_change().iloc[-lbk:-skip] if skip > 0 else spy_close.pct_change().iloc[-lbk:]
+                        # Align lengths in case of minor index differences
+                        min_len = min(len(stock_ret), len(spy_ret))
+                        stock_ret = stock_ret.iloc[-min_len:]
+                        spy_ret = spy_ret.iloc[-min_len:]
+                        # Simple beta: cov / var
+                        cov = stock_ret.cov(spy_ret)
+                        var = spy_ret.var()
+                        beta = cov / var if var > 1e-10 else 1.0
+                        residuals = stock_ret - beta * spy_ret
+                        idio_score = residuals.sum() / (residuals.std() + 1e-10)
+                        extra_features["idio_score"] = round(float(idio_score), 4)
+                        extra_features["beta"] = round(float(beta), 4)
+                        # Strong idiosyncratic momentum boosts confidence
+                        if idio_score > 1.0:
+                            confidence = min(0.95, confidence + 0.05)
+                    else:
+                        # SPY not in data — fall back silently
+                        effective_mode = "raw"
+
                 # Volume info note
                 is_volume_high = volume_ratio > self.volume_mult
                 if is_volume_high:
@@ -188,6 +251,18 @@ class MomentumBreakout(BaseStrategy):
                     f"ATR={current_atr:.2f}, stop=${stop_price:.2f}."
                 )
 
+                base_features: Dict[str, Any] = {
+                    "lookback_high": round(lookback_high, 4),
+                    "breakout_pct": round(breakout_strength * 100, 2),
+                    "volume_ratio": round(volume_ratio, 2),
+                    "trend_ma": round(current_trend_ma, 4),
+                    "trend_strength_pct": round(trend_strength * 100, 2),
+                    "atr": round(current_atr, 4),
+                    "close": round(today_close, 4),
+                    "signal_mode": effective_mode,
+                }
+                base_features.update(extra_features)
+
                 signal = Signal(
                     ticker=ticker,
                     strategy=self.name,
@@ -200,15 +275,7 @@ class MomentumBreakout(BaseStrategy):
                     risk_amount=pos["total_risk"],
                     confidence=round(confidence, 4),
                     rationale=rationale,
-                    features={
-                        "lookback_high": round(lookback_high, 4),
-                        "breakout_pct": round(breakout_strength * 100, 2),
-                        "volume_ratio": round(volume_ratio, 2),
-                        "trend_ma": round(current_trend_ma, 4),
-                        "trend_strength_pct": round(trend_strength * 100, 2),
-                        "atr": round(current_atr, 4),
-                        "close": round(today_close, 4),
-                    },
+                    features=base_features,
                     timestamp=datetime.now(),
                 )
                 signals.append(signal)
