@@ -13,7 +13,7 @@
     "benchmark_ticker": "SPY"
   },
   "risk": {
-    "starting_equity": 4000,
+    "starting_equity": 3518.12,
     "max_risk_per_trade_pct": 0.0035,
     "max_open_positions": 15,
     "max_sector_concentration": 2,
@@ -29,7 +29,7 @@
   },
   "trading": {
     "mode": "live",
-    "broker": "moomoo",
+    "broker": "alpaca",
     "live_enabled": true,
     "holding_period_min": 2,
     "holding_period_max": 20,
@@ -44,14 +44,14 @@
     }
   },
   "fees": {
-    "commission_per_trade": 1.1,
-    "commission_pct": 0.001,
+    "commission_per_trade": 0,
+    "commission_pct": 0,
     "slippage_pct": 0.0005,
-    "flat_fee_threshold": 5000.0,
+    "flat_fee_threshold": 0,
     "min_position_value": 100.0,
-    "_broker": "moomoo_us",
-    "_fee_notes": "Moomoo US actual fees from order_fee_query (2026-02-26): Platform Fee $0.99 + Settlement Fee ~$0.10 + Trading Activity Fee ~$0.03 = avg $1.09/order. Using $1.10 flat + 0.1% pct (whichever greater above threshold).",
-    "_actual_data": "6 US orders over 90 days: avg fee $1.09, avg order value $755. Fee range $0.99-$1.23."
+    "_broker": "alpaca",
+    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_previous_moomoo": "commission_per_trade=$1.10, commission_pct=0.001 (retired 2026-03-12)"
   },
   "strategies": {
     "momentum_breakout": {
@@ -197,7 +197,7 @@
     "_credentials": "Managed via ~/.atlas-secrets.json"
   },
   "alpaca": {
-    "paper": true,
+    "paper": false,
     "data_feed": "iex",
     "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
   },

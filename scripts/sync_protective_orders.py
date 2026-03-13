@@ -53,7 +53,7 @@ _MARKETS = ("asx", "sp500", "hk")
 # Default broker per market (overridden by config)
 _DEFAULT_BROKER: dict[str, str] = {
     "asx": "moomoo",
-    "sp500": "moomoo",
+    "sp500": "alpaca",
     "hk": "moomoo",
 }
 
@@ -169,12 +169,11 @@ def sync_market(
     # ── Connect to broker ────────────────────────────────────
     broker = None
     try:
-        if broker_name == "moomoo":
-            from brokers.moomoo.broker import MomooBroker
-            broker = MomooBroker(config, live=True)
-        else:
-            result["error"] = f"Unknown broker: {broker_name}"
-            logger.error("Unknown broker '%s' for %s", broker_name, market_id)
+        from brokers.registry import get_live_broker
+        broker = get_live_broker(config)
+        if not broker:
+            result["error"] = f"No live broker available for {broker_name}"
+            logger.error("get_live_broker returned None for %s", broker_name)
             return result
 
         if not broker.connect():
@@ -183,7 +182,61 @@ def sync_market(
             return result
 
         # ── Sync protective orders ────────────────────────────
-        if broker_name == "moomoo":
+
+        if broker_name == "alpaca":
+            # Alpaca broker handles everything internally —
+            # fetches positions + open orders, detects existing stops,
+            # places missing SL orders.
+            positions = broker.get_positions()
+            if not positions:
+                logger.info("No live positions in %s — nothing to protect", market_id)
+                result["counts"] = {"positions_checked": 0}
+                return result
+
+            logger.info("%d live positions in %s", len(positions), market_id)
+
+            sync_result = broker.sync_all_protective_orders(
+                positions=positions,
+                plan=plan,
+                trade_date=trade_date,
+                dry_run=dry_run,
+            )
+
+            # Normalise Alpaca result shape → script-expected shape
+            result["counts"] = {
+                "positions_checked": len(positions),
+                "sl_placed": sync_result.get("sl_placed", 0),
+                "sl_already_exists": sync_result.get("sl_already_exists", 0),
+                "tp_placed": 0,
+                "tp_already_exists": 0,
+                "sl_skipped": 0,
+                "tp_skipped": 0,
+                "errors": sync_result.get("errors", 0),
+            }
+            # Convert per_ticker → results with summary strings
+            per_ticker = sync_result.get("per_ticker", {})
+            for ticker, tdata in per_ticker.items():
+                action = tdata.get("action", "unknown")
+                if action == "placed":
+                    tdata["summary"] = (
+                        f"{ticker}: SL placed @ ${tdata.get('stop_price', 0):.2f} "
+                        f"qty={tdata.get('qty', '?')}"
+                    )
+                elif action == "skipped":
+                    tdata["summary"] = f"{ticker}: stop already exists — skipped"
+                elif action == "dry_run_placed":
+                    tdata["summary"] = (
+                        f"{ticker}: [DRY RUN] would place SL @ "
+                        f"${tdata.get('stop_price', 0):.2f} qty={tdata.get('qty', '?')}"
+                    )
+                elif action == "error":
+                    tdata["summary"] = f"{ticker}: ERROR — {tdata.get('message', '?')}"
+                    tdata["errors"] = [tdata.get("message", "unknown error")]
+                else:
+                    tdata["summary"] = f"{ticker}: {action}"
+            result["results"] = per_ticker
+
+        elif broker_name == "moomoo":
             # Moomoo needs positions + open orders for duplicate detection.
             # Use LivePortfolio to get enriched position objects.
             from brokers.live_portfolio import LivePortfolio
@@ -220,12 +273,13 @@ def sync_market(
                     trade_date=trade_date,
                     dry_run=dry_run,
                 )
+
+            result["counts"] = sync_result.get("counts", {})
+            result["results"] = sync_result.get("results", {})
+
         else:
             result["error"] = f"Unsupported broker: {broker_name}"
             return result
-
-        result["counts"] = sync_result.get("counts", {})
-        result["results"] = sync_result.get("results", {})
 
         # Log per-ticker summary
         for ticker, tresult in result["results"].items():

@@ -261,7 +261,9 @@ class AlpacaBroker(BrokerAdapter):
             # Validate connectivity — fetch account (raises on auth failure)
             account = self._trade_client.get_account()
             equity = float(getattr(account, "equity", 0) or 0)
-            status = str(getattr(account, "status", "UNKNOWN"))
+            raw_status = getattr(account, "status", "UNKNOWN")
+            # Handle both enum (AccountStatus.ACTIVE) and string
+            status = raw_status.name if hasattr(raw_status, 'name') else str(raw_status)
 
             logger.info(
                 "AlpacaBroker connected: paper=%s feed=%s equity=$%.2f status=%s",
