@@ -15,7 +15,7 @@
   "risk": {
     "starting_equity": 3518.12,
     "max_risk_per_trade_pct": 0.0035,
-    "max_open_positions": 15,
+    "max_open_positions": 5,
     "max_sector_concentration": 2,
     "max_daily_drawdown_pct": 0.02,
     "require_stop_loss": true,

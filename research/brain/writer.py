@@ -604,3 +604,21 @@ def rebuild_all_indexes() -> None:
     rebuild_simple_index("hypotheses", "Hypotheses")
     rebuild_simple_index("regime", "Market Regime")
     rebuild_root_index()
+
+
+# ─── Execution Intelligence ──────────────────────────────────────────────────
+
+import logging as _logging
+_exec_logger = _logging.getLogger("atlas.brain.writer")
+
+
+def update_execution_intelligence(days: int = 7):
+    """Run execution telemetry analysis and update brain docs.
+
+    Called by director or weekly cron.
+    """
+    try:
+        from research.brain.execution import weekly_review
+        weekly_review()
+    except Exception as e:
+        _exec_logger.warning("Execution intelligence update failed: %s", e)
