@@ -2383,14 +2383,18 @@ def _build_agents(daemon: dict) -> list:
     _RESEARCHER_SERVICES = [
         # (service_name, heartbeat_path, agent_id, display_name, agent_type)
         # Active sweep window service (sweep.py heartbeat format)
-        ("atlas-research-window", "/tmp/autoresearch-heartbeat.json",         "researcher",   "Atlas",  "sweep"),
+        ("atlas-research-window",  "/tmp/autoresearch-heartbeat.json",         "researcher",   "Atlas",    "sweep"),
+        # Runner daemon — processes queue.json experiments continuously
+        ("atlas-research-runner",  "/tmp/runner-daemon-heartbeat.json",        "runner",       "Pixel",    "runner"),
+        # Director cron — queue management + portfolio review
+        ("atlas-director",         "/tmp/director-heartbeat.json",             "director_cron","Director", "director_cron"),
         # Legacy/archived services kept for backward compatibility
-        ("atlas-autoresearch-0", "/tmp/autoresearch-parent-0-heartbeat.json", "researcher-0", "Atlas",  "atlas"),
-        ("atlas-autoresearch-1", "/tmp/autoresearch-parent-1-heartbeat.json", "researcher-1", "Nova",   "nova"),
-        ("atlas-autoresearch",   "/tmp/autoresearch-parent-heartbeat.json",   "researcher",   "Atlas",  "atlas"),
-        ("atlas-research-daemon", "/tmp/research-daemon-heartbeat.json",      "researcher",   "Atlas",  "atlas"),
-        ("atlas-sage",            "/tmp/sage-heartbeat.json",                 "sage",         "Sage",   "sage"),
-        ("atlas-principal",       "/tmp/principal-heartbeat.json",            "principal",    "Director", "principal"),
+        ("atlas-autoresearch-0",   "/tmp/autoresearch-parent-0-heartbeat.json","researcher-0", "Atlas",    "atlas"),
+        ("atlas-autoresearch-1",   "/tmp/autoresearch-parent-1-heartbeat.json","researcher-1", "Nova",     "nova"),
+        ("atlas-autoresearch",     "/tmp/autoresearch-parent-heartbeat.json",  "researcher",   "Atlas",    "atlas"),
+        ("atlas-research-daemon",  "/tmp/research-daemon-heartbeat.json",      "researcher",   "Atlas",    "atlas"),
+        ("atlas-sage",             "/tmp/sage-heartbeat.json",                 "sage",         "Sage",     "sage"),
+        ("atlas-principal",        "/tmp/principal-heartbeat.json",            "principal",    "Director", "principal"),
     ]
 
     found_any = False
@@ -2495,6 +2499,81 @@ def _build_agents(daemon: dict) -> list:
             else:
                 status = "sleeping"
                 task = "Engine offline"
+        elif agent_type == "runner":
+            # Runner daemon heartbeat: authoritative regardless of service state
+            # Phases: executing, evaluating, advancing, yielding, sleeping, error, stopped
+            rn_status = (hb.get("status") or "").strip() if hb else ""
+            rn_phase  = (hb.get("phase")  or "").strip() if hb else ""
+            rn_exp_id = (hb.get("experiment_id") or "") if hb else ""
+            rn_title  = (hb.get("experiment_title") or "") if hb else ""
+            rn_strat  = (hb.get("strategy") or "") if hb else ""
+            rn_depth  = hb.get("queue_depth", 0) if hb else 0
+            rn_done   = hb.get("experiments_completed", 0) if hb else 0
+
+            title_short = (rn_title[:30] + "…") if len(rn_title) > 30 else rn_title
+
+            if rn_status == "running":
+                if rn_phase == "executing":
+                    status = "typing"
+                    task   = title_short or (f"Running {rn_strat}" if rn_strat else "Running experiment")
+                elif rn_phase == "evaluating":
+                    status = "reading"
+                    task   = f"Evaluating {rn_exp_id}" if rn_exp_id else "Evaluating result"
+                elif rn_phase == "advancing":
+                    status = "typing"
+                    task   = "Auto-advancing lifecycle"
+                elif rn_phase == "idle":
+                    status = "idle"
+                    task   = f"Queue: {rn_depth} pending" if rn_depth else "Polling queue"
+                elif rn_phase == "error":
+                    status = "idle"
+                    task   = "Experiment error — retrying"
+                else:
+                    status = "reading"
+                    task   = "Processing queue"
+            elif rn_status in ("waiting", "sleeping") or rn_phase in ("sleeping", "yielding"):
+                status = "sleeping"
+                task   = f"Queue empty (done: {rn_done})" if rn_done else "Queue empty"
+            elif rn_status == "stopped" or not svc_running:
+                status = "sleeping"
+                task   = "Runner offline"
+            else:
+                status = "reading"
+                task   = "Starting up"
+        elif agent_type == "director_cron":
+            # Director cron heartbeat: runs twice daily, mostly idle between runs
+            # Phases: reviewing, queuing, portfolio, reporting, idle, stopped
+            dc_status = (hb.get("status") or "").strip() if hb else ""
+            dc_phase  = (hb.get("phase")  or "").strip() if hb else ""
+            dc_depth  = hb.get("queue_depth", 0) if hb else 0
+            dc_queued = hb.get("experiments_queued", 0) if hb else 0
+            dc_cov    = hb.get("coverage_pct", 0) if hb else 0
+
+            if dc_status == "running":
+                if dc_phase == "reviewing":
+                    status = "reading"
+                    task   = f"Reviewing {dc_depth} results" if dc_depth else "Reviewing queue"
+                elif dc_phase == "queuing":
+                    status = "typing"
+                    task   = f"Queue: {dc_depth} pending — generating"
+                elif dc_phase == "portfolio":
+                    status = "typing"
+                    task   = "Running portfolio optimizer"
+                elif dc_phase == "reporting":
+                    status = "typing"
+                    task   = "Sending daily digest"
+                else:
+                    status = "reading"
+                    task   = "Overseeing research"
+            elif dc_status == "idle" or dc_phase == "idle":
+                status = "idle"
+                task   = f"Queue: {dc_depth} experiments" if dc_depth else "Idle until next run"
+            elif dc_status == "stopped" or not svc_running:
+                status = "sleeping"
+                task   = "Cron complete"
+            else:
+                status = "reading"
+                task   = "Reviewing..."
         elif svc_running:
             if agent_type == "principal":
                 # Principal/Director-specific phase mapping
