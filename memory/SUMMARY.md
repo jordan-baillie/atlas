@@ -5,7 +5,7 @@
 
 | Market | Broker | Mode | Config | Strategies Active |
 |--------|--------|------|--------|-------------------|
-| **SP500** | Alpaca ($0 commission) | LIVE | v2.2 | TF + MR + OG (max_pos=5) |
+| **SP500** | Alpaca ($0 commission) | LIVE | v3.0 | TF+MR+OG+MB+SR+STMR+CR2 (max_pos=10, weighted alloc) |
 | **ASX** | INACTIVE (config moved to config/inactive/) | — | — | — |
 | **HK (SEHK)** | INACTIVE (config moved to config/inactive/) | — | — | — |
 

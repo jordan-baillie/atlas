@@ -1,288 +1,201 @@
 {
   "correlation_matrix": {
-    "opening_gap": {
-      "opening_gap": 1.0,
-      "momentum_breakout": 0.0067,
-      "mean_reversion": 0.9508,
-      "trend_following": 0.0109,
-      "connors_rsi2": 0.9431,
-      "bb_squeeze": 0.051,
-      "sector_rotation": 0.0307,
-      "short_term_mr": 0.0008,
-      "lower_band_reversion": 0.0582,
-      "consecutive_down_days": 0.0498
+    "sector_rotation": {
+      "sector_rotation": 1.0,
+      "opening_gap": 0.0195,
+      "mean_reversion": 0.0385,
+      "momentum_breakout": 0.0169,
+      "connors_rsi2": 0.0478,
+      "trend_following": 0.0376,
+      "short_term_mr": 0.0067
     },
-    "momentum_breakout": {
-      "opening_gap": 0.0067,
-      "momentum_breakout": 1.0,
-      "mean_reversion": 0.0204,
-      "trend_following": 0.0593,
-      "connors_rsi2": 0.0235,
-      "bb_squeeze": 0.1232,
-      "sector_rotation": 0.0823,
-      "short_term_mr": -0.0013,
-      "lower_band_reversion": 0.0457,
-      "consecutive_down_days": 0.1135
+    "opening_gap": {
+      "sector_rotation": 0.0195,
+      "opening_gap": 1.0,
+      "mean_reversion": 0.9504,
+      "momentum_breakout": -0.0008,
+      "connors_rsi2": 0.9436,
+      "trend_following": 0.0067,
+      "short_term_mr": 0.0004
     },
     "mean_reversion": {
-      "opening_gap": 0.9508,
-      "momentum_breakout": 0.0204,
+      "sector_rotation": 0.0385,
+      "opening_gap": 0.9504,
       "mean_reversion": 1.0,
-      "trend_following": 0.0776,
-      "connors_rsi2": 0.9437,
-      "bb_squeeze": 0.089,
-      "sector_rotation": 0.0548,
-      "short_term_mr": -0.0048,
-      "lower_band_reversion": 0.111,
-      "consecutive_down_days": 0.1035
+      "momentum_breakout": 0.0074,
+      "connors_rsi2": 0.944,
+      "trend_following": 0.013,
+      "short_term_mr": -0.0056
     },
-    "trend_following": {
-      "opening_gap": 0.0109,
-      "momentum_breakout": 0.0593,
-      "mean_reversion": 0.0776,
-      "trend_following": 1.0,
-      "connors_rsi2": 0.0843,
-      "bb_squeeze": 0.2634,
-      "sector_rotation": 0.14,
-      "short_term_mr": 0.1839,
-      "lower_band_reversion": 0.2391,
-      "consecutive_down_days": 0.3364
+    "momentum_breakout": {
+      "sector_rotation": 0.0169,
+      "opening_gap": -0.0008,
+      "mean_reversion": 0.0074,
+      "momentum_breakout": 1.0,
+      "connors_rsi2": 0.0062,
+      "trend_following": 0.0034,
+      "short_term_mr": -0.0018
     },
     "connors_rsi2": {
-      "opening_gap": 0.9431,
-      "momentum_breakout": 0.0235,
-      "mean_reversion": 0.9437,
-      "trend_following": 0.0843,
+      "sector_rotation": 0.0478,
+      "opening_gap": 0.9436,
+      "mean_reversion": 0.944,
+      "momentum_breakout": 0.0062,
       "connors_rsi2": 1.0,
-      "bb_squeeze": 0.1096,
-      "sector_rotation": 0.0635,
-      "short_term_mr": 0.0226,
-      "lower_band_reversion": 0.1412,
-      "consecutive_down_days": 0.1571
+      "trend_following": 0.0135,
+      "short_term_mr": 0.0206
     },
-    "bb_squeeze": {
-      "opening_gap": 0.051,
-      "momentum_breakout": 0.1232,
-      "mean_reversion": 0.089,
-      "trend_following": 0.2634,
-      "connors_rsi2": 0.1096,
-      "bb_squeeze": 1.0,
-      "sector_rotation": 0.2146,
-      "short_term_mr": 0.0088,
-      "lower_band_reversion": 0.2874,
-      "consecutive_down_days": 0.3221
-    },
-    "sector_rotation": {
-      "opening_gap": 0.0307,
-      "momentum_breakout": 0.0823,
-      "mean_reversion": 0.0548,
-      "trend_following": 0.14,
-      "connors_rsi2": 0.0635,
-      "bb_squeeze": 0.2146,
-      "sector_rotation": 1.0,
-      "short_term_mr": -0.0012,
-      "lower_band_reversion": 0.2459,
-      "consecutive_down_days": 0.2006
+    "trend_following": {
+      "sector_rotation": 0.0376,
+      "opening_gap": 0.0067,
+      "mean_reversion": 0.013,
+      "momentum_breakout": 0.0034,
+      "connors_rsi2": 0.0135,
+      "trend_following": 1.0,
+      "short_term_mr": 0.0008
     },
     "short_term_mr": {
-      "opening_gap": 0.0008,
-      "momentum_breakout": -0.0013,
-      "mean_reversion": -0.0048,
-      "trend_following": 0.1839,
-      "connors_rsi2": 0.0226,
-      "bb_squeeze": 0.0088,
-      "sector_rotation": -0.0012,
-      "short_term_mr": 1.0,
-      "lower_band_reversion": 0.0219,
-      "consecutive_down_days": 0.0076
-    },
-    "lower_band_reversion": {
-      "opening_gap": 0.0582,
-      "momentum_breakout": 0.0457,
-      "mean_reversion": 0.111,
-      "trend_following": 0.2391,
-      "connors_rsi2": 0.1412,
-      "bb_squeeze": 0.2874,
-      "sector_rotation": 0.2459,
-      "short_term_mr": 0.0219,
-      "lower_band_reversion": 1.0,
-      "consecutive_down_days": 0.4213
-    },
-    "consecutive_down_days": {
-      "opening_gap": 0.0498,
-      "momentum_breakout": 0.1135,
-      "mean_reversion": 0.1035,
-      "trend_following": 0.3364,
-      "connors_rsi2": 0.1571,
-      "bb_squeeze": 0.3221,
-      "sector_rotation": 0.2006,
-      "short_term_mr": 0.0076,
-      "lower_band_reversion": 0.4213,
-      "consecutive_down_days": 1.0
+      "sector_rotation": 0.0067,
+      "opening_gap": 0.0004,
+      "mean_reversion": -0.0056,
+      "momentum_breakout": -0.0018,
+      "connors_rsi2": 0.0206,
+      "trend_following": 0.0008,
+      "short_term_mr": 1.0
     }
   },
   "optimal_weights": {
-    "opening_gap": 0.1914,
-    "momentum_breakout": 0.143,
-    "mean_reversion": 0.2382,
-    "trend_following": 0.0,
-    "connors_rsi2": 0.1485,
-    "bb_squeeze": 0.0,
-    "sector_rotation": 0.2488,
-    "short_term_mr": 0.03,
-    "lower_band_reversion": 0.0,
-    "consecutive_down_days": 0.0
+    "sector_rotation": 0.2423,
+    "opening_gap": 0.2229,
+    "mean_reversion": 0.1727,
+    "momentum_breakout": 0.094,
+    "connors_rsi2": 0.03,
+    "trend_following": 0.2082,
+    "short_term_mr": 0.03
   },
   "active_weights": {
-    "opening_gap": 0.1914,
-    "momentum_breakout": 0.143,
-    "mean_reversion": 0.2382,
-    "connors_rsi2": 0.1485,
-    "sector_rotation": 0.2488,
+    "sector_rotation": 0.2423,
+    "opening_gap": 0.2229,
+    "mean_reversion": 0.1727,
+    "momentum_breakout": 0.094,
+    "connors_rsi2": 0.03,
+    "trend_following": 0.2082,
     "short_term_mr": 0.03
   },
   "portfolio_metrics": {
-    "analytic_sharpe": 0.4634,
-    "simulated_sharpe": 0.9919,
-    "n_strategies": 6,
-    "avg_correlation": 0.209,
-    "portfolio_annual_return": 10.77,
-    "portfolio_annual_vol": 10.86,
-    "portfolio_max_drawdown": -6.4
+    "analytic_sharpe": 0.4351,
+    "simulated_sharpe": 1.0927,
+    "n_strategies": 7,
+    "avg_correlation": 0.1461,
+    "portfolio_annual_return": 10.7,
+    "portfolio_annual_vol": 9.79,
+    "portfolio_max_drawdown": -2.16
   },
   "group_analysis": {
     "within_group": {
       "momentum": {
-        "avg_correlation": 0.0593,
-        "min_correlation": 0.0593,
-        "max_correlation": 0.0593,
+        "avg_correlation": 0.0034,
+        "min_correlation": 0.0034,
+        "max_correlation": 0.0034,
         "n_strategies": 2
       },
       "mean_reversion": {
-        "avg_correlation": 0.1828,
-        "min_correlation": -0.0048,
-        "max_correlation": 0.9437,
-        "n_strategies": 6
+        "avg_correlation": 0.3197,
+        "min_correlation": -0.0056,
+        "max_correlation": 0.944,
+        "n_strategies": 3
       },
       "other": {
-        "avg_correlation": 0.0307,
-        "min_correlation": 0.0307,
-        "max_correlation": 0.0307,
+        "avg_correlation": 0.0195,
+        "min_correlation": 0.0195,
+        "max_correlation": 0.0195,
         "n_strategies": 2
       }
     },
     "cross_momentum_mr": {
-      "avg_correlation": 0.1258,
-      "min_correlation": -0.0013,
-      "max_correlation": 0.3364,
-      "n_pairs": 12,
+      "avg_correlation": 0.0065,
+      "min_correlation": -0.0018,
+      "max_correlation": 0.0135,
+      "n_pairs": 6,
       "hypothesis_validated": true
     },
     "strategy_groups": {
-      "opening_gap": "other",
-      "momentum_breakout": "momentum",
-      "mean_reversion": "mean_reversion",
-      "trend_following": "momentum",
-      "connors_rsi2": "mean_reversion",
-      "bb_squeeze": "mean_reversion",
       "sector_rotation": "other",
-      "short_term_mr": "mean_reversion",
-      "lower_band_reversion": "mean_reversion",
-      "consecutive_down_days": "mean_reversion"
+      "opening_gap": "other",
+      "mean_reversion": "mean_reversion",
+      "momentum_breakout": "momentum",
+      "connors_rsi2": "mean_reversion",
+      "trend_following": "momentum",
+      "short_term_mr": "mean_reversion"
     }
   },
   "per_strategy": {
-    "opening_gap": {
-      "sharpe": 0.2712,
-      "total_trades": 392,
-      "cagr_pct": 8.68,
-      "max_drawdown_pct": 8.76,
-      "weight": 0.1914,
+    "sector_rotation": {
+      "sharpe": 0.2375,
+      "total_trades": 328,
+      "cagr_pct": 6.73,
+      "max_drawdown_pct": 4.72,
+      "weight": 0.2423,
       "group": "other",
-      "annual_vol_pct": 17.08
+      "annual_vol_pct": 8.31
     },
-    "momentum_breakout": {
-      "sharpe": 0.1525,
-      "total_trades": 397,
-      "cagr_pct": 6.31,
-      "max_drawdown_pct": 7.98,
-      "weight": 0.143,
-      "group": "momentum",
-      "annual_vol_pct": 12.86
+    "opening_gap": {
+      "sharpe": 0.2731,
+      "total_trades": 361,
+      "cagr_pct": 8.57,
+      "max_drawdown_pct": 7.44,
+      "weight": 0.2229,
+      "group": "other",
+      "annual_vol_pct": 16.22
     },
     "mean_reversion": {
-      "sharpe": 0.2285,
-      "total_trades": 240,
-      "cagr_pct": 7.17,
-      "max_drawdown_pct": 4.55,
-      "weight": 0.2382,
+      "sharpe": 0.1373,
+      "total_trades": 223,
+      "cagr_pct": 6.0,
+      "max_drawdown_pct": 5.38,
+      "weight": 0.1727,
       "group": "mean_reversion",
-      "annual_vol_pct": 11.57
+      "annual_vol_pct": 10.52
     },
-    "trend_following": {
-      "sharpe": -0.3884,
-      "total_trades": 302,
-      "cagr_pct": 3.28,
-      "max_drawdown_pct": 6.1,
-      "weight": 0.0,
+    "momentum_breakout": {
+      "sharpe": 0.2623,
+      "total_trades": 316,
+      "cagr_pct": 10.69,
+      "max_drawdown_pct": 10.33,
+      "weight": 0.094,
       "group": "momentum",
-      "annual_vol_pct": 4.02
+      "annual_vol_pct": 36.94
     },
     "connors_rsi2": {
-      "sharpe": 0.1754,
-      "total_trades": 925,
-      "cagr_pct": 6.72,
-      "max_drawdown_pct": 13.31,
-      "weight": 0.1485,
-      "group": "mean_reversion",
-      "annual_vol_pct": 14.24
-    },
-    "bb_squeeze": {
-      "sharpe": -0.7462,
-      "total_trades": 371,
-      "cagr_pct": 2.54,
-      "max_drawdown_pct": 4.34,
-      "weight": 0.0,
-      "group": "mean_reversion",
-      "annual_vol_pct": 3.1
-    },
-    "sector_rotation": {
-      "sharpe": 0.401,
-      "total_trades": 773,
-      "cagr_pct": 10.39,
-      "max_drawdown_pct": 10.53,
-      "weight": 0.2488,
-      "group": "other",
-      "annual_vol_pct": 14.98
-    },
-    "short_term_mr": {
-      "sharpe": 0.3948,
-      "total_trades": 878,
-      "cagr_pct": 35.96,
-      "max_drawdown_pct": 6.22,
+      "sharpe": 0.0011,
+      "total_trades": 937,
+      "cagr_pct": 4.16,
+      "max_drawdown_pct": 17.35,
       "weight": 0.03,
       "group": "mean_reversion",
-      "annual_vol_pct": 188.21
+      "annual_vol_pct": 13.79
     },
-    "lower_band_reversion": {
-      "sharpe": -1.3596,
-      "total_trades": 780,
-      "cagr_pct": 1.15,
-      "max_drawdown_pct": 5.88,
-      "weight": 0.0,
-      "group": "mean_reversion",
-      "annual_vol_pct": 2.72
+    "trend_following": {
+      "sharpe": 0.269,
+      "total_trades": 205,
+      "cagr_pct": 8.65,
+      "max_drawdown_pct": 2.79,
+      "weight": 0.2082,
+      "group": "momentum",
+      "annual_vol_pct": 17.1
     },
-    "consecutive_down_days": {
-      "sharpe": -1.6097,
-      "total_trades": 1605,
-      "cagr_pct": -0.27,
-      "max_drawdown_pct": 7.84,
-      "weight": 0.0,
+    "short_term_mr": {
+      "sharpe": 0.3968,
+      "total_trades": 802,
+      "cagr_pct": 36.45,
+      "max_drawdown_pct": 3.67,
+      "weight": 0.03,
       "group": "mean_reversion",
-      "annual_vol_pct": 3.17
+      "annual_vol_pct": 187.79
     }
   },
-  "n_strategies_analyzed": 10,
-  "n_strategies_active": 6
+  "n_strategies_analyzed": 7,
+  "n_strategies_active": 7,
+  "returns_df": "            sector_rotation  opening_gap  ...  trend_following  short_term_mr\n2020-03-12         0.000000    -0.006947  ...        -0.001069      -0.007257\n2020-03-13         0.000000     0.010685  ...         0.002023       0.007381\n2020-03-16         0.000000    -0.019147  ...        -0.003195      -0.002530\n2020-03-17         0.000000    -0.002902  ...         0.000291       0.005160\n2020-03-18         0.000000    -0.004735  ...        -0.002905      -0.004615\n...                     ...          ...  ...              ...            ...\n2026-02-09        -0.002357     0.001140  ...         0.001535      -0.000796\n2026-02-10         0.000031     0.000997  ...        -0.000182       0.000921\n2026-02-11         0.002361    -0.003918  ...         0.001147      -0.001596\n2026-02-12        -0.002546     0.000341  ...        -0.001781      -0.002878\n2026-02-13         0.000884     0.000952  ...         0.000417       0.001003\n\n[1490 rows x 7 columns]",
+  "cov_matrix": "[[ 0.00212754  0.          0.          0.          0.          0.\n   0.        ]\n [ 0.          0.00212754  0.         -0.          0.          0.\n   0.        ]\n [ 0.          0.          0.00212754  0.          0.          0.\n  -0.        ]\n [ 0.         -0.          0.          0.00212754  0.          0.\n  -0.        ]\n [ 0.          0.          0.          0.          0.00212754  0.\n   0.        ]\n [ 0.          0.          0.          0.          0.          0.00212754\n   0.        ]\n [ 0.          0.         -0.         -0.          0.          0.\n   0.00212754]]"
 }
