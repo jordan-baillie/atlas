@@ -4,10 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 10:46 | short_term_mr | None → 3 | ❌ discard | -0.0904 | 0.4132 |
-| 2026-03-12 10:46 | short_term_mr | None → 5 | ❌ discard | +0.0000 | 0.5036 |
-| 2026-03-12 10:49 | bb_squeeze | 15 → 10 | ❌ discard | -0.0198 | 0.3903 |
-| 2026-03-12 10:49 | bb_squeeze | 15 → 5 | ❌ discard | -0.1804 | 0.2297 |
 | 2026-03-12 13:19 | momentum_breakout | 15 → 20 | ❌ discard | -0.2817 | 0.4400 |
 | 2026-03-12 13:19 | momentum_breakout | 15 → 10 | ❌ discard | -0.0426 | 0.6791 |
 | 2026-03-12 13:19 | momentum_breakout | 15 → 5 | ❌ discard | -0.0542 | 0.6675 |
@@ -54,3 +50,7 @@
 | 2026-03-13 05:33 | short_term_mr | None → 7 | ❌ discard | -0.0015 | 0.5122 |
 | 2026-03-13 05:33 | short_term_mr | None → 5 | ❌ discard | +0.0000 | 0.5137 |
 | 2026-03-13 05:33 | short_term_mr | None → 2 | ❌ discard | -0.0568 | 0.4569 |
+| 2026-03-13 06:26 | adx_trend_pullback | None → 7 | ❌ discard | -0.6798 | -0.1240 |
+| 2026-03-13 06:26 | adx_trend_pullback | None → 15 | ❌ discard | -0.3914 | 0.1644 |
+| 2026-03-13 06:26 | adx_trend_pullback | None → 10 | ❌ discard | +0.0000 | 0.5558 |
+| 2026-03-13 06:26 | adx_trend_pullback | None → 5 | ❌ discard | -0.0509 | 0.5049 |

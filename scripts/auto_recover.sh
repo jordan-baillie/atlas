@@ -63,8 +63,12 @@ DIAGNOSIS=""
 FIXES_APPLIED=""
 
 # Check 1a: OpenD / Moomoo gateway (for SP500)
+# Skip if broker is Alpaca (no OpenD dependency)
+BROKER=$(python3 -c "import json; print(json.load(open('$PROJECT/config/active/sp500.json')).get('trading',{}).get('broker',''))" 2>/dev/null || echo "")
 OPEND_OK=true
-if ! python3 -c "
+if [ "$BROKER" = "alpaca" ]; then
+    log "Broker is Alpaca — skipping OpenD check"
+elif ! python3 -c "
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.settimeout(3)
@@ -115,8 +119,11 @@ import socket; s = socket.socket(); s.settimeout(3); s.connect(('127.0.0.1', 111
 fi
 
 # Check 1b: IB Gateway / IBKR (for ASX)
+# Skip if broker is Alpaca (no IBKR dependency, ASX/HK deactivated)
 IBGW_OK=true
-if ! nc -z localhost 4001 2>/dev/null; then
+if [ "$BROKER" = "alpaca" ]; then
+    log "Broker is Alpaca — skipping IB Gateway check"
+elif ! nc -z localhost 4001 2>/dev/null; then
     IBGW_OK=false
     DIAGNOSIS="${DIAGNOSIS}🔌 IB Gateway unreachable on port 4001\n"
     log "IB Gateway DOWN — attempting restart"

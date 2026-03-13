@@ -471,7 +471,10 @@ def main():
     all_alerts = []
     all_alerts.extend(check_positions(portfolio, prices, fired))
     all_alerts.extend(check_portfolio_drawdown(portfolio, prices, fired))
-    all_alerts.extend(check_opend_connectivity(fired))
+    # Only check OpenD if broker is moomoo (not Alpaca)
+    broker_name = config.get("trading", {}).get("broker", "")
+    if broker_name == "moomoo":
+        all_alerts.extend(check_opend_connectivity(fired))
 
     # ── Save dedup state ──────────────────────────────────────
     _save_fired(market_id, fired)

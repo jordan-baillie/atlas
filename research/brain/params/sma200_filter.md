@@ -29,3 +29,5 @@
 | 2026-03-13 03:29 | consecutive_down_days | False → True | ❌ discard | -0.1843 | 0.4059 |
 | 2026-03-13 05:31 | momentum_breakout | None → False | ❌ discard | +0.0000 | 0.7364 |
 | 2026-03-13 05:31 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7364 |
+| 2026-03-13 06:27 | adx_trend_pullback | None → True | ❌ discard | +0.0000 | 0.5558 |
+| 2026-03-13 06:27 | adx_trend_pullback | None → False | ❌ discard | -0.1226 | 0.4332 |

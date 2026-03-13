@@ -76,15 +76,26 @@ def check_infra(project: Path) -> list:
     """Infrastructure: services, ports, systemd units."""
     results = []
 
-    # OpenD gateway (moomoo — SP500)
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(2)
-        s.connect(("127.0.0.1", 11111))
-        s.close()
-        results.append({"check": "opend_gateway", "verdict": "ok", "message": "Port 11111 reachable"})
-    except Exception:
-        results.append({"check": "opend_gateway", "verdict": "fail", "message": "OpenD not reachable on port 11111. Run: systemctl start opend"})
+    # OpenD gateway (moomoo — only checked if broker is moomoo)
+    cfg_path = project / "config" / "active" / "sp500.json"
+    broker_name = ""
+    if cfg_path.exists():
+        try:
+            import json as _json
+            broker_name = _json.load(open(cfg_path)).get("trading", {}).get("broker", "")
+        except Exception:
+            pass
+    if broker_name == "moomoo":
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(2)
+            s.connect(("127.0.0.1", 11111))
+            s.close()
+            results.append({"check": "opend_gateway", "verdict": "ok", "message": "Port 11111 reachable"})
+        except Exception:
+            results.append({"check": "opend_gateway", "verdict": "fail", "message": "OpenD not reachable on port 11111. Run: systemctl start opend"})
+    elif broker_name == "alpaca":
+        results.append({"check": "alpaca_api", "verdict": "ok", "message": f"Broker is Alpaca (no OpenD needed)"})
 
     # (IBKR broker removed — no gateway check needed)
 
