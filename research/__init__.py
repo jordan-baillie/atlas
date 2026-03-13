@@ -1,4 +1,4 @@
-"""Atlas Research System — Continuous experiment pipeline."""
+"""Atlas Research System — sweep/runner pipeline with unified models."""
 
 from research.models import (
     QueueEntry, ExperimentEnvelope, JournalEntry,
