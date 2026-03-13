@@ -42,6 +42,7 @@ from strategies.base import BaseStrategy, Signal
 from utils.market_breadth import MarketBreadth
 from utils.relative_strength import RelativeStrength
 from utils.dynamic_sizing import DynamicSizer
+from backtest.vol_scaling import VolatilityScaler
 from utils.allocation import build_allocation_pool, StrategyAllocationPool
 from data.macro import download_macro_data, compute_macro_signals
 
@@ -153,6 +154,8 @@ class BacktestEngine:
         self.max_loss_per_trade = self.risk_config.get("max_loss_per_trade", None)  # e.g. 35.0
         # Phase 8D: Dynamic position sizing
         self.dynamic_sizer = DynamicSizer(config)
+        # Task #124: Conditional portfolio volatility scaling
+        self.vol_scaler = VolatilityScaler(config)
 
         # Fee parameters - Phase1-Fix2: smart commission model
         self.commission_per_trade = self.fees_config.get("commission_per_trade", 5.0)
@@ -920,7 +923,8 @@ class BacktestEngine:
                         if self.macro_regime_enabled and self.macro_mode == "sizing"
                         else 1.0
                     )
-                    risk_budget = equity * _risk_pct * regime_scale * _effective_macro_scale
+                    vol_scale = self.vol_scaler.scale_factor() if self.vol_scaler.enabled else 1.0
+                    risk_budget = equity * _risk_pct * regime_scale * _effective_macro_scale * vol_scale
                     shares = int(risk_budget / risk_per_share)
 
                     if shares <= 0:
@@ -1400,6 +1404,11 @@ class BacktestEngine:
                     {"date": test_date, "equity": round(mtm_value, 2)}
                 )
                 equity_history.append(mtm_value)  # Phase 8D
+                # Task #124: Feed daily return into volatility scaler
+                if len(equity_history) >= 2 and equity_history[-2] > 0:
+                    self.vol_scaler.update(
+                        (mtm_value - equity_history[-2]) / equity_history[-2]
+                    )
 
                 simulated_dates.add(test_date)
 
