@@ -1639,272 +1639,15 @@ def _pretty_strat(name: str) -> str:
     return (name or "unknown").replace("_", " ").title()
 
 
-def _parse_vault_frontmatter(path: Path) -> dict:
-    """Parse YAML frontmatter from a vault .md file. Returns dict of key-value pairs."""
-    try:
-        text = path.read_text()
-    except Exception:
-        return {}
-    if not text.startswith("---"):
-        return {}
-    end = text.find("---", 3)
-    if end < 0:
-        return {}
-    fm = {}
-    current_key = None
-    current_list = None
-    for line in text[3:end].splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        # List item under current key
-        if stripped.startswith("- ") and current_key:
-            val = stripped[2:].strip().strip('"').strip("'")
-            if current_list is None:
-                current_list = []
-            current_list.append(val)
-            fm[current_key] = current_list
-            continue
-        # Key-value pair
-        if ":" in stripped:
-            # Flush previous list
-            current_list = None
-            colon = stripped.index(":")
-            key = stripped[:colon].strip()
-            val = stripped[colon + 1:].strip().strip('"').strip("'")
-            current_key = key
-            if val == "":
-                # Could be a list following
-                continue
-            # Parse numbers
-            if val in ("true", "True"):
-                fm[key] = True
-            elif val in ("false", "False"):
-                fm[key] = False
-            elif val in ("null", "None", "~"):
-                fm[key] = None
-            else:
-                try:
-                    fm[key] = int(val)
-                except ValueError:
-                    try:
-                        fm[key] = float(val)
-                    except ValueError:
-                        fm[key] = val
-    return fm
-
-
-def _read_vault_strategies() -> list:
-    """Read all strategy cards from vault/Strategies/*.md frontmatter.
-
-    Falls back to STRATEGY_UNIVERSE from discovery.py for the 'type' field
-    since vault cards for tested strategies set type='strategy' (generic).
-    """
-    # Load strategy types from discovery engine (authoritative source)
-    type_map = {}
-    try:
-        from research.discovery import STRATEGY_UNIVERSE
-        for sid, info in STRATEGY_UNIVERSE.items():
-            type_map[sid] = info.get("type", "unknown")
-    except ImportError:
-        pass
-
-    # Load descriptions from discovery engine (Tier 1 strategies have them)
-    desc_map = {
-        # Tier 0 fallbacks (originals without STRATEGY_UNIVERSE descriptions)
-        "bb_squeeze": "Bollinger Band squeeze: enters when bands contract (low volatility) and break out. Captures volatility expansion moves.",
-        "short_term_mr": "RSI(2)/IBS short-term mean reversion. Captures rapid 1–5 day reversals that standard MR (RSI 14) misses.",
-        "momentum_breakout": "N-day high breakout momentum entry. Enters at point of price breach rather than lagging MA crossover.",
-        "consecutive_down_days": "Buy after N consecutive down days in an uptrend. Statistical mean-reversion pattern with 60-70% historical win rate on indices.",
-        "mtf_momentum": "Multi-timeframe momentum: weekly trend confirmation + daily entry timing. Combines fast and slow momentum signals.",
-        "dividend_capture": "Buy before ex-dividend date, capture dividend payment, exit shortly after. Event-driven income strategy.",
-        "sector_rotation": "Top-down momentum sector rotation. Selects strongest GICS sectors by momentum, rotates monthly.",
-    }
-    ref_map = {}
-    try:
-        for sid, info in STRATEGY_UNIVERSE.items():
-            if info.get("description"):
-                desc_map.setdefault(sid, info["description"])
-            if info.get("reference"):
-                ref_map[sid] = info["reference"]
-    except Exception:
-        pass
-
-    strat_dir = PROJECT_ROOT / "research" / "vault" / "Strategies"
-    if not strat_dir.exists():
-        return []
-    strategies = []
-    for md in sorted(strat_dir.glob("*.md")):
-        fm = _parse_vault_frontmatter(md)
-        if not fm:
-            continue
-        sid = fm.get("strategy_id", md.stem.lower().replace(" ", "_"))
-        raw_type = fm.get("type", "unknown")
-        # Always prefer discovery engine type (authoritative); vault cards often
-        # have 'strategy' (generic) or abbreviated types like 'adx', 'demark'
-        strat_type = type_map.get(sid, raw_type)
-
-        # Get description: prefer vault ## Overview, fall back to STRATEGY_UNIVERSE
-        description = ""
-        try:
-            text = md.read_text()
-            parts = text.split("---", 2)
-            body = parts[2] if len(parts) >= 3 else text
-            in_overview = False
-            for line in body.splitlines():
-                stripped = line.strip()
-                if stripped.startswith("## Overview"):
-                    in_overview = True
-                    continue
-                if in_overview and stripped.startswith("## "):
-                    break
-                if in_overview and stripped and not stripped.startswith(">"):
-                    # Skip generic placeholder text
-                    if not stripped.startswith("Research strategy `"):
-                        description = stripped
-                        break
-        except Exception:
-            pass
-        if not description:
-            description = desc_map.get(sid, "")
-        reference = ref_map.get(sid, "")
-
-        strategies.append({
-            "id": sid,
-            "name": md.stem,
-            "status": fm.get("status", "unknown"),
-            "tier": fm.get("tier", 0),
-            "type": strat_type,
-            "total_experiments": fm.get("total_experiments", 0),
-            "best_sharpe": fm.get("best_sharpe", None),
-            "description": description[:200],
-            "reference": reference[:100],
-        })
-    return strategies
-
-
-def _read_vault_coverage() -> dict:
-    """Parse the coverage matrix from vault/Meta/Coverage Map.md.
-
-    Returns: {strategy_id: {stage: icon}} e.g. {"mean_reversion": {"solo": "✅", "oos": "❌"}}
-    """
-    cov_path = PROJECT_ROOT / "research" / "vault" / "Meta" / "Coverage Map.md"
-    if not cov_path.exists():
-        return {}
-    try:
-        text = cov_path.read_text()
-    except Exception:
-        return {}
-
-    # Find the table header to get column names
-    stages = ["screen", "quick", "solo", "optimize", "combined", "oos", "promote"]
-    result = {}
-    in_table = False
-    for line in text.splitlines():
-        line = line.strip()
-        if line.startswith("| Strategy"):
-            in_table = True
-            continue
-        if in_table and line.startswith("|---"):
-            continue
-        if in_table and line.startswith("|"):
-            cells = [c.strip() for c in line.split("|")[1:-1]]
-            if len(cells) >= 9:  # strategy + type + 7 stages
-                strat_id = cells[0].strip()
-                stage_map = {}
-                for i, stage in enumerate(stages):
-                    icon = cells[i + 2].strip()
-                    if icon != "—":
-                        stage_map[stage] = icon
-                if strat_id:
-                    result[strat_id] = stage_map
-        elif in_table and not line.startswith("|"):
-            break  # End of table
-    return result
-
-
-def _read_vault_patterns() -> list:
-    """Read confirmed patterns from vault/Patterns/*.md."""
-    pat_dir = PROJECT_ROOT / "research" / "vault" / "Patterns"
-    if not pat_dir.exists():
-        return []
-    patterns = []
-    for md in sorted(pat_dir.glob("*.md")):
-        fm = _parse_vault_frontmatter(md)
-        # Grab the first real paragraph after frontmatter closes
-        summary = ""
-        try:
-            text = md.read_text()
-            # Skip past frontmatter (--- ... ---)
-            parts = text.split("---", 2)
-            if len(parts) >= 3:
-                body = parts[2]
-            else:
-                body = text
-            # Find first non-empty, non-heading, non-blockquote line
-            for line in body.splitlines():
-                stripped = line.strip()
-                if not stripped or stripped.startswith("#") or stripped.startswith(">") or stripped.startswith("|") or stripped.startswith("-"):
-                    continue
-                summary = stripped
-                break
-        except Exception:
-            pass
-        patterns.append({
-            "name": md.stem,
-            "status": fm.get("status", "unknown"),
-            "impact": fm.get("impact", "unknown"),
-            "summary": summary[:120] if summary else "",
-        })
-    return patterns
-
-
-def _read_vault_hypotheses() -> list:
-    """Read hypotheses from vault/Hypotheses/*.md."""
-    hyp_dir = PROJECT_ROOT / "research" / "vault" / "Hypotheses"
-    if not hyp_dir.exists():
-        return []
-    hypotheses = []
-    for md in sorted(hyp_dir.glob("*.md")):
-        fm = _parse_vault_frontmatter(md)
-        # Grab hypothesis text from ## Hypothesis section
-        hyp_text = ""
-        try:
-            text = md.read_text()
-            in_section = False
-            for line in text.splitlines():
-                if line.strip().startswith("## Hypothesis"):
-                    in_section = True
-                    continue
-                if in_section and line.strip().startswith("## "):
-                    break
-                if in_section and line.strip():
-                    hyp_text = line.strip()
-                    break
-        except Exception:
-            pass
-        hypotheses.append({
-            "id": fm.get("id", md.stem),
-            "title": fm.get("title", md.stem),
-            "status": fm.get("status", "proposed"),
-            "source": fm.get("source", "unknown"),
-            "created": fm.get("created", ""),
-            "hypothesis": hyp_text[:150] if hyp_text else "",
-        })
-    return hypotheses
-
-
 def _read_daemon_status() -> dict:
     """Read research engine heartbeat from /tmp.
 
-    Checks both heartbeat files (research daemon and autoresearch)
-    and returns the status of whichever is most recently active.
-    Falls back to systemctl if heartbeats are stale.
+    Checks autoresearch heartbeat file and returns its status.
+    Falls back to systemctl if heartbeat is stale.
     """
     import subprocess as _sp
 
     heartbeat_files = [
-        Path("/tmp/research-daemon-heartbeat.json"),
         Path("/tmp/autoresearch-heartbeat.json"),
     ]
 
@@ -1930,18 +1673,17 @@ def _read_daemon_status() -> dict:
             continue
 
     if best_hb is None:
-        # No heartbeat files — check if service is running via systemctl
-        for svc in ("atlas-autoresearch", "atlas-research-daemon"):
-            try:
-                r = _sp.run(["systemctl", "is-active", svc],
-                            capture_output=True, text=True, timeout=5)
-                if r.stdout.strip() == "active":
-                    return {"status": "running", "uptime_s": 0,
-                            "experiments_completed": 0, "experiments_failed": 0,
-                            "queue_depth": 0, "current_experiment": None,
-                            "source": svc}
-            except Exception:
-                pass
+        # No heartbeat file — check if service is running via systemctl
+        try:
+            r = _sp.run(["systemctl", "is-active", "atlas-autoresearch"],
+                        capture_output=True, text=True, timeout=5)
+            if r.stdout.strip() == "active":
+                return {"status": "running", "uptime_s": 0,
+                        "experiments_completed": 0, "experiments_failed": 0,
+                        "queue_depth": 0, "current_experiment": None,
+                        "source": "atlas-autoresearch"}
+        except Exception:
+            pass
         return {"status": "offline", "uptime_s": 0, "experiments_completed": 0,
                 "experiments_failed": 0, "queue_depth": 0, "current_experiment": None}
 
@@ -1952,18 +1694,15 @@ def _read_daemon_status() -> dict:
 
     # Heartbeat says "stopped" but maybe a new process took over
     if hb_status == "stopped" or age_min > 30:
-        # Check if either service is actually running
-        for svc in ("atlas-autoresearch", "atlas-research-daemon"):
-            try:
-                r = _sp.run(["systemctl", "is-active", svc],
-                            capture_output=True, text=True, timeout=5)
-                if r.stdout.strip() == "active":
-                    status = "running"
-                    break
-            except Exception:
-                pass
-        else:
-            status = "dead" if age_min > 30 else "stopped"
+        # Check if the service is actually running
+        status = "dead" if age_min > 30 else "stopped"
+        try:
+            r = _sp.run(["systemctl", "is-active", "atlas-autoresearch"],
+                        capture_output=True, text=True, timeout=5)
+            if r.stdout.strip() == "active":
+                status = "running"
+        except Exception:
+            pass
     elif age_min > 5:
         status = "stale"
     else:
@@ -2058,49 +1797,14 @@ def _get_sweep_window_status() -> dict:
 def generate_research_data() -> dict:
     """Generate research section data for the dashboard.
 
-    Reads primarily from the Obsidian vault (research/vault/) for
-    strategy cards, coverage, patterns, and hypotheses.
-    Supplements with queue.json, journal.json, and daemon heartbeat.
+    Reads from research/best/*.json (sweep best results) and
+    research/results/*.tsv (per-strategy experiment counts).
+    Supplements with journal.json (activity feed) and daemon heartbeat.
     """
     research_dir = PROJECT_ROOT / "research"
-    queue_path = research_dir / "queue.json"
     journal_path = research_dir / "journal.json"
 
-    # ── Vault data (primary source) ─────────────────────────────
-    strategies = _read_vault_strategies()
-    coverage = _read_vault_coverage()
-    patterns = _read_vault_patterns()
-    hypotheses = _read_vault_hypotheses()
     daemon = _read_daemon_status()
-
-    # ── Queue (aggregated summary, not raw dump) ────────────────
-    queue = safe_json(queue_path, [])
-    queue_by_status = {}
-    queue_by_priority = {}
-    queue_by_category = {}
-    for e in queue:
-        st = e.get("status", "queued")
-        queue_by_status[st] = queue_by_status.get(st, 0) + 1
-        pri = e.get("priority", "P3")
-        queue_by_priority[pri] = queue_by_priority.get(pri, 0) + 1
-        cat = e.get("category", "unknown")
-        queue_by_category[cat] = queue_by_category.get(cat, 0) + 1
-
-    # Queued items only (for the expandable table)
-    queued_items = [
-        {
-            "id": e.get("id", "?"),
-            "title": e.get("title", "?"),
-            "priority": e.get("priority", "?"),
-            "category": e.get("category", "?"),
-            "market": e.get("market", "?"),
-            "status": e.get("status", "?"),
-            "strategy_name": e.get("strategy_name", ""),
-            "estimated_runtime_min": e.get("estimated_runtime_min", 0),
-        }
-        for e in queue
-        if e.get("status") in ("queued", "claimed", "running")
-    ]
 
     # ── Journal (activity feed — last 20) ───────────────────────
     journal = safe_json(journal_path, [])
@@ -2122,14 +1826,7 @@ def generate_research_data() -> dict:
             "learnings": entry.get("learnings", [])[:2],  # First 2 only
         })
 
-    # ── Statistics (from journal) ───────────────────────────────
-    total_experiments = len(journal)
-    passed_count = sum(1 for e in journal if e.get("verdict") == "pass")
-    failed_count = sum(1 for e in journal if e.get("verdict") == "fail")
-    partial_count = sum(1 for e in journal if e.get("verdict") == "partial")
-    promoted_count = sum(1 for e in journal if e.get("verdict") == "promoted" or e.get("promoted"))
-
-    # Days active
+    # Days active (from journal first entry)
     days_active = 0
     if journal:
         first_ts = journal[0].get("timestamp", "")[:10]
@@ -2139,58 +1836,12 @@ def generate_research_data() -> dict:
         except ValueError:
             days_active = 1
 
-    # ── Leaderboard (from vault strategy cards, enriched) ───────
+    promoted_count = sum(1 for e in journal if e.get("verdict") == "promoted" or e.get("promoted"))
+
+    # ── Leaderboard (from research/best/*.json + results/*.tsv) ─
     leaderboard = []
-    for s in strategies:
-        sid = s["id"]
-        stages = coverage.get(sid, {})
-        # Determine highest lifecycle stage reached
-        stage_order = ["screen", "quick", "solo", "optimize", "combined", "oos", "promote"]
-        highest_stage = "—"
-        highest_icon = "—"
-        for stage in reversed(stage_order):
-            if stage in stages:
-                highest_stage = stage
-                highest_icon = stages[stage]
-                break
-
-        # Get win rate from journal (best experiment)
-        strat_entries = [e for e in journal if e.get("strategy") == sid]
-        best_wr = None
-        best_trades = 0
-        for e in strat_entries:
-            km = e.get("key_metrics", {})
-            wr = km.get("win_rate_pct")
-            trades = km.get("total_trades", 0)
-            sharpe = km.get("sharpe")
-            if sharpe is not None and s.get("best_sharpe") is not None:
-                if abs(sharpe - s["best_sharpe"]) < 0.01:
-                    best_wr = wr
-                    best_trades = trades
-            if wr is not None and (best_wr is None or wr > best_wr):
-                best_wr = wr
-            if trades > best_trades:
-                best_trades = trades
-
-        leaderboard.append({
-            "id": sid,
-            "name": s["name"],
-            "status": s["status"],
-            "tier": s["tier"],
-            "type": s["type"],
-            "total_experiments": s["total_experiments"],
-            "best_sharpe": s["best_sharpe"],
-            "best_win_rate": round(best_wr, 1) if best_wr is not None else None,
-            "best_trades": best_trades,
-            "stage": highest_stage,
-            "stage_icon": highest_icon,
-            "coverage": stages,
-            "description": s.get("description", ""),
-            "reference": s.get("reference", ""),
-        })
-    # ── Enrich leaderboard from research/best/*.json (1a) ──────
+    lb_index: dict = {}
     best_dir = research_dir / "best"
-    lb_index = {entry["id"]: i for i, entry in enumerate(leaderboard)}
     if best_dir.exists():
         for f in sorted(best_dir.glob("*.json")):
             try:
@@ -2205,43 +1856,21 @@ def generate_research_data() -> dict:
             b_cagr = metrics.get("cagr_pct")
             b_pf = metrics.get("profit_factor")
             exps_run = data.get("experiments_run", 0) or 0
-            if sid in lb_index:
-                entry = leaderboard[lb_index[sid]]
-                existing = entry.get("best_sharpe")
-                if b_sharpe is not None and (existing is None or b_sharpe > existing):
-                    entry["best_sharpe"] = b_sharpe
-                    entry["best_win_rate"] = round(b_wr, 1) if b_wr is not None else None
-                    entry["best_trades"] = int(b_trades) if b_trades else 0
-                if b_cagr is not None:
-                    entry["best_cagr"] = b_cagr
-                if b_pf is not None:
-                    entry["best_pf"] = b_pf
-                if exps_run > (entry.get("total_experiments") or 0):
-                    entry["total_experiments"] = exps_run
-            else:
-                # New research-only strategy not in vault
-                name = sid.replace("_", " ").title()
-                leaderboard.append({
-                    "id": sid,
-                    "name": name,
-                    "status": "research",
-                    "tier": 0,
-                    "type": "unknown",
-                    "total_experiments": exps_run,
-                    "best_sharpe": b_sharpe,
-                    "best_win_rate": round(b_wr, 1) if b_wr is not None else None,
-                    "best_trades": int(b_trades) if b_trades else 0,
-                    "best_cagr": b_cagr,
-                    "best_pf": b_pf,
-                    "stage": "—",
-                    "stage_icon": "—",
-                    "coverage": {},
-                    "description": "",
-                    "reference": "",
-                })
-                lb_index[sid] = len(leaderboard) - 1
+            name = sid.replace("_", " ").title()
+            leaderboard.append({
+                "id": sid,
+                "name": name,
+                "status": "research",
+                "total_experiments": exps_run,
+                "best_sharpe": b_sharpe,
+                "best_win_rate": round(b_wr, 1) if b_wr is not None else None,
+                "best_trades": int(b_trades) if b_trades else 0,
+                "best_cagr": b_cagr,
+                "best_pf": b_pf,
+            })
+            lb_index[sid] = len(leaderboard) - 1
 
-    # ── Enrich experiment counts from research/results/*.tsv (1b) ─
+    # ── Enrich experiment counts from research/results/*.tsv ────
     results_dir = research_dir / "results"
     tsv_total = 0
     if results_dir.exists():
@@ -2257,56 +1886,51 @@ def generate_research_data() -> dict:
                 entry = leaderboard[lb_index[sid]]
                 entry["total_experiments"] = max(entry.get("total_experiments") or 0, exp_count)
 
-    # Filter out meta-strategies (filters/combined — not directly tradable)
-    leaderboard = [s for s in leaderboard if s["status"] != "filter"]
+    # ── Add staleness info per strategy ─────────────────────────
+    try:
+        from research.param_history import get_strategy_staleness, PARAMS_DIR
+        stale_count = 0
+        total_param_tests = 0
+        # Count total param tests across all param files
+        if PARAMS_DIR.exists():
+            from research.param_history import load_param_history
+            for md_f in PARAMS_DIR.glob("*.md"):
+                if not md_f.name.startswith("_"):
+                    total_param_tests += len(load_param_history(md_f.stem))
+        # Annotate each leaderboard entry with staleness
+        for entry in leaderboard:
+            staleness = get_strategy_staleness(entry["id"])
+            entry["is_stale"] = staleness.get("is_stale", False)
+            entry["last_win_date"] = staleness.get("last_win_date")
+            if entry["is_stale"]:
+                stale_count += 1
+    except Exception:
+        stale_count = 0
+        total_param_tests = 0
+
     # Sort: tested strategies with best Sharpe first, then untested
     leaderboard.sort(key=lambda x: (
         0 if x["best_sharpe"] is not None else 1,
         -(x["best_sharpe"] or -999),
     ))
 
-    # ── Lifecycle pipeline counts ───────────────────────────────
-    pipeline = {"untested": 0, "screen": 0, "quick": 0, "solo": 0,
-                "optimize": 0, "combined": 0, "oos": 0, "promote": 0}
-    for s in leaderboard:
-        stage = s["stage"]
-        if stage == "—":
-            pipeline["untested"] += 1
-        elif stage in pipeline:
-            pipeline[stage] += 1
-
     return {
         "daemon": daemon,
         "leaderboard": leaderboard,
-        "pipeline": pipeline,
-        "strategy_pipeline": _build_strategy_pipeline(),
-        "patterns": patterns,
-        "hypotheses": hypotheses,
         "activity_feed": activity_feed,
-        "queue_summary": {
-            "total": len(queue),
-            "by_status": queue_by_status,
-            "by_priority": queue_by_priority,
-            "by_category": queue_by_category,
-            "pending_items": queued_items,
-        },
         "statistics": {
-            "total_experiments": tsv_total if tsv_total > 0 else total_experiments,
-            "passed": passed_count,
-            "failed": failed_count,
-            "partial": partial_count,
+            "total_experiments": tsv_total,
             "promoted": promoted_count,
-            "pass_rate_pct": round(passed_count / total_experiments * 100, 1) if total_experiments else 0,
             "days_active": days_active,
-            "strategies_tested": len([s for s in strategies if s["total_experiments"] and s["total_experiments"] > 0]),
-            "strategies_total": len(strategies),
-            "sweep_strategies": len(list(best_dir.glob("*.json"))) if best_dir.exists() else 0,
+            "sweep_strategies": len(leaderboard),
             "sweep_experiments": tsv_total,
+            "stale_strategies": stale_count,
+            "total_param_tests": total_param_tests,
             **_get_sweep_window_status(),
         },
         "daily_insight": generate_daily_insight(),
         "agents": _build_agents(daemon),
-        "discoveries": _build_discoveries(patterns, hypotheses, journal),
+        "discoveries": _build_discoveries(journal),
         "portfolio": _build_portfolio_metrics(),
     }
 
@@ -2393,60 +2017,6 @@ def _build_portfolio_metrics() -> dict:
     return result
 
 
-def _build_strategy_pipeline() -> dict:
-    """Build strategy pipeline counts from strategy_queue.json + sandbox dir."""
-    queue = safe_json(str(PROJECT_ROOT / "research" / "strategy_queue.json"), {})
-    active = queue.get("active", [])
-    candidates = queue.get("candidates", [])
-    rejected = queue.get("rejected", [])
-
-    # Count sandbox strategies not in any queue list
-    known = set()
-    for entry in active + candidates + rejected:
-        if isinstance(entry, dict):
-            known.add(entry.get("name", ""))
-        elif isinstance(entry, str):
-            known.add(entry)
-    sandbox_dir = PROJECT_ROOT / "research" / "strategies"
-    sandbox = 0
-    if sandbox_dir.exists():
-        for f in sandbox_dir.glob("*.py"):
-            if f.stem != "__init__" and f.stem not in known:
-                sandbox += 1
-
-    # ── Enrich with research/best/*.json sweep stage counts (1e) ─
-    sweep_stages: dict = {"untested": 0, "screen": 0, "quick": 0,
-                          "solo": 0, "optimize": 0}
-    best_dir = PROJECT_ROOT / "research" / "best"
-    if best_dir.exists():
-        for f in best_dir.glob("*.json"):
-            try:
-                data = json.loads(f.read_text())
-                metrics = data.get("metrics", {})
-                sharpe = metrics.get("sharpe") or 0
-                exps = data.get("experiments_run", 0) or 0
-                if exps == 0:
-                    sweep_stages["untested"] += 1
-                elif sharpe > 0.5:
-                    sweep_stages["optimize"] += 1
-                elif sharpe > 0.3:
-                    sweep_stages["solo"] += 1
-                elif sharpe > 0:
-                    sweep_stages["quick"] += 1
-                else:
-                    sweep_stages["screen"] += 1
-            except Exception:
-                pass
-
-    return {
-        "active": len(active),
-        "candidates": len(candidates),
-        "rejected": len(rejected),
-        "sandbox": sandbox,
-        "sweep": sweep_stages,
-    }
-
-
 def _build_agents(daemon: dict) -> list:
     """Build agents list for the pixel-agents canvas.
 
@@ -2461,23 +2031,14 @@ def _build_agents(daemon: dict) -> list:
     now_utc = datetime.now(_tz.utc)
     experiments_done = daemon.get("experiments_completed", 0)
 
-    # ── Researcher agents (partitioned or solo) ─────────────────
-    # Detect which services are active
+    # ── Researcher agents ────────────────────────────────────────
+    # Only the two active services: sweep window + director cron
     _RESEARCHER_SERVICES = [
         # (service_name, heartbeat_path, agent_id, display_name, agent_type)
-        # Active sweep window service (sweep.py heartbeat format)
-        ("atlas-research-window",  "/tmp/autoresearch-heartbeat.json",         "researcher",   "Atlas",    "sweep"),
-        # Runner daemon — processes queue.json experiments continuously
-        ("atlas-research-runner",  "/tmp/runner-daemon-heartbeat.json",        "runner",       "Pixel",    "runner"),
-        # Director cron — queue management + portfolio review
-        ("atlas-director",         "/tmp/director-heartbeat.json",             "director_cron","Director", "director_cron"),
-        # Legacy/archived services kept for backward compatibility
-        ("atlas-autoresearch-0",   "/tmp/autoresearch-parent-0-heartbeat.json","researcher-0", "Atlas",    "atlas"),
-        ("atlas-autoresearch-1",   "/tmp/autoresearch-parent-1-heartbeat.json","researcher-1", "Nova",     "nova"),
-        ("atlas-autoresearch",     "/tmp/autoresearch-parent-heartbeat.json",  "researcher",   "Atlas",    "atlas"),
-        ("atlas-research-daemon",  "/tmp/research-daemon-heartbeat.json",      "researcher",   "Atlas",    "atlas"),
-        ("atlas-sage",             "/tmp/sage-heartbeat.json",                 "sage",         "Sage",     "sage"),
-        ("atlas-principal",        "/tmp/principal-heartbeat.json",            "principal",    "Director", "principal"),
+        # Sweep window service (sweep.py heartbeat format)
+        ("atlas-research-window", "/tmp/autoresearch-heartbeat.json", "researcher", "Atlas",    "sweep"),
+        # Director cron — portfolio review + research oversight
+        ("atlas-director",        "/tmp/director-heartbeat.json",     "director_cron", "Director", "director_cron"),
     ]
 
     found_any = False
@@ -2522,25 +2083,20 @@ def _build_agents(daemon: dict) -> list:
             if ed and ed > experiments_done:
                 experiments_done = ed
 
-        # Core team members always show (sleeping when idle); legacy agents only show when active
-        _CORE_TEAM = {"sweep", "runner", "director_cron"}
+        # Both services are core — always show if installed, sleeping when idle
         if not svc_running and not hb:
-            if agent_type in _CORE_TEAM:
-                # Check if the service/timer is at least enabled (installed)
-                _is_enabled = False
-                try:
-                    # For timer-based services, check the timer unit
-                    check_unit = svc_name + ".timer" if agent_type == "director_cron" else svc_name
-                    r2 = _sp.run(["systemctl", "is-enabled", check_unit],
-                                 capture_output=True, text=True, timeout=3)
-                    _is_enabled = r2.stdout.strip() == "enabled"
-                except Exception:
-                    pass
-                if not _is_enabled:
-                    continue  # Not even installed — skip
-                # Core team member is installed but idle — show as sleeping
-            else:
-                continue  # Legacy/optional agent not active — skip
+            # Check if the service/timer is at least enabled (installed)
+            _is_enabled = False
+            try:
+                check_unit = svc_name + ".timer" if agent_type == "director_cron" else svc_name
+                r2 = _sp.run(["systemctl", "is-enabled", check_unit],
+                             capture_output=True, text=True, timeout=3)
+                _is_enabled = r2.stdout.strip() == "enabled"
+            except Exception:
+                pass
+            if not _is_enabled:
+                continue  # Not even installed — skip
+            # Service is installed but idle — show as sleeping
 
         found_any = True
 
@@ -2599,47 +2155,6 @@ def _build_agents(daemon: dict) -> list:
             else:
                 status = "sleeping"
                 task = "Engine offline"
-        elif agent_type == "runner":
-            # Runner daemon heartbeat: authoritative regardless of service state
-            # Phases: executing, evaluating, advancing, yielding, sleeping, error, stopped
-            rn_status = (hb.get("status") or "").strip() if hb else ""
-            rn_phase  = (hb.get("phase")  or "").strip() if hb else ""
-            rn_exp_id = (hb.get("experiment_id") or "") if hb else ""
-            rn_title  = (hb.get("experiment_title") or "") if hb else ""
-            rn_strat  = (hb.get("strategy") or "") if hb else ""
-            rn_depth  = hb.get("queue_depth", 0) if hb else 0
-            rn_done   = hb.get("experiments_completed", 0) if hb else 0
-
-            title_short = (rn_title[:30] + "…") if len(rn_title) > 30 else rn_title
-
-            if rn_status == "running":
-                if rn_phase == "executing":
-                    status = "typing"
-                    task   = title_short or (f"Running {rn_strat}" if rn_strat else "Running experiment")
-                elif rn_phase == "evaluating":
-                    status = "reading"
-                    task   = f"Evaluating {rn_exp_id}" if rn_exp_id else "Evaluating result"
-                elif rn_phase == "advancing":
-                    status = "typing"
-                    task   = "Auto-advancing lifecycle"
-                elif rn_phase == "idle":
-                    status = "idle"
-                    task   = f"Queue: {rn_depth} pending" if rn_depth else "Polling queue"
-                elif rn_phase == "error":
-                    status = "idle"
-                    task   = "Experiment error — retrying"
-                else:
-                    status = "reading"
-                    task   = "Processing queue"
-            elif rn_status in ("waiting", "sleeping") or rn_phase in ("sleeping", "yielding"):
-                status = "sleeping"
-                task   = f"Queue empty (done: {rn_done})" if rn_done else "Queue empty"
-            elif rn_status == "stopped" or not svc_running:
-                status = "sleeping"
-                task   = "Runner offline"
-            else:
-                status = "reading"
-                task   = "Starting up"
         elif agent_type == "director_cron":
             # Director cron heartbeat: runs twice daily, mostly idle between runs
             # Phases: reviewing, queuing, portfolio, reporting, idle, stopped
@@ -2688,73 +2203,6 @@ def _build_agents(daemon: dict) -> list:
             else:
                 status = "reading"
                 task   = "Reviewing..."
-        elif svc_running:
-            if agent_type == "principal":
-                # Principal/Director-specific phase mapping
-                if phase == "gathering":
-                    status = "reading"
-                    task = "Gathering research state"
-                elif phase == "reviewing":
-                    status = "reading"
-                    task = "Reviewing experiments"
-                elif phase == "executing":
-                    status = "typing"
-                    task = "Issuing directives"
-                elif phase == "sleep":
-                    status = "idle"
-                    task = "Sleeping until next review"
-                else:
-                    status = "reading"
-                    task = "Overseeing research"
-            elif agent_type == "sage":
-                # Sage-specific phase mapping
-                if phase.startswith("checking "):
-                    strat_label = phase[9:].replace("_", " ").title()
-                    status = "reading"
-                    task = f"Checking {strat_label}"
-                elif phase.startswith("creating_"):
-                    strat_label = phase[9:].replace("_", " ").title()
-                    status = "typing"
-                    task = f"Creating {strat_label}"
-                elif phase == "create_scan":
-                    status = "reading"
-                    task = "Scanning strategies..."
-                elif phase in ("promote", "legacy_scan"):
-                    status = "typing"
-                    task = "Promoting candidates"
-                elif phase == "sleep":
-                    status = "idle"
-                    task = "Sleeping until next cycle"
-                elif phase == "stopped":
-                    status = "sleeping"
-                    task = "Stopped"
-                elif strategy:
-                    status = "reading"
-                    task = strategy.replace("_", " ").title()
-                else:
-                    status = "reading"
-                    task = "Discovering..."
-            elif strategy:
-                strat_label = strategy.replace("_", " ").title()
-                if phase == "agent":
-                    status = "typing"
-                    task = f"Analyzing {strat_label}"
-                elif phase == "sweep":
-                    status = "typing"
-                    task = f"Sweeping {strat_label}"
-                else:
-                    status = "typing"
-                    task = strat_label
-            else:
-                if phase == "cycle_start":
-                    status = "reading"
-                    task = "Starting new cycle..."
-                elif phase == "cycle_done":
-                    status = "idle"
-                    task = "Cycle complete"
-                else:
-                    status = "reading"
-                    task = "Between strategies..."
         else:
             status = "sleeping"
             task = "Engine offline"
@@ -2837,31 +2285,12 @@ def _build_agents(daemon: dict) -> list:
     return agents
 
 
-def _build_discoveries(patterns: list, hypotheses: list, journal: list) -> list:
-    """Build consolidated discoveries list from patterns, hypotheses, and best results.
+def _build_discoveries(journal: list) -> list:
+    """Build consolidated discoveries list from sweep best results and journal.
 
     Merges multiple sources into a simple list of notable findings.
     """
     discoveries = []
-
-    # ── Patterns → discoveries ──────────────────────────────────
-    for p in patterns:
-        discoveries.append({
-            "text": p.get("name", "Unknown pattern"),
-            "type": "pattern",
-            "impact": p.get("impact", "medium"),
-            "detail": p.get("summary", ""),
-        })
-
-    # ── Confirmed hypotheses → discoveries ──────────────────────
-    for h in hypotheses:
-        if h.get("status") in ("confirmed", "testing"):
-            discoveries.append({
-                "text": h.get("title", "Unknown hypothesis"),
-                "type": "hypothesis",
-                "impact": "high" if h.get("status") == "confirmed" else "medium",
-                "detail": h.get("hypothesis", ""),
-            })
 
     # ── Best results from research/best/ → discoveries ──────────
     best_dir = PROJECT_ROOT / "research" / "best"
