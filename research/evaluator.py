@@ -21,6 +21,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+import numpy as np
+from scipy import stats
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ─── Stage → ExperimentType mapping ──────────────────────────────────────────
@@ -325,6 +328,222 @@ class ExperimentEvaluator:
             "delta_trades": delta_trades,
             "delta_dd": delta_dd,
             "simplicity_ok": simplicity_ok,
+        }
+
+    # ── Statistical Rigour Methods ────────────────────────────────────────
+
+    def deflated_sharpe_ratio(
+        self,
+        observed_sr: float,
+        n_strategies: int,
+        T_months: int,
+        skew: float = 0.0,
+        kurt: float = 3.0,
+    ) -> dict:
+        """Bailey & López de Prado (2014) Deflated Sharpe Ratio.
+
+        Computes the probability that the observed Sharpe ratio is significant
+        after correcting for multiple strategy testing.
+
+        Args:
+            observed_sr:   Annualised Sharpe ratio to test.
+            n_strategies:  Number of strategies tried (including this one).
+            T_months:      Number of months in the backtest sample.
+            skew:          Return distribution skewness (default 0 = normal).
+            kurt:          Return distribution kurtosis (default 3 = normal).
+
+        Returns:
+            dict with keys: dsr_pvalue, expected_max_sr, observed_sr,
+                            n_strategies_tested, T_months, is_significant
+        """
+        gamma = 0.5772156649  # Euler-Mascheroni constant
+        N = max(n_strategies, 1)
+
+        # E[max(SR)] under the null — Euler-Mascheroni approximation
+        if N > 1:
+            e_max_sr = (
+                (1 - gamma) * stats.norm.ppf(1 - 1 / N)
+                + gamma * stats.norm.ppf(1 - 1 / (N * np.e))
+            )
+        else:
+            e_max_sr = 0.0
+
+        # Convert annualised SR to monthly SR for the SE formula (Lo 2002)
+        sr_monthly = observed_sr / np.sqrt(12)
+        e_max_sr_monthly = e_max_sr / np.sqrt(12)
+
+        # Standard error of the Sharpe ratio with skew/kurtosis correction
+        se = np.sqrt(
+            (1 - skew * sr_monthly + (kurt - 1) / 4 * sr_monthly ** 2) / T_months
+        )
+
+        # DSR test statistic and p-value
+        if se > 0:
+            dsr_stat = (sr_monthly - e_max_sr_monthly) / se
+            dsr_pvalue = float(1 - stats.norm.cdf(dsr_stat))
+        else:
+            dsr_pvalue = 1.0
+
+        return {
+            "dsr_pvalue": round(dsr_pvalue, 4),
+            "expected_max_sr": round(float(e_max_sr), 4),
+            "observed_sr": round(float(observed_sr), 4),
+            "n_strategies_tested": n_strategies,
+            "T_months": T_months,
+            "is_significant": dsr_pvalue < 0.05,
+        }
+
+    def parameter_stability_test(
+        self,
+        metrics_at_variations: list,
+        base_sharpe: float,
+        tolerance: float = 0.50,
+    ) -> dict:
+        """Test if Sharpe is stable when params vary ±15%.
+
+        Args:
+            metrics_at_variations: list of dicts, each with a 'sharpe' key
+            base_sharpe:           the Sharpe at base params
+            tolerance:             max allowed relative change (0.50 = 50%)
+
+        Returns:
+            dict with: is_stable, min_sharpe, max_sharpe, base_sharpe,
+                       max_relative_change, tolerance, n_variations
+        """
+        sharpes = [m.get("sharpe", 0) for m in metrics_at_variations]
+        if not sharpes or base_sharpe == 0:
+            return {"is_stable": False, "reason": "insufficient data"}
+
+        min_s = min(sharpes)
+        max_s = max(sharpes)
+        max_change = (
+            max(abs(s - base_sharpe) / abs(base_sharpe) for s in sharpes)
+            if base_sharpe != 0
+            else 999
+        )
+
+        return {
+            "is_stable": max_change <= tolerance,
+            "min_sharpe": round(min_s, 4),
+            "max_sharpe": round(max_s, 4),
+            "base_sharpe": round(base_sharpe, 4),
+            "max_relative_change": round(max_change, 4),
+            "tolerance": tolerance,
+            "n_variations": len(sharpes),
+        }
+
+    def sub_period_test(
+        self,
+        period_sharpes: list,
+        min_profitable_ratio: float = 0.6,
+    ) -> dict:
+        """Test if strategy is profitable across majority of sub-periods.
+
+        Args:
+            period_sharpes:        Sharpe ratios for each sub-period.
+            min_profitable_ratio:  Fraction of periods that must be positive.
+
+        Returns:
+            dict with: passes, n_profitable, n_periods, profitable_ratio,
+                       min_required, period_sharpes
+        """
+        n_pos = sum(1 for s in period_sharpes if s > 0)
+        ratio = n_pos / len(period_sharpes) if period_sharpes else 0.0
+        return {
+            "passes": ratio >= min_profitable_ratio,
+            "n_profitable": n_pos,
+            "n_periods": len(period_sharpes),
+            "profitable_ratio": round(ratio, 4),
+            "min_required": min_profitable_ratio,
+            "period_sharpes": [round(s, 4) for s in period_sharpes],
+        }
+
+    def run_statistical_validation(
+        self,
+        observed_sr: float,
+        n_strategies: int = 29,
+        T_months: int = 60,
+        skew: float = 0.0,
+        kurt: float = 3.0,
+        metrics_at_variations: Optional[list] = None,
+        base_sharpe: Optional[float] = None,
+        stability_tolerance: float = 0.50,
+        period_sharpes: Optional[list] = None,
+        min_profitable_ratio: float = 0.6,
+    ) -> dict:
+        """Run all three statistical validation tests and return a combined result.
+
+        Args:
+            observed_sr:            Annualised Sharpe ratio to validate.
+            n_strategies:           Strategies tested (DSR correction).
+            T_months:               Backtest length in months.
+            skew:                   Return skewness (DSR correction).
+            kurt:                   Return kurtosis (DSR correction).
+            metrics_at_variations:  list[dict] for parameter stability test
+                                    (each dict must have 'sharpe' key).
+                                    If None, stability test is skipped.
+            base_sharpe:            Base-param Sharpe for stability test.
+                                    Defaults to observed_sr if not provided.
+            stability_tolerance:    Max relative Sharpe change (default 0.50).
+            period_sharpes:         list[float] Sharpe per sub-period.
+                                    If None, sub-period test is skipped.
+            min_profitable_ratio:   Fraction of profitable sub-periods required.
+
+        Returns:
+            dict with keys:
+              - dsr: result of deflated_sharpe_ratio()
+              - stability: result of parameter_stability_test() or None
+              - sub_period: result of sub_period_test() or None
+              - overall_pass: True only when every available test passes
+              - summary: human-readable string
+        """
+        dsr = self.deflated_sharpe_ratio(observed_sr, n_strategies, T_months, skew, kurt)
+
+        stability = None
+        if metrics_at_variations is not None:
+            _base = base_sharpe if base_sharpe is not None else observed_sr
+            stability = self.parameter_stability_test(
+                metrics_at_variations, _base, stability_tolerance
+            )
+
+        sub_period = None
+        if period_sharpes is not None:
+            sub_period = self.sub_period_test(period_sharpes, min_profitable_ratio)
+
+        # Aggregate pass/fail
+        tests_pass: list[bool] = [dsr["is_significant"]]
+        if stability is not None:
+            tests_pass.append(stability.get("is_stable", False))
+        if sub_period is not None:
+            tests_pass.append(sub_period.get("passes", False))
+
+        overall_pass = all(tests_pass)
+
+        # Build human-readable summary
+        parts = [
+            f"DSR p={dsr['dsr_pvalue']:.4f} "
+            f"({'✓' if dsr['is_significant'] else '✗'}, "
+            f"E[SR_max]={dsr['expected_max_sr']:.2f})"
+        ]
+        if stability is not None:
+            parts.append(
+                f"Stability {'✓' if stability.get('is_stable') else '✗'} "
+                f"(max_chg={stability.get('max_relative_change', 'N/A'):.1%})"
+            )
+        if sub_period is not None:
+            parts.append(
+                f"SubPeriods {'✓' if sub_period.get('passes') else '✗'} "
+                f"({sub_period['n_profitable']}/{sub_period['n_periods']} profitable)"
+            )
+
+        summary = f"overall={'PASS' if overall_pass else 'FAIL'}: " + " | ".join(parts)
+
+        return {
+            "dsr": dsr,
+            "stability": stability,
+            "sub_period": sub_period,
+            "overall_pass": overall_pass,
+            "summary": summary,
         }
 
     @staticmethod
