@@ -11,10 +11,6 @@
   ],
   "wti": [
     {
-      "t": "2026-03-09T12:00:06",
-      "v": 112.63
-    },
-    {
       "t": "2026-03-09T16:00:08",
       "v": 103.73
     },
@@ -81,13 +77,13 @@
     {
       "t": "2026-03-13T08:00:05",
       "v": 96.39
+    },
+    {
+      "t": "2026-03-13T16:00:07",
+      "v": 95.28
     }
   ],
   "brent": [
-    {
-      "t": "2026-03-09T12:00:06",
-      "v": 112.49
-    },
     {
       "t": "2026-03-09T16:00:08",
       "v": 107.2
@@ -155,13 +151,13 @@
     {
       "t": "2026-03-13T08:00:05",
       "v": 97.28
+    },
+    {
+      "t": "2026-03-13T16:00:07",
+      "v": 96.54
     }
   ],
   "gold": [
-    {
-      "t": "2026-03-09T12:00:06",
-      "v": 5087.7
-    },
     {
       "t": "2026-03-09T16:00:08",
       "v": 5143.7
@@ -229,13 +225,13 @@
     {
       "t": "2026-03-13T08:00:05",
       "v": 5084.1
+    },
+    {
+      "t": "2026-03-13T16:00:07",
+      "v": 5106.4
     }
   ],
   "vix": [
-    {
-      "t": "2026-03-09T12:00:06",
-      "v": 29.49
-    },
     {
       "t": "2026-03-09T16:00:08",
       "v": 29.49
@@ -303,14 +299,18 @@
     {
       "t": "2026-03-13T08:00:05",
       "v": 27.29
+    },
+    {
+      "t": "2026-03-13T16:00:07",
+      "v": 27.29
     }
   ],
   "last_escalation_event": {
-    "timestamp": "2026-03-13T04:09:05",
-    "description": "UK and British troops under fire at Erbil Iraqi air base from Iranian suicide drone swarm \u2014 UK Defence Chiefs confirm attack on NATO-allied base",
-    "source": "UK MOD/Daily Record/Falmouth Packet"
+    "timestamp": "2026-03-13T16:06:31",
+    "description": "19 total vessels attacked in Strait of Hormuz \u2014 largest single-conflict interdiction wave confirmed",
+    "source": "AP/Moneycontrol"
   },
-  "hours_since_escalation": 3.9,
+  "hours_since_escalation": 0.0,
   "escalation_gap_status": "active",
   "vlcc_3cycle_trend": "rising"
 }

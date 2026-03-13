@@ -27,3 +27,5 @@
 | 2026-03-13 02:49 | momentum_breakout | None → False | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-13 02:49 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-13 03:29 | consecutive_down_days | False → True | ❌ discard | -0.1843 | 0.4059 |
+| 2026-03-13 05:31 | momentum_breakout | None → False | ❌ discard | +0.0000 | 0.7364 |
+| 2026-03-13 05:31 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7364 |

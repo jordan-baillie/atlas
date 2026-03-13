@@ -505,6 +505,9 @@ def get_historical_bars(
                 continue
             df = pd.DataFrame(rows).set_index("date")
             df.index.name = "date"
+            # Atlas standard: tz-naive DatetimeIndex
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
             # adj_close = close (already adjusted per Adjustment enum)
             df["adj_close"] = df["close"]
             df = df[["open", "high", "low", "close", "adj_close", "volume", "ticker"]]

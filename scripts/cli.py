@@ -266,6 +266,10 @@ def cmd_plan(args):
     existing_positions = [p.to_dict() for p in portfolio.positions]
     for strat in strategies:
         try:
+            # Ensure indicators are pre-computed (backtest engine calls this,
+            # but live plan generation must also call it)
+            if hasattr(strat, 'precompute') and not getattr(strat, '_precomputed', False):
+                strat.precompute(data)
             signals = strat.generate_signals(data, portfolio.equity(prices), existing_positions)
             for sig in signals:
                 all_signals.append(sig)

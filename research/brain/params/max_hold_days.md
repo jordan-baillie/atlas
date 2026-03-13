@@ -4,13 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 07:08 | consecutive_down_days | None → 7 | ❌ discard | -0.0015 | 0.5728 |
-| 2026-03-12 07:08 | consecutive_down_days | None → 5 | ❌ discard | +0.0000 | 0.5743 |
-| 2026-03-12 10:31 | momentum_breakout | 10 → 15 | ✅ kept | +0.0426 | 0.7217 |
-| 2026-03-12 10:31 | momentum_breakout | 10 → 20 | ❌ discard | -0.2391 | 0.4400 |
-| 2026-03-12 10:31 | momentum_breakout | 10 → 5 | ❌ discard | -0.0116 | 0.6675 |
-| 2026-03-12 10:46 | short_term_mr | None → 7 | ❌ discard | -0.0019 | 0.5017 |
-| 2026-03-12 10:46 | short_term_mr | None → 2 | ❌ discard | -0.0868 | 0.4168 |
 | 2026-03-12 10:46 | short_term_mr | None → 3 | ❌ discard | -0.0904 | 0.4132 |
 | 2026-03-12 10:46 | short_term_mr | None → 5 | ❌ discard | +0.0000 | 0.5036 |
 | 2026-03-12 10:49 | bb_squeeze | 15 → 10 | ❌ discard | -0.0198 | 0.3903 |
@@ -54,3 +47,10 @@
 | 2026-03-13 03:29 | consecutive_down_days | None → 7 | ❌ discard | -0.0018 | 0.5884 |
 | 2026-03-13 03:29 | consecutive_down_days | None → 5 | ❌ discard | +0.0000 | 0.5902 |
 | 2026-03-13 03:29 | consecutive_down_days | None → 3 | ❌ discard | +0.0011 | 0.5913 |
+| 2026-03-13 05:31 | momentum_breakout | 15 → 20 | ❌ discard | -0.2679 | 0.4685 |
+| 2026-03-13 05:31 | momentum_breakout | 15 → 10 | ❌ discard | -0.0357 | 0.7007 |
+| 2026-03-13 05:31 | momentum_breakout | 15 → 5 | ❌ discard | -0.0423 | 0.6941 |
+| 2026-03-13 05:33 | short_term_mr | None → 3 | ❌ discard | -0.0592 | 0.4545 |
+| 2026-03-13 05:33 | short_term_mr | None → 7 | ❌ discard | -0.0015 | 0.5122 |
+| 2026-03-13 05:33 | short_term_mr | None → 5 | ❌ discard | +0.0000 | 0.5137 |
+| 2026-03-13 05:33 | short_term_mr | None → 2 | ❌ discard | -0.0568 | 0.4569 |

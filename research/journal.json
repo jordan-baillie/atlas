@@ -6345,5 +6345,51 @@
     "promoted": false,
     "runtime_s": 0,
     "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "ar-20260313_155952",
+    "timestamp": "2026-03-13T05:59:52.832294+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "adx_threshold: 20.0\u219225.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4408,
+      "cagr_pct": 10.9415,
+      "max_drawdown_pct": 6.6835,
+      "total_trades": 399,
+      "profit_factor": 2.1019
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 adx_threshold: 20.0\u219225.0"
+    ],
+    "promoted": false,
+    "runtime_s": 57.3,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260313_162404",
+    "timestamp": "2026-03-13T06:24:04.606607+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "ema_touch_pct: 0.015\u21920.01",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5558,
+      "cagr_pct": 13.6703,
+      "max_drawdown_pct": 6.3326,
+      "total_trades": 398,
+      "profit_factor": 2.265
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 ema_touch_pct: 0.015\u21920.01"
+    ],
+    "promoted": false,
+    "runtime_s": 63.0,
+    "agent_id": "autoresearch"
   }
 ]

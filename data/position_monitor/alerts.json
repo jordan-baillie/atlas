@@ -1660,5 +1660,72 @@
     "value": null,
     "source": "iran_monitor_agent",
     "timestamp": "2026-03-13T08:06:21"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_oil5d",
+    "condition_label": "Oil price 5-day trend rising",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-13T16:06:20"
+  },
+  {
+    "position_id": "0a70124996f3",
+    "ticker": "INSW",
+    "type": "invalidation_breach",
+    "message": "Price $66.76 breached invalidation $72.00",
+    "timestamp": "2026-03-13T16:06:54"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 597.22,
+    "timestamp": "2026-03-13T16:06:56"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-13T16:07:22"
+  },
+  {
+    "position_id": "0a70124996f3",
+    "ticker": "INSW",
+    "type": "invalidation_breach",
+    "message": "Price $66.76 breached invalidation $72.00",
+    "timestamp": "2026-03-13T16:07:30"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 597.22,
+    "timestamp": "2026-03-13T16:07:32"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": null,
+    "source": "iran_monitor_agent",
+    "timestamp": "2026-03-13T16:08:12"
   }
 ]

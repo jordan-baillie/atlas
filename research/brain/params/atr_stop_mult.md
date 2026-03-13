@@ -4,15 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 13:21 | short_term_mr | None → 2.5 | ❌ discard | -0.0405 | 0.4674 |
-| 2026-03-12 13:21 | short_term_mr | None → 2.0 | ❌ discard | -0.0284 | 0.4795 |
-| 2026-03-12 13:24 | bb_squeeze | 2.0 → 1.5 | ❌ discard | -0.2768 | 0.1333 |
-| 2026-03-12 13:24 | bb_squeeze | 2.0 → 2.5 | ❌ discard | -0.0461 | 0.3640 |
-| 2026-03-12 13:24 | bb_squeeze | 2.0 → 3.0 | ❌ discard | -0.0774 | 0.3327 |
-| 2026-03-12 13:29 | adx_trend_pullback | 1.5 → 2.5 | ❌ discard | -0.0104 | 0.4043 |
-| 2026-03-12 13:29 | adx_trend_pullback | 1.5 → 3.0 | ❌ discard | -0.0346 | 0.3801 |
-| 2026-03-12 13:29 | adx_trend_pullback | 1.5 → 2.0 | ❌ discard | -0.1098 | 0.3049 |
-| 2026-03-12 13:58 | consecutive_down_days | None → 1.5 | ❌ discard | -0.0029 | 0.5712 |
 | 2026-03-12 13:58 | consecutive_down_days | None → 2.5 | ❌ discard | -0.0129 | 0.5612 |
 | 2026-03-12 13:58 | consecutive_down_days | None → 3.0 | ❌ discard | -0.0189 | 0.5552 |
 | 2026-03-12 13:58 | consecutive_down_days | None → 2.0 | ❌ discard | +0.0000 | 0.5741 |
@@ -54,3 +45,12 @@
 | 2026-03-13 03:28 | consecutive_down_days | None → 3.0 | ❌ discard | -0.0182 | 0.5720 |
 | 2026-03-13 03:28 | consecutive_down_days | None → 2.0 | ❌ discard | +0.0000 | 0.5902 |
 | 2026-03-13 03:28 | consecutive_down_days | None → 2.5 | ❌ discard | -0.0153 | 0.5749 |
+| 2026-03-13 05:31 | momentum_breakout | 1.5 → 2.5 | ❌ discard | -0.2423 | 0.4941 |
+| 2026-03-13 05:31 | momentum_breakout | 1.5 → 3.0 | ❌ discard | -0.2510 | 0.4854 |
+| 2026-03-13 05:31 | momentum_breakout | 1.5 → 2.0 | ❌ discard | -0.2156 | 0.5208 |
+| 2026-03-13 05:34 | short_term_mr | None → 1.5 | ❌ discard | +0.0000 | 0.5137 |
+| 2026-03-13 05:34 | short_term_mr | None → 2.0 | ❌ discard | -0.0255 | 0.4882 |
+| 2026-03-13 05:34 | short_term_mr | None → 2.5 | ❌ discard | -0.0182 | 0.4955 |
+| 2026-03-13 06:25 | adx_trend_pullback | 1.5 → 2.5 | ❌ discard | -0.1593 | 0.3965 |
+| 2026-03-13 06:25 | adx_trend_pullback | 1.5 → 3.0 | ❌ discard | -1.8254 | -1.2696 |
+| 2026-03-13 06:25 | adx_trend_pullback | 1.5 → 2.0 | ❌ discard | -0.0979 | 0.4579 |
