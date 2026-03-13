@@ -2,12 +2,12 @@
   "strategy": "trend_following",
   "market": "sp500",
   "params": {
-    "fast_ma": 50,
+    "fast_ma": 15,
     "slow_ma": 20,
-    "pullback_pct": 0.06,
-    "atr_period": 10,
-    "atr_stop_mult": 1.5,
-    "trailing_stop_atr_mult": 2.8,
+    "pullback_pct": 0.04,
+    "atr_period": 14,
+    "atr_stop_mult": 2.0,
+    "trailing_stop_atr_mult": 2.5,
     "max_hold_days": 15,
     "volume": {
       "lookback": 20,
@@ -68,5 +68,7 @@
   "description": "atr_stop_mult=1.5",
   "experiments_run": 57,
   "experiments_kept": 21,
-  "updated_at": "2026-03-11T07:42:15.500724+00:00"
+  "updated_at": "2026-03-11T07:42:15.500724+00:00",
+  "_fix_note": "Reset to live v2.2 params (Sharpe ~0.50). Previous best had inverted fast/slow MA.",
+  "sharpe": 0.5
 }

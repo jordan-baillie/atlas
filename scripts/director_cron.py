@@ -520,6 +520,25 @@ def main() -> int:
         if portfolio_ran and not dry_run:
             state["last_portfolio_run"] = datetime.now(timezone.utc).isoformat()
             _save_state(state)
+
+            # Auto-update strategy weights from optimizer results
+            try:
+                import json as _json
+                opt_path = PROJECT_ROOT / "research" / "results" / "portfolio_optimization.json"
+                if opt_path.exists():
+                    from research.portfolio_optimizer import update_live_config_weights
+                    opt_result = _json.loads(opt_path.read_text())
+                    weight_update = update_live_config_weights(opt_result, market="sp500")
+                    if weight_update.get("updated"):
+                        logger.info(
+                            "Strategy weights auto-updated to %s: %s",
+                            weight_update["new_version"],
+                            weight_update["changes"],
+                        )
+                    else:
+                        logger.info("Weight update: %s", weight_update.get("reason", "no change"))
+            except Exception as _wu_exc:
+                logger.warning("Weight update failed: %s", _wu_exc)
     else:
         logger.info(
             "Portfolio optimizer: skipped (ran %.1f days ago, threshold=%d days)",

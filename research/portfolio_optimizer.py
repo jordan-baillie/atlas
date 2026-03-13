@@ -893,5 +893,89 @@ def main():
         print(f"Vault notes written to {vault_dir / 'Portfolio'}")
 
 
+def update_live_config_weights(
+    result: Dict[str, Any],
+    market: str = "sp500",
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """Update live config strategy weights from portfolio optimizer results.
+
+    Only updates weights for strategies that are currently enabled in the config.
+    Does NOT enable/disable strategies — that's a manual decision.
+
+    Also updates allocation pool position counts proportionally.
+
+    Args:
+        result: Portfolio optimization result dict.
+        market: Market ID.
+        dry_run: If True, return changes without writing.
+
+    Returns:
+        Dict with 'updated', 'changes', 'new_version' keys.
+    """
+    from utils.config import get_active_config, save_config_version
+
+    config = get_active_config(market)
+    optimal_weights = result.get("active_weights", {})
+    if not optimal_weights:
+        return {"updated": False, "reason": "No active weights in optimizer result"}
+
+    changes = []
+    for strat_name, strat_cfg in config.get("strategies", {}).items():
+        if not strat_cfg.get("enabled"):
+            continue
+        old_w = strat_cfg.get("weight", 0)
+        new_w = optimal_weights.get(strat_name, 0)
+        if new_w > 0 and abs(old_w - new_w) > 0.01:  # >1% change threshold
+            changes.append({
+                "strategy": strat_name,
+                "old_weight": round(old_w, 4),
+                "new_weight": round(new_w, 4),
+            })
+            strat_cfg["weight"] = round(new_w, 4)
+
+    if not changes:
+        return {"updated": False, "reason": "No significant weight changes", "changes": []}
+
+    # Update allocation pool position counts proportionally
+    alloc = config.get("allocation", {})
+    if alloc.get("enabled"):
+        max_pos = config.get("risk", {}).get("max_open_positions", 10)
+        pools = alloc.get("pools", {})
+        for strat_name in list(pools.keys()):
+            if strat_name == "_other":
+                continue
+            w = config.get("strategies", {}).get(strat_name, {}).get("weight", 0)
+            if w > 0:
+                pools[strat_name]["max_positions"] = max(1, round(w * max_pos))
+                pools[strat_name]["weight"] = round(w, 4)
+
+    if dry_run:
+        return {"updated": False, "reason": "dry_run", "changes": changes}
+
+    # Version bump
+    old_ver = config.get("version", "v3.0")
+    # Micro-version: v3.0 -> v3.0.1, v3.0.1 -> v3.0.2
+    parts = old_ver.replace("v", "").split(".")
+    if len(parts) == 2:
+        new_ver = f"v{parts[0]}.{parts[1]}.1"
+    elif len(parts) == 3:
+        new_ver = f"v{parts[0]}.{parts[1]}.{int(parts[2])+1}"
+    else:
+        new_ver = old_ver + ".1"
+
+    config["version"] = new_ver
+    config["_weight_update"] = {
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "portfolio_sharpe": result.get("portfolio_metrics", {}).get("simulated_sharpe"),
+        "changes": changes,
+    }
+
+    save_config_version(config, version=new_ver, market_id=market)
+    logger.info("Config weights updated: %s → %s (%d changes)", old_ver, new_ver, len(changes))
+
+    return {"updated": True, "changes": changes, "new_version": new_ver}
+
+
 if __name__ == "__main__":
     main()

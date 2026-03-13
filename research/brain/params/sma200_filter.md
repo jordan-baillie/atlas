@@ -31,3 +31,5 @@
 | 2026-03-13 05:31 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7364 |
 | 2026-03-13 06:27 | adx_trend_pullback | None → True | ❌ discard | +0.0000 | 0.5558 |
 | 2026-03-13 06:27 | adx_trend_pullback | None → False | ❌ discard | -0.1226 | 0.4332 |
+| 2026-03-13 07:20 | demark_sequential | None → True | ❌ discard | -5.5920 | -9.7056 |
+| 2026-03-13 07:20 | demark_sequential | None → False | ❌ discard | +0.0000 | -4.1136 |
