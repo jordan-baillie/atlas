@@ -11,812 +11,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=optional" rel="stylesheet">
-<style>
-:root {
-  --bg: #0d0c0a;
-  --surface: #151310;
-  --surface-hover: #1c1914;
-  --surface-raised: #231f18;
-  --border: #2a2419;
-  --border-subtle: #1e1a13;
-  --border-glow: #3a3020;
+<link rel="stylesheet" href="atlas.css">
 
-  --text: #e8e4da;
-  --text-secondary: #b0a494;  /* improved contrast — was #a09585 */
-  --text-tertiary: #8a7e70;  /* passes WCAG AA — was #635a4c */
-
-  --green: #7fb858;
-  --green-bright: #9dd672;
-  --green-dim: rgba(127,184,88,0.10);
-  --red: #d05858;
-  --red-dim: rgba(208,88,88,0.08);
-  --amber: #d4a84a;
-  --amber-dim: rgba(212,168,74,0.08);
-  --blue: #5a93c0;
-  --blue-dim: rgba(90,147,192,0.08);
-  --purple: #a07ec4;
-  --purple-dim: rgba(160,126,196,0.08);
-  --orange: #d97a55;
-  --orange-dim: rgba(217,122,85,0.08);
-  --cyan: #55b0a5;
-
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --radius: 10px;
-  --radius-sm: 7px;
-  --radius-xs: 4px;
-}
-
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { font-size: 14px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
-
-/* ── Accent bar ── */
-body::after {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 10000;
-  background: linear-gradient(90deg, #c17040 0%, #5a8fba 35%, #738c5a 65%, #b89545 100%);
-}
-
-/* ── Background canvas + vignette (no blur, pure compositing) ── */
-#phosphor-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.crt-scanlines { display: none; }
-.crt-vignette {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.3) 100%);
-}
-
-/* ── Plus grid markers (Stripe-inspired) ── */
-.plus-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 2px; pointer-events: none; user-select: none;
-  height: 14px; margin: 2px 0 4px;
-  opacity: 0; animation: fadeIn 0.6s ease-out forwards;
-}
-.plus-row .plus {
-  color: var(--text-tertiary); font-size: 11px; line-height: 1;
-  font-family: var(--mono); font-weight: 400; opacity: 0.7;
-}
-/* Dashed separators between section groups */
-.dash-sep {
-  border: none; border-top: 0.5px dashed var(--border-glow);
-  margin: 6px 0; opacity: 0.4;
-}
-/* ── Micro-accent canvases (Stripe Art-inspired) ── */
-.accent-canvas {
-  pointer-events: none; user-select: none; opacity: 0.6;
-  border-radius: 2px;
-}
-.accent-wrap {
-  display: flex; align-items: center; gap: 4px; pointer-events: none;
-}
-.accent-label {
-  font-family: var(--mono); font-size: 8px; color: var(--text-tertiary);
-  text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.5;
-}
-
-/* ── Shell ── */
-.shell { max-width: 1280px; margin: 0 auto; padding: 28px 24px 64px; position: relative; z-index: 1; }
-
-/* ── Entrance ── */
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.animate-in { opacity: 0; animation: fadeIn 0.4s ease-out forwards; }
-
-/* ── Header (ONLY element with backdrop-filter) ── */
-.header {
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 2px; z-index: 100;
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  background: rgba(13,12,10,0.7);
-  border-radius: var(--radius); padding: 10px 20px; margin: 0 -4px 24px;
-  border: 1px solid var(--border-subtle);
-  animation: fadeIn 0.3s ease-out;
-}
-.header-left { display: flex; align-items: center; gap: 14px; }
-.logo {
-  font-family: var(--font-display); font-size: 28px; font-weight: 400; letter-spacing: -0.3px;
-  background: linear-gradient(135deg, var(--text) 30%, var(--orange));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-/* ── Animated icon canvases (Stripe-inspired) ── */
-.atlas-globe { width: 34px; height: 34px; flex-shrink: 0; opacity: 0.8; }
-.card-icon-wrap { display: flex; align-items: center; gap: 6px; }
-.card-icon { width: 20px; height: 20px; flex-shrink: 0; opacity: 0.7; }
-.version {
-  font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--text-tertiary);
-  background: var(--surface); border: 1px solid var(--border); padding: 2px 10px; border-radius: 20px;
-}
-.header-right { display: flex; align-items: center; gap: 10px; }
-
-/* ── Status pills ── */
-.status-pill {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 500; color: var(--text-secondary);
-  background: var(--surface); border: 1px solid var(--border); padding: 5px 14px; border-radius: 20px;
-}
-.pulse, .pulse-live, .pulse-paper {
-  width: 7px; height: 7px; border-radius: 50%;
-  animation: pulse 2.5s ease-in-out infinite;
-}
-.pulse { background: var(--green); box-shadow: 0 0 6px var(--green-dim); }
-.pulse-live { background: var(--red); box-shadow: 0 0 6px var(--red-dim); animation-duration: 1.5s; }
-.pulse-paper { background: var(--amber); box-shadow: 0 0 6px var(--amber-dim); }
-.mode-live { color: var(--red); font-weight: 600; }
-.mode-paper { color: var(--amber); font-weight: 600; }
-.mode-dry { color: var(--orange); font-weight: 600; }
-
-/* ── Market clocks ── */
-.market-clocks { display: flex; align-items: center; gap: 5px; }
-.market-clock {
-  display: flex; align-items: center; gap: 6px; font-size: 11px;
-  padding: 4px 11px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--surface); white-space: nowrap;
-}
-.market-clock.mc-open { border-color: rgba(127,184,88,0.25); background: rgba(127,184,88,0.04); }
-.market-clock-name { font-family: var(--mono); font-weight: 700; font-size: 10px; letter-spacing: 0.4px; }
-.market-clock-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-.market-clock-dot.mc-dot-open { background: var(--green) !important; box-shadow: 0 0 6px var(--green-dim) !important; animation: pulse 1.5s ease-in-out infinite; }
-.market-clock-time { font-family: var(--mono); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; min-width: 48px; }
-.market-clock-label { font-size: 10px; color: var(--text-tertiary); }
-@media (max-width: 700px) {
-  .market-clocks { gap: 3px; } .market-clock { padding: 3px 8px; }
-  .market-clock-time { font-size: 10px; min-width: 38px; } .market-clock-label { display: none; }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; } 50% { opacity: 0.25; }
-}
-
-/* ── KPI Cards — hero layout ── */
-.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
-.card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 18px 20px;
-  position: relative; overflow: hidden;
-  opacity: 0; animation: fadeIn 0.4s ease-out forwards;
-}
-.card:nth-child(1) { animation-delay: 0.04s; }
-.card:nth-child(2) { animation-delay: 0.08s; }
-.card:nth-child(3) { animation-delay: 0.12s; }
-.card:nth-child(4) { animation-delay: 0.16s; }
-.card:nth-child(5) { animation-delay: 0.20s; }
-/* After first render, disable fadeIn so data refreshes don't flash */
-.cards-loaded .card { opacity: 1; animation: none; }
-.card:hover { border-color: var(--border-glow); }
-.card::before { display: none; }
-/* Accent glow on first card (equity) */
-.card:first-child { border-color: var(--border-glow); }
-.card:first-child::after {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--amber), transparent);
-  opacity: 0.4;
-}
-.card-label {
-  font-size: 10px; font-weight: 600; color: var(--text-tertiary);
-  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
-}
-.card-value {
-  font-family: var(--mono); font-size: 26px; font-weight: 700;
-  letter-spacing: -1px; line-height: 1.15; font-variant-numeric: tabular-nums;
-}
-.card-sub { font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
-.card-sparkline { display: inline-flex; align-items: center; }
-.up { color: var(--green); }
-.down { color: var(--red); }
-.flat { color: var(--text); }
-
-/* ── Sections ── */
-.section {
-  background: transparent; border: none; border-top: 0.5px dashed var(--border-glow);
-  border-radius: 0; margin-bottom: 4px; overflow: hidden;
-  opacity: 0; animation: fadeIn 0.4s ease-out forwards; animation-delay: 0.2s;
-}
-.section-head {
-  padding: 12px 4px; display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; user-select: none; border-radius: 0;
-}
-.section-head:hover { background: rgba(255,255,255,0.015); }
-.section-title {
-  font-family: var(--mono); font-size: 11px; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary);
-  display: flex; align-items: center; gap: 10px;
-}
-.section-count {
-  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--amber);
-  background: none; padding: 0; border-radius: 0;
-}
-.section-body {
-  padding: 0 4px 16px; max-height: 2000px; overflow: hidden; opacity: 1;
-  transition: max-height 0.15s ease-out, opacity 0.1s ease, padding 0.15s ease;
-}
-.section-body.collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; content-visibility: hidden; }
-.chevron {
-  font-family: var(--mono); font-size: 14px; color: var(--text-tertiary); width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center; border-radius: 0;
-  transition: transform 0.2s ease;
-}
-.chevron.down { transform: rotate(45deg); }
-.chevron.right { transform: rotate(0deg); }
-
-/* ── Tables ── */
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
-th {
-  text-align: left; padding: 9px 12px; font-size: 10px; text-transform: uppercase;
-  letter-spacing: 0.7px; color: var(--text-tertiary); font-weight: 600;
-  border-bottom: 0.5px dashed var(--border-glow); white-space: nowrap; cursor: pointer;
-  position: sticky; top: 0; z-index: 1; background: var(--bg);
-}
-th::after { content: '↕'; margin-left: 3px; opacity: 0; font-size: 8px; }
-th:hover { color: var(--text-secondary); }
-th:hover::after { opacity: 0.4; }
-td { padding: 9px 12px; border-bottom: 0.5px solid var(--border-subtle); white-space: nowrap; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.015); }
-.mono { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
-
-/* ── Strategy badges ── */
-.strat {
-  display: inline-flex; padding: 2px 8px; border-radius: 3px;
-  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
-}
-.strat-trend_following { background: var(--blue-dim); color: var(--blue); }
-.strat-mean_reversion { background: var(--purple-dim); color: var(--purple); }
-.strat-opening_gap { background: var(--green-dim); color: var(--green); }
-.strat-momentum_breakout { background: var(--orange-dim); color: var(--orange); }
-.strat-short_term_mr { background: rgba(85,176,165,0.10); color: var(--cyan); }
-/* ── Strategy tooltip ── */
-.strat-tip {
-  position: relative; cursor: help;
-}
-.strat-tip .strat-tiptext {
-  visibility: hidden; opacity: 0;
-  position: absolute; z-index: 100;
-  bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-  width: 300px; max-width: 90vw;
-  background: var(--surface-raised); border: 1px solid var(--border-glow);
-  border-radius: var(--radius-sm); padding: 10px 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  font-size: 11px; line-height: 1.55; font-weight: 400; font-family: var(--font);
-  color: var(--text-secondary); text-transform: none; letter-spacing: 0;
-  white-space: normal; text-align: left;
-  transition: opacity 0.15s ease, visibility 0.15s ease;
-  pointer-events: none;
-}
-.strat-tip .strat-tiptext::after {
-  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: var(--border-glow);
-}
-.strat-tip:hover .strat-tiptext {
-  visibility: visible; opacity: 1;
-}
-.strat-tip .tip-name {
-  font-weight: 600; color: var(--text); font-size: 12px; margin-bottom: 4px;
-  display: flex; align-items: center; gap: 6px;
-}
-.strat-tip .tip-ref {
-  font-size: 10px; color: var(--text-tertiary); font-style: italic; margin-top: 4px;
-}
-/* Keep tooltip visible when it would overflow left */
-td:first-child .strat-tip .strat-tiptext,
-td:nth-child(2) .strat-tip .strat-tiptext {
-  left: 0; transform: none;
-}
-td:first-child .strat-tip .strat-tiptext::after,
-td:nth-child(2) .strat-tip .strat-tiptext::after {
-  left: 20px; transform: none;
-}
-/* FIX 17: merged overflow rules — single declaration wins (allows tooltip overflow + x-scroll) */
-.table-scroll { overflow-x: auto; overflow-y: visible; }
-/* Activity feed tooltips appear below (items are near top of viewport) */
-.activity-strat .strat-tip .strat-tiptext {
-  bottom: auto; top: calc(100% + 8px);
-}
-.activity-strat .strat-tip .strat-tiptext::after {
-  top: auto; bottom: 100%;
-  border-top-color: transparent; border-bottom-color: var(--border-glow);
-}
-
-.strat-sector_rotation, .strat-rotation { background: var(--amber-dim); color: var(--amber); }
-.strat-volatility, .strat-volatility_breakout { background: rgba(160,126,196,0.10); color: var(--purple); }
-.strat-event { background: var(--orange-dim); color: var(--orange); }
-.strat-sentiment { background: rgba(85,176,165,0.10); color: var(--cyan); }
-.strat-manual { background: rgba(99,90,76,0.12); color: var(--text-tertiary); }
-
-/* ── Market badges ── */
-.market-tag {
-  display: inline-flex; padding: 1px 6px; border-radius: 3px;
-  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
-}
-.market-sp500 { background: var(--blue-dim); color: var(--blue); }
-.market-asx { background: var(--purple-dim); color: var(--purple); }
-
-/* ── Order statuses ── */
-.order-status { display: inline-flex; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 600; }
-.order-filled { background: var(--green-dim); color: var(--green); }
-.order-partial { background: var(--amber-dim); color: var(--amber); }
-.order-pending { background: var(--blue-dim); color: var(--blue); }
-.order-failed { background: var(--red-dim); color: var(--red); }
-.order-cancelled { background: rgba(99,90,76,0.12); color: var(--text-tertiary); }
-
-/* ── Tabs ── */
-.tab-nav {
-  display: flex; gap: 2px; margin-bottom: 18px; width: fit-content;
-  background: var(--surface); border-radius: var(--radius); padding: 3px;
-  border: 1px solid var(--border-subtle);
-}
-.tab-btn {
-  padding: 8px 20px; border: none; background: none; cursor: pointer;
-  font-family: var(--font); font-size: 13px; font-weight: 600;
-  color: var(--text-tertiary); border-radius: var(--radius-sm);
-  display: flex; align-items: center; gap: 8px;
-}
-.tab-btn:hover { color: var(--text-secondary); background: var(--surface-hover); }
-.tab-btn.active { color: var(--text); background: var(--surface-raised); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-.tab-btn .tab-icon { width: 16px; height: 16px; flex-shrink: 0; }
-.tab-btn .tab-badge {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  padding: 1px 6px; border-radius: 10px; background: var(--border); color: var(--text-secondary);
-}
-.tab-btn.active .tab-badge { background: var(--blue-dim); color: var(--blue); }
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-/* ── Market selector ── */
-.market-selector { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.market-btn {
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  padding: 7px 16px; border-radius: var(--radius-xs); cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
-  display: flex; align-items: center; gap: 7px;
-}
-.market-btn:hover { background: var(--surface-hover); color: var(--text); }
-.market-btn.active {
-  color: var(--text); border-color: var(--amber);
-  background: linear-gradient(135deg, var(--surface-raised), rgba(212,168,74,0.06));
-  box-shadow: 0 0 12px rgba(212,168,74,0.08);
-}
-.market-btn .mkt-eq { font-weight: 400; color: var(--text-tertiary); margin-left: 2px; }
-.market-btn.active .mkt-eq { color: var(--text-secondary); }
-.market-btn .mkt-dot { width: 6px; height: 6px; border-radius: 50%; }
-
-/* ── Research ── */
-.research-badge { display: inline-flex; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px; }
-.badge-pass { background: var(--green-dim); color: var(--green); }
-.badge-fail { background: var(--red-dim); color: var(--red); }
-.badge-partial { background: var(--amber-dim); color: var(--amber); }
-.badge-queued { background: rgba(99,90,76,0.12); color: var(--text-tertiary); }
-.badge-promoted { background: var(--green-dim); color: var(--green-bright); }
-.badge-running { background: var(--blue-dim); color: var(--blue); }
-
-/* Agent Floor */
-.agent-floor-wrap {
-  background: var(--bg); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius); margin-bottom: 16px; position: relative; overflow: hidden;
-}
-.agent-floor-wrap::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent); opacity: 0.4; z-index: 1;
-}
-.agent-floor-wrap::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent); opacity: 0.3;
-}
-#agent-canvas { display: block; width: 100%; height: 340px; image-rendering: pixelated; }
-
-/* Activity Ticker */
-.agent-ticker {
-  font: 11px/1.6 "JetBrains Mono", monospace; color: var(--text-secondary);
-  padding: 6px 12px; margin-bottom: 12px; min-height: 20px;
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); overflow: hidden; white-space: nowrap;
-  opacity: 0.85; transition: opacity 0.3s;
-}
-.agent-ticker:empty { display: none; }
-.agent-ticker .tick-icon { margin-right: 6px; }
-.agent-ticker .tick-kept { color: var(--green); }
-.agent-ticker .tick-disc { color: var(--red); opacity: 0.7; }
-.agent-ticker .tick-test { color: var(--amber); }
-.agent-ticker .tick-write { color: var(--purple); }
-.agent-ticker .tick-load { color: var(--blue); }
-.agent-ticker .tick-time { color: var(--text-tertiary); font-size: 10px; margin-left: 8px; }
-
-/* Portfolio Metrics Strip */
-.portfolio-strip {
-  display: flex; align-items: stretch; gap: 1px; margin-bottom: 12px;
-  background: var(--border-subtle); border-radius: var(--radius-sm);
-  overflow: hidden; border: 1px solid var(--border-subtle);
-}
-.portfolio-strip-empty { display: none; }
-.pf-cell {
-  flex: 1; background: var(--surface); padding: 10px 10px;
-  text-align: center; min-width: 0;
-}
-.pf-cell:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-.pf-cell:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.pf-val { font-family: var(--mono); font-size: 18px; font-weight: 800; line-height: 1.2; }
-.pf-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-tertiary); margin-top: 3px; }
-.pf-delta { font-family: var(--mono); font-size: 10px; margin-top: 2px; }
-.pf-delta-up { color: var(--green); }
-.pf-delta-down { color: var(--red); }
-.pf-delta-flat { color: var(--text-tertiary); }
-.pf-weights { display: flex; height: 4px; border-radius: 2px; overflow: hidden; margin-top: 4px; gap: 1px; }
-.pf-weights-bar { height: 100%; min-width: 2px; border-radius: 1px; }
-.pf-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 10px 4px; background: var(--surface);
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  border: 1px solid var(--border-subtle); border-bottom: none; margin-bottom: 0;
-}
-.pf-header-title { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-secondary); }
-.pf-header-sub { font-family: var(--mono); font-size: 9px; color: var(--text-tertiary); }
-.portfolio-strip { border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
-@media (max-width: 600px) {
-  .portfolio-strip { flex-wrap: wrap; }
-  .pf-cell { flex: 1 1 30%; }
-}
-
-/* KPI Strip */
-.research-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
-.rkpi {
-  background: var(--surface); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); padding: 14px 12px; text-align: center;
-}
-.rkpi:hover { border-color: var(--border); }
-.rkpi-value { font-family: var(--mono); font-size: 22px; font-weight: 800; line-height: 1.1; }
-.rkpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-top: 4px; }
-.rkpi-sub { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); margin-top: 2px; }
-
-/* Activity Feed */
-.activity-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12px;
-}
-.activity-item:last-child { border-bottom: none; }
-.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.activity-dot.v-pass { background: var(--green); }
-.activity-dot.v-fail { background: var(--red); }
-.activity-dot.v-partial { background: var(--amber); }
-.activity-dot.v-promoted { background: var(--green-bright); box-shadow: 0 0 6px var(--green-dim); }
-.activity-time { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); min-width: 52px; flex-shrink: 0; }
-.activity-strat { font-weight: 600; min-width: 100px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.activity-detail { color: var(--text-secondary); font-family: var(--mono); font-size: 11px; flex: 1; }
-
-/* Discoveries */
-.discovery-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 14px; margin-bottom: 6px;
-  background: var(--surface-hover); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm); border-left: 3px solid var(--green);
-}
-.discovery-item:hover { border-color: var(--border); }
-.discovery-item.impact-medium { border-left-color: var(--amber); }
-.discovery-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
-.discovery-text { font-size: 12px; font-weight: 500; line-height: 1.4; }
-.discovery-detail { font-size: 11px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
-
-/* Leaderboard bars */
-.lb-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
-.lb-rank { font-family: var(--mono); font-size: 11px; color: var(--text-tertiary); width: 20px; text-align: right; flex-shrink: 0; }
-.lb-name { font-size: 12px; font-weight: 600; width: 170px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lb-bar-wrap { flex: 1; height: 18px; background: var(--surface); border-radius: 3px; overflow: hidden; position: relative; }
-.lb-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
-.lb-value { font-family: var(--mono); font-size: 11px; font-weight: 600; width: 44px; text-align: right; flex-shrink: 0; }
-.lb-meta { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); width: 80px; flex-shrink: 0; }
-
-@media (max-width: 1060px) {
-  .research-kpis { grid-template-columns: repeat(2, 1fr); }
-  .lb-name { width: 120px; }
-  .lb-meta { display: none; }
-}
-@media (max-width: 700px) {
-  .research-kpis { grid-template-columns: repeat(2, 1fr); }
-  .lb-name { width: 100px; }
-  #agent-canvas { height: 200px; }
-}
-
-/* ── P&L breakdown ── */
-.pnl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
-.pnl-item { padding: 14px 16px; border-right: 1px solid var(--border); }
-.pnl-item:last-child { border-right: none; }
-.pnl-item:hover { background: var(--surface-hover); }
-.pnl-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-.pnl-value { font-family: var(--mono); font-size: 18px; font-weight: 600; letter-spacing: -0.5px; }
-.pnl-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
-
-/* ── Two-column ── */
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 4px; }
-.two-col > .section { margin-bottom: 0; }
-
-/* ── Plan entries ── */
-.plan-entry { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
-.plan-entry:last-child { border-bottom: none; }
-.plan-ticker { font-family: var(--mono); font-weight: 600; min-width: 70px; font-size: 13px; }
-.plan-detail { color: var(--text-secondary); font-size: 12px; }
-.plan-badge { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 0; text-transform: uppercase; letter-spacing: 0.3px; }
-.plan-badge.approved { color: var(--green); }
-.plan-badge.pending { color: var(--amber); }
-.plan-badge.executed { color: var(--blue); }
-
-/* ── Metrics ── */
-.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-.metric { padding: 11px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-.metric:nth-child(4n) { border-right: none; }
-.metric:nth-last-child(-n+4) { border-bottom: none; }
-.metric:hover { background: var(--surface-hover); }
-.metric-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
-.metric-value { font-family: var(--mono); font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
-
-/* ── Tasks ── */
-.task-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.task-col-head {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
-  color: var(--text-secondary); padding-bottom: 8px; margin-bottom: 8px; border-bottom: 2px solid var(--border);
-  display: flex; align-items: center; gap: 7px;
-}
-.task-col-head .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.dot-upcoming { background: var(--amber); }
-.dot-active { background: var(--blue); }
-.dot-done { background: var(--green); }
-.task-item {
-  padding: 9px 11px; margin-bottom: 5px; border-radius: var(--radius-sm);
-  font-size: 12px; line-height: 1.5; background: var(--surface-hover); border: 1px solid transparent;
-}
-.task-item:hover { border-color: var(--border); background: var(--surface-raised); }
-.task-item.done { color: var(--text-tertiary); text-decoration: line-through; text-decoration-color: rgba(99,90,76,0.4); }
-.task-empty { color: var(--text-tertiary); font-size: 12px; font-style: italic; padding: 9px 11px; }
-.empty { text-align: center; padding: 24px; color: var(--text-tertiary); font-size: 13px; font-style: italic; }
-
-/* ── Exposure bar ── */
-.exposure-bar { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 7px; }
-.exposure-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green), var(--blue)); box-shadow: 0 0 6px rgba(127,184,88,0.2); }
-
-/* ── Strategy breakdown ── */
-.strat-breakdown { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.strat-breakdown-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-.strat-breakdown-items { display: flex; gap: 16px; flex-wrap: wrap; }
-.strat-breakdown-item { display: flex; align-items: center; gap: 7px; }
-
-/* ── Chart ── */
-.chart-ranges { display: flex; gap: 3px; padding: 0 0 8px; }
-.chart-range-btn {
-  font-family: var(--mono); font-size: 10px; font-weight: 600;
-  padding: 4px 12px; border-radius: 5px; border: 1px solid var(--border);
-  background: transparent; color: var(--text-tertiary); cursor: pointer;
-}
-.chart-range-btn:hover { border-color: var(--text-tertiary); color: var(--text-secondary); }
-.chart-range-btn.active { background: rgba(127,184,88,0.06); border-color: var(--green); color: var(--green); }
-.chart-wrap { position: relative; cursor: crosshair; }
-.chart-wrap canvas { display: block; width: 100%; }
-.eq-crosshair { position: absolute; top: 0; width: 1px; background: rgba(232,228,218,0.12); pointer-events: none; display: none; z-index: 2; }
-.eq-tooltip {
-  position: absolute; top: 10px; background: var(--surface-raised);
-  border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 10px 14px; pointer-events: none; display: none; z-index: 3;
-  min-width: 180px; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-}
-.eq-tooltip-date { font-family: var(--mono); font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
-.eq-tooltip-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
-.eq-tooltip-label { color: var(--text-tertiary); font-size: 11px; }
-.eq-tooltip-val { font-family: var(--mono); font-weight: 600; font-size: 12px; }
-.chart-legend { display: flex; gap: 14px; padding: 0 0 5px; align-items: center; }
-.chart-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); }
-.chart-legend-swatch { width: 14px; height: 3px; border-radius: 2px; }
-
-/* ── Halted banner ── */
-.halted-banner {
-  background: var(--red-dim); border: 1px solid rgba(208,88,88,0.2); border-radius: var(--radius);
-  padding: 11px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
-  font-size: 13px; font-weight: 600; color: var(--red);
-}
-
-/* ── Responsive ── */
-@media (max-width: 1060px) {
-  .cards { grid-template-columns: repeat(3, 1fr); }
-  .two-col { grid-template-columns: 1fr; }
-  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
-  .metric:nth-child(4n) { border-right: 1px solid var(--border); }
-  .metric:nth-child(3n) { border-right: none; }
-  .research-hero { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 700px) {
-  .shell { padding: 18px 14px 48px; }
-  .cards { grid-template-columns: repeat(2, 1fr); }
-  .cards > .card:last-child { grid-column: 1 / -1; }
-  .task-columns { grid-template-columns: 1fr; }
-  .pnl-grid { grid-template-columns: repeat(2, 1fr); }
-  .pnl-item:nth-child(2) { border-right: none; }
-  .pnl-item:nth-child(1), .pnl-item:nth-child(2) { border-bottom: 1px solid var(--border); }
-  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-  .metric:nth-child(3n) { border-right: 1px solid var(--border); }
-  .metric:nth-child(2n) { border-right: none; }
-  .card-value { font-size: 20px; }
-  .logo { font-size: 24px; }
-  .research-hero { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 480px) {
-  .cards { grid-template-columns: 1fr; }
-  .header { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .market-clocks { flex-wrap: wrap; }
-}
-
-/* ── Accessibility ── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
-  .pulse, .pulse-live, .pulse-paper { animation: none; opacity: 1; }
-  #phosphor-bg, .crt-scanlines, .crt-vignette { display: none; }
-}
-.tab-btn:focus-visible, .chart-range-btn:focus-visible, .section-head:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-
-/* ── Card accents ── */
-.card.accent-green { background: linear-gradient(160deg, var(--surface), rgba(127,184,88,0.04)); }
-.card.accent-red { background: linear-gradient(160deg, var(--surface), rgba(208,88,88,0.04)); }
-
-/* ── Plan action buttons ── */
-.plan-actions {
-  display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
-}
-.plan-btn {
-  font-family: var(--font); font-size: 12px; font-weight: 600;
-  padding: 8px 20px; border-radius: var(--radius-sm); cursor: pointer;
-  border: 1px solid transparent; letter-spacing: 0.2px;
-  display: flex; align-items: center; gap: 6px;
-}
-.plan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.plan-btn-approve {
-  background: var(--green); color: #0d0c0a; border-color: var(--green);
-}
-.plan-btn-approve:hover:not(:disabled) { background: var(--green-bright); }
-.plan-btn-reject {
-  background: transparent; color: var(--red); border-color: var(--red);
-}
-.plan-btn-reject:hover:not(:disabled) { background: var(--red-dim); }
-.plan-btn-spinner {
-  display: inline-block; width: 14px; height: 14px;
-  border: 2px solid rgba(0,0,0,0.2); border-top-color: currentColor;
-  border-radius: 50%; animation: spin 0.6s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.plan-result {
-  margin-top: 10px; padding: 10px 14px; border-radius: var(--radius-sm);
-  font-family: var(--mono); font-size: 12px;
-}
-.plan-result.success { background: var(--green-dim); color: var(--green); }
-.plan-result.error { background: var(--red-dim); color: var(--red); }
-.plan-risk {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0;
-  margin-top: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); overflow: hidden;
-}
-.plan-risk-item { padding: 8px 12px; border-right: 1px solid var(--border-subtle); }
-.plan-risk-item:last-child { border-right: none; }
-.plan-risk-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; }
-.plan-risk-value { font-family: var(--mono); font-size: 14px; font-weight: 600; margin-top: 2px; }
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
-
-/* ── Skeleton loading ── */
-@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
-.skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%); background-size: 400px 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: var(--radius-sm); }
-.skeleton-card { height: 80px; }
-
-/* ── Table scroll indicator ── */
-.table-scroll { position: relative; }
-.table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 5px; width: 24px; background: linear-gradient(to left, var(--surface), transparent); pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 1; }
-.table-scroll.has-overflow::after { opacity: 1; }
-
-/* ── Live dot ── */
-.live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 4px var(--green); margin-left: 4px; vertical-align: middle; animation: pulse 2s ease-in-out infinite; }
-
-/* ── Market header accent ── */
-.shell[data-market="sp500"] .header { border-color: rgba(90,147,192,0.3); }
-.shell[data-market="asx"] .header { border-color: rgba(155,123,184,0.3); }
-.shell[data-market="hk"] .header { border-color: rgba(85,176,165,0.3); }
-
-/* ── In-page confirmation panel ── */
-.confirm-panel {
-  position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
-}
-.confirm-box {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 28px 32px; max-width: 440px; width: 90%;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-}
-.confirm-box-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-.confirm-box-msg { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
-.confirm-box-actions { display: flex; gap: 8px; }
-
-/* ── Position Monitor ── */
-.mon-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 18px 20px; cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.1s ease;
-}
-.mon-card:hover { border-color: var(--border-glow); transform: translateY(-1px); }
-.mon-card.health-critical { border-left: 3px solid var(--red); }
-.mon-card.health-warning { border-left: 3px solid var(--amber); }
-.mon-card.health-good { border-left: 3px solid var(--green); }
-.mon-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.mon-ticker { font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-.mon-pnl { font-family: var(--mono); font-size: 14px; font-weight: 600; }
-.mon-thesis { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.mon-health-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
-.mon-health-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
-.mon-health-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); margin-bottom: 12px; }
-.mon-conditions { display: flex; flex-direction: column; gap: 4px; }
-.mon-cond { display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 3px 0; }
-.mon-cond-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.mon-cond-dot.passing { background: var(--green); box-shadow: 0 0 4px var(--green-dim); }
-.mon-cond-dot.warning { background: var(--amber); box-shadow: 0 0 4px var(--amber-dim); }
-.mon-cond-dot.failing { background: var(--red); box-shadow: 0 0 4px var(--red-dim); }
-.mon-cond-dot.unknown { background: var(--text-tertiary); opacity: 0.4; }
-.mon-cond-label { color: var(--text-secondary); flex: 1; }
-.mon-cond-value { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); }
-.mon-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
-.mon-tag {
-  font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
-  padding: 2px 8px; border-radius: 3px; text-transform: uppercase;
-  background: var(--amber-dim); color: var(--amber);
-}
-.mon-tag-pill {
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  padding: 5px 14px; border-radius: 20px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary);
-  display: flex; align-items: center; gap: 6px;
-}
-.mon-tag-pill:hover { border-color: var(--border-glow); color: var(--text); }
-.mon-tag-pill.active { border-color: var(--amber); background: rgba(212,168,74,0.06); color: var(--amber); }
-.mon-tag-pill .mon-tag-health {
-  font-size: 10px; padding: 1px 6px; border-radius: 10px;
-  background: var(--border); color: var(--text-tertiary);
-}
-.mon-alert-item {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12px;
-}
-.mon-alert-item:last-child { border-bottom: none; }
-.mon-alert-time { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); min-width: 70px; }
-.mon-modal-close {
-  position: absolute; top: 16px; right: 16px; cursor: pointer;
-  font-size: 18px; color: var(--text-tertiary); background: none; border: none;
-  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  border-radius: 6px;
-}
-.mon-modal-close:hover { background: var(--surface-hover); color: var(--text); }
-.mon-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-.mon-detail-item { }
-.mon-detail-label { font-size: 10px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
-.mon-detail-value { font-family: var(--mono); font-size: 14px; font-weight: 600; margin-top: 2px; }
-.mon-toggle-btn {
-  font-family: var(--mono); font-size: 10px; font-weight: 600;
-  padding: 3px 10px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-tertiary);
-}
-.mon-toggle-btn:hover { border-color: var(--text-tertiary); color: var(--text-secondary); }
-.mon-toggle-btn.active { background: var(--green-dim); color: var(--green); border-color: var(--green); }
-.mon-toggle-btn.fail { background: var(--red-dim); color: var(--red); border-color: var(--red); }
-.mon-note { padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
-.mon-note:last-child { border-bottom: none; }
-.mon-note-time { font-family: var(--mono); font-size: 10px; color: var(--text-tertiary); }
-.mon-note-text { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-
-/* FIX 18: REMOVED unused legacy classes: research-hero (no base element exists in HTML),
-   insight-card base rules handled by stripe-refresh.css, queue-bar/bar-pass/bar-fail/bar-defer
-   removed from stripe-refresh.css. Only media-query references kept for forward-compat. */
-</style>
-<link rel="stylesheet" href="stripe-refresh.css">
 </head>
 <body>
-<canvas id="phosphor-bg"></canvas>
 <div class="shell">
 
   <div class="header">
     <div class="header-left">
-      <canvas class="atlas-globe" id="atlas-globe" width="64" height="64"></canvas>
       <div class="logo">Atlas</div>
     </div>
     <div class="header-right">
@@ -865,27 +67,11 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 
   <!-- ═══ TRADING TAB ═══ -->
   <div class="tab-content active" id="tab-trading">
-
-  <div class="plus-row" style="animation-delay:0.02s">
-    <span class="plus">+</span><span class="plus">+</span><span class="plus">+</span>
-    <span class="accent-wrap"><canvas class="accent-canvas" id="accent-dotgrid" width="48" height="10"></canvas></span>
-    <span class="plus">+</span><span class="plus">+</span><span class="plus">+</span>
-  </div>
-
   <div class="cards" id="cards">
     <div class="card"><div class="skeleton skeleton-card"></div></div>
     <div class="card"><div class="skeleton skeleton-card"></div></div>
     <div class="card"><div class="skeleton skeleton-card"></div></div>
   </div>
-
-  <div class="plus-row" style="animation-delay:0.25s">
-    <span class="plus">+</span><span class="plus">+</span>
-    <span class="accent-wrap"><canvas class="accent-canvas" id="accent-pulse" width="32" height="10"></canvas><span class="accent-label">sig</span></span>
-    <span class="plus">+</span><span class="plus">+</span>
-    <span class="accent-wrap"><span class="accent-label">vol</span><canvas class="accent-canvas" id="accent-wave" width="40" height="10"></canvas></span>
-    <span class="plus">+</span><span class="plus">+</span>
-  </div>
-
   <!-- P&L Breakdown -->
   <div class="section" style="animation-delay:0.30s">
     <div class="section-head" onclick="toggle('pnl')">
@@ -905,13 +91,6 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
       <div id="equity-chart" style="width:100%"></div>
     </div>
   </div>
-
-  <div class="plus-row" style="animation-delay:0.38s">
-    <span class="plus">+</span><span class="plus">+</span><span class="plus">+</span>
-    <span class="accent-wrap"><canvas class="accent-canvas" id="accent-orbit" width="14" height="14"></canvas></span>
-    <span class="plus">+</span><span class="plus">+</span><span class="plus">+</span>
-  </div>
-
   <!-- Two-col: Positions + Plan -->
   <div class="two-col">
     <div class="section" style="animation-delay:0.40s">
@@ -930,13 +109,6 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
       <div class="section-body" id="body-plan"></div>
     </div>
   </div>
-
-  <div class="plus-row" style="animation-delay:0.46s">
-    <span class="plus">+</span><span class="plus">+</span>
-    <span class="accent-wrap"><canvas class="accent-canvas" id="accent-bars" width="36" height="10"></canvas></span>
-    <span class="plus">+</span><span class="plus">+</span><span class="plus">+</span><span class="plus">+</span>
-  </div>
-
   <!-- Manual Positions (non-Atlas holdings) -->
   <div class="section" id="sec-manual" style="display:none;animation-delay:0.47s">
     <div class="section-head" onclick="toggle('manual')">
@@ -970,11 +142,8 @@ td:nth-child(2) .strat-tip .strat-tiptext::after {
 
   <!-- ═══ RESEARCH TAB ═══ -->
   <div class="tab-content" id="tab-research">
-
-    <!-- Agent Floor (pixel-agents canvas) -->
-    <div class="agent-floor-wrap">
-      <canvas id="agent-canvas"></canvas>
-    </div>
+    <!-- Agent Status -->
+    <div id="agent-floor" class="agent-floor"></div>
 
     <!-- Live Activity Ticker (below canvas) -->
     <div id="agent-ticker" class="agent-ticker"></div>
@@ -1307,10 +476,7 @@ function switchTab(tab) {
   var btn = document.getElementById('tab-btn-' + tab);
   if (content) content.classList.add('active');
   if (btn) btn.classList.add('active');
-  // Resize agent canvas when research tab becomes visible
-  if (tab === 'research' && typeof _resizeAgentCanvas === 'function') {
-    setTimeout(_resizeAgentCanvas, 100);
-  }
+  // Agent floor updates on data change (no canvas resize needed)
 }
 
 function toggle(id) {
@@ -2069,12 +1235,10 @@ function render(d) {
       };
     })(),
   ];
-  var cardIcons = ['equity','benchmark','pnl'];
   var ch = '';
   cards.forEach(function(c, i) {
-    var iconId = 'card-icon-' + cardIcons[i];
     ch += '<div class="card ' + c.accent + '">';
-    ch += '<div class="card-label"><div class="card-icon-wrap"><canvas class="card-icon" id="' + iconId + '" width="36" height="36"></canvas>' + c.label + '</div></div>';
+    ch += '<div class="card-label">' + c.label + '</div>';
     ch += '<div class="card-value ' + c.c + '">' + c.value + '</div>';
     ch += '<div class="card-sub">' + c.sub + '</div></div>';
   });
@@ -2084,7 +1248,7 @@ function render(d) {
   if (!cardsEl.classList.contains('cards-loaded')) {
     setTimeout(function() { cardsEl.classList.add('cards-loaded'); }, 500);
   }
-  if (typeof _initCardIcons === 'function') _initCardIcons();
+  // Card icons removed (decorative)
 
   // P&L inline summary
   var atlasPnl = (p.market_pnl || 0) + (p.realized_pnl || 0) - (p.total_commissions || 0);
@@ -3161,1046 +2325,121 @@ function renderResearch(d) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CENTRAL ANIMATION COORDINATOR
-// Single rAF loop drives all canvas animations. Each system
-// registers a tick callback with a target fps. Pauses when
-// tab is hidden. Replaces 14 independent rAF loops.
-// ═══════════════════════════════════════════════════════════════
-var _animSystems = []; // [{id, fn, fps, lastT}]
-var _animRunning = false;
-
-function _animRegister(id, fn, fps) {
-  _animSystems.push({ id: id, fn: fn, fps: fps || 60, lastT: 0, interval: 1000 / (fps || 60) });
-  if (!_animRunning) {
-    _animRunning = true;
-    requestAnimationFrame(_animTick);
-  }
-}
-
-function _animTick(now) {
-  if (document.hidden) {
-    requestAnimationFrame(_animTick);
-    return;
-  }
-  for (var i = 0; i < _animSystems.length; i++) {
-    var sys = _animSystems[i];
-    if (now - sys.lastT >= sys.interval) {
-      sys.lastT = now - ((now - sys.lastT) % sys.interval);
-      sys.fn(now);
-    }
-  }
-  requestAnimationFrame(_animTick);
-}
 
 // ═══════════════════════════════════════════════════════════════
-// PIXEL AGENT FLOOR — Canvas-based character visualization
+// TEXT-BASED AGENT STATUS DISPLAY
+// Replaces the pixel agent floor canvas with simple DOM elements
 // ═══════════════════════════════════════════════════════════════
-
-var _agentFloor = {
-  canvas: null,
-  ctx: null,
-  agents: [],      // agent data from dashboard JSON
-  characters: [],  // rendered character state
-  frame: 0,
-  animId: null,
-  inited: false,
-  scale: 4,        // pixel scale (each sprite pixel = 4 CSS px)
-};
-
-// 12x16 pixel sprite frames — front-facing characters
-// Each is a 2D array of hex color strings ('' = transparent)
-// 'S' = skin, 'H' = hair, 'B' = body color (replaced per agent type)
-var _SPRITE_TEMPLATE = {
-  typing: [
-    // Frame 0: typing, hands down
-    [
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','E','S','S','E','S','','','',
-      '','','','S','S','S','S','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','','','','S','S','','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','S','','B','B','B','B','B','B','','S','',
-      '','S','','','B','B','B','B','','','S','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-    // Frame 1: typing, hands up (on keyboard)
-    [
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','E','S','S','E','S','','','',
-      '','','','S','S','S','S','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','','','','S','S','','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','','S','B','B','B','B','B','B','S','','',
-      '','','','S','B','B','B','B','S','','','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-  ],
-  reading: [
-    // Frame 0: head slightly tilted
-    [
-      '','','','','H','H','H','H','H','','','',
-      '','','','H','H','H','H','H','H','H','','',
-      '','','','H','S','S','S','S','S','H','','',
-      '','','','','S','E','S','E','S','','','',
-      '','','','','S','S','S','S','S','','','',
-      '','','','','','S','S','S','','','','',
-      '','','','','','','S','S','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','','S','B','B','B','B','B','B','S','','',
-      '','','','S','B','B','B','B','S','','','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-    // Frame 1: head other direction
-    [
-      '','','H','H','H','H','H','','','','','',
-      '','H','H','H','H','H','H','H','','','','',
-      '','H','S','S','S','S','S','H','','','','',
-      '','','S','E','S','E','S','','','','','',
-      '','','S','S','S','S','S','','','','','',
-      '','','','S','S','S','','','','','','',
-      '','','','','S','S','','','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','B','B','B','B','B','B','B','B','B','B','',
-      '','','S','B','B','B','B','B','B','S','','',
-      '','','','S','B','B','B','B','S','','','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-  ],
-  idle: [
-    // Frame 0: standing, arms at side
-    [
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','E','S','S','E','S','','','',
-      '','','','S','S','M','M','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','','','','S','S','','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','S','S','B','B','B','B','B','B','S','S','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-    // Frame 1: slight bob
-    [
-      '','','','','','','','','','','','',
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','E','S','S','E','S','','','',
-      '','','','S','S','M','M','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','','','','S','S','','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','S','S','B','B','B','B','B','B','S','S','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-  ],
-  sleeping: [
-    // Single frame — slumped
-    [
-      '','','','','','','','','','','','',
-      '','','','','','','','','','','','',
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','X','S','S','X','S','','','',
-      '','','','S','S','S','S','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','S','S','B','B','B','B','B','B','S','S','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-    [
-      '','','','','','','','','','','','',
-      '','','','','','','','','','','','',
-      '','','','H','H','H','H','H','H','','','',
-      '','','H','H','H','H','H','H','H','H','','',
-      '','','H','S','S','S','S','S','S','H','','',
-      '','','','S','X','S','S','X','S','','','',
-      '','','','S','S','S','S','S','S','','','',
-      '','','','','S','S','S','S','','','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','','B','B','B','B','B','B','B','B','','',
-      '','S','S','B','B','B','B','B','B','S','S','',
-      '','','','','B','B','B','B','','','','',
-      '','','','','B','','','B','','','','',
-      '','','','P','P','','','P','P','','','',
-      '','','','P','P','','','P','P','','','',
-    ],
-  ],
-};
-
-// Read CSS variables for theme-aware rendering
-var _themeColors = {};
-function _readThemeColors() {
-  var s = getComputedStyle(document.documentElement);
-  _themeColors = {
-    bg: s.getPropertyValue('--bg').trim() || '#0d0c0a',
-    surface: s.getPropertyValue('--surface').trim() || '#151310',
-    surfaceHover: s.getPropertyValue('--surface-hover').trim() || '#1c1914',
-    surfaceRaised: s.getPropertyValue('--surface-raised').trim() || '#231f18',
-    border: s.getPropertyValue('--border').trim() || '#2a2419',
-    borderSubtle: s.getPropertyValue('--border-subtle').trim() || '#1e1a13',
-    text: s.getPropertyValue('--text').trim() || '#e8e4da',
-    textSecondary: s.getPropertyValue('--text-secondary').trim() || '#b0a494',
-    textTertiary: s.getPropertyValue('--text-tertiary').trim() || '#8a7e70',
-    green: s.getPropertyValue('--green').trim() || '#7fb858',
-    greenBright: s.getPropertyValue('--green-bright').trim() || '#9dd672',
-    red: s.getPropertyValue('--red').trim() || '#d05858',
-    amber: s.getPropertyValue('--amber').trim() || '#d4a84a',
-    blue: s.getPropertyValue('--blue').trim() || '#5a93c0',
-    purple: s.getPropertyValue('--purple').trim() || '#a07ec4',
-  };
-}
-
-// Agent type → color map
-// B=body/shirt, H=hair, P=pants, E=eyes, S=skin, M=skin-shadow, X=shoes
-var _AGENT_COLORS = {
-  // Atlas — green shirt, brown hair, light skin (the OG researcher)
-  atlas:      { B: '#5a7a3a', H: '#6B4E0A', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
-  // Nova — purple shirt, dark red hair, warm skin
-  nova:       { B: '#7a4a8a', H: '#8B2500', P: '#2a2a3a', E: '#c8e8ff', S: '#c8956a', M: '#a87050', X: '#6a6a7a' },
-  // Job agent — blue shirt
-  job:        { B: '#3a5a7a', H: '#4a3020', P: '#3a3020', E: '#e8e4da', S: '#c8a080', M: '#b08060', X: '#8a7e70' },
-  // Sweep agent — amber shirt
-  sweep:      { B: '#7a6a3a', H: '#5a3010', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
-  // Sage — teal shirt, grey hair, neutral skin (the long-cycle promotion agent)
-  sage:       { B: '#3a7a7a', H: '#8a8a8a', P: '#2a3040', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#6a7a7a' },
-  // Principal/Director — dark navy shirt, warm skin tone
-  principal:  { B: '#2a3a5a', H: '#2a2020', P: '#1a1a2a', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#3a4a5a' },
-  // Runner daemon — electric blue shirt, dark hair (the tireless queue worker)
-  runner:     { B: '#3a6a9a', H: '#1e2530', P: '#22304a', E: '#c8e8ff', S: '#c8a080', M: '#b08060', X: '#2a3a5a' },
-  // Director cron — dark charcoal/gold shirt, grey/silver hair (the distinguished overseer)
-  director_cron: { B: '#5a4a18', H: '#8a8a96', P: '#1a1a2a', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#3a3a2a' },
-  // Fallback
-  researcher: { B: '#5a7a3a', H: '#6B4E0A', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
-};
-
-function _colorizeSprite(templateFrames, agentType) {
-  var colors = _AGENT_COLORS[agentType] || _AGENT_COLORS.researcher;
-  // Each frame is a flat array of 192 pixels (12 wide × 16 tall)
-  // Convert to 2D and colorize
-  var W = 12;
-  return templateFrames.map(function(flat) {
-    var rows = [];
-    for (var r = 0; r < 16; r++) {
-      var row = [];
-      for (var c = 0; c < W; c++) {
-        var px = flat[r * W + c] || '';
-        row.push(colors[px] || px);
-      }
-      rows.push(row);
-    }
-    return rows;
-  });
-}
-
-// Desk colors derived from theme at render time
-
-function _resizeAgentCanvas() {
-  var canvas = _agentFloor.canvas;
-  if (!canvas) return;
-  var rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return; // Tab hidden
-  var dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  _agentFloor.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  _agentFloor.ctx.imageSmoothingEnabled = false;
-}
-
-function initAgentFloor() {
-  var canvas = document.getElementById('agent-canvas');
-  if (!canvas) return;
-  _agentFloor.canvas = canvas;
-  _agentFloor.ctx = canvas.getContext('2d');
-  _agentFloor.inited = true;
-  // Off-screen canvas for static content (wall, floor, whiteboard, props)
-  _agentFloor.staticCanvas = document.createElement('canvas');
-  _agentFloor.staticCtx = _agentFloor.staticCanvas.getContext('2d');
-  _agentFloor.staticDirty = true; // needs initial draw
-
-  _resizeAgentCanvas();
-  window.addEventListener('resize', function() {
-    _resizeAgentCanvas();
-    _agentFloor.staticDirty = true; // resize invalidates cache
-  });
-
-  // Register with central animation coordinator (30fps for pixel art)
-  _animRegister('agentFloor', function() {
-    if (_agentFloor.canvas.width === 0) _resizeAgentCanvas();
-    _agentFloor.frame++;
-    drawAgentFloor();
-  }, 30);
-}
 
 function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
-  // FIX 19: store latest data so applyTheme can re-render canvas on theme change
+  var el = document.getElementById('agent-floor');
+  if (!el) return;
+
+  // Store for theme re-render
   window._lastAgentData = agents;
-  _agentFloor.agents = agents;
-  _agentFloor.stats = stats || {};
-  _agentFloor.leaderboard = leaderboard || [];
-  _agentFloor.strategyPipeline = strategyPipeline || {};
-  // Adjust canvas height when Director is present
-  var canvas = document.getElementById('agent-canvas');
-  if (canvas) {
-    var hasDirector = (agents || []).some(function(a) { return a.type === 'principal' || a.type === 'director_cron'; });
-    var newH = hasDirector ? '440px' : '340px';
-    if (canvas.style.height !== newH) {
-      canvas.style.height = newH;
-      setTimeout(_resizeAgentCanvas, 50);
-    }
-  }
-  if (!_agentFloor.inited) initAgentFloor();
-  // Data changed — invalidate static cache
-  _agentFloor.staticDirty = true;
-  // Force resize when agents update (tab may have just become visible)
-  setTimeout(_resizeAgentCanvas, 50);
-}
 
-// ── Room Props ──────────────────────────────────────────────────
-// Static props — cached to off-screen canvas, only redrawn on data change
-function _drawPropsStatic(ctx, W, H, wallH, tc, agents, stats, leaderboard, strategyPipeline, isActive, isSleeping) {
-  // Server rack frame (no LEDs — those are dynamic)
-  var rackX = 10, rackY = wallH - 48, rackW = 24, rackH = 48;
-  ctx.fillStyle = tc.surfaceRaised;
-  ctx.fillRect(rackX, rackY, rackW, rackH);
-  ctx.strokeStyle = tc.border;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(rackX, rackY, rackW, rackH);
-  ctx.globalAlpha = 0.4;
-  for (var ui = 1; ui < 5; ui++) {
-    ctx.beginPath(); ctx.moveTo(rackX, rackY + ui * 9); ctx.lineTo(rackX + rackW, rackY + ui * 9); ctx.stroke();
-  }
-  ctx.globalAlpha = 1.0;
+  var pipeline = strategyPipeline || {};
+  var isActive = (agents || []).some(function(a) { return a.status === 'typing' || a.status === 'reading'; });
+  var isSleeping = !isActive && (agents || []).every(function(a) { return a.status === 'sleeping' || a.status === 'idle'; });
 
-  // Plant (static position — no sway in static layer)
-  var plantX = W - 38, potW = 12, potH = 10;
-  var potY = H - potH - 3;
-  ctx.fillStyle = tc.amber; ctx.globalAlpha = isSleeping ? 0.25 : 0.6;
-  ctx.fillRect(plantX, potY, potW, potH);
-  ctx.fillRect(plantX + 2, potY + potH, potW - 4, 3);
-  ctx.globalAlpha = 1.0;
-  ctx.fillStyle = tc.green; ctx.globalAlpha = isSleeping ? 0.25 : 0.7;
-  var leafCx = plantX + potW / 2;
-  ctx.fillRect(leafCx - 5, potY - 10, 4, 4);
-  ctx.fillRect(leafCx + 2, potY - 12, 4, 4);
-  ctx.fillRect(leafCx - 1, potY - 7, 4, 4);
-  ctx.globalAlpha = isSleeping ? 0.15 : 0.5;
-  ctx.fillRect(leafCx, potY - 5, 2, 7);
-  ctx.globalAlpha = 1.0;
+  var html = '';
 
-  // Coffee mug (static body — no steam)
-  var mugX = W - 90, mugY = H - 20;
-  if (W > 500) {
-    ctx.fillStyle = tc.surfaceRaised;
-    ctx.globalAlpha = isSleeping ? 0.4 : 1.0;
-    ctx.fillRect(mugX, mugY, 7, 9);
-    ctx.strokeStyle = tc.border; ctx.lineWidth = 1;
-    ctx.strokeRect(mugX, mugY, 7, 9);
-    ctx.beginPath(); ctx.arc(mugX + 9, mugY + 4, 3, -Math.PI/2, Math.PI/2); ctx.stroke();
-    ctx.globalAlpha = 1.0;
-  }
-}
-
-// Dynamic props — redrawn every frame (blinking LEDs, steam, plant sway)
-function _drawPropsDynamic(ctx, W, H, wallH, tc, frame, isActive, isSleeping) {
-  // Server rack LEDs
-  var rackX = 10, rackY = wallH - 48;
-  for (var li = 0; li < 5; li++) {
-    var ledY = rackY + 5 + li * 9;
-    if (isActive) {
-      var blinkOn = ((frame + li * 17) % 60) < 40;
-      ctx.beginPath();
-      ctx.arc(rackX + 6, ledY, 3, 0, Math.PI * 2);
-      ctx.fillStyle = blinkOn ? tc.green : tc.border;
-      ctx.globalAlpha = blinkOn ? 0.9 : 0.3;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(rackX + 16, ledY, 3, 0, Math.PI * 2);
-      ctx.fillStyle = ((frame + li * 23) % 80) < 50 ? tc.blue : tc.border;
-      ctx.fill();
-    } else {
-      ctx.beginPath();
-      ctx.arc(rackX + 6, ledY, 2, 0, Math.PI * 2);
-      ctx.fillStyle = isSleeping ? tc.red : tc.amber;
-      ctx.globalAlpha = isSleeping ? 0.2 : 0.35;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(rackX + 16, ledY, 2, 0, Math.PI * 2);
-      ctx.fillStyle = tc.border;
-      ctx.globalAlpha = 0.15;
-      ctx.fill();
-    }
-  }
-  ctx.globalAlpha = 1.0;
-
-  // Plant sway (only when active)
-  if (isActive) {
-    var plantX = W - 38, potW = 12, potH = 10;
-    var potY = H - potH - 3;
-    var leafCx2 = plantX + potW / 2;
-    var sway = Math.sin(frame * 0.02) * 1.5;
-    ctx.fillStyle = tc.green; ctx.globalAlpha = 0.7;
-    ctx.fillRect(leafCx2 - 5 + sway, potY - 10, 4, 4);
-    ctx.fillRect(leafCx2 + 2 - sway, potY - 12, 4, 4);
-    ctx.globalAlpha = 1.0;
-  }
-
-  // Coffee steam (only when active)
-  var mugX = W - 90, mugY = H - 20;
-  if (W > 500 && isActive) {
-    ctx.globalAlpha = 0.2 + Math.sin(frame * 0.05) * 0.1;
-    ctx.fillStyle = tc.textTertiary;
-    ctx.fillRect(mugX + 2, mugY - 4 - Math.sin(frame * 0.03) * 2, 1, 3);
-    ctx.fillRect(mugX + 4, mugY - 5 - Math.cos(frame * 0.04) * 2, 1, 3);
-    ctx.globalAlpha = 1.0;
-  }
-}
-
-// Whiteboard — drawn to static cache (only redrawn on data change)
-function _drawWhiteboard(ctx, W, H, wallH, tc, agents, stats, leaderboard, strategyPipeline, isActive, isSleeping) {
-  // ════════════════════════════════════════════════════════════════
-  // ── WHITEBOARD (center of wall — the main feature) ──
-  // ════════════════════════════════════════════════════════════════
-  if (W < 350) return; // Too narrow to render
-
-  var wbPad = 10;
-  var wbW = Math.min(W - 80, 720);
-  var wbX = (W - wbW) / 2;
-  var wbY = 3;
-  var wbH = wallH - 10;
-
-  // Board background — brighter when active, dim glow when idle
-  ctx.fillStyle = tc.text;
-  ctx.globalAlpha = isActive ? 0.10 : isSleeping ? 0.04 : 0.07;
-  ctx.beginPath();
-  ctx.roundRect(wbX, wbY, wbW, wbH, 4);
-  ctx.fill();
-  ctx.globalAlpha = 1.0;
-
-  // Active: subtle green glow around whiteboard edges
-  if (isActive) {
-    ctx.shadowColor = tc.green;
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = tc.green;
-    ctx.globalAlpha = 0.15;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(wbX, wbY, wbW, wbH, 4);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1.0;
-  }
-
-  // Board border
-  ctx.strokeStyle = isSleeping ? tc.borderSubtle : tc.border;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(wbX, wbY, wbW, wbH, 4);
-  ctx.stroke();
-
-  // ── Header ──
-  ctx.fillStyle = tc.textSecondary;
-  ctx.globalAlpha = 0.85;
-  ctx.font = 'bold 10px "JetBrains Mono", monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('RESEARCH LAB', wbX + wbPad, wbY + 14);
-  ctx.globalAlpha = 1.0;
-
-  // Divider line under header
-  ctx.strokeStyle = tc.border;
-  ctx.globalAlpha = 0.4;
-  ctx.beginPath();
-  ctx.moveTo(wbX + wbPad, wbY + 18);
-  ctx.lineTo(wbX + wbW - wbPad, wbY + 18);
-  ctx.stroke();
-  ctx.globalAlpha = 1.0;
-
-  // ── Stats row (right-aligned in header) ──
+  // Summary bar — stats + pipeline
+  html += '<div class="agent-summary">';
   var exp = stats.sweep_experiments || stats.total_experiments || 0;
   var passRate = stats.pass_rate_pct || 0;
   var promoted = stats.promoted || 0;
   var sweepCount = stats.sweep_strategies || 0;
-  ctx.font = '9px "JetBrains Mono", monospace';
-  ctx.textAlign = 'right';
-  ctx.fillStyle = tc.textTertiary;
-  ctx.globalAlpha = 0.8;
-  var statsStr = exp + ' exp · ' + sweepCount + ' strategies · ' + promoted + ' promoted';
-  ctx.fillText(statsStr, wbX + wbW - wbPad, wbY + 14);
-  ctx.globalAlpha = 1.0;
+  html += '<span class="agent-summary-stat">' + exp + ' experiments</span>';
+  html += '<span class="agent-summary-stat">' + sweepCount + ' strategies</span>';
+  html += '<span class="agent-summary-stat">' + promoted + ' promoted</span>';
+  html += '<span class="agent-summary-stat">' + passRate + '% pass rate</span>';
 
-  // ── Strategy list with status indicators ──
-  // Build a strategy list dynamically from leaderboard data
-  var allStrats = (leaderboard || []).map(function(s) { return s.id || s.name.toLowerCase().replace(/ /g, '_'); });
-  if (allStrats.length === 0) {
-    allStrats = ['mean_reversion', 'trend_following', 'opening_gap', 'connors_rsi2',
-                 'momentum_breakout', 'short_term_mr', 'bb_squeeze'];
-  }
-
-  // Who's working on what?
-  var agentTasks = {};
-  (agents || []).forEach(function(a) {
-    if (a.task && a.status !== 'sleeping') {
-      // Extract strategy name from task like "Sweeping Mean Reversion"
-      var taskLower = a.task.toLowerCase().replace(/sweeping |analyzing /, '');
-      allStrats.forEach(function(s) {
-        if (taskLower === s.replace(/_/g, ' ')) {
-          agentTasks[s] = a;
-        }
-      });
-    }
-  });
-
-  // Best sharpe per strategy from leaderboard (handle both .id and .name fields)
-  var bestSharpe = {};
-  (leaderboard || []).forEach(function(s) {
-    var sid = s.id || s.name.toLowerCase().replace(/ /g, '_');
-    if (s.best_sharpe != null) bestSharpe[sid] = s.best_sharpe;
-  });
-
-  var colY = wbY + 23;
-  var lineH = 10;
-  var numCols = wbW > 600 ? 3 : wbW > 400 ? 2 : 1;
-  var colW = (wbW - wbPad * 2) / numCols;
-
-  ctx.textAlign = 'left';
-
-  allStrats.forEach(function(strat, idx) {
-    var maxPerCol = Math.ceil(allStrats.length / numCols);
-    var col = Math.floor(idx / maxPerCol);
-    var row = idx % maxPerCol;
-    var ly = colY + row * lineH;
-    var lx = wbX + wbPad + col * colW;
-    if (ly + lineH > wbY + wbH - 1) return;
-
-    var label = strat.replace(/_/g, ' ');
-    label = label.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-    if (label.length > 16) label = label.substring(0, 14) + '..';
-
-    var activeAgent = agentTasks[strat];
-    var sharpe = bestSharpe[strat];
-
-    // Status indicator
-    var dotX = lx;
-    if (activeAgent) {
-      ctx.fillStyle = tc.green;
-      ctx.globalAlpha = 0.85; // Static glow in cached layer
-      ctx.beginPath();
-      ctx.arc(dotX + 3, ly + 4, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-    } else if (sharpe && sharpe > 0.3) {
-      ctx.strokeStyle = tc.green;
-      ctx.globalAlpha = 0.7; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(dotX, ly + 4);
-      ctx.lineTo(dotX + 3, ly + 7);
-      ctx.lineTo(dotX + 7, ly + 1);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-    } else if (sharpe && sharpe > 0) {
-      ctx.fillStyle = tc.amber;
-      ctx.globalAlpha = 0.5;
-      ctx.beginPath();
-      ctx.arc(dotX + 3, ly + 4, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-    } else if (sharpe != null && sharpe < 0) {
-      ctx.strokeStyle = tc.red;
-      ctx.globalAlpha = 0.4; ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(dotX, ly + 1); ctx.lineTo(dotX + 6, ly + 7);
-      ctx.moveTo(dotX + 6, ly + 1); ctx.lineTo(dotX, ly + 7);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-    } else {
-      ctx.strokeStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.25; ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(dotX + 3, ly + 4, 2.5, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-    }
-
-    // Strategy name
-    ctx.font = '9px "JetBrains Mono", monospace';
-    ctx.fillStyle = activeAgent ? tc.text : sharpe > 0.3 ? tc.text : tc.textSecondary;
-    ctx.globalAlpha = activeAgent ? 1.0 : sharpe > 0 ? 0.75 : 0.5;
-    ctx.fillText(label, dotX + 10, ly + 7);
-    ctx.globalAlpha = 1.0;
-
-    // Sharpe value
-    if (sharpe != null) {
-      ctx.fillStyle = sharpe > 0.5 ? tc.green : sharpe > 0.2 ? tc.amber : sharpe > 0 ? tc.textSecondary : tc.red;
-      ctx.globalAlpha = sharpe > 0 ? 0.85 : 0.45;
-      ctx.font = '9px "JetBrains Mono", monospace';
-      ctx.fillText(sharpe.toFixed(2), dotX + colW - 50, ly + 7);
-      ctx.globalAlpha = 1.0;
-    }
-
-    // Agent tag (when actively working on this strategy)
-    if (activeAgent) {
-      ctx.fillStyle = activeAgent.type === 'nova' ? '#7a4a8a' : tc.green;
-      ctx.globalAlpha = 0.9;
-      ctx.font = '8px "Inter", sans-serif';
-      ctx.fillText('← ' + activeAgent.name, dotX + colW - 35, ly + 7);
-      ctx.globalAlpha = 1.0;
-    }
-  });
-
-  // ── Strategy Pipeline row ──────────────────────────────────────
-  // Shows lifecycle stage counts from research.strategy_pipeline
-  var pipeline = strategyPipeline || {};
+  // Pipeline stages
   var pipelineStages = ['untested','screen','quick','solo','optimize','combined','oos','promote'];
   var pipelineLabels = ['?','SCR','QCK','SLO','OPT','CMB','OOS','PRO'];
-  var pipelineColors = [tc.textTertiary, tc.textTertiary, tc.amber, tc.amber, tc.blue, tc.blue, tc.green, tc.green];
   var anyPipeline = pipelineStages.some(function(s) { return pipeline[s] > 0; });
   if (anyPipeline) {
-    var pipeY = wbY + wbH - 12;
-    if (pipeY > wbY + 18) {
-      // Divider
-      ctx.strokeStyle = tc.border;
-      ctx.globalAlpha = 0.3;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(wbX + wbPad, pipeY - 6);
-      ctx.lineTo(wbX + wbW - wbPad, pipeY - 6);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-
-      // "PIPELINE" label
-      ctx.font = '8px "JetBrains Mono", monospace';
-      ctx.fillStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.6;
-      ctx.textAlign = 'left';
-      ctx.fillText('PIPELINE', wbX + wbPad, pipeY);
-      ctx.globalAlpha = 1.0;
-
-      // Stage badges: label + count
-      var px = wbX + wbPad + 46;
-      var stageSpacing = Math.min(38, (wbW - wbPad * 2 - 50) / pipelineStages.length);
-      for (var si = 0; si < pipelineStages.length; si++) {
-        var stageName = pipelineStages[si];
-        var stageVal = pipeline[stageName] || 0;
-        var stageLabel = pipelineLabels[si];
-        var stageColor = pipelineColors[si];
-        var bx2 = px + si * stageSpacing;
-        if (bx2 + stageSpacing > wbX + wbW - wbPad) break;
-
-        ctx.font = '8px "JetBrains Mono", monospace';
-        ctx.fillStyle = stageVal > 0 ? stageColor : tc.textTertiary;
-        ctx.globalAlpha = stageVal > 0 ? 0.85 : 0.25;
-        ctx.textAlign = 'center';
-        ctx.fillText(stageLabel, bx2, pipeY - 4);
-        ctx.fillText(stageVal, bx2, pipeY + 4);
-        ctx.globalAlpha = 1.0;
-      }
-      ctx.textAlign = 'left';
+    html += '<span class="agent-summary-pipe">';
+    for (var si = 0; si < pipelineStages.length; si++) {
+      var val = pipeline[pipelineStages[si]] || 0;
+      if (val > 0) html += '<span class="pipe-stage">' + pipelineLabels[si] + ':' + val + '</span>';
     }
+    html += '</span>';
   }
-}
+  html += '</div>';
 
-// ── Per-agent pixel character renderer ──────────────────────────
-// Draws a single agent (desk, monitor, sprite, bubble, label) at (cx, baseY).
-// Extracted so the director row and team row can share the same drawing logic.
-function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
-  var scale = f.scale;
-
-  // Draw desk (theme-aware)
-  var deskW = 36 * scale / 3;
-  var deskH = 6 * scale / 3;
-  var deskY = baseY + 16 * scale - 4;
-  ctx.fillStyle = tc.surfaceRaised;
-  ctx.fillRect(cx - deskW, deskY, deskW * 2, deskH);
-  ctx.fillStyle = tc.border;
-  ctx.fillRect(cx - deskW, deskY, deskW * 2, 1);
-  ctx.fillRect(cx - deskW, deskY + deskH - 1, deskW * 2, 1);
-
-  // ── Monitor (to the left of character) ──
-  var monPxW = 28, monPxH = 22;
-  var monPx = cx - deskW + 2;
-  var monPy = deskY - monPxH - 3;
-  // Bezel
-  ctx.fillStyle = tc.surfaceRaised;
-  ctx.fillRect(monPx, monPy, monPxW, monPxH);
-  ctx.strokeStyle = tc.border;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(monPx, monPy, monPxW, monPxH);
-  // Stand
-  var monCx = monPx + monPxW / 2;
-  ctx.fillStyle = tc.border;
-  ctx.fillRect(monCx - 2, monPy + monPxH, 4, 3);
-  ctx.fillRect(monCx - 5, deskY - 1, 10, 2);
-
-  // Screen inset
-  var screenX = monPx + 2;
-  var screenY = monPy + 2;
-  var screenW = monPxW - 4;
-  var screenH = monPxH - 4;
-  var act = agent.activity || {};
-  var actType = act.activity || '';
-
-  // Activity-aware glow color
-  var glowColor = tc.border;
-  if (actType === 'testing' || actType === 'baseline') glowColor = tc.amber;
-  else if (actType === 'kept') glowColor = tc.green;
-  else if (actType === 'discarded') glowColor = tc.red;
-  else if (actType === 'writing') glowColor = tc.purple;
-  else if (actType === 'loading' || actType === 'evaluating') glowColor = tc.blue;
-  else if (agent.status === 'typing') glowColor = tc.green;
-  else if (agent.status === 'reading') glowColor = tc.blue;
-
-  // Screen bg
-  ctx.fillStyle = tc.bg;
-  ctx.fillRect(screenX, screenY, screenW, screenH);
-
-  // Activity-specific screen content
-  var prog = agent.progress || {};
-
-  if (actType === 'testing') {
-    // Running backtests — show animated compute bars
-    var nBars = act.candidates || 4;
-    nBars = Math.min(nBars, 6);
-    var barSpacing = Math.floor(screenH / (nBars + 1));
-    for (var bi = 0; bi < nBars; bi++) {
-      var by = screenY + barSpacing * (bi + 1) - 1;
-      var phase = ((f.frame * 2 + bi * 40) % 200) / 200;
-      var bw = screenW - 4;
-      // Track
-      ctx.fillStyle = tc.border;
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(screenX + 2, by, bw, 2);
-      // Running fill (each bar at different phase)
-      ctx.fillStyle = glowColor;
-      ctx.globalAlpha = 0.7;
-      ctx.fillRect(screenX + 2, by, bw * phase, 2);
-      ctx.globalAlpha = 1.0;
-    }
-  } else if (actType === 'kept') {
-    // Success flash — green screen pulse
-    ctx.fillStyle = tc.green;
-    ctx.globalAlpha = 0.15 + Math.sin(f.frame * 0.15) * 0.08;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 1.0;
-    // Checkmark
-    ctx.strokeStyle = tc.green;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.8;
-    var chkCx = screenX + screenW / 2;
-    var chkCy = screenY + screenH / 2;
-    ctx.beginPath();
-    ctx.moveTo(chkCx - 5, chkCy);
-    ctx.lineTo(chkCx - 1, chkCy + 4);
-    ctx.lineTo(chkCx + 5, chkCy - 4);
-    ctx.stroke();
-    ctx.globalAlpha = 1.0;
-  } else if (actType === 'discarded') {
-    // Red dim
-    ctx.fillStyle = tc.red;
-    ctx.globalAlpha = 0.08;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 1.0;
-    // X mark
-    ctx.strokeStyle = tc.red;
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.5;
-    var xCx = screenX + screenW / 2;
-    var xCy = screenY + screenH / 2;
-    ctx.beginPath();
-    ctx.moveTo(xCx - 4, xCy - 4); ctx.lineTo(xCx + 4, xCy + 4);
-    ctx.moveTo(xCx + 4, xCy - 4); ctx.lineTo(xCx - 4, xCy + 4);
-    ctx.stroke();
-    ctx.globalAlpha = 1.0;
-  } else if (actType === 'writing') {
-    // Writing to brain — purple scrolling lines
-    ctx.fillStyle = tc.purple;
-    ctx.globalAlpha = 0.1;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 0.5;
-    var wLineY = screenY + 2;
-    for (var wl = 0; wl < 6 && wLineY < screenY + screenH - 2; wl++) {
-      var wIndent = (wl % 2 === 0) ? 0 : 4;
-      var scrollOff = (f.frame * 0.8 + wl * 20) % 60;
-      var wLen = (screenW - 4 - wIndent) * (0.2 + scrollOff / 80);
-      ctx.fillRect(screenX + 2 + wIndent, wLineY, Math.min(wLen, screenW - 4 - wIndent), 1);
-      wLineY += 3;
-    }
-    ctx.globalAlpha = 1.0;
-  } else if (actType === 'loading' || actType === 'baseline') {
-    // Loading data — blue pulsing bar
-    ctx.fillStyle = tc.blue;
-    ctx.globalAlpha = 0.08;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 1.0;
-    var loadW = ((f.frame * 1.5) % (screenW * 2));
-    if (loadW > screenW) loadW = screenW * 2 - loadW;
-    ctx.fillStyle = tc.blue;
-    ctx.globalAlpha = 0.5;
-    ctx.fillRect(screenX + 1, screenY + screenH / 2 - 1, loadW, 2);
-    ctx.globalAlpha = 1.0;
-  } else if (actType === 'reviewing' || actType === 'queue_checking' || actType === 'portfolio') {
-    // Reviewing queue/results — amber document-reading pattern
-    ctx.fillStyle = tc.amber;
-    ctx.globalAlpha = 0.06;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 0.45;
-    var docLineY = screenY + 2;
-    for (var dl = 0; dl < 5 && docLineY < screenY + screenH - 2; dl++) {
-      var dlIndent = (dl === 0) ? 0 : (dl % 3 === 0 ? 4 : 2);
-      var dlLen = (screenW - 6 - dlIndent) * (0.4 + Math.sin(f.frame * 0.04 + dl * 1.2) * 0.3);
-      ctx.fillRect(screenX + 2 + dlIndent, docLineY, Math.max(2, dlLen), 1);
-      docLineY += 3;
-    }
-    ctx.globalAlpha = 1.0;
-  } else if (actType === 'queuing') {
-    // Queuing new experiments — green lines being added
-    ctx.fillStyle = tc.green;
-    ctx.globalAlpha = 0.06;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 0.5;
-    var qLineY = screenY + 2;
-    var qScroll = (f.frame * 1.2) % (screenH * 1.5);
-    for (var ql = 0; ql < 5 && qLineY < screenY + screenH - 2; ql++) {
-      var qAppear = (qScroll - ql * 12) / (screenH * 1.5);
-      if (qAppear > 0 && qAppear < 1) {
-        ctx.globalAlpha = 0.4 * Math.min(1, qAppear * 4);
-        ctx.fillRect(screenX + 2, qLineY, (screenW - 4) * (0.3 + ql * 0.15), 1);
+  // Sleeping/idle state — show countdown
+  if (isSleeping || !agents || !agents.length) {
+    var nextIso = (stats || {}).next_window_iso || '';
+    if (nextIso) {
+      var diffMs = new Date(nextIso) - new Date();
+      if (diffMs > 0) {
+        var totalSec = Math.floor(diffMs / 1000);
+        var hrs = Math.floor(totalSec / 3600);
+        var mins = Math.floor((totalSec % 3600) / 60);
+        var secs = totalSec % 60;
+        var countdownStr = (hrs > 0 ? hrs + 'h ' : '') + (mins < 10 ? '0' : '') + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+        html += '<div class="agent-idle">';
+        html += '<div class="agent-idle-label">NEXT SWEEP WINDOW</div>';
+        html += '<div class="agent-idle-countdown">' + countdownStr + '</div>';
+        html += '</div>';
+      } else {
+        html += '<div class="agent-idle"><div class="agent-idle-countdown">Starting...</div></div>';
       }
-      qLineY += 3;
+    } else if (!agents || !agents.length) {
+      html += '<div class="agent-idle"><div class="agent-idle-label">Research engine idle</div></div>';
     }
-    ctx.globalAlpha = 1.0;
-  } else if (prog.pct !== undefined && prog.pct >= 0) {
-    // Generic progress — scrolling code lines + progress bar
-    ctx.fillStyle = glowColor;
-    ctx.globalAlpha = 0.35;
-    var lineY = screenY + 2;
-    for (var tl = 0; tl < 5 && lineY < screenY + screenH - 9; tl++) {
-      var indent = (tl % 3 === 0) ? 0 : 3;
-      var lw = (screenW - 6 - indent) * (0.3 + ((tl * 37 + f.frame * 0.5) % 50) / 80);
-      ctx.fillRect(screenX + 2 + indent, lineY, Math.min(lw, screenW - 4 - indent), 1);
-      lineY += 3;
+    el.innerHTML = html;
+    return;
+  }
+
+  // Active agents — render as cards
+  (agents || []).forEach(function(agent) {
+    var statusClass = agent.status === 'typing' ? 'active' : agent.status === 'reading' ? 'active' : agent.status === 'idle' ? 'idle' : 'sleeping';
+    var act = agent.activity || {};
+    var actType = act.activity || '';
+    var prog = agent.progress || {};
+
+    html += '<div class="agent-card">';
+    html += '<div class="agent-card-header">';
+    html += '<span class="agent-status-dot ' + statusClass + '"></span>';
+    html += '<span class="agent-name">' + (agent.name || agent.type || 'Agent') + '</span>';
+    if (prog.label) html += '<span class="agent-progress">' + prog.label + '</span>';
+    if (prog.cycle > 1) html += '<span class="agent-progress">↻' + prog.cycle + '</span>';
+    html += '</div>';
+
+    if (agent.task) {
+      html += '<div class="agent-task">' + agent.task + '</div>';
     }
-    ctx.globalAlpha = 1.0;
+
+    // Activity detail
+    if (actType === 'testing') {
+      html += '<div class="agent-activity" style="color:var(--amber)">Testing ' + (act.candidates || '?') + ' candidates</div>';
+    } else if (actType === 'kept') {
+      var delta = act.last_delta || 0;
+      html += '<div class="agent-activity" style="color:var(--green)">Kept: Sharpe ' + (delta >= 0 ? '+' : '') + delta.toFixed(4) + '</div>';
+    } else if (actType === 'discarded') {
+      html += '<div class="agent-activity" style="color:var(--red)">Discarded — no improvement</div>';
+    } else if (actType === 'writing') {
+      html += '<div class="agent-activity" style="color:var(--purple)">Writing brain indexes</div>';
+    } else if (actType === 'loading' || actType === 'baseline') {
+      html += '<div class="agent-activity" style="color:var(--blue)">Loading data</div>';
+    } else if (actType === 'reviewing' || actType === 'queue_checking') {
+      html += '<div class="agent-activity" style="color:var(--amber)">Reviewing results</div>';
+    } else if (actType === 'queuing') {
+      html += '<div class="agent-activity" style="color:var(--green)">Queuing experiments</div>';
+    }
+
     // Progress bar
-    var barY = screenY + screenH - 5;
-    ctx.fillStyle = tc.border;
-    ctx.fillRect(screenX + 1, barY, screenW - 2, 3);
-    var fillW = Math.max(1, (screenW - 2) * prog.pct / 100);
-    ctx.fillStyle = glowColor;
-    ctx.fillRect(screenX + 1, barY, fillW, 3);
-  } else {
-    // Idle — gentle screen glow
-    ctx.fillStyle = glowColor;
-    ctx.globalAlpha = 0.12;
-    ctx.fillRect(screenX, screenY, screenW, screenH);
-    ctx.globalAlpha = 1.0;
-  }
-
-  // ── Tally marks on desk (strategies completed this cycle) ──
-  if (prog.pct !== undefined && prog.label) {
-    var parts = prog.label.split('/');
-    var done = parseInt(parts[0]) - 1;
-    var total = parseInt(parts[1]);
-    if (done > 0 || total > 0) {
-      var tallyX = cx - deskW + 6;
-      var tallyY0 = deskY + 1;
-      var tallyH = deskH - 2;
-      ctx.lineWidth = 1.5;
-      for (var ti = 0; ti < total; ti++) {
-        var tx = tallyX + ti * 5;
-        if (tx > cx + deskW - 6) break;
-        var isDone = ti < done;
-        ctx.strokeStyle = isDone ? tc.green : tc.textTertiary;
-        ctx.globalAlpha = isDone ? 0.85 : 0.2;
-        ctx.beginPath();
-        if ((ti + 1) % 5 === 0 && ti > 0) {
-          ctx.moveTo(tx - 16, tallyY0 + tallyH + 1);
-          ctx.lineTo(tx + 2, tallyY0 - 1);
-        } else {
-          ctx.moveTo(tx, tallyY0);
-          ctx.lineTo(tx, tallyY0 + tallyH);
-        }
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1.0;
+    if (prog.pct !== undefined && prog.pct >= 0) {
+      html += '<div class="agent-bar"><div class="agent-bar-fill" style="width:' + Math.min(100, prog.pct) + '%"></div></div>';
     }
-  }
 
-  // Get sprite frames
-  var state = agent.status || 'idle';
-  var templateFrames = _SPRITE_TEMPLATE[state] || _SPRITE_TEMPLATE.idle;
-  var frames = _colorizeSprite(templateFrames, agent.type || 'researcher');
-  var spriteFrame = frames[animFrame % frames.length];
-
-  // Draw character
-  var spriteW = 12;
-  var charX = cx - (spriteW * scale / 2);
-  var charY = baseY - 2;
-
-  spriteFrame.forEach(function(row, sy) {
-    row.forEach(function(px, sx) {
-      if (px && px !== '') {
-        ctx.fillStyle = px;
-        ctx.fillRect(charX + sx * scale, charY + sy * scale, scale, scale);
-      }
-    });
+    html += '</div>';
   });
 
-  // Speech bubble — activity-aware, positioned below name label
-  var bubbleText = agent.task || '';
-  if (bubbleText) {
-    if (bubbleText.length > 32) bubbleText = bubbleText.substring(0, 29) + '...';
-    var bubbleY = deskY + deskH + 28;
-    ctx.font = '10px "JetBrains Mono", monospace';
-    var textW = ctx.measureText(bubbleText).width;
-    var padX = 8, padY = 4;
-
-    var bx = cx - textW / 2 - padX - 8; // extra space for activity dot
-    var by = bubbleY - padY;
-    var bw = textW + padX * 2 + 12;
-    var bh = 14 + padY * 2;
-
-    // Activity-colored left border
-    var bubbleBorderColor = tc.border;
-    if (actType === 'testing') bubbleBorderColor = tc.amber;
-    else if (actType === 'kept') bubbleBorderColor = tc.green;
-    else if (actType === 'discarded') bubbleBorderColor = tc.red;
-    else if (actType === 'writing') bubbleBorderColor = tc.purple;
-    else if (actType === 'loading' || actType === 'baseline') bubbleBorderColor = tc.blue;
-
-    // Bubble bg
-    ctx.fillStyle = tc.surfaceRaised;
-    ctx.globalAlpha = 0.95;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 4);
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
-
-    // Left accent bar
-    ctx.fillStyle = bubbleBorderColor;
-    ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, 3, bh, [4, 0, 0, 4]);
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
-
-    // Border
-    ctx.strokeStyle = tc.border;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 4);
-    ctx.stroke();
-
-    // Tail
-    ctx.fillStyle = tc.surfaceRaised;
-    ctx.globalAlpha = 0.95;
-    ctx.beginPath();
-    ctx.moveTo(cx - 4, by);
-    ctx.lineTo(cx + 4, by);
-    ctx.lineTo(cx, by - 5);
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
-
-    // Text — color from activity
-    ctx.fillStyle = bubbleBorderColor !== tc.border ? bubbleBorderColor :
-      (agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : tc.text);
-    ctx.globalAlpha = 0.9;
-    ctx.textAlign = 'center';
-    ctx.fillText(bubbleText, cx + 2, bubbleY + 7);
-    ctx.globalAlpha = 1.0;
-  }
-
-  // Name label + progress
-  // FIX 5: Director label above desk to avoid colliding with org-chart connector lines
-  ctx.fillStyle = tc.textTertiary;
-  ctx.font = '10px "Inter", sans-serif';
-  ctx.textAlign = 'center';
-  var nameLabel = agent.name;
-  if (prog.label) nameLabel += '  ' + prog.label;
-  if (prog.cycle > 1) nameLabel += '  ↻' + prog.cycle;
-  var labelY = (agent.type === 'principal') ? deskY - 18 : deskY + deskH + 14;
-  ctx.fillText(nameLabel, cx, labelY);
-
-  // Status dot
-  var dotColor = agent.status === 'typing' ? tc.green : agent.status === 'reading' ? tc.blue : agent.status === 'idle' ? tc.amber : tc.red;
-  ctx.beginPath();
-  ctx.arc(cx, labelY + 10, 3, 0, Math.PI * 2);
-  ctx.fillStyle = dotColor;
-  ctx.fill();
-
-  // Sparkle effect when a result is kept
-  if (actType === 'kept' && agent.status !== 'sleeping') {
-    var sparkleCount = 5;
-    for (var si = 0; si < sparkleCount; si++) {
-      var sparkPhase = ((f.frame * 3 + si * 60) % 180) / 180;
-      if (sparkPhase < 0.8) {
-        var sx = cx + Math.sin(si * 2.5 + f.frame * 0.05) * 25;
-        var sy = charY + 20 - sparkPhase * 40;
-        var sparkSize = (1 - sparkPhase) * 3;
-        ctx.fillStyle = tc.green;
-        ctx.globalAlpha = (1 - sparkPhase) * 0.7;
-        ctx.fillRect(sx - sparkSize/2, sy - sparkSize/2, sparkSize, sparkSize);
-        ctx.globalAlpha = 1.0;
-      }
-    }
-  }
-
-  // Sleeping ZZZ
-  if (agent.status === 'sleeping') {
-    var zOffset = (f.frame % 90) / 90;
-    ctx.globalAlpha = 1 - zOffset * 0.7;
-    ctx.fillStyle = tc.textTertiary;
-    ctx.font = (10 + zOffset * 4) + 'px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('z', cx + 20 + zOffset * 8, charY - zOffset * 20);
-    ctx.fillText('z', cx + 28 + zOffset * 10, charY - 10 - zOffset * 18);
-    ctx.fillText('Z', cx + 34 + zOffset * 12, charY - 22 - zOffset * 16);
-    ctx.globalAlpha = 1.0;
-  }
+  el.innerHTML = html;
 }
 
 // ── Activity Ticker — shows what the research engine is doing right now ──
@@ -5104,191 +3343,217 @@ switchTab = function(tab) {
   if (tab === 'monitor') loadMonitor();
 };
 
-// ── Drift Meridians Background — Invisible forces made visible ──
-// Flowing particles tracing sinusoidal meridian channels through a
-// Perlin-noise vector field. Warm earthy palette on dark canvas.
-(function(){
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var canvas = document.getElementById('phosphor-bg');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
+// ═══════════════════════════════════════════════════════════════
+// THEME TOGGLE, KEYBOARD SHORTCUTS, SCROLL REVEALS
+// (inlined from stripe-refresh.js)
+// ═══════════════════════════════════════════════════════════════
 
-  // ── Mulberry32 PRNG ──
-  var _s=42;
-  function seed(v){_s=v|0;}
-  function R(){_s=(_s+0x6d2b79f5)|0;var t=Math.imul(_s^(_s>>>15),1|_s);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;}
+// ── Theme switching ──
+var THEME_KEY = 'atlas-theme';
+var _autoTimer = null;
 
-  // ── Compact 3-D Perlin noise ──
-  var perm=new Uint8Array(512);
-  function initPerm(s){
-    var p=new Uint8Array(256);for(var i=0;i<256;i++)p[i]=i;
-    seed(s);
-    for(var i=255;i>0;i--){var j=(R()*(i+1))|0;var tmp=p[i];p[i]=p[j];p[j]=tmp;}
-    for(var i=0;i<256;i++)perm[i]=perm[i+256]=p[i];
+function getStoredTheme() {
+  try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch(e) { return 'auto'; }
+}
+function storeTheme(t) {
+  try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
+}
+function resolveAutoTheme() {
+  var h = new Date().getHours();
+  return (h >= 6 && h < 18) ? 'light' : 'dark';
+}
+function applyTheme(theme) {
+  var resolved = theme === 'auto' ? resolveAutoTheme() : theme;
+  document.documentElement.setAttribute('data-theme', resolved);
+  if (typeof paintChart === 'function') setTimeout(paintChart, 50);
+  if (typeof updateAgentFloor === 'function' && window._lastAgentData) {
+    setTimeout(function() { updateAgentFloor(window._lastAgentData); }, 80);
   }
-  var G3=[[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
-  function fade(t){return t*t*t*(t*(t*6-15)+10);}
-  function lerp2(a,b,t){return a+t*(b-a);}
-  function dot3(g,x,y,z){return g[0]*x+g[1]*y+g[2]*z;}
-  function perlin(x,y,z){
-    var X=Math.floor(x)&255,Y=Math.floor(y)&255,Z=Math.floor(z)&255;
-    x-=Math.floor(x);y-=Math.floor(y);z-=Math.floor(z);
-    var u=fade(x),v=fade(y),w=fade(z);
-    var A=perm[X]+Y,AA=perm[A]+Z,AB=perm[A+1]+Z;
-    var B=perm[X+1]+Y,BA=perm[B]+Z,BB=perm[B+1]+Z;
-    return lerp2(
-      lerp2(lerp2(dot3(G3[perm[AA]%12],x,y,z),dot3(G3[perm[BA]%12],x-1,y,z),u),
-            lerp2(dot3(G3[perm[AB]%12],x,y-1,z),dot3(G3[perm[BB]%12],x-1,y-1,z),u),v),
-      lerp2(lerp2(dot3(G3[perm[AA+1]%12],x,y,z-1),dot3(G3[perm[BA+1]%12],x-1,y,z-1),u),
-            lerp2(dot3(G3[perm[AB+1]%12],x,y-1,z-1),dot3(G3[perm[BB+1]%12],x-1,y-1,z-1),u),v),w);
-  }
-  function N(x,y,z){return (perlin(x,y,z)+1)*0.5;}
-
-  // ── Drift Meridians palette (brightened for dark bg) ──
-  var C=[
-    [210,130,80],   // copper
-    [80,135,185],   // indigo
-    [140,175,110],  // sage
-    [190,130,130],  // dusty rose
-    [210,175,95]    // antique gold
-  ];
-
-  // ── Meridian channel parameters (seeded for repeatable pattern) ──
-  var meridian={};
-  function initMeridian(){
-    seed(42);
-    meridian={
-      freq1:0.003+R()*0.009,
-      freq2:0.003+R()*0.009,
-      freq3:0.004+R()*0.006,
-      freq4:0.004+R()*0.006,
-      phase1:R()*Math.PI*2,
-      phase2:R()*Math.PI*2,
-      oct2scale:1.8+R()*1.4,
-      oct2weight:0.25+R()*0.25,
-      drift:-0.3+R()*0.6
-    };
-  }
-
-  // ── Tuning ──
-  var NS    = 0.002;   // noise scale (gentler flow)
-  var MS    = 0.35;    // meridian strength (subtler channels)
-  var SPEED = 0.4;     // drift speed (slow, meditative)
-  var NUM   = 120;     // particle count (reduced from 250 for performance)
-  var TRAIL = 97;      // trail persistence (long fading tails)
-  var W,H,pts,frameN=0;
-
-  // ── Flow angle: Perlin noise + sinusoidal meridian modulation ──
-  function flowAngle(x,y){
-    var m=meridian;
-    var n1=N(x*NS, y*NS, 0)*Math.PI*4;
-    var n2=N(x*NS*m.oct2scale+1000, y*NS*m.oct2scale+1000, 0)*Math.PI*4;
-    var angle=n1+n2*m.oct2weight;
-    angle+=Math.sin(x*m.freq1+y*m.freq2+m.phase1)*MS;
-    angle+=Math.cos(x*m.freq3-y*m.freq4+m.phase2)*MS*0.65;
-    angle+=m.drift;
-    return angle;
-  }
-
-  // ── Particle factory ──
-  function spawn(stagger){
-    var maxAge=200+~~(R()*500);
-    return{
-      x:R()*W, y:R()*H, px:0, py:0,
-      ci:~~(R()*C.length),
-      spd:0.4+R()*1.0,
-      age: stagger ? ~~(R()*maxAge) : 0,
-      maxAge:maxAge,
-      fresh:true
-    };
-  }
-
-  function build(){
-    initPerm(42);
-    initMeridian();
-    seed(7777);
-    frameN=0;
-    pts=[];
-    for(var i=0;i<NUM;i++) pts.push(spawn(true));
-    ctx.fillStyle='#0d0c0a';
-    ctx.fillRect(0,0,W,H);
-  }
-
-  function resize(){
-    var dpr=Math.min(window.devicePixelRatio||1,1.5);
-    W=window.innerWidth; H=window.innerHeight;
-    canvas.width=W*dpr; canvas.height=H*dpr;
-    canvas.style.width=W+'px'; canvas.style.height=H+'px';
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    build();
-  }
-
-  // Pre-compute fade overlay
-  var fadeA=35+(TRAIL-1)/(100-1)*(3-35);
-  var fadeStr='rgba(13,12,10,'+(fadeA/255).toFixed(4)+')';
-
-  function frameTick(){
-    // Trail fade
-    ctx.fillStyle=fadeStr;
-    ctx.fillRect(0,0,W,H);
-
-    frameN++;
-    for(var i=0;i<pts.length;i++){
-      var p=pts[i];
-      p.px=p.x;
-      p.py=p.y;
-
-      var angle=flowAngle(p.x,p.y);
-      var spd=SPEED*p.spd;
-      p.x+=Math.cos(angle)*spd;
-      p.y+=Math.sin(angle)*spd;
-      p.age++;
-
-      var m=30;
-      if(p.x<-m){p.x+=W+m*2;p.px=p.x;}
-      if(p.x>W+m){p.x-=W+m*2;p.px=p.x;}
-      if(p.y<-m){p.y+=H+m*2;p.py=p.y;}
-      if(p.y>H+m){p.y-=H+m*2;p.py=p.y;}
-
-      if(p.age>p.maxAge){
-        p.x=R()*W; p.y=R()*H;
-        p.px=p.x; p.py=p.y;
-        p.age=0; p.maxAge=200+~~(R()*500);
-        p.spd=0.4+R()*1.0;
-        p.ci=~~(R()*C.length);
-        p.fresh=true;
-        continue;
+  var mt = document.getElementById('meta-theme-color');
+  if (mt) mt.setAttribute('content', resolved === 'light' ? '#ffffff' : '#111111');
+  document.querySelectorAll('.theme-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
+  });
+  if (_autoTimer) { clearInterval(_autoTimer); _autoTimer = null; }
+  if (theme === 'auto') {
+    _autoTimer = setInterval(function() {
+      var nr = resolveAutoTheme();
+      if (nr !== document.documentElement.getAttribute('data-theme')) {
+        document.documentElement.setAttribute('data-theme', nr);
+        if (typeof paintChart === 'function') setTimeout(paintChart, 50);
       }
-
-      if(p.fresh){p.fresh=false;continue;}
-
-      var lr=p.age/p.maxAge;
-      var alpha=Math.sin(lr*Math.PI)*0.05;
-      if(alpha<0.003) continue;
-
-      var sw=0.2+Math.sin(lr*Math.PI)*0.5;
-
-      var c=C[p.ci];
-      var xs=(p.x/W-0.5)*20;
-      var ys=(p.y/H-0.5)*14;
-      var r=Math.max(0,Math.min(255,c[0]+xs));
-      var g=Math.max(0,Math.min(255,c[1]+ys));
-      var b=Math.max(0,Math.min(255,c[2]-xs*0.4));
-
-      ctx.strokeStyle='rgba('+~~r+','+~~g+','+~~b+','+alpha.toFixed(4)+')';
-      ctx.lineWidth=sw;
-      ctx.beginPath();
-      ctx.moveTo(p.px,p.py);
-      ctx.lineTo(p.x,p.y);
-      ctx.stroke();
-    }
+    }, 60000);
   }
+}
+function initThemeToggle() {
+  var tog = document.getElementById('theme-toggle');
+  if (!tog) return;
+  tog.addEventListener('click', function(e) {
+    var btn = e.target.closest('.theme-btn');
+    if (!btn) return;
+    var t = btn.getAttribute('data-theme');
+    storeTheme(t);
+    applyTheme(t);
+  });
+  applyTheme(getStoredTheme());
+}
 
-  var _rt;
-  window.addEventListener('resize',function(){clearTimeout(_rt);_rt=setTimeout(resize,120);});
-  resize();
-  _animRegister('flowField', frameTick, 30);
+// ── Keyboard shortcuts ──
+function initKeyboardShortcuts() {
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    switch (e.key.toLowerCase()) {
+      case 't': if (typeof switchTab === 'function') switchTab('trading'); break;
+      case 'r': if (typeof switchTab === 'function') switchTab('research'); break;
+      case 'm': if (typeof switchTab === 'function') switchTab('monitor'); break;
+      case 'l':
+        var cur = getStoredTheme();
+        var next = cur === 'dark' ? 'light' : cur === 'light' ? 'auto' : 'dark';
+        storeTheme(next); applyTheme(next);
+        break;
+    }
+  });
+}
+
+// ── Scroll-triggered reveals ──
+var _scrollObserver = null;
+function initScrollReveals() {
+  var staggerCounters = {};
+  _scrollObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (!entry.isIntersecting) return;
+      var el = entry.target;
+      var parent = el.parentElement;
+      var pid = parent ? parent.id || parent.className.slice(0,30) : 'root';
+      if (!staggerCounters[pid]) staggerCounters[pid] = 0;
+      var delay = staggerCounters[pid] * 0.06;
+      staggerCounters[pid]++;
+      if (delay > 0.4) delay = 0;
+      el.style.transitionDelay = delay + 's';
+      el.classList.add('sr-visible');
+      setTimeout(function() { el.style.transitionDelay = '0s'; staggerCounters[pid] = 0; }, (delay + 0.6) * 1000);
+    });
+  }, { threshold: 0.06, rootMargin: '0px 0px -60px 0px' });
+  document.querySelectorAll('.section, .card, .mon-card, .research-card, .pnl-item, .metric').forEach(function(el) {
+    _scrollObserver.observe(el);
+  });
+}
+
+// ── Count-up animation for KPI values ──
+function animateCountUp(el) {
+  var text = el.textContent;
+  var match = text.match(/^([^0-9]*)([\d,]+\.?\d*)(.*)/);
+  if (!match) return;
+  var prefix = match[1], numStr = match[2], suffix = match[3];
+  var target = parseFloat(numStr.replace(/,/g, ''));
+  if (isNaN(target) || target === 0) return;
+  var decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
+  var hasCommas = numStr.includes(',');
+  var startTime = null, duration = 800;
+  function fmt(n) {
+    var s = n.toFixed(decimals);
+    if (hasCommas) { var p = s.split('.'); p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); s = p.join('.'); }
+    return s;
+  }
+  function step(ts) {
+    if (!startTime) startTime = ts;
+    var prog = Math.min((ts - startTime) / duration, 1);
+    var eased = prog === 1 ? 1 : 1 - Math.pow(2, -10 * prog);
+    el.textContent = prefix + fmt(target * eased) + suffix;
+    if (prog < 1) requestAnimationFrame(step); else el.textContent = text;
+  }
+  requestAnimationFrame(step);
+}
+function initCountUps() {
+  var vo = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (!e.isIntersecting) return;
+      animateCountUp(e.target); vo.unobserve(e.target);
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('.card-value').forEach(function(el) { vo.observe(el); });
+}
+
+// ── Enhanced section toggle ──
+function enhanceSectionToggle() {
+  if (typeof window.toggle !== 'function') return;
+  var orig = window.toggle;
+  window.toggle = function(id) {
+    var body = document.getElementById('body-' + id);
+    if (!body) return orig(id);
+    var isCollapsed = body.classList.contains('collapsed');
+    if (isCollapsed) {
+      body.classList.remove('collapsed');
+      body.style.display = '';
+      var th = body.scrollHeight;
+      body.style.maxHeight = '0px'; body.style.opacity = '0';
+      body.offsetHeight;
+      body.style.maxHeight = th + 'px'; body.style.opacity = '1';
+      setTimeout(function() { body.style.maxHeight = ''; }, 650);
+    } else {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      body.offsetHeight;
+      body.style.maxHeight = '0px'; body.style.opacity = '0';
+      setTimeout(function() { body.classList.add('collapsed'); body.style.maxHeight = ''; body.style.opacity = ''; }, 650);
+    }
+    var chev = document.getElementById('chev-' + id);
+    if (chev) { chev.classList.toggle('down'); chev.classList.toggle('right'); }
+  };
+}
+
+// ── Enhanced tab switch with crossfade ──
+function enhanceTabSwitch() {
+  if (typeof window.switchTab !== 'function') return;
+  var origST = window.switchTab;
+  window.switchTab = function(tabId) {
+    var ac = document.querySelector('.tab-content.active');
+    if (ac && ac.id !== 'tab-' + tabId) {
+      ac.style.opacity = '0'; ac.style.transform = 'translateY(8px)';
+      setTimeout(function() {
+        origST(tabId);
+        var nc = document.querySelector('.tab-content.active');
+        if (nc) { nc.style.opacity = '0'; nc.style.transform = 'translateY(8px)'; nc.offsetHeight; nc.style.opacity = ''; nc.style.transform = ''; }
+      }, 200);
+    } else { origST(tabId); }
+  };
+}
+
+// ── MutationObserver for dynamic elements ──
+function initMutationWatcher() {
+  if (!_scrollObserver) return;
+  var mo = new MutationObserver(function(mutations) {
+    mutations.forEach(function(m) {
+      m.addedNodes.forEach(function(node) {
+        if (node.nodeType !== 1) return;
+        var sel = '.section, .card, .mon-card, .research-card, .pnl-item, .metric';
+        if (node.matches && node.matches(sel)) _scrollObserver.observe(node);
+        if (node.querySelectorAll) {
+          node.querySelectorAll(sel).forEach(function(el) { _scrollObserver.observe(el); });
+          node.querySelectorAll('.card-value').forEach(function(el) { animateCountUp(el); });
+        }
+      });
+    });
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+}
+
+// ── Apply theme immediately to prevent flash ──
+(function() {
+  var t = getStoredTheme();
+  var r = t === 'auto' ? resolveAutoTheme() : t;
+  document.documentElement.setAttribute('data-theme', r);
 })();
+
+// ── Boot on DOMContentLoaded ──
+document.addEventListener('DOMContentLoaded', function() {
+  initThemeToggle();
+  initScrollReveals();
+  initCountUps();
+  initKeyboardShortcuts();
+  initMutationWatcher();
+  setTimeout(function() { enhanceSectionToggle(); enhanceTabSwitch(); }, 100);
+});
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -5626,355 +3891,9 @@ switchTab = function(tab) {
 
 })();
 </script>
-<script src="stripe-refresh.js"></script>
 <script src="ceasefire_widget.js"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- ANIMATED ICONS (Stripe-inspired minimal canvas animations)    -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<script>
-(function() {
-  'use strict';
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-  // ── Globe animation (header logo) ──────────────────────────
-  function initGlobe() {
-    var c = document.getElementById('atlas-globe');
-    if (!c) return;
-    var ctx = c.getContext('2d');
-    var W = 34, H = 34;
-    c.width = W * dpr; c.height = H * dpr;
-    c.style.width = W + 'px'; c.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    var cx = W / 2, cy = H / 2, r = 14;
-
-    function draw(t) {
-      ctx.clearRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(212,168,74,0.5)';
-      ctx.lineWidth = 0.8;
-
-      // Outer circle
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-
-      // Latitude lines
-      ctx.lineWidth = 0.6;
-      for (var i = -2; i <= 2; i++) {
-        if (i === 0) continue;
-        var y = cy + i * r * 0.35;
-        var hw = Math.sqrt(Math.max(0, r * r - (y - cy) * (y - cy)));
-        ctx.strokeStyle = 'rgba(212,168,74,' + (0.25 - Math.abs(i) * 0.05).toFixed(2) + ')';
-        ctx.beginPath(); ctx.moveTo(cx - hw, y); ctx.lineTo(cx + hw, y); ctx.stroke();
-      }
-      // Equator (brighter)
-      ctx.strokeStyle = 'rgba(212,168,74,0.4)';
-      ctx.lineWidth = 0.7;
-      ctx.beginPath(); ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.stroke();
-
-      // Rotating meridians
-      ctx.strokeStyle = 'rgba(212,168,74,0.35)';
-      ctx.lineWidth = 0.6;
-      var phase = t * 0.0003;
-      for (var m = 0; m < 4; m++) {
-        var angle = phase + m * Math.PI / 4;
-        var squeeze = Math.cos(angle);
-        var rx = Math.abs(squeeze) * r;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, Math.max(0.3, rx), r, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-
-      // Orbiting dot
-      var da = t * 0.001;
-      var orbitR = r * 0.85;
-      var dx = cx + Math.cos(da) * orbitR;
-      var dy = cy + Math.sin(da) * orbitR * 0.4;
-      // Behind globe when sin < 0 (dimmer)
-      var dotAlpha = Math.sin(da) > 0 ? 0.8 : 0.25;
-      ctx.fillStyle = 'rgba(127,184,88,' + dotAlpha + ')';
-      ctx.beginPath(); ctx.arc(dx, dy, 1.8, 0, Math.PI * 2); ctx.fill();
-    }
-
-    _animRegister('globe', function(t) { draw(t); }, 30);
-  }
-
-  // ── Card icon animations ───────────────────────────────────
-  var _cardAnimId = 0;
-  window._initCardIcons = function() {
-    cancelAnimationFrame(_cardAnimId);
-    var icons = {
-      equity: drawEquity,
-      benchmark: drawBenchmark,
-      positions: drawPositions,
-      pnl: drawPnl,
-      winrate: drawWinrate
-    };
-
-    var canvases = {};
-    Object.keys(icons).forEach(function(k) {
-      var el = document.getElementById('card-icon-' + k);
-      if (el) {
-        var ctx = el.getContext('2d');
-        el.width = 40 * dpr; el.height = 40 * dpr;
-        el.style.width = '20px'; el.style.height = '20px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        canvases[k] = { ctx: ctx, w: 20, h: 20 };
-      }
-    });
-    if (Object.keys(canvases).length === 0) return;
-
-    _animRegister('cardIcons', function(t) {
-      Object.keys(icons).forEach(function(k) {
-        if (canvases[k]) icons[k](canvases[k].ctx, 18, 18, t);
-      });
-    }, 24);
-  };
-
-  // ── Equity: pulsing concentric rings ───────────────────────
-  function drawEquity(ctx, w, h, t) {
-    ctx.clearRect(0, 0, w, h);
-    var cx = w / 2, cy = h / 2;
-    var phase = (t * 0.0008) % 1;
-    for (var i = 0; i < 3; i++) {
-      var p = (phase + i * 0.33) % 1;
-      var r = 2 + p * 8;
-      var a = (1 - p) * 0.6;
-      ctx.strokeStyle = 'rgba(212,168,74,' + a.toFixed(3) + ')';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(212,168,74,0.7)';
-    ctx.beginPath(); ctx.arc(cx, cy, 1.8, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // ── Benchmark: dual sine waves sliding ─────────────────────
-  function drawBenchmark(ctx, w, h, t) {
-    ctx.clearRect(0, 0, w, h);
-    var phase = t * 0.0015;
-    // Main wave
-    ctx.strokeStyle = 'rgba(90,147,192,0.6)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (var x = 0; x <= w; x++) {
-      var y = h / 2 + Math.sin((x / w) * Math.PI * 2.5 + phase) * 4.5
-                     + Math.sin((x / w) * Math.PI * 1.3 + phase * 0.6) * 2;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    // Ghost wave (lagging)
-    ctx.strokeStyle = 'rgba(90,147,192,0.2)';
-    ctx.lineWidth = 0.6;
-    ctx.beginPath();
-    for (var x = 0; x <= w; x++) {
-      var y = h / 2 + Math.sin((x / w) * Math.PI * 2.5 + phase - 0.8) * 4
-                     + Math.sin((x / w) * Math.PI * 1.3 + phase * 0.6 - 0.5) * 1.5;
-      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    // Tracking dot
-    var ey = h / 2 + Math.sin(Math.PI * 2.5 + phase) * 4.5
-                   + Math.sin(Math.PI * 1.3 + phase * 0.6) * 2;
-    ctx.fillStyle = 'rgba(90,147,192,0.8)';
-    ctx.beginPath(); ctx.arc(w - 1, ey, 1.8, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // ── Positions: orbiting dots on elliptical paths ───────────
-  function drawPositions(ctx, w, h, t) {
-    ctx.clearRect(0, 0, w, h);
-    var cx = w / 2, cy = h / 2;
-    var base = t * 0.0007;
-    // Orbit ellipse
-    ctx.strokeStyle = 'rgba(138,126,112,0.18)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.ellipse(cx, cy, 8, 6, 0, 0, Math.PI * 2); ctx.stroke();
-    // Inner ring
-    ctx.beginPath(); ctx.ellipse(cx, cy, 4, 3, 0.3, 0, Math.PI * 2); ctx.stroke();
-    // Dots
-    var colors = ['rgba(90,147,192,0.8)', 'rgba(127,184,88,0.8)', 'rgba(212,168,74,0.8)', 'rgba(190,130,130,0.7)'];
-    for (var i = 0; i < 4; i++) {
-      var a = base + i * Math.PI / 2;
-      var orb = i < 2 ? 1 : 0.55;
-      var dx = cx + Math.cos(a) * 8 * orb;
-      var dy = cy + Math.sin(a) * 6 * orb;
-      ctx.fillStyle = colors[i];
-      ctx.beginPath(); ctx.arc(dx, dy, 1.6, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  // ── P&L: animated bars rising/falling ──────────────────────
-  function drawPnl(ctx, w, h, t) {
-    ctx.clearRect(0, 0, w, h);
-    var phase = t * 0.0005;
-    var mid = h / 2 + 1;
-    var bw = 2.2, gap = 1, n = 5;
-    var x0 = (w - n * (bw + gap) + gap) / 2;
-    for (var i = 0; i < n; i++) {
-      var v = Math.sin(phase + i * 0.85) * 6;
-      var x = x0 + i * (bw + gap);
-      ctx.fillStyle = v > 0 ? 'rgba(127,184,88,0.6)' : 'rgba(208,88,88,0.55)';
-      if (v > 0) {
-        ctx.fillRect(x, mid - v, bw, v);
-      } else {
-        ctx.fillRect(x, mid, bw, -v);
-      }
-    }
-    // Zero line
-    ctx.strokeStyle = 'rgba(138,126,112,0.25)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath(); ctx.moveTo(1, mid); ctx.lineTo(w - 1, mid); ctx.stroke();
-  }
-
-  // ── Win rate: rotating crosshair/target ────────────────────
-  function drawWinrate(ctx, w, h, t) {
-    ctx.clearRect(0, 0, w, h);
-    var cx = w / 2, cy = h / 2;
-    var rot = t * 0.0004;
-    ctx.strokeStyle = 'rgba(212,168,74,0.4)';
-    ctx.lineWidth = 0.6;
-    // Rings
-    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2); ctx.stroke();
-    // Rotating crosshair
-    for (var i = 0; i < 4; i++) {
-      var a = rot + i * Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(a) * 3.5, cy + Math.sin(a) * 3.5);
-      ctx.lineTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9);
-      ctx.stroke();
-    }
-    // Center hit dot (pulses)
-    var pulse = 0.5 + Math.sin(t * 0.003) * 0.3;
-    ctx.fillStyle = 'rgba(127,184,88,' + pulse.toFixed(2) + ')';
-    ctx.beginPath(); ctx.arc(cx, cy, 1.5, 0, Math.PI * 2); ctx.fill();
-  }
-
-  // ── Accent micro-animations (Stripe Art-inspired) ─────────
-  function initAccents() {
-    var hidden = false;
-    document.addEventListener('visibilitychange', function() { hidden = document.hidden; });
-
-    function setup(id, w, h) {
-      var c = document.getElementById(id);
-      if (!c) return null;
-      var ctx = c.getContext('2d');
-      c.width = w * dpr; c.height = h * dpr;
-      c.style.width = w + 'px'; c.style.height = h + 'px';
-      ctx.scale(dpr, dpr);
-      return { ctx: ctx, w: w, h: h };
-    }
-
-    // Collect all accent canvases
-    var dg = setup('accent-dotgrid', 48, 10);
-    var pl = setup('accent-pulse', 32, 10);
-    var wv = setup('accent-wave', 40, 10);
-    var ob = setup('accent-orbit', 14, 14);
-    var br = setup('accent-bars', 36, 10);
-    var sp = setup('accent-spiral', 20, 20);
-
-    // Single tick function for all accents — registered at 12fps (decorative)
-    _animRegister('accents', function(t) {
-      // 1. Dot grid
-      if (dg) {
-        var cols = 8, rows2 = 2, ddx = 6, ddy = 5;
-        dg.ctx.clearRect(0, 0, dg.w, dg.h);
-        for (var r = 0; r < rows2; r++) {
-          for (var c2 = 0; c2 < cols; c2++) {
-            var x = c2 * ddx + 3, y = r * ddy + 2.5;
-            var phase = (c2 + r * cols) * 0.4 + t * 0.001;
-            var a = 0.25 + Math.sin(phase) * 0.2;
-            dg.ctx.fillStyle = 'rgba(138,126,112,' + a.toFixed(2) + ')';
-            dg.ctx.beginPath(); dg.ctx.arc(x, y, 0.8, 0, Math.PI * 2); dg.ctx.fill();
-          }
-        }
-      }
-      // 2. Pulse
-      if (pl) {
-        pl.ctx.clearRect(0, 0, pl.w, pl.h);
-        pl.ctx.strokeStyle = 'rgba(127,184,88,0.6)';
-        pl.ctx.lineWidth = 0.8;
-        pl.ctx.beginPath();
-        for (var px = 0; px < pl.w; px++) {
-          var py = pl.h / 2;
-          var spike = Math.exp(-Math.pow((px - pl.w / 2 + (t * 0.02 % pl.w)) % pl.w - pl.w / 2, 2) / 8);
-          py -= spike * 3.5;
-          px === 0 ? pl.ctx.moveTo(px, py) : pl.ctx.lineTo(px, py);
-        }
-        pl.ctx.stroke();
-      }
-      // 3. Wave
-      if (wv) {
-        wv.ctx.clearRect(0, 0, wv.w, wv.h);
-        var mid = wv.h / 2;
-        wv.ctx.strokeStyle = 'rgba(212,168,74,0.5)';
-        wv.ctx.lineWidth = 0.7;
-        wv.ctx.beginPath();
-        for (var wx = 0; wx < wv.w; wx++) {
-          var wy = mid + Math.sin(wx * 0.18 + t * 0.0015) * 3;
-          wx === 0 ? wv.ctx.moveTo(wx, wy) : wv.ctx.lineTo(wx, wy);
-        }
-        wv.ctx.stroke();
-        wv.ctx.strokeStyle = 'rgba(90,147,192,0.4)';
-        wv.ctx.beginPath();
-        for (var wx2 = 0; wx2 < wv.w; wx2++) {
-          var wy2 = mid + Math.sin(wx2 * 0.15 + t * 0.001 + 1.5) * 2;
-          wx2 === 0 ? wv.ctx.moveTo(wx2, wy2) : wv.ctx.lineTo(wx2, wy2);
-        }
-        wv.ctx.stroke();
-      }
-      // 4. Orbit
-      if (ob) {
-        ob.ctx.clearRect(0, 0, ob.w, ob.h);
-        var ocx = ob.w / 2, ocy = ob.h / 2;
-        ob.ctx.strokeStyle = 'rgba(138,126,112,0.3)';
-        ob.ctx.lineWidth = 0.5;
-        ob.ctx.beginPath(); ob.ctx.arc(ocx, ocy, 5, 0, Math.PI * 2); ob.ctx.stroke();
-        ob.ctx.fillStyle = 'rgba(212,168,74,0.5)';
-        ob.ctx.beginPath(); ob.ctx.arc(ocx, ocy, 1, 0, Math.PI * 2); ob.ctx.fill();
-        var oa = t * 0.0015;
-        var ox = ocx + Math.cos(oa) * 5, oy = ocy + Math.sin(oa) * 5;
-        ob.ctx.fillStyle = 'rgba(127,184,88,0.7)';
-        ob.ctx.beginPath(); ob.ctx.arc(ox, oy, 1.2, 0, Math.PI * 2); ob.ctx.fill();
-      }
-      // 5. Bars
-      if (br) {
-        br.ctx.clearRect(0, 0, br.w, br.h);
-        var barW2 = 2.5, gap = 1.5, n = 8;
-        for (var bi = 0; bi < n; bi++) {
-          var bx = bi * (barW2 + gap) + 2;
-          var bh = 2 + Math.abs(Math.sin(bi * 0.7 + t * 0.002)) * 6;
-          br.ctx.fillStyle = bi < 5 ? 'rgba(127,184,88,0.5)' : 'rgba(208,88,88,0.5)';
-          br.ctx.fillRect(bx, br.h - bh, barW2, bh);
-        }
-      }
-      // 6. Spiral
-      if (sp) {
-        sp.ctx.clearRect(0, 0, sp.w, sp.h);
-        var scx = sp.w / 2, scy = sp.h / 2;
-        var rot = t * 0.0003;
-        sp.ctx.strokeStyle = 'rgba(138,126,112,0.35)';
-        sp.ctx.lineWidth = 0.4;
-        for (var arm = 0; arm < 6; arm++) {
-          var sa = rot + arm * Math.PI / 3;
-          sp.ctx.beginPath();
-          for (var p = 0; p < 30; p++) {
-            var r1 = 3, r2 = 5 + Math.sin(t * 0.001 + arm) * 1;
-            var angle = sa + p * 0.22;
-            var sx = scx + Math.cos(angle) * (r1 + (r2 - r1) * p / 30);
-            var sy = scy + Math.sin(angle) * (r1 + (r2 - r1) * p / 30);
-            p === 0 ? sp.ctx.moveTo(sx, sy) : sp.ctx.lineTo(sx, sy);
-          }
-          sp.ctx.stroke();
-        }
-        sp.ctx.fillStyle = 'rgba(212,168,74,0.4)';
-        sp.ctx.beginPath(); sp.ctx.arc(scx, scy, 1, 0, Math.PI * 2); sp.ctx.fill();
-      }
-    }, 12);
-  }
-
-  // Boot
-  initGlobe();
-  initAccents();
-})();
-</script>
+<!-- Animated icons removed (decorative) -->
 </body>
 </html>
