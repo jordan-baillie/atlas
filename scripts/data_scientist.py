@@ -942,6 +942,44 @@ def _derive_wave_theme(recommendations: list[dict], regime: str) -> str:
     return f"Research Deepening — {regime.replace('_', ' ').title()} Market"
 
 
+# ── Portfolio Correlations ──────────────────────────────────────
+
+def analyze_portfolio_correlations() -> dict:
+    """Load latest portfolio optimization results and summarize for report."""
+    results_path = PROJECT / "research" / "results" / "portfolio_optimization.json"
+    if not results_path.exists():
+        return {
+            "analysis": "portfolio_correlations",
+            "available": False,
+            "note": "Run: python3 research/portfolio_optimizer.py --vault",
+        }
+
+    import json as _json
+    with open(results_path) as f:
+        data = _json.load(f)
+
+    active = data.get("active_weights", {})
+    pm = data.get("portfolio_metrics", {})
+    ga = data.get("group_analysis", {})
+    ps = data.get("per_strategy", {})
+
+    return {
+        "analysis": "portfolio_correlations",
+        "available": True,
+        "portfolio_sharpe": pm.get("simulated_sharpe", 0),
+        "analytic_sharpe": pm.get("analytic_sharpe", 0),
+        "avg_correlation": pm.get("avg_correlation", 0),
+        "n_active": pm.get("n_strategies", 0),
+        "annual_return": pm.get("portfolio_annual_return", 0),
+        "annual_vol": pm.get("portfolio_annual_vol", 0),
+        "max_drawdown": pm.get("portfolio_max_drawdown", 0),
+        "active_weights": active,
+        "per_strategy": ps,
+        "cross_momentum_mr": ga.get("cross_momentum_mr", {}),
+        "within_group": ga.get("within_group", {}),
+    }
+
+
 # ── Weekly Digest ───────────────────────────────────────────────
 
 def generate_weekly_digest() -> dict:
@@ -959,6 +997,7 @@ def generate_weekly_digest() -> dict:
         "alpha_decay": analyze_alpha_decay(),
         "research_insights": analyze_research_insights(),
         "wave_recommendations": analyze_wave_recommendations(),
+        "portfolio_correlations": analyze_portfolio_correlations(),
     }
 
 
@@ -1079,13 +1118,37 @@ def format_report(result: dict) -> str:
                 lines.append(f"      → {exp}")
             lines.append("")
     
+    elif analysis == "portfolio_correlations":
+        lines.append("📊 PORTFOLIO CORRELATIONS REPORT")
+        if not result.get("available"):
+            lines.append(f"   ⚠️  No data. {result.get('note', '')}")
+        else:
+            lines.append(f"   Simulated Sharpe:  {result.get('portfolio_sharpe', 0):.4f}")
+            lines.append(f"   Analytic Sharpe:   {result.get('analytic_sharpe', 0):.4f}")
+            lines.append(f"   Avg Correlation:   {result.get('avg_correlation', 0):.4f}")
+            lines.append(f"   Active strategies: {result.get('n_active', 0)}")
+            lines.append(f"   Annual return:     {result.get('annual_return', 0):.1f}%")
+            lines.append(f"   Annual vol:        {result.get('annual_vol', 0):.1f}%")
+            lines.append(f"   Max drawdown:      {result.get('max_drawdown', 0):.1f}%")
+            cm = result.get("cross_momentum_mr", {})
+            if cm:
+                validated = "✅" if cm.get("hypothesis_validated") else "❌"
+                lines.append(f"   Momentum vs MR corr: {cm.get('avg_correlation', 0):.3f} {validated}")
+            active = result.get("active_weights", {})
+            if active:
+                lines.append("\n   Optimal Weights:")
+                for name in sorted(active, key=lambda x: active[x], reverse=True):
+                    info = result.get("per_strategy", {}).get(name, {})
+                    lines.append(f"   {name:30s} {active[name]*100:5.1f}%  sharpe={info.get('sharpe', 0):.3f}  [{info.get('group', '?')}]")
+
     elif analysis == "weekly_digest":
         lines.append("═" * 60)
         lines.append("📊 ATLAS WEEKLY DATA SCIENCE DIGEST")
         lines.append(f"   Generated: {result.get('generated_at', '?')[:19]}")
         lines.append("═" * 60)
         for key in ["regime_state", "signal_accuracy", "confidence_model", "strategy_mix",
-                     "rejection_impact", "alpha_decay", "research_insights", "wave_recommendations"]:
+                     "rejection_impact", "alpha_decay", "research_insights", "wave_recommendations",
+                     "portfolio_correlations"]:
             if key in result:
                 lines.append("")
                 lines.append(format_report(result[key]))
@@ -1278,6 +1341,39 @@ def generate_markdown_report(digest: dict) -> str:
                 lines.append(f"- `{exp}`")
             lines.append("")
 
+    # ── Portfolio Optimization ──
+    pc = digest.get("portfolio_correlations", {})
+    if pc.get("available"):
+        lines.append("## Portfolio Optimization")
+        lines.append("")
+        lines.append(f"- **Portfolio Sharpe (simulated)**: {pc.get('portfolio_sharpe', 0):.4f}")
+        lines.append(f"- **Portfolio Sharpe (analytic)**: {pc.get('analytic_sharpe', 0):.4f}")
+        lines.append(f"- **Avg correlation**: {pc.get('avg_correlation', 0):.4f}")
+        lines.append(f"- **Active strategies**: {pc.get('n_active', 0)}")
+        lines.append(f"- **Annual return**: {pc.get('annual_return', 0):.1f}%")
+        lines.append(f"- **Annual vol**: {pc.get('annual_vol', 0):.1f}%")
+        lines.append(f"- **Max drawdown**: {pc.get('max_drawdown', 0):.1f}%")
+        lines.append("")
+
+        # Cross-group correlation
+        cm = pc.get("cross_momentum_mr", {})
+        if cm:
+            validated = "✅" if cm.get("hypothesis_validated") else "❌"
+            lines.append(f"**Momentum vs MR correlation**: {cm.get('avg_correlation', 0):.3f} {validated}")
+            lines.append("")
+
+        # Optimal weights table
+        active = pc.get("active_weights", {})
+        if active:
+            lines.append("**Optimal Weights:**")
+            lines.append("")
+            lines.append("| Strategy | Weight | Sharpe | Group |")
+            lines.append("|----------|--------|--------|-------|")
+            for name in sorted(active, key=lambda x: active[x], reverse=True):
+                info = pc.get("per_strategy", {}).get(name, {})
+                lines.append(f"| {name} | {active[name]*100:.1f}% | {info.get('sharpe', 0):.3f} | {info.get('group', '?')} |")
+            lines.append("")
+
     # ── Footer ──
     lines.append("---")
     lines.append(f"*Report generated by `scripts/data_scientist.py` — Atlas Data Scientist*")
@@ -1313,6 +1409,7 @@ ANALYSES = {
     "alpha_decay": analyze_alpha_decay,
     "research_insights": analyze_research_insights,
     "wave_recommendations": analyze_wave_recommendations,
+    "portfolio_correlations": analyze_portfolio_correlations,
     "weekly_digest": generate_weekly_digest,
 }
 

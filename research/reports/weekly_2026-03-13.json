@@ -1,0 +1,1118 @@
+{
+  "analysis": "weekly_digest",
+  "generated_at": "2026-03-13T10:48:15.386802",
+  "signal_accuracy": {
+    "analysis": "signal_accuracy",
+    "total_proposed": 316,
+    "results_by_period": {
+      "1d": {
+        "signals_tested": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_return_pct": 0.0
+      },
+      "3d": {
+        "signals_tested": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_return_pct": 0.0
+      },
+      "5d": {
+        "signals_tested": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_return_pct": 0.0
+      },
+      "10d": {
+        "signals_tested": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_return_pct": 0.0
+      },
+      "20d": {
+        "signals_tested": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_return_pct": 0.0
+      }
+    },
+    "strategy_breakdown": {},
+    "top_signals": [],
+    "worst_signals": []
+  },
+  "strategy_mix": {
+    "analysis": "strategy_mix",
+    "total_signals": 422,
+    "strategies": {
+      "mean_reversion": {
+        "signal_count": 43,
+        "pct_of_total": 10.2,
+        "unique_tickers": 12,
+        "proposed": 30,
+        "rejected": 13,
+        "confidence_mean": 0.735,
+        "confidence_std": 0.064,
+        "confidence_min": 0.613,
+        "confidence_max": 0.813
+      },
+      "trend_following": {
+        "signal_count": 371,
+        "pct_of_total": 87.9,
+        "unique_tickers": 60,
+        "proposed": 280,
+        "rejected": 91,
+        "confidence_mean": 0.701,
+        "confidence_std": 0.174,
+        "confidence_min": 0.361,
+        "confidence_max": 1.0
+      },
+      "opening_gap": {
+        "signal_count": 8,
+        "pct_of_total": 1.9,
+        "unique_tickers": 2,
+        "proposed": 6,
+        "rejected": 2,
+        "confidence_mean": 0.89,
+        "confidence_std": 0.077,
+        "confidence_min": 0.791,
+        "confidence_max": 0.95
+      }
+    },
+    "enabled_strategies": [
+      "mean_reversion",
+      "trend_following",
+      "opening_gap"
+    ],
+    "disabled_strategies": [
+      "momentum_breakout",
+      "sector_rotation",
+      "short_term_mr",
+      "bb_squeeze",
+      "mtf_momentum",
+      "dividend_capture",
+      "connors_rsi2"
+    ],
+    "diagnoses": [
+      "WARNING: trend_following dominates at 87.9% of all signals \u2014 likely over-sensitive or other strategies are under-generating"
+    ]
+  },
+  "confidence_model": {
+    "analysis": "confidence_model",
+    "quartile_thresholds": [
+      0.575,
+      0.737,
+      0.847
+    ],
+    "bucket_results": {
+      "Q1_low": {
+        "signals": 81,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "confidence_range": "0.361-0.575"
+      },
+      "Q2": {
+        "signals": 77,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "confidence_range": "0.585-0.736"
+      },
+      "Q3": {
+        "signals": 79,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "confidence_range": "0.738-0.846"
+      },
+      "Q4_high": {
+        "signals": 79,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "confidence_range": "0.851-1.000"
+      }
+    },
+    "diagnosis": "BROKEN: High-confidence signals (Q4) underperform low-confidence (Q1). Confidence scoring adds no value \u2014 needs rebuilding.",
+    "recommendation": "Optimal threshold likely near 0.737 (median) \u2014 test in backtest before changing live config."
+  },
+  "rejection_impact": {
+    "analysis": "rejection_impact",
+    "total_rejected": 106,
+    "total_proposed": 316,
+    "rejection_groups": {
+      "confidence_below_threshold": {
+        "rejected_count": 49,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_missed_return_pct": 0
+      },
+      "risk_exceeds_max": {
+        "rejected_count": 5,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_missed_return_pct": 0
+      },
+      "max_positions_exceeded": {
+        "rejected_count": 44,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_missed_return_pct": 0
+      },
+      "sector_concentration": {
+        "rejected_count": 8,
+        "tested": 0,
+        "win_rate": 0,
+        "avg_return_pct": 0,
+        "total_missed_return_pct": 0
+      }
+    },
+    "proposed_avg_return_pct": 0,
+    "proposed_win_rate": 0
+  },
+  "regime_state": {
+    "analysis": "regime_state",
+    "error": "No SPY data"
+  },
+  "alpha_decay": {
+    "analysis": "alpha_decay",
+    "first_half": {
+      "signals": 211,
+      "tested": 0,
+      "win_rate": 0,
+      "avg_return_pct": 0
+    },
+    "second_half": {
+      "signals": 211,
+      "tested": 0,
+      "win_rate": 0,
+      "avg_return_pct": 0
+    },
+    "decay_detected": false,
+    "recommendation": "No significant decay detected"
+  },
+  "research_insights": {
+    "analysis": "research_insights",
+    "total_experiments": 152,
+    "verdict_distribution": {
+      "pass": 59,
+      "fail": 42,
+      "partial": 48,
+      "promoted": 3
+    },
+    "category_distribution": {
+      "dormant": 38,
+      "param_drift": 25,
+      "filter": 23,
+      "cross_market": 2,
+      "promotion": 3,
+      "new_strategy": 13,
+      "portfolio": 2,
+      "autoresearch": 46
+    },
+    "strategy_scorecard": {
+      "momentum_breakout": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 10,
+        "pass": 5,
+        "fail": 1,
+        "partial": 4,
+        "promoted": 0,
+        "pass_rate": 0.5,
+        "best_sharpe": 0.722
+      },
+      "short_term_mr": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 9,
+        "pass": 3,
+        "fail": 1,
+        "partial": 5,
+        "promoted": 0,
+        "pass_rate": 0.33,
+        "best_sharpe": 0.504
+      },
+      "sector_rotation": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 8,
+        "pass": 2,
+        "fail": 3,
+        "partial": 3,
+        "promoted": 0,
+        "pass_rate": 0.25,
+        "best_sharpe": 0.43
+      },
+      "bb_squeeze": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 9,
+        "pass": 4,
+        "fail": 0,
+        "partial": 5,
+        "promoted": 0,
+        "pass_rate": 0.44,
+        "best_sharpe": 0.486
+      },
+      "param_drift": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 1,
+        "partial": 1,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.749
+      },
+      "filter": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 9,
+        "pass": 0,
+        "fail": 6,
+        "partial": 3,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.588
+      },
+      "cross_market": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 2,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.868
+      },
+      "mtf_momentum": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 7,
+        "pass": 0,
+        "fail": 6,
+        "partial": 1,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.344
+      },
+      "combined": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 8,
+        "pass": 3,
+        "fail": 5,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.38,
+        "best_sharpe": 0.749
+      },
+      "promotion": {
+        "grade": "A",
+        "status": "PROMOTED \u2014 live-ready",
+        "experiments": 4,
+        "pass": 0,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 4,
+        "pass_rate": 1.0,
+        "best_sharpe": null
+      },
+      "mean_reversion": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 44,
+        "pass": 23,
+        "fail": 7,
+        "partial": 14,
+        "promoted": 0,
+        "pass_rate": 0.52,
+        "best_sharpe": 0.642
+      },
+      "sma200_filter": {
+        "grade": "A",
+        "status": "PROMOTED \u2014 live-ready",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 2,
+        "pass_rate": 1.0,
+        "best_sharpe": 0.868
+      },
+      "connors_rsi2": {
+        "grade": "C",
+        "status": "PARTIAL \u2014 infrastructure issues likely",
+        "experiments": 5,
+        "pass": 0,
+        "fail": 1,
+        "partial": 4,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.337
+      },
+      "opening_gap": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 5,
+        "pass": 1,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.2,
+        "best_sharpe": 0.618
+      },
+      "trend_following": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 14,
+        "pass": 10,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.71,
+        "best_sharpe": 0.662
+      },
+      "triple_rsi": {
+        "grade": "C",
+        "status": "PARTIAL \u2014 infrastructure issues likely",
+        "experiments": 3,
+        "pass": 0,
+        "fail": 1,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.119
+      },
+      "lower_band_reversion": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 5,
+        "pass": 1,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.2,
+        "best_sharpe": 0.707
+      },
+      "portfolio": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 1,
+        "pass": 0,
+        "fail": 1,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.618
+      },
+      "consecutive_down_days": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 4,
+        "pass": 3,
+        "fail": 1,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.75,
+        "best_sharpe": 0.578
+      },
+      "adx_trend_pullback": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 4,
+        "pass": 4,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 1.0,
+        "best_sharpe": 0.579
+      }
+    },
+    "infrastructure_blockers": [
+      {
+        "experiment": "wave1_vix_filter",
+        "issue": "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+      },
+      {
+        "experiment": "wave1_vol_filter",
+        "issue": "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+      },
+      {
+        "experiment": "wave1_cross_mkt",
+        "issue": "These are infrastructure failures, not hypothesis rejections \u2014 requeue with correct format"
+      },
+      {
+        "experiment": "wave1_sector_comb",
+        "issue": "Root cause: max_open_positions=10 creates zero-sum competition for position slots"
+      },
+      {
+        "experiment": "wave1_mtf_mo_solo",
+        "issue": "ROOT CAUSE: confidence=0.50 hardcoded in mtf_momentum.py, filtered by min_confidence=0.75 in config"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 volume variants produced identical results"
+      },
+      {
+        "experiment": "wave2_exit_og",
+        "issue": "All max_hold_days variants produce essentially identical results (9 trades each)"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 TOM variants produced identical results"
+      },
+      {
+        "experiment": "wave2_tom_filter",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 TOM variants produced near-identical results (116/77/115 trades)"
+      },
+      {
+        "experiment": "wave2_vol_combined",
+        "issue": "INFRASTRUCTURE FAILURE: All 3 volume variants produced near-identical results (116/117/111 trades)"
+      }
+    ],
+    "queue_status": {
+      "failed": 20,
+      "deferred": 15,
+      "partial": 20,
+      "passed": 2,
+      "queued": 49
+    },
+    "stalled_experiments": [
+      "wave2_vol_combined",
+      "wave2_rsi2_solo",
+      "wave2_exit_mr",
+      "wave2_exit_og",
+      "wave2_chandelier_tf",
+      "wave2_tom_filter",
+      "wave3_ibs_sweep",
+      "wave3_vol_sweep",
+      "wave3_trsi_solo",
+      "wave3_rsi_period",
+      "wave3_hold_combined",
+      "wave4_lbr_solo",
+      "wave4_lbr_solo_relaxed",
+      "wave4_mr_hold5_oos",
+      "wave4_mr_strength_exit",
+      "wave4_lbr_band_sweep",
+      "wave4_lbr_ibs_sweep",
+      "wave5_mr_profit_sweep",
+      "wave5_tf_trail_sweep",
+      "wave5_og_gap_sweep",
+      "wave5_pool_toggle",
+      "wave5_cdd_solo",
+      "20260310_181024_f7508b",
+      "20260310_181024_9b3400",
+      "20260310_181024_d14b81",
+      "20260310_181024_d2d7b3",
+      "20260310_181024_e41347",
+      "20260310_183205_1eac79",
+      "20260310_183205_f86e93",
+      "20260310_183205_800b5b",
+      "20260310_185801_5ee089",
+      "20260310_185801_dd443f",
+      "20260310_185801_754a55",
+      "20260310_185801_9e1d01",
+      "20260310_185804_7a6d6d",
+      "20260310_185804_730b2e",
+      "20260310_185804_461735",
+      "20260310_185804_c5b707",
+      "20260310_185804_9ff181",
+      "director_mr_combined_20260311"
+    ],
+    "key_learnings": [
+      {
+        "experiment": "ar-20260311_213036",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 zscore_lookback: 30\u219220"
+      },
+      {
+        "experiment": "ar-20260311_231123",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 rsi_period: 10\u219214"
+      },
+      {
+        "experiment": "ar-20260311_231130",
+        "strategy": "consecutive_down_days",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 min_down_days: None\u21922"
+      },
+      {
+        "experiment": "ar-20260311_233005",
+        "strategy": "consecutive_down_days",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 ibs_threshold: None\u21921.0"
+      },
+      {
+        "experiment": "ar-20260311_233403",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 profit_target_atr_mult: 1.5\u21922.5"
+      },
+      {
+        "experiment": "ar-20260311_234534",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 ibs_max: 1.0\u21920.7"
+      },
+      {
+        "experiment": "ar-20260312_000417",
+        "strategy": "momentum_breakout",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 atr_stop_mult: 2.0\u21921.5"
+      },
+      {
+        "experiment": "ar-20260312_001727",
+        "strategy": "momentum_breakout",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 max_hold_days: 15\u219210"
+      },
+      {
+        "experiment": "ar-20260312_003716",
+        "strategy": "bb_squeeze",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 bb_std: 2.5\u21921.5"
+      },
+      {
+        "experiment": "ar-20260312_005338",
+        "strategy": "bb_squeeze",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21922.0"
+      },
+      {
+        "experiment": "ar-20260312_091855",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 rsi_period: 14\u21927"
+      },
+      {
+        "experiment": "ar-20260312_094057",
+        "strategy": "mean_reversion",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 rsi_period: 7\u219210"
+      },
+      {
+        "experiment": "ar-20260312_101555",
+        "strategy": "adx_trend_pullback",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 adx_period: None\u21927"
+      },
+      {
+        "experiment": "ar-20260312_104004",
+        "strategy": "adx_trend_pullback",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 atr_stop_mult: None\u21921.5"
+      },
+      {
+        "experiment": "ar-20260312_110553",
+        "strategy": "consecutive_down_days",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 sma200_filter: None\u2192False"
+      },
+      {
+        "experiment": "ar-20260312_125928",
+        "strategy": "opening_gap",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 vol_surge_threshold: 1.2\u21921.5"
+      },
+      {
+        "experiment": "ar-20260312_170031",
+        "strategy": "adx_trend_pullback",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 ema_touch_pct: None\u21920.015"
+      },
+      {
+        "experiment": "ar-20260312_203132",
+        "strategy": "momentum_breakout",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 max_hold_days: 10\u219215"
+      },
+      {
+        "experiment": "ar-20260312_204612",
+        "strategy": "short_term_mr",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 rsi_oversold: 20\u219215"
+      },
+      {
+        "experiment": "ar-20260312_213643",
+        "strategy": "adx_trend_pullback",
+        "verdict": "pass",
+        "learning": "autoresearch: keep \u2014 adx_threshold: None\u219220.0"
+      }
+    ]
+  },
+  "wave_recommendations": {
+    "analysis": "wave_recommendations",
+    "current_regime": "UNKNOWN",
+    "research_summary": {
+      "total_experiments": 152,
+      "verdicts": {
+        "pass": 59,
+        "fail": 42,
+        "partial": 48,
+        "promoted": 3
+      },
+      "infra_blockers": 12,
+      "stalled_count": 40
+    },
+    "strategy_scorecard": {
+      "momentum_breakout": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 10,
+        "pass": 5,
+        "fail": 1,
+        "partial": 4,
+        "promoted": 0,
+        "pass_rate": 0.5,
+        "best_sharpe": 0.722
+      },
+      "short_term_mr": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 9,
+        "pass": 3,
+        "fail": 1,
+        "partial": 5,
+        "promoted": 0,
+        "pass_rate": 0.33,
+        "best_sharpe": 0.504
+      },
+      "sector_rotation": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 8,
+        "pass": 2,
+        "fail": 3,
+        "partial": 3,
+        "promoted": 0,
+        "pass_rate": 0.25,
+        "best_sharpe": 0.43
+      },
+      "bb_squeeze": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 9,
+        "pass": 4,
+        "fail": 0,
+        "partial": 5,
+        "promoted": 0,
+        "pass_rate": 0.44,
+        "best_sharpe": 0.486
+      },
+      "param_drift": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 1,
+        "partial": 1,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.749
+      },
+      "filter": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 9,
+        "pass": 0,
+        "fail": 6,
+        "partial": 3,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.588
+      },
+      "cross_market": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 2,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.868
+      },
+      "mtf_momentum": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 7,
+        "pass": 0,
+        "fail": 6,
+        "partial": 1,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.344
+      },
+      "combined": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 8,
+        "pass": 3,
+        "fail": 5,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.38,
+        "best_sharpe": 0.749
+      },
+      "promotion": {
+        "grade": "A",
+        "status": "PROMOTED \u2014 live-ready",
+        "experiments": 4,
+        "pass": 0,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 4,
+        "pass_rate": 1.0,
+        "best_sharpe": null
+      },
+      "mean_reversion": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 44,
+        "pass": 23,
+        "fail": 7,
+        "partial": 14,
+        "promoted": 0,
+        "pass_rate": 0.52,
+        "best_sharpe": 0.642
+      },
+      "sma200_filter": {
+        "grade": "A",
+        "status": "PROMOTED \u2014 live-ready",
+        "experiments": 2,
+        "pass": 0,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 2,
+        "pass_rate": 1.0,
+        "best_sharpe": 0.868
+      },
+      "connors_rsi2": {
+        "grade": "C",
+        "status": "PARTIAL \u2014 infrastructure issues likely",
+        "experiments": 5,
+        "pass": 0,
+        "fail": 1,
+        "partial": 4,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.337
+      },
+      "opening_gap": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 5,
+        "pass": 1,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.2,
+        "best_sharpe": 0.618
+      },
+      "trend_following": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 14,
+        "pass": 10,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.71,
+        "best_sharpe": 0.662
+      },
+      "triple_rsi": {
+        "grade": "C",
+        "status": "PARTIAL \u2014 infrastructure issues likely",
+        "experiments": 3,
+        "pass": 0,
+        "fail": 1,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": -2.119
+      },
+      "lower_band_reversion": {
+        "grade": "C",
+        "status": "MIXED \u2014 some positive results",
+        "experiments": 5,
+        "pass": 1,
+        "fail": 2,
+        "partial": 2,
+        "promoted": 0,
+        "pass_rate": 0.2,
+        "best_sharpe": 0.707
+      },
+      "portfolio": {
+        "grade": "D",
+        "status": "FAILING \u2014 needs rethink or abandonment",
+        "experiments": 1,
+        "pass": 0,
+        "fail": 1,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.0,
+        "best_sharpe": 0.618
+      },
+      "consecutive_down_days": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 4,
+        "pass": 3,
+        "fail": 1,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 0.75,
+        "best_sharpe": 0.578
+      },
+      "adx_trend_pullback": {
+        "grade": "B",
+        "status": "PROMISING \u2014 needs OOS validation",
+        "experiments": 4,
+        "pass": 4,
+        "fail": 0,
+        "partial": 0,
+        "promoted": 0,
+        "pass_rate": 1.0,
+        "best_sharpe": 0.579
+      }
+    },
+    "recommendations": [
+      {
+        "priority": 1,
+        "type": "infrastructure_fix",
+        "title": "Fix: mtf_momentum confidence hardcoded at 0.50",
+        "rationale": "Research experiments producing invalid results. Must fix before running more experiments.",
+        "experiments": []
+      },
+      {
+        "priority": 2,
+        "type": "infrastructure_fix",
+        "title": "Fix: Root cause: max_open_positions=10 creates zero-sum competition for position slot",
+        "rationale": "Research experiments producing invalid results. Must fix before running more experiments.",
+        "experiments": []
+      },
+      {
+        "priority": 3,
+        "type": "infrastructure_fix",
+        "title": "Fix: filter_test infrastructure broken (nested params + TOM engine)",
+        "rationale": "Research experiments producing invalid results. Must fix before running more experiments.",
+        "experiments": []
+      },
+      {
+        "priority": 4,
+        "type": "infrastructure_fix",
+        "title": "Fix: These are infrastructure failures, not hypothesis rejections \u2014 requeue with corr",
+        "rationale": "Research experiments producing invalid results. Must fix before running more experiments.",
+        "experiments": []
+      },
+      {
+        "priority": 5,
+        "type": "rebalancing",
+        "title": "Investigate why opening_gap generate so few signals",
+        "rationale": "trend_following at 87.9% is crowding out other strategies. Check parameter sensitivity and market condition filters.",
+        "experiments": [
+          "opening_gap_sensitivity \u2014 Parameter sensitivity analysis"
+        ]
+      },
+      {
+        "priority": 6,
+        "type": "model_improvement",
+        "title": "Rebuild confidence scoring model",
+        "rationale": "BROKEN: High-confidence signals (Q4) underperform low-confidence (Q1). Confidence scoring adds no value \u2014 needs rebuilding.",
+        "experiments": [
+          "confidence_backtest \u2014 Backtest accuracy of confidence scores vs actual returns",
+          "confidence_features \u2014 Feature importance analysis for confidence model inputs",
+          "confidence_threshold \u2014 Optimal threshold search via walk-forward"
+        ]
+      },
+      {
+        "priority": 7,
+        "type": "queue_cleanup",
+        "title": "Resolve 40 stalled experiments",
+        "rationale": "Experiments stuck in failed/partial: wave2_vol_combined, wave2_rsi2_solo, wave2_exit_mr, wave2_exit_og, wave2_chandelier_tf",
+        "experiments": [
+          "retry_wave2_vol_combined \u2014 Fix and re-run",
+          "retry_wave2_rsi2_solo \u2014 Fix and re-run",
+          "retry_wave2_exit_mr \u2014 Fix and re-run",
+          "retry_wave2_exit_og \u2014 Fix and re-run",
+          "retry_wave2_chandelier_tf \u2014 Fix and re-run"
+        ]
+      },
+      {
+        "priority": 8,
+        "type": "coverage_gap",
+        "title": "Research gaps: dividend_capture",
+        "rationale": "Strategies with little or no research data. Need baseline solo testing.",
+        "experiments": [
+          "dividend_capture_solo \u2014 Baseline solo backtest"
+        ]
+      }
+    ],
+    "suggested_wave_theme": "Infrastructure Repair + Unknown Strategy Alignment"
+  },
+  "portfolio_correlations": {
+    "analysis": "portfolio_correlations",
+    "available": true,
+    "portfolio_sharpe": 0.9919,
+    "analytic_sharpe": 0.4634,
+    "avg_correlation": 0.209,
+    "n_active": 6,
+    "annual_return": 10.77,
+    "annual_vol": 10.86,
+    "max_drawdown": -6.4,
+    "active_weights": {
+      "opening_gap": 0.1914,
+      "momentum_breakout": 0.143,
+      "mean_reversion": 0.2382,
+      "connors_rsi2": 0.1485,
+      "sector_rotation": 0.2488,
+      "short_term_mr": 0.03
+    },
+    "per_strategy": {
+      "opening_gap": {
+        "sharpe": 0.2712,
+        "total_trades": 392,
+        "cagr_pct": 8.68,
+        "max_drawdown_pct": 8.76,
+        "weight": 0.1914,
+        "group": "other",
+        "annual_vol_pct": 17.08
+      },
+      "momentum_breakout": {
+        "sharpe": 0.1525,
+        "total_trades": 397,
+        "cagr_pct": 6.31,
+        "max_drawdown_pct": 7.98,
+        "weight": 0.143,
+        "group": "momentum",
+        "annual_vol_pct": 12.86
+      },
+      "mean_reversion": {
+        "sharpe": 0.2285,
+        "total_trades": 240,
+        "cagr_pct": 7.17,
+        "max_drawdown_pct": 4.55,
+        "weight": 0.2382,
+        "group": "mean_reversion",
+        "annual_vol_pct": 11.57
+      },
+      "trend_following": {
+        "sharpe": -0.3884,
+        "total_trades": 302,
+        "cagr_pct": 3.28,
+        "max_drawdown_pct": 6.1,
+        "weight": 0.0,
+        "group": "momentum",
+        "annual_vol_pct": 4.02
+      },
+      "connors_rsi2": {
+        "sharpe": 0.1754,
+        "total_trades": 925,
+        "cagr_pct": 6.72,
+        "max_drawdown_pct": 13.31,
+        "weight": 0.1485,
+        "group": "mean_reversion",
+        "annual_vol_pct": 14.24
+      },
+      "bb_squeeze": {
+        "sharpe": -0.7462,
+        "total_trades": 371,
+        "cagr_pct": 2.54,
+        "max_drawdown_pct": 4.34,
+        "weight": 0.0,
+        "group": "mean_reversion",
+        "annual_vol_pct": 3.1
+      },
+      "sector_rotation": {
+        "sharpe": 0.401,
+        "total_trades": 773,
+        "cagr_pct": 10.39,
+        "max_drawdown_pct": 10.53,
+        "weight": 0.2488,
+        "group": "other",
+        "annual_vol_pct": 14.98
+      },
+      "short_term_mr": {
+        "sharpe": 0.3948,
+        "total_trades": 878,
+        "cagr_pct": 35.96,
+        "max_drawdown_pct": 6.22,
+        "weight": 0.03,
+        "group": "mean_reversion",
+        "annual_vol_pct": 188.21
+      },
+      "lower_band_reversion": {
+        "sharpe": -1.3596,
+        "total_trades": 780,
+        "cagr_pct": 1.15,
+        "max_drawdown_pct": 5.88,
+        "weight": 0.0,
+        "group": "mean_reversion",
+        "annual_vol_pct": 2.72
+      },
+      "consecutive_down_days": {
+        "sharpe": -1.6097,
+        "total_trades": 1605,
+        "cagr_pct": -0.27,
+        "max_drawdown_pct": 7.84,
+        "weight": 0.0,
+        "group": "mean_reversion",
+        "annual_vol_pct": 3.17
+      }
+    },
+    "cross_momentum_mr": {
+      "avg_correlation": 0.1258,
+      "min_correlation": -0.0013,
+      "max_correlation": 0.3364,
+      "n_pairs": 12,
+      "hypothesis_validated": true
+    },
+    "within_group": {
+      "momentum": {
+        "avg_correlation": 0.0593,
+        "min_correlation": 0.0593,
+        "max_correlation": 0.0593,
+        "n_strategies": 2
+      },
+      "mean_reversion": {
+        "avg_correlation": 0.1828,
+        "min_correlation": -0.0048,
+        "max_correlation": 0.9437,
+        "n_strategies": 6
+      },
+      "other": {
+        "avg_correlation": 0.0307,
+        "min_correlation": 0.0307,
+        "max_correlation": 0.0307,
+        "n_strategies": 2
+      }
+    }
+  }
+}
