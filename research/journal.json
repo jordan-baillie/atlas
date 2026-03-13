@@ -5769,5 +5769,74 @@
     "promoted": false,
     "runtime_s": 68.3,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260312_203132",
+    "timestamp": "2026-03-12T10:31:32.647766+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "max_hold_days: 10\u219215",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.7217,
+      "cagr_pct": 43.0389,
+      "max_drawdown_pct": 9.3951,
+      "total_trades": 293,
+      "profit_factor": 5.715
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u219215"
+    ],
+    "promoted": false,
+    "runtime_s": 17.3,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260312_204612",
+    "timestamp": "2026-03-12T10:46:12.985930+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "short_term_mr",
+    "hypothesis": "rsi_oversold: 20\u219215",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5036,
+      "cagr_pct": 59.7994,
+      "max_drawdown_pct": 4.2883,
+      "total_trades": 543,
+      "profit_factor": 5.4345
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_oversold: 20\u219215"
+    ],
+    "promoted": false,
+    "runtime_s": 22.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260312_213643",
+    "timestamp": "2026-03-12T11:36:43.600194+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "adx_threshold: None\u219220.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4147,
+      "cagr_pct": 42.1314,
+      "max_drawdown_pct": 8.174,
+      "total_trades": 415,
+      "profit_factor": 4.0126
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 adx_threshold: None\u219220.0"
+    ],
+    "promoted": false,
+    "runtime_s": 59.8,
+    "agent_id": "autoresearch"
   }
 ]

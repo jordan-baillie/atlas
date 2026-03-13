@@ -2,41 +2,70 @@
   "strategy": "short_term_mr",
   "market": "sp500",
   "params": {
-    "rsi_oversold": 20
+    "rsi_oversold": 15
   },
   "metrics": {
-    "total_trades": 728,
-    "cagr_pct": 76.5046,
-    "cagr_full_period_pct": 61.8723,
-    "sharpe": 0.5091,
-    "sortino": 42.5896,
-    "max_drawdown_pct": 6.7368,
-    "win_rate_pct": 59.07,
-    "profit_factor": 6.1706,
-    "total_pnl": 112072.75,
-    "avg_trade": 153.95,
-    "final_equity": 116062.76,
-    "expectancy_r": 2.3833,
-    "avg_r": 2.3833,
-    "r_count": 728,
-    "edge_p_value": 0.201728,
+    "total_trades": 543,
+    "cagr_pct": 59.7994,
+    "cagr_full_period_pct": 48.847,
+    "sharpe": 0.5036,
+    "sortino": 43.4669,
+    "max_drawdown_pct": 4.2883,
+    "win_rate_pct": 58.93,
+    "profit_factor": 5.4345,
+    "total_pnl": 60629.62,
+    "avg_trade": 111.66,
+    "final_equity": 64626.79,
+    "expectancy_r": 3.2022,
+    "avg_r": 3.2022,
+    "r_count": 543,
+    "edge_p_value": 0.200826,
     "edge_significant": false,
-    "var_95_pct": 0.446,
-    "cvar_95_pct": 0.69,
-    "calmar": 11.3562,
-    "mc_p95_drawdown_pct": 60.04,
+    "var_95_pct": 0.307,
+    "cvar_95_pct": 0.464,
+    "calmar": 13.9448,
+    "mc_p95_drawdown_pct": 63.16,
     "mc_fragile": true,
     "strategy_breakdown": {
       "short_term_mr": {
-        "trades": 728,
-        "total_pnl": 112072.75,
-        "win_rate_pct": 59.1
+        "trades": 543,
+        "total_pnl": 60629.62,
+        "win_rate_pct": 58.9
       }
     },
-    "runtime_s": 149.6
+    "regime_metrics": {
+      "bear": {
+        "trades": 8,
+        "win_rate_pct": 75.0,
+        "avg_trade": 78.63,
+        "total_pnl": 629.02,
+        "profit_factor": 1.9953,
+        "sharpe_approx": 0.2783,
+        "avg_r": 0.3726
+      },
+      "bull": {
+        "trades": 190,
+        "win_rate_pct": 55.8,
+        "avg_trade": 275.78,
+        "total_pnl": 52398.27,
+        "profit_factor": 6.5335,
+        "sharpe_approx": 0.0698,
+        "avg_r": 6.8245
+      },
+      "neutral": {
+        "trades": 345,
+        "win_rate_pct": 60.3,
+        "avg_trade": 22.04,
+        "total_pnl": 7602.33,
+        "profit_factor": 3.1288,
+        "sharpe_approx": 0.0636,
+        "avg_r": 1.2728
+      }
+    },
+    "runtime_s": 22.2
   },
-  "description": "rsi_oversold=20",
-  "experiments_run": 32,
-  "experiments_kept": 2,
-  "updated_at": "2026-03-10T16:19:09.969412+00:00"
+  "description": "rsi_oversold=15",
+  "experiments_run": 33,
+  "experiments_kept": 3,
+  "updated_at": "2026-03-12T10:46:12.984780+00:00"
 }

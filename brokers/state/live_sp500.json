@@ -579,10 +579,65 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-03-12",
+      "equity": 4000,
+      "cash": 2878.06,
+      "positions_value": 1121.94,
+      "num_positions": 4,
+      "total_realized_pnl": -11.25,
+      "total_closed_trades": 1,
+      "positions": [
+        {
+          "ticker": "XOP",
+          "strategy": "unknown",
+          "shares": 5,
+          "entry_price": 127.429,
+          "current_price": 166.7100067138672,
+          "unrealized_pnl": 196.41,
+          "mae": 0.0,
+          "mfe": 30.83,
+          "holding_days": -1
+        },
+        {
+          "ticker": "RTX",
+          "strategy": "unknown",
+          "shares": 6,
+          "entry_price": 207.59,
+          "current_price": 203.0399932861328,
+          "unrealized_pnl": -27.3,
+          "mae": -2.19,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "PSQ",
+          "strategy": "unknown",
+          "shares": 33,
+          "entry_price": 31.2,
+          "current_price": 31.290000915527344,
+          "unrealized_pnl": 2.97,
+          "mae": 0.0,
+          "mfe": 0.29,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CIBR",
+          "strategy": "unknown",
+          "shares": 10,
+          "entry_price": 63.8,
+          "current_price": 65.30000305175781,
+          "unrealized_pnl": 15.0,
+          "mae": 0.0,
+          "mfe": 2.35,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 4003.86,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-12T08:03:19.360262"
+  "last_saved": "2026-03-13T08:00:49.890768"
 }
