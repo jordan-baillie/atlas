@@ -2208,8 +2208,8 @@ function renderResearch(d) {
   var agents = res.agents || [];
   var discoveries = res.discoveries || [];
 
-  // Update agents canvas (pass stats + leaderboard + pipeline for whiteboard)
-  updateAgentFloor(agents, stats, lb, res.strategy_pipeline || res.pipeline || {});
+  // Update agents canvas (pass stats + leaderboard)
+  updateAgentFloor(agents, stats, lb);
 
   // Update activity ticker
   _updateAgentTicker(agents);
@@ -2228,9 +2228,9 @@ function renderResearch(d) {
   var kh = '';
   var expCount = stats.sweep_experiments || stats.total_experiments;
   kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text)">' + expCount + '</div><div class="rkpi-label">Experiments</div><div class="rkpi-sub">' + stats.days_active + ' days</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green)">' + (stats.pass_rate_pct || 0) + '%</div><div class="rkpi-label">Pass Rate</div><div class="rkpi-sub">' + stats.passed + ' passed</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + (stats.sweep_strategies || stats.strategies_tested) + '</div><div class="rkpi-label">In Sweep</div><div class="rkpi-sub">' + stats.strategies_tested + ' tested</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green-bright)">' + stats.promoted + '</div><div class="rkpi-label">Promoted</div><div class="rkpi-sub">to live config</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + (stats.sweep_strategies || stats.strategies_tested || 0) + '</div><div class="rkpi-label">Strategies</div><div class="rkpi-sub">with best params</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green-bright)">' + (stats.promoted || 0) + '</div><div class="rkpi-label">Promoted</div><div class="rkpi-sub">to live config</div></div>';
+  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text-tertiary)">' + (stats.stale_strategies || 0) + '</div><div class="rkpi-label">Stale</div><div class="rkpi-sub">0 wins</div></div>';
   var windowColor = stats.sweep_window_active ? 'var(--green)' : 'var(--text-tertiary)';
   var windowIcon = stats.sweep_window_active ? '●' : '○';
   var windowSub = stats.sweep_window_active ? 'sweep running' : (stats.next_window || 'idle');
@@ -2313,7 +2313,7 @@ function renderResearch(d) {
       var displaySharpe = (isNeg ? '−' : '') + Math.abs(sharpeVal).toFixed(3);
       lh += '<div class="lb-row">';
       lh += '<span class="lb-rank">' + (i + 1) + '</span>';
-      lh += '<span class="lb-name">' + esc(s.name) + '</span>';
+      lh += '<span class="lb-name"' + (s.is_stale ? ' style="opacity:0.5"' : '') + '>' + esc(s.name) + (s.is_stale ? ' <span style="opacity:0.5;font-size:0.8em">[stale]</span>' : '') + '</span>';
       lh += '<span class="lb-bar-wrap"><span class="lb-bar" style="width:' + pct + '%;background:' + barColor + ';opacity:' + (isNeg ? '0.5' : '0.85') + '"></span></span>';
       lh += '<span class="lb-value" style="color:' + color + '">' + displaySharpe + '</span>';
       lh += '<span class="lb-meta">' + meta + '</span>';
@@ -2331,42 +2331,26 @@ function renderResearch(d) {
 // Replaces the pixel agent floor canvas with simple DOM elements
 // ═══════════════════════════════════════════════════════════════
 
-function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
+function updateAgentFloor(agents, stats, leaderboard) {
   var el = document.getElementById('agent-floor');
   if (!el) return;
 
   // Store for theme re-render
   window._lastAgentData = agents;
 
-  var pipeline = strategyPipeline || {};
   var isActive = (agents || []).some(function(a) { return a.status === 'typing' || a.status === 'reading'; });
   var isSleeping = !isActive && (agents || []).every(function(a) { return a.status === 'sleeping' || a.status === 'idle'; });
 
   var html = '';
 
-  // Summary bar — stats + pipeline
+  // Summary bar — experiments + strategies + promoted
   html += '<div class="agent-summary">';
   var exp = stats.sweep_experiments || stats.total_experiments || 0;
-  var passRate = stats.pass_rate_pct || 0;
   var promoted = stats.promoted || 0;
   var sweepCount = stats.sweep_strategies || 0;
   html += '<span class="agent-summary-stat">' + exp + ' experiments</span>';
   html += '<span class="agent-summary-stat">' + sweepCount + ' strategies</span>';
   html += '<span class="agent-summary-stat">' + promoted + ' promoted</span>';
-  html += '<span class="agent-summary-stat">' + passRate + '% pass rate</span>';
-
-  // Pipeline stages
-  var pipelineStages = ['untested','screen','quick','solo','optimize','combined','oos','promote'];
-  var pipelineLabels = ['?','SCR','QCK','SLO','OPT','CMB','OOS','PRO'];
-  var anyPipeline = pipelineStages.some(function(s) { return pipeline[s] > 0; });
-  if (anyPipeline) {
-    html += '<span class="agent-summary-pipe">';
-    for (var si = 0; si < pipelineStages.length; si++) {
-      var val = pipeline[pipelineStages[si]] || 0;
-      if (val > 0) html += '<span class="pipe-stage">' + pipelineLabels[si] + ':' + val + '</span>';
-    }
-    html += '</span>';
-  }
   html += '</div>';
 
   // Sleeping/idle state — show countdown
@@ -2425,7 +2409,7 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
       html += '<div class="agent-activity" style="color:var(--purple)">Writing brain indexes</div>';
     } else if (actType === 'loading' || actType === 'baseline') {
       html += '<div class="agent-activity" style="color:var(--blue)">Loading data</div>';
-    } else if (actType === 'reviewing' || actType === 'queue_checking') {
+    } else if (actType === 'reviewing') {
       html += '<div class="agent-activity" style="color:var(--amber)">Reviewing results</div>';
     } else if (actType === 'queuing') {
       html += '<div class="agent-activity" style="color:var(--green)">Queuing experiments</div>';
@@ -2450,16 +2434,15 @@ function _updateAgentTicker(agents) {
   var el = document.getElementById('agent-ticker');
   if (!el) return;
 
-  // Find the most interesting active agent (sweep > runner > director_cron)
-  var sweep = null, runner = null, director = null;
+  // Find the most interesting active agent (sweep > director_cron)
+  var sweep = null, director = null;
   (agents || []).forEach(function(a) {
     if (a.type === 'sweep' && a.status !== 'sleeping') sweep = a;
-    if (a.type === 'runner' && a.status !== 'sleeping') runner = a;
     if ((a.type === 'principal' || a.type === 'director_cron') && a.status !== 'sleeping') director = a;
   });
 
-  // Priority: sweep > runner > director; if none active, clear ticker
-  var active = sweep || runner || director;
+  // Priority: sweep > director; if none active, clear ticker
+  var active = sweep || director;
   if (!active || !active.activity) {
     if (!active || active.status === 'sleeping') {
       el.innerHTML = '';
@@ -2485,12 +2468,8 @@ function _updateAgentTicker(agents) {
   var time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   if (actType === 'testing') {
-    icon = agentType === 'runner' ? '⚙️' : '⚡'; cls = 'tick-test';
-    if (agentType === 'runner') {
-      text = 'Runner: ' + (act.experiment_title || act.param || '?');
-    } else {
-      text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
-    }
+    icon = '⚡'; cls = 'tick-test';
+    text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
   } else if (actType === 'kept') {
     icon = '✅'; cls = 'tick-kept';
     var delta = act.last_delta || 0;
