@@ -65,6 +65,19 @@ from research.brain.writer import (
     rebuild_all_indexes,
 )
 
+# Result-aware intelligence — reads brain/params/*.md to skip dead zones
+# and detect stale strategies.  Gracefully unavailable on first run.
+try:
+    from research.param_history import (
+        get_strategy_staleness,
+        build_strategy_param_history,
+        reset_staleness,
+    )
+    _PARAM_HISTORY_AVAILABLE = True
+except Exception as _ph_import_err:  # pragma: no cover
+    logger.debug("param_history not available: %s", _ph_import_err)
+    _PARAM_HISTORY_AVAILABLE = False
+
 # ─── Grid Expansion (jitter around current best) ────────────────────────────
 
 import random
@@ -74,6 +87,7 @@ def expand_grid(
     current_best: Dict[str, Any],
     n_jitter: int = 3,
     rng_seed: Optional[int] = None,
+    param_history: Optional[Dict[str, Dict]] = None,
 ) -> Dict[str, list]:
     """Expand a fixed parameter grid with jittered values around the current best.
 
@@ -89,11 +103,18 @@ def expand_grid(
     - Never produces duplicates of existing grid values
     - Values are rounded to match the precision of the grid
 
+    Result-aware rules (when param_history is provided):
+    - Skip values tested 3+ times for this strategy that always lost (win_rate=0)
+    - Bias jitter direction toward the best-performing known value
+
     Args:
-        base_grid:    Original PARAM_GRIDS entry for a strategy.
-        current_best: Current best params dict.
-        n_jitter:     Number of jittered values to add per param.
-        rng_seed:     Random seed for reproducibility (None = random).
+        base_grid:     Original PARAM_GRIDS entry for a strategy.
+        current_best:  Current best params dict.
+        n_jitter:      Number of jittered values to add per param.
+        rng_seed:      Random seed for reproducibility (None = random).
+        param_history: Per-value statistics from build_strategy_param_history().
+            Format: {param_name: {value: {tests, wins, sharpe_deltas}}}
+            When provided, enables result-aware pruning and biased jitter.
 
     Returns:
         New grid dict with expanded value lists.
@@ -135,13 +156,35 @@ def expand_grid(
         if all(v > 0 for v in sorted_vals):
             lo = max(lo, avg_step * 0.25)  # don't go below ~quarter step
 
-        # Generate jittered values around the current best
+        # ── Result-aware intelligence (when param_history provided) ──────
+        # Extract per-value statistics for this param (empty dict = no history).
+        value_stats: Dict = (param_history or {}).get(param, {})
+
+        # Determine jitter bias direction from the best-known value.
+        # If historical data shows e.g. higher values perform better, shift the
+        # random offset range toward positive so jitter explores that direction.
+        bias = 0.0
+        if value_stats and isinstance(current, (int, float)) and not isinstance(current, bool):
+            best_known_val = None
+            best_known_delta = float("-inf")
+            for v, stats in value_stats.items():
+                if stats["tests"] > 0 and isinstance(v, (int, float)):
+                    avg_d = sum(stats["sharpe_deltas"]) / stats["tests"]
+                    if avg_d > best_known_delta:
+                        best_known_delta = avg_d
+                        best_known_val = v
+            if best_known_val is not None and best_known_val != current:
+                # Shift jitter range by ±0.4 toward best direction.
+                # This biases sampling without fully committing to one side.
+                bias = 0.4 if best_known_val > current else -0.4
+
+        # ── Generate jittered values around the current best ──────────────
         jittered = set()
         attempts = 0
         while len(jittered) < n_jitter and attempts < n_jitter * 10:
             attempts += 1
-            # Random offset: ±(0.3 to 1.0) × avg_step
-            offset = rng.uniform(-1.0, 1.0) * avg_step
+            # Random offset shifted by bias toward best-known direction
+            offset = rng.uniform(-1.0 + bias, 1.0 + bias) * avg_step
             new_val = current + offset
             new_val = max(lo, min(hi, new_val))
 
@@ -159,7 +202,27 @@ def expand_grid(
             if new_val not in values and new_val not in jittered:
                 jittered.add(new_val)
 
-        expanded[param] = list(values) + sorted(jittered)
+        # ── Prune dead values (tested 3+ times, never kept) ──────────────
+        # Always preserve the current best value even if it's in the dead set.
+        def _is_dead(v: Any) -> bool:
+            """Return True if this value has been tested ≥3× with 0 wins."""
+            if not value_stats:
+                return False
+            try:
+                stats = value_stats.get(v)
+            except TypeError:
+                return False
+            if stats is None:
+                return False
+            return stats["tests"] >= 3 and stats["wins"] == 0
+
+        candidate_values = list(values) + sorted(jittered)
+        pruned = [v for v in candidate_values if not _is_dead(v) or v == current]
+        # Safety: never return an empty list — keep at least the current best
+        if not pruned:
+            pruned = [current] if current is not None else list(values)
+
+        expanded[param] = pruned
 
     return expanded
 
@@ -1039,6 +1102,46 @@ def run_sweep(
                 logger.info("No param grid for %s — skipping.", strategy_name)
                 continue
 
+            # ── Staleness check — skip strategies with no wins recently ──
+            if _PARAM_HISTORY_AVAILABLE:
+                try:
+                    staleness = get_strategy_staleness(strategy_name)
+                    if staleness["is_stale"]:
+                        logger.info(
+                            "Skipping stale strategy %s — 0 wins in last %d "
+                            "experiments (last win: %s). "
+                            "Use --reset-stale to force re-test.",
+                            strategy_name,
+                            staleness["total_recent"],
+                            staleness.get("last_win_date") or "never",
+                        )
+                        continue
+                except Exception as _stale_exc:
+                    logger.debug(
+                        "Staleness check failed for %s: %s",
+                        strategy_name, _stale_exc,
+                    )
+
+            # ── Load param history for result-aware grid expansion ────────
+            _strategy_ph: Dict = {}
+            if _PARAM_HISTORY_AVAILABLE:
+                try:
+                    _strategy_ph = build_strategy_param_history(strategy_name)
+                    if _strategy_ph:
+                        total_ph = sum(
+                            sum(v["tests"] for v in stats.values())
+                            for stats in _strategy_ph.values()
+                        )
+                        logger.debug(
+                            "Loaded param history for %s: %d param×value records",
+                            strategy_name, total_ph,
+                        )
+                except Exception as _ph_exc:
+                    logger.debug(
+                        "Param history load failed for %s: %s",
+                        strategy_name, _ph_exc,
+                    )
+
             # Expand grid with jittered values around current best
             # (prevents stalling when the fixed grid is exhausted)
             try:
@@ -1046,13 +1149,23 @@ def run_sweep(
             except Exception:
                 current_best_params = {}
             if current_best_params:
-                grid = expand_grid(base_grid, current_best_params, n_jitter=3)
+                grid = expand_grid(
+                    base_grid,
+                    current_best_params,
+                    n_jitter=3,
+                    param_history=_strategy_ph or None,
+                )
                 n_base = sum(len(v) for v in base_grid.values())
                 n_expanded = sum(len(v) for v in grid.values())
                 if n_expanded > n_base:
                     logger.info(
                         "Grid expanded: %d → %d values (+%d jittered around best)",
                         n_base, n_expanded, n_expanded - n_base,
+                    )
+                elif n_expanded < n_base:
+                    logger.info(
+                        "Grid pruned: %d → %d values (-%d dead zones removed)",
+                        n_base, n_expanded, n_base - n_expanded,
                     )
             else:
                 grid = base_grid
@@ -1211,6 +1324,14 @@ def main():
         "--log-file", type=str, default=None,
         help="Log file path (default: stdout)",
     )
+    parser.add_argument(
+        "--reset-stale", action="store_true", default=False,
+        help=(
+            "Clear staleness tracking so all strategies get re-tested this cycle. "
+            "Writes brain/staleness_reset.json; get_strategy_staleness() will "
+            "ignore experiments older than the reset timestamp."
+        ),
+    )
     args = parser.parse_args()
 
     # Logging — force-configure the root logger.
@@ -1256,6 +1377,22 @@ def main():
     workers = args.workers
     if workers is None:
         workers = max(1, os.cpu_count() - 2)
+
+    # Handle --reset-stale: clear staleness tracking before sweep starts
+    if args.reset_stale:
+        if _PARAM_HISTORY_AVAILABLE:
+            try:
+                reset_staleness()
+                logger.info(
+                    "Staleness tracking reset — all strategies will be re-tested "
+                    "this cycle (brain/staleness_reset.json updated)."
+                )
+            except Exception as _rst_exc:
+                logger.warning("Failed to reset staleness: %s", _rst_exc)
+        else:
+            logger.warning(
+                "--reset-stale specified but param_history module is not available."
+            )
 
     strategies = [args.strategy] if args.strategy else None
     run_sweep(
