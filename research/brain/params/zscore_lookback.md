@@ -16,3 +16,6 @@
 | 2026-03-12 23:31 | mean_reversion | 30 → 10 | ❌ discard | -2.4504 | -3.0199 |
 | 2026-03-12 23:31 | mean_reversion | 30 → 20 | ❌ discard | -0.5732 | -1.1427 |
 | 2026-03-12 23:31 | mean_reversion | 30 → 15 | ❌ discard | -0.9847 | -1.5542 |
+| 2026-03-13 02:31 | mean_reversion | 30 → 15 | ❌ discard | -0.9847 | -1.5542 |
+| 2026-03-13 02:31 | mean_reversion | 30 → 20 | ❌ discard | -0.5732 | -1.1427 |
+| 2026-03-13 02:31 | mean_reversion | 30 → 10 | ❌ discard | -2.4504 | -3.0199 |

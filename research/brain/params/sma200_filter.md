@@ -23,3 +23,7 @@
 | 2026-03-12 23:49 | momentum_breakout | None → False | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-12 23:49 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-13 00:28 | consecutive_down_days | False → True | ❌ discard | -0.1857 | 0.3884 |
+| 2026-03-13 02:47 | connors_rsi2 | False → True | ❌ discard | +0.0045 | 0.3948 |
+| 2026-03-13 02:49 | momentum_breakout | None → False | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:49 | momentum_breakout | None → True | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 03:29 | consecutive_down_days | False → True | ❌ discard | -0.1843 | 0.4059 |

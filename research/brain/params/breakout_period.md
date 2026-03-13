@@ -24,3 +24,8 @@
 | 2026-03-12 23:48 | momentum_breakout | None → 10 | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-12 23:48 | momentum_breakout | None → 40 | ❌ discard | +0.0000 | 0.7217 |
 | 2026-03-12 23:48 | momentum_breakout | None → 30 | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:48 | momentum_breakout | None → 30 | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:48 | momentum_breakout | None → 40 | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:48 | momentum_breakout | None → 60 | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:48 | momentum_breakout | None → 10 | ❌ discard | +0.0000 | 0.7217 |
+| 2026-03-13 02:48 | momentum_breakout | None → 20 | ❌ discard | +0.0000 | 0.7217 |

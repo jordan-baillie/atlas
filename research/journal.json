@@ -5838,5 +5838,512 @@
     "promoted": false,
     "runtime_s": 59.8,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "director_trend_following_combined_20260311",
+    "timestamp": "2026-03-13T01:50:22.192872+00:00",
+    "market": "sp500",
+    "category": "active",
+    "strategy": "trend_following",
+    "hypothesis": "trend_following with best observed Sharpe 0.5795 (ar-20260311_152317) clears the solo pass threshold (\u22650.3). Combined portfolio test will determine whether it holds Sharpe \u22650.3 with \u226550 trades and max_dd \u226410% alongside MR and OG in a live-weight portfolio \u2014 required by RULE-1 before any promotion consideration.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 200,
+      "cagr_pct": 8.7098,
+      "cagr_full_period_pct": 7.3269,
+      "sharpe": 0.2718,
+      "sortino": 3.1111,
+      "max_drawdown_pct": 3.4671,
+      "win_rate_pct": 51.0,
+      "profit_factor": 3.2868,
+      "total_pnl": 2556.27,
+      "avg_trade": 12.78,
+      "final_equity": 6562.08,
+      "expectancy_r": 0.8701,
+      "avg_r": 0.8701,
+      "r_count": 200,
+      "edge_p_value": 0.225089,
+      "edge_significant": false,
+      "var_95_pct": 0.22,
+      "cvar_95_pct": 0.31,
+      "calmar": 2.5121,
+      "mc_p95_drawdown_pct": 4.67,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 200,
+          "total_pnl": 2556.27,
+          "win_rate_pct": 51.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 2,
+          "win_rate_pct": 50.0,
+          "avg_trade": 4.4,
+          "total_pnl": 8.81,
+          "profit_factor": 2.0103,
+          "sharpe_approx": 0.2373,
+          "avg_r": 0.1988
+        },
+        "bull": {
+          "trades": 69,
+          "win_rate_pct": 56.5,
+          "avg_trade": 36.84,
+          "total_pnl": 2541.96,
+          "profit_factor": 8.5557,
+          "sharpe_approx": 0.1491,
+          "avg_r": 2.4683
+        },
+        "neutral": {
+          "trades": 129,
+          "win_rate_pct": 48.1,
+          "avg_trade": 0.04,
+          "total_pnl": 5.5,
+          "profit_factor": 1.0071,
+          "sharpe_approx": 0.0028,
+          "avg_r": 0.0257
+        }
+      }
+    },
+    "delta_vs_baseline": {
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0.0,
+      "total_trades": 0
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 666.1,
+    "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "20260313_110651_e142dd",
+    "timestamp": "2026-03-13T02:40:00.667099+00:00",
+    "market": "sp500",
+    "category": "sharpe_roadmap",
+    "strategy": null,
+    "hypothesis": "Conditional vol scaling (lookback=20d, target=10% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 247,
+      "cagr_pct": 8.3639,
+      "cagr_full_period_pct": 7.0376,
+      "sharpe": 0.2519,
+      "sortino": 3.0333,
+      "max_drawdown_pct": 5.3675,
+      "win_rate_pct": 51.01,
+      "profit_factor": 3.0196,
+      "total_pnl": 2433.45,
+      "avg_trade": 9.85,
+      "final_equity": 6439.26,
+      "expectancy_r": 0.6743,
+      "avg_r": 0.6743,
+      "r_count": 247,
+      "edge_p_value": 0.245056,
+      "edge_significant": false,
+      "var_95_pct": 0.217,
+      "cvar_95_pct": 0.296,
+      "calmar": 1.5582,
+      "mc_p95_drawdown_pct": 4.97,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 168,
+          "total_pnl": 2373.13,
+          "win_rate_pct": 50.0
+        },
+        "mean_reversion": {
+          "trades": 78,
+          "total_pnl": 54.04,
+          "win_rate_pct": 52.6
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 6.28,
+          "win_rate_pct": 100.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 4,
+          "win_rate_pct": 50.0,
+          "avg_trade": 0.36,
+          "total_pnl": 1.45,
+          "profit_factor": 1.0465,
+          "sharpe_approx": 0.0185,
+          "avg_r": 0.0683
+        },
+        "bull": {
+          "trades": 85,
+          "win_rate_pct": 55.3,
+          "avg_trade": 29.04,
+          "total_pnl": 2468.59,
+          "profit_factor": 6.9949,
+          "sharpe_approx": 0.1303,
+          "avg_r": 1.9903
+        },
+        "neutral": {
+          "trades": 158,
+          "win_rate_pct": 48.7,
+          "avg_trade": -0.23,
+          "total_pnl": -36.59,
+          "profit_factor": 0.952,
+          "sharpe_approx": -0.0187,
+          "avg_r": -0.0183
+        }
+      },
+      "variant_name": "disabled",
+      "variant_value": {
+        "enabled": false
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "director_trend_following_combined_20260311A",
+    "timestamp": "2026-03-13T02:51:40.543769+00:00",
+    "market": "sp500",
+    "category": "active",
+    "strategy": "trend_following",
+    "hypothesis": "Trend_following solo peaked at Sharpe=0.6618 today (ar-20260311_174215). Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 200,
+      "cagr_pct": 8.7098,
+      "cagr_full_period_pct": 7.3269,
+      "sharpe": 0.2718,
+      "sortino": 3.1111,
+      "max_drawdown_pct": 3.4671,
+      "win_rate_pct": 51.0,
+      "profit_factor": 3.2868,
+      "total_pnl": 2556.27,
+      "avg_trade": 12.78,
+      "final_equity": 6562.08,
+      "expectancy_r": 0.8701,
+      "avg_r": 0.8701,
+      "r_count": 200,
+      "edge_p_value": 0.225089,
+      "edge_significant": false,
+      "var_95_pct": 0.22,
+      "cvar_95_pct": 0.31,
+      "calmar": 2.5121,
+      "mc_p95_drawdown_pct": 4.67,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 200,
+          "total_pnl": 2556.27,
+          "win_rate_pct": 51.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 2,
+          "win_rate_pct": 50.0,
+          "avg_trade": 4.4,
+          "total_pnl": 8.81,
+          "profit_factor": 2.0103,
+          "sharpe_approx": 0.2373,
+          "avg_r": 0.1988
+        },
+        "bull": {
+          "trades": 69,
+          "win_rate_pct": 56.5,
+          "avg_trade": 36.84,
+          "total_pnl": 2541.96,
+          "profit_factor": 8.5557,
+          "sharpe_approx": 0.1491,
+          "avg_r": 2.4683
+        },
+        "neutral": {
+          "trades": 129,
+          "win_rate_pct": 48.1,
+          "avg_trade": 0.04,
+          "total_pnl": 5.5,
+          "profit_factor": 1.0071,
+          "sharpe_approx": 0.0028,
+          "avg_r": 0.0257
+        }
+      }
+    },
+    "delta_vs_baseline": {
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0.0,
+      "total_trades": 0
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 694.8,
+    "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "director_mean_reversion_combined_20260311B",
+    "timestamp": "2026-03-13T03:02:43.576711+00:00",
+    "market": "sp500",
+    "category": "active",
+    "strategy": "mean_reversion",
+    "hypothesis": "Mean_reversion solo Sharpe improved monotonically across 6 runs today: 0.1506 \u2192 0.3564. Optimization appears converged. Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 115,
+      "cagr_pct": 0.1143,
+      "cagr_full_period_pct": 0.0967,
+      "sharpe": -4.0685,
+      "sortino": -5.8965,
+      "max_drawdown_pct": 2.6761,
+      "win_rate_pct": 46.96,
+      "profit_factor": 1.0638,
+      "total_pnl": 27.17,
+      "avg_trade": 0.24,
+      "final_equity": 4027.17,
+      "expectancy_r": 0.0122,
+      "avg_r": 0.0122,
+      "r_count": 115,
+      "edge_p_value": 0.873935,
+      "edge_significant": false,
+      "var_95_pct": 0.101,
+      "cvar_95_pct": 0.195,
+      "calmar": 0.0427,
+      "mc_p95_drawdown_pct": 3.77,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 115,
+          "total_pnl": 27.17,
+          "win_rate_pct": 47.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 3,
+          "win_rate_pct": 33.3,
+          "avg_trade": -7.92,
+          "total_pnl": -23.75,
+          "profit_factor": 0.1976,
+          "sharpe_approx": -0.6639,
+          "avg_r": -0.562
+        },
+        "bull": {
+          "trades": 35,
+          "win_rate_pct": 34.3,
+          "avg_trade": -2.24,
+          "total_pnl": -78.29,
+          "profit_factor": 0.568,
+          "sharpe_approx": -0.2382,
+          "avg_r": -0.2253
+        },
+        "neutral": {
+          "trades": 77,
+          "win_rate_pct": 53.2,
+          "avg_trade": 1.68,
+          "total_pnl": 129.21,
+          "profit_factor": 1.6016,
+          "sharpe_approx": 0.1673,
+          "avg_r": 0.1425
+        }
+      }
+    },
+    "delta_vs_baseline": {
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0.0,
+      "total_trades": 0
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 658.0,
+    "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "20260313_110651_6b7bc5",
+    "timestamp": "2026-03-13T03:19:25.851156+00:00",
+    "market": "sp500",
+    "category": "sharpe_roadmap",
+    "strategy": null,
+    "hypothesis": "Conditional vol scaling (lookback=20d, target=12% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 247,
+      "cagr_pct": 8.3639,
+      "cagr_full_period_pct": 7.0376,
+      "sharpe": 0.2519,
+      "sortino": 3.0333,
+      "max_drawdown_pct": 5.3675,
+      "win_rate_pct": 51.01,
+      "profit_factor": 3.0196,
+      "total_pnl": 2433.45,
+      "avg_trade": 9.85,
+      "final_equity": 6439.26,
+      "expectancy_r": 0.6743,
+      "avg_r": 0.6743,
+      "r_count": 247,
+      "edge_p_value": 0.245056,
+      "edge_significant": false,
+      "var_95_pct": 0.217,
+      "cvar_95_pct": 0.296,
+      "calmar": 1.5582,
+      "mc_p95_drawdown_pct": 4.97,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 168,
+          "total_pnl": 2373.13,
+          "win_rate_pct": 50.0
+        },
+        "mean_reversion": {
+          "trades": 78,
+          "total_pnl": 54.04,
+          "win_rate_pct": 52.6
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 6.28,
+          "win_rate_pct": 100.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 4,
+          "win_rate_pct": 50.0,
+          "avg_trade": 0.36,
+          "total_pnl": 1.45,
+          "profit_factor": 1.0465,
+          "sharpe_approx": 0.0185,
+          "avg_r": 0.0683
+        },
+        "bull": {
+          "trades": 85,
+          "win_rate_pct": 55.3,
+          "avg_trade": 29.04,
+          "total_pnl": 2468.59,
+          "profit_factor": 6.9949,
+          "sharpe_approx": 0.1303,
+          "avg_r": 1.9903
+        },
+        "neutral": {
+          "trades": 158,
+          "win_rate_pct": 48.7,
+          "avg_trade": -0.23,
+          "total_pnl": -36.59,
+          "profit_factor": 0.952,
+          "sharpe_approx": -0.0187,
+          "avg_r": -0.0183
+        }
+      },
+      "variant_name": "disabled",
+      "variant_value": {
+        "enabled": false
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research-runner"
+  },
+  {
+    "experiment_id": "20260313_110651_f6f8ff",
+    "timestamp": "2026-03-13T03:36:12.743292+00:00",
+    "market": "sp500",
+    "category": "sharpe_roadmap",
+    "strategy": null,
+    "hypothesis": "Conditional vol scaling (lookback=20d, target=15% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 250,
+      "cagr_pct": 8.815,
+      "cagr_full_period_pct": 7.4148,
+      "sharpe": 0.2808,
+      "sortino": 3.2241,
+      "max_drawdown_pct": 3.0074,
+      "win_rate_pct": 54.4,
+      "profit_factor": 3.2609,
+      "total_pnl": 2282.61,
+      "avg_trade": 9.13,
+      "final_equity": 5804.72,
+      "expectancy_r": 0.7227,
+      "avg_r": 0.7227,
+      "r_count": 250,
+      "edge_p_value": 0.207926,
+      "edge_significant": false,
+      "var_95_pct": 0.213,
+      "cvar_95_pct": 0.301,
+      "calmar": 2.9311,
+      "mc_p95_drawdown_pct": 4.17,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "trend_following": {
+          "trades": 167,
+          "total_pnl": 2155.33,
+          "win_rate_pct": 53.3
+        },
+        "mean_reversion": {
+          "trades": 82,
+          "total_pnl": 120.6,
+          "win_rate_pct": 56.1
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 6.68,
+          "win_rate_pct": 100.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 4,
+          "win_rate_pct": 50.0,
+          "avg_trade": 0.67,
+          "total_pnl": 2.7,
+          "profit_factor": 1.1091,
+          "sharpe_approx": 0.0398,
+          "avg_r": 0.0944
+        },
+        "bull": {
+          "trades": 86,
+          "win_rate_pct": 61.6,
+          "avg_trade": 25.52,
+          "total_pnl": 2194.47,
+          "profit_factor": 7.4927,
+          "sharpe_approx": 0.1315,
+          "avg_r": 1.9898
+        },
+        "neutral": {
+          "trades": 160,
+          "win_rate_pct": 50.6,
+          "avg_trade": 0.53,
+          "total_pnl": 85.44,
+          "profit_factor": 1.1321,
+          "sharpe_approx": 0.0432,
+          "avg_r": 0.0574
+        }
+      },
+      "variant_name": "disabled",
+      "variant_value": {
+        "enabled": false
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research-runner"
   }
 ]

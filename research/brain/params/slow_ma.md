@@ -16,3 +16,6 @@
 | 2026-03-12 23:43 | trend_following | 20 → 50 | ❌ discard | -0.6215 | 0.0000 |
 | 2026-03-12 23:43 | trend_following | 20 → 100 | ❌ discard | -0.1051 | 0.5164 |
 | 2026-03-12 23:43 | trend_following | 20 → 200 | ❌ discard | -0.2409 | 0.3806 |
+| 2026-03-13 02:43 | trend_following | 20 → 50 | ❌ discard | -0.6215 | 0.0000 |
+| 2026-03-13 02:43 | trend_following | 20 → 100 | ❌ discard | -0.1051 | 0.5164 |
+| 2026-03-13 02:43 | trend_following | 20 → 200 | ❌ discard | -0.2409 | 0.3806 |

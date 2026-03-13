@@ -3310,12 +3310,12 @@
     "priority": "P1",
     "hypothesis": "trend_following with best observed Sharpe 0.5795 (ar-20260311_152317) clears the solo pass threshold (\u22650.3). Combined portfolio test will determine whether it holds Sharpe \u22650.3 with \u226550 trades and max_dd \u226410% alongside MR and OG in a live-weight portfolio \u2014 required by RULE-1 before any promotion consideration.",
     "params_override": {},
-    "status": "running",
+    "status": "partial",
     "created_at": "2026-03-11T07:35:37.269535+00:00",
     "claimed_by": "atlas-research-runner",
     "claimed_at": "2026-03-13T01:39:15.631586+00:00",
     "market": "sp500",
-    "updated_at": "2026-03-13T01:39:15.637275+00:00",
+    "updated_at": "2026-03-13T01:50:22.183969+00:00",
     "notes": " | Auto-reset from claimed after 14h (zombie cleanup 2026-03-11 23:05)"
   },
   {
@@ -3342,12 +3342,12 @@
     "priority": "P1",
     "hypothesis": "mean_reversion annealing crossed the solo threshold: Sharpe trajectory 0.2043\u21920.2375\u21920.2525\u21920.2734\u21920.3564. Combined test will determine if this marginal solo pass (0.3564 vs 0.30 threshold) holds under position contention with trend_following and opening_gap. Solo was borderline \u2014 combined outcome is uncertain and must be run before any promotion discussion.",
     "params_override": {},
-    "status": "queued",
+    "status": "running",
     "created_at": "2026-03-11T08:43:40.239276+00:00",
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T01:50:27.207634+00:00",
     "market": "sp500",
-    "updated_at": "2026-03-11T23:05:22.489935+00:00",
+    "updated_at": "2026-03-13T01:50:27.214631+00:00",
     "notes": " | Auto-reset from claimed after 13h (zombie cleanup 2026-03-11 23:05)"
   },
   {
@@ -3359,10 +3359,11 @@
     "priority": "P1",
     "hypothesis": "Trend_following solo peaked at Sharpe=0.6618 today (ar-20260311_174215). Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
     "params_override": {},
-    "status": "queued",
+    "status": "partial",
     "created_at": "2026-03-11T11:00:57.992505+00:00",
-    "claimed_by": null,
-    "claimed_at": null
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T02:40:05.720795+00:00",
+    "updated_at": "2026-03-13T02:51:40.531207+00:00"
   },
   {
     "id": "director_mean_reversion_combined_20260311B",
@@ -3373,10 +3374,11 @@
     "priority": "P1",
     "hypothesis": "Mean_reversion solo Sharpe improved monotonically across 6 runs today: 0.1506 \u2192 0.3564. Optimization appears converged. Combined portfolio test is the mandatory RULE-1/RULE-4 promotion gate. Expects combined Sharpe\u22650.30, trades\u226550, max_dd\u226410%, PF\u22651.0.",
     "params_override": {},
-    "status": "queued",
+    "status": "partial",
     "created_at": "2026-03-11T11:00:58.491471+00:00",
-    "claimed_by": null,
-    "claimed_at": null
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T02:51:45.562511+00:00",
+    "updated_at": "2026-03-13T03:02:43.566878+00:00"
   },
   {
     "id": "20260313_110651_e142dd",
@@ -3388,7 +3390,7 @@
     "acceptance_criteria": {},
     "estimated_runtime_min": 15,
     "priority": "P1",
-    "status": "queued",
+    "status": "partial",
     "strategy_name": null,
     "params_override": {
       "filter_param": "vol_scaling",
@@ -3426,7 +3428,7 @@
     "claimed_by": null,
     "claimed_at": null,
     "created_at": "2026-03-13T01:06:51.896808+00:00",
-    "updated_at": "2026-03-13T01:06:51.896817+00:00",
+    "updated_at": "2026-03-13T02:40:00.609597+00:00",
     "tags": [
       "sharpe_roadmap",
       "vol_scaling"
@@ -3444,7 +3446,7 @@
     "acceptance_criteria": {},
     "estimated_runtime_min": 15,
     "priority": "P1",
-    "status": "queued",
+    "status": "partial",
     "strategy_name": null,
     "params_override": {
       "filter_param": "vol_scaling",
@@ -3479,10 +3481,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T03:02:48.593720+00:00",
     "created_at": "2026-03-13T01:06:51.896838+00:00",
-    "updated_at": "2026-03-13T01:06:51.896839+00:00",
+    "updated_at": "2026-03-13T03:19:25.842705+00:00",
     "tags": [
       "sharpe_roadmap",
       "vol_scaling"
@@ -3500,7 +3502,7 @@
     "acceptance_criteria": {},
     "estimated_runtime_min": 15,
     "priority": "P1",
-    "status": "queued",
+    "status": "partial",
     "strategy_name": null,
     "params_override": {
       "filter_param": "vol_scaling",
@@ -3535,10 +3537,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T03:19:30.865317+00:00",
     "created_at": "2026-03-13T01:06:51.896858+00:00",
-    "updated_at": "2026-03-13T01:06:51.896863+00:00",
+    "updated_at": "2026-03-13T03:36:12.734178+00:00",
     "tags": [
       "sharpe_roadmap",
       "vol_scaling"
@@ -3556,7 +3558,7 @@
     "acceptance_criteria": {},
     "estimated_runtime_min": 15,
     "priority": "P1",
-    "status": "queued",
+    "status": "running",
     "strategy_name": null,
     "params_override": {
       "filter_param": "vol_scaling",
@@ -3591,10 +3593,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research-runner",
+    "claimed_at": "2026-03-13T03:36:17.760097+00:00",
     "created_at": "2026-03-13T01:06:51.896875+00:00",
-    "updated_at": "2026-03-13T01:06:51.896876+00:00",
+    "updated_at": "2026-03-13T03:36:17.768548+00:00",
     "tags": [
       "sharpe_roadmap",
       "vol_scaling"

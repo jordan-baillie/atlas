@@ -4,17 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 03:07 | mean_reversion | 14 → 10 | ❌ discard | -0.0317 | 0.2284 |
-| 2026-03-12 03:07 | mean_reversion | 14 → 7 | ❌ discard | -0.2168 | 0.0433 |
-| 2026-03-12 03:11 | mean_reversion | 14 → 5 | ❌ discard | -0.1652 | 0.0949 |
-| 2026-03-12 03:11 | mean_reversion | 14 → 10 | ❌ discard | -0.0317 | 0.2284 |
-| 2026-03-12 03:11 | mean_reversion | 14 → 21 | ❌ discard | -2.0565 | -1.7964 |
-| 2026-03-12 03:11 | mean_reversion | 14 → 7 | ❌ discard | -0.2168 | 0.0433 |
-| 2026-03-12 05:30 | mean_reversion | 14 → 21 | ❌ discard | -2.0565 | -1.7964 |
-| 2026-03-12 05:30 | mean_reversion | 14 → 5 | ❌ discard | -0.1652 | 0.0949 |
-| 2026-03-12 05:30 | mean_reversion | 14 → 10 | ❌ discard | -0.0317 | 0.2284 |
-| 2026-03-12 05:30 | mean_reversion | 14 → 7 | ❌ discard | -0.2168 | 0.0433 |
-| 2026-03-12 05:35 | connors_rsi2 | 4 → 5 | ❌ discard | -0.5096 | -0.0979 |
 | 2026-03-12 05:35 | connors_rsi2 | 4 → 3 | ❌ discard | -0.3873 | 0.0244 |
 | 2026-03-12 05:35 | connors_rsi2 | 4 → 2 | ❌ discard | -0.3603 | 0.0514 |
 | 2026-03-12 05:39 | short_term_mr | None → 5 | ❌ discard | +0.0071 | 0.4172 |
@@ -54,3 +43,14 @@
 | 2026-03-12 23:49 | short_term_mr | None → 4 | ❌ discard | -0.1148 | 0.3931 |
 | 2026-03-12 23:49 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.5079 |
 | 2026-03-12 23:49 | short_term_mr | None → 3 | ❌ discard | -0.0939 | 0.4140 |
+| 2026-03-13 02:30 | mean_reversion | 14 → 21 | ❌ discard | -1.3285 | -1.8980 |
+| 2026-03-13 02:30 | mean_reversion | 14 → 5 | ❌ discard | -0.2610 | -0.8305 |
+| 2026-03-13 02:30 | mean_reversion | 14 → 10 | ❌ discard | -0.1070 | -0.6765 |
+| 2026-03-13 02:30 | mean_reversion | 14 → 7 | ❌ discard | -0.6367 | -1.2062 |
+| 2026-03-13 02:46 | connors_rsi2 | 4 → 5 | ❌ discard | -1.6943 | -1.3040 |
+| 2026-03-13 02:46 | connors_rsi2 | 4 → 3 | ❌ discard | -1.4932 | -1.1029 |
+| 2026-03-13 02:46 | connors_rsi2 | 4 → 2 | ❌ discard | -1.4097 | -1.0194 |
+| 2026-03-13 02:50 | short_term_mr | None → 5 | ❌ discard | -0.1162 | 0.3917 |
+| 2026-03-13 02:50 | short_term_mr | None → 3 | ❌ discard | -0.0939 | 0.4140 |
+| 2026-03-13 02:50 | short_term_mr | None → 4 | ❌ discard | -0.1148 | 0.3931 |
+| 2026-03-13 02:50 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.5079 |
