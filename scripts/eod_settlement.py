@@ -26,6 +26,7 @@ BRISBANE = ZoneInfo("Australia/Brisbane")
 
 # Setup
 PROJECT = Path(__file__).resolve().parent.parent
+SNAPSHOT_LOG = PROJECT / "logs" / "portfolio_snapshots.jsonl"
 sys.path.insert(0, str(PROJECT))
 os.chdir(PROJECT)
 
@@ -229,6 +230,55 @@ def generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits):
     lines.append("=" * 55)
 
     return "\n".join(lines)
+
+
+def record_daily_snapshot(portfolio, prices: dict, eq: float, daily_pnl: float, trade_date: str):
+    """Append a daily portfolio snapshot to logs/portfolio_snapshots.jsonl.
+
+    Uses atomic write pattern (tmp → append) to prevent JSONL corruption.
+    Never raises — snapshot failure must not interrupt the settlement flow.
+    """
+    try:
+        position_list = []
+        for pos in portfolio.positions:
+            cur_price = prices.get(pos.ticker, pos.entry_price)
+            position_list.append({
+                "ticker": pos.ticker,
+                "shares": pos.shares,
+                "entry_price": pos.entry_price,
+                "current_price": cur_price,
+                "unrealized_pnl": pos.unrealized_pnl(cur_price),
+                "market_value": pos.current_value(cur_price),
+            })
+
+        snapshot = {
+            "date": trade_date,
+            "timestamp": datetime.now().isoformat(),
+            "equity": eq,
+            "cash": portfolio.cash,
+            "market_value": round(eq - portfolio.cash, 2),
+            "buying_power": portfolio.cash,  # cash is effective buying power for Atlas positions
+            "num_positions": len(portfolio.positions),
+            "positions": position_list,
+            "daily_pnl": daily_pnl,
+        }
+
+        SNAPSHOT_LOG.parent.mkdir(parents=True, exist_ok=True)
+        line = json.dumps(snapshot, default=str) + "\n"
+
+        # Atomic write: stage to tmp, append to log only when fully serialised
+        tmp = SNAPSHOT_LOG.with_suffix(".snap.tmp")
+        tmp.write_text(line, encoding="utf-8")
+        with open(SNAPSHOT_LOG, "ab") as f:
+            f.write(tmp.read_bytes())
+        tmp.unlink(missing_ok=True)
+
+        log.info(
+            "Portfolio snapshot recorded: equity=$%.2f, positions=%d, daily_pnl=$%+.2f",
+            eq, len(position_list), daily_pnl,
+        )
+    except Exception as exc:
+        log.warning("Portfolio snapshot failed (non-fatal): %s", exc)
 
 
 def update_dashboard():
@@ -457,6 +507,9 @@ def main():
     with open(summary_path, 'w') as f:
         json.dump(summary, f, indent=2, default=str)
     log.info(f"EOD summary saved: {summary_path}")
+
+    # Record daily portfolio snapshot to logs/portfolio_snapshots.jsonl
+    record_daily_snapshot(portfolio, prices, eq, daily_pnl, trade_date)
 
     # Disconnect broker to free clientId for position monitor
     portfolio.disconnect()

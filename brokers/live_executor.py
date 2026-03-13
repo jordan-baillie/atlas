@@ -28,7 +28,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 from typing import Optional
 
@@ -415,7 +415,25 @@ class LiveExecutor:
             self._daily_order_count += 1
             return result
 
+        # Capture bid-ask spread at order time — never blocks execution
+        spread_info = {}
+        try:
+            if self._broker and hasattr(self._broker, 'get_market_snapshot'):
+                snap = self._broker.get_market_snapshot(ticker)
+                if snap:
+                    ask = snap.get("ask", 0)
+                    bid = snap.get("bid", 0)
+                    spread_info = {
+                        "bid": bid,
+                        "ask": ask,
+                        "spread_bps": round((ask - bid) / ask * 10000, 1) if ask else None,
+                        "last_trade": snap.get("last_trade", 0),
+                    }
+        except Exception:
+            pass  # Never let spread capture block execution
+
         # Live execution — LIMIT order to control entry price
+        _submit_time = datetime.now().isoformat()
         order_result = self._broker.place_order(
             ticker=ticker,
             side=OrderSide.BUY,
@@ -437,6 +455,14 @@ class LiveExecutor:
             "fill_price": order_result.fill_price,
             "message": order_result.message,
             "dry_run": False,
+            # Enriched execution telemetry
+            "submit_time": _submit_time,
+            "fill_time": order_result.raw.get("filled_at", ""),
+            "submitted_at": order_result.raw.get("submitted_at", ""),
+            "planned_price": price,
+            "slippage_bps": round((order_result.fill_price - price) / price * 10000, 1) if order_result.fill_price > 0 and price > 0 else None,
+            "order_type": "LIMIT",
+            "spread": spread_info,
         }
 
         if order_result.success:
@@ -445,6 +471,20 @@ class LiveExecutor:
                 "LIVE BUY: %s %d x $%.2f → order_id=%s",
                 ticker, qty, price, order_result.order_id,
             )
+            # Record entry to TradeLedger — telemetry must never crash execution
+            try:
+                from journal.logger import TradeLedger
+                _ledger = TradeLedger()
+                _ledger.record_entry({
+                    "ticker": ticker, "strategy": strategy, "shares": qty,
+                    "fill_price": order_result.fill_price or price,
+                    "planned_price": price, "stop_price": stop_price,
+                    "slippage_bps": result.get("slippage_bps"),
+                    "order_id": order_result.order_id,
+                    "timestamp": datetime.now().isoformat(),
+                })
+            except Exception as _ledger_exc:
+                logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
         else:
             logger.error(
                 "LIVE BUY FAILED: %s — %s",
@@ -483,6 +523,18 @@ class LiveExecutor:
         qty = pos.shares
         price = pos.current_price
 
+        # Capture entry telemetry for PnL and holding-period calculations
+        entry_price = pos.entry_price if pos else None
+        holding_days = None
+        try:
+            if pos and hasattr(pos, 'entry_date') and pos.entry_date:
+                from datetime import date as _date
+                _entry_str = str(pos.entry_date)[:10]
+                _entry_date = _date.fromisoformat(_entry_str)
+                holding_days = (_date.today() - _entry_date).days
+        except Exception:
+            pass
+
         # Pre-flight check
         errors = preflight_check_order(
             ticker, OrderSide.SELL, qty, price,
@@ -518,6 +570,24 @@ class LiveExecutor:
             _exit_order_type = OrderType.LIMIT
             _exit_price = round(price * 0.99, 2)  # 1% buffer to improve fill odds
 
+        # Capture bid-ask spread at exit order time — never blocks execution
+        spread_info = {}
+        try:
+            if self._broker and hasattr(self._broker, 'get_market_snapshot'):
+                snap = self._broker.get_market_snapshot(ticker)
+                if snap:
+                    ask = snap.get("ask", 0)
+                    bid = snap.get("bid", 0)
+                    spread_info = {
+                        "bid": bid,
+                        "ask": ask,
+                        "spread_bps": round((ask - bid) / ask * 10000, 1) if ask else None,
+                        "last_trade": snap.get("last_trade", 0),
+                    }
+        except Exception:
+            pass  # Never let spread capture block execution
+
+        _submit_time = datetime.now().isoformat()
         order_result = self._broker.place_order(
             ticker=ticker,
             side=OrderSide.SELL,
@@ -537,6 +607,15 @@ class LiveExecutor:
             "reason": reason,
             "message": order_result.message,
             "dry_run": False,
+            # Enriched exit telemetry
+            "submit_time": _submit_time,
+            "fill_time": order_result.raw.get("filled_at", ""),
+            "submitted_at": order_result.raw.get("submitted_at", ""),
+            "planned_price": _exit_price,
+            "slippage_bps": round((order_result.fill_price - _exit_price) / _exit_price * 10000, 1) if order_result.fill_price > 0 and _exit_price > 0 else None,
+            "entry_price": entry_price,
+            "holding_days": holding_days,
+            "spread": spread_info,
         }
 
         if order_result.success:
@@ -582,6 +661,41 @@ class LiveExecutor:
                         "fill_price remains 0. Check order %s manually.",
                         ticker, _max_wait, order_result.order_id,
                     )
+
+            # Track protective stop fill quality — telemetry, never blocks execution
+            try:
+                _stop_price = pos.stop_price if pos else 0
+                if reason in ("stop_loss", "protective_stop") and _stop_price and result.get("fill_price", 0) > 0:
+                    result["stop_expected_price"] = _stop_price
+                    result["stop_fill_price"] = result["fill_price"]
+                    result["stop_slippage_bps"] = round(
+                        (_stop_price - result["fill_price"]) / _stop_price * 10000, 1
+                    )
+            except Exception:
+                pass
+
+            # Record exit to TradeLedger — telemetry must never crash execution
+            try:
+                from journal.logger import TradeLedger
+                _ledger = TradeLedger()
+                _fill_price = result.get("fill_price") or _exit_price
+                _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
+                _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
+                _ledger.record_exit({
+                    "ticker": ticker,
+                    "strategy": pos.strategy if pos and hasattr(pos, 'strategy') else "",
+                    "shares": qty,
+                    "fill_price": _fill_price,
+                    "entry_price": entry_price,
+                    "pnl": _pnl,
+                    "pnl_pct": _pnl_pct,
+                    "holding_days": holding_days,
+                    "exit_reason": reason,
+                    "slippage_bps": result.get("slippage_bps"),
+                    "order_id": order_result.order_id,
+                })
+            except Exception as _ledger_exc:
+                logger.warning("TradeLedger exit record failed (non-fatal): %s", _ledger_exc)
         else:
             logger.error(
                 "LIVE SELL FAILED: %s — %s", ticker, order_result.message,
