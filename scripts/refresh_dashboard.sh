@@ -35,3 +35,4 @@ fi
 
 # Always copy template — stale data is better than a broken page
 cp -f dashboard/templates/index.html dashboard/data/index.html 2>/dev/null
+cp -f dashboard/templates/atlas.css dashboard/data/atlas.css 2>/dev/null

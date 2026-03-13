@@ -341,6 +341,7 @@ if ! $RERUN_OK; then
             log "Dashboard exit: $DASH_RC"
 
             cp -f dashboard/templates/index.html dashboard/data/index.html
+            cp -f dashboard/templates/atlas.css dashboard/data/atlas.css 2>/dev/null
 
             [ $EOD_RC -eq 0 ] && RERUN_OK=true
             ;;
