@@ -3281,6 +3281,10 @@ var _AGENT_COLORS = {
   sage:       { B: '#3a7a7a', H: '#8a8a8a', P: '#2a3040', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#6a7a7a' },
   // Principal/Director — dark navy shirt, warm skin tone
   principal:  { B: '#2a3a5a', H: '#2a2020', P: '#1a1a2a', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#3a4a5a' },
+  // Runner daemon — electric blue shirt, dark hair (the tireless queue worker)
+  runner:     { B: '#3a6a9a', H: '#1e2530', P: '#22304a', E: '#c8e8ff', S: '#c8a080', M: '#b08060', X: '#2a3a5a' },
+  // Director cron — dark charcoal/gold shirt, grey/silver hair (the distinguished overseer)
+  director_cron: { B: '#5a4a18', H: '#8a8a96', P: '#1a1a2a', E: '#f0e8d0', S: '#c8a080', M: '#b08060', X: '#3a3a2a' },
   // Fallback
   researcher: { B: '#5a7a3a', H: '#6B4E0A', P: '#3a3020', E: '#e8e4da', S: '#d4a574', M: '#c0825a', X: '#8a7e70' },
 };
@@ -3353,7 +3357,7 @@ function updateAgentFloor(agents, stats, leaderboard, strategyPipeline) {
   // Adjust canvas height when Director is present
   var canvas = document.getElementById('agent-canvas');
   if (canvas) {
-    var hasDirector = (agents || []).some(function(a) { return a.type === 'principal'; });
+    var hasDirector = (agents || []).some(function(a) { return a.type === 'principal' || a.type === 'director_cron'; });
     var newH = hasDirector ? '440px' : '340px';
     if (canvas.style.height !== newH) {
       canvas.style.height = newH;
@@ -3848,6 +3852,37 @@ function _drawAgentAt(ctx, f, tc, agent, cx, baseY, animFrame) {
     ctx.globalAlpha = 0.5;
     ctx.fillRect(screenX + 1, screenY + screenH / 2 - 1, loadW, 2);
     ctx.globalAlpha = 1.0;
+  } else if (actType === 'reviewing' || actType === 'queue_checking' || actType === 'portfolio') {
+    // Reviewing queue/results — amber document-reading pattern
+    ctx.fillStyle = tc.amber;
+    ctx.globalAlpha = 0.06;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 0.45;
+    var docLineY = screenY + 2;
+    for (var dl = 0; dl < 5 && docLineY < screenY + screenH - 2; dl++) {
+      var dlIndent = (dl === 0) ? 0 : (dl % 3 === 0 ? 4 : 2);
+      var dlLen = (screenW - 6 - dlIndent) * (0.4 + Math.sin(f.frame * 0.04 + dl * 1.2) * 0.3);
+      ctx.fillRect(screenX + 2 + dlIndent, docLineY, Math.max(2, dlLen), 1);
+      docLineY += 3;
+    }
+    ctx.globalAlpha = 1.0;
+  } else if (actType === 'queuing') {
+    // Queuing new experiments — green lines being added
+    ctx.fillStyle = tc.green;
+    ctx.globalAlpha = 0.06;
+    ctx.fillRect(screenX, screenY, screenW, screenH);
+    ctx.globalAlpha = 0.5;
+    var qLineY = screenY + 2;
+    var qScroll = (f.frame * 1.2) % (screenH * 1.5);
+    for (var ql = 0; ql < 5 && qLineY < screenY + screenH - 2; ql++) {
+      var qAppear = (qScroll - ql * 12) / (screenH * 1.5);
+      if (qAppear > 0 && qAppear < 1) {
+        ctx.globalAlpha = 0.4 * Math.min(1, qAppear * 4);
+        ctx.fillRect(screenX + 2, qLineY, (screenW - 4) * (0.3 + ql * 0.15), 1);
+      }
+      qLineY += 3;
+    }
+    ctx.globalAlpha = 1.0;
   } else if (prog.pct !== undefined && prog.pct >= 0) {
     // Generic progress — scrolling code lines + progress bar
     ctx.fillStyle = glowColor;
@@ -4046,25 +4081,29 @@ function _updateAgentTicker(agents) {
   var el = document.getElementById('agent-ticker');
   if (!el) return;
 
-  // Find the sweep agent
-  var sweep = null;
+  // Find the most interesting active agent (sweep > runner > director_cron)
+  var sweep = null, runner = null, director = null;
   (agents || []).forEach(function(a) {
     if (a.type === 'sweep' && a.status !== 'sleeping') sweep = a;
+    if (a.type === 'runner' && a.status !== 'sleeping') runner = a;
+    if ((a.type === 'principal' || a.type === 'director_cron') && a.status !== 'sleeping') director = a;
   });
 
-  if (!sweep || !sweep.activity) {
-    // Check if sleeping with countdown
-    if (!sweep || sweep.status === 'sleeping') {
+  // Priority: sweep > runner > director; if none active, clear ticker
+  var active = sweep || runner || director;
+  if (!active || !active.activity) {
+    if (!active || active.status === 'sleeping') {
       el.innerHTML = '';
       return;
     }
-    el.innerHTML = '<span class="tick-icon">🔬</span>' + (sweep.task || 'Idle');
+    el.innerHTML = '<span class="tick-icon">🔬</span>' + (active.task || 'Idle');
     return;
   }
 
-  var act = sweep.activity;
+  var act = active.activity;
   var actType = act.activity || '';
-  var key = actType + ':' + (act.param || '') + ':' + (act.param_value || '');
+  var agentType = active.type || 'sweep';
+  var key = agentType + ':' + actType + ':' + (act.param || act.experiment_id || '') + ':' + (act.param_value || '');
 
   // Only update on state change
   if (key === _lastTickerActivity) return;
@@ -4073,12 +4112,16 @@ function _updateAgentTicker(agents) {
   // Build ticker entry
   var icon = '🔬';
   var cls = '';
-  var text = sweep.task || '';
+  var text = active.task || '';
   var time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   if (actType === 'testing') {
-    icon = '⚡'; cls = 'tick-test';
-    text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
+    icon = agentType === 'runner' ? '⚙️' : '⚡'; cls = 'tick-test';
+    if (agentType === 'runner') {
+      text = 'Runner: ' + (act.experiment_title || act.param || '?');
+    } else {
+      text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
+    }
   } else if (actType === 'kept') {
     icon = '✅'; cls = 'tick-kept';
     var delta = act.last_delta || 0;
@@ -4096,6 +4139,15 @@ function _updateAgentTicker(agents) {
   } else if (actType === 'baseline') {
     icon = '📊'; cls = 'tick-load';
     text = 'Running baseline backtest';
+  } else if (actType === 'reviewing') {
+    icon = '📋'; cls = 'tick-load';
+    text = 'Director: ' + (active.task || 'Reviewing results');
+  } else if (actType === 'queuing') {
+    icon = '➕'; cls = 'tick-write';
+    text = 'Director: Queuing ' + (act.experiments_queued || '?') + ' new experiments';
+  } else if (actType === 'portfolio') {
+    icon = '📈'; cls = 'tick-test';
+    text = 'Director: Running portfolio optimization';
   }
 
   // Add to history (keep last 5)
@@ -4305,22 +4357,33 @@ function drawAgentFloor() {
     return; // Don't draw agents or desks
   }
 
-  // Split into director (principal) row and team row
-  var directors = agents.filter(function(a) { return a.type === 'principal'; });
-  var team = agents.filter(function(a) { return a.type !== 'principal'; });
+  // Split into director row (principal + director_cron) and team row
+  var directors = agents.filter(function(a) { return a.type === 'principal' || a.type === 'director_cron'; });
+  var team = agents.filter(function(a) { return a.type !== 'principal' && a.type !== 'director_cron'; });
 
   var animFrame = Math.floor(f.frame / 30) % 2;
 
-  // ── Director row: left of center, right below the wall ──
-  // Offset left so the director doesn't sit directly above center team member
+  // ── Director row: left of center (or multi-director spacing) ──
+  var dirConnectX = W / 2; // midpoint for org-chart connector origin
   if (directors.length > 0) {
     var dirY = wallH + 2;
-    var dirX = team.length === 3 ? W * 0.42 : W / 2;
-    directors.forEach(function(agent) {
-      _drawAgentAt(ctx, f, tc, agent, dirX, dirY, animFrame);
-    });
 
-    // Org-chart connector lines from Director down to each team member
+    if (directors.length === 1) {
+      // Single director: offset left when team is 3-wide to avoid centering collision
+      dirConnectX = team.length === 3 ? W * 0.42 : W / 2;
+      _drawAgentAt(ctx, f, tc, directors[0], dirConnectX, dirY, animFrame);
+    } else {
+      // Multiple directors: space them horizontally; connector drops from midpoint
+      var dirSpacing = Math.min(200, W / (directors.length + 1));
+      var dirStartX = (W - dirSpacing * (directors.length - 1)) / 2;
+      directors.forEach(function(agent, di) {
+        var dX = dirStartX + di * dirSpacing;
+        _drawAgentAt(ctx, f, tc, agent, dX, dirY, animFrame);
+      });
+      dirConnectX = W / 2; // connector drops from center-of-directors row
+    }
+
+    // Org-chart connector lines from Director row down to each team member
     if (team.length > 0) {
       var lineStartY = wallH + 62;
       var lineEndY = wallH + 76;
@@ -4334,10 +4397,10 @@ function drawAgentFloor() {
       ctx.globalAlpha = 0.65;
       ctx.lineWidth = 2;
 
-      // Vertical line down from Director
+      // Vertical line down from Director connector point
       ctx.beginPath();
-      ctx.moveTo(dirX, lineStartY);
-      ctx.lineTo(dirX, lineStartY + 10);
+      ctx.moveTo(dirConnectX, lineStartY);
+      ctx.lineTo(dirConnectX, lineStartY + 10);
       ctx.stroke();
 
       // Horizontal bar across team
@@ -4360,7 +4423,7 @@ function drawAgentFloor() {
     }
   }
 
-  // ── Team row: evenly spaced, well below director when present ──
+  // ── Team row: evenly spaced, well below director row when present ──
   if (team.length > 0) {
     var teamBaseY = directors.length > 0 ? wallH + 110 : wallH + 8;
     var spacing = Math.min(220, W / (team.length + 1));
