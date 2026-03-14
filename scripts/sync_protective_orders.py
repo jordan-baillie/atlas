@@ -20,7 +20,7 @@ detected and skipped; only missing orders are placed.
     python scripts/sync_protective_orders.py [options]
 
     Options:
-      --market {asx,sp500,hk,all}   Market to sync (default: all)
+      --market {asx,sp500,all}       Market to sync (default: all)
       --dry-run                     Log intent but do NOT send orders
       --no-telegram                 Suppress Telegram notification
       --date YYYY-MM-DD             Trade date override (default: today)
@@ -49,12 +49,10 @@ from utils.logging_config import setup_logging  # noqa: E402
 logger = logging.getLogger("atlas.sync_protective_orders")
 
 # Markets supported by this script
-_MARKETS = ("asx", "sp500", "hk")
+_MARKETS = ("asx", "sp500")
 # Default broker per market (overridden by config)
 _DEFAULT_BROKER: dict[str, str] = {
-    "asx": "moomoo",
     "sp500": "alpaca",
-    "hk": "moomoo",
 }
 
 
@@ -150,7 +148,7 @@ def sync_market(
         return result
 
     # ── Determine broker ─────────────────────────────────────
-    broker_name = config.get("trading", {}).get("broker", _DEFAULT_BROKER.get(market_id, "moomoo"))
+    broker_name = config.get("trading", {}).get("broker", _DEFAULT_BROKER.get(market_id, "alpaca"))
     live_enabled = config.get("trading", {}).get("live_enabled", False)
 
     if not live_enabled:
@@ -185,8 +183,8 @@ def sync_market(
 
         if broker_name == "alpaca":
             # Alpaca broker handles everything internally —
-            # fetches positions + open orders, detects existing stops,
-            # places missing SL orders.
+            # fetches positions + open orders, detects existing stops/TPs,
+            # places missing SL and TP orders.
             positions = broker.get_positions()
             if not positions:
                 logger.info("No live positions in %s — nothing to protect", market_id)
@@ -207,8 +205,8 @@ def sync_market(
                 "positions_checked": len(positions),
                 "sl_placed": sync_result.get("sl_placed", 0),
                 "sl_already_exists": sync_result.get("sl_already_exists", 0),
-                "tp_placed": 0,
-                "tp_already_exists": 0,
+                "tp_placed": sync_result.get("tp_placed", 0),
+                "tp_already_exists": sync_result.get("tp_already_exists", 0),
                 "sl_skipped": 0,
                 "tp_skipped": 0,
                 "errors": sync_result.get("errors", 0),
@@ -216,66 +214,49 @@ def sync_market(
             # Convert per_ticker → results with summary strings
             per_ticker = sync_result.get("per_ticker", {})
             for ticker, tdata in per_ticker.items():
-                action = tdata.get("action", "unknown")
-                if action == "placed":
-                    tdata["summary"] = (
-                        f"{ticker}: SL placed @ ${tdata.get('stop_price', 0):.2f} "
+                sl_action = tdata.get("sl_action") or tdata.get("action", "unknown")
+                tp_action = tdata.get("tp_action", "")
+
+                # Build SL part of summary
+                if sl_action == "placed":
+                    sl_part = (
+                        f"SL placed @ ${tdata.get('stop_price', 0):.2f} "
                         f"qty={tdata.get('qty', '?')}"
                     )
-                elif action == "skipped":
-                    tdata["summary"] = f"{ticker}: stop already exists — skipped"
-                elif action == "dry_run_placed":
-                    tdata["summary"] = (
-                        f"{ticker}: [DRY RUN] would place SL @ "
-                        f"${tdata.get('stop_price', 0):.2f} qty={tdata.get('qty', '?')}"
+                elif sl_action in ("skipped",):
+                    sl_part = "SL exists"
+                elif sl_action == "dry_run_placed":
+                    sl_part = (
+                        f"[DRY RUN] SL @ ${tdata.get('stop_price', 0):.2f} "
+                        f"qty={tdata.get('qty', '?')}"
                     )
-                elif action == "error":
-                    tdata["summary"] = f"{ticker}: ERROR — {tdata.get('message', '?')}"
-                    tdata["errors"] = [tdata.get("message", "unknown error")]
+                elif sl_action == "error":
+                    sl_part = f"SL ERROR: {tdata.get('sl_message') or tdata.get('message', '?')}"
+                    tdata["errors"] = [tdata.get("sl_message") or tdata.get("message", "unknown")]
                 else:
-                    tdata["summary"] = f"{ticker}: {action}"
+                    sl_part = f"SL {sl_action}"
+
+                # Build TP part of summary
+                tp_part = ""
+                if tp_action == "placed":
+                    tp_part = f"TP placed @ ${tdata.get('take_profit', 0):.2f}"
+                elif tp_action == "skipped" and tdata.get("tp_reason") == "tp_exists":
+                    tp_part = "TP exists"
+                elif tp_action == "skipped":
+                    tp_part = "TP skipped (no target)"
+                elif tp_action == "dry_run_placed":
+                    tp_part = f"[DRY RUN] TP @ ${tdata.get('take_profit', 0):.2f}"
+                elif tp_action == "error":
+                    tp_part = f"TP ERROR: {tdata.get('tp_message', '?')}"
+                    tdata.setdefault("errors", []).append(
+                        tdata.get("tp_message", "unknown")
+                    )
+
+                parts = [p for p in [sl_part, tp_part] if p]
+                tdata["summary"] = (
+                    f"{ticker}: {' | '.join(parts)}" if parts else f"{ticker}: nothing to do"
+                )
             result["results"] = per_ticker
-
-        elif broker_name == "moomoo":
-            # Moomoo needs positions + open orders for duplicate detection.
-            # Use LivePortfolio to get enriched position objects.
-            from brokers.live_portfolio import LivePortfolio
-            portfolio = LivePortfolio(config, market_id=market_id)
-            if not portfolio.connect():
-                result["error"] = "LivePortfolio connect failed"
-                return result
-
-            if not portfolio.positions:
-                logger.info("No live positions in %s — nothing to protect", market_id)
-                result["counts"] = {"positions_checked": 0}
-                return result
-
-            logger.info("%d live positions in %s", len(portfolio.positions), market_id)
-
-            open_orders = broker.get_open_orders()
-            logger.info("%d open orders fetched from broker", len(open_orders))
-
-            if hasattr(broker, "sync_all_protective_orders"):
-                sync_result = broker.sync_all_protective_orders(
-                    positions=portfolio.positions,
-                    plan=plan,
-                    trade_date=trade_date,
-                    dry_run=dry_run,
-                )
-            else:
-                from brokers.moomoo.protective_orders import sync_protective_orders
-                sync_result = sync_protective_orders(
-                    broker=broker,
-                    positions=portfolio.positions,
-                    open_orders=open_orders,
-                    plan=plan,
-                    config=config,
-                    trade_date=trade_date,
-                    dry_run=dry_run,
-                )
-
-            result["counts"] = sync_result.get("counts", {})
-            result["results"] = sync_result.get("results", {})
 
         else:
             result["error"] = f"Unsupported broker: {broker_name}"
