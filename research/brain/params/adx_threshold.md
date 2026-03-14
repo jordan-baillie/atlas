@@ -20,3 +20,15 @@
 | 2026-03-13 05:59 | adx_trend_pullback | 20.0 → 25.0 | ✅ kept | +0.0391 | 0.4408 |
 | 2026-03-13 05:59 | adx_trend_pullback | 20.0 → 35.0 | ❌ discard | -0.2482 | 0.1535 |
 | 2026-03-13 05:59 | adx_trend_pullback | 20.0 → 30.0 | ❌ discard | -1.0020 | -0.6003 |
+| 2026-03-13 10:35 | adx_trend_pullback | 25.0 → 35.0 | ❌ discard | -3.1242 | -2.7341 |
+| 2026-03-13 10:35 | adx_trend_pullback | 25.0 → 30.0 | ❌ discard | -1.9171 | -1.5270 |
+| 2026-03-13 10:35 | adx_trend_pullback | 25.0 → 20.0 | ❌ discard | -0.0032 | 0.3869 |
+| 2026-03-13 13:02 | adx_trend_pullback | 25.0 → 35.0 | ❌ discard | -3.1242 | -2.7341 |
+| 2026-03-13 13:02 | adx_trend_pullback | 25.0 → 30.0 | ❌ discard | -1.9171 | -1.5270 |
+| 2026-03-13 13:02 | adx_trend_pullback | 25.0 → 20.0 | ❌ discard | -0.0032 | 0.3869 |
+| 2026-03-13 23:05 | adx_trend_pullback | 25.0 → 35.0 | ❌ discard | -3.1242 | -2.7341 |
+| 2026-03-13 23:05 | adx_trend_pullback | 25.0 → 30.0 | ❌ discard | -1.9171 | -1.5270 |
+| 2026-03-13 23:05 | adx_trend_pullback | 25.0 → 20.0 | ❌ discard | -0.0032 | 0.3869 |
+| 2026-03-14 02:05 | adx_trend_pullback | 25.0 → 35.0 | ❌ discard | -3.1242 | -2.7341 |
+| 2026-03-14 02:05 | adx_trend_pullback | 25.0 → 30.0 | ❌ discard | -1.9171 | -1.5270 |
+| 2026-03-14 02:05 | adx_trend_pullback | 25.0 → 20.0 | ❌ discard | -0.0032 | 0.3869 |

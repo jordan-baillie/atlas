@@ -1,40 +1,72 @@
 {
   "strategy": "demark_sequential",
   "market": "sp500",
-  "params": {},
+  "params": {
+    "atr_stop_mult": 1.5,
+    "max_hold_days": 15
+  },
   "metrics": {
-    "total_trades": 11,
-    "cagr_pct": -0.2637,
-    "cagr_full_period_pct": -0.2239,
-    "sharpe": -5.429,
-    "sortino": -6.2629,
-    "max_drawdown_pct": 4.2116,
-    "win_rate_pct": 63.64,
-    "profit_factor": 0.6721,
-    "total_pnl": -49.54,
-    "avg_trade": -4.5,
-    "final_equity": 3937.8,
-    "expectancy_r": -0.2551,
-    "avg_r": -0.2551,
-    "r_count": 11,
-    "edge_p_value": 0.654393,
+    "total_trades": 45,
+    "cagr_pct": 0.8075,
+    "cagr_full_period_pct": 0.6845,
+    "sharpe": -3.1559,
+    "sortino": -4.7427,
+    "max_drawdown_pct": 1.8929,
+    "win_rate_pct": 62.22,
+    "profit_factor": 1.876,
+    "total_pnl": 180.33,
+    "avg_trade": 4.01,
+    "final_equity": 3690.14,
+    "expectancy_r": 0.3492,
+    "avg_r": 0.3492,
+    "r_count": 45,
+    "edge_p_value": 0.093114,
     "edge_significant": false,
-    "var_95_pct": -0.0,
-    "cvar_95_pct": 0.005,
-    "calmar": -0.0626,
-    "mc_p95_drawdown_pct": 3.68,
+    "var_95_pct": 0.105,
+    "cvar_95_pct": 0.2,
+    "calmar": 0.4266,
+    "mc_p95_drawdown_pct": 2.65,
     "mc_fragile": false,
     "strategy_breakdown": {
       "demark_sequential": {
-        "trades": 11,
-        "total_pnl": -49.54,
-        "win_rate_pct": 63.6
+        "trades": 45,
+        "total_pnl": 180.33,
+        "win_rate_pct": 62.2
       }
     },
-    "runtime_s": 5.2
+    "regime_metrics": {
+      "bear": {
+        "trades": 2,
+        "win_rate_pct": 100.0,
+        "avg_trade": 13.76,
+        "total_pnl": 27.51,
+        "profit_factor": Infinity,
+        "sharpe_approx": 1.55,
+        "avg_r": 1.2698
+      },
+      "bull": {
+        "trades": 13,
+        "win_rate_pct": 38.5,
+        "avg_trade": -3.41,
+        "total_pnl": -44.34,
+        "profit_factor": 0.5712,
+        "sharpe_approx": -0.2283,
+        "avg_r": -0.2687
+      },
+      "neutral": {
+        "trades": 30,
+        "win_rate_pct": 70.0,
+        "avg_trade": 6.57,
+        "total_pnl": 197.16,
+        "profit_factor": 2.9245,
+        "sharpe_approx": 0.4136,
+        "avg_r": 0.5556
+      }
+    },
+    "runtime_s": 30.7
   },
-  "description": "baseline",
-  "experiments_run": 0,
-  "experiments_kept": 1,
-  "updated_at": "2026-03-11T11:48:24.981698+00:00"
+  "description": "max_hold_days=15",
+  "experiments_run": 2,
+  "experiments_kept": 3,
+  "updated_at": "2026-03-13T11:34:26.449448+00:00"
 }

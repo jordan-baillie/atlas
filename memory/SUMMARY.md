@@ -6,16 +6,16 @@
 | Market | Broker | Mode | Config | Strategies Active |
 |--------|--------|------|--------|-------------------|
 | **SP500** | Alpaca ($0 commission) | LIVE | v3.0 | TF+MR+OG+MB+SR+STMR+CR2 (max_pos=10, weighted alloc) |
-| **ASX** | INACTIVE (config moved to config/inactive/) | — | — | — |
+| **ASX** | Moomoo (monitoring only — 2 open positions) | MONITOR | v1.0-passive | No new trades; Moomoo = source of truth |
 | **HK (SEHK)** | INACTIVE (config moved to config/inactive/) | — | — | — |
 
-**Live positions:** SP500: 0 (fresh Alpaca account, $3,518.12 USD equity). ASX/HK: deactivated.
+**Live positions:** SP500: 2 (DHR, OXY via Alpaca, ~$3,520 USD equity). ASX: 2 (WHC.AX, WDS.AX via Moomoo, ~A$12,417 account equity).
 
 ## Key Architecture Decisions
 
 1. **Live broker = sole source of truth.** Paper engine removed. Broker state > paper state at all times.
 2. **SP500 via Alpaca ($0 commission).** Switched from Moomoo 2026-03-13. Commission-free eliminates fee drag.
-3. **ASX/HK deactivated.** Configs moved to config/inactive/. IBKR fees killed edge at current equity.
+3. **ASX monitoring mode.** config/active/asx.json uses Moomoo (monitoring_enabled=true, live_enabled=false). No new trades; reads real positions from Moomoo REAL account. `atlas status -m asx` shows live positions. HK still inactive.
 5. **No paper trading layer.** `LivePortfolio` reads broker. Paper engine used only for backtest and plan generation.
 6. **Allocation pools implemented but disabled** (`allocation.enabled=false`). Enable when momentum_breakout is re-activated.
 7. **Position count:** SP500 max_open_positions=15 (up from 10 — confirmed +13% Sharpe improvement).

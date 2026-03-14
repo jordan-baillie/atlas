@@ -1,9 +1,9 @@
 {
   "trade_date": "2026-03-13",
-  "generated_at": "2026-03-13T18:21:46.670892",
+  "generated_at": "2026-03-13T19:01:03.132148",
   "market_id": "sp500",
   "config_version": "v3.0",
-  "status": "REJECTED",
+  "status": "APPROVED",
   "portfolio_snapshot": {
     "equity": 3518.12,
     "cash": 3518.12,
@@ -4373,5 +4373,5 @@
       "cap": 1
     }
   },
-  "rejected_at": "2026-03-14T21:45:18.878302"
+  "approved_at": "2026-03-13T19:26:08.252728"
 }

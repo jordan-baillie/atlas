@@ -1,40 +1,73 @@
 {
   "strategy": "donchian_breakout",
   "market": "sp500",
-  "params": {},
+  "params": {
+    "entry_period": 20,
+    "atr_stop_mult": 1.5,
+    "max_hold_days": 30
+  },
   "metrics": {
-    "total_trades": 91,
-    "cagr_pct": 10.1507,
-    "cagr_full_period_pct": 8.5529,
-    "sharpe": 0.3181,
-    "sortino": 2.9624,
-    "max_drawdown_pct": 6.0384,
-    "win_rate_pct": 52.75,
-    "profit_factor": 5.5054,
-    "total_pnl": 3100.38,
-    "avg_trade": 34.07,
-    "final_equity": 7100.38,
-    "expectancy_r": 1.538,
-    "avg_r": 1.538,
-    "r_count": 91,
-    "edge_p_value": 0.200843,
+    "total_trades": 74,
+    "cagr_pct": 20.9077,
+    "cagr_full_period_pct": 17.4654,
+    "sharpe": 0.5547,
+    "sortino": 7.0629,
+    "max_drawdown_pct": 6.8656,
+    "win_rate_pct": 47.3,
+    "profit_factor": 8.1447,
+    "total_pnl": 7344.82,
+    "avg_trade": 99.25,
+    "final_equity": 10857.47,
+    "expectancy_r": 5.3632,
+    "avg_r": 5.3632,
+    "r_count": 74,
+    "edge_p_value": 0.093512,
     "edge_significant": false,
-    "var_95_pct": 0.187,
-    "cvar_95_pct": 0.357,
-    "calmar": 1.681,
-    "mc_p95_drawdown_pct": 4.5,
-    "mc_fragile": false,
+    "var_95_pct": 0.232,
+    "cvar_95_pct": 0.443,
+    "calmar": 3.0453,
+    "mc_p95_drawdown_pct": 8.0,
+    "mc_fragile": true,
     "strategy_breakdown": {
       "donchian_breakout": {
-        "trades": 91,
-        "total_pnl": 3100.38,
-        "win_rate_pct": 52.7
+        "trades": 74,
+        "total_pnl": 7344.82,
+        "win_rate_pct": 47.3
       }
     },
-    "runtime_s": 6.7
+    "regime_metrics": {
+      "bear": {
+        "trades": 1,
+        "win_rate_pct": 100.0,
+        "avg_trade": 77.91,
+        "total_pnl": 77.91,
+        "profit_factor": Infinity,
+        "sharpe_approx": 0,
+        "avg_r": 2.136
+      },
+      "bull": {
+        "trades": 26,
+        "win_rate_pct": 46.2,
+        "avg_trade": 231.73,
+        "total_pnl": 6025.0,
+        "profit_factor": 15.3709,
+        "sharpe_approx": 0.2597,
+        "avg_r": 11.5127
+      },
+      "neutral": {
+        "trades": 47,
+        "win_rate_pct": 46.8,
+        "avg_trade": 26.42,
+        "total_pnl": 1241.91,
+        "profit_factor": 3.0401,
+        "sharpe_approx": 0.1605,
+        "avg_r": 2.03
+      }
+    },
+    "runtime_s": 19.7
   },
-  "description": "baseline",
-  "experiments_run": 0,
-  "experiments_kept": 1,
-  "updated_at": "2026-03-11T11:44:58.350385+00:00"
+  "description": "entry_period=20",
+  "experiments_run": 5,
+  "experiments_kept": 6,
+  "updated_at": "2026-03-14T02:36:33.324325+00:00"
 }

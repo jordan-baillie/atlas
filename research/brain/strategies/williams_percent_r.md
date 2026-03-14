@@ -1,27 +1,40 @@
 # williams_percent_r
 
-> **Status:** dormant | **Best Sharpe:** 0.0810 | **Trades:** 190
-> **Updated:** 2026-03-12 02:55
+> **Status:** active | **Best Sharpe:** 0.1968 | **Trades:** 228
+> **Updated:** 2026-03-14 05:30
 
 ## Current Best Params
 
 | Parameter | Value |
 |-----------|-------|
-
+| atr_stop_mult | 1.5 |
+| max_hold_days | 7 |
+| sma200_filter | False |
+| wr_period | 21 |
 
 ## Current Metrics
 
 | Metric | Value |
 |--------|-------|
-| Sharpe | 0.0810 |
-| CAGR | 5.4% |
-| Profit Factor | 2.04 |
-| Max Drawdown | 5.3% |
-| Total Trades | 190 |
-| Win Rate | 51.6% |
+| Sharpe | 0.1968 |
+| CAGR | 6.9% |
+| Profit Factor | 2.46 |
+| Max Drawdown | 3.9% |
+| Total Trades | 228 |
+| Win Rate | 55.7% |
 
 ## History
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
+| Date | Sharpe | Trades | PF | CAGR | Change |
+| Date | Sharpe | Trades | PF | CAGR | Change |
+| Date | Sharpe | Trades | PF | CAGR | Change |
+| Date | Sharpe | Trades | PF | CAGR | Change |
+| Date | Sharpe | Trades | PF | CAGR | Change |
 | 2026-03-12 02:55 | 0.0810 | 190 | 2.04 | 5.4% | migrated from best/williams_percent_r.json |
+| 2026-03-13 14:57 | -2.4969 | 168 | 1.27 | 1.1% | wr_period=10 |
+| 2026-03-14 00:11 | -2.0282 | 178 | 1.09 | 0.7% | atr_stop_mult=1.5 |
+| 2026-03-14 00:39 | -1.6028 | 214 | 1.41 | 1.6% | max_hold_days=7 |
+| 2026-03-14 03:13 | -1.1208 | 254 | 1.53 | 2.5% | sma200_filter=False |
+| 2026-03-14 05:30 | 0.1968 | 228 | 2.46 | 6.9% | wr_period=21 |

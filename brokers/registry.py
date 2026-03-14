@@ -66,22 +66,33 @@ def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter
 
     Returns the live broker if configured and available, or None
     if live trading is not configured.
+
+    A broker is created when either:
+      - trading.live_enabled = true  (full trading mode)
+      - trading.monitoring_enabled = true  (read-only: positions + account info,
+        no order execution — read-only monitoring mode)
     """
     _register_defaults()
     market_id = market_id.lower().strip()
     broker_name = _resolve_broker_name(config)
     live_enabled = config.get("trading", {}).get("live_enabled", False)
+    monitoring_enabled = config.get("trading", {}).get("monitoring_enabled", False)
 
-    if not live_enabled or broker_name not in _KNOWN_BROKERS:
+    if not (live_enabled or monitoring_enabled) or broker_name not in _KNOWN_BROKERS:
         logger.debug(
-            "Broker not configured for live trading (broker=%s, live_enabled=%s)",
-            broker_name, live_enabled,
+            "Broker not configured (broker=%s, live_enabled=%s, monitoring_enabled=%s)",
+            broker_name, live_enabled, monitoring_enabled,
         )
         return None
 
     factory = _BROKER_FACTORIES.get(broker_name)
     if factory:
-        return factory(market_id, config, live=live_enabled)
+        # monitoring_enabled connects to the REAL account for position reading
+        # even though live_enabled=False (no order execution).  Pass live=True
+        # so the broker selects TrdEnv.REAL, but calling code (LivePortfolio)
+        # will not place any orders since live_enabled is False.
+        connect_as_live = live_enabled or monitoring_enabled
+        return factory(market_id, config, live=connect_as_live)
 
     logger.warning(
         "Broker '%s' not available (installed: %s)",

@@ -151,9 +151,14 @@ def _order_to_result(order, atlas_ticker: str, side: OrderSide) -> OrderResult:
             "id": str(getattr(order, "id", "")),
             "client_order_id": str(getattr(order, "client_order_id", "")),
             "status": status_val,
+            # Dashboard-compatible aliases
+            "order_status": status_val,
+            "order_type": str(getattr(getattr(order, "order_type", None), "value", "limit")).lower(),
+            "create_time": str(getattr(order, "submitted_at", "")),
             "symbol": str(getattr(order, "symbol", "")),
             "filled_at": str(getattr(order, "filled_at", "")),
             "submitted_at": str(getattr(order, "submitted_at", "")),
+            "order_market": "US",
         },
     )
 
@@ -430,7 +435,10 @@ class AlpacaBroker(BrokerAdapter):
         alpaca_symbol = mapper.to_alpaca(ticker)
         alpaca_side = _map_side(side)
         tif = _map_tif(self._tif)
-        client_id = f"atlas_{remark[:8] if remark else uuid.uuid4().hex[:8]}"
+        # Always append a UUID suffix to guarantee uniqueness across multiple
+        # orders with the same strategy/remark on the same day.
+        _remark_slug = remark[:10] if remark else "ord"
+        client_id = f"atlas_{_remark_slug}_{uuid.uuid4().hex[:8]}"
 
         # Dollar-amount order (fractional shares)
         notional = kwargs.get("notional")

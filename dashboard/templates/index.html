@@ -323,6 +323,9 @@ function ago(ts) {
   } catch(e) { return ''; }
 }
 
+// ── Mobile detection ──
+function isMobile() { return window.innerWidth <= 700; }
+
 // ── In-page confirmation panel (replaces browser confirm()) ──
 function _showConfirm(title, msg, confirmLabel, confirmCls, onConfirm) {
   var panel = document.createElement('div');
@@ -1134,20 +1137,25 @@ function render(d) {
 
   // Combined equity: Atlas (Alpaca) + Manual (Moomoo)
   var totalEquity = headlineEquity + manualEquity;
+  var mob = isMobile();
   var cards = [
     {
       label: 'Total Equity',
       value: $(totalEquity),
       c: cls(p.total_pnl + manualPnl),
       accent: 'accent-blue',
-      sub: 'Atlas ' + $(headlineEquity) + ' · Manual ' + $(manualEquity) + ' ' + sparkHtml
+      sub: mob
+        ? $(headlineEquity) + ' Atlas ' + sparkHtml
+        : 'Atlas ' + $(headlineEquity) + ' · Manual ' + $(manualEquity) + ' ' + sparkHtml
     },
     {
       label: 'vs ' + benchTk,
       value: pct(alpha),
       c: cls(alpha),
       accent: cls(alpha) === 'up' ? 'accent-green' : cls(alpha) === 'down' ? 'accent-red' : 'accent-blue',
-      sub: 'Atlas ' + pct(atlasRet) + ' · ' + benchTk + ' ' + pct(benchRet)
+      sub: mob
+        ? 'Atl ' + pct(atlasRet) + ' · Bch ' + pct(benchRet)
+        : 'Atlas ' + pct(atlasRet) + ' · ' + benchTk + ' ' + pct(benchRet)
     },
     (function() {
       // Compute today's P&L from per-currency breakdown (works for both combined and per-market views)
@@ -1172,7 +1180,9 @@ function render(d) {
         var sym = CURRENCY_SYMBOLS[ccy] || (ccy + ' ');
         parts.push('<span class="' + cls(val) + '">' + (val >= 0 ? '+' : '-') + sym + Math.abs(val).toFixed(2) + '</span>');
       });
-      var posInfo = (p.num_open || 0) + ' positions · ' + exposurePct.toFixed(0) + '% deployed';
+      var posInfo = mob
+        ? (p.num_open || 0) + ' pos · ' + exposurePct.toFixed(0) + '%'
+        : (p.num_open || 0) + ' positions · ' + exposurePct.toFixed(0) + '% deployed';
       var sub = (parts.length > 0 ? parts.join(' · ') + ' · ' : '') + posInfo;
       // Display: use view currency
       var viewCcy = getViewCurrency();
@@ -1231,7 +1241,35 @@ function render(d) {
   document.getElementById('pos-count').textContent = pos.length;
   if (pos.length === 0) {
     document.getElementById('body-positions').innerHTML = '<div class="empty">No open positions</div>';
+  } else if (isMobile()) {
+    // ── Mobile: card-per-position layout ──
+    pos.sort(function(a,b) { return Math.abs(b.pnl) - Math.abs(a.pnl); });
+    var h = '<div class="mob-pos-list">';
+    pos.forEach(function(p) {
+      var c = cls(p.pnl);
+      h += '<div class="mob-pos-card">';
+      h += '<div class="mob-pos-header">';
+      h += '<span class="mob-pos-ticker">';
+      if (_currentMarket === 'all') h += marketTag(p.market) + ' ';
+      h += esc(p.ticker);
+      if (p.strategy) h += ' ' + strat(p.strategy);
+      h += '</span>';
+      h += '<span class="mob-pos-pnl ' + c + ' live-pnl" data-ticker="' + esc(p.ticker) + '" data-market="' + esc(p.market||'') + '">';
+      h += $(p.pnl) + '<span class="mob-pos-pnl-pct">' + pct(p.pnl_pct) + '</span>';
+      h += '</span>';
+      h += '</div>';
+      h += '<div class="mob-pos-meta">';
+      h += '<span><span class="mob-label">In</span> <span class="mob-val">' + $(p.entry_price) + '</span></span>';
+      h += '<span><span class="mob-label">Now</span> <span class="mob-val live-price" data-ticker="' + esc(p.ticker) + '">' + $(p.current_price) + '</span></span>';
+      if (p.stop_price > 0) h += '<span><span class="mob-label">Stop</span> <span class="mob-val" style="color:var(--red)">' + $(p.stop_price) + '</span></span>';
+      h += '<span class="mob-val" style="color:var(--text-tertiary)">' + (p.days_held || 0) + 'd</span>';
+      h += '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    document.getElementById('body-positions').innerHTML = h;
   } else {
+    // ── Desktop: full table ──
     var h = '<div class="table-scroll"><table id="tbl-pos"><thead><tr>';
     h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',0,\'str\')">Ticker</th>';
     h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',1,\'str\')">Strategy</th>';
@@ -1407,34 +1445,58 @@ function render(d) {
   var connDot = manualConnected ? '<span style="color:var(--green)">●</span>' : '<span style="color:var(--red)">●</span>';
   manualCountEl.innerHTML = connDot + ' ' + manualPos.length + ' positions · ' + $(mp.equity || 0) + ' equity' + staleTag;
   if (manualPos.length > 0) {
-    var mh = '<div style="display:flex;gap:24px;margin-bottom:12px;flex-wrap:wrap;font-size:12px">';
+    // Portfolio summary strip (shown on all screen sizes)
+    var mh = '<div style="display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap;font-size:12px">';
     mh += '<div><span class="pnl-label">Equity</span> <span class="mono">' + $(mp.equity) + '</span></div>';
     mh += '<div><span class="pnl-label">Cash</span> <span class="mono">' + $(mp.cash) + '</span></div>';
     mh += '<div><span class="pnl-label">Invested</span> <span class="mono">' + $(mp.market_value) + '</span></div>';
     mh += '<div><span class="pnl-label">P&L</span> <span class="mono ' + cls(mp.unrealized_pnl) + '">' + $(mp.unrealized_pnl) + '</span></div>';
     mh += '</div>';
-    mh += '<div class="table-scroll"><table id="tbl-manual"><thead><tr>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',0,\'str\')">Ticker</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',1,\'num\')">Shares</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',2,\'num\')">Entry</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',3,\'num\')">Current</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',4,\'num\')">Value</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',5,\'num\')">P&L</th>';
-    mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',6,\'num\')">P&L %</th>';
-    mh += '</tr></thead><tbody>';
-    manualPos.forEach(function(pos) {
-      var c = cls(pos.pnl);
-      mh += '<tr>';
-      mh += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(pos.ticker) + '</td>';
-      mh += '<td class="mono">' + pos.shares + '</td>';
-      mh += '<td class="mono">' + $(pos.entry_price) + '</td>';
-      mh += '<td class="mono">' + $(pos.current_price) + '</td>';
-      mh += '<td class="mono">' + $(pos.market_value) + '</td>';
-      mh += '<td class="mono ' + c + '">' + $(pos.pnl) + '</td>';
-      mh += '<td class="mono ' + c + '">' + pct(pos.pnl_pct) + '</td>';
-      mh += '</tr>';
-    });
-    mh += '</tbody></table></div>';
+
+    if (isMobile()) {
+      // ── Mobile: card-per-position ──
+      mh += '<div class="mob-pos-list">';
+      manualPos.forEach(function(pos) {
+        var c = cls(pos.pnl);
+        mh += '<div class="mob-pos-card">';
+        mh += '<div class="mob-pos-header">';
+        mh += '<span class="mob-pos-ticker">' + esc(pos.ticker) + '</span>';
+        mh += '<span class="mob-pos-pnl ' + c + '">' + $(pos.pnl) + '<span class="mob-pos-pnl-pct">' + pct(pos.pnl_pct) + '</span></span>';
+        mh += '</div>';
+        mh += '<div class="mob-pos-meta">';
+        mh += '<span><span class="mob-label">In</span> <span class="mob-val">' + $(pos.entry_price) + '</span></span>';
+        mh += '<span><span class="mob-label">Now</span> <span class="mob-val">' + $(pos.current_price) + '</span></span>';
+        mh += '<span><span class="mob-label">Val</span> <span class="mob-val">' + $(pos.market_value) + '</span></span>';
+        mh += '<span class="mob-val" style="color:var(--text-tertiary)">' + (pos.shares || 0) + ' sh</span>';
+        mh += '</div>';
+        mh += '</div>';
+      });
+      mh += '</div>';
+    } else {
+      // ── Desktop: full table ──
+      mh += '<div class="table-scroll"><table id="tbl-manual"><thead><tr>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',0,\'str\')">Ticker</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',1,\'num\')">Shares</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',2,\'num\')">Entry</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',3,\'num\')">Current</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',4,\'num\')">Value</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',5,\'num\')">P&L</th>';
+      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',6,\'num\')">P&L %</th>';
+      mh += '</tr></thead><tbody>';
+      manualPos.forEach(function(pos) {
+        var c = cls(pos.pnl);
+        mh += '<tr>';
+        mh += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(pos.ticker) + '</td>';
+        mh += '<td class="mono">' + pos.shares + '</td>';
+        mh += '<td class="mono">' + $(pos.entry_price) + '</td>';
+        mh += '<td class="mono">' + $(pos.current_price) + '</td>';
+        mh += '<td class="mono">' + $(pos.market_value) + '</td>';
+        mh += '<td class="mono ' + c + '">' + $(pos.pnl) + '</td>';
+        mh += '<td class="mono ' + c + '">' + pct(pos.pnl_pct) + '</td>';
+        mh += '</tr>';
+      });
+      mh += '</tbody></table></div>';
+    }
     document.getElementById('body-manual').innerHTML = mh;
   } else {
     document.getElementById('body-manual').innerHTML = '<div class="empty">' + (manualConnected ? 'No manual positions' : 'Moomoo offline — cached data may be available') + '</div>';

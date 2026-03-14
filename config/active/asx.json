@@ -7,14 +7,26 @@
     "benchmark_ticker": "IOZ.AX"
   },
   "risk": {
-    "starting_equity": 0,
-    "max_open_positions": 0
+    "starting_equity": 12417,
+    "max_open_positions": 10,
+    "max_risk_per_trade_pct": 0.02,
+    "max_sector_concentration": 5,
+    "max_daily_drawdown_pct": 0.10,
+    "_note": "Monitoring only — no new trades. Equity = full Moomoo AU account balance."
   },
   "trading": {
     "mode": "passive",
     "broker": "moomoo",
     "live_enabled": false,
+    "monitoring_enabled": true,
     "data_frequency": "daily"
+  },
+  "data": {
+    "source": "yfinance",
+    "history_years": 3,
+    "cache_dir": "data/cache",
+    "raw_dir": "data/raw",
+    "processed_dir": "data/processed"
   },
   "moomoo": {
     "opend_host": "127.0.0.1",

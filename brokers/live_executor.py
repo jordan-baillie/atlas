@@ -850,6 +850,19 @@ class LiveExecutor:
             if not ticker or not qty or not stop_price:
                 continue
 
+            # Skip stop placement if the entry order is still pending (not filled).
+            # Placing a STOP SELL while a LIMIT BUY is open causes a "wash trade"
+            # rejection on Alpaca.  sync_protective_orders.py handles post-fill stops.
+            entry_status = result.get("status", "").upper()
+            if entry_status in ("SUBMITTED", "NEW", "ACCEPTED", "PENDING_NEW",
+                                "PENDING", "PARTIALLY_FILLED"):
+                logger.info(
+                    "Skipping immediate stop for %s (order status=%s) — "
+                    "sync_protective_orders will place stop after fill.",
+                    ticker, entry_status,
+                )
+                continue
+
             # Determine if this strategy uses trailing stops
             strat_cfg = config.get("strategies", {}).get(strategy, {})
             trailing_mult = strat_cfg.get("trailing_stop_atr_mult", 0)

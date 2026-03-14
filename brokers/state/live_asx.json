@@ -745,8 +745,8 @@
       ]
     }
   ],
-  "daily_high_water": 3999.0,
-  "halted": true,
-  "halt_reason": "Daily drawdown 2.23% >= 2.00%",
+  "daily_high_water": 0,
+  "halted": false,
+  "halt_reason": "",
   "last_saved": "2026-03-03T17:08:12.086777"
 }

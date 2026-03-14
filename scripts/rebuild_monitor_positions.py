@@ -302,52 +302,6 @@ positions.append({
 })
 
 # ═══════════════════════════════════════════════════════════════════════════
-# WDS.AX — Woodside Energy (38 shares @ A$30.24)
-# ═══════════════════════════════════════════════════════════════════════════
-positions.append({
-    "id": "20a45fa0c57c",
-    "ticker": "WDS.AX",
-    "asset_type": "stock",
-    "entry_price": 25.84,
-    "entry_date": "2026-03-01",
-    "quantity": 38,
-    "direction": "long",
-    "thesis": "ASX energy major — LNG/oil exposure with geopolitical upside. Strong dividends. Watch energy concentration (XOP+WDS) — flag if >55% of portfolio.",
-    "timeframe": "6-12 months",
-    "invalidation_price": 22.0,
-    "target_price": 38.0,
-    "tags": ["energy", "oil", "asx", "dividend", "iran-conflict"],
-    "status": "open",
-    "conditions": [
-        # Weight 3: WTI spot (auto)
-        cond("wds_wti", "WTI spot price", "price_above",
-             source="CL=F", threshold=60.0, warning_threshold=70.0, weight=3,
-             notes="<$60 = red, $60-70 = amber, >$70 = green"),
-        # Weight 2: WDS overextended vs broker target $27 (auto — price_below for overextension)
-        cond("wds_target", "WDS not overextended (vs $27 target)", "price_below",
-             source="WDS.AX", threshold=33.0, warning_threshold=30.0, weight=2,
-             notes="<$30 = green (within 10% of $27 target), $30-33 = amber, >$33 = red (overextended >20%)"),
-        # Weight 1: WDS vs 50-day MA (auto)
-        cond("wds_ma50", "WDS above 50-day MA", "ma_position",
-             source="WDS.AX", threshold=50, weight=1),
-        # Weight 1: LNG spot price JKM (manual)
-        cond("wds_lng", "LNG spot price (JKM)", "manual_toggle",
-             weight=1, notes="Green=>$15/MMBtu, Amber=$10-15, Red=<$10"),
-        # Weight 1: Hormuz/Qatar LNG status (manual)
-        cond("wds_qatar", "Qatar LNG exports disrupted", "manual_toggle",
-             weight=1, notes="Green=Qatar exports disrupted, Amber=partially restored, Red=fully restored"),
-        # Weight 1: Energy concentration check (manual — agent calculates)
-        cond("wds_conc", "Combined energy exposure (XOP+WDS) <55%", "manual_toggle",
-             weight=1, notes="Green=<40%, Amber=40-55%, Red=>55% = CONCENTRATION WARNING. Agent: calculate from portfolio."),
-        # Weight 1: AUD/USD direction (manual — agent checks from data)
-        cond("wds_audusd", "AUD/USD rate direction", "manual_toggle",
-             weight=1, notes="Green=weakening AUD (boosts USD earnings), Amber=stable, Red=strengthening AUD"),
-    ],
-    "notes": get_notes("20a45fa0c57c"),
-    "created_at": "2026-03-01T00:00:00", "updated_at": NOW,
-})
-
-# ═══════════════════════════════════════════════════════════════════════════
 # CHTR — Charter Communications (1 share @ $232.80)
 # ═══════════════════════════════════════════════════════════════════════════
 positions.append({

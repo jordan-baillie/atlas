@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "type": "entry",
+    "ticker": "OXY",
+    "strategy": "momentum_breakout",
+    "shares": 2,
+    "fill_price": 58.4,
+    "planned_price": 58.4,
+    "stop_price": 55.5664,
+    "slippage_bps": null,
+    "order_id": "25481ca1-d27e-44c6-bd72-e07e31b221ce",
+    "timestamp": "2026-03-13T19:26:13.132621",
+    "recorded_at": "2026-03-13T19:26:13.132630"
+  },
+  {
+    "type": "entry",
+    "ticker": "DHR",
+    "strategy": "mean_reversion",
+    "shares": 1,
+    "fill_price": 186.245,
+    "planned_price": 186.245,
+    "stop_price": 178.1155,
+    "slippage_bps": null,
+    "order_id": "5062d3fa-bf19-499f-8d3a-80fbfb218e52",
+    "timestamp": "2026-03-13T19:26:14.607275",
+    "recorded_at": "2026-03-13T19:26:14.607284"
+  }
+]
