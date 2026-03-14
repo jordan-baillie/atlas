@@ -1485,14 +1485,13 @@ function render(d) {
       mh += '</tr></thead><tbody>';
       manualPos.forEach(function(pos) {
         var c = cls(pos.pnl);
-        mh += '<tr>';
+        mh += '<tr data-ticker="' + esc(pos.ticker) + '" data-entry="' + (pos.entry_price||0) + '" data-shares="' + (pos.shares||0) + '">';
         mh += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(pos.ticker) + '</td>';
         mh += '<td class="mono">' + pos.shares + '</td>';
         mh += '<td class="mono">' + $(pos.entry_price) + '</td>';
-        mh += '<td class="mono">' + $(pos.current_price) + '</td>';
+        mh += '<td class="mono live-price" data-v="' + (pos.current_price||0) + '">' + $(pos.current_price) + '</td>';
         mh += '<td class="mono">' + $(pos.market_value) + '</td>';
-        mh += '<td class="mono ' + c + '">' + $(pos.pnl) + '</td>';
-        mh += '<td class="mono ' + c + '">' + pct(pos.pnl_pct) + '</td>';
+        mh += '<td class="mono live-pnl ' + c + '" data-v="' + (pos.pnl||0) + '">' + $(pos.pnl) + ' <span style="font-size:10px;opacity:0.7">' + pct(pos.pnl_pct) + '</span></td>';
         mh += '</tr>';
       });
       mh += '</tbody></table></div>';
@@ -3272,7 +3271,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ── Update positions table with live prices ────────────────
   function updatePositions(quotes) {
-    var rows = document.querySelectorAll('#tbl-pos tbody tr[data-ticker]');
+    var rows = document.querySelectorAll('#tbl-pos tbody tr[data-ticker], #tbl-manual tbody tr[data-ticker]');
     var totalMktValue = 0;
     var totalEntryValue = 0;
 

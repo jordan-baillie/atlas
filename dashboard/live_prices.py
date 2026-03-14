@@ -332,6 +332,12 @@ def get_all_tickers_from_dashboard(dashboard_path: str) -> list[str]:
                 if t:
                     tickers.add(t)
 
+    # Manual portfolio positions (Moomoo)
+    for pos in data.get("manual_portfolio", {}).get("positions", []):
+        t = pos.get("ticker", "")
+        if t:
+            tickers.add(t)
+
     return list(tickers)
 
 
