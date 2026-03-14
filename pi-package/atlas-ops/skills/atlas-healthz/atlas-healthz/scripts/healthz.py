@@ -76,7 +76,7 @@ def check_infra(project: Path) -> list:
     """Infrastructure: services, ports, systemd units."""
     results = []
 
-    # OpenD gateway (moomoo — only checked if broker is moomoo)
+    # Alpaca broker (no gateway process needed — REST API only)
     cfg_path = project / "config" / "active" / "sp500.json"
     broker_name = ""
     if cfg_path.exists():
@@ -85,17 +85,8 @@ def check_infra(project: Path) -> list:
             broker_name = _json.load(open(cfg_path)).get("trading", {}).get("broker", "")
         except Exception:
             pass
-    if broker_name == "moomoo":
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(2)
-            s.connect(("127.0.0.1", 11111))
-            s.close()
-            results.append({"check": "opend_gateway", "verdict": "ok", "message": "Port 11111 reachable"})
-        except Exception:
-            results.append({"check": "opend_gateway", "verdict": "fail", "message": "OpenD not reachable on port 11111. Run: systemctl start opend"})
-    elif broker_name == "alpaca":
-        results.append({"check": "alpaca_api", "verdict": "ok", "message": f"Broker is Alpaca (no OpenD needed)"})
+    if broker_name == "alpaca":
+        results.append({"check": "alpaca_api", "verdict": "ok", "message": "Broker is Alpaca (REST API, no gateway needed)"})
 
     # (IBKR broker removed — no gateway check needed)
 
@@ -122,17 +113,11 @@ def check_infra(project: Path) -> list:
     if secrets_path.exists():
         secrets = _load_json(secrets_path)
         has_telegram = bool(secrets.get("telegram_bot_token")) and bool(secrets.get("telegram_chat_id"))
-        has_moomoo = bool(secrets.get("moomoo_rsa_key_path") or secrets.get("moomoo_password_md5")
-                         or secrets.get("MOOMOO_LOGIN_PWD_MD5") or secrets.get("moomoo"))
         has_alpaca = bool(secrets.get("ALPACA_API_KEY") and secrets.get("ALPACA_SECRET_KEY"))
         results.append({"check": "secrets_telegram", "verdict": "ok" if has_telegram else "fail",
                         "message": "Telegram credentials present" if has_telegram else "Missing telegram_bot_token or telegram_chat_id in ~/.atlas-secrets.json"})
-        broker_ok = has_moomoo or has_alpaca
-        broker_names = []
-        if has_moomoo: broker_names.append("moomoo")
-        if has_alpaca: broker_names.append("alpaca")
-        results.append({"check": "secrets_broker", "verdict": "ok" if broker_ok else "warn",
-                        "message": f"Broker credentials: {', '.join(broker_names)}" if broker_ok else "No broker credentials in ~/.atlas-secrets.json"})
+        results.append({"check": "secrets_broker", "verdict": "ok" if has_alpaca else "warn",
+                        "message": "Alpaca credentials present" if has_alpaca else "Missing ALPACA_API_KEY or ALPACA_SECRET_KEY in ~/.atlas-secrets.json"})
     else:
         results.append({"check": "secrets_file", "verdict": "fail", "message": "~/.atlas-secrets.json not found"})
 
@@ -230,7 +215,7 @@ def check_config(project: Path, market_id: str) -> list:
     # Trading mode
     trading = cfg.get("trading", {})
     mode = trading.get("mode", "live")
-    broker = trading.get("broker", "moomoo")
+    broker = trading.get("broker", "alpaca")
     live = trading.get("live_enabled", False)
     dry = trading.get("live_safety", {}).get("dry_run_first", True)
     results.append({"check": "trading_mode", "verdict": "ok",
@@ -256,8 +241,8 @@ def check_broker(project: Path, market_id: str) -> list:
         return results
 
     cfg = _load_json(cfg_path)
-    broker_name = cfg.get("trading", {}).get("broker", "moomoo")
-    if broker_name not in ("moomoo", "alpaca"):
+    broker_name = cfg.get("trading", {}).get("broker", "alpaca")
+    if broker_name not in ("alpaca",):
         results.append({"check": "broker", "verdict": "ok", "message": "No valid broker configured"})
         return results
 
@@ -676,17 +661,12 @@ def main():
     parser.add_argument("--project", default=None, help="Project root override")
     args = parser.parse_args()
 
-    # In JSON mode, suppress all stdout noise from third-party SDKs
-    # (moomoo/futu SDK prints ANSI log lines to stdout on broker connect,
-    # which corrupts the JSON output and breaks cron message parsing).
+    # In JSON mode, suppress stdout noise from SDKs to keep JSON output clean.
     if args.json:
         import io, logging as _logging
         # Redirect stdout during health check run, capture it
         _real_stdout = sys.stdout
         sys.stdout = io.StringIO()
-        # Also silence all loggers that write to stdout
-        for name in ('futu', 'moomoo', 'OpenQuoteContext', 'OpenSecTradeContext'):
-            _logging.getLogger(name).setLevel(_logging.CRITICAL)
 
     project = Path(args.project) if args.project else PROJECT
     sections = [args.section] if args.section else None

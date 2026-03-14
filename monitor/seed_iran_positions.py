@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Seed/update position monitor from live Moomoo data + user-defined rules.
+"""Seed/update position monitor with user-defined rules.
 
-Pulls actual entry prices, quantities, and P&L from Moomoo broker.
-Adds thesis, conditions, and monitoring rules per user specification.
-Positions NOT in Moomoo (INSW, CIBR) are marked as planned/pending.
+Defines thesis, conditions, and monitoring rules per user specification.
+Live broker data is pulled via Alpaca where available; positions with no
+live data are seeded with fallback values.
 
 Run: python3 monitor/seed_iran_positions.py
 """
@@ -26,41 +26,31 @@ KILL_SWITCH_NOTE = (
 )
 
 
-def _get_moomoo_positions() -> dict:
-    """Pull live positions from Moomoo. Returns {ticker: row_dict}."""
+def _get_broker_positions() -> dict:
+    """Pull live positions from Alpaca broker. Returns {ticker: row_dict}."""
     try:
-        from moomoo import OpenSecTradeContext, TrdMarket, TrdEnv, SecurityFirm
-        trd_ctx = OpenSecTradeContext(
-            host='127.0.0.1', port=11111,
-            security_firm=SecurityFirm.FUTUAU,
-            filter_trdmarket=TrdMarket.US
-        )
-        ret, data = trd_ctx.position_list_query(trd_env=TrdEnv.REAL)
-        trd_ctx.close()
-        if ret != 0 or data is None:
-            print(f"  ⚠️ Moomoo query failed: ret={ret}")
+        from brokers.alpaca.broker import AlpacaBroker
+        from utils.config import get_active_config
+        config = get_active_config("sp500")
+        broker = AlpacaBroker(config)
+        if not broker.connect():
+            print("  ⚠️ Alpaca connection failed")
             return {}
         result = {}
-        for _, row in data.iterrows():
-            if row['qty'] <= 0:
-                continue
-            # Strip market prefix (US.RTX -> RTX, AU.WDS -> WDS)
-            raw_code = row['code']
-            ticker = raw_code.split('.')[-1] if '.' in raw_code else raw_code
-            # Keep AU prefix for ASX stocks
-            if raw_code.startswith('AU.'):
-                ticker = raw_code.replace('AU.', '') + '.AX'
-            result[ticker] = {
-                'qty': float(row['qty']),
-                'cost_price': float(row['cost_price']),
-                'current_price': float(row['nominal_price']),
-                'market_val': float(row['market_val']),
-                'unrealized_pnl': float(row['unrealized_pl']),
-                'pnl_pct': float(row['pl_ratio']),
-            }
+        for p in broker.get_positions():
+            if p.shares > 0:
+                result[p.ticker] = {
+                    'qty': float(p.shares),
+                    'cost_price': float(p.entry_price),
+                    'current_price': float(p.current_price or 0),
+                    'market_val': float(p.market_value or 0),
+                    'unrealized_pnl': float(p.unrealized_pnl or 0),
+                    'pnl_pct': float(p.unrealized_pnl_pct or 0),
+                }
+        broker.disconnect()
         return result
     except Exception as e:
-        print(f"  ⚠️ Moomoo connection failed: {e}")
+        print(f"  ⚠️ Broker connection failed: {e}")
         return {}
 
 
@@ -79,22 +69,22 @@ def _upsert(pos: Position):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Pull live data from Moomoo
+# Pull live data from broker
 # ══════════════════════════════════════════════════════════════════════════════
-print("Pulling live positions from Moomoo...")
-moomoo = _get_moomoo_positions()
-for ticker, d in moomoo.items():
+print("Pulling live positions from broker...")
+broker_data = _get_broker_positions()
+for ticker, d in broker_data.items():
     print(f"  {ticker:8s}  qty={d['qty']:>5.0f}  cost=${d['cost_price']:>8.2f}  "
           f"current=${d['current_price']:>8.2f}  pnl=${d['unrealized_pnl']:>+8.2f}")
 print()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Define positions with live Moomoo data + user monitoring rules
+# Define positions with live broker data + user monitoring rules
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _m(ticker: str, fallback_qty=0, fallback_cost=0):
-    """Get Moomoo data for ticker, with fallbacks for positions not yet bought."""
-    d = moomoo.get(ticker, {})
+    """Get broker data for ticker, with fallbacks for positions not yet bought."""
+    d = broker_data.get(ticker, {})
     return {
         'qty': d.get('qty', fallback_qty),
         'cost': d.get('cost_price', fallback_cost),
@@ -159,7 +149,7 @@ rtx = Position(
     notes=[{"timestamp": "2026-03-04", "text": KILL_SWITCH_NOTE}],
 )
 
-# ── INSW — Tanker rates (NOT YET IN MOOMOO) ─────────────────────────────────
+# ── INSW — Tanker rates (PENDING ORDER) ─────────────────────────────────────
 m = _m('INSW', fallback_qty=0, fallback_cost=0)
 insw = Position(
     ticker="INSW",
@@ -174,7 +164,7 @@ insw = Position(
         "Hormuz closure → record VLCC rates ($423k/day), best balance sheet in tankers. "
         "Sell 4 at $95 (B. Riley target), sell 3 at $105 or on Hormuz reopening. "
         "MOST BINARY POSITION — treat as leveraged trade. "
-        "⚠️ NOT YET PURCHASED — pending Moomoo order."
+        "⚠️ NOT YET PURCHASED — pending order."
     ),
     timeframe="1-6 months",
     invalidation_price=72.0,
@@ -218,7 +208,7 @@ insw = Position(
     notes=[
         {"timestamp": "2026-03-04", "text": KILL_SWITCH_NOTE},
         {"timestamp": "2026-03-04", "text": "Hormuz reopening = immediate full exit. No negotiation."},
-        {"timestamp": "2026-03-04", "text": "⚠️ NOT YET IN MOOMOO — pending purchase order."},
+        {"timestamp": "2026-03-04", "text": "⚠️ NOT YET PURCHASED — pending order."},
     ],
 )
 
@@ -287,7 +277,7 @@ nem = Position(
     notes=[{"timestamp": "2026-03-04", "text": KILL_SWITCH_NOTE}],
 )
 
-# ── CIBR — Cybersecurity (NOT YET IN MOOMOO) ────────────────────────────────
+# ── CIBR — Cybersecurity (PENDING ORDER) ────────────────────────────────────
 m = _m('CIBR', fallback_qty=0, fallback_cost=0)
 cibr = Position(
     ticker="CIBR",
@@ -302,7 +292,7 @@ cibr = Position(
         "Iran cyber retaliation + CISA understaffed (38% capacity) → "
         "non-discretionary enterprise security spend. "
         "Trim 5 at $77 (analyst consensus). Hold 5 medium-term. "
-        "Lowest binary risk. ⚠️ NOT YET PURCHASED — pending Moomoo order."
+        "Lowest binary risk. ⚠️ NOT YET PURCHASED — pending order."
     ),
     timeframe="6-18 months",
     invalidation_price=55.0,
@@ -342,7 +332,7 @@ cibr = Position(
     ],
     notes=[
         {"timestamp": "2026-03-04", "text": KILL_SWITCH_NOTE},
-        {"timestamp": "2026-03-04", "text": "⚠️ NOT YET IN MOOMOO — pending purchase order."},
+        {"timestamp": "2026-03-04", "text": "⚠️ NOT YET PURCHASED — pending order."},
     ],
 )
 
@@ -545,7 +535,7 @@ wds = Position(
 # Execute
 # ══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
-    print("Seeding positions from Moomoo live data + monitoring rules...\n")
+    print("Seeding positions from broker live data + monitoring rules...\n")
     for pos in [rtx, insw, nem, cibr, xop, chtr, psq, wds]:
         _upsert(pos)
 

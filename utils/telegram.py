@@ -541,8 +541,8 @@ def send_error(mode: str, detail: str, logfile: Optional[str] = None) -> bool:
     # Classify error and provide actionable hints
     all_text = (detail + " " + " ".join(log_lines[-30:])).lower()
     hints = []
-    if "connect" in all_text or "opend" in all_text or "moomoo" in all_text or "broker" in all_text:
-        hints.append("🔌 Check OpenD: <code>systemctl status opend</code>")
+    if "connect" in all_text or "broker" in all_text:
+        hints.append("🔌 Check broker connectivity")
     if "timeout" in all_text or "timed out" in all_text:
         hints.append("⏱ Timeout — network or API rate limit")
     if "yfinance" in all_text or "download" in all_text and "fail" in all_text:

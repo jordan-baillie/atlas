@@ -317,7 +317,7 @@ def evaluate_position(position) -> tuple:
 
 
 def _fetch_broker_positions() -> Dict[str, Dict]:
-    """Try to get live position data from moomoo broker.
+    """Try to get live position data from active broker.
 
     Returns dict of {ticker: {current_price, unrealized_pnl, unrealized_pnl_pct,
     entry_price, shares, market_value}} or empty dict on failure.
@@ -329,7 +329,7 @@ def _fetch_broker_positions() -> Dict[str, Dict]:
         from brokers.registry import get_broker
 
         result = {}
-        for market_id in ("sp500", "asx", "hk"):
+        for market_id in ("sp500", "asx"):
             try:
                 config = get_active_config(market_id)
                 broker = get_broker(market_id, config)

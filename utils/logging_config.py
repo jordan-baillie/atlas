@@ -137,8 +137,8 @@ def _classify_errors(records: list[logging.LogRecord]) -> list[str]:
     messages = " ".join(r.getMessage().lower() for r in records)
     names = " ".join(r.name.lower() for r in records)
 
-    if "connect" in messages or "opend" in messages or "moomoo" in names:
-        hints.append("🔌 Broker connection — check OpenD is running: <code>systemctl status opend</code>")
+    if "connect" in messages or "broker" in messages:
+        hints.append("🔌 Broker connection — check broker connectivity")
     if "timeout" in messages:
         hints.append("⏱ Timeout — network issue or API rate limit")
     if "price" in messages and ("fetch" in messages or "download" in messages):
@@ -227,7 +227,7 @@ def setup_logging(
         atexit.register(_collector.flush_to_telegram)
 
     # Suppress noisy third-party loggers
-    for noisy in ["urllib3", "peewee", "futu"]:
+    for noisy in ["urllib3", "peewee"]:
         logging.getLogger(noisy).setLevel(logging.WARNING)
     # yfinance logs routine download failures (delisted tickers, 404s) at ERROR
     # level. Suppress to CRITICAL so they never appear in stderr or Telegram.
