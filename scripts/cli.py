@@ -231,7 +231,7 @@ def cmd_plan(args):
 
     # Use live broker portfolio as source of truth
     portfolio = _get_portfolio(config, market_id)
-    broker_name = config.get("trading", {}).get("broker", "moomoo")
+    broker_name = config.get("trading", {}).get("broker", "alpaca")
     n_atlas = len(portfolio.atlas_positions) if hasattr(portfolio, 'atlas_positions') else len(portfolio.positions)
     n_manual = len(portfolio.manual_positions) if hasattr(portfolio, 'manual_positions') else 0
     manual_note = f" + {n_manual} manual" if n_manual else ""
@@ -432,7 +432,7 @@ def cmd_broker_status(args):
     """Show broker connection and account status."""
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
-    broker_name = config.get("trading", {}).get("broker", "moomoo")
+    broker_name = config.get("trading", {}).get("broker", "alpaca")
     mode = config.get("trading", {}).get("mode", "live")
 
     print("\n" + "=" * 55)
@@ -442,12 +442,7 @@ def cmd_broker_status(args):
     print("    Broker:     %s" % broker_name)
     print("    Mode:       %s" % mode)
 
-    if broker_name == "moomoo":
-        moomoo_cfg = config.get("moomoo", {})
-        print("    OpenD:      %s:%s" % (moomoo_cfg.get("opend_host"), moomoo_cfg.get("opend_port")))
-        print("    Firm:       %s" % moomoo_cfg.get("security_firm"))
-        print("    TrdEnv:     %s" % moomoo_cfg.get("trd_env"))
-    elif broker_name == "alpaca":
+    if broker_name == "alpaca":
         alpaca_cfg = config.get("alpaca", {})
         print("    Base URL:   %s" % alpaca_cfg.get("base_url", "paper"))
 
@@ -486,10 +481,10 @@ def cmd_live_run(args):
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
     mode = config.get("trading", {}).get("mode", "live")
-    broker_name = config.get("trading", {}).get("broker", "moomoo")
+    broker_name = config.get("trading", {}).get("broker", "alpaca")
 
-    if broker_name not in ("moomoo", "alpaca"):
-        print("ERROR: trading.broker must be 'moomoo' or 'alpaca'.")
+    if broker_name != "alpaca":
+        print("ERROR: trading.broker must be 'alpaca'.")
         return
     if mode != "live":
         print("ERROR: trading.mode must be 'live'")
@@ -884,30 +879,6 @@ def cmd_market_check(args):
                     print("    ✅ %s market is a trading day today" % mkt)
                 else:
                     print("    ❌ %s market is NOT a trading day today" % mkt)
-
-        # User info / quote rights (Moomoo-specific)
-        try:
-            if hasattr(broker, "_quote_ctx") and broker._quote_ctx:
-                import moomoo as ft
-                ret, data = broker._quote_ctx.get_user_info()
-                if ret == ft.RET_OK:
-                    print("\n  API quota:")
-                    if isinstance(data, dict):
-                        for key in ["sub_quota", "history_kl_quota", "us_qot_right",
-                                    "hk_qot_right", "api_level"]:
-                            if key in data:
-                                print("    %-25s %s" % (key, data[key]))
-        except Exception:
-            pass
-
-        # Subscription usage
-        try:
-            ret, data = broker._quote_ctx.query_subscription()
-            if ret == ft.RET_OK and isinstance(data, dict):
-                print("\n  Subscriptions: %s/%s used" % (
-                    data.get("total_used", "?"), data.get("remain", "?")))
-        except Exception:
-            pass
 
     finally:
         broker.disconnect()

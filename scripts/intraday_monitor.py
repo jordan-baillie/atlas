@@ -8,7 +8,6 @@ prices and fire Telegram alerts when:
   🟡 Stop proximity    — price within 2% of stop
   🟢 Take-profit hit   — intraday high hit the TP target
   ⚠️  Portfolio DD      — equity drawdown exceeds threshold
-  🔌 OpenD down        — Moomoo gateway unreachable
 
 Designed to run every 30 minutes via cron (10:00–16:00 AEST, Mon–Fri).
 Alert deduplication prevents the same alert from firing twice in one
@@ -24,7 +23,6 @@ import argparse
 import json
 import logging
 import os
-import socket
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -47,8 +45,6 @@ log = setup_logging("intraday_monitor", extra_log_file="intraday_monitor")
 
 STOP_PROXIMITY_PCT = 0.03      # alert when price within 3% of stop
 PORTFOLIO_DD_PCT = 0.03        # alert when portfolio DD exceeds 3%
-OPEND_HOST = "127.0.0.1"
-OPEND_PORT = 11111
 
 
 # ── Alert dedup ───────────────────────────────────────────────
@@ -293,47 +289,6 @@ def check_portfolio_drawdown(portfolio, prices: dict, fired: dict) -> list[dict]
     return alerts
 
 
-def check_opend_connectivity(fired: dict) -> list[dict]:
-    """Check if Moomoo OpenD is reachable."""
-    alerts = []
-    key = "opend_down"
-
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
-        result = sock.connect_ex((OPEND_HOST, OPEND_PORT))
-        sock.close()
-
-        if result != 0:
-            if not _already_fired(fired, key):
-                alerts.append({
-                    "type": "opend_down",
-                    "severity": "🔌",
-                    "ticker": "INFRA",
-                    "message": (
-                        f"<b>Moomoo OpenD unreachable</b>\n"
-                        f"  {OPEND_HOST}:{OPEND_PORT} connection refused\n"
-                        f"  Live order execution will fail"
-                    ),
-                })
-                _mark_fired(fired, key)
-        else:
-            # OpenD is back up — clear the fired flag so we re-alert if it drops again
-            if key in fired:
-                del fired[key]
-
-    except Exception as e:
-        if not _already_fired(fired, key):
-            alerts.append({
-                "type": "opend_down",
-                "severity": "🔌",
-                "ticker": "INFRA",
-                "message": f"<b>OpenD check failed:</b> {e}",
-            })
-            _mark_fired(fired, key)
-
-    return alerts
-
 
 # ── Telegram ──────────────────────────────────────────────────
 
@@ -471,10 +426,6 @@ def main():
     all_alerts = []
     all_alerts.extend(check_positions(portfolio, prices, fired))
     all_alerts.extend(check_portfolio_drawdown(portfolio, prices, fired))
-    # Only check OpenD if broker is moomoo (not Alpaca)
-    broker_name = config.get("trading", {}).get("broker", "")
-    if broker_name == "moomoo":
-        all_alerts.extend(check_opend_connectivity(fired))
 
     # ── Save dedup state ──────────────────────────────────────
     _save_fired(market_id, fired)

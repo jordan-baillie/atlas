@@ -4,8 +4,8 @@
 Produces a JSON payload consumed by the single-page dashboard.
 Includes portfolio state, today's plan, backtest metrics, and task tracker.
 
-When trading.mode == "live" and broker == "moomoo", equity/cash/positions
-are fetched from the live Moomoo account. Paper state is used for metadata
+When trading.mode == "live" and live_enabled is True, equity/cash/positions
+are fetched from the live broker (Alpaca). Paper state is used for metadata
 (strategy, entry_date, stop_price, confidence, rationale) that the broker
 doesn't track.
 """
@@ -206,7 +206,7 @@ def _load_plan_metadata() -> dict:
 
 
 def get_live_broker_data(config):
-    """Fetch account info and positions from Moomoo broker.
+    """Fetch account info and positions from the live broker.
 
     Returns (account_info_dict, positions_list, connected, orders_list)
     or (None, [], False, []) on failure.
@@ -215,7 +215,7 @@ def get_live_broker_data(config):
     Broker is the sole source of truth for positions and equity.
     """
     trading = config.get("trading", {})
-    broker_name = trading.get("broker", "moomoo")
+    broker_name = trading.get("broker", "alpaca")
     if not trading.get("live_enabled"):
         return None, [], False, []
 
@@ -322,107 +322,6 @@ def get_live_broker_data(config):
     except Exception as e:
         logger.error("Dashboard: broker fetch failed: %s", e, exc_info=True)
         return None, [], False, []
-
-
-def get_moomoo_manual_portfolio() -> dict:
-    """Fetch manual portfolio from Moomoo broker (discretionary positions).
-
-    Connects to Moomoo OpenD independently of the market config to get
-    all positions in the Moomoo account.  These are treated as 100% manual
-    (user's discretionary trades), separate from Atlas automated trades
-    on Alpaca.
-
-    Returns dict with keys: connected, equity, cash, buying_power,
-    currency, positions, num_open, unrealized_pnl, market_value.
-    Falls back to cached data if OpenD is unreachable.
-    """
-    cache_path = CACHE_DIR / "moomoo_manual.json"
-    empty = {
-        "connected": False, "equity": 0, "cash": 0, "buying_power": 0,
-        "currency": "USD", "positions": [], "num_open": 0,
-        "unrealized_pnl": 0, "market_value": 0, "stale_minutes": None,
-    }
-
-    try:
-        from brokers.registry import get_live_broker
-
-        moomoo_config = {
-            "trading": {"broker": "moomoo", "live_enabled": True},
-            "moomoo": {
-                "opend_host": "127.0.0.1", "opend_port": 11111,
-                "security_firm": "FUTUAU", "trd_market": "US",
-                "trd_env": "REAL", "currency": "USD",
-            },
-        }
-        broker = get_live_broker(moomoo_config)
-        if hasattr(broker, '_client_id') and hasattr(broker, '_set_client_id'):
-            broker._set_client_id(21)  # separate from dashboard Alpaca reads
-        if not broker or not broker.connect():
-            raise ConnectionError("Moomoo broker connect failed")
-
-        try:
-            acct = broker.get_account_info()
-            positions = broker.get_positions()
-        finally:
-            broker.disconnect()
-
-        if not acct or (acct.equity == 0 and acct.cash == 0):
-            raise ConnectionError("Moomoo returned zeroed data")
-
-        pos_list = []
-        for pos in positions:
-            pos_list.append({
-                "ticker": pos.ticker,
-                "entry_price": round(pos.entry_price, 4),
-                "shares": pos.shares,
-                "current_price": round(pos.current_price, 4),
-                "market_value": round(pos.market_value, 2),
-                "pnl": round(pos.unrealized_pnl, 2),
-                "pnl_pct": round(pos.unrealized_pnl_pct, 2),
-                "cost_basis": round(pos.cost_basis, 2),
-                "today_pnl": round(pos.today_pnl, 2),
-                "currency": pos.currency or "USD",
-                "strategy": "manual",
-                "is_atlas": False,
-            })
-
-        result = {
-            "connected": True,
-            "equity": round(acct.equity, 2),
-            "cash": round(acct.cash, 2),
-            "buying_power": round(acct.buying_power, 2),
-            "currency": "USD",
-            "positions": pos_list,
-            "num_open": len(pos_list),
-            "unrealized_pnl": round(sum(p["pnl"] for p in pos_list), 2),
-            "market_value": round(sum(p["market_value"] for p in pos_list), 2),
-            "stale_minutes": None,
-        }
-
-        # Cache for fallback
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        cache_data = {**result, "timestamp": datetime.now(BRISBANE).isoformat()}
-        with open(cache_path, "w") as f:
-            json.dump(cache_data, f, indent=2, default=str)
-
-        logger.info("Moomoo manual: $%.2f equity, %d positions, $%.2f unrealised",
-                     result["equity"], result["num_open"], result["unrealized_pnl"])
-        return result
-
-    except Exception as e:
-        logger.warning("Moomoo manual portfolio fetch failed: %s — trying cache", e)
-        # Fallback to cache
-        if cache_path.exists():
-            try:
-                cached = json.load(open(cache_path))
-                age = (datetime.now(BRISBANE) - datetime.fromisoformat(cached["timestamp"])).total_seconds() / 60
-                cached["connected"] = False
-                cached["stale_minutes"] = round(age, 1)
-                logger.info("Moomoo manual: using cache (%.0f min old)", age)
-                return cached
-            except Exception:
-                pass
-        return empty
 
 
 def get_latest_plan(market_id: str = ""):
@@ -827,8 +726,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
 
     # ── Try live broker data first ──────────────────────────────
     broker_acct, broker_positions, broker_ok = None, [], False
-    # Also check for cross-broker positions: Moomoo may hold .AX stocks
-    # even when this market is not in live trading mode.
+    # Also check for cross-broker positions (e.g. positions in markets not
+    # in live trading mode but held on the same broker account).
     cross_broker_positions = []
     if is_live_mode:
         if broker_cache and broker_cache.get("ok"):
@@ -934,7 +833,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
                 total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
 
         # ── C2: P&L consistency validation ──────────────────────────
-        # Brokers (esp. Moomoo) may return unrealized_pnl from a stale snapshot
+        # Brokers may return unrealized_pnl from a stale snapshot
         # while current_price comes from a different snapshot.
         # If |broker_pnl - (cp-ep)*shares| > 10%, recalculate from prices.
         for p in all_positions:
@@ -955,7 +854,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
 
     elif cross_broker_positions:
         # Not in live mode, but we have cross-broker positions from a shared
-        # broker (e.g. ASX stocks held on Moomoo). Show their real value.
+        # broker account. Show their real value.
         positions = portfolio.get("positions", [])
         atlas_positions = positions
         all_positions = list(positions) + cross_broker_positions
@@ -1038,7 +937,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
         t = p.get("ticker", "")
         is_atlas = p.get("is_atlas", True)
 
-        # Cross-broker positions (from shared Moomoo data) already have
+        # Cross-broker positions already have
         # market_value and unrealized_pnl from the broker even in paper mode.
         has_broker_data = broker_ok or p.get("market_value", 0) > 0
         if has_broker_data:
@@ -1232,7 +1131,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
         "currency": currency,
         "trading_mode": mode_label,
         "data_source": data_source,
-        "broker": trading.get("broker", "moomoo"),
+        "broker": trading.get("broker", "alpaca"),
         "portfolio": {
             "equity": equity, "cash": round(cash, 2),
             "starting_equity": seq,
@@ -1656,7 +1555,7 @@ def generate_daily_insight() -> dict:
                 candidates.append((4, {
                     "type": "fee_waterfall", "chart": "waterfall",
                     "title": f"Fee drag: {drag:.1f}pp CAGR lost to real trading costs",
-                    "subtitle": f"Moomoo US: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 1.1):.2f}/order · {abs(delta.get('trades_removed', 7))} trades filtered",
+                    "subtitle": f"Alpaca: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 0.0):.2f}/order · {abs(delta.get('trades_removed', 7))} trades filtered",
                     "steps": steps,
                     "annotation": {"text": f"Net {rf['cagr_pct']:.1f}% still beats SPY {bm.get('spy_cagr_pct', 0):.1f}%", "color": "green"},
                     "date": fee_file.stem.split("_")[-1][:10],
@@ -1664,7 +1563,7 @@ def generate_daily_insight() -> dict:
                 candidates.append((4, {
                     "type": "fee_compare", "chart": "grouped_bar",
                     "title": f"Real fees reduce CAGR by {drag:.1f}pp but strategy still beats benchmark",
-                    "subtitle": f"Moomoo US: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 1.1):.2f}/order",
+                    "subtitle": f"Alpaca: ~${fee_data.get('actual_fees', {}).get('avg_per_order_usd', 0.0):.2f}/order",
                     "labels": ["CAGR", "Sharpe", "Win Rate", "Profit Factor"],
                     "series": [
                         {"name": "Zero Fee", "values": [zf["cagr_pct"], zf["sharpe"], zf["win_rate_pct"], zf.get("profit_factor", 1.55)], "color": "secondary"},
@@ -2464,7 +2363,7 @@ def _merge_equity_curves(market_data: dict, exchange_rates: dict) -> list:
     all_dates = set()
     for mid, md in market_data.items():
         # Skip cross-broker markets — their equity is already inside
-        # the primary broker's curve (e.g. WDS.AX is in Moomoo's total).
+        # the primary broker's curve.
         if md.get("data_source") == "cross-broker":
             continue
         ccy = md.get("currency", "AUD")
@@ -2676,20 +2575,15 @@ def generate_ceasefire_data() -> dict:
 def generate():
     """Generate multi-market dashboard data.
 
-    Each market connects to its own broker independently (SP500=Moomoo,
-    ASX=Moomoo cross-broker), then results are merged into a combined payload.
+    Each market connects to its own broker independently, then results are
+    merged into a combined payload.
     """
     from markets.registry import list_markets
 
     markets = list_markets()  # ['asx', 'sp500']
 
     # ── Per-market broker connections (each market has its own broker) ──
-    # Connect to each distinct broker ONCE and share positions across markets.
-    # Moomoo holds positions across AU/US/HK on a single account, so one
-    # connection provides data for all markets — positions are filtered by
-    # ticker suffix when building each market's cache.
     broker_caches = {}
-    moomoo_data = None  # shared Moomoo connection (all markets on one account)
 
     import signal
 
@@ -2699,77 +2593,52 @@ def generate():
     for mid in markets:
         cfg = get_config(mid)
         trading = cfg.get("trading", {})
-        broker_name = trading.get("broker", "moomoo")
+        broker_name = trading.get("broker", "alpaca")
         if (trading.get("mode") == "live"
                 and trading.get("live_enabled", False)):
-            if broker_name == "moomoo" and moomoo_data is not None:
-                # Reuse existing Moomoo connection
-                broker_caches[mid] = moomoo_data
-                print(f"  {mid}: reusing moomoo connection")
+            # Per-broker timeout — don't let one broker block others
+            broker_timeout = 15
+            try:
+                signal.signal(signal.SIGALRM, _broker_timeout_handler)
+                signal.alarm(broker_timeout)
+                acct, positions, ok, orders = get_live_broker_data(cfg)
+                signal.alarm(0)  # cancel alarm on success
+            except TimeoutError:
+                signal.alarm(0)
+                print(f"  {mid}: broker TIMEOUT after {broker_timeout}s ({broker_name})")
+                acct, positions, ok, orders = None, [], False, []
+            if ok:
+                cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
+                broker_caches[mid] = cache
+                # M1: persist last-known-good broker data
+                _save_broker_cache(mid, acct, positions, orders)
+                print(f"  {mid}: broker connected ({broker_name}), "
+                      f"{len(positions)} positions")
             else:
-                # Per-broker timeout — don't let one broker block others
-                broker_timeout = 15
-                try:
-                    signal.signal(signal.SIGALRM, _broker_timeout_handler)
-                    signal.alarm(broker_timeout)
-                    acct, positions, ok, orders = get_live_broker_data(cfg)
-                    signal.alarm(0)  # cancel alarm on success
-                except TimeoutError:
-                    signal.alarm(0)
-                    print(f"  {mid}: broker TIMEOUT after {broker_timeout}s ({broker_name})")
-                    acct, positions, ok, orders = None, [], False, []
-                if ok:
-                    cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
-                    broker_caches[mid] = cache
-                    if broker_name == "moomoo":
-                        moomoo_data = cache
-                    # M1: persist last-known-good broker data
-                    _save_broker_cache(mid, acct, positions, orders)
-                    print(f"  {mid}: broker connected ({broker_name}), "
-                          f"{len(positions)} positions")
+                # M1: try last-known-good cache (allow stale as last resort
+                # so positions don't vanish when broker is temporarily offline)
+                cached = _load_broker_cache(mid, allow_stale=True)
+                if cached:
+                    is_stale = cached.get("_stale", False)
+                    cache_entry = {
+                        "acct": cached["acct"],
+                        "positions": cached["positions"],
+                        "ok": True,
+                        "orders": cached.get("orders", []),
+                        "_cached": True,
+                        "_cache_age_minutes": cached.get("cache_age_minutes", 0),
+                    }
+                    broker_caches[mid] = cache_entry
+                    stale_tag = " (STALE)" if is_stale else ""
+                    print(f"  {mid}: broker FAILED — using cached data{stale_tag} "
+                          f"({cached['cache_age_minutes']:.0f}m old, "
+                          f"{len(cached['positions'])} positions)")
                 else:
-                    # M1: try last-known-good cache (allow stale as last resort
-                    # so positions don't vanish when broker is temporarily offline)
-                    cached = _load_broker_cache(mid, allow_stale=True)
-                    if cached:
-                        is_stale = cached.get("_stale", False)
-                        cache_entry = {
-                            "acct": cached["acct"],
-                            "positions": cached["positions"],
-                            "ok": True,
-                            "orders": cached.get("orders", []),
-                            "_cached": True,
-                            "_cache_age_minutes": cached.get("cache_age_minutes", 0),
-                        }
-                        broker_caches[mid] = cache_entry
-                        # Share cached Moomoo data for cross-broker markets
-                        # (ASX/HK positions on the same Moomoo account)
-                        if broker_name == "moomoo" and moomoo_data is None:
-                            moomoo_data = cache_entry
-                        stale_tag = " (STALE)" if is_stale else ""
-                        print(f"  {mid}: broker FAILED — using cached data{stale_tag} "
-                              f"({cached['cache_age_minutes']:.0f}m old, "
-                              f"{len(cached['positions'])} positions)")
-                    else:
-                        print(f"  {mid}: broker connect FAILED ({broker_name}), no cache available")
-                        # Sentinel: tells generate_market() not to retry — upstream already tried.
-                        broker_caches[mid] = {"ok": False}
+                    print(f"  {mid}: broker connect FAILED ({broker_name}), no cache available")
+                    # Sentinel: tells generate_market() not to retry — upstream already tried.
+                    broker_caches[mid] = {"ok": False}
 
-    # Share Moomoo positions with markets that don't have their own live broker
-    # but DO have positions on Moomoo (e.g. ASX stocks held on Moomoo account).
-    if moomoo_data:
-        for mid in markets:
-            if mid in broker_caches:
-                continue  # already has broker data
-            cfg = get_config(mid)
-            # Check if this market has a moomoo config section (could hold positions)
-            if cfg.get("moomoo"):
-                broker_caches[mid] = moomoo_data
-                print(f"  {mid}: using shared moomoo data (cross-broker positions)")
-
-    # Fallback: markets with their own broker cache but no shared moomoo data.
-    # This covers the case where SP500 has no cache at all but ASX has an
-    # older cache from when Moomoo was last online with .AX positions.
+    # Fallback: markets with stale cache but no live data.
     for mid in markets:
         if mid in broker_caches:
             continue
@@ -2791,10 +2660,6 @@ def generate():
     # ── Fetch exchange rates before generating market data so we can pass
     # them into generate_market() for equity curve FX rate tagging (Issue #3)
     exchange_rates = _get_exchange_rates()
-
-    # ── Fetch Moomoo manual portfolio (independent of market configs) ──
-    print("\n  Fetching Moomoo manual portfolio...")
-    moomoo_manual = get_moomoo_manual_portfolio()
 
     # ── Generate per-market data ────────────────────────────────
     market_data = {}
@@ -2837,9 +2702,8 @@ def generate():
         include_in_combined = has_broker and is_funded
         if include_in_combined:
             # Headline equity from broker (matches broker app).
-            # NOTE: For multi-market brokers (Moomoo), broker_equity is
-            # the FULL account including positions from other markets
-            # (.AX stocks). Cross-broker markets are skipped below to
+            # broker_equity is the FULL account including positions from
+            # other markets. Cross-broker markets are skipped below to
             # avoid double-counting those positions.
             be = pf.get("broker_equity") or pf.get("equity", 0)
             bc = pf.get("broker_cash") or pf.get("cash", 0)
@@ -2848,7 +2712,7 @@ def generate():
             # Atlas equity for P&L tracking
             combined_atlas_equity_aud += to_aud(pf.get("equity", 0), ccy)
             combined_starting_aud += to_aud(pf.get("starting_equity", 0), ccy)
-        # Cross-broker markets (ASX on Moomoo): equity is already a SUBSET
+        # Cross-broker markets: equity is already a SUBSET
         # of the parent broker's equity. Don't add to combined headline
         # to avoid double-counting. Positions are still included below.
         # Tag positions with market (include all markets for position display)
@@ -2954,7 +2818,7 @@ def generate():
         # Top-level summary (combined across ALL markets, AUD-normalised)
         "trading_mode": "live" if any(md.get("trading_mode") == "live" for md in market_data.values()) else "offline",
         "data_source": "broker" if broker_caches else "offline",
-        "broker": {mid: get_config(mid).get("trading", {}).get("broker", "moomoo") for mid in markets},
+        "broker": {mid: get_config(mid).get("trading", {}).get("broker", "alpaca") for mid in markets},
         "config_version": {mid: md.get("config_version", "?") for mid, md in market_data.items()},
         "account": {
             "equity": round(combined_broker_equity_aud, 2),
@@ -2985,7 +2849,7 @@ def generate():
             "today_pnl_by_ccy": _combined_today_pnl_by_ccy,
             "today_pnl_aud": _combined_today_pnl_aud,
         },
-        "manual_portfolio": moomoo_manual,
+        "manual_portfolio": {"connected": False, "positions": [], "num_open": 0, "equity": 0},
         "strategy_summary": list(combined_strats.values()),
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
@@ -3022,8 +2886,6 @@ def generate():
         print(f"  {mid.upper():6s} {label}: ${pf.get('equity',0):,.2f} equity, "
               f"{pos_detail}{ds_tag}, "
               f"v{md.get('config_version','?')}")
-    moo_tag = f"🟢 {moomoo_manual['num_open']} pos, ${moomoo_manual['equity']:,.2f}" if moomoo_manual.get("connected") else "🔴 offline"
-    print(f"  MOOMOO  Manual: {moo_tag}")
     print(f"  COMBINED (AUD): A${combined_broker_equity_aud:,.2f} equity, "
           f"A${combined_broker_cash_aud:,.2f} cash, "
           f"Atlas P&L A${combined_pnl:,.2f} ({combined_pnl_pct:+.2f}%), "
