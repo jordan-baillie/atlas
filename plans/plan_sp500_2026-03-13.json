@@ -3,7 +3,7 @@
   "generated_at": "2026-03-13T18:21:46.670892",
   "market_id": "sp500",
   "config_version": "v3.0",
-  "status": "PENDING_APPROVAL",
+  "status": "REJECTED",
   "portfolio_snapshot": {
     "equity": 3518.12,
     "cash": 3518.12,
@@ -4372,5 +4372,6 @@
       "used": 0,
       "cap": 1
     }
-  }
+  },
+  "rejected_at": "2026-03-14T21:45:18.878302"
 }

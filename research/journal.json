@@ -6391,5 +6391,28 @@
     "promoted": false,
     "runtime_s": 63.0,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260314_215610",
+    "timestamp": "2026-03-14T11:56:10.202352+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "triple_rsi",
+    "hypothesis": "atr_stop_mult: None\u21922.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2065,
+      "cagr_pct": 6.9767,
+      "max_drawdown_pct": 4.2734,
+      "total_trades": 156,
+      "profit_factor": 3.175
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: None\u21922.0"
+    ],
+    "promoted": false,
+    "runtime_s": 51.2,
+    "agent_id": "autoresearch"
   }
 ]
