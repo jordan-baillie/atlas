@@ -324,6 +324,126 @@ def get_live_broker_data(config):
         return None, [], False, []
 
 
+def get_moomoo_manual_portfolio() -> dict:
+    """Fetch manual portfolio from Moomoo OpenD (read-only, no order placement).
+
+    Connects directly to Moomoo OpenD gateway to read account info and
+    positions.  These are treated as manual (user's discretionary trades),
+    separate from Atlas automated trades on Alpaca.
+
+    Returns dict with keys: connected, equity, cash, buying_power,
+    currency, positions, num_open, unrealized_pnl, market_value.
+    Falls back to cached data if OpenD is unreachable.
+    """
+    cache_path = CACHE_DIR / "moomoo_manual.json"
+    empty = {
+        "connected": False, "equity": 0, "cash": 0, "buying_power": 0,
+        "currency": "USD", "positions": [], "num_open": 0,
+        "unrealized_pnl": 0, "market_value": 0, "stale_minutes": None,
+    }
+
+    try:
+        from moomoo import (
+            OpenSecTradeContext, TrdMarket, TrdEnv, SecurityFirm,
+        )
+
+        ctx = OpenSecTradeContext(
+            host="127.0.0.1", port=11111,
+            security_firm=SecurityFirm.FUTUAU,
+        )
+        try:
+            # Account info
+            ret, acct_df = ctx.accinfo_query(trd_env=TrdEnv.REAL)
+            if ret != 0 or acct_df is None or acct_df.empty:
+                raise ConnectionError(f"Moomoo accinfo_query failed: ret={ret}")
+
+            row = acct_df.iloc[0]
+            equity = float(row.get("total_assets", 0) or 0)
+            cash = float(row.get("cash", 0) or 0)
+            buying_power = float(row.get("power", 0) or row.get("buying_power", 0) or 0)
+
+            if equity == 0 and cash == 0:
+                raise ConnectionError("Moomoo returned zeroed data")
+
+            # Positions
+            ret, pos_df = ctx.position_list_query(trd_env=TrdEnv.REAL)
+            pos_list = []
+            if ret == 0 and pos_df is not None and not pos_df.empty:
+                for _, p in pos_df.iterrows():
+                    ticker_raw = str(p.get("code", ""))
+                    # Moomoo format: "US.AAPL" → "AAPL", "AU.WDS" → "WDS.AX"
+                    if "." in ticker_raw:
+                        market_prefix, symbol = ticker_raw.split(".", 1)
+                        if market_prefix == "US":
+                            ticker = symbol
+                        elif market_prefix == "AU":
+                            ticker = f"{symbol}.AX"
+                        elif market_prefix == "HK":
+                            ticker = f"{symbol}.HK"
+                        else:
+                            ticker = ticker_raw
+                    else:
+                        ticker = ticker_raw
+
+                    qty = int(float(p.get("qty", 0) or 0))
+                    if qty == 0:
+                        continue
+
+                    pos_list.append({
+                        "ticker": ticker,
+                        "entry_price": round(float(p.get("cost_price", 0) or 0), 4),
+                        "shares": qty,
+                        "current_price": round(float(p.get("market_val", 0) or 0) / qty if qty else 0, 4),
+                        "market_value": round(float(p.get("market_val", 0) or 0), 2),
+                        "pnl": round(float(p.get("pl_val", 0) or 0), 2),
+                        "pnl_pct": round(float(p.get("pl_ratio", 0) or 0) * 100, 2),
+                        "cost_basis": round(float(p.get("cost_price", 0) or 0) * qty, 2),
+                        "today_pnl": round(float(p.get("today_pl_val", 0) or 0), 2),
+                        "currency": "USD",
+                        "strategy": "manual",
+                        "is_atlas": False,
+                    })
+        finally:
+            ctx.close()
+
+        result = {
+            "connected": True,
+            "equity": round(equity, 2),
+            "cash": round(cash, 2),
+            "buying_power": round(buying_power, 2),
+            "currency": "USD",
+            "positions": pos_list,
+            "num_open": len(pos_list),
+            "unrealized_pnl": round(sum(p["pnl"] for p in pos_list), 2),
+            "market_value": round(sum(p["market_value"] for p in pos_list), 2),
+            "stale_minutes": None,
+        }
+
+        # Cache for fallback
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_data = {**result, "timestamp": datetime.now(BRISBANE).isoformat()}
+        with open(cache_path, "w") as f:
+            json.dump(cache_data, f, indent=2, default=str)
+
+        logger.info("Moomoo manual: $%.2f equity, %d positions, $%.2f unrealised",
+                     result["equity"], result["num_open"], result["unrealized_pnl"])
+        return result
+
+    except Exception as e:
+        logger.warning("Moomoo manual portfolio fetch failed: %s — trying cache", e)
+        if cache_path.exists():
+            try:
+                cached = json.load(open(cache_path))
+                age = (datetime.now(BRISBANE) - datetime.fromisoformat(cached["timestamp"])).total_seconds() / 60
+                cached["connected"] = False
+                cached["stale_minutes"] = round(age, 1)
+                logger.info("Moomoo manual: using cache (%.0f min old)", age)
+                return cached
+            except Exception:
+                pass
+        return empty
+
+
 def get_latest_plan(market_id: str = ""):
     """Get the latest plan, optionally filtered by market_id."""
     plans_dir = PROJECT_ROOT / "plans"
@@ -2661,6 +2781,10 @@ def generate():
     # them into generate_market() for equity curve FX rate tagging (Issue #3)
     exchange_rates = _get_exchange_rates()
 
+    # ── Fetch Moomoo manual portfolio (read-only, independent of market configs) ──
+    print("\n  Fetching Moomoo manual portfolio...")
+    moomoo_manual = get_moomoo_manual_portfolio()
+
     # ── Generate per-market data ────────────────────────────────
     market_data = {}
     for mid in markets:
@@ -2849,7 +2973,7 @@ def generate():
             "today_pnl_by_ccy": _combined_today_pnl_by_ccy,
             "today_pnl_aud": _combined_today_pnl_aud,
         },
-        "manual_portfolio": {"connected": False, "positions": [], "num_open": 0, "equity": 0},
+        "manual_portfolio": moomoo_manual,
         "strategy_summary": list(combined_strats.values()),
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
@@ -2886,6 +3010,10 @@ def generate():
         print(f"  {mid.upper():6s} {label}: ${pf.get('equity',0):,.2f} equity, "
               f"{pos_detail}{ds_tag}, "
               f"v{md.get('config_version','?')}")
+    moo_tag = (f"🟢 {moomoo_manual['num_open']} pos, ${moomoo_manual['equity']:,.2f}"
+               if moomoo_manual.get("connected")
+               else "🔴 offline")
+    print(f"  MOOMOO  Manual: {moo_tag}")
     print(f"  COMBINED (AUD): A${combined_broker_equity_aud:,.2f} equity, "
           f"A${combined_broker_cash_aud:,.2f} cash, "
           f"Atlas P&L A${combined_pnl:,.2f} ({combined_pnl_pct:+.2f}%), "
