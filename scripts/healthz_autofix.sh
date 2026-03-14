@@ -102,7 +102,13 @@ After fixing, run the healthcheck again to verify:
 Report what you fixed and what still needs attention."
 
 # Run pi headless — 5 min timeout, capture output
-timeout 300 pi -p --no-session --model anthropic/claude-haiku-4-5 "$PROMPT" >> "$LOG_FILE" 2>&1
+# Load incident + state-queries skills for diagnostic knowledge
+SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
+timeout 300 pi -p --no-session --model anthropic/claude-haiku-4-5 \
+    --skill "$SKILLS_ROOT/atlas-incident" \
+    --skill "$SKILLS_ROOT/atlas-state-queries" \
+    --skill "$SKILLS_ROOT/atlas-lessons" \
+    "$PROMPT" >> "$LOG_FILE" 2>&1
 PI_EXIT=$?
 
 echo "" >> "$LOG_FILE"

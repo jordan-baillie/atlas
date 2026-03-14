@@ -298,7 +298,14 @@ SAFETY RULES:
 - Make the smallest possible fix"
 
     # Run pi agent with timeout (non-interactive mode)
-    timeout 600 pi -p "$AGENT_PROMPT" \
+    # Load incident + state-queries + lessons skills for diagnostic knowledge
+    SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
+    timeout 600 pi -p \
+        --skill "$SKILLS_ROOT/atlas-incident" \
+        --skill "$SKILLS_ROOT/atlas-state-queries" \
+        --skill "$SKILLS_ROOT/atlas-lessons" \
+        --skill "$SKILLS_ROOT/atlas-codebase" \
+        "$AGENT_PROMPT" \
         >> "$AGENT_LOG" 2>&1
     AGENT_RC=$?
     log "Agent exit code: $AGENT_RC"

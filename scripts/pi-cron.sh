@@ -33,6 +33,29 @@ trap '_cron_error_trap $LINENO' ERR
 SKILL_DIR="$PROJECT/pi-package/atlas-ops/skills/atlas-daily"
 RESEARCH_SKILL_DIR="$PROJECT/pi-package/atlas-ops/skills/atlas-research-loop"
 NOTIFY="$SCRIPT_DIR/telegram_notify.py"
+
+# ── Skill library paths ────────────────────────────────────────
+# Phase 2-3 skills loaded alongside the primary skill per mode.
+# --skill can be repeated; each loads the SKILL.md content into the prompt.
+SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
+SKILL_INCIDENT="$SKILLS_ROOT/atlas-incident"
+SKILL_STATE="$SKILLS_ROOT/atlas-state-queries"
+SKILL_LESSONS="$SKILLS_ROOT/atlas-lessons"
+SKILL_CODEBASE="$SKILLS_ROOT/atlas-codebase"
+SKILL_BRAIN="$SKILLS_ROOT/atlas-brain"
+SKILL_BACKTEST="$SKILLS_ROOT/atlas-backtest"
+
+# Per-mode skill sets (primary + supporting skills)
+# These are assembled into SKILL_FLAGS below each case branch.
+build_skill_flags() {
+    # Usage: build_skill_flags dir1 dir2 dir3 ...
+    # Outputs: --skill dir1 --skill dir2 --skill dir3
+    local flags=""
+    for skill_dir in "$@"; do
+        flags="$flags --skill $skill_dir"
+    done
+    echo "$flags"
+}
 RESEARCH_LOCK="/tmp/atlas-research.lock"
 
 mkdir -p "$LOG_DIR"
@@ -95,12 +118,26 @@ case "$MODE" in
             VOL_CONTEXT="✅ Volatility gate: OK — no macro flags."
         fi
 
-        PROMPT="Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). ${VOL_CONTEXT} Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md"
+        PROMPT="You have these skills loaded — read them FIRST before acting:
+- atlas-daily: main workflow (READ THIS FIRST: /skill:atlas-daily)
+- atlas-state-queries: how to check data freshness, services, broker
+- atlas-incident: if any service is down, diagnose using this
+- atlas-lessons: critical pitfalls to avoid
+
+Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). ${VOL_CONTEXT} Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md"
         LOGFILE="$LOG_DIR/pi-cron-premarket-${TIMESTAMP}.log"
+        SKILL_FLAGS=$(build_skill_flags "$SKILL_DIR" "$SKILL_STATE" "$SKILL_INCIDENT" "$SKILL_LESSONS")
         ;;
     postclose)
-        PROMPT="Run the atlas-daily post-close workflow for the ${MARKET} market: run cli_eod_settlement (pass -m ${MARKET}), then dashboard_generate_data. Summarize any exits triggered and the final equity snapshot. Write results to logs/pi-cron-postclose-${TIMESTAMP}.md"
+        PROMPT="You have these skills loaded — read them FIRST before acting:
+- atlas-daily: main workflow (READ THIS FIRST: /skill:atlas-daily)
+- atlas-state-queries: how to check equity, broker, settlement
+- atlas-incident: if any service is down or settlement fails, diagnose using this
+- atlas-lessons: critical pitfalls to avoid
+
+Run the atlas-daily post-close workflow for the ${MARKET} market: run cli_eod_settlement (pass -m ${MARKET}), then dashboard_generate_data. Summarize any exits triggered and the final equity snapshot. Write results to logs/pi-cron-postclose-${TIMESTAMP}.md"
         LOGFILE="$LOG_DIR/pi-cron-postclose-${TIMESTAMP}.log"
+        SKILL_FLAGS=$(build_skill_flags "$SKILL_DIR" "$SKILL_STATE" "$SKILL_INCIDENT" "$SKILL_LESSONS")
 
         # Check research daemon health
         if systemctl is-active --quiet atlas-research-daemon 2>/dev/null; then
@@ -124,7 +161,14 @@ case "$MODE" in
             HEARTBEAT=$(cat /tmp/autoresearch-heartbeat.json 2>/dev/null || echo "{}")
         fi
 
-        PROMPT="Run a daily autoresearch session. Read research/program.md first.
+        PROMPT="You have these skills loaded — read them FIRST before acting:
+- atlas-research-loop: main workflow (READ THIS FIRST: /skill:atlas-research-loop)
+- atlas-brain: check prior results and closed decisions BEFORE running experiments
+- atlas-backtest: how to run backtests, interpret results, and record findings
+- atlas-lessons: critical pitfalls to avoid (degenerate solutions, solo vs combined, etc.)
+- atlas-codebase: system architecture reference
+
+Run a daily autoresearch session. Read research/program.md first.
 
 SWEEPER STATUS: ${SWEEPER_STATUS}
 HEARTBEAT: ${HEARTBEAT}
@@ -182,6 +226,7 @@ Focus on strategies the sweeper hasn't cracked yet."
 LOCKEOF
         # Clean up lock on exit
         trap 'rm -f "$RESEARCH_LOCK"' EXIT
+        SKILL_FLAGS=$(build_skill_flags "$SKILL_DIR" "$SKILL_BRAIN" "$SKILL_BACKTEST" "$SKILL_LESSONS" "$SKILL_CODEBASE")
         ;;
     research-status)
         if [ -f "$RESEARCH_LOCK" ]; then
@@ -216,14 +261,16 @@ echo "$(date -Iseconds) Starting pi-cron $MODE" >> "$LOG_DIR/pi-cron.log"
 cd "$PROJECT"
 if [ "$MODE" = "research" ]; then
     # Research sessions get an 8-hour timeout
+    # shellcheck disable=SC2086
     timeout 28800 pi --print \
-       --skill "$SKILL_DIR" \
+       $SKILL_FLAGS \
        --no-session \
        "$PROMPT" \
        >> "$LOGFILE" 2>&1
 else
+    # shellcheck disable=SC2086
     pi --print \
-       --skill "$SKILL_DIR" \
+       $SKILL_FLAGS \
        --no-session \
        "$PROMPT" \
        >> "$LOGFILE" 2>&1
