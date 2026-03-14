@@ -12,7 +12,7 @@
 set -uo pipefail
 
 PROJECT="/root/atlas"
-HEALTHZ="$PROJECT/pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz/scripts/healthz.py"
+HEALTHZ="$PROJECT/pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py"
 LOG_DIR="$PROJECT/logs"
 TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
 LOG_FILE="$LOG_DIR/healthz-autofix_${TIMESTAMP}.log"
@@ -78,14 +78,15 @@ $ISSUES
 Fix every issue you can. Here are the SAFE fixes you are allowed to perform:
 
 ALLOWED (do these automatically):
-- Restart services: systemctl restart opend, systemctl restart atlas-telegram-bot, systemctl restart atlas-dashboard
-- Start IBKR docker: cd /root/atlas/docker && docker compose -f docker-compose-ibgw.yml up -d
+- Restart services: systemctl restart atlas-telegram-bot, systemctl restart atlas-dashboard
+- Restart research services: systemctl restart atlas-director, systemctl restart atlas-research-runner, systemctl restart atlas-research-window
 - Truncate large logs: tail -1000 logs/atlas.log > logs/atlas.log.tmp && mv logs/atlas.log.tmp logs/atlas.log
 - Clean __pycache__: find /root/atlas -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
 - Run weekly maintenance: bash /root/atlas/scripts/weekly_maintenance.sh
-- Refresh data cache: cd /root/atlas && python3 scripts/cli.py ingest
+- Refresh data cache: cd /root/atlas && python3 scripts/cli.py -m sp500 ingest
 - Fix pip/numpy issues: pip install --break-system-packages --upgrade <package>
 - Clean old log files: find /root/atlas/logs -name '*.log' -mtime +30 -delete
+- Kill orphan research processes: ps aux | grep research | grep -v grep
 
 NOT ALLOWED (never do these):
 - Do NOT edit any Python source code
@@ -97,7 +98,7 @@ NOT ALLOWED (never do these):
 - Do NOT restart the system or reboot
 
 After fixing, run the healthcheck again to verify:
-  cd /root/atlas && python3 pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz/scripts/healthz.py --market sp500
+  cd /root/atlas && python3 pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py --market sp500
 
 Report what you fixed and what still needs attention."
 

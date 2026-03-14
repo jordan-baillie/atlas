@@ -702,7 +702,7 @@ Full list: [`tasks/lessons.md`](../tasks/lessons.md)
 | Skill | SKILL.md | When to use |
 |---|---|---|
 | **atlas-daily** | `pi-package/atlas-ops/skills/atlas-daily/SKILL.md` | Day-to-day trading: ingest → plan → approve → execute → EOD |
-| **atlas-healthz** | `pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz/SKILL.md` | Full system audit (infra, data, config, broker, portfolio, cron, disk) |
+| **atlas-healthz** | `pi-package/atlas-ops/skills/atlas-healthz/SKILL.md` | Full system audit (infra, data, config, broker, portfolio, cron, disk) |
 | **atlas-reoptimize** | `pi-package/atlas-ops/skills/atlas-reoptimize/SKILL.md` | Degradation → re-optimize → validate → promote with human approval |
 | **atlas-research** | `pi-package/atlas-ops/skills/atlas-research/SKILL.md` | Ad-hoc research experiments and validation runs |
 | **atlas-research-loop** | `pi-package/atlas-ops/skills/atlas-research-loop/SKILL.md` | Daily research cycle: researcher → backtester → analyst → risk |
@@ -720,7 +720,7 @@ Full list: [`tasks/lessons.md`](../tasks/lessons.md)
 
 | File | Description |
 |---|---|
-| `pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz/scripts/healthz.py` | Health audit runner: checks all components, outputs structured report |
+| `pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py` | Health audit runner: checks all components, outputs structured report |
 
 ---
 

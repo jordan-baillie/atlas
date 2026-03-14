@@ -62,87 +62,20 @@ tg "🔧 <b>Atlas Auto-Recovery</b> [attempt $ATTEMPT/$MAX_ATTEMPTS]
 DIAGNOSIS=""
 FIXES_APPLIED=""
 
-# Check 1a: OpenD / Moomoo gateway (for SP500)
-# Skip if broker is Alpaca (no OpenD dependency)
-BROKER=$(python3 -c "import json; print(json.load(open('$PROJECT/config/active/sp500.json')).get('trading',{}).get('broker',''))" 2>/dev/null || echo "")
-OPEND_OK=true
-if [ "$BROKER" = "alpaca" ]; then
-    log "Broker is Alpaca — skipping OpenD check"
-elif ! python3 -c "
-import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(3)
-s.connect(('127.0.0.1', 11111))
-s.close()
+# Check 1: Alpaca broker connectivity
+BROKER_OK=true
+if ! python3 -c "
+import sys; sys.path.insert(0, '$PROJECT')
+from brokers.registry import get_broker
+b = get_broker('sp500')
+eq = b.get_account_equity()
+assert eq > 0, f'Equity is {eq}'
 print('ok')
 " 2>/dev/null | grep -q "ok"; then
-    OPEND_OK=false
-    DIAGNOSIS="${DIAGNOSIS}🔌 OpenD gateway unreachable on port 11111\n"
-    log "OpenD DOWN — attempting restart"
-
-    # Try to restart OpenD
-    if [ -f "$PROJECT/scripts/start_opend.sh" ]; then
-        bash "$PROJECT/scripts/start_opend.sh" >> "$RECOVER_LOG" 2>&1
-        sleep 10  # give it time to initialize
-        # Re-check
-        if python3 -c "
-import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.settimeout(3)
-s.connect(('127.0.0.1', 11111))
-s.close()
-" 2>/dev/null; then
-            FIXES_APPLIED="${FIXES_APPLIED}✅ Restarted OpenD successfully\n"
-            OPEND_OK=true
-            log "OpenD restarted OK"
-        else
-            FIXES_APPLIED="${FIXES_APPLIED}❌ OpenD restart failed\n"
-            log "OpenD restart FAILED"
-        fi
-    elif command -v FutuOpenD >/dev/null 2>&1; then
-        nohup FutuOpenD >> "$LOG_DIR/opend.log" 2>&1 &
-        sleep 10
-        if python3 -c "
-import socket; s = socket.socket(); s.settimeout(3); s.connect(('127.0.0.1', 11111)); s.close()
-" 2>/dev/null; then
-            FIXES_APPLIED="${FIXES_APPLIED}✅ Started OpenD process\n"
-            OPEND_OK=true
-            log "OpenD started OK"
-        else
-            FIXES_APPLIED="${FIXES_APPLIED}❌ OpenD start failed\n"
-            log "OpenD start FAILED"
-        fi
-    else
-        FIXES_APPLIED="${FIXES_APPLIED}⚠️ No OpenD start script found\n"
-        log "No OpenD start mechanism available"
-    fi
-fi
-
-# Check 1b: IB Gateway / IBKR (for ASX)
-# Skip if broker is Alpaca (no IBKR dependency, ASX/HK deactivated)
-IBGW_OK=true
-if [ "$BROKER" = "alpaca" ]; then
-    log "Broker is Alpaca — skipping IB Gateway check"
-elif ! nc -z localhost 4001 2>/dev/null; then
-    IBGW_OK=false
-    DIAGNOSIS="${DIAGNOSIS}🔌 IB Gateway unreachable on port 4001\n"
-    log "IB Gateway DOWN — attempting restart"
-
-    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "atlas-ibgateway"; then
-        docker restart atlas-ibgateway >> "$RECOVER_LOG" 2>&1
-        sleep 90  # IB Gateway needs time to authenticate (may need 2FA approval)
-        if nc -z localhost 4001 2>/dev/null; then
-            FIXES_APPLIED="${FIXES_APPLIED}✅ Restarted IB Gateway container\n"
-            IBGW_OK=true
-            log "IB Gateway restarted OK"
-        else
-            FIXES_APPLIED="${FIXES_APPLIED}❌ IB Gateway restart failed (may need 2FA approval on IBKR Mobile)\n"
-            log "IB Gateway restart FAILED"
-        fi
-    else
-        FIXES_APPLIED="${FIXES_APPLIED}⚠️ IB Gateway container not found — run: cd /root/atlas/docker && docker compose -f docker-compose-ibgw.yml up -d\n"
-        log "No IB Gateway container to restart"
-    fi
+    BROKER_OK=false
+    DIAGNOSIS="${DIAGNOSIS}🔌 Alpaca broker unreachable or returning \$0 equity\n"
+    log "Broker connectivity FAILED"
+    FIXES_APPLIED="${FIXES_APPLIED}⚠️ Alpaca broker unreachable — check API keys and /etc/hosts DNS entry\n"
 fi
 
 # Check 2: Network connectivity

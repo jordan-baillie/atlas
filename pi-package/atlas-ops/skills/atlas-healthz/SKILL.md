@@ -10,7 +10,7 @@ Complete audit of all Atlas subsystems via `scripts/healthz.py`. Produces struct
 ## Running the check
 
 ```bash
-cd /root/atlas && python3 pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz/scripts/healthz.py --market sp500
+cd /root/atlas && python3 pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py --market sp500
 ```
 
 Options:
@@ -25,10 +25,10 @@ Exit codes: `0` = healthy, `1` = warnings, `2` = failures.
 
 | Section | What it verifies |
 |---------|-----------------|
-| **infra** | OpenD gateway (port 11111), telegram bot service, dashboard service, secrets file |
+| **infra** | Telegram bot service, dashboard service, secrets file |
 | **data** | Cache directory, parquet count/freshness/integrity, universe file |
 | **config** | Active config exists, required sections present, strategies enabled/disabled, risk params, trading mode, optimization metadata |
-| **broker** | Moomoo connection, account equity/cash, open positions, pending orders |
+| **broker** | Alpaca connection, account equity/cash, open positions, pending orders |
 | **portfolio** | Live state file, equity history, closed trades, halt status, latest plan |
 | **cron** | Crontab jobs installed (premarket/postclose/research/dashboard/maintenance), last run recency, recent recovery events |
 | **research** | Queue status counts, journal verdicts, experiment result files |
@@ -45,8 +45,7 @@ Run the script, then:
 3. **Act on messages** — each check includes what's wrong and what to do.
 
 Common fixes:
-- `opend_gateway fail` → `systemctl restart opend`
-- `cache_freshness warn` → `cd /root/atlas && python3 scripts/cli.py ingest`
+- `cache_freshness warn` → `cd /root/atlas && python3 scripts/cli.py -m sp500 ingest`
 - `telegram_bot fail` → `systemctl restart atlas-telegram-bot`
 - `pycache warn` → `bash scripts/weekly_maintenance.sh`
 - `halt_status fail` → Check drawdown, then `python3 -c "from brokers.live_portfolio import LivePortfolio; ..."`

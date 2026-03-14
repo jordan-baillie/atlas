@@ -43,8 +43,8 @@ DRIVE_SH = Path.home() / ".pi" / "agent" / "skills" / "drive" / "drive.sh"
 
 # Skills that can be referenced by short name
 SKILL_ALIASES = {
-    "healthz": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz"),
-    "health": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-healthz/atlas-healthz"),
+    "healthz": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-healthz"),
+    "health": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-healthz"),
     "research": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-research"),
     "research-loop": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-research-loop"),
     "reoptimize": str(PROJECT_ROOT / "pi-package/atlas-ops/skills/atlas-reoptimize"),
