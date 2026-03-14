@@ -14,7 +14,16 @@
     "@sinclair/typebox": "*"
   },
   "pi": {
-    "extensions": ["./extensions/*/src/index.ts"],
+    "extensions": [
+      "./extensions/atlas-artifacts/src",
+      "./extensions/atlas-commands/src",
+      "./extensions/atlas-context-injector/src",
+      "./extensions/atlas-jobs/src",
+      "./extensions/atlas-risk-gates/src",
+      "./extensions/atlas-safety-gates/src",
+      "./extensions/atlas-state/src",
+      "./extensions/atlas-status-dashboard/src"
+    ],
     "skills": ["./skills"]
   }
 }
