@@ -32,10 +32,6 @@ REQUIRED_MODE = 0o600
 
 # Known secret keys and their descriptions
 SECRET_KEYS = {
-    # Moomoo
-    "MOOMOO_TRADE_PWD": "Moomoo 6-digit trade unlock PIN",
-    "MOOMOO_LOGIN_ACCOUNT": "Moomoo login account (user ID, phone, or email)",
-    "MOOMOO_LOGIN_PWD_MD5": "Moomoo login password (MD5 hash)",
     # Interactive Brokers
     "IBKR_ACCOUNT_ID": "IBKR account ID (e.g. U1234567 or DU1234567 for paper)",
 }
@@ -106,7 +102,7 @@ def get_secret(key: str, prompt: bool = False) -> Optional[str]:
         3. Interactive prompt (if prompt=True)
 
     Args:
-        key: Secret key name (e.g. "MOOMOO_TRADE_PWD")
+        key: Secret key name (e.g. "IBKR_ACCOUNT_ID")
         prompt: If True and secret not found, prompt interactively.
 
     Returns:

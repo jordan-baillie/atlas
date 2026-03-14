@@ -1,7 +1,7 @@
 """Live Trade Executor — bridges trade plan → broker order execution.
 
 Reads an approved trade plan and executes it through the configured
-broker (Moomoo, Alpaca, or any future BrokerAdapter implementation).
+broker (Alpaca or any future BrokerAdapter implementation).
 Broker selection is driven by config and handled by the registry.
 
 Safety architecture:
@@ -68,11 +68,6 @@ def preflight_check_config(config: dict) -> list[str]:
             errors.append("live_safety.max_order_value must be > 0")
         if safety.get("max_daily_orders", 0) <= 0:
             errors.append("live_safety.max_daily_orders must be > 0")
-
-    # Check broker-specific config exists
-    broker_name = config.get("trading", {}).get("broker", "moomoo").lower()
-    if broker_name == "moomoo" and not config.get("moomoo", {}).get("opend_host"):
-        errors.append("moomoo.opend_host not configured")
 
     return errors
 
@@ -206,7 +201,7 @@ class LiveExecutor:
         from brokers.registry import get_live_broker
         self._broker = get_live_broker(self.config)
         if not self._broker:
-            broker_name = self.config.get("trading", {}).get("broker", "moomoo")
+            broker_name = self.config.get("trading", {}).get("broker", "alpaca")
             _journal_entry("connect_failed", {"reason": f"No live broker for {broker_name}"})
             logger.error("LiveExecutor: no live broker available for '%s'", broker_name)
             return False
@@ -762,7 +757,7 @@ class LiveExecutor:
 
         # Build order kwargs
         if use_trailing:
-            # TRAILING_STOP SELL: price is reference, trail_value is the distance
+            # TRAILING_STOP SELL: trail_price is the dollar trail distance (Alpaca)
             order_result = self._broker.place_order(
                 ticker=ticker,
                 side=OrderSide.SELL,
@@ -770,9 +765,7 @@ class LiveExecutor:
                 price=stop_price,  # reference/activation price
                 order_type=order_type,
                 remark=f"atlas_stop_{strategy}_{trade_date}"[:64],
-                trail_type="AMOUNT",
-                trail_value=trailing_atr,
-                trail_spread=0,
+                trail_price=trailing_atr,
             )
         else:
             # Fixed STOP SELL: aux_price is the trigger

@@ -1,6 +1,6 @@
 """Abstract broker interface for Atlas.
 
-All brokers (moomoo, alpaca, etc.) implement this ABC.
+All brokers implement this ABC.
 Atlas internals use yfinance ticker format throughout — conversion
 happens inside each broker implementation at the boundary.
 For ASX: .AX format. For US: bare tickers. For LSE: .L format.

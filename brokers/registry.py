@@ -4,11 +4,10 @@ Single source of truth for broker instantiation. All code that needs
 a broker MUST use this module — never import broker classes directly.
 
 Supported brokers:
-    moomoo — Moomoo/Futu via OpenD gateway (ASX, SP500)
     alpaca — Alpaca Markets REST API (SP500, commission-free)
 
 Broker selection is driven by config:
-    trading.broker      = "moomoo" | "alpaca"
+    trading.broker      = "alpaca"
     trading.live_enabled = true | false
 
 Live trading requires live_enabled == true and a valid broker configured.
@@ -17,7 +16,7 @@ The live broker is the sole source of truth — no paper fallback.
 Usage:
     from brokers.registry import get_broker, get_live_broker
 
-    broker = get_broker("asx", config)          # Live broker (or None)
+    broker = get_broker("sp500", config)        # Live broker (or None)
     live   = get_live_broker(config)             # Live broker (or None)
 """
 
@@ -43,12 +42,6 @@ def _register_defaults():
         return
 
     try:
-        from brokers.moomoo.broker import MomooBroker  # noqa: F401
-        _BROKER_FACTORIES["moomoo"] = _make_moomoo_broker
-    except Exception:
-        logger.debug("moomoo broker not available (import failed)")
-
-    try:
         from brokers.alpaca.broker import AlpacaBroker  # noqa: F401
         _BROKER_FACTORIES["alpaca"] = _make_alpaca_broker
     except Exception:
@@ -65,7 +58,7 @@ def available_brokers() -> list[str]:
 # Public API
 # ═══════════════════════════════════════════════════════════════
 
-_KNOWN_BROKERS = ("moomoo", "alpaca")
+_KNOWN_BROKERS = ("alpaca",)
 
 
 def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter]:
@@ -151,14 +144,7 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
 
 def _resolve_broker_name(config: Dict[str, Any]) -> str:
     """Extract and normalise broker name from config."""
-    return config.get("trading", {}).get("broker", "moomoo").lower().strip()
-
-
-def _make_moomoo_broker(
-    market_id: str, config: Dict[str, Any], live: bool = False, **kwargs,
-) -> BrokerAdapter:
-    from brokers.moomoo.broker import MomooBroker
-    return MomooBroker(config, live=live)
+    return config.get("trading", {}).get("broker", "alpaca").lower().strip()
 
 
 def _make_alpaca_broker(
