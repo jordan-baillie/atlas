@@ -12,7 +12,8 @@
     "exclusions": [
       "MMC"
     ],
-    "benchmark_ticker": "SPY"
+    "benchmark_ticker": "SPY",
+    "point_in_time": false
   },
   "risk": {
     "starting_equity": 3518.12,
@@ -278,6 +279,17 @@
         "max_positions": 1
       }
     }
+  },
+  "event_calendar": {
+    "enabled": true,
+    "warn_in_plan": true,
+    "block_entries": false
+  },
+  "portfolio_optimizer": {
+    "method": "mean_variance",
+    "min_weight": 0.05,
+    "max_weight": 0.40,
+    "cluster_threshold": 0.7
   },
   "dynamic_sizing": {
     "enabled": true,

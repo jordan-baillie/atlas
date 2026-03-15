@@ -129,11 +129,48 @@ def _market_processed_dir(market_id: Optional[str] = None) -> Path:
     return d
 
 
+def filter_universe_pit(
+    tickers: List[str],
+    as_of_date,
+    config: Dict[str, Any],
+) -> List[str]:
+    """Filter a universe to point-in-time S&P 500 membership.
+
+    Used during backtesting to eliminate survivorship bias by only including
+    tickers that were in the index at the specified date.
+
+    Args:
+        tickers: Current universe tickers.
+        as_of_date: Date to reconstruct membership for.
+        config: Configuration dictionary.
+
+    Returns:
+        Filtered list of tickers that were in the S&P 500 at as_of_date.
+    """
+    uni_cfg = config.get("universe", {})
+    if not uni_cfg.get("point_in_time", False):
+        return tickers
+
+    try:
+        from data.sp500_history import get_members_at_date
+        pit_members = get_members_at_date(as_of_date)
+        filtered = [t for t in tickers if t in pit_members]
+        logger.info(
+            f"PIT universe: {len(filtered)}/{len(tickers)} tickers "
+            f"at {as_of_date} ({len(tickers) - len(filtered)} excluded)"
+        )
+        return filtered
+    except Exception as e:
+        logger.warning(f"PIT filtering failed, using full universe: {e}")
+        return tickers
+
+
 def build_universe(
     config: Dict[str, Any],
     candidate_tickers: Optional[List[str]] = None,
     save: bool = True,
     verbose: bool = True,
+    as_of_date=None,
 ) -> List[str]:
     """Build a filtered and ranked tradeable universe.
 
@@ -144,7 +181,8 @@ def build_universe(
         4. Rank by average daily traded value (descending)
         5. Take top N tickers
         6. Apply exclusions from config
-        7. Save results to data/processed/{market_id}/universe.json
+        7. Optionally filter to point-in-time membership (if as_of_date set)
+        8. Save results to data/processed/{market_id}/universe.json
 
     Args:
         config: Configuration dictionary (from get_active_config()).
@@ -152,6 +190,7 @@ def build_universe(
                            Defaults to market profile's universe.
         save: Whether to save results to JSON (default True).
         verbose: Whether to print progress (default True).
+        as_of_date: If set and point_in_time enabled, filter to PIT membership.
 
     Returns:
         List of ticker symbols that passed all filters.

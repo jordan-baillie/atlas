@@ -1361,6 +1361,20 @@ class BacktestEngine:
                 data, train_start, test_end
             )
 
+            # Point-in-time universe filtering (survivorship bias elimination)
+            if self.config.get("universe", {}).get("point_in_time", False):
+                try:
+                    from data.sp500_history import get_members_at_date
+                    pit_members = get_members_at_date(test_start.date() if hasattr(test_start, 'date') else test_start)
+                    pre_filter = len(window_data)
+                    window_data = {t: df for t, df in window_data.items() if t in pit_members}
+                    logger.info(
+                        f"PIT filter: {len(window_data)}/{pre_filter} tickers "
+                        f"for window starting {test_start.date() if hasattr(test_start, 'date') else test_start}"
+                    )
+                except Exception as e:
+                    logger.warning(f"PIT filtering failed, using full data: {e}")
+
             if not window_data:
                 logger.warning(f"Window {window_num}: no data, skipping")
                 window_start += self.step_days
