@@ -279,7 +279,7 @@ class EventCalendar:
         hi = centre + timedelta(days=window_days)
         return [e for e in self._events if lo <= e.date <= hi]
 
-    def get_event_proximity(self, dt: date) -> Dict[str, int]:
+    def get_event_proximity(self, dt) -> Dict[str, int]:
         """Return days-to-next occurrence for each major event type.
 
         Searches forward from dt for the next FOMC, CPI, NFP, OPEX, and REBAL
@@ -287,6 +287,7 @@ class EventCalendar:
 
         Args:
             dt: Reference date (typically today or the trade date).
+                Accepts datetime.date, datetime.datetime, or pandas.Timestamp.
 
         Returns:
             Dictionary with keys:
@@ -298,6 +299,9 @@ class EventCalendar:
                 "days_to_rebal" — calendar days until next quarterly REBAL after dt
             Values of -1 indicate no future event found in the loaded schedule.
         """
+        # Normalise to datetime.date for consistent comparison with event dates
+        if hasattr(dt, "date") and callable(dt.date):
+            dt = dt.date()  # handles pd.Timestamp, datetime.datetime
         result: Dict[str, int] = {
             "days_to_fomc": -1,
             "days_to_cpi": -1,

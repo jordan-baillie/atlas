@@ -8,7 +8,9 @@
 #   00 08 * * 2-6  /root/atlas/scripts/pi-cron.sh postclose
 #   00 9  1 * *    /root/atlas/scripts/pi-cron.sh slippage-cal
 #   00 9  * * 6    /root/atlas/scripts/pi-cron.sh health-check
-#   55 18 * * 1-5  /root/atlas/scripts/pi-cron.sh reconcile sp500   # Pre-market (5 min before plan gen)
+#   55 18 * * 1-5  /root/atlas/scripts/pi-cron.sh reconcile sp500
+#   00 10 1 * *    /root/atlas/scripts/pi-cron.sh calibrate sp500
+#   00 8  * * 0    /root/atlas/scripts/pi-cron.sh rejected-signals sp500
 #
 # Setup:
 #   1. Ensure pi is logged in: pi (interactive) — OAuth login persists in ~/.pi/agent/auth.json
@@ -81,6 +83,32 @@ AGENT_ID="${3:-atlas-research}"
 
 case "$MODE" in
     premarket)
+        # ── Pre-flight: config validation ──────────────────────────────────
+        # Validate config schema before doing anything. Warn on errors but don't block.
+        CONFIG_ERRORS=""
+        _IN_SET_PLUS_E=1
+        set +e
+        CONFIG_ERRORS=$(python3 -c "
+import sys; sys.path.insert(0, '$PROJECT')
+from config.schema import validate_config_file
+errors = validate_config_file('$PROJECT/config/active/${MARKET}.json')
+if errors:
+    for e in errors:
+        print(f'  ⚠ {e}')
+" 2>>"$LOG_DIR/pi-cron.log")
+        set -e
+        _IN_SET_PLUS_E=0
+
+        if [ -n "$CONFIG_ERRORS" ]; then
+            echo "$(date -Iseconds) Config validation warnings:" >> "$LOG_DIR/pi-cron.log"
+            echo "$CONFIG_ERRORS" >> "$LOG_DIR/pi-cron.log"
+            CONFIG_CONTEXT="⚠️ CONFIG VALIDATION: Issues found — check logs. Proceeding anyway.
+${CONFIG_ERRORS}"
+        else
+            echo "$(date -Iseconds) Config validation: OK" >> "$LOG_DIR/pi-cron.log"
+            CONFIG_CONTEXT="✅ Config validation: OK"
+        fi
+
         # ── Pre-flight: volatility gate check ──────────────────────────────
         # Check macro indicators before generating the plan.
         # Exit codes: 0=ok, 1=reduce(50%), 2=block(skip entries)
@@ -127,7 +155,7 @@ case "$MODE" in
 - atlas-incident: if any service is down, diagnose using this
 - atlas-lessons: critical pitfalls to avoid
 
-Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). ${VOL_CONTEXT} Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md
+Run the atlas-daily pre-market workflow for the ${MARKET} market ONLY: check data freshness and run cli_ingest if stale (pass -m ${MARKET}), then run cli_plan (pass -m ${MARKET}). ${VOL_CONTEXT} ${CONFIG_CONTEXT} Summarize the plan and stop — do NOT approve or execute. Write results to logs/pi-cron-premarket-${TIMESTAMP}.md
 
 TELEGRAM: You own all notifications. Send a single Telegram message via:
   python3 -c \"import sys; sys.path.insert(0,'/root/atlas'); from utils.telegram import send_message; send_message('''YOUR_MSG''')\"
@@ -309,8 +337,20 @@ LOCKEOF
             >> "$LOG_DIR/pi-cron.log" 2>&1
         exit $?
         ;;
+    calibrate)
+        echo "$(date -Iseconds) Running confidence calibration for $MARKET" >> "$LOG_DIR/pi-cron.log"
+        python3 "$PROJECT/scripts/calibration_cron.py" --market "$MARKET" \
+            >> "$LOG_DIR/pi-cron.log" 2>&1
+        exit $?
+        ;;
+    rejected-signals)
+        echo "$(date -Iseconds) Running rejected signal analysis for $MARKET" >> "$LOG_DIR/pi-cron.log"
+        python3 "$PROJECT/scripts/rejected_signals_cron.py" --market "$MARKET" \
+            >> "$LOG_DIR/pi-cron.log" 2>&1
+        exit $?
+        ;;
     *)
-        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile} [market] [agent-id]"
+        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals} [market] [agent-id]"
         exit 1
         ;;
 esac
