@@ -154,6 +154,32 @@ def _build_degradation_alert_message(report: HealthReport) -> str:
     return "\n".join(lines)
 
 
+def _fmt_lifecycle_transitions(transitions: list) -> str:
+    """Format lifecycle transitions for appending to a Telegram message."""
+    if not transitions:
+        return ""
+    lines = [
+        "",
+        "",
+        "<b>🔄 Lifecycle Transitions:</b>",
+    ]
+    _STATE_ICON = {
+        "ACTIVE":     "🟢",
+        "WATCH":      "🟡",
+        "PROBATION":  "🟠",
+        "SUSPENDED":  "🔴",
+        "RAMP_UP":    "🔵",
+    }
+    for t in transitions:
+        from_icon = _STATE_ICON.get(t["from"], "❓")
+        to_icon   = _STATE_ICON.get(t["to"],   "❓")
+        lines.append(
+            f"  <b>{t['strategy']}</b>: "
+            f"{from_icon} {t['from']} → {to_icon} {t['to']}"
+        )
+    return "\n".join(lines)
+
+
 def run_health_check(market_id: str, dry_run: bool = False) -> HealthReport:
     """Load config, run health check, save report, send Telegram notifications.
 
@@ -203,6 +229,21 @@ def run_health_check(market_id: str, dry_run: bool = False) -> HealthReport:
             a.live_trade_count,
         )
 
+    # ── Process lifecycle transitions ─────────────────────────────────────────
+    lifecycle_transitions: list = []
+    try:
+        from monitor.lifecycle import StrategyLifecycleManager
+        lifecycle = StrategyLifecycleManager(config, market_id=market_id)
+        lifecycle_transitions = lifecycle.process_health_report(report)
+        if lifecycle_transitions:
+            logger.info(
+                "Lifecycle transitions (%d): %s",
+                len(lifecycle_transitions),
+                [(t["strategy"], t["from"], "→", t["to"]) for t in lifecycle_transitions],
+            )
+    except Exception as exc:
+        logger.warning("Lifecycle processing failed (non-fatal): %s", exc)
+
     # ── Save report to disk ────────────────────────────────────────────────────
     date_str = datetime.now().strftime("%Y-%m-%d")
     reports_dir = PROJECT / "logs" / "health_reports"
@@ -210,7 +251,10 @@ def run_health_check(market_id: str, dry_run: bool = False) -> HealthReport:
     if dry_run:
         logger.info("Dry run — skipping file write and Telegram")
         # Print the formatted Telegram message to stdout
-        print(_build_telegram_message(report))
+        msg = _build_telegram_message(report)
+        if lifecycle_transitions:
+            msg += _fmt_lifecycle_transitions(lifecycle_transitions)
+        print(msg)
         return report
 
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -222,10 +266,12 @@ def run_health_check(market_id: str, dry_run: bool = False) -> HealthReport:
     except Exception as exc:
         logger.error("Failed to save report: %s", exc)
 
-    # ── Send Telegram summary ─────────────────────────────────────────────────
+    # ── Send Telegram summary (with lifecycle transitions appended) ───────────
     try:
         from utils.telegram import send_message
         msg = _build_telegram_message(report)
+        if lifecycle_transitions:
+            msg += _fmt_lifecycle_transitions(lifecycle_transitions)
         ok = send_message(msg)
         if ok:
             logger.info("Telegram health summary sent")
@@ -252,6 +298,24 @@ def run_health_check(market_id: str, dry_run: bool = False) -> HealthReport:
                     )
         except Exception as exc:
             logger.warning("Failed to send degradation alert: %s", exc)
+
+    # ── High-priority alert for newly SUSPENDED strategies ────────────────────
+    suspended_transitions = [t for t in lifecycle_transitions if t["to"] == "SUSPENDED"]
+    if suspended_transitions:
+        try:
+            from utils.telegram import send_message
+            alert_msg = "🚨 <b>STRATEGY SUSPENDED</b>\n\n"
+            for t in suspended_transitions:
+                alert_msg += f"  🔴 <b>{t['strategy']}</b> — {t['reason']}\n"
+            alert_msg += "\nImmediate review required."
+            ok = send_message(alert_msg)
+            if ok:
+                logger.info(
+                    "Suspension alert sent for: %s",
+                    [t["strategy"] for t in suspended_transitions],
+                )
+        except Exception as exc:
+            logger.warning("Failed to send suspension alert: %s", exc)
 
     return report
 

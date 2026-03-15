@@ -204,6 +204,46 @@ class StrategyAllocationPool:
         return unnamed_count + overflow_from_named
 
 
-def build_allocation_pool(config: Dict[str, Any]) -> StrategyAllocationPool:
+def build_allocation_pool(config: Dict[str, Any]) -> "StrategyAllocationPool":
     """Factory helper — creates a StrategyAllocationPool from a config dict."""
     return StrategyAllocationPool(config)
+
+
+def get_pool_cap(
+    strategy: str,
+    config: Dict[str, Any],
+    lifecycle_manager: Optional[Any] = None,
+) -> int:
+    """Return the effective pool cap for a strategy, respecting lifecycle overrides.
+
+    When ``lifecycle_manager`` is provided (a :class:`monitor.lifecycle.StrategyLifecycleManager`
+    instance), its override takes precedence over the config value.  This allows
+    the lifecycle system to reduce or suspend a strategy's slot budget without
+    modifying the active config file.
+
+    Args:
+        strategy: Strategy name, e.g. ``'mean_reversion'``.
+        config: Full Atlas config dict.
+        lifecycle_manager: Optional lifecycle manager instance.  When *None*,
+                           only the config value is used.
+
+    Returns:
+        Effective pool cap (0 means the strategy is suspended).
+    """
+    default_cap: int = (
+        config.get("allocation", {})
+        .get("pools", {})
+        .get(strategy, {})
+        .get("max_positions", 3)
+    )
+
+    if lifecycle_manager is not None:
+        override = lifecycle_manager.get_effective_pool_cap(strategy)
+        if override is not None:
+            logger.debug(
+                "Pool cap for '%s' overridden by lifecycle: %d → %d",
+                strategy, default_cap, override,
+            )
+            return override
+
+    return default_cap
