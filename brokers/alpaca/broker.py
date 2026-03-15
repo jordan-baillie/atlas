@@ -101,7 +101,11 @@ def _map_order_status(status_value: str) -> OrderStatus:
 
 
 def _map_side(side: OrderSide) -> "AlpacaSide":
-    """Map Atlas OrderSide to Alpaca OrderSide."""
+    """Map Atlas OrderSide to Alpaca OrderSide.
+
+    For short selling: SELL opens a short position (Alpaca handles automatically),
+    BUY closes/covers a short position. No special handling needed.
+    """
     if not ALPACA_AVAILABLE:
         return None
     return AlpacaSide.BUY if side == OrderSide.BUY else AlpacaSide.SELL
@@ -294,6 +298,23 @@ class AlpacaBroker(BrokerAdapter):
         self._market_data = None
         self._connected = False
         logger.info("AlpacaBroker disconnected")
+
+    def verify_shorting_enabled(self) -> bool:
+        """Check if the Alpaca account has shorting enabled.
+
+        Returns:
+            True if the account allows short selling, False otherwise.
+            Also returns False if the check fails (e.g. not connected).
+        """
+        try:
+            account = self._trade_client.get_account()
+            enabled = getattr(account, 'shorting_enabled', False)
+            if not enabled:
+                logger.warning("Alpaca account does not have shorting enabled")
+            return bool(enabled)
+        except Exception as e:
+            logger.error(f"Failed to check shorting status: {e}")
+            return False
 
     # ── Account ────────────────────────────────────────────────
 

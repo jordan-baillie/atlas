@@ -110,14 +110,30 @@ class MeanReversion(BaseStrategy):
         equity: float,
         existing_positions: List[Dict[str, Any]],
     ) -> List[Signal]:
-        """Scan all tickers for mean reversion entry signals.
+        """Scan all tickers for mean reversion entry signals (long and short).
 
-        A signal is generated when:
+        Long signals when:
             1. RSI(rsi_period) < rsi_oversold
             2. Z-score(zscore_lookback) < zscore_entry
-            3. Risk limits allow a new position
-            4. Ticker is not already held
+
+        Short signals (when short_enabled=True) when:
+            1. RSI(rsi_period) > (100 - rsi_oversold)
+            2. Z-score(zscore_lookback) > -zscore_entry (overbought)
         """
+        signals = self._generate_long_signals(data, equity, existing_positions)
+
+        if self.config.get("strategies", {}).get("mean_reversion", {}).get("short_enabled", False):
+            signals.extend(self._generate_short_signals(data, equity, existing_positions))
+
+        return signals
+
+    def _generate_long_signals(
+        self,
+        data: Dict[str, pd.DataFrame],
+        equity: float,
+        existing_positions: List[Dict[str, Any]],
+    ) -> List[Signal]:
+        """Generate long (buy) signals for oversold tickers."""
         signals: List[Signal] = []
         held_tickers = self._get_held_tickers(existing_positions)
         risk_pct = self.risk_config.get("max_risk_per_trade_pct", 0.005)
@@ -350,7 +366,228 @@ class MeanReversion(BaseStrategy):
                 )
                 continue
 
-        self._logger.info(f"MeanReversion generated {len(signals)} signals")
+        self._logger.info(f"MeanReversion generated {len(signals)} long signals")
+        return signals
+
+    def _generate_short_signals(
+        self,
+        data: Dict[str, pd.DataFrame],
+        equity: float,
+        existing_positions: List[Dict[str, Any]],
+    ) -> List[Signal]:
+        """Generate short signals for overbought tickers expecting mean reversion downward.
+
+        Entry conditions (mirror of long, inverted):
+            1. RSI > (100 - rsi_oversold)  — overbought
+            2. Z-score > -zscore_entry     — price extended above mean
+            3. If sma200_filter: price ABOVE SMA-200 (extended in uptrend)
+        """
+        signals: List[Signal] = []
+        held_tickers = self._get_held_tickers(existing_positions)
+        rsi_overbought = 100 - self.rsi_oversold
+        zscore_overbought = -self.zscore_entry  # e.g. +2.0 if zscore_entry is -2.0
+        risk_pct = self.risk_config.get("max_risk_per_trade_pct", 0.005)
+        commission_per_trade = self.fees_config.get("commission_per_trade", 5.0)
+        commission_pct = self.fees_config.get("commission_pct", 0.0008)
+        min_position_value = self.fees_config.get("min_position_value", 0.0)
+        max_position_value = self.config.get("trading", {}).get("live_safety", {}).get("max_order_value", 0.0)
+
+        min_rows = max(self.rsi_period, self.zscore_lookback, self.atr_period) + 10
+
+        for ticker, df in data.items():
+            try:
+                if ticker in held_tickers:
+                    continue
+
+                if not self._can_open_position(existing_positions):
+                    self._logger.debug("Max positions reached, skipping remaining tickers for shorts")
+                    break
+
+                if not self._has_sufficient_data(df, min_rows):
+                    continue
+
+                close = df["close"]
+                high = df["high"]
+                low = df["low"]
+                volume = df["volume"]
+
+                # Calculate indicators
+                if self._precomputed:
+                    current_rsi = df["_mr_rsi"].iloc[-1]
+                    current_zscore = df["_mr_zscore"].iloc[-1]
+                else:
+                    rsi = calc_rsi(close, period=self.rsi_period)
+                    zscore = calc_zscore(close, lookback=self.zscore_lookback)
+                    current_rsi = rsi.iloc[-1]
+                    current_zscore = zscore.iloc[-1]
+
+                if pd.isna(current_rsi) or pd.isna(current_zscore):
+                    continue
+
+                # Entry conditions: RSI overbought AND z-score extreme high
+                is_rsi_overbought = current_rsi > rsi_overbought
+                is_zscore_extreme = current_zscore > zscore_overbought
+
+                if not (is_rsi_overbought and is_zscore_extreme):
+                    continue
+
+                # SMA-200 filter for shorts: price ABOVE SMA-200 means extended in uptrend
+                if self.sma200_filter:
+                    if self._precomputed:
+                        sma200_val = df["_mr_sma200"].iloc[-1]
+                    else:
+                        sma200_val = close.rolling(200).mean().iloc[-1]
+                    if pd.isna(sma200_val) or close.iloc[-1] <= sma200_val:
+                        self._logger.debug(
+                            f"{ticker}: [short] below SMA(200), skipping"
+                        )
+                        continue
+
+                # Earnings blackout check
+                if self.earnings_blackout_enabled:
+                    reference_date = df.index[-1]
+                    try:
+                        if is_near_earnings(
+                            ticker,
+                            reference_date=reference_date,
+                            blackout_days_before=self.earnings_blackout_before,
+                            blackout_days_after=self.earnings_blackout_after,
+                        ):
+                            self._logger.debug(
+                                f"{ticker}: [short] within earnings blackout window, skipping"
+                            )
+                            continue
+                    except Exception as e:
+                        self._logger.debug(f"{ticker}: [short] earnings check failed ({e}), proceeding")
+
+                # Volume confirmation
+                if self._precomputed:
+                    current_vol_ratio = df["_mr_vol_ratio"].iloc[-1]
+                else:
+                    vol_ratio = calc_volume_ratio(volume, lookback=self.vol_lookback)
+                    current_vol_ratio = vol_ratio.iloc[-1]
+
+                if pd.isna(current_vol_ratio):
+                    current_vol_ratio = 1.0
+
+                if self.volume_entry_min > 0 and current_vol_ratio < self.volume_entry_min:
+                    self._logger.debug(
+                        f"{ticker}: [short] volume {current_vol_ratio:.2f}x < min, skipping"
+                    )
+                    continue
+
+                # Calculate ATR
+                if self._precomputed:
+                    current_atr = df["_mr_atr"].iloc[-1]
+                else:
+                    atr = calc_atr(high, low, close, period=self.atr_period)
+                    current_atr = atr.iloc[-1]
+
+                if pd.isna(current_atr) or current_atr <= 0:
+                    continue
+
+                today_close = close.iloc[-1]
+                entry_price = today_close
+
+                # Short stop loss: ABOVE entry (we lose money if price rises)
+                stop_price = entry_price + (self.atr_stop_mult * current_atr)
+
+                # Take profit: 20-day moving average (target mean reversion downward)
+                if self._precomputed:
+                    mean_20 = df["_mr_mean_target"].iloc[-1]
+                else:
+                    mean_20 = close.iloc[-self.zscore_lookback:].mean()
+
+                take_profit = mean_20  # target the mean
+
+                # Validate: take_profit must be below entry for shorts
+                if pd.isna(take_profit) or take_profit >= entry_price:
+                    self._logger.debug(
+                        f"{ticker}: [short] mean_20={take_profit:.2f} >= entry={entry_price:.2f}, "
+                        f"no reversion room, skipping"
+                    )
+                    continue
+
+                # Position sizing (risk = stop - entry distance)
+                try:
+                    pos = calc_position_size(
+                        equity=equity,
+                        risk_pct=risk_pct,
+                        entry_price=entry_price,
+                        stop_price=stop_price,
+                        commission_per_trade=commission_per_trade,
+                        commission_pct=commission_pct,
+                        min_position_value=min_position_value,
+                        max_position_value=max_position_value,
+                    )
+                except ValueError as e:
+                    self._logger.debug(f"{ticker}: [short] position sizing error: {e}")
+                    continue
+
+                if pos["shares"] <= 0:
+                    continue
+
+                # Confidence: same formula as longs using overbought depth
+                rsi_bonus = min(1.0, max(0, (current_rsi - rsi_overbought) / 15.0))
+                zscore_bonus = min(1.0, max(0, (abs(current_zscore) - zscore_overbought) / 1.0))
+                confidence = min(1.0, 0.6 + 0.2 * rsi_bonus + 0.2 * zscore_bonus)
+
+                # Volume confidence adjustment (same as longs)
+                _vol_conf_adj = 0.0
+                if current_vol_ratio >= self.vol_surge_threshold:
+                    _vol_conf_adj = self.vol_surge_boost
+                    vol_note = f"Volume surge {current_vol_ratio:.1f}x avg (+conf). "
+                elif current_vol_ratio < self.vol_min_ratio:
+                    _vol_conf_adj = -self.vol_dry_penalty
+                    vol_note = f"Volume low {current_vol_ratio:.1f}x avg (-conf). "
+                else:
+                    vol_note = f"Volume {current_vol_ratio:.1f}x avg. "
+                if _vol_conf_adj != 0.0:
+                    confidence = min(1.0, max(0.0, confidence + _vol_conf_adj))
+
+                rationale = (
+                    f"{ticker} is overbought with RSI={current_rsi:.1f} (threshold {rsi_overbought}) "
+                    f"and Z-score={current_zscore:.2f} (threshold +{zscore_overbought:.1f}). "
+                    f"Price ${today_close:.2f} is {abs(current_zscore):.1f} std devs above "
+                    f"20-day mean of ${mean_20:.2f}. "
+                    f"{vol_note}"
+                    f"Target reversion to ${take_profit:.2f} (20d mean), "
+                    f"stop at ${stop_price:.2f}."
+                )
+
+                signal = Signal(
+                    ticker=ticker,
+                    strategy=self.name,
+                    direction="short",
+                    entry_price=entry_price,
+                    stop_price=round(stop_price, 4),
+                    take_profit=round(take_profit, 4),
+                    position_size=pos["shares"],
+                    position_value=pos["position_value"],
+                    risk_amount=pos["total_risk"],
+                    confidence=round(confidence, 4),
+                    rationale=rationale,
+                    features={
+                        "rsi": round(current_rsi, 2),
+                        "zscore": round(current_zscore, 4),
+                        "mean_20": round(mean_20, 4),
+                        "atr": round(current_atr, 4),
+                        "close": round(today_close, 4),
+                        "volume_ratio": round(current_vol_ratio, 2),
+                    },
+                    timestamp=datetime.now(),
+                )
+                signals.append(signal)
+                self._logger.info(f"SHORT SIGNAL: {signal}")
+
+            except Exception as e:
+                self._logger.error(
+                    f"{ticker}: unexpected error in short signal generation: {e}",
+                    exc_info=True,
+                )
+                continue
+
+        self._logger.info(f"MeanReversion generated {len(signals)} short signals")
         return signals
 
     def check_exits(
@@ -360,10 +597,16 @@ class MeanReversion(BaseStrategy):
     ) -> List[Dict[str, Any]]:
         """Check open mean reversion positions for exit conditions.
 
-        Exit conditions:
+        Long exit conditions:
             1. Hard stop: price drops below original stop_price
             2. Take profit: price reaches or exceeds take_profit level
             3. Mean reversion: price reverts to 20-day moving average
+            4. Time exit: position held longer than max_hold_days
+
+        Short exit conditions (mirror of long, inverted):
+            1. Hard stop: price rises above original stop_price
+            2. Take profit: price drops to or below take_profit level
+            3. Mean reversion: price drops to 20-day moving average (RSI normalises)
             4. Time exit: position held longer than max_hold_days
         """
         exits: List[Dict[str, Any]] = []
@@ -388,6 +631,7 @@ class MeanReversion(BaseStrategy):
                 entry_price = pos["entry_price"]
                 stop_price = pos.get("stop_price", 0)
                 take_profit = pos.get("take_profit")
+                direction = pos.get("direction", "long")
 
                 # Days held
                 days_held = (today_date - entry_date).days
@@ -398,54 +642,104 @@ class MeanReversion(BaseStrategy):
                 else:
                     mean_20 = close.iloc[-self.zscore_lookback:].mean()
 
-                # Check exit conditions (priority order)
-                # 1. Hard stop hit
-                if today_close <= stop_price:
-                    exits.append({
-                        "ticker": ticker,
-                        "reason": "stop_hit",
-                        "exit_price": today_close,
-                        "details": (
-                            f"{ticker} hit hard stop at ${stop_price:.2f}. "
-                            f"Close=${today_close:.2f}, held {days_held} days."
-                        ),
-                    })
-                # 2. Take profit hit
-                elif take_profit is not None and today_close >= take_profit:
-                    exits.append({
-                        "ticker": ticker,
-                        "reason": "take_profit",
-                        "exit_price": today_close,
-                        "details": (
-                            f"{ticker} hit take profit at ${take_profit:.2f}. "
-                            f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
-                            f"held {days_held} days."
-                        ),
-                    })
-                # 3. Mean reversion: price reverted to 20-day mean
-                elif today_close >= mean_20 and entry_price < mean_20:
-                    exits.append({
-                        "ticker": ticker,
-                        "reason": "signal_exit",
-                        "exit_price": today_close,
-                        "details": (
-                            f"{ticker} reverted to 20-day mean (${mean_20:.2f}). "
-                            f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
-                            f"held {days_held} days."
-                        ),
-                    })
-                # 4. Time exit
-                elif days_held >= self.max_hold_days:
-                    exits.append({
-                        "ticker": ticker,
-                        "reason": "time_exit",
-                        "exit_price": today_close,
-                        "details": (
-                            f"{ticker} time exit after {days_held} days "
-                            f"(max={self.max_hold_days}). Close=${today_close:.2f}, "
-                            f"entry=${entry_price:.2f}."
-                        ),
-                    })
+                if direction == "short":
+                    # ── Short exit logic ──────────────────────────────────
+                    # 1. Hard stop hit: price rose above stop (we lose on short)
+                    if stop_price and today_close >= stop_price:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "stop_hit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} [short] hit hard stop at ${stop_price:.2f}. "
+                                f"Close=${today_close:.2f}, held {days_held} days."
+                            ),
+                        })
+                    # 2. Take profit hit: price dropped to target
+                    elif take_profit is not None and today_close <= take_profit:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "take_profit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} [short] hit take profit at ${take_profit:.2f}. "
+                                f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                                f"held {days_held} days."
+                            ),
+                        })
+                    # 3. Mean reversion: price dropped to 20-day mean
+                    elif today_close <= mean_20 and entry_price > mean_20:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "signal_exit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} [short] reverted to 20-day mean (${mean_20:.2f}). "
+                                f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                                f"held {days_held} days."
+                            ),
+                        })
+                    # 4. Time exit
+                    elif days_held >= self.max_hold_days:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "time_exit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} [short] time exit after {days_held} days "
+                                f"(max={self.max_hold_days}). Close=${today_close:.2f}, "
+                                f"entry=${entry_price:.2f}."
+                            ),
+                        })
+                else:
+                    # ── Long exit logic ───────────────────────────────────
+                    # 1. Hard stop hit
+                    if today_close <= stop_price:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "stop_hit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} hit hard stop at ${stop_price:.2f}. "
+                                f"Close=${today_close:.2f}, held {days_held} days."
+                            ),
+                        })
+                    # 2. Take profit hit
+                    elif take_profit is not None and today_close >= take_profit:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "take_profit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} hit take profit at ${take_profit:.2f}. "
+                                f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                                f"held {days_held} days."
+                            ),
+                        })
+                    # 3. Mean reversion: price reverted to 20-day mean
+                    elif today_close >= mean_20 and entry_price < mean_20:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "signal_exit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} reverted to 20-day mean (${mean_20:.2f}). "
+                                f"Close=${today_close:.2f}, entry=${entry_price:.2f}, "
+                                f"held {days_held} days."
+                            ),
+                        })
+                    # 4. Time exit
+                    elif days_held >= self.max_hold_days:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "time_exit",
+                            "exit_price": today_close,
+                            "details": (
+                                f"{ticker} time exit after {days_held} days "
+                                f"(max={self.max_hold_days}). Close=${today_close:.2f}, "
+                                f"entry=${entry_price:.2f}."
+                            ),
+                        })
 
             except Exception as e:
                 self._logger.error(
