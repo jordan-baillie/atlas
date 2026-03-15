@@ -8,6 +8,7 @@
 #   00 08 * * 2-6  /root/atlas/scripts/pi-cron.sh postclose
 #   00 9  1 * *    /root/atlas/scripts/pi-cron.sh slippage-cal
 #   00 9  * * 6    /root/atlas/scripts/pi-cron.sh health-check
+#   55 18 * * 1-5  /root/atlas/scripts/pi-cron.sh reconcile sp500   # Pre-market (5 min before plan gen)
 #
 # Setup:
 #   1. Ensure pi is logged in: pi (interactive) — OAuth login persists in ~/.pi/agent/auth.json
@@ -302,8 +303,14 @@ LOCKEOF
             >> "$LOG_DIR/pi-cron.log" 2>&1
         exit $?
         ;;
+    reconcile)
+        echo "$(date -Iseconds) Running reconciliation for $MARKET" >> "$LOG_DIR/pi-cron.log"
+        python3 "$PROJECT/scripts/reconcile.py" --market "$MARKET" --auto-fix \
+            >> "$LOG_DIR/pi-cron.log" 2>&1
+        exit $?
+        ;;
     *)
-        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check} [market] [agent-id]"
+        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile} [market] [agent-id]"
         exit 1
         ;;
 esac
