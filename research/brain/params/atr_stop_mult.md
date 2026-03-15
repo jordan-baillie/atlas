@@ -4,9 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-14 10:01 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -0.1464 | 0.4083 |
-| 2026-03-14 10:05 | stochastic_oversold | None → 1.5 | ❌ discard | -0.4926 | -0.0939 |
-| 2026-03-14 10:05 | stochastic_oversold | None → 2.0 | ❌ discard | +0.0000 | 0.3987 |
 | 2026-03-14 10:05 | stochastic_oversold | None → 2.5 | ❌ discard | -0.0049 | 0.3938 |
 | 2026-03-14 10:05 | stochastic_oversold | None → 3.0 | ❌ discard | -0.0158 | 0.3829 |
 | 2026-03-14 10:09 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -0.3544 | -0.1576 |
@@ -54,3 +51,6 @@
 | 2026-03-15 06:25 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -1.1882 | -0.8233 |
 | 2026-03-15 06:25 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -2.2080 | -1.8431 |
 | 2026-03-15 06:25 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -1.3554 | -0.9905 |
+| 2026-03-15 07:00 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -2.8061 | -2.8368 |
+| 2026-03-15 07:00 | williams_percent_r | 1.5 → 2.0 | ❌ discard | -0.2158 | -0.2465 |
+| 2026-03-15 07:00 | williams_percent_r | 1.5 → 3.0 | ❌ discard | -3.5710 | -3.6017 |

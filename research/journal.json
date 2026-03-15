@@ -7058,5 +7058,28 @@
     "promoted": false,
     "runtime_s": 31.5,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260315_165945",
+    "timestamp": "2026-03-15T06:59:45.438092+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "williams_percent_r",
+    "hypothesis": "wr_entry: None\u2192-85",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": -0.0307,
+      "cagr_pct": 4.3677,
+      "max_drawdown_pct": 3.2317,
+      "total_trades": 275,
+      "profit_factor": 1.715
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 wr_entry: None\u2192-85"
+    ],
+    "promoted": false,
+    "runtime_s": 37.0,
+    "agent_id": "autoresearch"
   }
 ]
