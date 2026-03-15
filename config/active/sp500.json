@@ -68,6 +68,7 @@
     },
     "mean_reversion": {
       "enabled": true,
+      "short_enabled": false,
       "rsi_period": 14,
       "rsi_oversold": 35,
       "zscore_lookback": 30,
@@ -344,6 +345,12 @@
     },
     "_behavior": "1 flag \u2192 50% position size reduction | 2+ flags \u2192 block all entries + Telegram alert",
     "_note": "ASX futures disabled for SP500 market \u2014 not relevant for US trading session"
+  },
+  "intraday": {
+    "enabled": false,
+    "entry_refinement": false,
+    "timeframe": "15Min",
+    "lookback_days": 2
   },
   "macro_regime": {
     "enabled": false,

@@ -107,7 +107,7 @@ class TestValidSignalCreation:
 class TestSignalValidationErrors:
     def test_invalid_direction_raises(self):
         with pytest.raises(ValueError, match="direction"):
-            _make_signal(direction="short")
+            _make_signal(direction="sideways")
 
     def test_confidence_below_zero_raises(self):
         with pytest.raises(ValueError, match="[Cc]onfidence"):
