@@ -4,9 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-14 06:28 | lower_band_reversion | None → 1.5 | ❌ discard | -0.3749 | 0.0107 |
-| 2026-03-14 10:01 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -0.2891 | 0.2656 |
-| 2026-03-14 10:01 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -0.4722 | 0.0825 |
 | 2026-03-14 10:01 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -0.1464 | 0.4083 |
 | 2026-03-14 10:05 | stochastic_oversold | None → 1.5 | ❌ discard | -0.4926 | -0.0939 |
 | 2026-03-14 10:05 | stochastic_oversold | None → 2.0 | ❌ discard | +0.0000 | 0.3987 |
@@ -54,3 +51,6 @@
 | 2026-03-15 05:28 | demark_sequential | 1.5 → 2.0 | ❌ discard | -2.6441 | -2.9362 |
 | 2026-03-15 05:28 | demark_sequential | 1.5 → 2.5 | ❌ discard | -3.5557 | -3.8478 |
 | 2026-03-15 05:28 | demark_sequential | 1.5 → 3.0 | ❌ discard | -4.2484 | -4.5405 |
+| 2026-03-15 06:25 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -1.1882 | -0.8233 |
+| 2026-03-15 06:25 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -2.2080 | -1.8431 |
+| 2026-03-15 06:25 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -1.3554 | -0.9905 |

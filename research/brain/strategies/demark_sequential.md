@@ -1,7 +1,7 @@
 # demark_sequential
 
-> **Status:** active | **Best Sharpe:** -0.1078 | **Trades:** 181
-> **Updated:** 2026-03-15 05:56
+> **Status:** active | **Best Sharpe:** 0.1246 | **Trades:** 145
+> **Updated:** 2026-03-15 06:24
 
 ## Current Best Params
 
@@ -10,22 +10,24 @@
 | atr_stop_mult | 1.5 |
 | max_hold_days | 7 |
 | setup_bars | 7 |
+| sma200_filter | True |
 
 ## Current Metrics
 
 | Metric | Value |
 |--------|-------|
-| Sharpe | -0.1078 |
-| CAGR | 3.7% |
-| Profit Factor | 1.76 |
-| Max Drawdown | 4.3% |
-| Total Trades | 181 |
-| Win Rate | 55.8% |
+| Sharpe | 0.1246 |
+| CAGR | 5.8% |
+| Profit Factor | 2.45 |
+| Max Drawdown | 3.8% |
+| Total Trades | 145 |
+| Win Rate | 51.0% |
 
 ## History
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
+| Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
@@ -37,3 +39,4 @@
 | 2026-03-15 02:31 | -1.7879 | 120 | 1.45 | 1.4% | max_hold_days=10 |
 | 2026-03-15 05:28 | -0.2921 | 152 | 1.40 | 2.0% | setup_bars=7 |
 | 2026-03-15 05:56 | -0.1078 | 181 | 1.76 | 3.7% | max_hold_days=7 |
+| 2026-03-15 06:24 | 0.1246 | 145 | 2.45 | 5.8% | sma200_filter=True |
