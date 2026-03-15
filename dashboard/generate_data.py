@@ -2692,6 +2692,316 @@ def generate_ceasefire_data() -> dict:
     }
 
 
+
+def generate_strategy_health_data() -> dict:
+    """Generate strategy health/lifecycle data for the Health tab.
+
+    Reads from:
+        - logs/lifecycle_state.json  -> current lifecycle state per strategy
+        - research/best/*.json        -> best backtest metrics as reference
+    """
+    lifecycle_path = PROJECT_ROOT / "logs" / "lifecycle_state.json"
+    best_dir = PROJECT_ROOT / "research" / "best"
+
+    # Load lifecycle state
+    lifecycle_raw = safe_json(lifecycle_path, {})
+
+    # Load best backtest metrics as reference
+    best_metrics: dict = {}
+    if best_dir.exists():
+        for f in sorted(best_dir.glob("*.json")):
+            try:
+                data = json.loads(f.read_text())
+            except Exception:
+                continue
+            sid = data.get("strategy", f.stem)
+            m = data.get("metrics", {})
+            best_metrics[sid] = {
+                "sharpe": m.get("sharpe"),
+                "win_rate_pct": m.get("win_rate_pct"),
+                "cagr_pct": m.get("cagr_pct"),
+                "max_drawdown_pct": m.get("max_drawdown_pct"),
+                "profit_factor": m.get("profit_factor"),
+                "total_trades": m.get("total_trades"),
+                "experiments_run": data.get("experiments_run", 0),
+                "backtest_file": f.name,
+            }
+
+    # Build per-strategy health records
+    strategies: list = []
+    all_strategy_names = set(lifecycle_raw.keys()) | set(best_metrics.keys())
+
+    state_colour_map = {
+        "RAMP_UP": "blue",
+        "ACTIVE": "green",
+        "WATCH": "yellow",
+        "PROBATION": "orange",
+        "SUSPENDED": "red",
+        "UNKNOWN": "gray",
+    }
+
+    for sid in sorted(all_strategy_names):
+        lc = lifecycle_raw.get(sid, {})
+        bm = best_metrics.get(sid, {})
+
+        state = lc.get("state", "UNKNOWN")
+        strategies.append({
+            "id": sid,
+            "name": sid.replace("_", " ").title(),
+            "state": state,
+            "state_colour": state_colour_map.get(state, "gray"),
+            "entered_at": lc.get("entered_at", ""),
+            "consecutive_degraded": lc.get("consecutive_degraded", 0),
+            "consecutive_recovered": lc.get("consecutive_recovered", 0),
+            "pool_cap_override": lc.get("pool_cap_override"),
+            "recent_history": lc.get("history", [])[-5:],
+            # Best backtest reference
+            "best_sharpe": bm.get("sharpe"),
+            "best_win_rate": bm.get("win_rate_pct"),
+            "best_cagr": bm.get("cagr_pct"),
+            "best_drawdown": bm.get("max_drawdown_pct"),
+            "best_pf": bm.get("profit_factor"),
+            "best_trades": bm.get("total_trades"),
+            "experiments_run": bm.get("experiments_run", 0),
+        })
+
+    state_counts: dict = {}
+    for s in strategies:
+        state_counts[s["state"]] = state_counts.get(s["state"], 0) + 1
+
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "lifecycle_file": str(lifecycle_path),
+        "total_strategies": len(strategies),
+        "state_counts": state_counts,
+        "strategies": strategies,
+        "has_lifecycle_data": bool(lifecycle_raw),
+    }
+
+
+def generate_events_data() -> dict:
+    """Generate macro event calendar data for the Events tab.
+
+    Uses EventCalendar to produce:
+        - upcoming events for the next 30 days
+        - proximity KPIs (days to FOMC, CPI, NFP, OPEX week flag)
+        - recent past events (last 7 days)
+    """
+    from datetime import date as _date_cls
+    try:
+        from data.events import EventCalendar
+        ec = EventCalendar()
+        today = _date_cls.today()
+
+        # Upcoming events (next 30 days, future only)
+        upcoming_raw = ec.get_events_near(today.isoformat(), window_days=30)
+        upcoming = sorted(
+            [
+                {
+                    "event_type": e.event_type,
+                    "date": e.date.isoformat(),
+                    "description": e.description,
+                    "impact": e.impact,
+                    "days_away": (e.date - today).days,
+                }
+                for e in upcoming_raw
+                if e.date >= today
+            ],
+            key=lambda x: x["date"],
+        )
+
+        # Proximity KPIs
+        proximity = ec.get_event_proximity(today)
+
+        # Recent past events (last 7 days)
+        past_raw = ec.get_events_near(today.isoformat(), window_days=7)
+        recent_past = sorted(
+            [
+                {
+                    "event_type": e.event_type,
+                    "date": e.date.isoformat(),
+                    "description": e.description,
+                    "impact": e.impact,
+                    "days_ago": (today - e.date).days,
+                }
+                for e in past_raw
+                if e.date < today
+            ],
+            key=lambda x: x["date"],
+            reverse=True,
+        )
+
+        return {
+            "generated_at": datetime.now().isoformat(),
+            "reference_date": today.isoformat(),
+            "upcoming": upcoming,
+            "recent_past": recent_past,
+            "proximity": proximity,
+            "total_events_loaded": len(ec.all_events()),
+            "error": None,
+        }
+
+    except Exception as exc:
+        logger.warning("generate_events_data failed: %s", exc)
+        return {
+            "generated_at": datetime.now().isoformat(),
+            "reference_date": datetime.now().date().isoformat(),
+            "upcoming": [],
+            "recent_past": [],
+            "proximity": {
+                "days_to_fomc": -1,
+                "days_to_cpi": -1,
+                "days_to_nfp": -1,
+                "is_opex_week": 0,
+            },
+            "total_events_loaded": 0,
+            "error": str(exc),
+        }
+
+
+def generate_system_data() -> dict:
+    """Generate system-health and operations data for the System tab.
+
+    Produces:
+        - reconciliation reports (from logs/reconciliation/*.json if exists)
+        - config validation summary for each active config
+    """
+    logs_dir = PROJECT_ROOT / "logs"
+    config_dir = PROJECT_ROOT / "config" / "active"
+
+    # Reconciliation reports
+    recon_dir = logs_dir / "reconciliation"
+    reconciliation_reports: list = []
+    reconciliation_summary = {
+        "reports_found": 0,
+        "clean_count": 0,
+        "dirty_count": 0,
+        "last_run": None,
+    }
+
+    if recon_dir.exists():
+        recon_files = sorted(recon_dir.glob("*.json"), reverse=True)[:10]
+        for rfile in recon_files:
+            try:
+                rdata = json.loads(rfile.read_text())
+                reconciliation_reports.append({
+                    "file": rfile.name,
+                    "timestamp": rdata.get("timestamp"),
+                    "market_id": rdata.get("market_id", "?"),
+                    "clean": rdata.get("clean", False),
+                    "broker_positions": rdata.get("broker_positions", 0),
+                    "local_positions": rdata.get("local_positions", 0),
+                    "discrepancy_count": len(rdata.get("discrepancies", [])),
+                    "discrepancies": rdata.get("discrepancies", [])[:5],
+                    "fixes_applied": len(rdata.get("fixes_applied", [])),
+                })
+            except Exception:
+                continue
+        reconciliation_summary["reports_found"] = len(reconciliation_reports)
+        reconciliation_summary["clean_count"] = sum(1 for r in reconciliation_reports if r["clean"])
+        reconciliation_summary["dirty_count"] = sum(1 for r in reconciliation_reports if not r["clean"])
+        if reconciliation_reports:
+            reconciliation_summary["last_run"] = reconciliation_reports[0]["timestamp"]
+
+    # Config validation
+    config_validations: list = []
+    if config_dir.exists():
+        for cfile in sorted(config_dir.glob("*.json")):
+            market_id = cfile.stem
+            issues: list = []
+            warnings_list: list = []
+
+            try:
+                cfg = json.loads(cfile.read_text())
+
+                if "trading" not in cfg:
+                    issues.append("Missing trading section")
+                else:
+                    trading = cfg["trading"]
+                    mode = trading.get("mode")
+                    if mode not in ("live", "paper", "passive"):
+                        issues.append(f"Invalid trading.mode: {repr(mode)}")
+                    if mode == "live" and not trading.get("approval_required", True):
+                        warnings_list.append("Live mode without approval_required=true")
+                    if trading.get("live_enabled") and mode == "passive":
+                        issues.append("live_enabled=true but mode=passive")
+
+                if "strategies" not in cfg:
+                    warnings_list.append("No strategies section")
+                else:
+                    strats = cfg["strategies"]
+                    enabled = [k for k, v in strats.items()
+                               if isinstance(v, dict) and v.get("enabled", True)]
+                    if not enabled:
+                        warnings_list.append("No enabled strategies found")
+
+                if "allocation" not in cfg:
+                    warnings_list.append("No allocation section")
+                else:
+                    pools = cfg.get("allocation", {}).get("pools", {})
+                    total_caps = [p.get("max_positions", 0) for p in pools.values()
+                                  if isinstance(p, dict)]
+                    if total_caps and sum(total_caps) > 20:
+                        warnings_list.append(f"Total max_positions across pools is {sum(total_caps)}")
+
+                version = cfg.get("version", cfg.get("_version", ""))
+                if not version:
+                    warnings_list.append("No version field")
+
+                config_validations.append({
+                    "market_id": market_id,
+                    "file": cfile.name,
+                    "valid": len(issues) == 0,
+                    "version": version,
+                    "trading_mode": cfg.get("trading", {}).get("mode", "?"),
+                    "live_enabled": cfg.get("trading", {}).get("live_enabled", False),
+                    "broker": cfg.get("trading", {}).get("broker", "?"),
+                    "strategy_count": len(cfg.get("strategies", {})),
+                    "issues": issues,
+                    "warnings": warnings_list,
+                    "issue_count": len(issues),
+                    "warning_count": len(warnings_list),
+                })
+
+            except Exception as exc:
+                config_validations.append({
+                    "market_id": market_id,
+                    "file": cfile.name,
+                    "valid": False,
+                    "version": "?",
+                    "trading_mode": "?",
+                    "live_enabled": False,
+                    "broker": "?",
+                    "strategy_count": 0,
+                    "issues": [f"Failed to parse: {exc}"],
+                    "warnings": [],
+                    "issue_count": 1,
+                    "warning_count": 0,
+                })
+
+    any_config_invalid = any(not v["valid"] for v in config_validations)
+    recon_clean = (reconciliation_summary["dirty_count"] == 0
+                   and reconciliation_summary["reports_found"] > 0)
+
+    return {
+        "generated_at": datetime.now().isoformat(),
+        "reconciliation": {
+            "summary": reconciliation_summary,
+            "reports": reconciliation_reports,
+            "dir_exists": recon_dir.exists(),
+        },
+        "config_validation": {
+            "configs": config_validations,
+            "all_valid": not any_config_invalid,
+            "total_issues": sum(v["issue_count"] for v in config_validations),
+            "total_warnings": sum(v["warning_count"] for v in config_validations),
+        },
+        "system_ok": not any_config_invalid and (
+            recon_clean or not reconciliation_summary["reports_found"]
+        ),
+    }
+
+
 def generate():
     """Generate multi-market dashboard data.
 
@@ -2997,6 +3307,25 @@ def generate():
     with open(tmp_output, "w") as f:
         json.dump(result, f, indent=2, default=str)
     tmp_output.rename(OUTPUT)
+
+    # ── Health / Events / System tab data (WP-5.3) ────────────────────────────
+    for _gen_fn, _fname in [
+        (generate_strategy_health_data, "health-data.json"),
+        (generate_events_data,          "events-data.json"),
+        (generate_system_data,          "system-data.json"),
+    ]:
+        try:
+            _tab_data = _gen_fn()
+        except Exception as _exc:
+            logger.warning("Tab data generation failed for %s: %s", _fname, _exc)
+            _tab_data = {"error": str(_exc), "generated_at": datetime.now().isoformat()}
+        _tab_out = OUTPUT.parent / _fname
+        _tab_tmp = _tab_out.with_suffix(".tmp")
+        with open(_tab_tmp, "w") as _tf:
+            json.dump(_tab_data, _tf, indent=2, default=str)
+        _tab_tmp.rename(_tab_out)
+    print("  Tab data written: health-data.json, events-data.json, system-data.json")
+
 
     print(f"\nDashboard data written to {OUTPUT}")
     for mid, md in market_data.items():
