@@ -67,6 +67,79 @@ def _get_group(strategy_name: str) -> str:
     return "other"
 
 
+def cluster_strategies(
+    corr_matrix: pd.DataFrame, threshold: float = 0.7
+) -> List[List[str]]:
+    """Group strategies by pairwise correlation exceeding threshold.
+
+    Uses union-find agglomerative clustering: if corr(A,B) > threshold and
+    corr(B,C) > threshold, then A, B, C are in the same cluster.
+
+    Returns list of clusters, each a sorted list of strategy names, ordered
+    by cluster size (largest first). Strategies not correlated above threshold
+    with any other appear as singleton clusters.
+
+    Concentration risk: callers should sum portfolio weights within each cluster;
+    clusters with combined weight > 50% of the portfolio represent concentration
+    risk and may warrant position limits.
+
+    Args:
+        corr_matrix: Symmetric correlation DataFrame (strategy names as index/columns).
+        threshold: Correlation threshold above which strategies are grouped (default 0.7).
+
+    Returns:
+        List of clusters, each a sorted list of strategy names (largest cluster first).
+    """
+    strategies = list(corr_matrix.columns)
+    n = len(strategies)
+
+    if n == 0:
+        return []
+
+    # Union-Find with path compression
+    parent = list(range(n))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]  # path compression
+            x = parent[x]
+        return x
+
+    def union(x: int, y: int) -> None:
+        rx, ry = find(x), find(y)
+        if rx != ry:
+            parent[rx] = ry
+
+    # Union strategies whose pairwise correlation exceeds threshold
+    for i in range(n):
+        for j in range(i + 1, n):
+            si, sj = strategies[i], strategies[j]
+            corr_val = float(corr_matrix.loc[si, sj])
+            if corr_val > threshold:
+                union(i, j)
+
+    # Collect clusters by root
+    cluster_map: Dict[int, List[str]] = {}
+    for i in range(n):
+        root = find(i)
+        cluster_map.setdefault(root, []).append(strategies[i])
+
+    # Sort strategies within each cluster; sort clusters by size (largest first)
+    clusters = [sorted(members) for members in cluster_map.values()]
+    clusters.sort(key=len, reverse=True)
+
+    # Log cluster summary
+    logger.info(
+        f"cluster_strategies: {len(clusters)} clusters from {n} strategies "
+        f"(threshold={threshold})"
+    )
+    for i, cluster in enumerate(clusters):
+        if len(cluster) > 1:
+            logger.info(f"  Cluster {i + 1} ({len(cluster)} strategies): {cluster}")
+
+    return clusters
+
+
 def _run_solo_backtest(args: tuple) -> tuple:
     """Run a single strategy backtest in a worker process.
 
@@ -421,6 +494,106 @@ class PortfolioOptimizer:
 
         return weights
 
+    def compute_optimal_weights_mv(
+        self,
+        returns_df: pd.DataFrame,
+        metrics: Dict[str, dict],
+        cov_matrix: np.ndarray,
+    ) -> Dict[str, float]:
+        """Mean-variance optimization: maximize portfolio Sharpe ratio.
+
+        Solves the following constrained optimization via SLSQP:
+
+            max  (w'μ) / sqrt(w'Σw)
+            s.t. sum(w) = 1.0
+                 min_weight ≤ w_i ≤ max_weight  ∀i
+
+        where:
+            μ = per-strategy mean daily returns (from equity curve history)
+            Σ = Ledoit-Wolf shrinkage covariance matrix (daily scale)
+
+        Weight bounds are read from config.portfolio_optimizer (defaults: 0.05 / 0.40).
+        Falls back to compute_optimal_weights() if SLSQP fails to converge or if
+        scipy is unavailable.
+
+        Args:
+            returns_df: Aligned daily returns DataFrame (strategies as columns).
+            metrics: Per-strategy metrics dict (must contain 'sharpe', 'total_trades').
+            cov_matrix: Ledoit-Wolf covariance matrix (n×n, daily scale).
+
+        Returns:
+            Dict mapping strategy_name → weight (values sum ≈ 1.0).
+        """
+        try:
+            from scipy.optimize import minimize
+        except ImportError:
+            logger.warning("scipy not available — falling back to Sharpe-tilted inverse-vol")
+            return self.compute_optimal_weights(returns_df, metrics, cov_matrix)
+
+        strategies = list(returns_df.columns)
+        n = len(strategies)
+
+        # μ: per-strategy daily mean returns from equity curves
+        mu = returns_df.mean().values  # shape (n,)
+
+        # Weight bounds from config, with instance-level fallback
+        opt_cfg = self.config.get("portfolio_optimizer", {})
+        min_w = float(opt_cfg.get("min_weight", self.min_weight))
+        max_w = float(opt_cfg.get("max_weight", self.max_weight))
+
+        # Objective: negative Sharpe ratio (SLSQP minimises)
+        def neg_sharpe(w: np.ndarray) -> float:
+            port_ret = float(w @ mu)
+            port_var = float(w @ cov_matrix @ w)
+            port_vol = np.sqrt(max(port_var, 1e-12))
+            return -port_ret / port_vol
+
+        # Analytic gradient for faster convergence
+        def neg_sharpe_grad(w: np.ndarray) -> np.ndarray:
+            port_ret = float(w @ mu)
+            port_var = float(w @ cov_matrix @ w)
+            port_vol = np.sqrt(max(port_var, 1e-12))
+            # d/dw [ w'μ / sqrt(w'Σw) ] = μ/vol - (w'μ)·(Σw)/vol³
+            grad = mu / port_vol - port_ret * (cov_matrix @ w) / (port_vol ** 3)
+            return -grad  # negate: we minimise
+
+        constraints = [{"type": "eq", "fun": lambda w: w.sum() - 1.0}]
+        bounds = [(min_w, max_w)] * n
+
+        # Feasible equal-weight starting point
+        w0 = np.clip(np.ones(n) / n, min_w, max_w)
+        w0 = w0 / w0.sum()
+
+        try:
+            res = minimize(
+                neg_sharpe,
+                w0,
+                method="SLSQP",
+                jac=neg_sharpe_grad,
+                bounds=bounds,
+                constraints=constraints,
+                options={"maxiter": 1000, "ftol": 1e-9, "disp": False},
+            )
+
+            if res.success:
+                w = np.clip(res.x, min_w, max_w)
+                w = w / w.sum()
+                logger.info(
+                    f"  MV optimization converged (nit={res.nit}): "
+                    f"annualised Sharpe≈{-res.fun * np.sqrt(252):.4f}"
+                )
+                return {strategies[i]: round(float(w[i]), 4) for i in range(n)}
+            else:
+                logger.warning(
+                    f"  MV optimization did not converge (status={res.status}): "
+                    f"{res.message} — falling back to Sharpe-tilted inverse-vol"
+                )
+                return self.compute_optimal_weights(returns_df, metrics, cov_matrix)
+
+        except Exception as exc:
+            logger.warning(f"  MV optimization raised exception: {exc} — falling back")
+            return self.compute_optimal_weights(returns_df, metrics, cov_matrix)
+
     def estimate_portfolio_sharpe(
         self,
         weights: Dict[str, float],
@@ -582,8 +755,16 @@ class PortfolioOptimizer:
         cov_matrix = self.compute_covariance_ledoit_wolf(returns_df)
         logger.info("Covariance matrix (Ledoit-Wolf) computed")
 
-        # Step 5: Optimal weights
-        weights = self.compute_optimal_weights(returns_df, metrics, cov_matrix)
+        # Step 5: Optimal weights — method selectable via config
+        method = self.config.get("portfolio_optimizer", {}).get(
+            "method", "sharpe_inverse_vol"
+        )
+        if method == "mean_variance":
+            logger.info("Using mean-variance optimization (SLSQP Sharpe maximization)")
+            weights = self.compute_optimal_weights_mv(returns_df, metrics, cov_matrix)
+        else:
+            logger.info("Using Sharpe-tilted inverse-vol weighting")
+            weights = self.compute_optimal_weights(returns_df, metrics, cov_matrix)
         active_weights = {k: v for k, v in weights.items() if v > 0}
         logger.info(f"Optimal weights: {active_weights}")
 
@@ -598,6 +779,13 @@ class PortfolioOptimizer:
 
         # Step 7: Group correlation analysis
         group_analysis = self.analyze_group_correlations(corr_matrix)
+
+        # Step 8: Correlation-based cluster analysis
+        cluster_threshold = self.config.get("portfolio_optimizer", {}).get(
+            "cluster_threshold", 0.7
+        )
+        clusters = cluster_strategies(corr_matrix, threshold=cluster_threshold)
+        logger.info(f"Strategy clusters (threshold={cluster_threshold}): {clusters}")
 
         # Build per-strategy summary
         per_strategy = {}
@@ -621,6 +809,7 @@ class PortfolioOptimizer:
             "active_weights": active_weights,
             "portfolio_metrics": portfolio_metrics,
             "group_analysis": group_analysis,
+            "clusters": clusters,
             "per_strategy": per_strategy,
             "n_strategies_analyzed": len(returns_df.columns),
             "n_strategies_active": len(active_weights),
