@@ -421,17 +421,30 @@ class LiveExecutor:
             _journal_entry("order_blocked", result)
             return result
 
+        # Determine effective order price from entry refinement (if present)
+        _refined_order_type = entry.get("order_type", "")        # "limit" | "" | "market"
+        _refined_limit_price = entry.get("limit_price")           # set by entry_optimizer
+        if _refined_order_type == "limit" and _refined_limit_price:
+            _order_price = round(float(_refined_limit_price), 2)
+            logger.info(
+                "Limit order (refined): %s @ %.2f (DAY)", ticker, _order_price,
+            )
+        else:
+            _order_price = round(price, 2)   # original entry_price
+
         if self.is_dry_run:
             result = {
-                "ticker": ticker, "side": "BUY", "qty": qty, "price": price,
+                "ticker": ticker, "side": "BUY", "qty": qty, "price": _order_price,
                 "strategy": strategy, "confidence": confidence,
                 "stop_price": stop_price,
-                "position_value": round(price * qty, 2),
-                "risk_amount": round(abs(price - stop_price) * qty, 2),
+                "position_value": round(_order_price * qty, 2),
+                "risk_amount": round(abs(_order_price - stop_price) * qty, 2),
                 "success": True, "dry_run": True,
+                "order_type": "LIMIT",
+                "entry_refinement": entry.get("entry_refinement", ""),
                 "message": "DRY RUN — order would be placed",
             }
-            logger.info("DRY RUN BUY: %s %d x $%.2f", ticker, qty, price)
+            logger.info("DRY RUN BUY: %s %d x $%.2f", ticker, qty, _order_price)
             _journal_entry("dry_run_entry", result)
             self._daily_order_count += 1
             return result
@@ -453,23 +466,23 @@ class LiveExecutor:
         except Exception:
             pass  # Never let spread capture block execution
 
-        # Live execution — LIMIT order to control entry price
+        # Live execution — LIMIT order at (refined) entry price
         _submit_time = datetime.now().isoformat()
         order_result = self._broker.place_order(
             ticker=ticker,
             side=OrderSide.BUY,
             qty=qty,
-            price=round(price, 2),
+            price=_order_price,
             order_type=OrderType.LIMIT,
             remark=f"atlas_{strategy}_{trade_date}"[:64],
         )
 
         result = {
-            "ticker": ticker, "side": "BUY", "qty": qty, "price": price,
+            "ticker": ticker, "side": "BUY", "qty": qty, "price": _order_price,
             "strategy": strategy, "confidence": confidence,
             "stop_price": stop_price,
-            "position_value": round(price * qty, 2),
-            "risk_amount": round(abs(price - stop_price) * qty, 2),
+            "position_value": round(_order_price * qty, 2),
+            "risk_amount": round(abs(_order_price - stop_price) * qty, 2),
             "success": order_result.success,
             "order_id": order_result.order_id,
             "status": order_result.status.value,
@@ -480,8 +493,10 @@ class LiveExecutor:
             "submit_time": _submit_time,
             "fill_time": order_result.raw.get("filled_at", ""),
             "submitted_at": order_result.raw.get("submitted_at", ""),
-            "planned_price": price,
-            "slippage_bps": round((order_result.fill_price - price) / price * 10000, 1) if order_result.fill_price > 0 and price > 0 else None,
+            "planned_price": price,         # original signal entry price
+            "refined_price": _order_price,  # actual price used (may differ from planned)
+            "entry_refinement": entry.get("entry_refinement", ""),
+            "slippage_bps": round((order_result.fill_price - _order_price) / _order_price * 10000, 1) if order_result.fill_price > 0 and _order_price > 0 else None,
             "order_type": "LIMIT",
             "spread": spread_info,
         }
@@ -1203,6 +1218,84 @@ class LiveExecutor:
         }
 
 
+
+    # ── Limit order lifecycle ──────────────────────────────────
+
+    def cancel_unfilled_limits(self, cutoff_hour: int = 12) -> list:
+        """Cancel unfilled limit BUY orders after cutoff hour (default noon ET).
+
+        Called by a midday cron job to avoid stale open-limit orders sitting
+        on the exchange through the close.  Only BUY limit orders are cancelled;
+        protective STOP/TRAILING_STOP SELL orders are left untouched.
+
+        Args:
+            cutoff_hour: Hour in ET (0-23) after which unfilled limits are
+                         cancelled.  Default is 12 (noon ET).
+
+        Returns:
+            List of cancellation result dicts, one per attempted cancel.
+        """
+        if not self._connected or not self._broker:
+            logger.warning("cancel_unfilled_limits: not connected")
+            return []
+
+        # Determine current ET time without requiring pytz
+        from datetime import timezone, timedelta
+        _et_offset = timedelta(hours=-4)   # approximate EDT (UTC-4); -5 in EST
+        _now_et = datetime.now(tz=timezone(_et_offset))
+        current_et_hour = _now_et.hour
+
+        if current_et_hour < cutoff_hour:
+            logger.info(
+                "cancel_unfilled_limits: ET hour %d < cutoff %d — skipping",
+                current_et_hour, cutoff_hour,
+            )
+            return []
+
+        open_orders = self._broker.get_open_orders()
+        cancelled = []
+
+        for order in open_orders:
+            # Only cancel BUY-side orders (not protective STOP SELL orders)
+            if order.side != OrderSide.BUY:
+                continue
+            # Only cancel non-terminal orders
+            if order.status.value in ("FILLED", "CANCELLED", "FAILED", "CANCELLED_ALL"):
+                continue
+
+            cancel_result = self._broker.cancel_order(order.order_id)
+            entry = {
+                "ticker":       order.ticker,
+                "order_id":     order.order_id,
+                "success":      cancel_result.success,
+                "message":      cancel_result.message,
+                "reason":       "unfilled_limit_cutoff",
+                "cutoff_hour":  cutoff_hour,
+                "et_hour":      current_et_hour,
+                "cancelled_at": _now_et.isoformat(),
+            }
+            cancelled.append(entry)
+
+            if cancel_result.success:
+                logger.info(
+                    "Cancelled unfilled limit BUY: %s order_id=%s",
+                    order.ticker, order.order_id,
+                )
+            else:
+                logger.warning(
+                    "Failed to cancel limit order %s for %s: %s",
+                    order.order_id, order.ticker, cancel_result.message,
+                )
+            _journal_entry("limit_cancelled_cutoff", entry)
+
+        logger.info(
+            "cancel_unfilled_limits: cancelled %d/%d orders (ET hour %d, cutoff %d)",
+            sum(1 for c in cancelled if c["success"]),
+            len(cancelled),
+            current_et_hour,
+            cutoff_hour,
+        )
+        return cancelled
 
     # ── Volatility gate ────────────────────────────────────────
 

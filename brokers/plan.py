@@ -136,6 +136,28 @@ class TradePlanGenerator:
             except Exception as exc:
                 logger.debug("Event calendar integration skipped: %s", exc)
 
+        # Entry refinement (if enabled) — refine entry prices using intraday bars
+        if self.config.get("intraday", {}).get("entry_refinement", False):
+            try:
+                from data.intraday import download_intraday_bars
+                from strategies.entry_optimizer import refine_entry_prices
+
+                plan_tickers = [e["ticker"] for e in proposed_entries]
+                if plan_tickers:
+                    intraday = download_intraday_bars(plan_tickers, config=self.config)
+                    refinements = refine_entry_prices(proposed_entries, intraday, self.config)
+                    for entry, ref in zip(proposed_entries, refinements):
+                        entry["order_type"] = ref.order_type
+                        entry["limit_price"] = ref.limit_price
+                        entry["entry_refinement"] = ref.reason
+                        if ref.order_type == "limit" and ref.limit_price:
+                            logger.info(
+                                "Entry refined: %s limit @ %.2f (%s)",
+                                ref.ticker, ref.limit_price, ref.reason,
+                            )
+            except Exception as e:
+                logger.warning("Entry refinement failed, using market orders: %s", e)
+
         # Portfolio state after proposed trades
         proposed_cost = sum(e["entry_price"] * e["position_size"] for e in proposed_entries)
         proposed_risk = sum(e["risk_amount"] for e in proposed_entries)
