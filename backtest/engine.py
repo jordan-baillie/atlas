@@ -45,20 +45,7 @@ from utils.dynamic_sizing import DynamicSizer
 from backtest.vol_scaling import VolatilityScaler
 from utils.allocation import build_allocation_pool, StrategyAllocationPool
 from data.macro import download_macro_data, compute_macro_signals
-from backtest.filters import (
-    check_vix_gate,
-    check_fred_macro,
-    check_turn_of_month,
-    check_macro_regime,
-)
-from backtest.enrichment import (
-    apply_macro_confidence,
-    apply_tom_confidence,
-    inject_breadth_features,
-    apply_breadth_confidence,
-    inject_rs_features,
-    apply_rs_confidence,
-)
+from backtest.pipeline import DayContext, run_entry_gates, enrich_signals
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +251,17 @@ class BacktestEngine:
         except (ImportError, KeyError):
             self._risk_free_rate = 0.04
 
+        # FIX-4: EventCalendar integration
+        if self.config.get("event_calendar", {}).get("enabled", False):
+            try:
+                from data.events import EventCalendar
+                self.event_calendar = EventCalendar()
+            except Exception as e:
+                logger.warning(f"EventCalendar init failed: {e} — continuing without event calendar")
+                self.event_calendar = None
+        else:
+            self.event_calendar = None
+
         logger.info(
             f"BacktestEngine initialized: train={self.train_window}, "
             f"test={self.test_window}, step={self.step_days}, "
@@ -312,7 +310,11 @@ class BacktestEngine:
         today: pd.Timestamp, exit_reason: str,
     ) -> Dict[str, Any]:
         """Build a closed-trade record dict from a position and fill price."""
-        gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
+        # FIX-1: Direction-aware P&L — short profits when price falls
+        if pos.get("direction", "long") == "short":
+            gross_pnl = (pos["fill_price"] - fill_price) * pos["shares"]
+        else:
+            gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
         exit_commission = self._calc_commission(pos["shares"] * fill_price)
         total_commission = pos["entry_commission"] + exit_commission
         net_pnl = gross_pnl - total_commission
@@ -320,7 +322,7 @@ class BacktestEngine:
         trade = {
             "ticker": pos["ticker"],
             "strategy": pos["strategy"],
-            "direction": "long",
+            "direction": pos.get("direction", "long"),  # FIX-1: preserve actual direction
             "entry_date": pos["entry_date"],
             "entry_price": pos["fill_price"],
             "exit_date": today,
@@ -394,16 +396,35 @@ class BacktestEngine:
         self, today: pd.Timestamp, data: Dict[str, pd.DataFrame],
         open_positions: List[Dict[str, Any]],
     ) -> None:
-        """Update MAE/MFE excursions for all open positions."""
+        """Update MAE/MFE excursions for all open positions.
+
+        MAE (Maximum Adverse Excursion) stored as a negative fraction (worst loss).
+        MFE (Maximum Favorable Excursion) stored as a positive fraction (best gain).
+
+        FIX-1: Direction-aware — for shorts, price rising is adverse (MAE)
+        and price falling is favorable (MFE).
+        """
         for pos in open_positions:
             ticker = pos["ticker"]
             today_df = data.get(ticker)
             if today_df is None or today not in today_df.index:
                 continue
             fill_price = pos["fill_price"]
-            adverse = (today_df.loc[today, "low"] - fill_price) / fill_price
+            if fill_price <= 0:
+                continue
+            bar = today_df.loc[today]
+            # FIX-1: direction-aware adverse/favorable excursions
+            if pos.get("direction", "long") == "short":
+                # Short: adverse = price rose above entry (high > fill), stored negative
+                adverse = (fill_price - bar["high"]) / fill_price
+                # Short: favorable = price fell below entry (low < fill), stored positive
+                favorable = (fill_price - bar["low"]) / fill_price
+            else:
+                # Long: adverse = price fell below entry (low < fill), stored negative
+                adverse = (bar["low"] - fill_price) / fill_price
+                # Long: favorable = price rose above entry (high > fill), stored positive
+                favorable = (bar["high"] - fill_price) / fill_price
             pos["mae"] = min(pos.get("mae", 0.0), adverse)
-            favorable = (today_df.loc[today, "high"] - fill_price) / fill_price
             pos["mfe"] = max(pos.get("mfe", 0.0), favorable)
 
     def _process_max_loss_exits(
@@ -426,7 +447,11 @@ class BacktestEngine:
             if _yest is None or _yest not in df.index:
                 continue
             yest_close = df.loc[_yest, "close"]
-            unrealized = (yest_close - pos["fill_price"]) * pos["shares"]
+            # FIX-1: direction-aware unrealized P&L
+            if pos.get("direction", "long") == "short":
+                unrealized = (pos["fill_price"] - yest_close) * pos["shares"]
+            else:
+                unrealized = (yest_close - pos["fill_price"]) * pos["shares"]
             if unrealized <= -abs(self.max_loss_per_trade):
                 exits.append((pi, df.loc[today, "close"]))
                 logger.debug(
@@ -436,7 +461,9 @@ class BacktestEngine:
 
         for pi, exit_price in reversed(exits):
             pos = open_positions[pi]
-            fill = self._apply_slippage(exit_price, "sell")
+            # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
+            _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
+            fill = self._apply_slippage(exit_price, _exit_side)
             trade = self._build_trade_record(pos, fill, today, "max_loss_cap")
             closed_trades.append(trade)
             equity += trade["pnl"]
@@ -462,10 +489,12 @@ class BacktestEngine:
             if df is None or today not in df.index:
                 continue
             today_high = df.loc[today, "high"]
+            today_low = df.loc[today, "low"]
             today_close = df.loc[today, "close"]
             fill = pos["fill_price"]
             yest_close = (df.loc[_yest, "close"]
                           if _yest is not None and _yest in df.index else None)
+            direction = pos.get("direction", "long")
 
             # Get ATR
             atr = pos.get("features", {}).get("atr", 0.0) or 0.0
@@ -477,32 +506,64 @@ class BacktestEngine:
                 if atr <= 0:
                     continue
 
-            # Check activation
             trail_active = pos.get("trailing_stop_active", False)
-            if not trail_active and (today_high - fill) / fill >= self.trail_activation_pct:
-                trail_active = True
-                pos["trailing_stop_active"] = True
-                pos["highest_price"] = today_high
-                pos["trailing_stop_price"] = today_high - self.trail_atr_multiplier * atr
-                logger.debug(f"TRAIL ACTIVATED {ticker}: high={today_high:.3f}, "
-                             f"trail_stop={pos['trailing_stop_price']:.3f}")
 
-            if trail_active:
-                new_high = max(pos.get("highest_price", today_high), today_high)
-                pos["highest_price"] = new_high
-                new_trail = new_high - self.trail_atr_multiplier * atr
-                pos["trailing_stop_price"] = max(
-                    pos.get("trailing_stop_price", pos["stop_price"]),
-                    new_trail, pos["stop_price"],
-                )
-                if yest_close is not None and yest_close <= pos["trailing_stop_price"]:
-                    trail_exits.append((pi, today_close))
-                    logger.debug(f"TRAIL EXIT {ticker}: yest_close={yest_close:.3f} "
-                                 f"<= trail_stop={pos['trailing_stop_price']:.3f}")
+            if direction == "short":
+                # FIX-1: Short trailing stop — track LOWEST price, trigger on RISE
+                # Activation: price dropped below entry by activation_pct
+                if not trail_active and fill > 0 and (fill - today_low) / fill >= self.trail_activation_pct:
+                    trail_active = True
+                    pos["trailing_stop_active"] = True
+                    pos["lowest_price"] = today_low
+                    pos["trailing_stop_price"] = today_low + self.trail_atr_multiplier * atr
+                    logger.debug(f"TRAIL ACTIVATED (short) {ticker}: low={today_low:.3f}, "
+                                 f"trail_stop={pos['trailing_stop_price']:.3f}")
+
+                if trail_active:
+                    new_low = min(pos.get("lowest_price", today_low), today_low)
+                    pos["lowest_price"] = new_low
+                    # Trail stop moves DOWN as price falls (tracks ATR above lowest)
+                    new_trail = new_low + self.trail_atr_multiplier * atr
+                    # For shorts, trailing stop is a ceiling — take the LOWER of existing and new
+                    # (stop moves down with price, protecting profit)
+                    pos["trailing_stop_price"] = min(
+                        pos.get("trailing_stop_price", pos["stop_price"]),
+                        new_trail, pos["stop_price"],
+                    )
+                    # Trigger when yesterday's close RISES above the trailing stop ceiling
+                    if yest_close is not None and yest_close >= pos["trailing_stop_price"]:
+                        trail_exits.append((pi, today_close))
+                        logger.debug(f"TRAIL EXIT (short) {ticker}: yest_close={yest_close:.3f} "
+                                     f">= trail_stop={pos['trailing_stop_price']:.3f}")
+            else:
+                # Existing long logic — unchanged
+                # Check activation
+                if not trail_active and (today_high - fill) / fill >= self.trail_activation_pct:
+                    trail_active = True
+                    pos["trailing_stop_active"] = True
+                    pos["highest_price"] = today_high
+                    pos["trailing_stop_price"] = today_high - self.trail_atr_multiplier * atr
+                    logger.debug(f"TRAIL ACTIVATED {ticker}: high={today_high:.3f}, "
+                                 f"trail_stop={pos['trailing_stop_price']:.3f}")
+
+                if trail_active:
+                    new_high = max(pos.get("highest_price", today_high), today_high)
+                    pos["highest_price"] = new_high
+                    new_trail = new_high - self.trail_atr_multiplier * atr
+                    pos["trailing_stop_price"] = max(
+                        pos.get("trailing_stop_price", pos["stop_price"]),
+                        new_trail, pos["stop_price"],
+                    )
+                    if yest_close is not None and yest_close <= pos["trailing_stop_price"]:
+                        trail_exits.append((pi, today_close))
+                        logger.debug(f"TRAIL EXIT {ticker}: yest_close={yest_close:.3f} "
+                                     f"<= trail_stop={pos['trailing_stop_price']:.3f}")
 
         for pi, exit_price in reversed(trail_exits):
             pos = open_positions[pi]
-            fill = self._apply_slippage(exit_price, "sell")
+            # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
+            _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
+            fill = self._apply_slippage(exit_price, _exit_side)
             # Override stop_price to show trailing stop value
             saved_stop = pos.get("stop_price", 0.0)
             pos["stop_price"] = pos.get("trailing_stop_price", saved_stop)
@@ -654,29 +715,27 @@ class BacktestEngine:
         if day_idx > 0 and len(open_positions) < self.max_positions:  # regime_scale applied in sizing
             yesterday = trading_dates[day_idx - 1]
 
-            # ── Entry gate filters (extracted to backtest.filters) ────────────
-            vix_blocked, _, vix_meta = check_vix_gate(
-                vix_series, yesterday, self.vix_max_entry
+            # ── FIX-3: Entry gate filters via pipeline orchestrator ───────────
+            ctx = DayContext(
+                today=today,
+                yesterday=yesterday,
+                day_idx=day_idx,
+                equity=equity,
+                open_positions=open_positions,
+                closed_trades=closed_trades,
+                data=data,
+                trading_dates=trading_dates,   # FIX-3: pass authoritative calendar
+                vix_series=vix_series,
+                breadth_series=breadth_series,
+                rs_data=rs_data,
+                macro_signals=macro_signals,
+                fred_yield_curve=fred_yield_curve,
+                fred_claims=fred_claims,
+                equity_history=equity_history,
+                regime=regime,
+                regime_scale=regime_scale,
             )
-            fred_blocked, _, _ = check_fred_macro(
-                fred_yield_curve, fred_claims, yesterday,
-                self.config.get("fred_filter", {}),
-            )
-            _tom_cfg = {
-                "mode": self.tom_mode,
-                "days_before_month_end": self.tom_days_before_end,
-                "days_after_month_start": self.tom_days_after_start,
-                "confidence_boost": self.tom_confidence_boost,
-            }
-            tom_blocked, _, tom_meta = check_turn_of_month(today, trading_dates, _tom_cfg)
-            tom_in_window = tom_meta.get("tom_in_window", False)
-
-            macro_blocked, _, macro_meta = check_macro_regime(
-                macro_signals, yesterday, today,
-                self.config.get("macro_regime", {}),
-            )
-            macro_scale_today = macro_meta.get("macro_scale", 1.0)
-            macro_boost_today = macro_meta.get("macro_boost", 0.0)
+            run_entry_gates(ctx, self.config)
 
             # Build data windows up to yesterday for signal generation
             signal_data = {}
@@ -688,29 +747,23 @@ class BacktestEngine:
             for strategy in strategies:
                 if len(open_positions) >= self.max_positions:
                     break
-                if vix_blocked or fred_blocked or tom_blocked or macro_blocked:
+                if ctx.any_gate_blocked:
                     break
 
                 signals = strategy.generate_signals(
                     signal_data, equity, open_positions
                 )
 
-                # ── Signal enrichment (extracted to backtest.enrichment) ──────
-                # Macro regime features: inject into signals and apply adjustments
-                apply_macro_confidence(
-                    signals, macro_signals, yesterday, today,
-                    self.config.get("macro_regime", {}), macro_boost_today,
-                )
-                # TOM boost mode: add confidence during TOM window + tag all signals
-                apply_tom_confidence(signals, _tom_cfg, tom_in_window)
-                # Phase 7C: Inject market breadth features (info-only)
-                inject_breadth_features(signals, breadth_series, today, regime, regime_scale)
-                # Phase 7C: Apply breadth-based confidence modifiers
-                apply_breadth_confidence(signals, self.config.get("strategies", {}))
-                # Phase 7B: Inject relative strength features (info-only)
-                inject_rs_features(signals, rs_data, yesterday)
-                # Phase 7B: Apply RS-based confidence modifiers
-                apply_rs_confidence(signals, self.config.get("strategies", {}))
+                # ── FIX-3: Signal enrichment via pipeline orchestrator ────────
+                enrich_signals(signals, ctx, self.config)
+
+                # FIX-4: EventCalendar feature injection
+                if self.event_calendar is not None:
+                    try:
+                        from backtest.enrichment import inject_event_features
+                        inject_event_features(signals, today, self.event_calendar)
+                    except ImportError:
+                        pass  # Builder 3 creates inject_event_features; safe to skip until then
 
                 for signal in signals:
                     if len(open_positions) >= self.max_positions:
@@ -767,7 +820,11 @@ class BacktestEngine:
                         continue
 
                     today_open = today_df.loc[today, "open"]
-                    fill_price = self._apply_slippage(today_open, "buy")
+                    # FIX-1: direction-aware entry slippage
+                    # Long entry (buy): slippage raises price (adverse)
+                    # Short entry (sell): slippage lowers price (adverse)
+                    _entry_side = "buy" if signal.direction == "long" else "sell"
+                    fill_price = self._apply_slippage(today_open, _entry_side)
 
                     if fill_price <= 0:
                         continue
@@ -777,10 +834,21 @@ class BacktestEngine:
                     price_ratio = fill_price / signal.entry_price
                     adjusted_stop = signal.stop_price * price_ratio
 
-                    if fill_price <= adjusted_stop:
-                        continue  # stop would be above entry
+                    # FIX-1: direction-aware stop check
+                    # Long: stop below entry — skip if fill already below stop
+                    # Short: stop above entry — skip if fill already above stop
+                    if signal.direction == "short":
+                        if fill_price >= adjusted_stop:
+                            continue  # stop already hit for short
+                    else:
+                        if fill_price <= adjusted_stop:
+                            continue  # stop would be above entry for long
 
-                    risk_per_share = fill_price - adjusted_stop
+                    # FIX-1: direction-aware risk-per-share (always positive)
+                    if signal.direction == "short":
+                        risk_per_share = adjusted_stop - fill_price
+                    else:
+                        risk_per_share = fill_price - adjusted_stop
                     # Phase 8D: Dynamic position sizing
                     _atr = signal.features.get('atr', 0.0) if hasattr(signal, 'features') and signal.features else 0.0
                     _risk_pct = self.dynamic_sizer.calculate_risk_pct(
@@ -790,8 +858,9 @@ class BacktestEngine:
                         equity_history=equity_history,
                     )
                     # Phase 3: regime scaling + macro regime scaling (task #77)
+                    # FIX-3: use ctx.macro_scale from pipeline gate results
                     _effective_macro_scale = (
-                        macro_scale_today
+                        ctx.macro_scale
                         if self.macro_regime_enabled and self.macro_mode == "sizing"
                         else 1.0
                     )
@@ -865,7 +934,7 @@ class BacktestEngine:
                     position = {
                         "ticker": ticker,
                         "strategy": signal.strategy,
-                        "direction": "long",
+                        "direction": signal.direction,  # FIX-1: preserve actual direction
                         "entry_date": today,
                         "fill_price": round(fill_price, 4),
                         "entry_price": round(fill_price, 4),  # alias for strategy compat
@@ -914,11 +983,17 @@ class BacktestEngine:
             else:
                 close_price = pos["fill_price"]  # fallback
 
-            fill_price = self._apply_slippage(close_price, "sell")
+            # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
+            _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
+            fill_price = self._apply_slippage(close_price, _exit_side)
             exit_value = pos["shares"] * fill_price
             exit_commission = self._calc_commission(exit_value)
 
-            gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
+            # FIX-1: Direction-aware P&L
+            if pos.get("direction", "long") == "short":
+                gross_pnl = (pos["fill_price"] - fill_price) * pos["shares"]
+            else:
+                gross_pnl = (fill_price - pos["fill_price"]) * pos["shares"]
             total_commission = pos["entry_commission"] + exit_commission
             net_pnl = gross_pnl - total_commission
             hold_days = (close_date - pd.Timestamp(pos["entry_date"])).days
@@ -926,7 +1001,7 @@ class BacktestEngine:
             trade = {
                 "ticker": ticker,
                 "strategy": pos["strategy"],
-                "direction": "long",
+                "direction": pos.get("direction", "long"),  # FIX-1: preserve actual direction
                 "entry_date": pos["entry_date"],
                 "entry_price": pos["fill_price"],
                 "exit_date": close_date,
