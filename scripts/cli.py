@@ -1008,6 +1008,24 @@ def cmd_calibrate(args):
     print("Report saved to %s" % report_path)
 
 
+def cmd_reconcile(args):
+    """Run broker-local state reconciliation."""
+    import subprocess
+
+    cmd = [
+        sys.executable,
+        str(PROJECT_ROOT / "scripts" / "reconcile.py"),
+        "--market",
+        args.market,
+    ]
+    if args.dry_run:
+        cmd.append("--dry-run")
+    if args.auto_fix:
+        cmd.append("--auto-fix")
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
 def main():
     parser = argparse.ArgumentParser(prog="atlas", description="Atlas Multi-Market Swing Trading Lab")
     # Global --market flag
@@ -1045,6 +1063,11 @@ def main():
     subparsers.add_parser("market-check", help="Check market state and trading calendar")
     subparsers.add_parser("schedule", help="Show recommended cron schedule for all markets")
     subparsers.add_parser("calibrate", help="Run confidence score calibration analysis")
+    p_reconcile = subparsers.add_parser("reconcile", help="Reconcile broker vs local state")
+    p_reconcile.add_argument("-m", "--market", default=DEFAULT_MARKET)
+    p_reconcile.add_argument("--dry-run", action="store_true", help="Report only, no fixes or Telegram")
+    p_reconcile.add_argument("--auto-fix", action="store_true", help="Apply automatic fixes")
+    p_reconcile.set_defaults(func=cmd_reconcile)
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1062,6 +1085,7 @@ def main():
         "market-check": cmd_market_check,
         "schedule": cmd_schedule,
         "calibrate": cmd_calibrate,
+        "reconcile": cmd_reconcile,
     }
     cmd_func = commands.get(args.command)
     if cmd_func:
