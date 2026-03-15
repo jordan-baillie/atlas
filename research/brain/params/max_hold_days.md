@@ -4,7 +4,10 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
+<<<<<<< Updated upstream
 | 2026-03-14 10:09 | williams_percent_r | 7 → 5 | ❌ discard | -0.1369 | 0.0599 |
+=======
+>>>>>>> Stashed changes
 | 2026-03-14 10:13 | lower_band_reversion | None → 5 | ❌ discard | -0.0220 | 0.3746 |
 | 2026-03-14 10:13 | lower_band_reversion | None → 10 | ❌ discard | +0.0037 | 0.4003 |
 | 2026-03-14 10:13 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3966 |
@@ -51,6 +54,13 @@
 | 2026-03-15 06:26 | donchian_breakout | 30 → 15 | ❌ discard | -0.3418 | 0.0231 |
 | 2026-03-15 06:26 | donchian_breakout | 30 → 20 | ❌ discard | -0.0648 | 0.3001 |
 | 2026-03-15 06:26 | donchian_breakout | 30 → 10 | ❌ discard | -0.2453 | 0.1196 |
+<<<<<<< Updated upstream
 | 2026-03-15 07:00 | williams_percent_r | 7 → 10 | ❌ discard | -1.8878 | -1.9185 |
 | 2026-03-15 07:00 | williams_percent_r | 7 → 5 | ❌ discard | -1.7523 | -1.7830 |
 | 2026-03-15 07:00 | williams_percent_r | 7 → 15 | ❌ discard | -1.4741 | -1.5048 |
+=======
+| 2026-03-15 06:29 | stochastic_oversold | None → 5 | ❌ discard | +0.0017 | 0.4008 |
+| 2026-03-15 06:29 | stochastic_oversold | None → 15 | ❌ discard | +0.0000 | 0.3991 |
+| 2026-03-15 06:29 | stochastic_oversold | None → 10 | ❌ discard | +0.0000 | 0.3991 |
+| 2026-03-15 06:29 | stochastic_oversold | None → 7 | ❌ discard | +0.0002 | 0.3993 |
+>>>>>>> Stashed changes
