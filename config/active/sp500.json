@@ -227,6 +227,8 @@
   },
   "data": {
     "source": "yfinance",
+    "source_priority": ["alpaca", "yfinance"],
+    "fallback_enabled": true,
     "history_years": 7,
     "cache_dir": "data/cache",
     "raw_dir": "data/raw",

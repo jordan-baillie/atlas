@@ -49,6 +49,11 @@ CACHE_MAX_AGE_HOURS = 24
 # Default market
 DEFAULT_MARKET = "asx"
 
+# Tickers that MUST use yfinance — not available or unreliable on Alpaca.
+# Includes index tickers (^VIX, ^GSPC), futures (GC=F, HG=F), and broad ETFs
+# that Alpaca's IEX feed doesn't carry consistently.
+_YFINANCE_ONLY = {"^VIX", "^TNX", "^IRX", "^AXJO", "GC=F", "HG=F", "SPY", "^GSPC"}
+
 
 def _market_cache_dir(market_id: Optional[str] = None) -> Path:
     """Return the cache directory for a market. Creates it if needed."""
@@ -305,45 +310,25 @@ def _apply_split_adjustments(df: pd.DataFrame, splits: pd.Series) -> pd.DataFram
     return df
 
 
-def _fetch_ohlcv(
+def _download_via_yfinance(
     ticker: str,
     start_str: str,
     end_str: str,
-    market_id: Optional[str] = None,
 ) -> pd.DataFrame:
-    """Download OHLCV from the best available source and return cleaned data.
+    """Download OHLCV for a single ticker via yfinance.
 
-    For SP500: tries Alpaca ``get_historical_bars()`` first; falls back to
-    yfinance if Alpaca returns empty or is unavailable.
-    For all other markets: uses yfinance directly.
+    Applies split adjustments (not dividend adjustments) to historical prices.
 
     Args:
-        ticker:    Fully-formatted ticker (e.g. 'AAPL' for sp500, 'BHP.AX' for asx).
+        ticker:    Fully-formatted ticker symbol (e.g. 'AAPL', 'BHP.AX').
         start_str: Inclusive start date 'YYYY-MM-DD'.
-        end_str:   Inclusive end date   'YYYY-MM-DD' (yfinance +1-day offset handled internally).
-        market_id: Market identifier (e.g. 'sp500', 'asx').
+        end_str:   Inclusive end date   'YYYY-MM-DD'.
 
     Returns:
-        Cleaned DataFrame (same format as ``_clean_ohlcv``), or empty DataFrame.
+        Cleaned split-adjusted DataFrame, or empty DataFrame on failure.
     """
-    if (market_id or "").lower() == "sp500":
-        try:
-            from brokers.alpaca.market_data import get_historical_bars as _alpaca_bars
-            result = _alpaca_bars(ticker, start=start_str, end=end_str)
-            df = result.get(ticker, pd.DataFrame())
-            if not df.empty:
-                logger.debug(f"{ticker}: Alpaca historical bars ({len(df)} rows)")
-                # Drop adj_close — canonical format is open, high, low, close, volume, ticker
-                if "adj_close" in df.columns:
-                    df = df.drop(columns=["adj_close"])
-                return df  # already in Atlas format from get_historical_bars
-            logger.debug(f"{ticker}: Alpaca returned empty — falling back to yfinance")
-        except Exception as e:
-            logger.debug(f"{ticker}: Alpaca fetch failed ({e}) — falling back to yfinance")
-
-    # yfinance path (all non-sp500 markets, or sp500 fallback)
     if not YF_AVAILABLE:
-        logger.warning(f"{ticker}: yfinance not available and Alpaca returned no data")
+        logger.warning(f"{ticker}: yfinance not available")
         return pd.DataFrame()
 
     # yfinance end is exclusive — add 1 day so end_str is included
@@ -376,6 +361,94 @@ def _fetch_ohlcv(
         logger.error(f"{ticker}: yfinance download failed: {e}")
 
     return pd.DataFrame()
+
+
+def _download_via_alpaca(
+    tickers: List[str],
+    start_date: str,
+    end_date: str,
+    config: Optional[dict] = None,  # reserved for future source_priority reads
+) -> Dict[str, pd.DataFrame]:
+    """Download OHLCV via Alpaca API.
+
+    Uses the AlpacaMarketData singleton (reads credentials from
+    ``~/.atlas-secrets.json``).  Returns an empty dict if Alpaca is
+    unavailable or credentials are missing — callers should fall back to
+    yfinance in that case.
+
+    Args:
+        tickers:    List of Atlas-format US tickers.
+        start_date: Start date 'YYYY-MM-DD'.
+        end_date:   End date   'YYYY-MM-DD'.
+        config:     Optional config dict (reserved; not used yet).
+
+    Returns:
+        Dict of ticker -> DataFrame (same schema as yfinance output).
+        Empty dict on any failure.
+    """
+    try:
+        from brokers.alpaca.market_data import get_alpaca_data_client
+        client = get_alpaca_data_client()
+        if client is None:
+            logger.debug("_download_via_alpaca: no Alpaca client available")
+            return {}
+        result = client.download_universe_bars(tickers, start_date, end_date)
+        logger.debug(
+            "_download_via_alpaca: got %d/%d tickers",
+            len(result), len(tickers),
+        )
+        return result
+    except Exception as e:
+        logger.warning("_download_via_alpaca failed: %s", e)
+        return {}
+
+
+def _fetch_ohlcv(
+    ticker: str,
+    start_str: str,
+    end_str: str,
+    market_id: Optional[str] = None,
+) -> pd.DataFrame:
+    """Download OHLCV from the best available source and return cleaned data.
+
+    Routing rules:
+    - Tickers in ``_YFINANCE_ONLY`` always go to yfinance (index tickers,
+      futures, and ETFs not available on Alpaca).
+    - SP500 market: Alpaca-primary with yfinance fallback.
+    - All other markets (ASX, etc.): yfinance directly.
+
+    Args:
+        ticker:    Fully-formatted ticker (e.g. 'AAPL' for sp500, 'BHP.AX' for asx).
+        start_str: Inclusive start date 'YYYY-MM-DD'.
+        end_str:   Inclusive end date   'YYYY-MM-DD'.
+        market_id: Market identifier (e.g. 'sp500', 'asx').
+
+    Returns:
+        Cleaned DataFrame (same format as ``_clean_ohlcv``), or empty DataFrame.
+    """
+    # Force yfinance for index/commodity tickers not available on Alpaca
+    if ticker in _YFINANCE_ONLY:
+        logger.debug(f"{ticker}: in _YFINANCE_ONLY — using yfinance directly")
+        return _download_via_yfinance(ticker, start_str, end_str)
+
+    if (market_id or "").lower() == "sp500":
+        # Alpaca-primary path for US equities
+        try:
+            from brokers.alpaca.market_data import get_historical_bars as _alpaca_bars
+            result = _alpaca_bars(ticker, start=start_str, end=end_str)
+            df = result.get(ticker, pd.DataFrame())
+            if not df.empty:
+                logger.debug(f"{ticker}: Alpaca historical bars ({len(df)} rows)")
+                # Drop adj_close — canonical format is open, high, low, close, volume, ticker
+                if "adj_close" in df.columns:
+                    df = df.drop(columns=["adj_close"])
+                return df  # already in Atlas format from get_historical_bars
+            logger.debug(f"{ticker}: Alpaca returned empty — falling back to yfinance")
+        except Exception as e:
+            logger.debug(f"{ticker}: Alpaca fetch failed ({e}) — falling back to yfinance")
+
+    # yfinance path (all non-sp500 markets, or sp500 fallback)
+    return _download_via_yfinance(ticker, start_str, end_str)
 
 
 def download_ticker(

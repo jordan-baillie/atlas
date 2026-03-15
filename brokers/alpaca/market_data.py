@@ -18,8 +18,9 @@ All tickers use Atlas format (bare US symbols: AAPL, MSFT, etc.).
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date as _date_type
-from typing import Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -275,6 +276,148 @@ class AlpacaMarketData:
                     prices[ticker] = mid
 
         return prices
+
+    # ── Bulk Historical Download ───────────────────────────────
+
+    def download_universe_bars(
+        self,
+        tickers: List[str],
+        start_date: str,
+        end_date: str,
+        timeframe: str = "1Day",
+    ) -> Dict[str, pd.DataFrame]:
+        """Download daily OHLCV bars for multiple tickers via Alpaca's multi-bar endpoint.
+
+        Returns DataFrames with columns: open, high, low, close, volume
+        (matching yfinance output schema for downstream compatibility).
+
+        Handles pagination (Alpaca limits bars per request) and rate limiting
+        (200 requests/minute for free tier).  Tickers are processed in batches
+        of 50 to stay within Alpaca's multi-symbol limits; a short sleep is
+        inserted between batches to respect the free-tier rate limit.
+
+        Args:
+            tickers:    List of Atlas-format US tickers (e.g. ['AAPL', 'MSFT']).
+            start_date: Start date 'YYYY-MM-DD' (inclusive).
+            end_date:   End date   'YYYY-MM-DD' (inclusive).
+            timeframe:  Bar timeframe — "1Day" (default), "1Hour", "1Min".
+
+        Returns:
+            Dict of ticker -> DataFrame with columns [open, high, low, close, volume, ticker]
+            and tz-naive DatetimeIndex named 'date'.  Empty dict if client unavailable.
+        """
+        if not self.is_available or not tickers:
+            return {}
+
+        if not ALPACA_AVAILABLE:
+            return {}
+
+        try:
+            from alpaca.data.timeframe import TimeFrame
+            from alpaca.data.enums import Adjustment
+            from brokers.alpaca.mapper import to_alpaca_list, to_atlas
+        except ImportError as e:
+            logger.warning("download_universe_bars: import error: %s", e)
+            return {}
+
+        _tf_map: Dict[str, object] = {
+            "1Day":    TimeFrame.Day,
+            "1Hour":   TimeFrame.Hour,
+            "1Min":    TimeFrame.Minute,
+            "1Minute": TimeFrame.Minute,
+        }
+        tf = _tf_map.get(timeframe, TimeFrame.Day)
+
+        BATCH_SIZE = 50
+        batches = [tickers[i:i + BATCH_SIZE] for i in range(0, len(tickers), BATCH_SIZE)]
+        result: Dict[str, pd.DataFrame] = {}
+
+        for batch_idx, batch in enumerate(batches):
+            if batch_idx > 0:
+                time.sleep(0.3)  # rate-limit: 200 requests/minute for free tier
+
+            processed = batch_idx * BATCH_SIZE
+            logger.info(
+                "download_universe_bars: batch %d/%d (%d/%d tickers processed)",
+                batch_idx + 1, len(batches), processed, len(tickers),
+            )
+
+            alpaca_symbols = to_alpaca_list(batch)
+
+            # Accumulate bars; inner loop handles next_page_token if present.
+            all_bars: Dict[str, list] = {sym: [] for sym in alpaca_symbols}
+            page_token: Optional[str] = None
+
+            while True:
+                try:
+                    req_kwargs: dict = dict(
+                        symbol_or_symbols=alpaca_symbols,
+                        timeframe=tf,
+                        start=start_date,
+                        end=end_date,
+                        adjustment=Adjustment.ALL,
+                        feed=self._feed,
+                    )
+                    if page_token:
+                        req_kwargs["page_token"] = page_token
+
+                    req = StockBarsRequest(**req_kwargs)
+                    barset = self._client.get_stock_bars(req)
+
+                    barset_data = (
+                        getattr(barset, "data", None)
+                        or (barset if isinstance(barset, dict) else {})
+                    )
+                    for symbol, bars in barset_data.items():
+                        if symbol in all_bars:
+                            all_bars[symbol].extend(bars or [])
+
+                    # Pagination: continue if Alpaca signals more pages
+                    page_token = getattr(barset, "next_page_token", None)
+                    if not page_token:
+                        break
+
+                except Exception as e:
+                    logger.warning(
+                        "download_universe_bars: batch %d fetch error: %s",
+                        batch_idx + 1, e,
+                    )
+                    break
+
+            # Convert accumulated bars to DataFrames
+            for symbol, bars in all_bars.items():
+                atlas_ticker = to_atlas(symbol)
+                if not bars:
+                    continue
+                rows = []
+                for bar in bars:
+                    ts = getattr(bar, "timestamp", None)
+                    if ts is None:
+                        continue
+                    rows.append({
+                        "date":   pd.Timestamp(ts).normalize(),
+                        "open":   float(getattr(bar, "open",   0) or 0),
+                        "high":   float(getattr(bar, "high",   0) or 0),
+                        "low":    float(getattr(bar, "low",    0) or 0),
+                        "close":  float(getattr(bar, "close",  0) or 0),
+                        "volume": int(getattr(bar,   "volume", 0) or 0),
+                        "ticker": atlas_ticker,
+                    })
+                if not rows:
+                    continue
+                df = pd.DataFrame(rows).set_index("date")
+                df.index.name = "date"
+                if df.index.tz is not None:
+                    df.index = df.index.tz_localize(None)
+                # Canonical column order matching yfinance output schema
+                df = df[["open", "high", "low", "close", "volume", "ticker"]]
+                result[atlas_ticker] = df
+
+        logger.info(
+            "download_universe_bars: completed %d/%d tickers",
+            len(result), len(tickers),
+        )
+        return result
 
 
 # ─────────────────────────────────────────────────────────────────
