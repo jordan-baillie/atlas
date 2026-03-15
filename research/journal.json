@@ -6897,5 +6897,28 @@
     "promoted": false,
     "runtime_s": 47.4,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260315_105913",
+    "timestamp": "2026-03-15T00:59:13.616464+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "keltner_reversion",
+    "hypothesis": "atr_stop_mult: None\u21921.5",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": -0.0802,
+      "cagr_pct": 3.8103,
+      "max_drawdown_pct": 2.2565,
+      "total_trades": 55,
+      "profit_factor": 3.626
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: None\u21921.5"
+    ],
+    "promoted": false,
+    "runtime_s": 49.9,
+    "agent_id": "autoresearch"
   }
 ]
