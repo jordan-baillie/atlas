@@ -45,6 +45,20 @@ from utils.dynamic_sizing import DynamicSizer
 from backtest.vol_scaling import VolatilityScaler
 from utils.allocation import build_allocation_pool, StrategyAllocationPool
 from data.macro import download_macro_data, compute_macro_signals
+from backtest.filters import (
+    check_vix_gate,
+    check_fred_macro,
+    check_turn_of_month,
+    check_macro_regime,
+)
+from backtest.enrichment import (
+    apply_macro_confidence,
+    apply_tom_confidence,
+    inject_breadth_features,
+    apply_breadth_confidence,
+    inject_rs_features,
+    apply_rs_confidence,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -640,65 +654,29 @@ class BacktestEngine:
         if day_idx > 0 and len(open_positions) < self.max_positions:  # regime_scale applied in sizing
             yesterday = trading_dates[day_idx - 1]
 
-            # VIX regime filter: skip all entries when VIX is too high
-            vix_blocked = False
-            if vix_series is not None and yesterday in vix_series.index:
-                current_vix = float(vix_series.loc[yesterday])
-                if current_vix > self.vix_max_entry:
-                    vix_blocked = True
+            # ── Entry gate filters (extracted to backtest.filters) ────────────
+            vix_blocked, _, vix_meta = check_vix_gate(
+                vix_series, yesterday, self.vix_max_entry
+            )
+            fred_blocked, _, _ = check_fred_macro(
+                fred_yield_curve, fred_claims, yesterday,
+                self.config.get("fred_filter", {}),
+            )
+            _tom_cfg = {
+                "mode": self.tom_mode,
+                "days_before_month_end": self.tom_days_before_end,
+                "days_after_month_start": self.tom_days_after_start,
+                "confidence_boost": self.tom_confidence_boost,
+            }
+            tom_blocked, _, tom_meta = check_turn_of_month(today, trading_dates, _tom_cfg)
+            tom_in_window = tom_meta.get("tom_in_window", False)
 
-            # FRED macro regime filter: skip entries during adverse macro
-            fred_blocked = False
-            if fred_yield_curve is not None and self.fred_yield_curve_min is not None:
-                # Use latest available value on or before yesterday
-                yc_mask = fred_yield_curve.index <= yesterday
-                if yc_mask.any():
-                    yc_val = float(fred_yield_curve.loc[yc_mask].iloc[-1])
-                    if yc_val < self.fred_yield_curve_min:
-                        fred_blocked = True
-            if fred_claims is not None and self.fred_claims_max is not None and not fred_blocked:
-                cl_mask = fred_claims.index <= yesterday
-                if cl_mask.any():
-                    cl_val = float(fred_claims.loc[cl_mask].iloc[-1])
-                    if cl_val > self.fred_claims_max:
-                        fred_blocked = True
-            # Macro regime filter (gold/copper, VIX ROC, yield curve)
-            macro_blocked = False
-            macro_scale_today = 1.0
-            macro_boost_today = 0.0
-            if macro_signals is not None and self.macro_regime_enabled:
-                # Use latest available macro data on or before yesterday
-                _macro_mask = macro_signals.index <= yesterday
-                if _macro_mask.any():
-                    _macro_row = macro_signals.loc[_macro_mask].iloc[-1]
-                    macro_scale_today = float(_macro_row.get("macro_regime_scale", 1.0))
-                    _gc_regime = int(_macro_row.get("gc_regime", 2))
-                    _vix_roc = float(_macro_row.get("vix_roc_5d", 0.0))
-                    _vix_spike = bool(_macro_row.get("vix_spike", False))
-                    _yc_spread = float(_macro_row.get("yield_curve_10y_3m", 0.0))
-                    _yc_flatten = bool(_macro_row.get("yc_flattening", False))
-
-                    if self.macro_mode == "gate" and macro_scale_today < 0.7:
-                        macro_blocked = True
-                        logger.debug(
-                            f"MACRO GATE BLOCKED {today.date()}: "
-                            f"scale={macro_scale_today:.2f} < 0.7 "
-                            f"(gc_regime={_gc_regime}, vix_roc={_vix_roc:.2%}, "
-                            f"yc_spread={_yc_spread:.3f})"
-                        )
-                    elif self.macro_mode == "boost" and macro_scale_today > 1.2:
-                        macro_boost_today = 0.05
-                    logger.debug(
-                        f"MACRO {today.date()}: scale={macro_scale_today:.2f}, "
-                        f"gc_regime={_gc_regime}, vix_roc={_vix_roc:.2%}, "
-                        f"yc={_yc_spread:.3f}, mode={self.macro_mode}"
-                    )
-
-            # Turn-of-Month calendar filter
-            tom_in_window = self._is_tom_window(today, trading_dates) if self.tom_mode else False
-            tom_blocked = (self.tom_mode is True and not tom_in_window)
-            if tom_blocked:
-                logger.debug(f"TOM BLOCKED {today.date()}: outside turn-of-month window")
+            macro_blocked, _, macro_meta = check_macro_regime(
+                macro_signals, yesterday, today,
+                self.config.get("macro_regime", {}),
+            )
+            macro_scale_today = macro_meta.get("macro_scale", 1.0)
+            macro_boost_today = macro_meta.get("macro_boost", 0.0)
 
             # Build data windows up to yesterday for signal generation
             signal_data = {}
@@ -717,128 +695,22 @@ class BacktestEngine:
                     signal_data, equity, open_positions
                 )
 
+                # ── Signal enrichment (extracted to backtest.enrichment) ──────
                 # Macro regime features: inject into signals and apply adjustments
-                if macro_signals is not None and self.macro_regime_enabled:
-                    _macro_mask = macro_signals.index <= yesterday
-                    if _macro_mask.any():
-                        _macro_row = macro_signals.loc[_macro_mask].iloc[-1]
-                        for _sig in signals:
-                            _sig.features["macro_gc_regime"] = int(_macro_row.get("gc_regime", 2))
-                            _sig.features["macro_gc_ratio"] = float(_macro_row.get("gold_copper_ratio", 0.0))
-                            _sig.features["macro_vix_roc"] = float(_macro_row.get("vix_roc_5d", 0.0))
-                            _sig.features["macro_vix_spike"] = bool(_macro_row.get("vix_spike", False))
-                            _sig.features["macro_yc_spread"] = float(_macro_row.get("yield_curve_10y_3m", 0.0))
-                            _sig.features["macro_yc_flattening"] = bool(_macro_row.get("yc_flattening", False))
-                            _sig.features["macro_regime_scale"] = float(_macro_row.get("macro_regime_scale", 1.0))
-                        # Boost mode: add confidence when macro is favorable
-                        if self.macro_mode == "boost" and macro_boost_today > 0:
-                            for _sig in signals:
-                                _orig_conf = _sig.confidence
-                                _sig.confidence = min(1.0, _sig.confidence + macro_boost_today)
-                                _sig.features["macro_confidence_boost"] = round(macro_boost_today, 4)
-                                _sig.features["macro_confidence_orig"] = round(_orig_conf, 4)
-                                logger.debug(
-                                    f"MACRO BOOST {_sig.ticker}: "
-                                    f"conf {_orig_conf:.3f} -> {_sig.confidence:.3f}"
-                                )
-
-                # TOM boost mode: add confidence during TOM window
-                if self.tom_mode == "boost" and tom_in_window:
-                    for _sig in signals:
-                        _orig = _sig.confidence
-                        _sig.confidence = min(1.0, _sig.confidence + self.tom_confidence_boost)
-                        _sig.features["tom_boost"] = round(self.tom_confidence_boost, 4)
-                        _sig.features["tom_confidence_orig"] = round(_orig, 4)
-                # Tag all signals with TOM window info
-                for _sig in signals:
-                    _sig.features["tom_in_window"] = tom_in_window
-
+                apply_macro_confidence(
+                    signals, macro_signals, yesterday, today,
+                    self.config.get("macro_regime", {}), macro_boost_today,
+                )
+                # TOM boost mode: add confidence during TOM window + tag all signals
+                apply_tom_confidence(signals, _tom_cfg, tom_in_window)
                 # Phase 7C: Inject market breadth features (info-only)
-                if breadth_series is not None and today in breadth_series.index:
-                    _brd = breadth_series.loc[today]
-                    for _sig in signals:
-                        _sig.features["breadth_pct_above_50ma"] = float(_brd.get("pct_above_50ma", 0))
-                        _sig.features["breadth_pct_above_200ma"] = float(_brd.get("pct_above_200ma", 0))
-                        _sig.features["breadth_ad_ratio"] = float(_brd.get("ad_ratio", 0))
-                        _sig.features["breadth_thrust"] = float(_brd.get("breadth_thrust", 0))
-                        _sig.features["breadth_momentum"] = float(_brd.get("breadth_momentum", 0)) if not pd.isna(_brd.get("breadth_momentum", 0)) else 0.0
-                        _sig.features["breadth_net_new_highs_pct"] = float(_brd.get("net_new_highs_pct", 0))
-                        _sig.features["regime"] = regime
-                        _sig.features["regime_scale"] = regime_scale
-
+                inject_breadth_features(signals, breadth_series, today, regime, regime_scale)
                 # Phase 7C: Apply breadth-based confidence modifiers
-                for _sig in signals:
-                    _strat_key = _sig.strategy  # e.g. 'trend_following', 'mean_reversion'
-                    _breadth_cfg = self.config.get("strategies", {}).get(_strat_key, {}).get("breadth", {})
-                    if _breadth_cfg.get("enabled", False):
-                        _metric = _breadth_cfg.get("metric", "pct_above_50ma")
-                        _breadth_val = _sig.features.get(f"breadth_{_metric}", None)
-                        if _breadth_val is not None:
-                            _low_thresh = _breadth_cfg.get("low_threshold", 0.48)
-                            _high_thresh = _breadth_cfg.get("high_threshold", 0.58)
-                            _low_boost = _breadth_cfg.get("low_boost", 0.0)
-                            _high_penalty = _breadth_cfg.get("high_penalty", 0.0)
-                            _orig_conf = _sig.confidence
-                            _breadth_adj = 0.0
-                            if _breadth_val < _low_thresh:
-                                _breadth_adj = _low_boost
-                            elif _breadth_val > _high_thresh:
-                                _breadth_adj = -_high_penalty
-                            if _breadth_adj != 0.0:
-                                _sig.confidence = max(0.0, min(1.0, _sig.confidence + _breadth_adj))
-                                _sig.features["breadth_confidence_adj"] = round(_breadth_adj, 4)
-                                _sig.features["breadth_confidence_orig"] = round(_orig_conf, 4)
-                                logger.debug(
-                                    f"BREADTH {_sig.ticker} ({_strat_key}): "
-                                    f"breadth={_breadth_val:.2f}, adj={_breadth_adj:+.3f}, "
-                                    f"conf {_orig_conf:.3f} -> {_sig.confidence:.3f}"
-                                )
-
+                apply_breadth_confidence(signals, self.config.get("strategies", {}))
                 # Phase 7B: Inject relative strength features (info-only)
-                if rs_data is not None:
-                    for _sig in signals:
-                        _ticker = _sig.ticker
-                        if _ticker in rs_data:
-                            _rs_df = rs_data[_ticker]
-                            # Use yesterday's date for RS lookup (signal generation date)
-                            _rs_dates = _rs_df.index[_rs_df.index <= yesterday]
-                            if len(_rs_dates) > 0:
-                                _rs_date = _rs_dates[-1]
-                                _rs_row = _rs_df.loc[_rs_date]
-                                _sig.features["rs_percentile"] = float(_rs_row.get("rs_percentile", 50.0)) if not pd.isna(_rs_row.get("rs_percentile", 50.0)) else 50.0
-                                _sig.features["rs_score"] = float(_rs_row.get("rs_score", 0.0)) if not pd.isna(_rs_row.get("rs_score", 0.0)) else 0.0
-                                _sig.features["rs_momentum"] = float(_rs_row.get("rs_momentum", 0.0)) if not pd.isna(_rs_row.get("rs_momentum", 0.0)) else 0.0
-                                _sig.features["roc_20"] = float(_rs_row.get("roc_20", 0.0)) if not pd.isna(_rs_row.get("roc_20", 0.0)) else 0.0
-                                _sig.features["roc_60"] = float(_rs_row.get("roc_60", 0.0)) if not pd.isna(_rs_row.get("roc_60", 0.0)) else 0.0
-                                _sig.features["roc_120"] = float(_rs_row.get("roc_120", 0.0)) if not pd.isna(_rs_row.get("roc_120", 0.0)) else 0.0
-
+                inject_rs_features(signals, rs_data, yesterday)
                 # Phase 7B: Apply RS-based confidence modifiers
-                for _sig in signals:
-                    _strat_key = _sig.strategy
-                    _rs_cfg = self.config.get("strategies", {}).get(_strat_key, {}).get("relative_strength", {})
-                    if _rs_cfg.get("enabled", False):
-                        _rs_metric = _rs_cfg.get("metric", "rs_percentile")
-                        _rs_val = _sig.features.get(_rs_metric, None)
-                        if _rs_val is not None:
-                            _rs_low_thresh = _rs_cfg.get("low_threshold", 40.0)
-                            _rs_high_thresh = _rs_cfg.get("high_threshold", 60.0)
-                            _rs_low_penalty = _rs_cfg.get("low_penalty", 0.0)
-                            _rs_high_boost = _rs_cfg.get("high_boost", 0.0)
-                            _rs_orig_conf = _sig.confidence
-                            _rs_adj = 0.0
-                            if _rs_val < _rs_low_thresh:
-                                _rs_adj = -_rs_low_penalty
-                            elif _rs_val > _rs_high_thresh:
-                                _rs_adj = _rs_high_boost
-                            if _rs_adj != 0.0:
-                                _sig.confidence = max(0.0, min(1.0, _sig.confidence + _rs_adj))
-                                _sig.features["rs_confidence_adj"] = round(_rs_adj, 4)
-                                _sig.features["rs_confidence_orig"] = round(_rs_orig_conf, 4)
-                                logger.debug(
-                                    f"RS {_sig.ticker} ({_strat_key}): "
-                                    f"rs={_rs_val:.1f}, adj={_rs_adj:+.3f}, "
-                                    f"conf {_rs_orig_conf:.3f} -> {_sig.confidence:.3f}"
-                                )
+                apply_rs_confidence(signals, self.config.get("strategies", {}))
 
                 for signal in signals:
                     if len(open_positions) >= self.max_positions:
