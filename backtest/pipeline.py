@@ -55,6 +55,10 @@ class DayContext:
     fred_claims: Optional[pd.Series] = None
     equity_history: Optional[List] = None
 
+    # ── Authoritative trading calendar (FIX-3: passed from engine) ───────────
+    # When provided, run_entry_gates uses this instead of rebuilding from data.
+    trading_dates: Optional[pd.DatetimeIndex] = None
+
     # ── Regime state (populated by _compute_regime before gates) ─────────────
     regime: str = "neutral"
     regime_scale: float = 1.0
@@ -110,12 +114,14 @@ def run_entry_gates(ctx: DayContext, config: Dict[str, Any]) -> None:
     )
     ctx.fred_blocked = fred_blocked
 
-    # Turn-of-Month gate — needs trading_dates from data (approximation: use ctx.data index union)
-    # Callers that have trading_dates should call check_turn_of_month directly;
-    # this helper builds a best-effort index from ctx.data for convenience.
-    _all_dates: pd.DatetimeIndex = pd.DatetimeIndex(
-        sorted({d for df in ctx.data.values() for d in df.index})
-    )
+    # Turn-of-Month gate — use authoritative trading_dates when available (FIX-3).
+    # Fall back to rebuilding from ctx.data union for callers that don't pass it.
+    if ctx.trading_dates is not None:
+        _all_dates: pd.DatetimeIndex = ctx.trading_dates
+    else:
+        _all_dates = pd.DatetimeIndex(
+            sorted({d for df in ctx.data.values() for d in df.index})
+        )
     tom_cfg = _build_tom_cfg(config)
     tom_blocked, _, tom_meta = check_turn_of_month(ctx.today, _all_dates, tom_cfg)
     ctx.tom_blocked = tom_blocked
