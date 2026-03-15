@@ -25,7 +25,7 @@ class Signal:
     Attributes:
         ticker: Ticker symbol (e.g., 'BHP.AX', 'AAPL').
         strategy: Name of the strategy that generated this signal.
-        direction: Trade direction ('long' only for v1).
+        direction: Trade direction ('long' or 'short').
         entry_price: Planned entry price per share.
         stop_price: Stop-loss price per share.
         take_profit: Take-profit price (None if trailing stop only).
@@ -40,7 +40,7 @@ class Signal:
     """
     ticker: str
     strategy: str
-    direction: str  # 'long' only for v1
+    direction: str  # 'long' or 'short'
     entry_price: float
     stop_price: float
     take_profit: Optional[float]
@@ -56,20 +56,35 @@ class Signal:
 
     def __post_init__(self):
         """Validate signal fields after initialization."""
-        if self.direction != "long":
-            raise ValueError(f"Only 'long' direction supported in v1, got '{self.direction}'")
+        valid_directions = ("long", "short")
+        if self.direction not in valid_directions:
+            raise ValueError(f"direction must be one of {valid_directions}, got '{self.direction}'")
         if self.confidence < 0.0 or self.confidence > 1.0:
             raise ValueError(f"Confidence must be in [0, 1], got {self.confidence}")
-        if self.stop_price >= self.entry_price:
-            raise ValueError(
-                f"Stop price ({self.stop_price}) must be below entry price "
-                f"({self.entry_price}) for long positions"
-            )
-        if self.take_profit is not None and self.take_profit <= self.entry_price:
-            raise ValueError(
-                f"Take profit ({self.take_profit}) must be above entry price "
-                f"({self.entry_price}) for long positions"
-            )
+
+        if self.direction == "long":
+            if self.stop_price and self.stop_price >= self.entry_price:
+                raise ValueError(
+                    f"Stop loss ({self.stop_price}) must be below entry price "
+                    f"({self.entry_price}) for long positions"
+                )
+            if self.take_profit and self.take_profit <= self.entry_price:
+                raise ValueError(
+                    f"Take profit ({self.take_profit}) must be above entry price "
+                    f"({self.entry_price}) for long positions"
+                )
+        elif self.direction == "short":
+            if self.stop_price and self.stop_price <= self.entry_price:
+                raise ValueError(
+                    f"Stop loss ({self.stop_price}) must be above entry price "
+                    f"({self.entry_price}) for short positions"
+                )
+            if self.take_profit and self.take_profit >= self.entry_price:
+                raise ValueError(
+                    f"Take profit ({self.take_profit}) must be below entry price "
+                    f"({self.entry_price}) for short positions"
+                )
+
         if self.position_size <= 0:
             raise ValueError(f"Position size must be positive, got {self.position_size}")
 
