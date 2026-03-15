@@ -59,6 +59,18 @@
       <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
       <span class="hotkey-hint">[R]</span> Research <span class="tab-badge" id="research-tab-badge">0</span>
     </button>
+    <button class="tab-btn" onclick="switchTab('health')" id="tab-btn-health">
+      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="hotkey-hint">[H]</span> Health
+    </button>
+    <button class="tab-btn" onclick="switchTab('events')" id="tab-btn-events">
+      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="hotkey-hint">[E]</span> Events
+    </button>
+    <button class="tab-btn" onclick="switchTab('system')" id="tab-btn-system">
+      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      <span class="hotkey-hint">[S]</span> System
+    </button>
 
   </div>
 
@@ -184,6 +196,83 @@
 
   </div><!-- /tab-research -->
 
+  <!-- ═══ HEALTH TAB ═══ -->
+  <div class="tab-content" id="tab-health">
+
+    <!-- Strategy Lifecycle KPIs -->
+    <div class="research-kpis" id="health-kpis"></div>
+
+    <!-- Lifecycle State Table -->
+    <div class="section" style="animation-delay:0.05s">
+      <div class="section-head" onclick="toggle('health-lifecycle')">
+        <div class="section-title">/Strategy Lifecycle <span class="section-count" id="health-lifecycle-count">0</span></div>
+        <span class="chevron down" id="chev-health-lifecycle">+</span>
+      </div>
+      <div class="section-body show" id="body-health-lifecycle"></div>
+    </div>
+
+    <!-- Backtest Reference Metrics -->
+    <div class="section" style="animation-delay:0.10s">
+      <div class="section-head" onclick="toggle('health-metrics')">
+        <div class="section-title">/Best Backtest Metrics <span class="section-count" id="health-metrics-count">0</span></div>
+        <span class="chevron down" id="chev-health-metrics">+</span>
+      </div>
+      <div class="section-body show" id="body-health-metrics"></div>
+    </div>
+
+  </div><!-- /tab-health -->
+
+  <!-- ═══ EVENTS TAB ═══ -->
+  <div class="tab-content" id="tab-events">
+
+    <!-- Proximity KPIs -->
+    <div class="research-kpis" id="events-kpis"></div>
+
+    <!-- Upcoming Events Table -->
+    <div class="section" style="animation-delay:0.05s">
+      <div class="section-head" onclick="toggle('events-upcoming')">
+        <div class="section-title">/Upcoming Events <span class="section-count" id="events-upcoming-count">0</span></div>
+        <span class="chevron down" id="chev-events-upcoming">+</span>
+      </div>
+      <div class="section-body show" id="body-events-upcoming"></div>
+    </div>
+
+    <!-- Recent Past Events -->
+    <div class="section" style="animation-delay:0.10s">
+      <div class="section-head" onclick="toggle('events-past')">
+        <div class="section-title">/Recent Past <span class="section-count" id="events-past-count">0</span></div>
+        <span class="chevron down" id="chev-events-past">+</span>
+      </div>
+      <div class="section-body show" id="body-events-past"></div>
+    </div>
+
+  </div><!-- /tab-events -->
+
+  <!-- ═══ SYSTEM TAB ═══ -->
+  <div class="tab-content" id="tab-system">
+
+    <!-- System Status KPIs -->
+    <div class="research-kpis" id="system-kpis"></div>
+
+    <!-- Reconciliation Status -->
+    <div class="section" style="animation-delay:0.05s">
+      <div class="section-head" onclick="toggle('system-recon')">
+        <div class="section-title">/Reconciliation Status <span class="section-count" id="system-recon-count">0</span></div>
+        <span class="chevron down" id="chev-system-recon">+</span>
+      </div>
+      <div class="section-body show" id="body-system-recon"></div>
+    </div>
+
+    <!-- Config Validation -->
+    <div class="section" style="animation-delay:0.10s">
+      <div class="section-head" onclick="toggle('system-config')">
+        <div class="section-title">/Config Validation <span class="section-count" id="system-config-count">0</span></div>
+        <span class="chevron down" id="chev-system-config">+</span>
+      </div>
+      <div class="section-body show" id="body-system-config"></div>
+    </div>
+
+  </div><!-- /tab-system -->
 
 
   <!-- FIX 22: Removed trailing plus-row grid markers (visual noise at page bottom) -->
@@ -2926,6 +3015,329 @@ function _mcTick() {
 // Tick every second for live countdown
 setInterval(_mcTick, 1000);
 
+// ═══════════════════════════════════════════════════════════════
+// HEALTH / EVENTS / SYSTEM TAB RENDERERS (WP-5.3)
+// ═══════════════════════════════════════════════════════════════
+
+// ── Health Tab ──
+function renderHealthTab(h) {
+  if (!h) return;
+  var sc = h.state_counts || {};
+  var strats = h.strategies || [];
+  var total = h.total_strategies || 0;
+
+  // KPIs
+  var kpiEl = document.getElementById('health-kpis');
+  if (kpiEl) {
+    var active  = sc.ACTIVE     || 0;
+    var watch   = sc.WATCH      || 0;
+    var prob    = sc.PROBATION  || 0;
+    var susp    = sc.SUSPENDED  || 0;
+    var unknown = sc.UNKNOWN    || 0;
+    kpiEl.innerHTML =
+      '<div class="research-kpi"><span class="research-kpi-label">Total Strategies</span><span class="research-kpi-value">' + total + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Active</span><span class="research-kpi-value green">' + active + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Watch / Probation</span><span class="research-kpi-value amber">' + (watch + prob) + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Suspended</span><span class="research-kpi-value red">' + susp + '</span></div>';
+  }
+
+  // Lifecycle table
+  var lcEl = document.getElementById('body-health-lifecycle');
+  var lcCountEl = document.getElementById('health-lifecycle-count');
+  if (lcEl) {
+    if (!strats.length) {
+      lcEl.innerHTML = '<div class="empty">No lifecycle data — run monitor/lifecycle.py to populate</div>';
+    } else {
+      var stateClass = { ACTIVE: 'green', WATCH: 'amber', PROBATION: 'amber', SUSPENDED: 'red', RAMP_UP: 'blue', UNKNOWN: '' };
+      var rows = strats.map(function(s) {
+        var sc2 = stateClass[s.state] || '';
+        var entered = s.entered_at ? s.entered_at.slice(0, 10) : '—';
+        var capStr = s.pool_cap_override != null ? String(s.pool_cap_override) : '—';
+        return '<tr>' +
+          '<td>' + s.name + '</td>' +
+          '<td><span class="' + sc2 + '">' + s.state + '</span></td>' +
+          '<td class="mono">' + entered + '</td>' +
+          '<td class="mono center">' + (s.consecutive_degraded || 0) + '</td>' +
+          '<td class="mono center">' + (s.consecutive_recovered || 0) + '</td>' +
+          '<td class="mono center">' + capStr + '</td>' +
+          '</tr>';
+      }).join('');
+      lcEl.innerHTML = '<div class="tbl-wrap"><table id="tbl-health-lifecycle" class="tbl sortable">' +
+        '<thead><tr>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',0,\'str\')" tabindex="0">Strategy</th>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',1,\'str\')" tabindex="0">State</th>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',2,\'str\')" tabindex="0">Since</th>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',3,\'num\')" tabindex="0">Consec↓</th>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',4,\'num\')" tabindex="0">Consec↑</th>' +
+        '<th onclick="sortTable(\'tbl-health-lifecycle\',5,\'num\')" tabindex="0">Pool Cap</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    if (lcCountEl) lcCountEl.textContent = strats.length;
+  }
+
+  // Best backtest metrics table
+  var bmEl = document.getElementById('body-health-metrics');
+  var bmCountEl = document.getElementById('health-metrics-count');
+  var withMetrics = strats.filter(function(s) { return s.best_sharpe != null; });
+  if (bmEl) {
+    if (!withMetrics.length) {
+      bmEl.innerHTML = '<div class="empty">No backtest metrics — run research sweeps to populate research/best/</div>';
+    } else {
+      var bmRows = withMetrics.map(function(s) {
+        function fmt2(v) { return v != null ? v.toFixed(2) : '—'; }
+        function fmtPct(v) { return v != null ? v.toFixed(1) + '%' : '—'; }
+        return '<tr>' +
+          '<td>' + s.name + '</td>' +
+          '<td class="mono ' + (s.best_sharpe != null && s.best_sharpe >= 0.5 ? 'green' : 'amber') + '">' + fmt2(s.best_sharpe) + '</td>' +
+          '<td class="mono">' + fmtPct(s.best_win_rate) + '</td>' +
+          '<td class="mono">' + fmtPct(s.best_cagr) + '</td>' +
+          '<td class="mono">' + fmt2(s.best_drawdown) + '%</td>' +
+          '<td class="mono">' + fmt2(s.best_pf) + '</td>' +
+          '<td class="mono center">' + (s.experiments_run || 0) + '</td>' +
+          '</tr>';
+      }).join('');
+      bmEl.innerHTML = '<div class="tbl-wrap"><table id="tbl-health-metrics" class="tbl sortable">' +
+        '<thead><tr>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',0,\'str\')" tabindex="0">Strategy</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',1,\'num\')" tabindex="0">Sharpe</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',2,\'num\')" tabindex="0">Win%</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',3,\'num\')" tabindex="0">CAGR%</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',4,\'num\')" tabindex="0">Max DD%</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',5,\'num\')" tabindex="0">PF</th>' +
+        '<th onclick="sortTable(\'tbl-health-metrics\',6,\'num\')" tabindex="0">Exps</th>' +
+        '</tr></thead><tbody>' + bmRows + '</tbody></table></div>';
+    }
+    if (bmCountEl) bmCountEl.textContent = withMetrics.length;
+  }
+}
+
+// ── Events Tab ──
+function renderEventsTab(ev) {
+  if (!ev) return;
+  var prox = ev.proximity || {};
+  var upcoming = ev.upcoming || [];
+  var past = ev.recent_past || [];
+
+  // Proximity KPIs
+  var kpiEl = document.getElementById('events-kpis');
+  if (kpiEl) {
+    function proxLabel(days) {
+      if (days < 0) return 'N/A';
+      if (days === 0) return 'Today';
+      return days + 'd';
+    }
+    function proxClass(days) {
+      if (days < 0) return '';
+      if (days <= 3) return 'red';
+      if (days <= 7) return 'amber';
+      return 'green';
+    }
+    var fomc = prox.days_to_fomc != null ? prox.days_to_fomc : -1;
+    var cpi  = prox.days_to_cpi  != null ? prox.days_to_cpi  : -1;
+    var nfp  = prox.days_to_nfp  != null ? prox.days_to_nfp  : -1;
+    var opex = prox.is_opex_week  ? 1 : 0;
+    kpiEl.innerHTML =
+      '<div class="research-kpi"><span class="research-kpi-label">FOMC</span><span class="research-kpi-value ' + proxClass(fomc) + '">' + proxLabel(fomc) + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">CPI</span><span class="research-kpi-value '  + proxClass(cpi)  + '">' + proxLabel(cpi)  + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">NFP</span><span class="research-kpi-value '  + proxClass(nfp)  + '">' + proxLabel(nfp)  + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">OPEX Week</span><span class="research-kpi-value ' + (opex ? 'amber' : 'green') + '">' + (opex ? 'YES' : 'NO') + '</span></div>';
+  }
+
+  // Upcoming events table
+  var upEl = document.getElementById('body-events-upcoming');
+  var upCountEl = document.getElementById('events-upcoming-count');
+  if (upEl) {
+    if (!upcoming.length) {
+      upEl.innerHTML = '<div class="empty">No upcoming events in the next 30 days</div>';
+    } else {
+      var impactClass = { high: 'red', medium: 'amber', low: '' };
+      var upRows = upcoming.map(function(e) {
+        var ic = impactClass[e.impact] || '';
+        var dayStr = e.days_away === 0 ? 'Today' : (e.days_away === 1 ? 'Tomorrow' : 'In ' + e.days_away + 'd');
+        return '<tr>' +
+          '<td class="mono">' + e.date + '</td>' +
+          '<td><span class="' + ic + '">' + e.event_type + '</span></td>' +
+          '<td>' + e.description + '</td>' +
+          '<td class="' + ic + '">' + (e.impact || '—') + '</td>' +
+          '<td class="mono">' + dayStr + '</td>' +
+          '</tr>';
+      }).join('');
+      upEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
+        '<thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>In</th></tr></thead>' +
+        '<tbody>' + upRows + '</tbody></table></div>';
+    }
+    if (upCountEl) upCountEl.textContent = upcoming.length;
+  }
+
+  // Recent past
+  var pastEl = document.getElementById('body-events-past');
+  var pastCountEl = document.getElementById('events-past-count');
+  if (pastEl) {
+    if (!past.length) {
+      pastEl.innerHTML = '<div class="empty">No events in the last 7 days</div>';
+    } else {
+      var impactClass2 = { high: 'red', medium: 'amber', low: '' };
+      var pastRows = past.map(function(e) {
+        var ic = impactClass2[e.impact] || '';
+        return '<tr>' +
+          '<td class="mono">' + e.date + '</td>' +
+          '<td><span class="' + ic + '">' + e.event_type + '</span></td>' +
+          '<td>' + e.description + '</td>' +
+          '<td class="' + ic + '">' + (e.impact || '—') + '</td>' +
+          '<td class="mono">' + e.days_ago + 'd ago</td>' +
+          '</tr>';
+      }).join('');
+      pastEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
+        '<thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>When</th></tr></thead>' +
+        '<tbody>' + pastRows + '</tbody></table></div>';
+    }
+    if (pastCountEl) pastCountEl.textContent = past.length;
+  }
+}
+
+// ── System Tab ──
+function renderSystemTab(sys) {
+  if (!sys) return;
+  var cv = sys.config_validation || {};
+  var recon = sys.reconciliation || {};
+  var reconSum = recon.summary || {};
+  var configs = cv.configs || [];
+
+  // KPIs
+  var kpiEl = document.getElementById('system-kpis');
+  if (kpiEl) {
+    var allValid = cv.all_valid ? 1 : 0;
+    var totalIssues = cv.total_issues || 0;
+    var totalWarnings = cv.total_warnings || 0;
+    var reconReports = reconSum.reports_found || 0;
+    kpiEl.innerHTML =
+      '<div class="research-kpi"><span class="research-kpi-label">Config Valid</span><span class="research-kpi-value ' + (allValid ? 'green' : 'red') + '">' + (allValid ? 'YES' : 'NO') + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Config Issues</span><span class="research-kpi-value ' + (totalIssues > 0 ? 'red' : 'green') + '">' + totalIssues + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Warnings</span><span class="research-kpi-value ' + (totalWarnings > 0 ? 'amber' : 'green') + '">' + totalWarnings + '</span></div>' +
+      '<div class="research-kpi"><span class="research-kpi-label">Recon Reports</span><span class="research-kpi-value">' + reconReports + '</span></div>';
+  }
+
+  // Reconciliation status
+  var reconEl = document.getElementById('body-system-recon');
+  var reconCountEl = document.getElementById('system-recon-count');
+  if (reconEl) {
+    if (!recon.dir_exists) {
+      reconEl.innerHTML = '<div class="empty">No reconciliation reports yet — run: python3 scripts/reconcile.py --market sp500</div>';
+    } else if (!reconSum.reports_found) {
+      reconEl.innerHTML = '<div class="empty">Reconciliation directory exists but no reports found</div>';
+    } else {
+      var rReports = recon.reports || [];
+      var reconRows = rReports.map(function(r) {
+        var cleanCls = r.clean ? 'green' : 'red';
+        return '<tr>' +
+          '<td class="mono">' + (r.timestamp || '—').slice(0, 19).replace('T', ' ') + '</td>' +
+          '<td>' + r.market_id + '</td>' +
+          '<td class="' + cleanCls + '">' + (r.clean ? 'CLEAN' : 'DIRTY') + '</td>' +
+          '<td class="mono center">' + (r.broker_positions || 0) + '</td>' +
+          '<td class="mono center">' + (r.local_positions || 0) + '</td>' +
+          '<td class="mono center ' + (r.discrepancy_count > 0 ? 'red' : '') + '">' + (r.discrepancy_count || 0) + '</td>' +
+          '</tr>';
+      }).join('');
+      reconEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
+        '<thead><tr><th>Timestamp</th><th>Market</th><th>Status</th><th>Broker Pos</th><th>Local Pos</th><th>Discrepancies</th></tr></thead>' +
+        '<tbody>' + reconRows + '</tbody></table></div>';
+      if (reconCountEl) reconCountEl.textContent = rReports.length;
+    }
+  }
+
+  // Config validation
+  var cfgEl = document.getElementById('body-system-config');
+  var cfgCountEl = document.getElementById('system-config-count');
+  if (cfgEl) {
+    if (!configs.length) {
+      cfgEl.innerHTML = '<div class="empty">No configs found in config/active/</div>';
+    } else {
+      var cfgRows = configs.map(function(c) {
+        var vc = c.valid ? 'green' : 'red';
+        var issuesHtml = c.issues.length
+          ? '<ul style="margin:2px 0;padding-left:16px">' + c.issues.map(function(i) { return '<li class="red">' + i + '</li>'; }).join('') + '</ul>'
+          : '';
+        var warnHtml = c.warnings.length
+          ? '<ul style="margin:2px 0;padding-left:16px">' + c.warnings.map(function(w) { return '<li class="amber">' + w + '</li>'; }).join('') + '</ul>'
+          : '';
+        return '<tr>' +
+          '<td>' + c.market_id.toUpperCase() + '</td>' +
+          '<td class="mono">' + (c.version || '—') + '</td>' +
+          '<td>' + c.trading_mode + '</td>' +
+          '<td>' + c.broker + '</td>' +
+          '<td class="mono center">' + (c.strategy_count || 0) + '</td>' +
+          '<td class="' + vc + '">' + (c.valid ? 'PASS' : 'FAIL') + '</td>' +
+          '<td>' + (issuesHtml || warnHtml || '<span style="opacity:0.5">—</span>') + '</td>' +
+          '</tr>';
+      }).join('');
+      cfgEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
+        '<thead><tr><th>Market</th><th>Version</th><th>Mode</th><th>Broker</th><th>Strategies</th><th>Valid</th><th>Issues / Warnings</th></tr></thead>' +
+        '<tbody>' + cfgRows + '</tbody></table></div>';
+      if (cfgCountEl) cfgCountEl.textContent = configs.length;
+    }
+  }
+}
+
+// ── Fetch and render tab data ──
+var _tabFetched = {};  // track which tabs have been loaded
+function loadTabData(tabId) {
+  var tabMap = {
+    'health':  'data/health-data.json',
+    'events':  'data/events-data.json',
+    'system':  'data/system-data.json',
+  };
+  var renderMap = {
+    'health':  renderHealthTab,
+    'events':  renderEventsTab,
+    'system':  renderSystemTab,
+  };
+  var url = tabMap[tabId];
+  var renderFn = renderMap[tabId];
+  if (!url || !renderFn) return;
+
+  fetch(url + '?t=' + Date.now(), {credentials: 'same-origin'})
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      renderFn(data);
+      _tabFetched[tabId] = Date.now();
+    })
+    .catch(function(e) {
+      console.warn('[atlas] Failed to load ' + url + ':', e.message);
+      // Show error state in KPIs
+      var kpiEl = document.getElementById(tabId + '-kpis');
+      if (kpiEl) kpiEl.innerHTML = '<div class="empty" style="padding:12px">⚠ Data unavailable — run generate_data.py to refresh</div>';
+    });
+}
+
+// Hook into switchTab to lazy-load tab data
+(function() {
+  var _origST = window.switchTab;
+  var _patchST = function(tabId) {
+    if (_origST) _origST(tabId);
+    if (['health', 'events', 'system'].indexOf(tabId) !== -1) {
+      var last = _tabFetched[tabId] || 0;
+      if (Date.now() - last > 30000) {  // re-fetch if older than 30s
+        loadTabData(tabId);
+      }
+    }
+  };
+  // Apply patch after a short delay so stripe-refresh.js enhanceTabSwitch has run
+  setTimeout(function() {
+    window.switchTab = _patchST;
+    // Also wrap the enhanced version if present
+    var _origST2 = window.switchTab;
+    if (_origST2 !== _patchST) {
+      window.switchTab = function(tabId) {
+        _origST2(tabId);
+        if (['health', 'events', 'system'].indexOf(tabId) !== -1) {
+          var last = _tabFetched[tabId] || 0;
+          if (Date.now() - last > 30000) { loadTabData(tabId); }
+        }
+      };
+    }
+  }, 200);
+})();
+
 // ── Load ──
 var _lastDataTs = null;  // skip render when backend data hasn't changed
 function load() {
@@ -3072,6 +3484,9 @@ function initKeyboardShortcuts() {
     switch (e.key.toLowerCase()) {
       case 't': if (typeof switchTab === 'function') switchTab('trading'); break;
       case 'r': if (typeof switchTab === 'function') switchTab('research'); break;
+      case 'h': if (typeof switchTab === 'function') switchTab('health'); break;
+      case 'e': if (typeof switchTab === 'function') switchTab('events'); break;
+      case 's': if (typeof switchTab === 'function') switchTab('system'); break;
       // 'm' key was Monitor tab — removed
       case 'l':
         var cur = getStoredTheme();
