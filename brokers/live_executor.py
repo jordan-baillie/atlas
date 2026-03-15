@@ -313,6 +313,32 @@ class LiveExecutor:
             "errors": [],
         }
 
+        # Preflight: filter short entries when short_enabled=False
+        _plan_entries = plan.get("proposed_entries", [])
+        _filtered_entries = []
+        for _entry in _plan_entries:
+            if _entry.get("direction") == "short":
+                _short_enabled = (
+                    self.config.get("mean_reversion", {}).get("short_enabled", False)
+                    or self.config.get("strategies", {}).get(
+                        _entry.get("strategy", "mean_reversion"), {}
+                    ).get("short_enabled", False)
+                )
+                if not _short_enabled:
+                    logger.warning(
+                        "Short entry rejected — short_enabled=false: %s",
+                        _entry.get("ticker"),
+                    )
+                    _journal_entry("short_entry_rejected", {
+                        "ticker": _entry.get("ticker"), "trade_date": trade_date,
+                        "reason": "short_enabled=false",
+                    })
+                    continue
+            _filtered_entries.append(_entry)
+        if len(_filtered_entries) != len(_plan_entries):
+            plan = dict(plan)  # shallow copy — don't mutate original
+            plan["proposed_entries"] = _filtered_entries
+
         # Execute exits first (frees cash) — protective orders always proceed
         for exit_rec in plan.get("proposed_exits", []):
             result = self._execute_exit(exit_rec, trade_date)
@@ -406,14 +432,22 @@ class LiveExecutor:
         confidence = entry.get("confidence", 0)
         stop_price = entry.get("stop_price", 0)
 
+        # Direction: long = BUY to open, short = SELL to open
+        direction = entry.get("direction", "long")
+        if direction == "short":
+            order_side = OrderSide.SELL  # short sell to open
+        else:
+            order_side = OrderSide.BUY  # buy to open
+        side_label = order_side.value
+
         # Pre-flight check
         errors = preflight_check_order(
-            ticker, OrderSide.BUY, qty, price,
+            ticker, order_side, qty, price,
             self.safety, self._daily_order_count,
         )
         if errors:
             result = {
-                "ticker": ticker, "side": "BUY", "qty": qty, "price": price,
+                "ticker": ticker, "side": side_label, "qty": qty, "price": price,
                 "success": False, "errors": errors, "dry_run": self.is_dry_run,
             }
             report_msg = f"ENTRY BLOCKED {ticker}: {'; '.join(errors)}"
@@ -434,9 +468,10 @@ class LiveExecutor:
 
         if self.is_dry_run:
             result = {
-                "ticker": ticker, "side": "BUY", "qty": qty, "price": _order_price,
+                "ticker": ticker, "side": side_label, "qty": qty, "price": _order_price,
                 "strategy": strategy, "confidence": confidence,
                 "stop_price": stop_price,
+                "direction": direction,
                 "position_value": round(_order_price * qty, 2),
                 "risk_amount": round(abs(_order_price - stop_price) * qty, 2),
                 "success": True, "dry_run": True,
@@ -444,7 +479,7 @@ class LiveExecutor:
                 "entry_refinement": entry.get("entry_refinement", ""),
                 "message": "DRY RUN — order would be placed",
             }
-            logger.info("DRY RUN BUY: %s %d x $%.2f", ticker, qty, _order_price)
+            logger.info("DRY RUN %s: %s %d x $%.2f", side_label, ticker, qty, _order_price)
             _journal_entry("dry_run_entry", result)
             self._daily_order_count += 1
             return result
@@ -470,7 +505,7 @@ class LiveExecutor:
         _submit_time = datetime.now().isoformat()
         order_result = self._broker.place_order(
             ticker=ticker,
-            side=OrderSide.BUY,
+            side=order_side,
             qty=qty,
             price=_order_price,
             order_type=OrderType.LIMIT,
@@ -478,7 +513,7 @@ class LiveExecutor:
         )
 
         result = {
-            "ticker": ticker, "side": "BUY", "qty": qty, "price": _order_price,
+            "ticker": ticker, "side": side_label, "qty": qty, "price": _order_price,
             "strategy": strategy, "confidence": confidence,
             "stop_price": stop_price,
             "position_value": round(_order_price * qty, 2),
@@ -499,13 +534,14 @@ class LiveExecutor:
             "slippage_bps": round((order_result.fill_price - _order_price) / _order_price * 10000, 1) if order_result.fill_price > 0 and _order_price > 0 else None,
             "order_type": "LIMIT",
             "spread": spread_info,
+            "direction": direction,
         }
 
         if order_result.success:
             self._daily_order_count += 1
             logger.info(
-                "LIVE BUY: %s %d x $%.2f → order_id=%s",
-                ticker, qty, price, order_result.order_id,
+                "LIVE %s: %s %d x $%.2f → order_id=%s",
+                side_label, ticker, qty, price, order_result.order_id,
             )
             # Record entry to TradeLedger — telemetry must never crash execution
             try:
@@ -518,13 +554,14 @@ class LiveExecutor:
                     "slippage_bps": result.get("slippage_bps"),
                     "order_id": order_result.order_id,
                     "timestamp": datetime.now().isoformat(),
+                    "direction": direction,
                 })
             except Exception as _ledger_exc:
                 logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
         else:
             logger.error(
-                "LIVE BUY FAILED: %s — %s",
-                ticker, order_result.message,
+                "LIVE %s FAILED: %s — %s",
+                side_label, ticker, order_result.message,
             )
 
         _journal_entry("live_entry", result)
@@ -534,6 +571,9 @@ class LiveExecutor:
         """Execute a single exit order."""
         ticker = exit_rec.get("ticker", "")
         reason = exit_rec.get("reason", "signal_exit")
+
+        # Direction: long = SELL to close, short = BUY to cover
+        direction = exit_rec.get("direction", "long")
 
         # Cancel any protective stop order first (prevent double-sell)
         stop_order_id = exit_rec.get("stop_order_id", "")
@@ -571,14 +611,25 @@ class LiveExecutor:
         except Exception:
             pass
 
+        # Refine direction from live position if it has direction info (dict fallback)
+        if isinstance(pos, dict):
+            direction = pos.get("direction", direction)
+
+        # Exit order side: long = SELL to close, short = BUY to cover
+        if direction == "short":
+            exit_side = OrderSide.BUY   # buy to cover short position
+        else:
+            exit_side = OrderSide.SELL  # sell to close long position
+        exit_side_label = exit_side.value
+
         # Pre-flight check
         errors = preflight_check_order(
-            ticker, OrderSide.SELL, qty, price,
+            ticker, exit_side, qty, price,
             self.safety, self._daily_order_count,
         )
         if errors:
             result = {
-                "ticker": ticker, "side": "SELL", "qty": qty, "price": price,
+                "ticker": ticker, "side": exit_side_label, "qty": qty, "price": price,
                 "success": False, "errors": errors, "dry_run": self.is_dry_run,
             }
             logger.warning("EXIT BLOCKED %s: %s", ticker, "; ".join(errors))
@@ -587,11 +638,12 @@ class LiveExecutor:
 
         if self.is_dry_run:
             result = {
-                "ticker": ticker, "side": "SELL", "qty": qty, "price": price,
+                "ticker": ticker, "side": exit_side_label, "qty": qty, "price": price,
+                "direction": direction,
                 "success": True, "dry_run": True, "reason": reason,
                 "message": "DRY RUN — exit would be placed",
             }
-            logger.info("DRY RUN SELL: %s %d x $%.2f [%s]", ticker, qty, price, reason)
+            logger.info("DRY RUN %s: %s %d x $%.2f [%s]", exit_side_label, ticker, qty, price, reason)
             _journal_entry("dry_run_exit", result)
             self._daily_order_count += 1
             return result
@@ -626,7 +678,7 @@ class LiveExecutor:
         _submit_time = datetime.now().isoformat()
         order_result = self._broker.place_order(
             ticker=ticker,
-            side=OrderSide.SELL,
+            side=exit_side,
             qty=qty,
             price=_exit_price,
             order_type=_exit_order_type,
@@ -634,7 +686,7 @@ class LiveExecutor:
         )
 
         result = {
-            "ticker": ticker, "side": "SELL", "qty": qty, "price": _exit_price,
+            "ticker": ticker, "side": exit_side_label, "qty": qty, "price": _exit_price,
             "order_type": _exit_order_type.value,
             "success": order_result.success,
             "order_id": order_result.order_id,
@@ -657,8 +709,8 @@ class LiveExecutor:
         if order_result.success:
             self._daily_order_count += 1
             logger.info(
-                "LIVE SELL: %s %d x $%.2f → order_id=%s [%s]",
-                ticker, qty, price, order_result.order_id, reason,
+                "LIVE %s: %s %d x $%.2f → order_id=%s [%s]",
+                exit_side_label, ticker, qty, price, order_result.order_id, reason,
             )
 
             # Poll for fill confirmation — LIMIT orders return fill_price=0
@@ -715,8 +767,13 @@ class LiveExecutor:
                 from journal.logger import TradeLedger
                 _ledger = TradeLedger()
                 _fill_price = result.get("fill_price") or _exit_price
-                _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
-                _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
+                # Short PnL: profit when price falls (entry - fill); long: (fill - entry)
+                if direction == "short":
+                    _pnl = round((entry_price - _fill_price) * qty, 2) if entry_price else None
+                    _pnl_pct = round((entry_price - _fill_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
+                else:
+                    _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
+                    _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
                 _ledger.record_exit({
                     "ticker": ticker,
                     "strategy": pos.strategy if pos and hasattr(pos, 'strategy') else "",
@@ -729,12 +786,13 @@ class LiveExecutor:
                     "exit_reason": reason,
                     "slippage_bps": result.get("slippage_bps"),
                     "order_id": order_result.order_id,
+                    "direction": direction,
                 })
             except Exception as _ledger_exc:
                 logger.warning("TradeLedger exit record failed (non-fatal): %s", _ledger_exc)
         else:
             logger.error(
-                "LIVE SELL FAILED: %s — %s", ticker, order_result.message,
+                "LIVE %s FAILED: %s — %s", exit_side_label, ticker, order_result.message,
             )
 
         _journal_entry("live_exit", result)
@@ -750,10 +808,14 @@ class LiveExecutor:
         strategy: str = "",
         trailing_atr: float = 0.0,
         trade_date: str = "",
+        direction: str = "long",
     ) -> Optional[str]:
-        """Place a protective STOP SELL or TRAILING_STOP SELL on the exchange.
+        """Place a protective STOP or TRAILING_STOP on the exchange.
 
-        Called after an entry LIMIT BUY fills. Returns the stop order ID,
+        For long positions: STOP SELL (triggers below entry).
+        For short positions: STOP BUY (triggers above entry, buy-to-cover).
+
+        Called after an entry LIMIT order fills. Returns the stop order ID,
         or None on failure.
 
         Args:
@@ -765,6 +827,7 @@ class LiveExecutor:
                          instead of a fixed STOP. Calculated as
                          trailing_stop_atr_mult × ATR at entry time.
             trade_date: For remark/journal.
+            direction: "long" or "short" — determines stop order side.
 
         Returns:
             Order ID string if placed, None if failed or dry-run.
@@ -773,14 +836,21 @@ class LiveExecutor:
             logger.error("Cannot place protective stop — not connected")
             return None
 
+        # Stop order side: long positions close with SELL, short positions cover with BUY
+        if direction == "short":
+            stop_side = OrderSide.BUY   # buy-to-cover stop for short position
+        else:
+            stop_side = OrderSide.SELL  # sell stop for long position
+        stop_side_label = stop_side.value
+
         use_trailing = trailing_atr > 0
 
         if use_trailing:
             order_type = OrderType.TRAILING_STOP
-            log_label = f"TRAILING_STOP SELL trail=${trailing_atr:.2f}"
+            log_label = f"TRAILING_STOP {stop_side_label} trail=${trailing_atr:.2f}"
         else:
             order_type = OrderType.STOP
-            log_label = f"STOP SELL trigger=${stop_price:.2f}"
+            log_label = f"STOP {stop_side_label} trigger=${stop_price:.2f}"
 
         logger.info(
             "Placing protective stop: %s %s %d shares [%s]",
@@ -791,17 +861,17 @@ class LiveExecutor:
             _journal_entry("dry_run_protective_stop", {
                 "ticker": ticker, "qty": qty, "stop_price": stop_price,
                 "trailing_atr": trailing_atr, "order_type": order_type.value,
-                "strategy": strategy,
+                "strategy": strategy, "direction": direction,
             })
             logger.info("DRY RUN: would place %s for %s", log_label, ticker)
             return None
 
         # Build order kwargs
         if use_trailing:
-            # TRAILING_STOP SELL: trail_price is the dollar trail distance (Alpaca)
+            # TRAILING_STOP: trail_price is the dollar trail distance (Alpaca)
             order_result = self._broker.place_order(
                 ticker=ticker,
-                side=OrderSide.SELL,
+                side=stop_side,
                 qty=qty,
                 price=stop_price,  # reference/activation price
                 order_type=order_type,
@@ -809,10 +879,10 @@ class LiveExecutor:
                 trail_price=trailing_atr,
             )
         else:
-            # Fixed STOP SELL: aux_price is the trigger
+            # Fixed STOP: aux_price is the trigger
             order_result = self._broker.place_order(
                 ticker=ticker,
-                side=OrderSide.SELL,
+                side=stop_side,
                 qty=qty,
                 price=stop_price,  # limit price after trigger (= stop price for market-like fill)
                 order_type=order_type,
@@ -922,6 +992,7 @@ class LiveExecutor:
                 strategy=strategy,
                 trailing_atr=trailing_atr,
                 trade_date=trade_date,
+                direction=entry_rec.get("direction", "long"),
             )
 
             if order_id:
