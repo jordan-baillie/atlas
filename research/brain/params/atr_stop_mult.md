@@ -4,9 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-15 06:29 | stochastic_oversold | None → 2.0 | ❌ discard | +0.0000 | 0.3991 |
-| 2026-03-15 10:03 | consecutive_down_days | None → 3.0 | ❌ discard | -0.1856 | 0.3069 |
-| 2026-03-15 10:03 | consecutive_down_days | None → 2.0 | ❌ discard | +0.0000 | 0.4925 |
 | 2026-03-15 10:03 | consecutive_down_days | None → 2.5 | ❌ discard | -0.0122 | 0.4803 |
 | 2026-03-15 10:03 | consecutive_down_days | None → 1.5 | ❌ discard | +0.0054 | 0.4979 |
 | 2026-03-15 10:07 | demark_sequential | 1.5 → 2.0 | ❌ discard | -0.1286 | -0.0040 |
@@ -54,3 +51,6 @@
 | 2026-03-16 01:09 | williams_percent_r | 1.5 → 2.0 | ❌ discard | -1.8486 | -1.7225 |
 | 2026-03-16 01:09 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -2.6797 | -2.5536 |
 | 2026-03-16 01:09 | williams_percent_r | 1.5 → 3.0 | ❌ discard | -3.6461 | -3.5200 |
+| 2026-03-16 01:13 | lower_band_reversion | 2.5 → 2.0 | ❌ discard | -0.0116 | 0.3818 |
+| 2026-03-16 01:13 | lower_band_reversion | 2.5 → 1.5 | ❌ discard | -0.3731 | 0.0203 |
+| 2026-03-16 01:13 | lower_band_reversion | 2.5 → 3.0 | ❌ discard | -0.0293 | 0.3641 |

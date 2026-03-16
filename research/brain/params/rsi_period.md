@@ -4,8 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 23:30 | mean_reversion | 14 → 10 | ❌ discard | -0.1070 | -0.6765 |
-| 2026-03-12 23:30 | mean_reversion | 14 → 5 | ❌ discard | -0.2610 | -0.8305 |
 | 2026-03-12 23:30 | mean_reversion | 14 → 7 | ❌ discard | -0.6367 | -1.2062 |
 | 2026-03-12 23:46 | connors_rsi2 | 4 → 5 | ❌ discard | -1.6943 | -1.3040 |
 | 2026-03-12 23:46 | connors_rsi2 | 4 → 3 | ❌ discard | -1.4932 | -1.1029 |
@@ -54,3 +52,5 @@
 | 2026-03-15 23:31 | short_term_mr | None → 4 | ❌ discard | -0.0572 | 0.4393 |
 | 2026-03-15 23:31 | short_term_mr | None → 3 | ❌ discard | -0.0308 | 0.4657 |
 | 2026-03-15 23:31 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.4965 |
+| 2026-03-16 01:15 | triple_rsi | 7 → 3 | ❌ discard | -0.2391 | -0.0403 |
+| 2026-03-16 01:15 | triple_rsi | 7 → 5 | ❌ discard | -0.2204 | -0.0216 |
