@@ -1,3987 +1,586 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#111111" id="meta-theme-color">
+<meta name="theme-color" content="#0a0a0a" id="meta-theme">
 <title>Atlas Dashboard</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=optional" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atlas.css">
-
 </head>
 <body>
-<div class="shell">
+<div id="app">
 
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">Atlas</div>
-    </div>
+  <!-- ── Header ── -->
+  <header class="header">
+    <div class="logo">Atlas</div>
     <div class="header-right">
       <div class="market-clocks" id="market-clocks"></div>
-      <div class="theme-toggle" id="theme-toggle">
-        <button class="theme-btn" data-theme="light" title="Light">☀</button>
-        <button class="theme-btn active" data-theme="auto" title="Auto">◑</button>
-        <button class="theme-btn" data-theme="dark" title="Dark">☾</button>
-      </div>
-      <div class="status-pill" id="mode-pill" style="display:none">
-        <span id="mode-dot" class="pulse"></span>
-        <span id="mode-label"></span>
-      </div>
-      <div class="status-pill">
-        <span class="pulse"></span>
-        <span id="updated">Loading…</span>
-      </div>
+      <button class="theme-btn" id="theme-btn" title="Toggle theme (L)">◑</button>
     </div>
-    <span class="version" id="version" style="display:none"></span>
-  </div>
+  </header>
 
-  <!-- Halt banner (hidden by default) -->
-  <div class="halted-banner" id="halt-banner" style="display:none">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-    Trading halted — risk limits breached
-  </div>
-
-  <div class="market-selector" id="market-selector"></div>
-  <div id="freshness-bar" style="display:none"></div>
-
-  <!-- Tab Navigation -->
-  <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('trading')" id="tab-btn-trading">
-      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      <span class="hotkey-hint">[T]</span> Trading
-    </button>
-    <button class="tab-btn" onclick="switchTab('research')" id="tab-btn-research">
-      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-      <span class="hotkey-hint">[R]</span> Research <span class="tab-badge" id="research-tab-badge">0</span>
-    </button>
-    <button class="tab-btn" onclick="switchTab('health')" id="tab-btn-health">
-      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-      <span class="hotkey-hint">[H]</span> Health
-    </button>
-    <button class="tab-btn" onclick="switchTab('events')" id="tab-btn-events">
-      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span class="hotkey-hint">[E]</span> Events
-    </button>
-    <button class="tab-btn" onclick="switchTab('system')" id="tab-btn-system">
-      <svg class="tab-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      <span class="hotkey-hint">[S]</span> System
-    </button>
-
-  </div>
-
-  <!-- ═══ TRADING TAB ═══ -->
-  <div class="tab-content active" id="tab-trading">
-  <div class="cards" id="cards">
-    <div class="card"><div class="skeleton skeleton-card"></div></div>
-    <div class="card"><div class="skeleton skeleton-card"></div></div>
-    <div class="card"><div class="skeleton skeleton-card"></div></div>
-  </div>
-  <!-- P&L Breakdown -->
-  <div class="section" style="animation-delay:0.30s">
-    <div class="section-head" onclick="toggle('pnl')">
-      <div class="section-title">/Profit &amp; Loss<span class="section-count" id="pnl-net"></span></div>
-      <span class="chevron down" id="chev-pnl">+</span>
+  <!-- ── Summary Strip ── -->
+  <div class="summary-strip" id="summary-strip">
+    <div class="stat">
+      <div class="stat-label">Portfolio</div>
+      <div class="stat-value" id="stat-equity">—</div>
     </div>
-    <div class="section-body" id="body-pnl"></div>
-  </div>
-
-  <!-- Equity Curve -->
-  <div class="section" id="sec-equity" style="animation-delay:0.35s">
-    <div class="section-head" onclick="toggle('equity')">
-      <div class="section-title">/Performance</div>
-      <span class="chevron down" id="chev-equity">+</span>
+    <div class="stat">
+      <div class="stat-label">Today</div>
+      <div class="stat-value" id="stat-today">—</div>
     </div>
-    <div class="section-body" id="body-equity">
-      <div id="equity-chart" style="width:100%"></div>
+    <div class="stat">
+      <div class="stat-label">Positions</div>
+      <div class="stat-value" id="stat-positions">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Win Rate</div>
+      <div class="stat-value" id="stat-winrate">—</div>
     </div>
   </div>
-  <!-- Two-col: Positions + Plan -->
-  <div class="two-col">
-    <div class="section" style="animation-delay:0.40s">
-      <div class="section-head" onclick="toggle('positions')">
-        <div class="section-title">/Open Positions <span class="section-count" id="pos-count">0</span></div>
-        <span class="chevron down" id="chev-positions">+</span>
-      </div>
-      <div class="section-body" id="body-positions"></div>
-    </div>
 
-    <div class="section" style="animation-delay:0.45s">
-      <div class="section-head" onclick="toggle('plan')">
-        <div class="section-title">/Today's Plan <span class="plan-badge" id="plan-status"></span></div>
-        <span class="chevron down" id="chev-plan">+</span>
-      </div>
-      <div class="section-body" id="body-plan"></div>
+  <!-- ── Equity Chart ── -->
+  <div class="chart-section">
+    <div class="chart-header">
+      <span class="chart-title">Equity Curve</span>
+      <span class="return-badge" id="return-badge">+0.00%</span>
     </div>
-  </div>
-  <!-- Manual Portfolio (Moomoo — discretionary trades) -->
-  <div class="section" id="sec-manual" style="animation-delay:0.47s">
-    <div class="section-head" onclick="toggle('manual')">
-      <div class="section-title">/Manual Portfolio <span style="color:var(--text-tertiary);font-size:11px;font-weight:400;margin-left:6px">Moomoo</span> <span class="section-count" id="manual-count">0</span></div>
-      <span class="chevron down" id="chev-manual">+</span>
-    </div>
-    <div class="section-body" id="body-manual"></div>
+    <canvas id="equity-canvas"></canvas>
+    <div class="chart-tooltip" id="chart-tooltip"></div>
   </div>
 
-  <!-- Pending Orders -->
-  <div class="section" id="sec-orders" style="display:none;animation-delay:0.50s">
-    <div class="section-head" onclick="toggle('orders')">
-      <div class="section-title">/Today's Orders <span class="section-count" id="orders-count">0</span></div>
-      <span class="chevron down" id="chev-orders">+</span>
-    </div>
-    <div class="section-body" id="body-orders"></div>
-  </div>
-
-  <div id="sec-account" style="display:none"><div id="body-account"></div></div>
-
-  <!-- Closed Trades -->
-  <div class="section" id="sec-closed" style="display:none;animation-delay:0.60s">
-    <div class="section-head" onclick="toggle('closed')">
-      <div class="section-title">/Trade History <span class="section-count" id="closed-count">0</span></div>
-      <span class="chevron down" id="chev-closed">+</span>
-    </div>
-    <div class="section-body" id="body-closed"></div>
-  </div>
-
-  </div><!-- /tab-trading -->
-
-  <!-- ═══ RESEARCH TAB ═══ -->
-  <div class="tab-content" id="tab-research">
-    <!-- Agent Status -->
-    <div id="agent-floor" class="agent-floor"></div>
-
-    <!-- Live Activity Ticker (below canvas) -->
-    <div id="agent-ticker" class="agent-ticker"></div>
-
-    <!-- Portfolio Metrics Strip (between canvas and KPIs) -->
-    <div id="portfolio-header" class="pf-header" style="display:none">
-      <span class="pf-header-title">📊 Portfolio</span>
-      <span class="pf-header-sub" id="portfolio-updated"></span>
-    </div>
-    <div id="portfolio-strip" class="portfolio-strip portfolio-strip-empty"></div>
-
-    <!-- KPI Strip (4 metrics) -->
-    <div class="research-kpis" id="research-kpis"></div>
-
-    <!-- Activity Feed (always visible) -->
-    <div class="section" style="animation-delay:0.05s">
-      <div class="section-head" onclick="toggle('ractivity')">
-        <div class="section-title">/Live Activity <span class="section-count" id="ractivity-count">0</span></div>
-        <span class="chevron down" id="chev-ractivity">+</span>
-      </div>
-      <div class="section-body show" id="body-ractivity"></div>
-    </div>
-
-    <!-- Discoveries (consolidated findings) -->
-    <div class="section" style="animation-delay:0.10s">
-      <div class="section-head" onclick="toggle('discoveries')">
-        <div class="section-title">/Discoveries <span class="section-count" id="discoveries-count">0</span></div>
-        <span class="chevron down" id="chev-discoveries">+</span>
-      </div>
-      <div class="section-body show" id="body-discoveries"></div>
-    </div>
-
-    <!-- Leaderboard (compact bar chart) -->
-    <div class="section" style="animation-delay:0.15s">
-      <div class="section-head" onclick="toggle('leaderboard')">
-        <div class="section-title">/Strategy Leaderboard <span class="section-count" id="leaderboard-count">0</span></div>
-        <span class="chevron down" id="chev-leaderboard">+</span>
-      </div>
-      <div class="section-body show" id="body-leaderboard"></div>
-    </div>
-
-  </div><!-- /tab-research -->
-
-  <!-- ═══ HEALTH TAB ═══ -->
-  <div class="tab-content" id="tab-health">
-
-    <!-- Strategy Lifecycle KPIs -->
-    <div class="research-kpis" id="health-kpis"></div>
-
-    <!-- Lifecycle State Table -->
-    <div class="section" style="animation-delay:0.05s">
-      <div class="section-head" onclick="toggle('health-lifecycle')">
-        <div class="section-title">/Strategy Lifecycle <span class="section-count" id="health-lifecycle-count">0</span></div>
-        <span class="chevron down" id="chev-health-lifecycle">+</span>
-      </div>
-      <div class="section-body show" id="body-health-lifecycle"></div>
-    </div>
-
-    <!-- Backtest Reference Metrics -->
-    <div class="section" style="animation-delay:0.10s">
-      <div class="section-head" onclick="toggle('health-metrics')">
-        <div class="section-title">/Best Backtest Metrics <span class="section-count" id="health-metrics-count">0</span></div>
-        <span class="chevron down" id="chev-health-metrics">+</span>
-      </div>
-      <div class="section-body show" id="body-health-metrics"></div>
-    </div>
-
-  </div><!-- /tab-health -->
-
-  <!-- ═══ EVENTS TAB ═══ -->
-  <div class="tab-content" id="tab-events">
-
-    <!-- Proximity KPIs -->
-    <div class="research-kpis" id="events-kpis"></div>
-
-    <!-- Upcoming Events Table -->
-    <div class="section" style="animation-delay:0.05s">
-      <div class="section-head" onclick="toggle('events-upcoming')">
-        <div class="section-title">/Upcoming Events <span class="section-count" id="events-upcoming-count">0</span></div>
-        <span class="chevron down" id="chev-events-upcoming">+</span>
-      </div>
-      <div class="section-body show" id="body-events-upcoming"></div>
-    </div>
-
-    <!-- Recent Past Events -->
-    <div class="section" style="animation-delay:0.10s">
-      <div class="section-head" onclick="toggle('events-past')">
-        <div class="section-title">/Recent Past <span class="section-count" id="events-past-count">0</span></div>
-        <span class="chevron down" id="chev-events-past">+</span>
-      </div>
-      <div class="section-body show" id="body-events-past"></div>
-    </div>
-
-  </div><!-- /tab-events -->
-
-  <!-- ═══ SYSTEM TAB ═══ -->
-  <div class="tab-content" id="tab-system">
-
-    <!-- System Status KPIs -->
-    <div class="research-kpis" id="system-kpis"></div>
-
-    <!-- Reconciliation Status -->
-    <div class="section" style="animation-delay:0.05s">
-      <div class="section-head" onclick="toggle('system-recon')">
-        <div class="section-title">/Reconciliation Status <span class="section-count" id="system-recon-count">0</span></div>
-        <span class="chevron down" id="chev-system-recon">+</span>
-      </div>
-      <div class="section-body show" id="body-system-recon"></div>
-    </div>
-
-    <!-- Config Validation -->
-    <div class="section" style="animation-delay:0.10s">
-      <div class="section-head" onclick="toggle('system-config')">
-        <div class="section-title">/Config Validation <span class="section-count" id="system-config-count">0</span></div>
-        <span class="chevron down" id="chev-system-config">+</span>
-      </div>
-      <div class="section-body show" id="body-system-config"></div>
-    </div>
-
-  </div><!-- /tab-system -->
-
-
-  <!-- FIX 22: Removed trailing plus-row grid markers (visual noise at page bottom) -->
+  <!-- ── Positions Grid ── -->
+  <div class="section-title" id="positions-label">Open Positions</div>
+  <div class="positions-grid" id="positions-grid"></div>
 
 </div>
-
 <script>
-// ── Market view state ──
-var _rawData = null;
-var _currentMarket = 'all';  // 'all', 'asx', 'sp500', etc.
-var CURRENCY_SYMBOLS = { AUD: 'A$', USD: 'US$', GBP: '£', EUR: '€', JPY: '¥', HKD: 'HK$' };
+'use strict';
 
-function switchMarket(m) {
-  _currentMarket = m;
-  document.querySelectorAll('.market-btn').forEach(function(el) {
-    el.classList.toggle('active', el.getAttribute('data-market') === m);
-  });
-  var shell = document.querySelector('.shell');
-  if (shell) shell.setAttribute('data-market', m);
-  // Force chart and render refresh on market switch
-  _lastChartKey = '';
-  if (_rawData) render(buildView(_rawData, m));
+// ── Strategy colour map ──────────────────────────────────────
+var STRATEGY_COLORS = {
+  momentum_breakout: '#fb923c',
+  mean_reversion:    '#60a5fa',
+  trend_following:   '#4ade80',
+  opening_gap:       '#fbbf24',
+  sector_rotation:   '#c084fc',
+  short_term_mr:     '#22d3ee',
+  connors_rsi2:      '#fb7185',
+  manual:            '#9ca3af'
+};
+
+// ── Theme ────────────────────────────────────────────────────
+var THEMES = ['dark', 'light', 'auto'];
+var currentTheme = localStorage.getItem('atlas-theme') || 'auto';
+
+function applyTheme(t) {
+  currentTheme = t;
+  var eff = t === 'auto'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : t;
+  document.documentElement.setAttribute('data-theme', eff);
+  document.getElementById('meta-theme').content = eff === 'light' ? '#fafafa' : '#0a0a0a';
+  localStorage.setItem('atlas-theme', t);
 }
 
-function getViewCurrency() {
-  if (_currentMarket === 'all') return 'AUD';
-  if (!_rawData || !_rawData.markets[_currentMarket]) return 'AUD';
-  return _rawData.markets[_currentMarket].currency || 'AUD';
-}
+document.getElementById('theme-btn').onclick = function() {
+  var idx = (THEMES.indexOf(currentTheme) + 1) % THEMES.length;
+  applyTheme(THEMES[idx]);
+  if (window._chartData) drawChart(window._chartData);
+};
 
-function toAud(amount, currency) {
-  if (!_rawData || currency === 'AUD') return amount;
-  var rates = _rawData.exchange_rates || {};
-  if (currency === 'USD') return amount * (rates.USDAUD || 1.41);
-  return amount;
-}
-
-function buildView(raw, market) {
-  if (market === 'all') return raw;  // combined view already in AUD
-  var md = raw.markets[market];
-  if (!md) return raw;
-  // Reshape single-market data to match top-level structure render() expects
-  return {
-    timestamp: md.timestamp || raw.timestamp,
-    project: raw.project,
-    markets: raw.markets,
-    exchange_rates: raw.exchange_rates,
-    trading_mode: md.trading_mode || 'paper',
-    data_source: md.data_source || 'paper',
-    broker: raw.broker,
-    config_version: md.config_version || '?',
-    account: {
-      equity: (md.portfolio || {}).equity || 0,
-      cash: (md.portfolio || {}).cash || 0,
-      buying_power: (md.portfolio || {}).buying_power || (md.portfolio || {}).cash || 0,
-      currency: md.currency || 'AUD'
-    },
-    portfolio: md.portfolio || {},
-    manual_portfolio: raw.manual_portfolio || { connected: false, positions: [], num_open: 0, unrealized_pnl: 0, equity: 0, cash: 0 },
-    strategy_summary: md.strategy_summary || [],
-    equity_curve: md.equity_curve || [],
-    benchmark_curve: md.benchmark_curve || [],
-    benchmark_ticker: md.benchmark_ticker || 'SPY',
-    benchmark_return_pct: md.benchmark_return_pct || 0,
-    plan: md.plan || null,
-    closed_trades: md.closed_trades || [],
-    risk: md.risk || {},
-    tasks: md.tasks || raw.tasks || {},
-    research: raw.research  // research is always global
-  };
-}
-
-function buildMarketSelector(raw) {
-  var el = document.getElementById('market-selector');
-  var markets = raw.markets || {};
-  var rates = raw.exchange_rates || {};
-  var html = '';
-
-  // "All Markets" button with AUD total
-  var totalAud = (raw.portfolio || {}).equity || 0;
-  html += '<button class="market-btn' + (_currentMarket === 'all' ? ' active' : '') + '" data-market="all" onclick="switchMarket(\'all\')">';
-  html += '<span class="mkt-dot" style="background:var(--amber)"></span>';
-  html += 'All Markets';
-  html += '<span class="mkt-eq">A$' + totalAud.toLocaleString('en-AU', {minimumFractionDigits:0, maximumFractionDigits:0}) + '</span>';
-  html += '</button>';
-
-  // Per-market buttons
-  Object.keys(markets).forEach(function(mid) {
-    var md = markets[mid];
-    var pf = md.portfolio || {};
-    var ccy = md.currency || 'AUD';
-    var sym = CURRENCY_SYMBOLS[ccy] || (ccy + ' ');
-    var dotColor = mid === 'asx' ? 'var(--purple)' : mid === 'sp500' ? 'var(--blue)' : 'var(--cyan)';
-    var eq = pf.equity || 0;
-    html += '<button class="market-btn' + (_currentMarket === mid ? ' active' : '') + '" data-market="' + mid + '" onclick="switchMarket(\'' + mid + '\')">';
-    html += '<span class="mkt-dot" style="background:' + dotColor + '"></span>';
-    html += mid.toUpperCase();
-    html += '<span class="mkt-eq">' + sym + eq.toLocaleString('en-AU', {minimumFractionDigits:0, maximumFractionDigits:0}) + '</span>';
-    html += '</button>';
-  });
-
-  el.innerHTML = html;
-}
-
-// ── Helpers ──
-function $(v, ccy) {
-  ccy = ccy || getViewCurrency();
-  var sym = CURRENCY_SYMBOLS[ccy] || '$';
-  return (v >= 0 ? '' : '-') + sym + Math.abs(v).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-function pct(v) { return (v >= 0 ? '+' : '') + (v != null ? v.toFixed(2) : '0.00') + '%'; }
-function cls(v) { return v > 0.005 ? 'up' : v < -0.005 ? 'down' : 'flat'; }
-function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
-function strat(s) { return s ? '<span class="strat strat-' + s + '">' + s.replace(/_/g,' ') + '</span>' : ''; }
-function marketTag(m) { return m ? '<span class="market-tag market-' + m + '">' + m.toUpperCase() + '</span>' : ''; }
-function orderStatus(s) {
-  if (!s) return '';
-  var clean = String(s).replace(/_/g, ' ').toLowerCase();
-  var cls = 'order-pending';
-  if (/filled|complete/i.test(s)) cls = 'order-filled';
-  else if (/partial/i.test(s)) cls = 'order-partial';
-  else if (/fail|reject/i.test(s)) cls = 'order-failed';
-  else if (/cancel/i.test(s)) cls = 'order-cancelled';
-  // Prettify common names
-  if (clean === 'filled all') clean = 'filled';
-  return '<span class="order-status ' + cls + '">' + clean + '</span>';
-}
-
-function ago(ts) {
-  try {
-    var d = new Date(ts);
-    var s = Math.floor((Date.now() - d) / 1000);
-    if (s < 60) return 'just now';
-    if (s < 3600) return Math.floor(s/60) + 'm ago';
-    if (s < 86400) return Math.floor(s/3600) + 'h ago';
-    return Math.floor(s/86400) + 'd ago';
-  } catch(e) { return ''; }
-}
-
-// ── Mobile detection ──
-function isMobile() { return window.innerWidth <= 700; }
-
-// ── In-page confirmation panel (replaces browser confirm()) ──
-function _showConfirm(title, msg, confirmLabel, confirmCls, onConfirm) {
-  var panel = document.createElement('div');
-  panel.className = 'confirm-panel';
-  panel.innerHTML =
-    '<div class="confirm-box">' +
-      '<div class="confirm-box-title">' + esc(title) + '</div>' +
-      '<div class="confirm-box-msg">' + esc(msg) + '</div>' +
-      '<div class="confirm-box-actions">' +
-        '<button class="plan-btn ' + confirmCls + '" id="_conf-ok">' + esc(confirmLabel) + '</button>' +
-        '<button class="plan-btn plan-btn-reject" id="_conf-cancel">Cancel</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(panel);
-  function cleanup() { document.body.removeChild(panel); document.removeEventListener('keydown', onEsc); }
-  function onEsc(e) { if (e.key === 'Escape') { cleanup(); } }
-  document.addEventListener('keydown', onEsc);
-  panel.querySelector('#_conf-ok').onclick = function() { cleanup(); onConfirm(); };
-  panel.querySelector('#_conf-cancel').onclick = function() { cleanup(); };
-  panel.onclick = function(e) { if (e.target === panel) cleanup(); };
-}
-
-// ── Plan approval/rejection ──
-function approvePlan(tradeDate, marketId) {
-  _showConfirm(
-    'Approve & Execute Plan',
-    'Approve and execute ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '? This will place live orders with your broker.',
-    '✓ Confirm Execute',
-    'plan-btn-approve',
-    function() { _planAction('/api/approve', tradeDate, marketId, false); }
-  );
-}
-
-function rejectPlan(tradeDate, marketId) {
-  _showConfirm(
-    'Reject Plan',
-    'Reject ' + marketId.toUpperCase() + ' plan for ' + tradeDate + '? No orders will be placed.',
-    '✗ Confirm Reject',
-    'plan-btn-reject',
-    function() { _planAction('/api/reject', tradeDate, marketId, true); }
-  );
-}
-
-function _planAction(endpoint, tradeDate, marketId, isReject) {
-  var planId = 'plan-' + marketId;
-  var approveBtn = document.getElementById(planId + '-approve');
-  var rejectBtn = document.getElementById(planId + '-reject');
-  var resultEl = document.getElementById(planId + '-result');
-  var activeBtn = isReject ? rejectBtn : approveBtn;
-  var otherBtn = isReject ? approveBtn : rejectBtn;
-  var savedLabel = activeBtn ? activeBtn.innerHTML : '';
-
-  // Disable both, spinner on the clicked one
-  if (activeBtn) { activeBtn.disabled = true; activeBtn.innerHTML = '<span class="plan-btn-spinner"></span> ' + (isReject ? 'Rejecting…' : 'Executing…'); }
-  if (otherBtn) { otherBtn.disabled = true; }
-
-  fetch(endpoint, {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ trade_date: tradeDate, market_id: marketId })
-  })
-  .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-  .then(function(res) {
-    if (res.ok && res.data.ok) {
-      var msg;
-      if (isReject) {
-        msg = '✓ Plan rejected — no orders placed';
-      } else {
-        msg = '✓ ' + (res.data.mode === 'live' ? 'LIVE' : 'PAPER') + ' executed — Entries: ' + (res.data.entries || '0') + ', Exits: ' + (res.data.exits || '0');
-      }
-      // Hide the entire plan block for this market and show result
-      var planBlock = document.getElementById(planId + '-block');
-      if (planBlock) planBlock.style.display = 'none';
-      if (resultEl) resultEl.innerHTML = '<div class="plan-result ' + (isReject ? 'error' : 'success') + '">' + msg + '</div>';
-      if (resultEl) resultEl.style.display = 'block';
-      // Refresh data after short delay (will rebuild orders section)
-      setTimeout(function() { load(); }, 2000);
-    } else {
-      var err = (res.data && res.data.error) || 'Unknown error';
-      if (resultEl) resultEl.innerHTML = '<div class="plan-result error">✗ ' + err + '</div>';
-      if (activeBtn) { activeBtn.disabled = false; activeBtn.innerHTML = savedLabel; }
-      if (otherBtn) { otherBtn.disabled = false; }
-    }
-  })
-  .catch(function(err) {
-    if (resultEl) resultEl.innerHTML = '<div class="plan-result error">✗ Network error: ' + err.message + '</div>';
-    if (activeBtn) { activeBtn.disabled = false; activeBtn.innerHTML = savedLabel; }
-    if (otherBtn) { otherBtn.disabled = false; }
-  });
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
-  document.querySelectorAll('.tab-btn').forEach(function(el) { el.classList.remove('active'); });
-  var content = document.getElementById('tab-' + tab);
-  var btn = document.getElementById('tab-btn-' + tab);
-  if (content) content.classList.add('active');
-  if (btn) btn.classList.add('active');
-  // Agent floor updates on data change (no canvas resize needed)
-}
-
-function toggle(id) {
-  var body = document.getElementById('body-' + id);
-  var chev = document.getElementById('chev-' + id);
-  if (body.classList.contains('collapsed')) {
-    body.classList.remove('collapsed');
-    if (chev) { chev.classList.remove('right'); chev.classList.add('down'); }
-  } else {
-    body.classList.add('collapsed');
-    if (chev) { chev.classList.remove('down'); chev.classList.add('right'); }
-  }
-}
-
-function sparkline(points, w, h) {
-  if (points.length < 2) return '';
-  var min = Math.min.apply(null, points);
-  var max = Math.max.apply(null, points);
-  var range = max - min || 1;
-  var pad = 1;
-  var path = points.map(function(p, i) {
-    var x = pad + (i / (points.length - 1)) * (w - pad * 2);
-    var y = pad + (h - pad * 2) - ((p - min) / range) * (h - pad * 2);
-    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
-  }).join(' ');
-  var color = points[points.length-1] >= points[0] ? 'var(--green)' : 'var(--red)';
-  return '<span class="card-sparkline"><svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/></svg></span>';
-}
-
-// ── Table header keyboard navigation ──
-// Allows Enter/Space to trigger click on focused th elements
 document.addEventListener('keydown', function(e) {
-  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.tagName === 'TH') {
-    e.preventDefault();
-    document.activeElement.click();
+  if (e.key === 'l' || e.key === 'L') {
+    var idx = (THEMES.indexOf(currentTheme) + 1) % THEMES.length;
+    applyTheme(THEMES[idx]);
+    if (window._chartData) drawChart(window._chartData);
   }
 });
 
-// ── Sort ──
-var sortState = {};
-function sortTable(tableId, col, type) {
-  var table = document.getElementById(tableId);
-  if (!table) return;
-  var tbody = table.querySelector('tbody');
-  var rows = Array.from(tbody.querySelectorAll('tr'));
-  var key = tableId + '-' + col;
-  var asc = sortState[key] === 'asc' ? 'desc' : 'asc';
-  sortState[key] = asc;
-  rows.sort(function(a, b) {
-    var av = a.cells[col].getAttribute('data-v') || a.cells[col].textContent;
-    var bv = b.cells[col].getAttribute('data-v') || b.cells[col].textContent;
-    if (type === 'num') { av = parseFloat(av) || 0; bv = parseFloat(bv) || 0; }
-    if (av < bv) return asc === 'asc' ? -1 : 1;
-    if (av > bv) return asc === 'asc' ? 1 : -1;
-    return 0;
-  });
-  rows.forEach(function(r) { tbody.appendChild(r); });
-}
+applyTheme(currentTheme);
 
-// ── Table overflow indicator ──
-function checkTableOverflow() {
-  document.querySelectorAll('.table-scroll').forEach(function(el) {
-    el.classList.toggle('has-overflow', el.scrollWidth > el.clientWidth + 10);
+// ── Formatting ───────────────────────────────────────────────
+function fmtNum(v, dec) {
+  if (v == null || isNaN(v)) return '—';
+  return v.toLocaleString(undefined, {
+    minimumFractionDigits: dec != null ? dec : 2,
+    maximumFractionDigits: dec != null ? dec : 2
   });
 }
 
-// ── Equity Chart (Canvas) ──
-var chartState = { bt: [], live: [], startEq: 5000, range: 'all' };
-var chartPoints = []; // populated by paintChart for hover lookup
-var _lastChartKey = '';  // skip repaint when data unchanged
-
-function drawEquityChart(benchCurve, liveCurve, startEq, benchTicker) {
-  // Skip chart rebuild if data hasn't changed
-  var chartKey = (liveCurve.length || 0) + ':' + (benchCurve.length || 0) + ':' +
-    (liveCurve.length ? liveCurve[liveCurve.length - 1].equity : 0);
-  if (chartKey === _lastChartKey && document.getElementById('eq-canvas')) return;
-  _lastChartKey = chartKey;
-
-  var el = document.getElementById('equity-chart');
-  if (!benchCurve.length && !liveCurve.length) {
-    el.innerHTML = '<div class="empty">No equity data available yet — chart builds as trading days accumulate</div>';
-    el.style.height = 'auto';
-    return;
-  }
-  chartState.bt = benchCurve;
-  chartState.live = liveCurve;
-  chartState.startEq = startEq;
-  chartState.benchTicker = benchTicker || 'SPY';
-
-  // Build DOM once
-  if (!document.getElementById('eq-canvas')) {
-    el.style.height = 'auto';
-    el.innerHTML =
-      '<div class="chart-legend" id="chart-legend"></div>' +
-      '<div class="chart-ranges" id="chart-ranges"></div>' +
-      '<div class="chart-wrap" id="chart-wrap">' +
-        '<canvas id="eq-canvas"></canvas>' +
-        '<div class="eq-crosshair" id="eq-crosshair"></div>' +
-        '<div class="eq-tooltip" id="eq-tooltip"></div>' +
-      '</div>';
-
-    // Range buttons
-    var ranges = [
-      { key: '3m', label: '3M' }, { key: '6m', label: '6M' },
-      { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' },
-      { key: 'all', label: 'All' }
-    ];
-    var rh = '';
-    ranges.forEach(function(r) {
-      rh += '<button class="chart-range-btn' + (r.key === chartState.range ? ' active' : '') +
-            '" data-range="' + r.key + '" onclick="setChartRange(\'' + r.key + '\')">' + r.label + '</button>';
-    });
-    document.getElementById('chart-ranges').innerHTML = rh;
-
-    // Events
-    var wrap = document.getElementById('chart-wrap');
-    wrap.addEventListener('mousemove', chartHover);
-    wrap.addEventListener('mouseleave', chartLeave);
-    var _chartRszT;
-    window.addEventListener('resize', function() { clearTimeout(_chartRszT); _chartRszT = setTimeout(paintChart, 120); });
-  }
-  // Legend — always update (benchmark ticker changes per market)
-  document.getElementById('chart-legend').innerHTML =
-    '<div class="chart-legend-item"><span class="chart-legend-swatch" style="background:#82a85a"></span>Atlas</div>' +
-    '<div class="chart-legend-item"><span class="chart-legend-swatch" style="background:rgba(90,143,186,0.5)"></span>' + (chartState.benchTicker || 'Benchmark') + '</div>';
-  paintChart();
+function fmtCcy(v, ccy) {
+  if (v == null || isNaN(v)) return '—';
+  var sym = (ccy || '').toUpperCase() === 'AUD' ? 'A$' : '$';
+  return sym + fmtNum(Math.abs(v));
 }
 
-function setChartRange(range) {
-  chartState.range = range;
-  document.querySelectorAll('.chart-range-btn').forEach(function(b) {
-    b.classList.toggle('active', b.getAttribute('data-range') === range);
-  });
-  paintChart();
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return '—';
+  return (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(2) + '%';
 }
 
-function filterByRange(data) {
-  if (chartState.range === 'all' || !data.length) return data;
-  var last = new Date(data[data.length - 1].date);
-  var cutoff = new Date(last);
-  switch (chartState.range) {
-    case '3m': cutoff.setMonth(cutoff.getMonth() - 3); break;
-    case '6m': cutoff.setMonth(cutoff.getMonth() - 6); break;
-    case '1y': cutoff.setFullYear(cutoff.getFullYear() - 1); break;
-    case '2y': cutoff.setFullYear(cutoff.getFullYear() - 2); break;
-  }
-  var cs = cutoff.toISOString().slice(0, 10);
-  return data.filter(function(d) { return d.date >= cs; });
-}
-
-function niceStep(range, target) {
-  var rough = range / target;
-  var mag = Math.pow(10, Math.floor(Math.log10(rough)));
-  var r = rough / mag;
-  if (r <= 1) return mag;
-  if (r <= 2) return 2 * mag;
-  if (r <= 5) return 5 * mag;
-  return 10 * mag;
-}
-
-function getTimeLabels(dates, cw) {
-  var n = dates.length;
-  if (n < 2) return [];
-  var maxL = Math.floor(cw / 85);
-  var step = Math.max(1, Math.ceil(n / maxL));
-  var labels = [];
-
-  // Determine date range to pick label format
-  // Use T12:00:00 to avoid UTC midnight → previous day in local timezone
-  var d0 = new Date(dates[0] + 'T12:00:00');
-  var dN = new Date(dates[n - 1] + 'T12:00:00');
-  var rangeDays = Math.round((dN - d0) / 86400000);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  for (var i = Math.floor(step / 2); i < n; i += step) {
-    var d = new Date(dates[i] + 'T12:00:00');
-    var text;
-    if (rangeDays <= 90) {
-      // Short range: day-level labels "26 Feb"
-      text = d.getUTCDate() + ' ' + months[d.getUTCMonth()];
-    } else {
-      // Longer range: month + year "Feb '26"
-      text = months[d.getUTCMonth()] + " '" + String(d.getUTCFullYear()).slice(-2);
-    }
-    labels.push({ idx: i, text: text });
-  }
-  return labels;
-}
-
-function paintChart() {
-  var canvas = document.getElementById('eq-canvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var dpr = window.devicePixelRatio || 1;
-  var W = canvas.parentElement.offsetWidth;
-  var eqH = 220, ddH = 70, gap = 12, axisH = 22;
-  var totalH = eqH + gap + ddH + axisH;
-
-  // ── Two independent series ──
-  var portRaw = chartState.live || [];
-  var benchRaw = chartState.bt || [];
-  var portData = filterByRange(portRaw);
-  var benchData = filterByRange(benchRaw);
-
-  // Need at least 2 portfolio points
-  if (portData.length < 2) {
-    var totalPts = portRaw.length;
-    canvas.width = W * dpr; canvas.height = totalH * dpr;
-    canvas.style.width = W + 'px'; canvas.style.height = totalH + 'px';
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, W, totalH);
-    var _isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    ctx.fillStyle = _isDark ? '#555555' : '#8d8d8d';
-    ctx.font = '13px Figtree, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    if (totalPts < 2) {
-      ctx.fillText('Chart builds as trading days accumulate — ' + totalPts + ' day' + (totalPts !== 1 ? 's' : '') + ' so far', W / 2, totalH / 2 - 10);
-      ctx.font = '11px "JetBrains Mono", monospace';
-      if (totalPts === 1) {
-        ctx.fillText('Starting equity: ' + $(portRaw[0].equity), W / 2, totalH / 2 + 14);
-      }
-    } else {
-      ctx.fillText('Not enough data for selected range', W / 2, totalH / 2);
-    }
-    return;
-  }
-
-  // ── Build unified date axis from both curves ──
-  var dateSet = {};
-  portData.forEach(function(d) { dateSet[d.date] = true; });
-  benchData.forEach(function(d) { dateSet[d.date] = true; });
-  var dates = Object.keys(dateSet).sort();
-  var n = dates.length;
-  if (n < 2) return;
-
-  // Map each series to the unified date axis
-  var portByDate = {};
-  var pnlByDate = {};
-  portData.forEach(function(d) {
-    portByDate[d.date] = d.equity;
-    if (d.pnl !== undefined) pnlByDate[d.date] = d.pnl;
-  });
-  var benchByDate = {};
-  benchData.forEach(function(d) { benchByDate[d.date] = d.equity; });
-
-  // Build arrays — forward-fill gaps
-  var portEquities = [];
-  var portPnls = [];
-  var benchEquities = [];
-  var lastP = null, lastB = null, lastPnl = null;
-  for (var i = 0; i < n; i++) {
-    var d = dates[i];
-    if (portByDate[d] !== undefined) lastP = portByDate[d];
-    if (pnlByDate[d] !== undefined) lastPnl = pnlByDate[d];
-    if (benchByDate[d] !== undefined) lastB = benchByDate[d];
-    portEquities.push(lastP);
-    portPnls.push(lastPnl);
-    benchEquities.push(lastB);
-  }
-
-  // ── Convert to % return ──
-  // Deposit-adjusted: if pnl data available, return = pnl / invested_capital
-  // where invested_capital = equity - pnl. This ignores deposits/withdrawals.
-  // Fallback for old points without pnl: use ratio to first equity value.
-  var hasPnl = portPnls.some(function(v) { return v !== null; });
-  var portBase = portEquities[0] || chartState.startEq;
-  var benchBase = null;
-  for (var i = 0; i < n; i++) { if (benchEquities[i] !== null) { benchBase = benchEquities[i]; break; } }
-
-  var portReturns = [];
-  var benchReturns = [];
-  for (var i = 0; i < n; i++) {
-    if (portEquities[i] !== null) {
-      if (hasPnl && portPnls[i] !== null) {
-        // Deposit-adjusted: pnl / (equity - pnl) × 100
-        var invested = portEquities[i] - portPnls[i];
-        portReturns.push(invested > 0 ? (portPnls[i] / invested) * 100 : 0);
-      } else {
-        // Fallback: ratio to first point (old behavior)
-        portReturns.push(((portEquities[i] / portBase) - 1) * 100);
-      }
-    } else {
-      portReturns.push(null);
-    }
-    benchReturns.push(benchEquities[i] !== null && benchBase ? ((benchEquities[i] / benchBase) - 1) * 100 : null);
-  }
-
-  // For very few points (< 5), hide drawdown panel
-  var showDrawdown = n >= 5;
-  var showLowDataNote = n < 5;
-
-  var ml = 52, mr = 14, mt = 6;
-  if (!showDrawdown) { eqH = eqH + gap + ddH; ddH = 0; gap = 0; totalH = eqH + mt + axisH; }
-  canvas.width = W * dpr;
-  canvas.height = totalH * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = totalH + 'px';
-  ctx.scale(dpr, dpr);
-  document.getElementById('eq-crosshair').style.height = totalH + 'px';
-  var cw = W - ml - mr;
-
-  // ── Return range (across both series) ──
-  var allVals = [0]; // always include 0% baseline
-  for (var i = 0; i < n; i++) {
-    if (portReturns[i] !== null) allVals.push(portReturns[i]);
-    if (benchReturns[i] !== null) allVals.push(benchReturns[i]);
-  }
-  var minRet = Math.min.apply(null, allVals);
-  var maxRet = Math.max.apply(null, allVals);
-  var retR = maxRet - minRet; if (retR < 1) retR = 1;
-  minRet -= retR * 0.12;
-  maxRet += retR * 0.12;
-
-  // ── Drawdown (portfolio only) ──
-  // Drawdown from return series (not raw equity) so deposits don't
-  // create phantom drawdowns when new money raises the high-water mark.
-  var dd = [];
-  var pkRet = null;
-  for (var i = 0; i < n; i++) {
-    var r = portReturns[i];
-    if (r === null) { dd.push(0); continue; }
-    if (pkRet === null || r > pkRet) pkRet = r;
-    // Drawdown as pct-points below peak return
-    dd.push(r - pkRet);
-  }
-  var minDD = Math.min.apply(null, dd);
-  if (minDD > -0.5) minDD = -0.5;
-
-  // ── Scales ──
-  function xS(i) { return ml + (i / (n - 1)) * cw; }
-  function yR(v) { return mt + (1 - (v - minRet) / (maxRet - minRet)) * eqH; }
-  var ddTop = mt + eqH + gap;
-  function yD(v) { return ddTop + (1 - v / minDD) * ddH; }
-
-  // ── Store for hover ──
-  chartPoints = [];
-  for (var i = 0; i < n; i++) {
-    chartPoints.push({
-      x: xS(i), date: dates[i],
-      equity: portEquities[i], bench: benchEquities[i],
-      portRet: portReturns[i], benchRet: benchReturns[i],
-      dd: dd[i], live: portByDate[dates[i]] !== undefined
-    });
-  }
-
-  // ── Clear ──
-  ctx.clearRect(0, 0, W, totalH);
-
-  // FIX 1B: Theme-aware chart colors
-  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  var gridLineColor = isDark ? 'rgba(234,234,234,0.07)' : 'rgba(30,30,30,0.12)';
-  var gridZeroColor = isDark ? 'rgba(234,234,234,0.18)' : 'rgba(30,30,30,0.30)';
-  var gridTextColor = isDark ? '#555555' : '#8d8d8d';
-  var gridZeroTextColor = isDark ? '#8d8d8d' : '#555555';
-  var panelLabelColor = isDark ? 'rgba(234,234,234,0.12)' : 'rgba(30,30,30,0.15)';
-
-  // ── Grid ──
-  ctx.font = '10px "JetBrains Mono", monospace';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
-
-  // Return Y grid
-  var retStep = niceStep(maxRet - minRet, 4);
-  if (retStep < 0.1) retStep = 0.1;
-  for (var v = Math.ceil(minRet / retStep) * retStep; v <= maxRet; v += retStep) {
-    var gy = yR(v);
-    if (gy < mt || gy > mt + eqH) continue;
-    var isZero = Math.abs(v) < retStep * 0.01;
-    ctx.strokeStyle = isZero ? gridZeroColor : gridLineColor;
-    ctx.lineWidth = isZero ? 1.5 : 1;
-    if (isZero) { ctx.setLineDash([4, 3]); } else { ctx.setLineDash([]); }
-    ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(W - mr, gy); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = isZero ? gridZeroTextColor : gridTextColor;
-    var label = (v > 0 ? '+' : '') + (retStep >= 1 ? v.toFixed(0) : v.toFixed(1)) + '%';
-    ctx.fillText(label, ml - 5, gy);
-  }
-
-  // Drawdown Y grid
-  if (showDrawdown) {
-    var ddStep = niceStep(-minDD, 2);
-    if (ddStep < 0.5) ddStep = 0.5;
-    for (var v = 0; v >= minDD; v -= ddStep) {
-      var gy = yD(v);
-      ctx.strokeStyle = gridLineColor;
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(W - mr, gy); ctx.stroke();
-      ctx.fillStyle = 'rgba(196,88,90,0.4)';
-      ctx.fillText(v.toFixed(1) + '%', ml - 5, gy);
-    }
-  }
-
-  // X axis labels + vertical grid
-  ctx.fillStyle = gridTextColor;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  var xLabelY = showDrawdown ? (mt + eqH + gap + ddH + 5) : (totalH - axisH + 5);
-  getTimeLabels(dates, cw).forEach(function(lbl) {
-    var x = xS(lbl.idx);
-    ctx.fillText(lbl.text, x, xLabelY);
-    ctx.strokeStyle = gridLineColor;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + eqH); ctx.stroke();
-    if (showDrawdown) {
-      ctx.beginPath(); ctx.moveTo(x, ddTop); ctx.lineTo(x, ddTop + ddH); ctx.stroke();
-    }
-  });
-
-  // ── Panel separator ──
-  if (showDrawdown) {
-    ctx.strokeStyle = isDark ? 'rgba(234,234,234,0.15)' : 'rgba(30,30,30,0.2)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(ml, mt + eqH + gap / 2);
-    ctx.lineTo(W - mr, mt + eqH + gap / 2);
-    ctx.stroke();
-  }
-
-  var eqBot = mt + eqH;
-  var zeroY = yR(0);
-
-  // ═══ Draw benchmark line + fill (blue) ═══
-  var benchPts = [];
-  for (var i = 0; i < n; i++) {
-    if (benchReturns[i] !== null) benchPts.push(i);
-  }
-
-  if (benchPts.length >= 2) {
-    // Fill towards 0% line
-    ctx.fillStyle = 'rgba(90,143,186,0.06)';
-    ctx.beginPath();
-    ctx.moveTo(xS(benchPts[0]), zeroY);
-    for (var j = 0; j < benchPts.length; j++) {
-      ctx.lineTo(xS(benchPts[j]), yR(benchReturns[benchPts[j]]));
-    }
-    ctx.lineTo(xS(benchPts[benchPts.length - 1]), zeroY);
-    ctx.closePath(); ctx.fill();
-
-    // Line
-    ctx.strokeStyle = 'rgba(90,143,186,0.5)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (var j = 0; j < benchPts.length; j++) {
-      var bi = benchPts[j];
-      j === 0 ? ctx.moveTo(xS(bi), yR(benchReturns[bi])) : ctx.lineTo(xS(bi), yR(benchReturns[bi]));
-    }
-    ctx.stroke();
-
-    // End dot + label
-    var lastBI = benchPts[benchPts.length - 1];
-    var bRetEnd = benchReturns[lastBI];
-    ctx.beginPath(); ctx.arc(xS(lastBI), yR(bRetEnd), 3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(90,143,186,0.6)'; ctx.fill();
-    ctx.fillStyle = 'rgba(90,143,186,0.7)';
-    ctx.font = '600 9px "JetBrains Mono", monospace';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText((chartState.benchTicker || 'Bench') + ' ' + (bRetEnd > 0 ? '+' : '') + bRetEnd.toFixed(2) + '%', xS(lastBI) + 6, yR(bRetEnd) - 2);
-  }
-
-  // ═══ Draw portfolio line + fill (green) ═══
-  var portPts = [];
-  for (var i = 0; i < n; i++) {
-    if (portReturns[i] !== null) portPts.push(i);
-  }
-
-  if (portPts.length >= 2) {
-    // Fill towards 0% line
-    var g2 = ctx.createLinearGradient(0, mt, 0, eqBot);
-    g2.addColorStop(0, 'rgba(130,168,90,0.10)');
-    g2.addColorStop(1, 'rgba(130,168,90,0.02)');
-    ctx.fillStyle = g2;
-    ctx.beginPath();
-    ctx.moveTo(xS(portPts[0]), zeroY);
-    for (var j = 0; j < portPts.length; j++) {
-      ctx.lineTo(xS(portPts[j]), yR(portReturns[portPts[j]]));
-    }
-    ctx.lineTo(xS(portPts[portPts.length - 1]), zeroY);
-    ctx.closePath(); ctx.fill();
-
-    // Glow
-    ctx.strokeStyle = 'rgba(130,168,90,0.15)';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    for (var j = 0; j < portPts.length; j++) {
-      var pi = portPts[j];
-      j === 0 ? ctx.moveTo(xS(pi), yR(portReturns[pi])) : ctx.lineTo(xS(pi), yR(portReturns[pi]));
-    }
-    ctx.stroke();
-
-    // Main line
-    ctx.strokeStyle = '#82a85a';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    for (var j = 0; j < portPts.length; j++) {
-      var pi = portPts[j];
-      j === 0 ? ctx.moveTo(xS(pi), yR(portReturns[pi])) : ctx.lineTo(xS(pi), yR(portReturns[pi]));
-    }
-    ctx.stroke();
-
-    // End marker + label
-    var lastPI = portPts[portPts.length - 1];
-    var pRetEnd = portReturns[lastPI];
-    var lx = xS(lastPI), ly = yR(pRetEnd);
-    ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2);
-    ctx.fillStyle = '#82a85a'; ctx.fill();
-    ctx.strokeStyle = '#16140f'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#82a85a';
-    ctx.font = '600 10px "JetBrains Mono", monospace';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText('Atlas ' + (pRetEnd > 0 ? '+' : '') + pRetEnd.toFixed(2) + '%', lx + 6, ly - 2);
-  }
-
-  // ── Drawdown fill + line (portfolio only) ──
-  if (showDrawdown && portPts.length >= 2) {
-    var g3 = ctx.createLinearGradient(0, ddTop, 0, ddTop + ddH);
-    g3.addColorStop(0, 'rgba(196,88,90,0)');
-    g3.addColorStop(1, 'rgba(196,88,90,0.12)');
-    ctx.fillStyle = g3;
-    ctx.beginPath(); ctx.moveTo(xS(0), ddTop);
-    for (var i = 0; i < n; i++) ctx.lineTo(xS(i), yD(dd[i]));
-    ctx.lineTo(xS(n - 1), ddTop); ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle = 'rgba(196,88,90,0.45)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (var i = 0; i < n; i++) { i === 0 ? ctx.moveTo(xS(i), yD(dd[i])) : ctx.lineTo(xS(i), yD(dd[i])); }
-    ctx.stroke();
-
-    // Max drawdown annotation
-    var worstI = dd.indexOf(minDD);
-    if (worstI >= 0 && minDD < -0.5) {
-      var wx = xS(worstI), wy = yD(dd[worstI]);
-      ctx.fillStyle = 'rgba(196,88,90,0.7)';
-      ctx.font = '600 9px "JetBrains Mono", monospace';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-      ctx.fillText('Max ' + dd[worstI].toFixed(1) + '%', wx, wy - 5);
-      ctx.strokeStyle = 'rgba(196,88,90,0.4)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(wx, wy - 3); ctx.lineTo(wx, wy + 3); ctx.stroke();
-    }
-  }
-
-  // ── Panel labels ──
-  ctx.fillStyle = panelLabelColor;
-  ctx.font = '600 8px "JetBrains Mono", monospace';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('RETURN \u0025 (cumulative)', ml + 4, mt + 3);
-  if (showDrawdown) ctx.fillText('DRAWDOWN', ml + 4, ddTop + 3);
-
-  // ── Low-data annotation (< 5 data points) ──
-  if (showLowDataNote) {
-    var noteY = mt + eqH - 28;
-    ctx.fillStyle = 'rgba(212,168,74,0.12)';
-    ctx.fillRect(ml + 4, noteY, 260, 20);
-    ctx.fillStyle = 'rgba(212,168,74,0.7)';
-    ctx.font = '500 10px Figtree, system-ui, sans-serif';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText('⚠ Early data — chart fills in as more trading days accumulate', ml + 10, noteY + 10);
-  }
-}
-
-// ── Chart hover ──
-function chartHover(e) {
-  if (!chartPoints.length) return;
-  var canvas = document.getElementById('eq-canvas');
-  var crosshair = document.getElementById('eq-crosshair');
-  var tooltip = document.getElementById('eq-tooltip');
-  var rect = canvas.getBoundingClientRect();
-  var mx = (e.clientX - rect.left) * (canvas.width / canvas.offsetWidth / (window.devicePixelRatio || 1));
-
-  var near = null, best = Infinity;
-  for (var i = 0; i < chartPoints.length; i++) {
-    var d = Math.abs(chartPoints[i].x - mx);
-    if (d < best) { best = d; near = chartPoints[i]; }
-  }
-  if (!near || best > 30) { crosshair.style.display = 'none'; tooltip.style.display = 'none'; return; }
-
-  // Crosshair
-  var pxX = near.x / (canvas.width / (window.devicePixelRatio || 1)) * canvas.offsetWidth;
-  crosshair.style.display = 'block';
-  crosshair.style.left = pxX + 'px';
-
-  // Tooltip content
-  var pRet = near.portRet;
-  var bRet = near.benchRet;
-  var dStr = new Date(near.date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-
-  var html = '<div class="eq-tooltip-date">' + dStr + (near.live ? ' <span style="color:var(--green)">● LIVE</span>' : '') + '</div>';
-  if (pRet !== null) {
-    html += '<div class="eq-tooltip-row"><span class="eq-tooltip-label">Atlas</span><span class="eq-tooltip-val ' + cls(pRet) + '">' + pct(pRet) + '</span></div>';
-    if (near.equity !== null) {
-      html += '<div class="eq-tooltip-row"><span class="eq-tooltip-label">Equity</span><span class="eq-tooltip-val" style="color:var(--text-secondary);font-size:11px">' + $(near.equity) + '</span></div>';
-    }
-  }
-  if (bRet !== null) {
-    html += '<div class="eq-tooltip-row"><span class="eq-tooltip-label">' + (chartState.benchTicker || 'Benchmark') + '</span><span class="eq-tooltip-val" style="color:var(--blue)">' + pct(bRet) + '</span></div>';
-  }
-  if (pRet !== null && bRet !== null) {
-    var alpha = pRet - bRet;
-    html += '<div class="eq-tooltip-row"><span class="eq-tooltip-label">Alpha</span><span class="eq-tooltip-val ' + cls(alpha) + '">' + pct(alpha) + '</span></div>';
-  }
-  var ddVal = near.dd != null ? near.dd : 0;
-  html += '<div class="eq-tooltip-row"><span class="eq-tooltip-label">Drawdown</span><span class="eq-tooltip-val" style="color:' + (ddVal < -1 ? 'var(--red)' : 'var(--text-tertiary)') + '">' + ddVal.toFixed(2) + '%</span></div>';
-
-  tooltip.style.display = 'block';
-  tooltip.innerHTML = html;
-
-  // Position tooltip (flip side at midpoint)
-  var tw = 210;
-  tooltip.style.left = (pxX > canvas.offsetWidth / 2) ? (pxX - tw - 14) + 'px' : (pxX + 14) + 'px';
-
-  // Vertical bounds check — keep tooltip within canvas bounds
-  tooltip.style.top = '10px';
-  var tooltipH = tooltip.offsetHeight || 120;
-  var canvasH = canvas.offsetHeight;
-  var rawTop = 10;
-  if (rawTop + tooltipH > canvasH - 8) rawTop = Math.max(4, canvasH - tooltipH - 8);
-  tooltip.style.top = rawTop + 'px';
-}
-
-function chartLeave() {
-  document.getElementById('eq-crosshair').style.display = 'none';
-  document.getElementById('eq-tooltip').style.display = 'none';
-}
-
-// ── Render ──
-function render(d) {
-  var p = d.portfolio || {};
-  var risk = d.risk || {};
-
-  var mp = d.manual_portfolio || {};
-  var manualPnl = mp.unrealized_pnl_aud || mp.unrealized_pnl || 0;
-  var manualEquity = mp.equity_aud || mp.equity || 0;
-  var manualCash = mp.cash_aud || mp.cash || 0;
-  var manualConnected = mp.connected || false;
-
-  // Market session countdowns — init from active markets in data
-  _mcInit(Object.keys(d.markets || {}));
-
-  // Header — config_version may be an object {asx: "v9.2", sp500: "v2.0"} or a string
-  var cv = d.config_version || '';
-  if (typeof cv === 'object') {
-    if (_currentMarket !== 'all' && cv[_currentMarket]) {
-      cv = _currentMarket.toUpperCase() + ' ' + cv[_currentMarket];
-    } else {
-      cv = Object.keys(cv).map(function(k) { return k.toUpperCase() + ' ' + cv[k]; }).join(' · ');
-    }
-  }
-  document.getElementById('version').textContent = cv;
-  document.getElementById('updated').textContent = 'Updated ' + ago(d.timestamp);
-
-  // Trading mode indicator
-  var modePill = document.getElementById('mode-pill');
-  var modeDot = document.getElementById('mode-dot');
-  var modeLabel = document.getElementById('mode-label');
-  var tradingMode = d.trading_mode || 'paper';
-  modePill.style.display = 'flex';
-  if (tradingMode === 'research' || tradingMode === 'offline') {
-    modeDot.className = 'pulse-paper';
-    modeLabel.innerHTML = '<span class="mode-paper" style="color:var(--text-tertiary)">RESEARCH</span>';
-    modeLabel.title = 'Research-only mode — no live orders';
-  } else if (tradingMode === 'live') {
-    modeDot.className = 'pulse-live';
-    modeLabel.innerHTML = '<span class="mode-live">LIVE</span>';
-    modeLabel.title = 'Real money — Moomoo broker';
-  } else if (tradingMode === 'live_dry_run') {
-    modeDot.className = 'pulse-paper';
-    modeLabel.innerHTML = '<span class="mode-dry">DRY RUN</span>';
-    modeLabel.title = 'Live config but orders are simulated';
-  } else {
-    modeDot.className = 'pulse-paper';
-    modeLabel.innerHTML = '<span class="mode-paper">PAPER</span>';
-    modeLabel.title = 'Paper trading — no real orders';
-  }
-
-  // Halt banner
-  var haltEl = document.getElementById('halt-banner');
-  if (risk.halted) { haltEl.style.display = 'flex'; } else { haltEl.style.display = 'none'; }
-
-  // Freshness bar removed — broker status shown via market selector dots
-  var freshBar = document.getElementById('freshness-bar');
-  if (false) {
-  }
-
-  // Equity sparkline from curve data
-  var eqCurve = d.equity_curve || [];
-  // Sparkline uses deposit-adjusted return if available, else raw equity
-  var sparkPoints = eqCurve.map(function(e) {
-    if (e.pnl !== undefined) {
-      var inv = e.equity - e.pnl;
-      return inv > 0 ? (e.pnl / inv) * 100 : 0;
-    }
-    return e.equity;
-  });
-  var sparkHtml = sparkline(sparkPoints, 48, 20);
-
-  // Exposure %
-  var exposurePct = risk.exposure_pct || 0;
-
-  // Benchmark data
-  var benchRet = d.benchmark_return_pct || 0;
-  var benchTk = d.benchmark_ticker || 'Benchmark';
-  var atlasRet = p.total_pnl_pct || 0;
-  var alpha = atlasRet - benchRet;
-
-  // Cards — 5 KPIs
-  // Headline equity: account.equity = SP500 (Alpaca) + ASX (Moomoo .AX) in AUD
-  var acct = d.account || {};
-  var totalEquity = acct.equity || p.equity || 0;
-  var mob = isMobile();
-  var cards = [
-    {
-      label: 'Total Equity',
-      value: $(totalEquity),
-      c: cls((p.total_pnl || 0) + manualPnl),
-      accent: 'accent-blue',
-      sub: (function() {
-        var alpUsd = acct.alpaca_equity_usd || 0;
-        var mooAud = acct.moomoo_equity_aud || 0;
-        if (alpUsd > 0 && mooAud > 0) {
-          return 'Alpaca $' + alpUsd.toLocaleString('en',{minimumFractionDigits:0, maximumFractionDigits:0})
-            + ' · Moomoo A$' + mooAud.toLocaleString('en',{minimumFractionDigits:0, maximumFractionDigits:0})
-            + ' ' + sparkHtml;
-        }
-        return $(totalEquity) + ' ' + (acct.currency || '') + ' ' + sparkHtml;
-      })()
-    },
-    {
-      label: 'vs ' + benchTk,
-      value: pct(alpha),
-      c: cls(alpha),
-      accent: cls(alpha) === 'up' ? 'accent-green' : cls(alpha) === 'down' ? 'accent-red' : 'accent-blue',
-      sub: mob
-        ? 'Atl ' + pct(atlasRet) + ' · Bch ' + pct(benchRet)
-        : 'Atlas ' + pct(atlasRet) + ' · ' + benchTk + ' ' + pct(benchRet)
-    },
-    (function() {
-      // Compute today's P&L from per-currency breakdown (works for both combined and per-market views)
-      var byCcy = p.today_pnl_by_ccy || {};
-      var ccyKeys = Object.keys(byCcy).sort();
-      // Convert to AUD using exchange rates
-      var rates = (d.exchange_rates || {});
-      var usdaud = rates.USDAUD || 1.42;
-      var todayAud = 0;
-      ccyKeys.forEach(function(ccy) {
-        if (ccy === 'AUD') todayAud += byCcy[ccy];
-        else if (ccy === 'USD') todayAud += byCcy[ccy] * usdaud;
-        else todayAud += byCcy[ccy]; // fallback: assume AUD
-      });
-      todayAud = Math.round(todayAud * 100) / 100;
-      // If explicit today_pnl_aud from combined view, prefer it
-      if (p.today_pnl_aud !== undefined && _currentMarket === 'all') todayAud = p.today_pnl_aud;
-      // Subtitle: per-currency breakdown
-      var parts = [];
-      ccyKeys.forEach(function(ccy) {
-        var val = byCcy[ccy];
-        var sym = CURRENCY_SYMBOLS[ccy] || (ccy + ' ');
-        parts.push('<span class="' + cls(val) + '">' + (val >= 0 ? '+' : '-') + sym + Math.abs(val).toFixed(2) + '</span>');
-      });
-      var posInfo = mob
-        ? (p.num_open || 0) + ' pos · ' + exposurePct.toFixed(0) + '%'
-        : (p.num_open || 0) + ' positions · ' + exposurePct.toFixed(0) + '% deployed';
-      var sub = (parts.length > 0 ? parts.join(' · ') + ' · ' : '') + posInfo;
-      // Display: use view currency
-      var viewCcy = getViewCurrency();
-      var dispSym = CURRENCY_SYMBOLS[viewCcy] || '$';
-      var dispVal = viewCcy === 'AUD' ? todayAud : (viewCcy === 'USD' ? (byCcy['USD'] || todayAud / usdaud) : todayAud);
-      return {
-        label: "Today's P&L",
-        value: (dispVal >= 0 ? '+' : '-') + dispSym + Math.abs(dispVal).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2}),
-        c: cls(todayAud),
-        accent: cls(todayAud) === 'up' ? 'accent-green' : cls(todayAud) === 'down' ? 'accent-red' : 'accent-blue',
-        sub: sub
-      };
-    })(),
-  ];
-  var ch = '';
-  cards.forEach(function(c, i) {
-    ch += '<div class="card ' + c.accent + '">';
-    ch += '<div class="card-label">' + c.label + '</div>';
-    ch += '<div class="card-value ' + c.c + '">' + c.value + '</div>';
-    ch += '<div class="card-sub">' + c.sub + '</div></div>';
-  });
-  var cardsEl = document.getElementById('cards');
-  cardsEl.innerHTML = ch;
-  // After first render, mark container so subsequent refreshes skip fadeIn
-  if (!cardsEl.classList.contains('cards-loaded')) {
-    setTimeout(function() { cardsEl.classList.add('cards-loaded'); }, 500);
-  }
-  // Card icons removed (decorative)
-
-  // P&L inline summary
-  var atlasPnl = (p.market_pnl || 0) + (p.realized_pnl || 0) - (p.total_commissions || 0);
-  var combinedPnl = atlasPnl + manualPnl;
-  var netCountEl = document.getElementById('pnl-net');
-  if (netCountEl) {
-    var pnlLabel = manualPnl !== 0 ? ('Atlas ' + $(atlasPnl) + ' · Manual ' + $(manualPnl) + ' · All ' + $(combinedPnl)) : $(atlasPnl);
-    netCountEl.textContent = pnlLabel;
-    netCountEl.className = 'section-count';
-    netCountEl.style.color = atlasPnl >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-
-  var pnlHtml = '<div style="display:flex;gap:32px;flex-wrap:wrap;padding:4px 0">';
-  pnlHtml += '<div><span class="pnl-label" style="margin-right:6px">Unrealized</span><span class="mono ' + cls(p.market_pnl) + '">' + $(p.market_pnl || 0) + '</span></div>';
-  if ((p.realized_pnl || 0) !== 0) pnlHtml += '<div><span class="pnl-label" style="margin-right:6px">Realized</span><span class="mono ' + cls(p.realized_pnl) + '">' + $(p.realized_pnl) + '</span></div>';
-  pnlHtml += '<div><span class="pnl-label" style="margin-right:6px">Manual</span><span class="mono ' + cls(manualPnl) + '">' + $(manualPnl) + '</span><span style="color:var(--text-tertiary);font-size:11px;margin-left:4px">' + (mp.num_open||0) + ' pos · ' + (manualConnected ? '🟢' : '🔴') + '</span></div>';
-  pnlHtml += '</div>';
-  document.getElementById('body-pnl').innerHTML = pnlHtml;
-
-  // Equity chart — portfolio vs benchmark
-  var benchCurve = d.benchmark_curve || [];
-  var liveCurve = d.equity_curve || [];
-  var benchTicker = d.benchmark_ticker || 'SPY';
-  drawEquityChart(benchCurve, liveCurve, p.starting_equity || 5000, benchTicker);
-
-  // Positions table
-  var pos = p.open_positions || [];
-  document.getElementById('pos-count').textContent = pos.length;
-  if (pos.length === 0) {
-    document.getElementById('body-positions').innerHTML = '<div class="empty">No open positions</div>';
-  } else if (isMobile()) {
-    // ── Mobile: card-per-position layout ──
-    pos.sort(function(a,b) { return Math.abs(b.pnl) - Math.abs(a.pnl); });
-    var h = '<div class="mob-pos-list">';
-    pos.forEach(function(p) {
-      var c = cls(p.pnl);
-      h += '<div class="mob-pos-card">';
-      h += '<div class="mob-pos-header">';
-      h += '<span class="mob-pos-ticker">';
-      if (_currentMarket === 'all') h += marketTag(p.market) + ' ';
-      h += esc(p.ticker);
-      if (p.strategy) h += ' ' + strat(p.strategy);
-      h += '</span>';
-      h += '<span class="mob-pos-pnl ' + c + ' live-pnl" data-ticker="' + esc(p.ticker) + '" data-market="' + esc(p.market||'') + '">';
-      h += $(p.pnl) + '<span class="mob-pos-pnl-pct">' + pct(p.pnl_pct) + '</span>';
-      h += '</span>';
-      h += '</div>';
-      h += '<div class="mob-pos-meta">';
-      h += '<span><span class="mob-label">In</span> <span class="mob-val">' + $(p.entry_price) + '</span></span>';
-      h += '<span><span class="mob-label">Now</span> <span class="mob-val live-price" data-ticker="' + esc(p.ticker) + '">' + $(p.current_price) + '</span></span>';
-      if (p.stop_price > 0) h += '<span><span class="mob-label">Stop</span> <span class="mob-val" style="color:var(--red)">' + $(p.stop_price) + '</span></span>';
-      h += '<span class="mob-val" style="color:var(--text-tertiary)">' + (p.days_held || 0) + 'd</span>';
-      h += '</div>';
-      h += '</div>';
-    });
-    h += '</div>';
-    document.getElementById('body-positions').innerHTML = h;
-  } else {
-    // ── Desktop: full table ──
-    var h = '<div class="table-scroll"><table id="tbl-pos"><thead><tr>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',0,\'str\')">Ticker</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',1,\'str\')">Strategy</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',2,\'num\')">Entry</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',3,\'num\')">Current</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',4,\'num\')">P&L</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',5,\'num\')">Stop</th>';
-    h += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-pos\',6,\'num\')">Days</th>';
-    h += '</tr></thead><tbody>';
-    pos.sort(function(a,b) { return Math.abs(b.pnl) - Math.abs(a.pnl); });
-    pos.forEach(function(p) {
-      var c = cls(p.pnl);
-      var pnlStr = $(p.pnl) + ' <span style="font-size:10px;opacity:0.7">' + pct(p.pnl_pct) + '</span>';
-      h += '<tr data-ticker="' + esc(p.ticker) + '" data-entry="' + p.entry_price + '" data-shares="' + (p.shares || 0) + '">';
-      h += '<td style="font-family:var(--mono);font-weight:600;font-size:12px" data-v="' + esc(p.ticker) + '">' + (_currentMarket === 'all' ? marketTag(p.market) + ' ' : '') + esc(p.ticker) + '</td>';
-      h += '<td>' + strat(p.strategy) + '</td>';
-      h += '<td class="mono" data-v="' + p.entry_price + '">' + $(p.entry_price) + '</td>';
-      h += '<td class="mono live-price" data-v="' + p.current_price + '">' + $(p.current_price) + '</td>';
-      h += '<td class="mono live-pnl ' + c + '" data-v="' + p.pnl + '">' + pnlStr + '</td>';
-      h += '<td class="mono" style="color:var(--text-tertiary);font-size:11px" data-v="' + p.stop_price + '">' + (p.stop_price > 0 ? $(p.stop_price) : '—') + '</td>';
-      h += '<td class="mono" style="color:var(--text-secondary)" data-v="' + p.days_held + '">' + p.days_held + 'd</td>';
-      h += '</tr>';
-    });
-    h += '</tbody></table></div>';
-    document.getElementById('body-positions').innerHTML = h;
-  }
-
-  // Plan — show per-market plans with approve/reject
-  var planEl = document.getElementById('body-plan');
-  var statusEl = document.getElementById('plan-status');
-
-  // Collect plans: single-market view uses that market's plan, all-markets shows all
-  var plans = [];
-  if (_currentMarket === 'all') {
-    var mkts = d.markets || {};
-    Object.keys(mkts).forEach(function(mid) {
-      var mp = mkts[mid].plan;
-      if (mp) { mp.market_id = mp.market_id || mid; plans.push(mp); }
-    });
-  } else {
-    if (d.plan) { d.plan.market_id = d.plan.market_id || _currentMarket; plans.push(d.plan); }
-  }
-
-  // Only show plans that need action (PENDING_APPROVAL)
-  var pendingPlans = plans.filter(function(p) { return p.status === 'PENDING_APPROVAL'; });
-  // Collect executed plan entries → inject into orders section later
-  var executedPlanOrders = [];
-  plans.forEach(function(plan) {
-    if (plan.status === 'APPROVED' || plan.status === 'EXECUTED') {
-      (plan.entries || []).forEach(function(e) {
-        executedPlanOrders.push({
-          market: plan.market_id || '',
-          side: 'BUY',
-          ticker: e.ticker,
-          qty: e.position_size || 0,
-          price: e.entry_price || 0,
-          fill_price: 0,
-          filled_qty: 0,
-          status: plan.status === 'EXECUTED' ? 'FILLED' : 'PENDING',
-          strategy: e.strategy || '',
-          created: plan.trade_date || '',
-          from_plan: true
-        });
-      });
-      (plan.exits || []).forEach(function(e) {
-        executedPlanOrders.push({
-          market: plan.market_id || '',
-          side: 'SELL',
-          ticker: e.ticker || '',
-          qty: 0,
-          price: e.exit_price || e.current_price || 0,
-          fill_price: 0,
-          filled_qty: 0,
-          status: plan.status === 'EXECUTED' ? 'FILLED' : 'PENDING',
-          strategy: '',
-          created: plan.trade_date || '',
-          from_plan: true
-        });
-      });
-    }
-  });
-
-  if (!pendingPlans.length) {
-    statusEl.textContent = plans.length ? (plans.every(function(p) { return p.status === 'EXECUTED'; }) ? 'EXECUTED' : plans.every(function(p) { return p.status === 'REJECTED'; }) ? 'REJECTED' : '') : '';
-    statusEl.className = 'plan-badge ' + (plans.some(function(p) { return p.status === 'EXECUTED'; }) ? 'executed' : '');
-    planEl.innerHTML = '<div class="empty">' + (plans.length ? 'All plans processed for today' : 'No plan for today') + '</div>';
-  } else {
-    statusEl.textContent = pendingPlans.length + ' PENDING';
-    statusEl.className = 'plan-badge pending';
-
-    var ph = '';
-    pendingPlans.forEach(function(plan, idx) {
-      var mid = plan.market_id || '';
-      var entries = plan.entries || [];
-      var exits = plan.exits || [];
-      var risk = plan.risk_summary || {};
-      var planId = 'plan-' + mid;
-
-      ph += '<div id="' + planId + '-block">';
-
-      // Market header (in combined view)
-      if (_currentMarket === 'all' && mid) {
-        ph += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;margin-top:' + (idx > 0 ? '18px' : '0') + '">';
-        ph += marketTag(mid);
-        ph += '<span style="font-family:var(--mono);font-size:10px;color:var(--text-tertiary)">' + plan.trade_date + '</span>';
-        ph += '</div>';
-      }
-
-      if (entries.length) {
-        ph += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">Entries (' + entries.length + ')</div>';
-        entries.forEach(function(e) {
-          ph += '<div class="plan-entry">';
-          ph += '<span class="plan-ticker">' + esc(e.ticker) + '</span>';
-          ph += strat(e.strategy);
-          ph += '<span class="plan-detail">@ <b style="color:var(--text)">' + $(e.entry_price) + '</b> → stop ' + $(e.stop_price);
-          if (e.position_size) ph += ' · ' + e.position_size + ' shares';
-          if (e.position_value) ph += ' · ' + $(e.position_value);
-          ph += '</span>';
-          if (e.confidence) ph += '<span style="font-family:var(--mono);font-size:10px;font-weight:600;color:var(--amber);background:var(--amber-dim);padding:2px 6px;border-radius:3px">' + (e.confidence * 100).toFixed(0) + '%</span>';
-          ph += '</div>';
-        });
-        ph += '</div>';
-      }
-
-      if (exits.length) {
-        ph += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px">Exits (' + exits.length + ')</div>';
-        exits.forEach(function(e) {
-          ph += '<div class="plan-entry">';
-          ph += '<span class="plan-ticker">' + esc(e.ticker) + '</span>';
-          ph += '<span class="plan-detail">' + esc(e.reason || e.exit_reason || '') + '</span>';
-          ph += '</div>';
-        });
-        ph += '</div>';
-      }
-
-      if (!entries.length && !exits.length) {
-        ph += '<div class="empty" style="padding:10px 0">No entries or exits — holding</div>';
-      }
-
-      // Risk summary
-      if (risk.total_proposed_cost) {
-        ph += '<div class="plan-risk">';
-        ph += '<div class="plan-risk-item"><div class="plan-risk-label">Cost</div><div class="plan-risk-value">' + $(risk.total_proposed_cost) + '</div></div>';
-        ph += '<div class="plan-risk-item"><div class="plan-risk-label">Risk</div><div class="plan-risk-value" style="color:var(--red)">' + $(risk.total_proposed_risk) + '</div></div>';
-        ph += '<div class="plan-risk-item"><div class="plan-risk-label">Positions After</div><div class="plan-risk-value">' + (risk.positions_after || 0) + '</div></div>';
-        ph += '<div class="plan-risk-item"><div class="plan-risk-label">Exposure</div><div class="plan-risk-value">' + (risk.portfolio_exposure_pct || 0).toFixed(0) + '%</div></div>';
-        ph += '</div>';
-      }
-
-      // Approve / Reject buttons
-      if (entries.length || exits.length) {
-        ph += '<div class="plan-actions" id="' + planId + '-actions">';
-        ph += '<button class="plan-btn plan-btn-approve" onclick="approvePlan(\'' + esc(plan.trade_date) + '\',\'' + esc(mid) + '\')" id="' + planId + '-approve">';
-        ph += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
-        ph += 'Approve &amp; Execute</button>';
-        ph += '<button class="plan-btn plan-btn-reject" onclick="rejectPlan(\'' + esc(plan.trade_date) + '\',\'' + esc(mid) + '\')" id="' + planId + '-reject">';
-        ph += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-        ph += 'Reject</button>';
-        ph += '</div>';
-      }
-
-      ph += '</div>'; // close plan-block
-      ph += '<div id="' + planId + '-result"></div>';
-    });
-    planEl.innerHTML = ph;
-  }
-
-  // Manual Portfolio (Moomoo — discretionary trades)
-  var manualPos = mp.positions || [];
-  var manualEl = document.getElementById('sec-manual');
-  var manualCountEl = document.getElementById('manual-count');
-  var staleTag = mp.stale_minutes ? ' <span style="color:var(--yellow);font-size:10px">(' + Math.round(mp.stale_minutes) + 'm ago)</span>' : '';
-  var connDot = manualConnected ? '<span style="color:var(--green)">●</span>' : '<span style="color:var(--red)">●</span>';
-  manualCountEl.innerHTML = connDot + ' ' + manualPos.length + ' positions · ' + $(mp.equity || 0) + ' equity' + staleTag;
-  if (manualPos.length > 0) {
-    // Portfolio summary strip (shown on all screen sizes)
-    var mh = '<div style="display:flex;gap:20px;margin-bottom:12px;flex-wrap:wrap;font-size:12px">';
-    mh += '<div><span class="pnl-label">Equity</span> <span class="mono">' + $(mp.equity) + '</span></div>';
-    mh += '<div><span class="pnl-label">Cash</span> <span class="mono">' + $(mp.cash) + '</span></div>';
-    mh += '<div><span class="pnl-label">Invested</span> <span class="mono">' + $(mp.market_value) + '</span></div>';
-    mh += '<div><span class="pnl-label">P&L</span> <span class="mono ' + cls(mp.unrealized_pnl) + '">' + $(mp.unrealized_pnl) + '</span></div>';
-    mh += '</div>';
-
-    if (isMobile()) {
-      // ── Mobile: card-per-position ──
-      mh += '<div class="mob-pos-list">';
-      manualPos.forEach(function(pos) {
-        var c = cls(pos.pnl);
-        mh += '<div class="mob-pos-card">';
-        mh += '<div class="mob-pos-header">';
-        mh += '<span class="mob-pos-ticker">' + esc(pos.ticker) + '</span>';
-        mh += '<span class="mob-pos-pnl ' + c + '">' + $(pos.pnl) + '<span class="mob-pos-pnl-pct">' + pct(pos.pnl_pct) + '</span></span>';
-        mh += '</div>';
-        mh += '<div class="mob-pos-meta">';
-        mh += '<span><span class="mob-label">In</span> <span class="mob-val">' + $(pos.entry_price) + '</span></span>';
-        mh += '<span><span class="mob-label">Now</span> <span class="mob-val">' + $(pos.current_price) + '</span></span>';
-        mh += '<span><span class="mob-label">Val</span> <span class="mob-val">' + $(pos.market_value) + '</span></span>';
-        mh += '<span class="mob-val" style="color:var(--text-tertiary)">' + (pos.shares || 0) + ' sh</span>';
-        mh += '</div>';
-        mh += '</div>';
-      });
-      mh += '</div>';
-    } else {
-      // ── Desktop: full table ──
-      mh += '<div class="table-scroll"><table id="tbl-manual"><thead><tr>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',0,\'str\')">Ticker</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',1,\'num\')">Shares</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',2,\'num\')">Entry</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',3,\'num\')">Current</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',4,\'num\')">Value</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',5,\'num\')">P&L</th>';
-      mh += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-manual\',6,\'num\')">P&L %</th>';
-      mh += '</tr></thead><tbody>';
-      manualPos.forEach(function(pos) {
-        var c = cls(pos.pnl);
-        mh += '<tr data-ticker="' + esc(pos.ticker) + '" data-entry="' + (pos.entry_price||0) + '" data-shares="' + (pos.shares||0) + '">';
-        mh += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(pos.ticker) + '</td>';
-        mh += '<td class="mono">' + pos.shares + '</td>';
-        mh += '<td class="mono">' + $(pos.entry_price) + '</td>';
-        mh += '<td class="mono live-price" data-v="' + (pos.current_price||0) + '">' + $(pos.current_price) + '</td>';
-        mh += '<td class="mono">' + $(pos.market_value) + '</td>';
-        mh += '<td class="mono live-pnl ' + c + '" data-v="' + (pos.pnl||0) + '">' + $(pos.pnl) + ' <span style="font-size:10px;opacity:0.7">' + pct(pos.pnl_pct) + '</span></td>';
-        mh += '</tr>';
-      });
-      mh += '</tbody></table></div>';
-    }
-    document.getElementById('body-manual').innerHTML = mh;
-  } else {
-    document.getElementById('body-manual').innerHTML = '<div class="empty">' + (manualConnected ? 'No manual positions' : 'Moomoo offline — cached data may be available') + '</div>';
-  }
-
-  // Orders — merge broker orders + approved/executed plan entries
-  var allOrders = [];
-  var brokerMarkets = d.markets || {};
-  Object.keys(brokerMarkets).forEach(function(mid) {
-    var mo = brokerMarkets[mid].pending_orders || [];
-    mo.forEach(function(o) { o.market = mid; allOrders.push(o); });
-  });
-  // Add executed plan entries as orders (so they appear here after approval)
-  executedPlanOrders.forEach(function(o) {
-    // Avoid duplicates: skip if broker already has an order for this ticker
-    var isDup = allOrders.some(function(bo) { return bo.ticker === o.ticker && bo.market === o.market; });
-    if (!isDup) allOrders.push(o);
-  });
-
-  var ordersEl = document.getElementById('sec-orders');
-  if (allOrders.length > 0) {
-    ordersEl.style.display = '';
-    document.getElementById('orders-count').textContent = allOrders.length;
-    var oh = '<div class="table-scroll"><table id="tbl-orders"><thead><tr>';
-    oh += '<th>Mkt</th><th>Side</th><th>Ticker</th><th>Strategy</th><th>Qty</th><th>Price</th><th>Filled</th><th>Status</th>';
-    oh += '</tr></thead><tbody>';
-    allOrders.forEach(function(o) {
-      var sideColor = o.side === 'BUY' ? 'var(--green)' : 'var(--red)';
-      oh += '<tr>';
-      oh += '<td>' + marketTag(o.market) + '</td>';
-      oh += '<td style="font-weight:600;color:' + sideColor + '">' + esc(o.side || '') + '</td>';
-      oh += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(o.ticker) + '</td>';
-      oh += '<td>' + (o.strategy ? strat(o.strategy) : '') + '</td>';
-      oh += '<td class="mono">' + (o.qty || '') + '</td>';
-      oh += '<td class="mono">' + $(o.price) + '</td>';
-      oh += '<td class="mono">' + (o.fill_price > 0 ? (o.filled_qty || o.qty) + ' @ ' + $(o.fill_price) : '—') + '</td>';
-      oh += '<td>' + orderStatus(o.status || 'PENDING') + '</td>';
-      oh += '</tr>';
-    });
-    oh += '</tbody></table></div>';
-    document.getElementById('body-orders').innerHTML = oh;
-  } else {
-    ordersEl.style.display = 'none';
-  }
-
-  // Broker Account / Allocations
-  var acct = d.account;
-  var acctEl = document.getElementById('sec-account');
-  if (acct) {
-    // Broker account section removed from visible UI — keep data for API consumers
-    var viewCcy = getViewCurrency();
-    var ah = '<div class="pnl-grid">';
-    ah += '<div class="pnl-item"><div class="pnl-label">Total Equity</div><div class="pnl-value">' + $(acct.equity) + '</div><div class="pnl-sub">' + viewCcy + (_currentMarket === 'all' ? ' · All markets combined' : ' · ' + _currentMarket.toUpperCase()) + '</div></div>';
-    ah += '<div class="pnl-item"><div class="pnl-label">Cash</div><div class="pnl-value">' + $(acct.cash) + '</div><div class="pnl-sub">Available</div></div>';
-
-    // Show per-market allocations (only in 'all' view)
-    if (_currentMarket === 'all') {
-      var allocHtml = '';
-      var markets = d.markets || {};
-      Object.keys(markets).forEach(function(mid) {
-        var mp = markets[mid].portfolio || {};
-        var ccy = markets[mid].currency || 'AUD';
-        var sym = CURRENCY_SYMBOLS[ccy] || '$';
-        var allocPnl = (mp.equity || 0) - (mp.starting_equity || 0);
-        var allocCls = allocPnl >= 0 ? 'up' : 'down';
-        // Show native currency + AUD equivalent if not AUD
-        var eqStr = sym + (mp.equity || 0).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
-        var audNote = '';
-        if (ccy !== 'AUD') {
-          var audEq = toAud(mp.equity || 0, ccy);
-          audNote = ' <span style="color:var(--text-tertiary);font-size:10px">(A$' + audEq.toLocaleString('en-AU', {minimumFractionDigits:0, maximumFractionDigits:0}) + ')</span>';
-        }
-        allocHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
-        allocHtml += marketTag(mid);
-        allocHtml += '<span class="mono" style="font-size:13px;font-weight:600">' + eqStr + audNote + '</span>';
-        allocHtml += '<span class="mono ' + allocCls + '" style="font-size:11px">' + (allocPnl >= 0 ? '+' : '') + sym + Math.abs(allocPnl).toFixed(2) + '</span>';
-        allocHtml += '</div>';
-      });
-      // Exchange rate info
-      var rates = (_rawData || {}).exchange_rates || {};
-      if (rates.USDAUD) {
-        allocHtml += '<div style="font-size:10px;color:var(--text-tertiary);margin-top:6px">1 USD = ' + rates.USDAUD.toFixed(4) + ' AUD</div>';
-      }
-      ah += '<div class="pnl-item"><div class="pnl-label">Allocations</div><div style="margin-top:6px">' + allocHtml + '</div></div>';
-    }
-    ah += '</div>';
-    document.getElementById('body-account').innerHTML = ah;
-  } else {
-    acctEl.style.display = 'none';
-  }
-
-  // Tasks section removed
-
-  // ── Research Tab ──
-  renderResearch(d);
-
-  // Check table overflow for scroll indicators
-  setTimeout(checkTableOverflow, 50);
-
-  // Closed trades
-  var closed = d.closed_trades || [];
-  if (closed.length) {
-    document.getElementById('sec-closed').style.display = '';
-    document.getElementById('closed-count').textContent = closed.length;
-    var ch2 = '<div class="table-scroll"><table id="tbl-closed"><thead><tr>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',0,\'str\')">Ticker</th>';
-    ch2 += '<th>Mkt</th>';
-    ch2 += '<th>Strategy</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',3,\'str\')">Entry</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',4,\'str\')">Exit</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',5,\'num\')">Price In</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',6,\'num\')">Price Out</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',7,\'num\')">P&L</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',8,\'num\')">P&L %</th>';
-    ch2 += '<th role="columnheader" tabindex="0" onclick="sortTable(\'tbl-closed\',9,\'num\')">Days</th>';
-    ch2 += '<th>Reason</th>';
-    ch2 += '</tr></thead><tbody>';
-    closed.forEach(function(t) {
-      var pnl = t.pnl || t.realized_pnl || 0;
-      var c = cls(pnl);
-      var days = t.holding_days || t.days_held || 0;
-      var pnlPct = t.pnl_pct || (t.entry_price > 0 ? ((t.exit_price - t.entry_price) / t.entry_price * 100) : 0);
-      ch2 += '<tr>';
-      ch2 += '<td style="font-family:var(--mono);font-weight:600;font-size:12px">' + esc(t.ticker) + '</td>';
-      ch2 += '<td>' + (_currentMarket === 'all' ? marketTag(t.market) : '') + '</td>';
-      ch2 += '<td>' + strat(t.strategy) + '</td>';
-      ch2 += '<td class="mono" style="color:var(--text-secondary)" data-v="' + esc(t.entry_date||'') + '">' + esc(t.entry_date || '') + '</td>';
-      ch2 += '<td class="mono" style="color:var(--text-secondary)" data-v="' + esc(t.exit_date||'') + '">' + esc(t.exit_date || '') + '</td>';
-      ch2 += '<td class="mono" data-v="' + (t.entry_price||0) + '">' + $(t.entry_price) + '</td>';
-      ch2 += '<td class="mono" data-v="' + (t.exit_price||0) + '">' + $(t.exit_price) + '</td>';
-      ch2 += '<td class="mono ' + c + '" data-v="' + pnl + '">' + $(pnl) + '</td>';
-      ch2 += '<td class="mono ' + c + '" data-v="' + pnlPct + '">' + pct(pnlPct) + '</td>';
-      ch2 += '<td class="mono" style="color:var(--text-secondary)" data-v="' + days + '">' + (days > 0 ? days + 'd' : '—') + '</td>';
-      ch2 += '<td style="color:var(--text-secondary);font-size:11px">' + esc((t.exit_reason || t.reason || '').replace(/_/g, ' ')) + '</td>';
-      ch2 += '</tr>';
-    });
-    ch2 += '</tbody></table></div>';
-    document.getElementById('body-closed').innerHTML = ch2;
-  }
-}
-
-function metric(label, value) {
-  return '<div class="metric"><div class="metric-label">' + label + '</div><div class="metric-value">' + esc(String(value)) + '</div></div>';
-}
-
-// ── Daily Insight Chart ──
-function renderDailyInsight(insight) {
-  var container = document.getElementById('insight-chart-container');
-  if (!container) return;
-
-  if (!insight || insight.type === 'no_data') {
-    container.innerHTML = '<div class="insight-card"><div class="insight-header">'
-      + '<div class="insight-title" style="color:var(--text-tertiary)">' + esc(insight ? insight.title : 'No insight available') + '</div>'
-      + '<div class="insight-subtitle">' + esc(insight ? insight.subtitle : '') + '</div>'
-      + '</div></div>';
-    return;
-  }
-
-  var html = '<div class="insight-card">';
-  html += '<div class="insight-header">';
-  html += '<div class="insight-title">' + esc(insight.title) + '</div>';
-  html += '<div class="insight-subtitle">' + esc(insight.subtitle) + '</div>';
-  html += '</div>';
-  html += '<div class="insight-chart-area">';
-
-  if (insight.chart === 'grouped_bar') {
-    html += renderGroupedBarSVG(insight);
-  } else if (insight.chart === 'horizontal_bar') {
-    html += renderHorizontalBarSVG(insight);
-  } else if (insight.chart === 'scatter') {
-    html += renderScatterSVG(insight);
-  } else if (insight.chart === 'lollipop') {
-    html += renderLollipopSVG(insight);
-  } else if (insight.chart === 'waterfall') {
-    html += renderWaterfallSVG(insight);
-  } else if (insight.chart === 'radar') {
-    html += renderRadarSVG(insight);
-  }
-
-  html += '</div>';
-
-  // Annotation callout
-  if (insight.annotation) {
-    html += '<div class="insight-annotation ' + (insight.annotation.color || 'green') + '">';
-    html += '<span>↗</span> ' + esc(insight.annotation.text);
-    html += '</div>';
-  }
-
-  // Format date nicely (e.g. "5 Mar 2026")
-  var insightDateStr = insight.date || '';
-  try {
-    if (insightDateStr) {
-      var dObj = new Date(insightDateStr + 'T12:00:00');
-      insightDateStr = dObj.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-    }
-  } catch(e) {}
-  html += '<div class="insight-date">' + esc(insightDateStr) + '</div>';
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function renderGroupedBarSVG(insight) {
-  // Clean horizontal metric rows — each metric gets its own row with
-  // before/after bars scaled relative to max in that row.
-  // Follows 5 C's: one message per row, no gridlines (clutter), direct
-  // labels (context), consistent colors, contrast on the "after" bar.
-
-  var labels = insight.labels || [];
-  var series = insight.series || [];
-  var n = labels.length;
-  if (n === 0 || series.length < 2) return '';
-
-  var beforeSeries = series[0];
-  var afterSeries = series[1];
-  var accentSeries = series.length > 2 ? series[2] : null;
-
-  // Layout
-  var W = 580, labelW = 90, valueW = 52, barAreaW = W - labelW - valueW * 2 - 20;
-  var rowH = 44, rowGap = 6, barH = 16;
-  var topPad = 30; // for legend
-  var H = topPad + n * (rowH + rowGap);
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Legend
-  svg += '<rect x="' + labelW + '" y="4" width="10" height="10" rx="2" fill="#4a4238"/>';
-  svg += '<text x="' + (labelW + 14) + '" y="13" style="font-size:10px;fill:#9e9484;font-family:\'Figtree\',sans-serif">' + esc(beforeSeries.name) + '</text>';
-  var leg2X = labelW + 14 + beforeSeries.name.length * 6 + 16;
-  svg += '<rect x="' + leg2X + '" y="4" width="10" height="10" rx="2" fill="#82a85a"/>';
-  svg += '<text x="' + (leg2X + 14) + '" y="13" style="font-size:10px;fill:#9e9484;font-family:\'Figtree\',sans-serif">' + esc(afterSeries.name) + '</text>';
-
-  for (var i = 0; i < n; i++) {
-    var bv = beforeSeries.values[i];
-    var av = afterSeries.values[i];
-    var y = topPad + i * (rowH + rowGap);
-
-    // Per-metric scale
-    var maxAbs = Math.max(Math.abs(bv), Math.abs(av), 0.001);
-
-    // Determine if improvement (green arrow) or regression (red)
-    var label = labels[i];
-    var lowerIsBetter = /dd|drawdown/i.test(label);
-    var delta = av - bv;
-    var improved = lowerIsBetter ? delta < 0 : delta > 0;
-
-    // Row background
-    svg += '<rect x="0" y="' + y + '" width="' + W + '" height="' + rowH + '" rx="6" fill="#16140f" opacity="0.6"/>';
-
-    // Metric label (left)
-    svg += '<text x="12" y="' + (y + rowH / 2 + 4) + '" style="font-size:12px;fill:#9e9484;font-family:\'Figtree\',sans-serif;font-weight:600">' + esc(label) + '</text>';
-
-    // Before value
-    var bvText = fmtMetric(bv, label);
-    svg += '<text x="' + labelW + '" y="' + (y + rowH / 2 + 4) + '" style="font-size:12px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace;font-weight:500">' + bvText + '</text>';
-
-    // After value
-    var avText = fmtMetric(av, label);
-    svg += '<text x="' + (labelW + valueW) + '" y="' + (y + rowH / 2 + 4) + '" style="font-size:12px;fill:#e8e4da;font-family:\'JetBrains Mono\',monospace;font-weight:700">' + avText + '</text>';
-
-    // Bar area starts after both value columns
-    var barX0 = labelW + valueW * 2 + 8;
-
-    // Before bar
-    var bBarW = Math.max(3, (Math.abs(bv) / maxAbs) * barAreaW * 0.85);
-    svg += '<rect x="' + barX0 + '" y="' + (y + 6) + '" width="' + bBarW + '" height="' + (barH - 2) + '" rx="3" fill="#4a4238"/>';
-
-    // After bar
-    var aBarW = Math.max(3, (Math.abs(av) / maxAbs) * barAreaW * 0.85);
-    svg += '<rect x="' + barX0 + '" y="' + (y + 6 + barH) + '" width="' + aBarW + '" height="' + (barH - 2) + '" rx="3" fill="' + (improved ? '#82a85a' : '#c4585a') + '"/>';
-
-    // Delta badge
-    var deltaText = (delta >= 0 ? '+' : '') + fmtVal(delta);
-    var badgeX = barX0 + Math.max(bBarW, aBarW) + 8;
-    svg += '<text x="' + badgeX + '" y="' + (y + rowH / 2 + 4) + '" style="font-size:10px;fill:#e8e4da;font-family:\'JetBrains Mono\',monospace;font-weight:700">' + deltaText + '</text>';
-  }
-
-  svg += '</svg>';
-  return svg;
-}
-
-function fmtVal(v, label) {
-  if (Math.abs(v) >= 100) return Math.round(v).toString();
-  if (v === 0) return '0';
-  var s = Math.abs(v) < 10 ? v.toFixed(2) : v.toFixed(1);
-  return s;
-}
-function fmtMetric(v, label) {
-  // Add % suffix for percentage metrics
-  var isPct = /cagr|dd|drawdown|win rate|rate/i.test(label || '');
-  var s = fmtVal(v);
-  return isPct ? s + '%' : s;
-}
-
-function renderHorizontalBarSVG(insight) {
-  var labels = insight.labels || [];
-  var series = insight.series || [];
-  var detail = insight.detail_rows || [];
-  if (labels.length === 0 || series.length === 0) return '';
-  var vals = series[0].values;
-  var n = labels.length;
-
-  var W = 600, marginL = 140, marginR = 60, marginT = 4, barH = 24, barGap = 20;
-  var chartW = W - marginL - marginR;
-  var H = marginT + n * (barH + barGap) + 8;
-
-  // Scale: find max absolute value
-  var maxAbs = Math.max.apply(null, vals.map(function(v) { return Math.abs(v); }));
-  if (maxAbs === 0) maxAbs = 1;
-
-  // Determine if we need negative axis
-  var hasNeg = vals.some(function(v) { return v < 0; });
-  var zeroX;
-  if (hasNeg) {
-    var minV = Math.min.apply(null, vals);
-    var maxV = Math.max.apply(null, vals);
-    var range = maxV - minV;
-    if (range === 0) range = 1;
-    zeroX = marginL + (Math.abs(minV) / range) * chartW;
-  } else {
-    zeroX = marginL;
-  }
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Zero line
-  svg += '<line x1="' + zeroX + '" y1="0" x2="' + zeroX + '" y2="' + H + '" stroke="#2e2820" stroke-width="1"/>';
-
-  for (var i = 0; i < n; i++) {
-    var y = marginT + i * (barH + barGap);
-    var val = vals[i];
-
-    // Bar
-    var bw, bx;
-    if (hasNeg) {
-      var minV2 = Math.min.apply(null, vals);
-      var maxV2 = Math.max.apply(null, vals);
-      var range2 = maxV2 - minV2;
-      if (range2 === 0) range2 = 1;
-      bw = Math.abs(val) / range2 * chartW;
-      bx = val >= 0 ? zeroX : zeroX - bw;
-    } else {
-      bw = (val / maxAbs) * chartW * 0.9;
-      bx = marginL;
-    }
-    bw = Math.max(bw, 3);
-
-    var fill = val >= 0 ? '#82a85a' : '#c4585a';
-    var r = Math.min(4, barH / 2);
-
-    svg += '<rect x="' + bx + '" y="' + y + '" width="' + bw + '" height="' + barH + '" rx="' + r + '" fill="' + fill + '" opacity="0.85"/>';
-
-    // Strategy label
-    svg += '<text x="' + (marginL - 8) + '" y="' + (y + barH / 2 + 4) + '" text-anchor="end" style="font-size:12px;fill:#e8e4da;font-family:\'Figtree\',sans-serif;font-weight:600">';
-    svg += esc(labels[i]);
-    svg += '</text>';
-
-    // Value label — always to the right, clear of any bar
-    var valStr = (val >= 0 ? '+' : '') + val.toFixed(3);
-    // Place at fixed right column to avoid any overlap
-    svg += '<text x="' + (W - marginR + 4) + '" y="' + (y + barH / 2 + 4) + '" text-anchor="end" style="font-size:11px;fill:#e8e4da;font-family:\'JetBrains Mono\',monospace;font-weight:700">' + valStr + '</text>';
-
-    // Detail row below bar
-    if (detail[i]) {
-      var d = detail[i];
-      var meta = (d.trades || '') + ' trades · WR ' + (d.win_rate || 0) + '% · DD ' + (d.max_dd || 0) + '%';
-      svg += '<text x="' + marginL + '" y="' + (y + barH + 12) + '" text-anchor="start" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">';
-      svg += esc(meta);
-      svg += '</text>';
-    }
-  }
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ── Scatter Plot: risk vs return, strategy comparison ──
-function renderScatterSVG(insight) {
-  var points = insight.points || [];
-  if (points.length === 0) return '';
-
-  var W = 580, H = 320, pad = {t: 20, r: 30, b: 50, l: 70};
-  var cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
-
-  // Axis ranges with padding
-  var xs = points.map(function(p) { return p.x; });
-  var ys = points.map(function(p) { return p.y; });
-  var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
-  var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
-  var xPad = (xMax - xMin) * 0.15 || 1, yPad = (yMax - yMin) * 0.15 || 1;
-  xMin -= xPad; xMax += xPad; yMin -= yPad; yMax += yPad;
-
-  function sx(v) { return pad.l + (v - xMin) / (xMax - xMin) * cW; }
-  function sy(v) { return pad.t + cH - (v - yMin) / (yMax - yMin) * cH; }
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Grid — subtle horizontal lines only
-  for (var gi = 0; gi <= 4; gi++) {
-    var gy = pad.t + (gi / 4) * cH;
-    var gv = yMax - (gi / 4) * (yMax - yMin);
-    svg += '<line x1="' + pad.l + '" y1="' + gy + '" x2="' + (W - pad.r) + '" y2="' + gy + '" stroke="#2e2820" stroke-width="1"/>';
-    svg += '<text x="' + (pad.l - 8) + '" y="' + (gy + 4) + '" text-anchor="end" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + gv.toFixed(1) + '</text>';
-  }
-
-  // Zero lines if axes cross through data
-  if (xMin < 0 && xMax > 0) {
-    svg += '<line x1="' + sx(0) + '" y1="' + pad.t + '" x2="' + sx(0) + '" y2="' + (H - pad.b) + '" stroke="#3a3328" stroke-width="1" stroke-dasharray="4,3"/>';
-  }
-  if (yMin < 0 && yMax > 0) {
-    svg += '<line x1="' + pad.l + '" y1="' + sy(0) + '" x2="' + (W - pad.r) + '" y2="' + sy(0) + '" stroke="#3a3328" stroke-width="1" stroke-dasharray="4,3"/>';
-  }
-
-  // Points
-  points.forEach(function(p, i) {
-    var cx = sx(p.x), cy = sy(p.y);
-    var r = p.size || 8;
-    var fill = p.color || (p.y >= 0 ? '#82a85a' : '#c4585a');
-    // Glow
-    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r + 4) + '" fill="' + fill + '" opacity="0.15"/>';
-    // Dot
-    svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '" stroke="#16140f" stroke-width="2"/>';
-    // Label
-    var labelY = cy - r - 6;
-    if (labelY < pad.t + 10) labelY = cy + r + 14;
-    svg += '<text x="' + cx + '" y="' + labelY + '" text-anchor="middle" style="font-size:11px;fill:#e8e4da;font-family:\'Figtree\',sans-serif;font-weight:600">' + esc(p.label) + '</text>';
-  });
-
-  // Axis labels
-  svg += '<text x="' + (pad.l + cW / 2) + '" y="' + (H - 8) + '" text-anchor="middle" style="font-size:11px;fill:#9e9484;font-family:\'Figtree\',sans-serif">' + esc(insight.x_label || 'X') + '</text>';
-  svg += '<text x="14" y="' + (pad.t + cH / 2) + '" text-anchor="middle" transform="rotate(-90,14,' + (pad.t + cH / 2) + ')" style="font-size:11px;fill:#9e9484;font-family:\'Figtree\',sans-serif">' + esc(insight.y_label || 'Y') + '</text>';
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ── Lollipop Chart: delta improvements per metric ──
-function renderLollipopSVG(insight) {
-  var items = insight.items || [];
-  if (items.length === 0) return '';
-
-  var W = 580, labelW = 110, dotR = 6;
-  var rowH = 36, topPad = 8;
-  var H = topPad + items.length * rowH;
-  var barAreaW = W - labelW - 80;
-
-  var maxAbs = Math.max.apply(null, items.map(function(d) { return Math.abs(d.delta); }));
-  if (maxAbs === 0) maxAbs = 1;
-
-  // Center line x
-  var centerX = labelW + barAreaW / 2;
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Center axis
-  svg += '<line x1="' + centerX + '" y1="' + topPad + '" x2="' + centerX + '" y2="' + H + '" stroke="#2e2820" stroke-width="1"/>';
-
-  items.forEach(function(d, i) {
-    var y = topPad + i * rowH + rowH / 2;
-    var improved = d.improved !== undefined ? d.improved : d.delta > 0;
-    var fill = improved ? '#82a85a' : '#c4585a';
-    var halfW = barAreaW / 2;
-    var dx = (d.delta / maxAbs) * halfW * 0.85;
-    var endX = centerX + dx;
-
-    // Stem line
-    svg += '<line x1="' + centerX + '" y1="' + y + '" x2="' + endX + '" y2="' + y + '" stroke="' + fill + '" stroke-width="2" stroke-linecap="round"/>';
-    // Dot
-    svg += '<circle cx="' + endX + '" cy="' + y + '" r="' + dotR + '" fill="' + fill + '"/>';
-    svg += '<circle cx="' + endX + '" cy="' + y + '" r="' + (dotR + 3) + '" fill="' + fill + '" opacity="0.15"/>';
-
-    // Label (left)
-    svg += '<text x="' + (labelW - 8) + '" y="' + (y - 2) + '" text-anchor="end" style="font-size:12px;fill:#9e9484;font-family:\'Figtree\',sans-serif;font-weight:600">' + esc(d.label) + '</text>';
-
-    // Value — always to the right of the dot, pushed further for negative
-    var valX = dx >= 0 ? endX + dotR + 6 : centerX + dotR + 6;
-    var valText = (d.delta >= 0 ? '+' : '') + fmtVal(d.delta);
-    svg += '<text x="' + valX + '" y="' + (y + 4) + '" text-anchor="start" style="font-size:11px;fill:#e8e4da;font-family:\'JetBrains Mono\',monospace;font-weight:700">' + valText + '</text>';
-
-    // Before → After in small text
-    if (d.before != null && d.after != null) {
-      svg += '<text x="' + (labelW - 8) + '" y="' + (y + 11) + '" text-anchor="end" style="font-size:10px;fill:#635a4c;font-family:\'JetBrains Mono\',monospace">' + fmtVal(d.before) + ' → ' + fmtVal(d.after) + '</text>';
-    }
-  });
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ── Waterfall Chart: cumulative decomposition ──
-function renderWaterfallSVG(insight) {
-  var steps = insight.steps || [];
-  if (steps.length === 0) return '';
-
-  var W = 580, marginL = 10, marginR = 10, marginT = 20, marginB = 60;
-  var chartW = W - marginL - marginR;
-  var chartH = 200;
-  var H = chartH + marginT + marginB;
-  var barW = Math.min(50, (chartW / steps.length) * 0.6);
-  var gap = (chartW - barW * steps.length) / (steps.length + 1);
-
-  // Compute running totals
-  var running = 0;
-  var processed = steps.map(function(s) {
-    var base = running;
-    if (s.type === 'total') {
-      return {label: s.label, value: running, base: 0, isTotal: true};
-    }
-    running += s.value;
-    return {label: s.label, value: s.value, base: base, end: running, isTotal: false};
-  });
-  // If last step is total, set its value
-  if (processed.length > 0 && processed[processed.length - 1].isTotal) {
-    processed[processed.length - 1].value = running;
-  }
-
-  var allVals = [];
-  var cumul = 0;
-  processed.forEach(function(p) {
-    if (p.isTotal) { allVals.push(0); allVals.push(p.value); }
-    else { allVals.push(p.base); allVals.push(p.base + p.value); cumul += p.value; }
-  });
-  var maxV = Math.max.apply(null, allVals);
-  var minV = Math.min.apply(null, allVals);
-  var range = maxV - minV || 1;
-
-  function sy(v) { return marginT + chartH - ((v - minV) / range) * chartH * 0.85 - chartH * 0.05; }
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Zero line
-  if (minV < 0 && maxV > 0) {
-    svg += '<line x1="' + marginL + '" y1="' + sy(0) + '" x2="' + (W - marginR) + '" y2="' + sy(0) + '" stroke="#3a3328" stroke-width="1" stroke-dasharray="4,3"/>';
-  }
-
-  processed.forEach(function(p, i) {
-    var x = marginL + gap + i * (barW + gap);
-    var fill, y1, y2;
-
-    if (p.isTotal) {
-      y1 = sy(p.value); y2 = sy(0);
-      fill = '#5a8fba'; // blue for total
-    } else if (p.value >= 0) {
-      y1 = sy(p.base + p.value); y2 = sy(p.base);
-      fill = '#82a85a';
-    } else {
-      y1 = sy(p.base); y2 = sy(p.base + p.value);
-      fill = '#c4585a';
-    }
-
-    var barH = Math.abs(y2 - y1);
-    var barY = Math.min(y1, y2);
-    barH = Math.max(barH, 2);
-
-    svg += '<rect x="' + x + '" y="' + barY + '" width="' + barW + '" height="' + barH + '" rx="3" fill="' + fill + '" opacity="0.85"/>';
-
-    // Connector line to next bar (except last)
-    if (i < processed.length - 1 && !p.isTotal) {
-      var nextX = marginL + gap + (i + 1) * (barW + gap);
-      var connY = sy(p.base + p.value);
-      svg += '<line x1="' + (x + barW) + '" y1="' + connY + '" x2="' + nextX + '" y2="' + connY + '" stroke="#3a3328" stroke-width="1" stroke-dasharray="3,2"/>';
-    }
-
-    // Value label above/below
-    var labelY = p.value >= 0 ? barY - 5 : barY + barH + 13;
-    var valText = (p.isTotal ? '' : (p.value >= 0 ? '+' : '')) + fmtVal(p.value);
-    svg += '<text x="' + (x + barW / 2) + '" y="' + labelY + '" text-anchor="middle" style="font-size:10px;fill:#e8e4da;font-family:\'JetBrains Mono\',monospace;font-weight:700">' + valText + '</text>';
-
-    // Category label (angled for readability)
-    svg += '<text x="' + (x + barW / 2) + '" y="' + (H - 12) + '" text-anchor="end" style="font-size:10px;fill:#9e9484;font-family:\'Figtree\',sans-serif" transform="rotate(-25,' + (x + barW / 2) + ',' + (H - 12) + ')">' + esc(p.label) + '</text>';
-  });
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ── Radar Chart: multi-dimensional strategy profile ──
-function renderRadarSVG(insight) {
-  var axes = insight.axes || [];
-  var profiles = insight.profiles || [];
-  if (axes.length < 3 || profiles.length === 0) return '';
-
-  var W = 400, H = 340;
-  var cx = W / 2, cy = 160, R = 120;
-  var n = axes.length;
-
-  function angleFor(i) { return (i / n) * Math.PI * 2 - Math.PI / 2; }
-  function ptX(i, r) { return cx + Math.cos(angleFor(i)) * r; }
-  function ptY(i, r) { return cy + Math.sin(angleFor(i)) * r; }
-
-  var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg">';
-
-  // Concentric rings
-  for (var ring = 1; ring <= 4; ring++) {
-    var rr = (ring / 4) * R;
-    var pts = [];
-    for (var ai = 0; ai < n; ai++) {
-      pts.push(ptX(ai, rr).toFixed(1) + ',' + ptY(ai, rr).toFixed(1));
-    }
-    svg += '<polygon points="' + pts.join(' ') + '" fill="none" stroke="#2e2820" stroke-width="1"/>';
-  }
-
-  // Spoke lines + labels
-  for (var ai = 0; ai < n; ai++) {
-    svg += '<line x1="' + cx + '" y1="' + cy + '" x2="' + ptX(ai, R) + '" y2="' + ptY(ai, R) + '" stroke="#2e2820" stroke-width="1"/>';
-    var lx = ptX(ai, R + 18), ly = ptY(ai, R + 18);
-    var anchor = lx < cx - 10 ? 'end' : lx > cx + 10 ? 'start' : 'middle';
-    svg += '<text x="' + lx + '" y="' + (ly + 4) + '" text-anchor="' + anchor + '" style="font-size:10px;fill:#9e9484;font-family:\'Figtree\',sans-serif;font-weight:500">' + esc(axes[ai]) + '</text>';
-  }
-
-  // Profile polygons
-  var colors = ['#82a85a', '#5a8fba', '#c9a64e', '#9b7bb8'];
-  profiles.forEach(function(prof, pi) {
-    var pts = [];
-    for (var ai = 0; ai < n; ai++) {
-      var v = prof.values[ai] || 0; // 0-1 normalised
-      pts.push(ptX(ai, v * R).toFixed(1) + ',' + ptY(ai, v * R).toFixed(1));
-    }
-    var c = colors[pi % colors.length];
-    svg += '<polygon points="' + pts.join(' ') + '" fill="' + c + '" fill-opacity="0.12" stroke="' + c + '" stroke-width="2"/>';
-    // Dots
-    for (var ai = 0; ai < n; ai++) {
-      var v = prof.values[ai] || 0;
-      svg += '<circle cx="' + ptX(ai, v * R) + '" cy="' + ptY(ai, v * R) + '" r="3" fill="' + c + '"/>';
-    }
-  });
-
-  // Legend
-  var legendY = H - 16;
-  var legendX = 20;
-  profiles.forEach(function(prof, pi) {
-    var c = colors[pi % colors.length];
-    svg += '<rect x="' + legendX + '" y="' + (legendY - 5) + '" width="10" height="10" rx="2" fill="' + c + '"/>';
-    svg += '<text x="' + (legendX + 14) + '" y="' + (legendY + 4) + '" style="font-size:10px;fill:#9e9484;font-family:\'Figtree\',sans-serif">' + esc(prof.name) + '</text>';
-    legendX += 14 + prof.name.length * 6 + 18;
-  });
-
-  svg += '</svg>';
-  return svg;
-}
-
-// ── Research Tab ──
-
-function _renderPortfolioStrip(pf) {
-  var strip = document.getElementById('portfolio-strip');
-  var header = document.getElementById('portfolio-header');
-  var updatedEl = document.getElementById('portfolio-updated');
-  if (!strip) return;
-
-  if (!pf || !pf.available) {
-    strip.className = 'portfolio-strip portfolio-strip-empty';
-    if (header) header.style.display = 'none';
-    return;
-  }
-
-  // Show header
-  if (header) {
-    header.style.display = 'flex';
-    if (updatedEl) updatedEl.textContent = pf.last_updated ? 'updated ' + pf.last_updated : '';
-  }
-
-  strip.className = 'portfolio-strip';
-  var h = '';
-
-  // Helper: delta badge
-  function delta(val, suffix, invert) {
-    if (val == null) return '<div class="pf-delta pf-delta-flat">—</div>';
-    var isUp = invert ? val < 0 : val > 0;
-    var isDown = invert ? val > 0 : val < 0;
-    var cls = isUp ? 'pf-delta-up' : isDown ? 'pf-delta-down' : 'pf-delta-flat';
-    var arrow = isUp ? '▲' : isDown ? '▼' : '–';
-    var abs = Math.abs(val);
-    return '<div class="pf-delta ' + cls + '">' + arrow + ' ' + abs.toFixed(suffix === '%' ? 1 : 2) + (suffix || '') + '</div>';
-  }
-
-  // Sharpe
-  var sharpeColor = pf.sharpe >= 1.0 ? 'var(--green)' : pf.sharpe >= 0.5 ? 'var(--amber)' : 'var(--red)';
-  h += '<div class="pf-cell">';
-  h += '<div class="pf-val" style="color:' + sharpeColor + '">' + (pf.sharpe != null ? pf.sharpe.toFixed(2) : '—') + '</div>';
-  h += '<div class="pf-lbl">Sharpe</div>';
-  h += delta(pf.sharpe_delta, '');
-  h += '</div>';
-
-  // Annual Return
-  var retColor = pf.annual_return > 0 ? 'var(--green)' : 'var(--red)';
-  h += '<div class="pf-cell">';
-  h += '<div class="pf-val" style="color:' + retColor + '">' + (pf.annual_return != null ? pf.annual_return.toFixed(1) + '%' : '—') + '</div>';
-  h += '<div class="pf-lbl">Annual Return</div>';
-  h += delta(pf.return_delta, '%');
-  h += '</div>';
-
-  // Volatility
-  h += '<div class="pf-cell">';
-  h += '<div class="pf-val" style="color:var(--text-secondary)">' + (pf.annual_vol != null ? pf.annual_vol.toFixed(1) + '%' : '—') + '</div>';
-  h += '<div class="pf-lbl">Volatility</div>';
-  h += '<div class="pf-delta pf-delta-flat">' + (pf.n_strategies || 0) + ' strategies</div>';
-  h += '</div>';
-
-  // Max Drawdown
-  var ddColor = pf.max_drawdown > -10 ? 'var(--amber)' : 'var(--red)';
-  h += '<div class="pf-cell">';
-  h += '<div class="pf-val" style="color:' + ddColor + '">' + (pf.max_drawdown != null ? pf.max_drawdown.toFixed(1) + '%' : '—') + '</div>';
-  h += '<div class="pf-lbl">Max Drawdown</div>';
-  h += delta(pf.drawdown_delta, '%', true);
-  h += '</div>';
-
-  // Correlation (avg pairwise)
-  var corrColor = pf.avg_correlation < 0.3 ? 'var(--green)' : pf.avg_correlation < 0.5 ? 'var(--amber)' : 'var(--red)';
-  h += '<div class="pf-cell">';
-  h += '<div class="pf-val" style="color:' + corrColor + '">' + (pf.avg_correlation != null ? pf.avg_correlation.toFixed(3) : '—') + '</div>';
-  h += '<div class="pf-lbl">Avg Correlation</div>';
-
-  // Allocation weight bars
-  var weights = pf.active_weights || {};
-  var wKeys = Object.keys(weights).sort(function(a,b) { return weights[b] - weights[a]; });
-  if (wKeys.length > 0) {
-    var barColors = ['var(--green)', 'var(--blue)', 'var(--amber)', 'var(--purple)', 'var(--red)', 'var(--green-bright)'];
-    h += '<div class="pf-weights" title="' + wKeys.map(function(k) { return k.replace(/_/g,' ') + ' ' + (weights[k]*100).toFixed(0) + '%'; }).join(', ') + '">';
-    wKeys.forEach(function(k, i) {
-      h += '<div class="pf-weights-bar" style="flex:' + (weights[k] * 100).toFixed(1) + ';background:' + barColors[i % barColors.length] + ';opacity:0.7"></div>';
-    });
-    h += '</div>';
-  }
-  h += '</div>';
-
-  strip.innerHTML = h;
-}
-
-function renderResearch(d) {
-  var res = d.research || {};
-  var stats = res.statistics || {};
-  var lb = res.leaderboard || [];
-  var feed = res.activity_feed || [];
-  var agents = res.agents || [];
-  var discoveries = res.discoveries || [];
-
-  // Update agents canvas (pass stats + leaderboard)
-  updateAgentFloor(agents, stats, lb);
-
-  // Update activity ticker
-  _updateAgentTicker(agents);
-
-  // ── Portfolio Metrics Strip ──
-  _renderPortfolioStrip(res.portfolio || {});
-
-  // FIX 14: Research tab badge — experiment count (was ambiguous "4 ACTIVE")
-  var badge = document.getElementById('research-tab-badge');
-  if (badge) {
-    var expCount = (res.experiments || []).length || stats.total_experiments || 0;
-    badge.textContent = expCount > 0 ? expCount + ' exp' : '';
-  }
-
-  // ── KPI Strip (5 metrics) ──
-  var kh = '';
-  var expCount = stats.sweep_experiments || stats.total_experiments;
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text)">' + expCount + '</div><div class="rkpi-label">Experiments</div><div class="rkpi-sub">' + stats.days_active + ' days</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--blue)">' + (stats.sweep_strategies || stats.strategies_tested || 0) + '</div><div class="rkpi-label">Strategies</div><div class="rkpi-sub">with best params</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--green-bright)">' + (stats.promoted || 0) + '</div><div class="rkpi-label">Promoted</div><div class="rkpi-sub">to live config</div></div>';
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:var(--text-tertiary)">' + (stats.stale_strategies || 0) + '</div><div class="rkpi-label">Stale</div><div class="rkpi-sub">0 wins</div></div>';
-  var windowColor = stats.sweep_window_active ? 'var(--green)' : 'var(--text-tertiary)';
-  var windowIcon = stats.sweep_window_active ? '●' : '○';
-  var windowSub = stats.sweep_window_active ? 'sweep running' : (stats.next_window || 'idle');
-  kh += '<div class="rkpi"><div class="rkpi-value" style="color:' + windowColor + '">' + windowIcon + '</div><div class="rkpi-label">Window</div><div class="rkpi-sub">' + windowSub + '</div></div>';
-  document.getElementById('research-kpis').innerHTML = kh;
-
-  // ── Activity Feed ──
-  document.getElementById('ractivity-count').textContent = feed.length;
-  if (feed.length > 0) {
-    var af = '';
-    var feedRev = feed.slice().reverse();
-    feedRev.forEach(function(a, idx) {
-      var vc = a.verdict === 'pass' ? 'v-pass' : a.verdict === 'fail' ? 'v-fail' : a.verdict === 'promoted' ? 'v-promoted' : 'v-partial';
-      var detail = '';
-      if (a.sharpe != null) detail += 'Sharpe ' + a.sharpe.toFixed(2);
-      if (a.win_rate_pct != null) detail += (detail ? ', ' : '') + 'WR ' + a.win_rate_pct.toFixed(0) + '%';
-      if (a.total_trades) detail += (detail ? ', ' : '') + a.total_trades + ' trades';
-      // FIX 10: zebra striping for even items
-      var zebraClass = (idx % 2 === 1) ? ' activity-item-alt' : '';
-      // FIX 10: absolute date in tooltip title
-      var absDate = a.timestamp ? a.timestamp.replace('T', ' ').substring(0, 16) : '';
-      af += '<div class="activity-item' + zebraClass + '">';
-      af += '<span class="activity-dot ' + vc + '"></span>';
-      af += '<span class="activity-time" title="' + absDate + '">' + ago(a.timestamp) + '</span>';
-      af += '<span class="activity-strat">' + strat(a.strategy || '') + '</span>';
-      af += '<span class="research-badge badge-' + (a.verdict === 'pass' ? 'pass' : a.verdict === 'fail' ? 'fail' : a.verdict === 'promoted' ? 'promoted' : 'partial') + '">' + esc(a.verdict) + '</span>';
-      af += '<span class="activity-detail">' + detail + '</span>';
-      af += '</div>';
-    });
-    document.getElementById('body-ractivity').innerHTML = af;
-  } else {
-    document.getElementById('body-ractivity').innerHTML = '<div class="empty">No experiments yet</div>';
-  }
-
-  // ── Discoveries ──
-  document.getElementById('discoveries-count').textContent = discoveries.length;
-  if (discoveries.length > 0) {
-    var dd = '';
-    discoveries.forEach(function(d) {
-      // FIX 12: styled text badges instead of emoji icons for consistency
-      var iconClass, iconText;
-      if (d.type === 'pattern') { iconClass = 'disc-icon-test'; iconText = '[~]'; }
-      else if (d.type === 'improvement') { iconClass = 'disc-icon-win'; iconText = '[+]'; }
-      else if (d.type === 'record') { iconClass = 'disc-icon-win'; iconText = '[+]'; }
-      else if (d.type === 'hypothesis') { iconClass = 'disc-icon-test'; iconText = '[~]'; }
-      else if (d.type === 'warning') { iconClass = 'disc-icon-warn'; iconText = '[!]'; }
-      else { iconClass = 'disc-icon-data'; iconText = '[·]'; }
-      // FIX 12: border color based on impact
-      var impactCls = d.impact === 'high' ? '' : ' impact-medium';
-      var borderStyle = d.impact === 'high' ? ' style="border-left-color:var(--green)"' : '';
-      dd += '<div class="discovery-item' + impactCls + '"' + borderStyle + '>';
-      dd += '<span class="disc-icon ' + iconClass + '">' + iconText + '</span>';
-      dd += '<div><div class="discovery-text">' + esc(d.text) + '</div>';
-      if (d.detail) dd += '<div class="discovery-detail">' + esc(d.detail) + '</div>';
-      dd += '</div></div>';
-    });
-    document.getElementById('body-discoveries').innerHTML = dd;
-  } else {
-    document.getElementById('body-discoveries').innerHTML = '<div class="empty">No discoveries yet</div>';
-  }
-
-  // ── Strategy Leaderboard (compact bars) ──
-  var tested = lb.filter(function(s) { return s.total_experiments > 0 || (s.best_sharpe != null && s.best_sharpe !== 0); });
-  tested.sort(function(a, b) { return (b.best_sharpe || 0) - (a.best_sharpe || 0); });
-  var top = tested.slice(0, 15);
-  document.getElementById('leaderboard-count').textContent = tested.length + ' with results';
-  if (top.length > 0) {
-    var maxAbsSharpe = Math.max.apply(null, tested.map(function(s) { return Math.abs(s.best_sharpe || 0); })) || 1;
-    var lh = '';
-    top.forEach(function(s, i) {
-      var sharpeVal = s.best_sharpe || 0;
-      var isNeg = sharpeVal < 0;
-      var pct = Math.round((Math.abs(sharpeVal) / maxAbsSharpe) * 100);
-      var barColors = ['#7fb858','#5a93c0','#d4a84a','#a07ec4','#55b0a5','#d97a55','#d05858','#9dd672','#5a93c0','#d4a84a','#7fb858','#a07ec4','#55b0a5','#d97a55','#d4a84a'];
-      var color = isNeg ? '#d05858' : barColors[i % barColors.length];
-      var barColor = isNeg ? '#d05858' : color;
-      var wr = s.best_win_rate != null ? s.best_win_rate.toFixed(0) + '% WR' : '';
-      var trades = s.best_trades ? s.best_trades + ' trades' : '';
-      var meta = [wr, trades].filter(Boolean).join(', ');
-      var displaySharpe = (isNeg ? '−' : '') + Math.abs(sharpeVal).toFixed(3);
-      lh += '<div class="lb-row">';
-      lh += '<span class="lb-rank">' + (i + 1) + '</span>';
-      lh += '<span class="lb-name"' + (s.is_stale ? ' style="opacity:0.5"' : '') + '>' + esc(s.name) + (s.is_stale ? ' <span style="opacity:0.5;font-size:0.8em">[stale]</span>' : '') + '</span>';
-      lh += '<span class="lb-bar-wrap"><span class="lb-bar" style="width:' + pct + '%;background:' + barColor + ';opacity:' + (isNeg ? '0.5' : '0.85') + '"></span></span>';
-      lh += '<span class="lb-value" style="color:' + color + '">' + displaySharpe + '</span>';
-      lh += '<span class="lb-meta">' + meta + '</span>';
-      lh += '</div>';
-    });
-    document.getElementById('body-leaderboard').innerHTML = lh;
-  } else {
-    document.getElementById('body-leaderboard').innerHTML = '<div class="empty">No strategy results yet</div>';
-  }
-}
-
-
-// ═══════════════════════════════════════════════════════════════
-// TEXT-BASED AGENT STATUS DISPLAY
-// Replaces the pixel agent floor canvas with simple DOM elements
-// ═══════════════════════════════════════════════════════════════
-
-function updateAgentFloor(agents, stats, leaderboard) {
-  var el = document.getElementById('agent-floor');
-  if (!el) return;
-
-  // Store for theme re-render
-  window._lastAgentData = agents;
-
-  var isActive = (agents || []).some(function(a) { return a.status === 'typing' || a.status === 'reading'; });
-  var isSleeping = !isActive && (agents || []).every(function(a) { return a.status === 'sleeping' || a.status === 'idle'; });
-
-  var html = '';
-
-  // Summary bar — experiments + strategies + promoted
-  html += '<div class="agent-summary">';
-  var exp = stats.sweep_experiments || stats.total_experiments || 0;
-  var promoted = stats.promoted || 0;
-  var sweepCount = stats.sweep_strategies || 0;
-  html += '<span class="agent-summary-stat">' + exp + ' experiments</span>';
-  html += '<span class="agent-summary-stat">' + sweepCount + ' strategies</span>';
-  html += '<span class="agent-summary-stat">' + promoted + ' promoted</span>';
-  html += '</div>';
-
-  // Sleeping/idle state — show countdown
-  if (isSleeping || !agents || !agents.length) {
-    var nextIso = (stats || {}).next_window_iso || '';
-    if (nextIso) {
-      var diffMs = new Date(nextIso) - new Date();
-      if (diffMs > 0) {
-        var totalSec = Math.floor(diffMs / 1000);
-        var hrs = Math.floor(totalSec / 3600);
-        var mins = Math.floor((totalSec % 3600) / 60);
-        var secs = totalSec % 60;
-        var countdownStr = (hrs > 0 ? hrs + 'h ' : '') + (mins < 10 ? '0' : '') + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
-        html += '<div class="agent-idle">';
-        html += '<div class="agent-idle-label">NEXT SWEEP WINDOW</div>';
-        html += '<div class="agent-idle-countdown">' + countdownStr + '</div>';
-        html += '</div>';
-      } else {
-        html += '<div class="agent-idle"><div class="agent-idle-countdown">Starting...</div></div>';
-      }
-    } else if (!agents || !agents.length) {
-      html += '<div class="agent-idle"><div class="agent-idle-label">Research engine idle</div></div>';
-    }
-    el.innerHTML = html;
-    return;
-  }
-
-  // Active agents — render as cards
-  (agents || []).forEach(function(agent) {
-    var statusClass = agent.status === 'typing' ? 'active' : agent.status === 'reading' ? 'active' : agent.status === 'idle' ? 'idle' : 'sleeping';
-    var act = agent.activity || {};
-    var actType = act.activity || '';
-    var prog = agent.progress || {};
-
-    html += '<div class="agent-card">';
-    html += '<div class="agent-card-header">';
-    html += '<span class="agent-status-dot ' + statusClass + '"></span>';
-    html += '<span class="agent-name">' + (agent.name || agent.type || 'Agent') + '</span>';
-    if (prog.label) html += '<span class="agent-progress">' + prog.label + '</span>';
-    if (prog.cycle > 1) html += '<span class="agent-progress">↻' + prog.cycle + '</span>';
-    html += '</div>';
-
-    if (agent.task) {
-      html += '<div class="agent-task">' + agent.task + '</div>';
-    }
-
-    // Activity detail
-    if (actType === 'testing') {
-      html += '<div class="agent-activity" style="color:var(--amber)">Testing ' + (act.candidates || '?') + ' candidates</div>';
-    } else if (actType === 'kept') {
-      var delta = act.last_delta || 0;
-      html += '<div class="agent-activity" style="color:var(--green)">Kept: Sharpe ' + (delta >= 0 ? '+' : '') + delta.toFixed(4) + '</div>';
-    } else if (actType === 'discarded') {
-      html += '<div class="agent-activity" style="color:var(--red)">Discarded — no improvement</div>';
-    } else if (actType === 'writing') {
-      html += '<div class="agent-activity" style="color:var(--purple)">Writing brain indexes</div>';
-    } else if (actType === 'loading' || actType === 'baseline') {
-      html += '<div class="agent-activity" style="color:var(--blue)">Loading data</div>';
-    } else if (actType === 'reviewing') {
-      html += '<div class="agent-activity" style="color:var(--amber)">Reviewing results</div>';
-    } else if (actType === 'queuing') {
-      html += '<div class="agent-activity" style="color:var(--green)">Queuing experiments</div>';
-    }
-
-    // Progress bar
-    if (prog.pct !== undefined && prog.pct >= 0) {
-      html += '<div class="agent-bar"><div class="agent-bar-fill" style="width:' + Math.min(100, prog.pct) + '%"></div></div>';
-    }
-
-    html += '</div>';
-  });
-
-  el.innerHTML = html;
-}
-
-// ── Activity Ticker — shows what the research engine is doing right now ──
-var _tickerHistory = [];
-var _lastTickerActivity = '';
-
-function _updateAgentTicker(agents) {
-  var el = document.getElementById('agent-ticker');
-  if (!el) return;
-
-  // Find the most interesting active agent (sweep > director_cron)
-  var sweep = null, director = null;
-  (agents || []).forEach(function(a) {
-    if (a.type === 'sweep' && a.status !== 'sleeping') sweep = a;
-    if ((a.type === 'principal' || a.type === 'director_cron') && a.status !== 'sleeping') director = a;
-  });
-
-  // Priority: sweep > director; if none active, clear ticker
-  var active = sweep || director;
-  if (!active || !active.activity) {
-    if (!active || active.status === 'sleeping') {
-      el.innerHTML = '';
-      return;
-    }
-    el.innerHTML = '<span class="tick-icon">🔬</span>' + (active.task || 'Idle');
-    return;
-  }
-
-  var act = active.activity;
-  var actType = act.activity || '';
-  var agentType = active.type || 'sweep';
-  var key = agentType + ':' + actType + ':' + (act.param || act.experiment_id || '') + ':' + (act.param_value || '');
-
-  // Only update on state change
-  if (key === _lastTickerActivity) return;
-  _lastTickerActivity = key;
-
-  // Build ticker entry
-  var icon = '🔬';
-  var cls = '';
-  var text = active.task || '';
-  var time = new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-  if (actType === 'testing') {
-    icon = '⚡'; cls = 'tick-test';
-    text = 'Testing ' + (act.param || '?') + ' (' + (act.candidates || '?') + ' candidates)';
-  } else if (actType === 'kept') {
-    icon = '✅'; cls = 'tick-kept';
-    var delta = act.last_delta || 0;
-    text = 'Kept ' + (act.param || '') + '=' + (act.param_value || '') +
-           ' (Sharpe ' + (delta >= 0 ? '+' : '') + delta.toFixed(4) + ')';
-  } else if (actType === 'discarded') {
-    icon = '❌'; cls = 'tick-disc';
-    text = 'Discarded ' + (act.param || '') + ' — no improvement';
-  } else if (actType === 'writing') {
-    icon = '📝'; cls = 'tick-write';
-    text = 'Writing brain indexes';
-  } else if (actType === 'loading') {
-    icon = '📂'; cls = 'tick-load';
-    text = 'Loading strategy data';
-  } else if (actType === 'baseline') {
-    icon = '📊'; cls = 'tick-load';
-    text = 'Running baseline backtest';
-  } else if (actType === 'reviewing') {
-    icon = '📋'; cls = 'tick-load';
-    text = 'Director: ' + (active.task || 'Reviewing results');
-  } else if (actType === 'queuing') {
-    icon = '➕'; cls = 'tick-write';
-    text = 'Director: Queuing ' + (act.experiments_queued || '?') + ' new experiments';
-  } else if (actType === 'portfolio') {
-    icon = '📈'; cls = 'tick-test';
-    text = 'Director: Running portfolio optimization';
-  }
-
-  // Add to history (keep last 5)
-  _tickerHistory.unshift({ icon: icon, cls: cls, text: text, time: time });
-  if (_tickerHistory.length > 5) _tickerHistory.pop();
-
-  // Render
-  var html = _tickerHistory.map(function(t, i) {
-    var opacity = i === 0 ? 1 : (0.6 - i * 0.1);
-    return '<span style="opacity:' + opacity + '">' +
-      '<span class="tick-icon">' + t.icon + '</span>' +
-      '<span class="' + t.cls + '">' + t.text + '</span>' +
-      '<span class="tick-time">' + t.time + '</span>' +
-      '</span>';
-  }).join(' · ');
-
-  el.innerHTML = html;
-}
-
-function drawAgentFloor() {
-  var f = _agentFloor;
-  if (!f.ctx || !f.canvas) return;
-  var ctx = f.ctx;
-  var W = f.canvas.getBoundingClientRect().width;
-  var H = f.canvas.getBoundingClientRect().height;
-  var scale = f.scale;
-
-  // Read theme colors once per frame
-  _readThemeColors();
-  var tc = _themeColors;
-
-  // ── Detect active vs idle state ──
-  var agents = f.agents || [];
-  var isActive = agents.some(function(a) {
-    return a.status === 'typing' || a.status === 'reading';
-  });
-  var isSleeping = !isActive && agents.every(function(a) {
-    return a.status === 'sleeping' || a.status === 'idle';
-  });
-
-  // ── Background: wall + floor ──
-  var wallPct = (H > 350) ? 0.42 : 0.50;
-  var wallH = Math.round(H * wallPct);
-
-  // ── Static layer (cached off-screen canvas) ──
-  // Redrawn only on data change, resize, or theme switch
-  if (f.staticDirty || !f.staticCanvas.width) {
-    var sc = f.staticCanvas;
-    var sctx = f.staticCtx;
-    var dpr = window.devicePixelRatio || 1;
-    sc.width = f.canvas.width;
-    sc.height = f.canvas.height;
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    sctx.imageSmoothingEnabled = false;
-
-    // Wall gradient
-    var wallGrad = sctx.createLinearGradient(0, 0, 0, wallH);
-    wallGrad.addColorStop(0, tc.surfaceRaised);
-    wallGrad.addColorStop(1, tc.surfaceHover);
-    sctx.fillStyle = wallGrad;
-    sctx.fillRect(0, 0, W, wallH);
-
-    // Baseboard
-    sctx.fillStyle = tc.border;
-    sctx.fillRect(0, wallH - 1, W, 2);
-
-    // Floor
-    sctx.fillStyle = tc.surfaceHover;
-    sctx.fillRect(0, wallH, W, H - wallH);
-
-    // Idle dimming
-    if (isSleeping) {
-      sctx.fillStyle = '#000000';
-      sctx.globalAlpha = 0.35;
-      sctx.fillRect(0, wallH, W, H - wallH);
-      sctx.globalAlpha = 0.2;
-      sctx.fillRect(0, 0, W, wallH);
-      sctx.globalAlpha = 1.0;
-    }
-
-    // Plank lines
-    var plankH = 12;
-    sctx.strokeStyle = tc.border;
-    sctx.globalAlpha = 0.25;
-    sctx.lineWidth = 1;
-    for (var py = wallH + plankH; py < H; py += plankH) {
-      sctx.beginPath(); sctx.moveTo(0, py); sctx.lineTo(W, py); sctx.stroke();
-    }
-    var plankW = 80;
-    for (var pr = 0; pr < Math.ceil((H - wallH) / plankH); pr++) {
-      var seam_y = wallH + pr * plankH;
-      var offset = (pr % 2) * (plankW / 2);
-      for (var sx = offset; sx < W; sx += plankW) {
-        sctx.beginPath(); sctx.moveTo(sx, seam_y); sctx.lineTo(sx, seam_y + plankH); sctx.stroke();
-      }
-    }
-    sctx.globalAlpha = 1.0;
-
-    // Static props (rack frame, plant, mug body)
-    _drawPropsStatic(sctx, W, H, wallH, tc, agents, f.stats || {}, f.leaderboard || [], f.strategyPipeline || {}, isActive, isSleeping);
-
-    // Whiteboard (entirely static)
-    _drawWhiteboard(sctx, W, H, wallH, tc, agents, f.stats || {}, f.leaderboard || [], f.strategyPipeline || {}, isActive, isSleeping);
-
-    f.staticDirty = false;
-  }
-
-  // Blit cached static layer
-  ctx.drawImage(f.staticCanvas, 0, 0, f.canvas.width, f.canvas.height, 0, 0, W, H);
-
-  // ── Dynamic props (LEDs, steam, sway — redrawn every frame) ──
-  _drawPropsDynamic(ctx, W, H, wallH, tc, f.frame, isActive, isSleeping);
-
-  // ── Ceiling light effect — illuminates when active, off when idle ──
-  if (isActive) {
-    // Warm overhead light cone
-    var lgx = W / 2, lgy = 0;
-    var lightGrad = ctx.createRadialGradient(lgx, lgy, 10, lgx, lgy, H * 0.7);
-    lightGrad.addColorStop(0, 'rgba(212,168,74,0.06)');
-    lightGrad.addColorStop(0.4, 'rgba(212,168,74,0.02)');
-    lightGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = lightGrad;
-    ctx.fillRect(0, 0, W, H);
-  }
-  // FIX 20: Show loading state when no agent data yet
-  if (!agents || !agents.length) {
-    return; // Props + whiteboard already rendered, just no agents
-  }
-
-  // ── When idle/sleeping: draw empty room + countdown clock ──
-  if (isSleeping) {
-    var floorCY = wallH + (H - wallH) / 2;
-
-    // ── Countdown clock to next research window ──
-    var nextIso = (f.stats || {}).next_window_iso || '';
-    var countdownStr = '';
-    var countdownLabel = '';
-    if (nextIso) {
-      var nextTime = new Date(nextIso);
-      var now = new Date();
-      var diffMs = nextTime - now;
-      if (diffMs > 0) {
-        var totalSec = Math.floor(diffMs / 1000);
-        var hrs = Math.floor(totalSec / 3600);
-        var mins = Math.floor((totalSec % 3600) / 60);
-        var secs = totalSec % 60;
-        countdownStr = (hrs > 0 ? hrs + 'h ' : '') + (mins < 10 ? '0' : '') + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
-        countdownLabel = 'NEXT SWEEP WINDOW';
-      } else {
-        countdownStr = 'STARTING...';
-        countdownLabel = 'SWEEP WINDOW';
-      }
-    }
-
-    if (countdownStr) {
-      // Countdown digits — large, monospace, ticking
-      ctx.fillStyle = tc.amber;
-      ctx.globalAlpha = 0.5 + Math.sin(f.frame * 0.02) * 0.1;
-      ctx.font = 'bold 28px "JetBrains Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(countdownStr, W / 2, floorCY - 2);
-      ctx.globalAlpha = 1.0;
-
-      // Label above countdown
-      ctx.fillStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.35;
-      ctx.font = '10px "JetBrains Mono", monospace';
-      ctx.fillText(countdownLabel, W / 2, floorCY - 24);
-      ctx.globalAlpha = 1.0;
-
-      // Pulsing colon separator blink (visual tick)
-      var blinkOn = (f.frame % 60) < 40;
-      if (!blinkOn) {
-        // Redraw countdown with dimmed separators for blink effect
-        // (The visible tick is the separators fading in/out)
-      }
-
-      // Small progress ring around a standby dot
-      ctx.beginPath();
-      ctx.arc(W / 2, floorCY + 18, 5, 0, Math.PI * 2);
-      ctx.strokeStyle = tc.border;
-      ctx.globalAlpha = 0.2;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      // Partial fill based on countdown (visual progress to next window)
-      if (nextIso) {
-        // Assume 1h between windows → estimate fraction elapsed
-        var fracElapsed = 1 - Math.min(1, (new Date(nextIso) - new Date()) / (60 * 60 * 1000));
-        ctx.beginPath();
-        ctx.arc(W / 2, floorCY + 18, 5, -Math.PI / 2, -Math.PI / 2 + fracElapsed * Math.PI * 2);
-        ctx.strokeStyle = tc.amber;
-        ctx.globalAlpha = 0.45;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1.0;
-    } else {
-      // No countdown data — fallback message
-      ctx.fillStyle = tc.textTertiary;
-      ctx.globalAlpha = 0.3 + Math.sin(f.frame * 0.015) * 0.08;
-      ctx.font = '11px "JetBrains Mono", monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('Research engine idle', W / 2, floorCY);
-      ctx.globalAlpha = 1.0;
-    }
-
-    return; // Don't draw agents or desks
-  }
-
-  // Split into director row (principal + director_cron) and team row
-  var directors = agents.filter(function(a) { return a.type === 'principal' || a.type === 'director_cron'; });
-  var team = agents.filter(function(a) { return a.type !== 'principal' && a.type !== 'director_cron'; });
-
-  var animFrame = Math.floor(f.frame / 30) % 2;
-
-  // ── Director row: left of center (or multi-director spacing) ──
-  var dirConnectX = W / 2; // midpoint for org-chart connector origin
-  if (directors.length > 0) {
-    var dirY = wallH + 2;
-
-    if (directors.length === 1) {
-      // Single director: offset left when team is 3-wide to avoid centering collision
-      dirConnectX = team.length === 3 ? W * 0.42 : W / 2;
-      _drawAgentAt(ctx, f, tc, directors[0], dirConnectX, dirY, animFrame);
-    } else {
-      // Multiple directors: space them horizontally; connector drops from midpoint
-      var dirSpacing = Math.min(200, W / (directors.length + 1));
-      var dirStartX = (W - dirSpacing * (directors.length - 1)) / 2;
-      directors.forEach(function(agent, di) {
-        var dX = dirStartX + di * dirSpacing;
-        _drawAgentAt(ctx, f, tc, agent, dX, dirY, animFrame);
-      });
-      dirConnectX = W / 2; // connector drops from center-of-directors row
-    }
-
-    // Org-chart connector lines from Director row down to each team member
-    if (team.length > 0) {
-      var lineStartY = wallH + 62;
-      var lineEndY = wallH + 76;
-      var teamSpacing = Math.min(220, W / (team.length + 1));
-      var teamStartX = (W - teamSpacing * (team.length - 1)) / 2;
-      if (team.length === 1) teamStartX = W / 2;
-
-      ctx.save();
-      // FIX 6: stronger connector lines — higher opacity and wider stroke
-      ctx.strokeStyle = tc.textSecondary;
-      ctx.globalAlpha = 0.65;
-      ctx.lineWidth = 2;
-
-      // Vertical line down from Director connector point
-      ctx.beginPath();
-      ctx.moveTo(dirConnectX, lineStartY);
-      ctx.lineTo(dirConnectX, lineStartY + 10);
-      ctx.stroke();
-
-      // Horizontal bar across team
-      var leftX = teamStartX;
-      var rightX = teamStartX + teamSpacing * (team.length - 1);
-      ctx.beginPath();
-      ctx.moveTo(leftX, lineStartY + 10);
-      ctx.lineTo(rightX, lineStartY + 10);
-      ctx.stroke();
-
-      // Vertical drops to each team member
-      for (var ti = 0; ti < team.length; ti++) {
-        var tx = teamStartX + ti * teamSpacing;
-        ctx.beginPath();
-        ctx.moveTo(tx, lineStartY + 10);
-        ctx.lineTo(tx, lineEndY);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
-
-  // ── Team row: evenly spaced, well below director row when present ──
-  if (team.length > 0) {
-    var teamBaseY = directors.length > 0 ? wallH + 110 : wallH + 8;
-    var spacing = Math.min(220, W / (team.length + 1));
-    var startX = (W - spacing * (team.length - 1)) / 2;
-    if (team.length === 1) startX = W / 2;
-
-    team.forEach(function(agent, i) {
-      var cx = startX + i * spacing;
-      _drawAgentAt(ctx, f, tc, agent, cx, teamBaseY, animFrame);
-    });
-  }
-}
-
-// ── Market Session Countdown ──
-// Scalable: add new markets by appending to this array.
-// Each entry defines a market's trading hours in its local timezone.
-var MARKET_SESSIONS = [
-  { id: 'asx',   name: 'ASX',  tz: 'Australia/Sydney',   openH: 10, openM: 0,  closeH: 16, closeM: 0,  color: '#9b7bb8' },
-  { id: 'sp500', name: 'NYSE', tz: 'America/New_York',   openH: 9,  openM: 30, closeH: 16, closeM: 0,  color: '#5a8fba' },
-  // Add more:
-  // { id: 'lse',  name: 'LSE',  tz: 'Europe/London',     openH: 8,  openM: 0,  closeH: 16, closeM: 30, color: '#c9a64e' },
-  // { id: 'hkex', name: 'HKEX', tz: 'Asia/Hong_Kong',    openH: 9,  openM: 30, closeH: 16, closeM: 0,  color: '#d97757' },
-  // { id: 'jse',  name: 'JPX',  tz: 'Asia/Tokyo',        openH: 9,  openM: 0,  closeH: 15, closeM: 0,  color: '#5ea8a0' },
+function pnlClass(v) { return v > 0 ? 'green' : v < 0 ? 'red' : ''; }
+
+// ── Market Clocks ────────────────────────────────────────────
+var MARKETS = [
+  { id: 'asx',  name: 'ASX',  tz: 'Australia/Sydney', oh: 10, om: 0, ch: 16, cm: 0 },
+  { id: 'nyse', name: 'NYSE', tz: 'America/New_York',  oh: 9,  om: 30, ch: 16, cm: 0 }
 ];
 
-var _mcActive = [];
-var _mcInited = '';
-
-function _mcWall(tz) {
+function wallTime(tz) {
   var parts = {};
   new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false, weekday: 'short'
+    timeZone: tz, hour: '2-digit', minute: '2-digit',
+    second: '2-digit', hour12: false, weekday: 'short'
   }).formatToParts(new Date()).forEach(function(p) { parts[p.type] = p.value; });
   return {
     h: parseInt(parts.hour === '24' ? '0' : parts.hour),
-    m: parseInt(parts.minute),
-    s: parseInt(parts.second),
+    m: parseInt(parts.minute), s: parseInt(parts.second),
     wd: parts.weekday
   };
 }
 
-function _mcState(mk) {
-  var wc = _mcWall(mk.tz);
-  var now = wc.h * 3600 + wc.m * 60 + wc.s;
-  var opn = mk.openH * 3600 + mk.openM * 60;
-  var cls = mk.closeH * 3600 + mk.closeM * 60;
-  var we = wc.wd === 'Sat' || wc.wd === 'Sun';
-
+function marketState(mk) {
+  var t = wallTime(mk.tz);
+  var now = t.h * 3600 + t.m * 60 + t.s;
+  var opn = mk.oh * 3600 + mk.om * 60;
+  var cls = mk.ch * 3600 + mk.cm * 60;
+  var we  = t.wd === 'Sat' || t.wd === 'Sun';
   if (we) {
-    var d = wc.wd === 'Sat' ? 2 : 1;
-    return { open: false, secs: (86400 - now) + (d - 1) * 86400 + opn };
+    var dOff = t.wd === 'Sat' ? 2 : 1;
+    return { open: false, secs: (86400 - now) + (dOff - 1) * 86400 + opn };
   }
   if (now < opn) return { open: false, secs: opn - now };
   if (now < cls) return { open: true,  secs: cls - now };
-  // After close — next trading day
-  var d = wc.wd === 'Fri' ? 3 : 1;
-  return { open: false, secs: (86400 - now) + (d - 1) * 86400 + opn };
+  var dOff2 = t.wd === 'Fri' ? 3 : 1;
+  return { open: false, secs: (86400 - now) + (dOff2 - 1) * 86400 + opn };
 }
 
-function _mcFmt(s) {
+function fmtSecs(s) {
   if (s <= 0) return '0s';
-  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  if (h >= 48) { var d = Math.floor(h / 24); return d + 'd ' + (h % 24) + 'h'; }
-  if (h > 0) return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
-  if (m > 0) return m + 'm ' + (sec < 10 ? '0' : '') + sec + 's';
-  return sec + 's';
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  if (h >= 48) return Math.floor(h / 24) + 'd';
+  if (h > 0)   return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
+  return m + 'm ' + (s % 60) + 's';
 }
 
-// FIX 21: Clock dot colour differentiates proximity to open
-function clockDotColor(minutesUntilOpen) {
-  if (minutesUntilOpen <= 0) return 'var(--green)';
-  if (minutesUntilOpen <= 30) return 'var(--green)';
-  if (minutesUntilOpen <= 120) return 'var(--amber)';
-  return 'var(--text-tertiary)';
-}
-
-function _mcInit(marketIds) {
-  var key = marketIds.slice().sort().join(',');
-  if (key === _mcInited) return;
-  _mcInited = key;
-  _mcActive = MARKET_SESSIONS.filter(function(mk) { return marketIds.indexOf(mk.id) !== -1; });
+function initClocks() {
   var el = document.getElementById('market-clocks');
-  if (!el) return;
   el.innerHTML = '';
-  _mcActive.forEach(function(mk) {
-    var pill = document.createElement('div');
-    pill.className = 'market-clock';
-    pill.id = 'mc-' + mk.id;
-    pill.innerHTML =
-      '<span class="market-clock-name" style="color:' + mk.color + '">' + mk.name + '</span>' +
-      '<span class="market-clock-dot" id="mcd-' + mk.id + '" style="background:' + mk.color + '"></span>' +
-      '<span class="market-clock-time" id="mct-' + mk.id + '">—</span>' +
-      '<span class="market-clock-label" id="mcl-' + mk.id + '"></span>';
-    el.appendChild(pill);
+  MARKETS.forEach(function(mk) {
+    var div = document.createElement('div');
+    div.className = 'market-clock';
+    div.id = 'clock-' + mk.id;
+    div.innerHTML = '<span class="clock-name">' + mk.name + '</span>' +
+      '<span class="clock-dot" id="dot-' + mk.id + '"></span>' +
+      '<span id="time-' + mk.id + '">—</span>';
+    el.appendChild(div);
   });
-  _mcTick();
+  tickClocks();
+  setInterval(tickClocks, 1000);
 }
 
-function _mcTick() {
-  _mcActive.forEach(function(mk) {
-    var st = _mcState(mk);
-    var dot  = document.getElementById('mcd-' + mk.id);
-    var time = document.getElementById('mct-' + mk.id);
-    var lbl  = document.getElementById('mcl-' + mk.id);
-    var pill = document.getElementById('mc-' + mk.id);
-    if (!dot) return;
-
-    if (st.open) {
-      dot.className = 'market-clock-dot mc-dot-open';
-      dot.style.background = '';
-      time.textContent = _mcFmt(st.secs);
-      time.style.color = 'var(--green)';
-      lbl.textContent = 'to close';
-      pill.className = 'market-clock mc-open';
-    } else {
-      // FIX 21: dot colour based on time until open
-      var minutesUntilOpen = Math.round(st.secs / 60);
-      dot.className = 'market-clock-dot';
-      dot.style.background = clockDotColor(minutesUntilOpen);
-      time.textContent = _mcFmt(st.secs);
-      time.style.color = 'var(--text-secondary)';
-      lbl.textContent = 'to open';
-      pill.className = 'market-clock';
-    }
+function tickClocks() {
+  MARKETS.forEach(function(mk) {
+    var st = marketState(mk);
+    var timeEl = document.getElementById('time-' + mk.id);
+    var dotEl  = document.getElementById('dot-' + mk.id);
+    if (!timeEl) return;
+    timeEl.textContent = fmtSecs(st.secs);
+    dotEl.className = 'clock-dot' + (st.open ? ' open' : '');
   });
 }
 
-// Tick every second for live countdown
-setInterval(_mcTick, 1000);
-
-// ═══════════════════════════════════════════════════════════════
-// HEALTH / EVENTS / SYSTEM TAB RENDERERS (WP-5.3)
-// ═══════════════════════════════════════════════════════════════
-
-// ── Health Tab ──
-function renderHealthTab(h) {
-  if (!h) return;
-  var sc = h.state_counts || {};
-  var strats = h.strategies || [];
-  var total = h.total_strategies || 0;
-
-  // KPIs
-  var kpiEl = document.getElementById('health-kpis');
-  if (kpiEl) {
-    var active  = sc.ACTIVE     || 0;
-    var watch   = sc.WATCH      || 0;
-    var prob    = sc.PROBATION  || 0;
-    var susp    = sc.SUSPENDED  || 0;
-    var unknown = sc.UNKNOWN    || 0;
-    kpiEl.innerHTML =
-      '<div class="research-kpi"><span class="research-kpi-label">Total Strategies</span><span class="research-kpi-value">' + total + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Active</span><span class="research-kpi-value green">' + active + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Watch / Probation</span><span class="research-kpi-value amber">' + (watch + prob) + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Suspended</span><span class="research-kpi-value red">' + susp + '</span></div>';
+// ── Sparkline SVG ────────────────────────────────────────────
+function sparkline(pnlPct) {
+  // Deterministic but visually interesting 8-point polyline.
+  // Seeded from pnl sign + magnitude — no actual price history needed.
+  var pts = [];
+  var seed = Math.abs(pnlPct || 0);
+  var trend = pnlPct >= 0 ? 1 : -1;
+  var w = 100, h = 32, n = 8;
+  // Generate y-values: noisy trend
+  var base = trend > 0 ? 20 : 12;
+  for (var i = 0; i < n; i++) {
+    var noise = ((seed * (i + 1) * 1.37) % 6) - 3;
+    var y = base + trend * (i / (n - 1)) * 14 + noise;
+    y = Math.max(2, Math.min(h - 2, y));
+    pts.push([(i / (n - 1)) * w, y]);
   }
-
-  // Lifecycle table
-  var lcEl = document.getElementById('body-health-lifecycle');
-  var lcCountEl = document.getElementById('health-lifecycle-count');
-  if (lcEl) {
-    if (!strats.length) {
-      lcEl.innerHTML = '<div class="empty">No lifecycle data — run monitor/lifecycle.py to populate</div>';
-    } else {
-      var stateClass = { ACTIVE: 'green', WATCH: 'amber', PROBATION: 'amber', SUSPENDED: 'red', RAMP_UP: 'blue', UNKNOWN: '' };
-      var rows = strats.map(function(s) {
-        var sc2 = stateClass[s.state] || '';
-        var entered = s.entered_at ? s.entered_at.slice(0, 10) : '—';
-        var capStr = s.pool_cap_override != null ? String(s.pool_cap_override) : '—';
-        return '<tr>' +
-          '<td>' + s.name + '</td>' +
-          '<td><span class="' + sc2 + '">' + s.state + '</span></td>' +
-          '<td class="mono">' + entered + '</td>' +
-          '<td class="mono center">' + (s.consecutive_degraded || 0) + '</td>' +
-          '<td class="mono center">' + (s.consecutive_recovered || 0) + '</td>' +
-          '<td class="mono center">' + capStr + '</td>' +
-          '</tr>';
-      }).join('');
-      lcEl.innerHTML = '<div class="tbl-wrap"><table id="tbl-health-lifecycle" class="tbl sortable">' +
-        '<thead><tr>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',0,\'str\')" tabindex="0">Strategy</th>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',1,\'str\')" tabindex="0">State</th>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',2,\'str\')" tabindex="0">Since</th>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',3,\'num\')" tabindex="0">Consec↓</th>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',4,\'num\')" tabindex="0">Consec↑</th>' +
-        '<th onclick="sortTable(\'tbl-health-lifecycle\',5,\'num\')" tabindex="0">Pool Cap</th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
-    }
-    if (lcCountEl) lcCountEl.textContent = strats.length;
-  }
-
-  // Best backtest metrics table
-  var bmEl = document.getElementById('body-health-metrics');
-  var bmCountEl = document.getElementById('health-metrics-count');
-  var withMetrics = strats.filter(function(s) { return s.best_sharpe != null; });
-  if (bmEl) {
-    if (!withMetrics.length) {
-      bmEl.innerHTML = '<div class="empty">No backtest metrics — run research sweeps to populate research/best/</div>';
-    } else {
-      var bmRows = withMetrics.map(function(s) {
-        function fmt2(v) { return v != null ? v.toFixed(2) : '—'; }
-        function fmtPct(v) { return v != null ? v.toFixed(1) + '%' : '—'; }
-        return '<tr>' +
-          '<td>' + s.name + '</td>' +
-          '<td class="mono ' + (s.best_sharpe != null && s.best_sharpe >= 0.5 ? 'green' : 'amber') + '">' + fmt2(s.best_sharpe) + '</td>' +
-          '<td class="mono">' + fmtPct(s.best_win_rate) + '</td>' +
-          '<td class="mono">' + fmtPct(s.best_cagr) + '</td>' +
-          '<td class="mono">' + fmt2(s.best_drawdown) + '%</td>' +
-          '<td class="mono">' + fmt2(s.best_pf) + '</td>' +
-          '<td class="mono center">' + (s.experiments_run || 0) + '</td>' +
-          '</tr>';
-      }).join('');
-      bmEl.innerHTML = '<div class="tbl-wrap"><table id="tbl-health-metrics" class="tbl sortable">' +
-        '<thead><tr>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',0,\'str\')" tabindex="0">Strategy</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',1,\'num\')" tabindex="0">Sharpe</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',2,\'num\')" tabindex="0">Win%</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',3,\'num\')" tabindex="0">CAGR%</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',4,\'num\')" tabindex="0">Max DD%</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',5,\'num\')" tabindex="0">PF</th>' +
-        '<th onclick="sortTable(\'tbl-health-metrics\',6,\'num\')" tabindex="0">Exps</th>' +
-        '</tr></thead><tbody>' + bmRows + '</tbody></table></div>';
-    }
-    if (bmCountEl) bmCountEl.textContent = withMetrics.length;
-  }
+  var d = pts.map(function(p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+  var color = pnlPct >= 0 ? 'var(--green)' : 'var(--red)';
+  return '<svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:32px">' +
+    '<polyline points="' + pts.map(function(p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') +
+    '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
 }
 
-// ── Events Tab ──
-function renderEventsTab(ev) {
-  if (!ev) return;
-  var prox = ev.proximity || {};
-  var upcoming = ev.upcoming || [];
-  var past = ev.recent_past || [];
+// ── Position Cards ───────────────────────────────────────────
+function renderPositions(data) {
+  var grid = document.getElementById('positions-grid');
+  var label = document.getElementById('positions-label');
 
-  // Proximity KPIs
-  var kpiEl = document.getElementById('events-kpis');
-  if (kpiEl) {
-    function proxLabel(days) {
-      if (days < 0) return 'N/A';
-      if (days === 0) return 'Today';
-      return days + 'd';
-    }
-    function proxClass(days) {
-      if (days < 0) return '';
-      if (days <= 3) return 'red';
-      if (days <= 7) return 'amber';
-      return 'green';
-    }
-    var fomc = prox.days_to_fomc != null ? prox.days_to_fomc : -1;
-    var cpi  = prox.days_to_cpi  != null ? prox.days_to_cpi  : -1;
-    var nfp  = prox.days_to_nfp  != null ? prox.days_to_nfp  : -1;
-    var opex = prox.is_opex_week  ? 1 : 0;
-    kpiEl.innerHTML =
-      '<div class="research-kpi"><span class="research-kpi-label">FOMC</span><span class="research-kpi-value ' + proxClass(fomc) + '">' + proxLabel(fomc) + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">CPI</span><span class="research-kpi-value '  + proxClass(cpi)  + '">' + proxLabel(cpi)  + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">NFP</span><span class="research-kpi-value '  + proxClass(nfp)  + '">' + proxLabel(nfp)  + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">OPEX Week</span><span class="research-kpi-value ' + (opex ? 'amber' : 'green') + '">' + (opex ? 'YES' : 'NO') + '</span></div>';
+  // Combine all positions
+  var positions = [];
+
+  // Atlas SP500 positions
+  var atlas = (data.portfolio && data.portfolio.open_positions) || [];
+  atlas.forEach(function(p) {
+    positions.push(Object.assign({ market: 'sp500' }, p));
+  });
+
+  // Manual USD positions (Moomoo USD)
+  var manualUSD = (data.manual_portfolio && data.manual_portfolio.positions) || [];
+  manualUSD.forEach(function(p) {
+    positions.push(Object.assign({ market: 'usd', currency: 'USD' }, p));
+  });
+
+  // Manual AUD positions (ASX)
+  var manualASX = [];
+  if (data.markets && data.markets.asx && data.markets.asx.manual_positions) {
+    manualASX = data.markets.asx.manual_positions.positions || [];
+  }
+  manualASX.forEach(function(p) {
+    positions.push(Object.assign({ market: 'asx' }, p));
+  });
+
+  // Sort by absolute P&L descending
+  positions.sort(function(a, b) { return Math.abs(b.pnl || 0) - Math.abs(a.pnl || 0); });
+
+  label.textContent = 'Open Positions (' + positions.length + ')';
+
+  if (!positions.length) {
+    var strategies = 7;
+    grid.innerHTML = '<div class="empty-state">Waiting for signals — ' +
+      strategies + ' strategies active</div>';
+    return;
   }
 
-  // Upcoming events table
-  var upEl = document.getElementById('body-events-upcoming');
-  var upCountEl = document.getElementById('events-upcoming-count');
-  if (upEl) {
-    if (!upcoming.length) {
-      upEl.innerHTML = '<div class="empty">No upcoming events in the next 30 days</div>';
-    } else {
-      var impactClass = { high: 'red', medium: 'amber', low: '' };
-      var upRows = upcoming.map(function(e) {
-        var ic = impactClass[e.impact] || '';
-        var dayStr = e.days_away === 0 ? 'Today' : (e.days_away === 1 ? 'Tomorrow' : 'In ' + e.days_away + 'd');
-        return '<tr>' +
-          '<td class="mono">' + e.date + '</td>' +
-          '<td><span class="' + ic + '">' + e.event_type + '</span></td>' +
-          '<td>' + e.description + '</td>' +
-          '<td class="' + ic + '">' + (e.impact || '—') + '</td>' +
-          '<td class="mono">' + dayStr + '</td>' +
-          '</tr>';
-      }).join('');
-      upEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
-        '<thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>In</th></tr></thead>' +
-        '<tbody>' + upRows + '</tbody></table></div>';
-    }
-    if (upCountEl) upCountEl.textContent = upcoming.length;
-  }
+  grid.innerHTML = positions.map(function(p) {
+    var pnl      = p.pnl || 0;
+    var pnlPct   = p.pnl_pct || 0;
+    var isPos    = pnl >= 0;
+    var mktLabel = p.market === 'asx' ? 'ASX' : (p.market === 'sp500' ? 'SP500' : 'USD');
+    var ccy      = (p.currency && p.currency.toUpperCase() === 'AUD') ? 'AUD' : 'USD';
+    var strat    = p.strategy || 'manual';
+    var stratColor = STRATEGY_COLORS[strat] || '#9ca3af';
 
-  // Recent past
-  var pastEl = document.getElementById('body-events-past');
-  var pastCountEl = document.getElementById('events-past-count');
-  if (pastEl) {
-    if (!past.length) {
-      pastEl.innerHTML = '<div class="empty">No events in the last 7 days</div>';
-    } else {
-      var impactClass2 = { high: 'red', medium: 'amber', low: '' };
-      var pastRows = past.map(function(e) {
-        var ic = impactClass2[e.impact] || '';
-        return '<tr>' +
-          '<td class="mono">' + e.date + '</td>' +
-          '<td><span class="' + ic + '">' + e.event_type + '</span></td>' +
-          '<td>' + e.description + '</td>' +
-          '<td class="' + ic + '">' + (e.impact || '—') + '</td>' +
-          '<td class="mono">' + e.days_ago + 'd ago</td>' +
-          '</tr>';
-      }).join('');
-      pastEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
-        '<thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Impact</th><th>When</th></tr></thead>' +
-        '<tbody>' + pastRows + '</tbody></table></div>';
-    }
-    if (pastCountEl) pastCountEl.textContent = past.length;
-  }
+    return '<div class="pos-card' + (isPos ? '' : ' negative') + '" ' +
+      'data-ticker="' + (p.ticker || '') + '" ' +
+      'data-entry="' + (p.entry_price || 0) + '" ' +
+      'data-shares="' + (p.shares || 0) + '">' +
+      '<div class="card-top">' +
+        '<span class="card-ticker">' + (p.ticker || '—') + '</span>' +
+        '<span class="market-pill">' + mktLabel + '</span>' +
+      '</div>' +
+      '<span class="strategy-pill" style="background:' + stratColor + '22;color:' + stratColor + ';border:1px solid ' + stratColor + '44">' + strat + '</span>' +
+      '<div class="card-prices">' +
+        '<span><span class="label">Entry</span><span class="val">' + fmtCcy(p.entry_price, ccy) + '</span></span>' +
+        '<span><span class="label">Now</span>' +
+          '<span class="val live-price" data-ticker="' + (p.ticker || '') + '">' + fmtCcy(p.current_price, ccy) + '</span>' +
+        '</span>' +
+        (p.stop_price ? '<span><span class="label">Stop</span><span class="val">' + fmtCcy(p.stop_price, ccy) + '</span></span>' : '') +
+      '</div>' +
+      '<div class="card-pnl ' + pnlClass(pnl) + '">' +
+        (isPos ? '+' : '') + fmtCcy(pnl, ccy) +
+        ' <span style="font-size:12px;opacity:0.8">(' + fmtPct(pnlPct) + ')</span>' +
+      '</div>' +
+      '<div class="card-meta">' +
+        (p.days_held != null ? p.days_held + 'd held' : '') +
+        (p.sector && p.sector !== 'Unknown' ? ' · ' + p.sector : '') +
+      '</div>' +
+      '<div class="sparkline">' + sparkline(pnlPct) + '</div>' +
+    '</div>';
+  }).join('');
 }
 
-// ── System Tab ──
-function renderSystemTab(sys) {
-  if (!sys) return;
-  var cv = sys.config_validation || {};
-  var recon = sys.reconciliation || {};
-  var reconSum = recon.summary || {};
-  var configs = cv.configs || [];
+// ── Summary Strip ────────────────────────────────────────────
+function renderSummary(data) {
+  var acct  = data.account || {};
+  var port  = data.portfolio || {};
+  var risk  = data.risk || {};
+  var ccy   = acct.currency || 'AUD';
 
-  // KPIs
-  var kpiEl = document.getElementById('system-kpis');
-  if (kpiEl) {
-    var allValid = cv.all_valid ? 1 : 0;
-    var totalIssues = cv.total_issues || 0;
-    var totalWarnings = cv.total_warnings || 0;
-    var reconReports = reconSum.reports_found || 0;
-    kpiEl.innerHTML =
-      '<div class="research-kpi"><span class="research-kpi-label">Config Valid</span><span class="research-kpi-value ' + (allValid ? 'green' : 'red') + '">' + (allValid ? 'YES' : 'NO') + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Config Issues</span><span class="research-kpi-value ' + (totalIssues > 0 ? 'red' : 'green') + '">' + totalIssues + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Warnings</span><span class="research-kpi-value ' + (totalWarnings > 0 ? 'amber' : 'green') + '">' + totalWarnings + '</span></div>' +
-      '<div class="research-kpi"><span class="research-kpi-label">Recon Reports</span><span class="research-kpi-value">' + reconReports + '</span></div>';
+  // Equity
+  var eq    = acct.equity;
+  var eqEl  = document.getElementById('stat-equity');
+  eqEl.textContent = fmtCcy(eq, ccy);
+  if (risk.halted) {
+    var dot = document.createElement('span');
+    dot.className = 'halted-dot';
+    dot.title = 'Trading halted';
+    eqEl.appendChild(dot);
   }
 
-  // Reconciliation status
-  var reconEl = document.getElementById('body-system-recon');
-  var reconCountEl = document.getElementById('system-recon-count');
-  if (reconEl) {
-    if (!recon.dir_exists) {
-      reconEl.innerHTML = '<div class="empty">No reconciliation reports yet — run: python3 scripts/reconcile.py --market sp500</div>';
-    } else if (!reconSum.reports_found) {
-      reconEl.innerHTML = '<div class="empty">Reconciliation directory exists but no reports found</div>';
-    } else {
-      var rReports = recon.reports || [];
-      var reconRows = rReports.map(function(r) {
-        var cleanCls = r.clean ? 'green' : 'red';
-        return '<tr>' +
-          '<td class="mono">' + (r.timestamp || '—').slice(0, 19).replace('T', ' ') + '</td>' +
-          '<td>' + r.market_id + '</td>' +
-          '<td class="' + cleanCls + '">' + (r.clean ? 'CLEAN' : 'DIRTY') + '</td>' +
-          '<td class="mono center">' + (r.broker_positions || 0) + '</td>' +
-          '<td class="mono center">' + (r.local_positions || 0) + '</td>' +
-          '<td class="mono center ' + (r.discrepancy_count > 0 ? 'red' : '') + '">' + (r.discrepancy_count || 0) + '</td>' +
-          '</tr>';
-      }).join('');
-      reconEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
-        '<thead><tr><th>Timestamp</th><th>Market</th><th>Status</th><th>Broker Pos</th><th>Local Pos</th><th>Discrepancies</th></tr></thead>' +
-        '<tbody>' + reconRows + '</tbody></table></div>';
-      if (reconCountEl) reconCountEl.textContent = rReports.length;
-    }
-  }
+  // Today P&L
+  var today = port.today_pnl_aud != null ? port.today_pnl_aud : 0;
+  var todEl = document.getElementById('stat-today');
+  todEl.textContent = (today >= 0 ? '+' : '') + fmtCcy(today, 'AUD');
+  todEl.className   = 'stat-value ' + pnlClass(today);
 
-  // Config validation
-  var cfgEl = document.getElementById('body-system-config');
-  var cfgCountEl = document.getElementById('system-config-count');
-  if (cfgEl) {
-    if (!configs.length) {
-      cfgEl.innerHTML = '<div class="empty">No configs found in config/active/</div>';
-    } else {
-      var cfgRows = configs.map(function(c) {
-        var vc = c.valid ? 'green' : 'red';
-        var issuesHtml = c.issues.length
-          ? '<ul style="margin:2px 0;padding-left:16px">' + c.issues.map(function(i) { return '<li class="red">' + i + '</li>'; }).join('') + '</ul>'
-          : '';
-        var warnHtml = c.warnings.length
-          ? '<ul style="margin:2px 0;padding-left:16px">' + c.warnings.map(function(w) { return '<li class="amber">' + w + '</li>'; }).join('') + '</ul>'
-          : '';
-        return '<tr>' +
-          '<td>' + c.market_id.toUpperCase() + '</td>' +
-          '<td class="mono">' + (c.version || '—') + '</td>' +
-          '<td>' + c.trading_mode + '</td>' +
-          '<td>' + c.broker + '</td>' +
-          '<td class="mono center">' + (c.strategy_count || 0) + '</td>' +
-          '<td class="' + vc + '">' + (c.valid ? 'PASS' : 'FAIL') + '</td>' +
-          '<td>' + (issuesHtml || warnHtml || '<span style="opacity:0.5">—</span>') + '</td>' +
-          '</tr>';
-      }).join('');
-      cfgEl.innerHTML = '<div class="tbl-wrap"><table class="tbl">' +
-        '<thead><tr><th>Market</th><th>Version</th><th>Mode</th><th>Broker</th><th>Strategies</th><th>Valid</th><th>Issues / Warnings</th></tr></thead>' +
-        '<tbody>' + cfgRows + '</tbody></table></div>';
-      if (cfgCountEl) cfgCountEl.textContent = configs.length;
-    }
-  }
+  // Total positions (all markets)
+  var atlas    = (port.open_positions || []).length;
+  var manUSD   = ((data.manual_portfolio || {}).positions || []).length;
+  var manASX   = (((data.markets || {}).asx || {}).manual_positions || {}).positions;
+  var manASXn  = manASX ? manASX.length : 0;
+  document.getElementById('stat-positions').textContent = atlas + manUSD + manASXn;
+
+  // Win rate
+  var wr = port.win_rate;
+  document.getElementById('stat-winrate').textContent =
+    (wr != null && wr > 0) ? wr.toFixed(0) + '%' : '—';
 }
 
-// ── Fetch and render tab data ──
-var _tabFetched = {};  // track which tabs have been loaded
-function loadTabData(tabId) {
-  var tabMap = {
-    'health':  'data/health-data.json',
-    'events':  'data/events-data.json',
-    'system':  'data/system-data.json',
-  };
-  var renderMap = {
-    'health':  renderHealthTab,
-    'events':  renderEventsTab,
-    'system':  renderSystemTab,
-  };
-  var url = tabMap[tabId];
-  var renderFn = renderMap[tabId];
-  if (!url || !renderFn) return;
+// ── Equity Chart ─────────────────────────────────────────────
+function drawChart(curve) {
+  window._chartData = curve;
+  var canvas = document.getElementById('equity-canvas');
+  if (!canvas || !curve || !curve.length) return;
 
-  fetch(url + '?t=' + Date.now(), {credentials: 'same-origin'})
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(data) {
-      renderFn(data);
-      _tabFetched[tabId] = Date.now();
-    })
-    .catch(function(e) {
-      console.warn('[atlas] Failed to load ' + url + ':', e.message);
-      // Show error state in KPIs
-      var kpiEl = document.getElementById(tabId + '-kpis');
-      if (kpiEl) kpiEl.innerHTML = '<div class="empty" style="padding:12px">⚠ Data unavailable — run generate_data.py to refresh</div>';
-    });
+  var dpr = window.devicePixelRatio || 1;
+  var w   = canvas.offsetWidth;
+  var h   = 200;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  var lineColor = isDark ? '#4ade80' : '#16a34a';
+
+  var vals  = curve.map(function(d) { return d.equity; });
+  var dates = curve.map(function(d) { return d.date; });
+  var minV  = Math.min.apply(null, vals);
+  var maxV  = Math.max.apply(null, vals);
+  var range = maxV - minV || 1;
+
+  var pad = { t: 10, r: 10, b: 36, l: 60 };
+  var cw  = w - pad.l - pad.r;
+  var ch  = h - pad.t - pad.b;
+
+  function xOf(i) { return pad.l + (curve.length === 1 ? cw / 2 : (i / (curve.length - 1)) * cw); }
+  function yOf(v) { return pad.t + ch - ((v - minV) / range) * ch; }
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Y-axis labels (3-4 values)
+  ctx.fillStyle = isDark ? '#71717a' : '#71717a';
+  ctx.font = '11px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  var ySteps = 3;
+  for (var yi = 0; yi <= ySteps; yi++) {
+    var yv = minV + (yi / ySteps) * range;
+    var yp = yOf(yv);
+    ctx.fillText('$' + Math.round(yv).toLocaleString(), pad.l - 6, yp + 4);
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+  }
+
+  // X-axis date labels (~5 evenly spaced)
+  ctx.textAlign = 'center';
+  var xCount = Math.min(6, curve.length);
+  var step   = Math.floor((curve.length - 1) / Math.max(xCount - 1, 1));
+  for (var xi = 0; xi < curve.length; xi += step) {
+    var xp = xOf(xi);
+    var dl = dates[xi] || '';
+    var parts = dl.split('-');
+    var label = parts.length === 3 ? parts[1] + '/' + parts[2] : dl;
+    ctx.fillStyle = isDark ? '#71717a' : '#71717a';
+    ctx.fillText(label, xp, h - 8);
+  }
+
+  if (curve.length === 0) return;
+
+  // Gradient fill
+  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, isDark ? 'rgba(74,222,128,0.18)' : 'rgba(22,163,74,0.12)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  // Draw path
+  ctx.beginPath();
+  if (curve.length === 1) {
+    // Single dot
+    ctx.arc(xOf(0), yOf(vals[0]), 4, 0, Math.PI * 2);
+    ctx.fillStyle = lineColor;
+    ctx.fill();
+    return;
+  }
+
+  ctx.moveTo(xOf(0), yOf(vals[0]));
+  for (var i = 1; i < curve.length; i++) {
+    ctx.lineTo(xOf(i), yOf(vals[i]));
+  }
+
+  // Fill
+  ctx.lineTo(xOf(curve.length - 1), pad.t + ch);
+  ctx.lineTo(xOf(0), pad.t + ch);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line (animate draw-in on first render)
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(vals[0]));
+  for (var j = 1; j < curve.length; j++) {
+    ctx.lineTo(xOf(j), yOf(vals[j]));
+  }
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth   = 2;
+  ctx.lineJoin    = 'round';
+  ctx.lineCap     = 'round';
+  ctx.stroke();
+
+  // Store layout for hover
+  canvas._chart = { pad: pad, cw: cw, ch: ch, vals: vals, dates: dates, minV: minV, range: range, curve: curve };
 }
 
-// Hook into switchTab to lazy-load tab data
+// Chart hover tooltip
 (function() {
-  var _origST = window.switchTab;
-  var _patchST = function(tabId) {
-    if (_origST) _origST(tabId);
-    if (['health', 'events', 'system'].indexOf(tabId) !== -1) {
-      var last = _tabFetched[tabId] || 0;
-      if (Date.now() - last > 30000) {  // re-fetch if older than 30s
-        loadTabData(tabId);
-      }
+  var canvas  = document.getElementById('equity-canvas');
+  var tooltip = document.getElementById('chart-tooltip');
+  var animDone = false;
+
+  function onMove(e) {
+    if (!canvas._chart) return;
+    var c  = canvas._chart;
+    var rect = canvas.getBoundingClientRect();
+    var mx   = e.clientX - rect.left;
+    var n    = c.curve.length;
+    if (n < 2) return;
+    var idx = Math.round((mx - c.pad.l) / c.cw * (n - 1));
+    idx = Math.max(0, Math.min(n - 1, idx));
+    var val  = c.curve[idx].equity;
+    var date = c.curve[idx].date || '';
+    tooltip.style.opacity  = '1';
+    tooltip.style.left     = (mx + 12) + 'px';
+    tooltip.style.top      = '40px';
+    tooltip.textContent    = date + '  $' + Math.round(val).toLocaleString();
+  }
+
+  function onLeave() { tooltip.style.opacity = '0'; }
+
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', onLeave);
+
+  // Draw-in animation on first load
+  window._animateChart = function(curve) {
+    if (animDone) { drawChart(curve); return; }
+    animDone = true;
+    var progress = 0;
+    var start = null;
+    var dur = 500;
+    function step(ts) {
+      if (!start) start = ts;
+      progress = Math.min((ts - start) / dur, 1);
+      var partial = curve.slice(0, Math.max(1, Math.round(progress * curve.length)));
+      drawChart(partial);
+      if (progress < 1) requestAnimationFrame(step);
+      else drawChart(curve);
     }
+    requestAnimationFrame(step);
   };
-  // Apply patch after a short delay so stripe-refresh.js enhanceTabSwitch has run
+})();
+
+// ── Return Badge ─────────────────────────────────────────────
+function renderReturnBadge(data) {
+  var curve = data.equity_curve || [];
+  if (!curve.length) return;
+  var first = curve[0].equity;
+  var last  = curve[curve.length - 1].equity;
+  if (!first) return;
+  var retPct = ((last - first) / first) * 100;
+  var badge  = document.getElementById('return-badge');
+  badge.textContent = fmtPct(retPct);
+  badge.className   = 'return-badge' + (retPct < 0 ? ' negative' : '');
+}
+
+// ── Live Price Updates ───────────────────────────────────────
+var POLL_INTERVAL = 15000;
+var _pollTimer    = null;
+var _marketData   = null;
+
+function isAnyMarketOpen() {
+  return MARKETS.some(function(mk) { return marketState(mk).open; });
+}
+
+function flashCard(card, isPositive) {
+  card.classList.add(isPositive ? 'flash-pos' : 'flash-neg');
   setTimeout(function() {
-    window.switchTab = _patchST;
-    // Also wrap the enhanced version if present
-    var _origST2 = window.switchTab;
-    if (_origST2 !== _patchST) {
-      window.switchTab = function(tabId) {
-        _origST2(tabId);
-        if (['health', 'events', 'system'].indexOf(tabId) !== -1) {
-          var last = _tabFetched[tabId] || 0;
-          if (Date.now() - last > 30000) { loadTabData(tabId); }
-        }
-      };
-    }
-  }, 200);
-})();
-
-// ── Load ──
-var _lastDataTs = null;  // skip render when backend data hasn't changed
-function load() {
-  fetch('data/dashboard-data.json?t=' + Date.now(), {credentials: 'same-origin'})
-    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(data) {
-      if (!data || !data.portfolio || typeof data.portfolio.equity !== 'number') {
-        document.getElementById('updated').textContent = '⚠ Data format error';
-        console.error('Invalid dashboard data shape', data);
-        return;
-      }
-      // Skip full DOM rebuild if backend timestamp is identical
-      var ts = data.timestamp || '';
-      if (ts === _lastDataTs && _rawData) {
-        var el = document.getElementById('updated');
-        if (el) el.textContent = 'Updated ' + ago(ts);
-        return;
-      }
-      _lastDataTs = ts;
-      _rawData = data;
-      buildMarketSelector(data);
-      render(buildView(data, _currentMarket));
-      // Re-apply cached live quotes so positions don't flash stale prices
-      if (window._cachedLiveQuotes) {
-        setTimeout(function() {
-          var rows = document.querySelectorAll('#tbl-pos tbody tr[data-ticker]');
-          rows.forEach(function(row) {
-            var ticker = row.getAttribute('data-ticker');
-            var q = window._cachedLiveQuotes[ticker];
-            if (!q || !q.price) return;
-            var entry = parseFloat(row.getAttribute('data-entry')) || 0;
-            var shares = parseFloat(row.getAttribute('data-shares')) || 0;
-            var pc = row.querySelector('.live-price');
-            var pl = row.querySelector('.live-pnl');
-            if (pc) {
-              pc.setAttribute('data-v', q.price);
-              pc.innerHTML = q.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + '<span class="live-dot" title="Live price"></span>';
-            }
-            if (pl && entry > 0 && shares > 0) {
-              var pnl = (q.price - entry) * shares;
-              var pp = ((q.price - entry) / entry) * 100;
-              pl.setAttribute('data-v', pnl);
-              pl.className = 'mono live-pnl ' + (pnl > 0.005 ? 'green' : pnl < -0.005 ? 'red' : '');
-              pl.innerHTML = pnl.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) +
-                ' <span style="font-size:10px;opacity:0.7">' + (pp >= 0 ? '+' : '') + pp.toFixed(2) + '%</span>';
-            }
-          });
-        }, 50);
-      }
-    })
-    .catch(function(e) {
-      console.error('Load failed:', e);
-      document.getElementById('updated').textContent = 'Load failed: ' + e.message;
-    });
+    card.classList.remove('flash-pos', 'flash-neg');
+  }, 300);
 }
 
-// ── "Updated X ago" refresh interval ──
-// Independently refreshes the "Updated X ago" text every 10s
-setInterval(function() {
-  if (_rawData && _rawData.timestamp) {
-    var el = document.getElementById('updated');
-    if (el) el.textContent = 'Updated ' + ago(_rawData.timestamp);
-  }
-}, 10000);
+function applyPrices(quotes) {
+  var cards = document.querySelectorAll('#positions-grid .pos-card');
+  cards.forEach(function(card) {
+    var ticker = card.getAttribute('data-ticker');
+    if (!ticker || !quotes[ticker]) return;
+    var q = quotes[ticker];
+    if (!q.price) return;
 
-// ── Smart polling: pause when tab hidden, immediate refresh on return ──
-var _pollTimer = null;
-function startPoll() {
+    // Update displayed price only (no P&L recalculation)
+    var priceEl = card.querySelector('.live-price[data-ticker="' + ticker + '"]');
+    if (priceEl) {
+      // Determine currency from data-entry context (assume USD for US stocks, AUD for .AX)
+      var ccy = ticker.endsWith('.AX') ? 'AUD' : 'USD';
+      priceEl.textContent = fmtCcy(q.price, ccy);
+      flashCard(card, (q.change_pct || 0) >= 0);
+    }
+  });
+}
+
+function startPricePolling() {
   if (_pollTimer) return;
-  load();
-  _pollTimer = setInterval(load, 10000);
+  function poll() {
+    if (!isAnyMarketOpen()) return;
+    fetch('/api/prices?t=' + Date.now(), { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(quotes) { if (quotes) applyPrices(quotes); })
+      .catch(function() {});
+  }
+  _pollTimer = setInterval(poll, POLL_INTERVAL);
 }
-function stopPoll() {
-  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+
+// ── Main Init ────────────────────────────────────────────────
+async function init() {
+  try {
+    var resp = await fetch('/data/dashboard-data.json');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    var data = await resp.json();
+    _marketData = data;
+
+    renderSummary(data);
+    renderReturnBadge(data);
+
+    var curve = data.equity_curve || [];
+    window._animateChart(curve);
+
+    renderPositions(data);
+    initClocks();
+    startPricePolling();
+
+  } catch (e) {
+    console.error('Atlas dashboard load failed:', e);
+    document.getElementById('positions-grid').innerHTML =
+      '<div class="empty-state">Failed to load data — ' + e.message + '</div>';
+  }
 }
-document.addEventListener('visibilitychange', function() {
-  if (document.hidden) { stopPoll(); }
-  else { startPoll(); }   // immediate refresh + restart timer
+
+window.addEventListener('resize', function() {
+  if (window._chartData) drawChart(window._chartData);
 });
-startPoll();
 
-// (Monitor tab removed — Moomoo manual positions shown in Trading tab)
-
-// ═══════════════════════════════════════════════════════════════
-// THEME TOGGLE, KEYBOARD SHORTCUTS, SCROLL REVEALS
-// (inlined from stripe-refresh.js)
-// ═══════════════════════════════════════════════════════════════
-
-// ── Theme switching ──
-var THEME_KEY = 'atlas-theme';
-var _autoTimer = null;
-
-function getStoredTheme() {
-  try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch(e) { return 'auto'; }
-}
-function storeTheme(t) {
-  try { localStorage.setItem(THEME_KEY, t); } catch(e) {}
-}
-function resolveAutoTheme() {
-  var h = new Date().getHours();
-  return (h >= 6 && h < 18) ? 'light' : 'dark';
-}
-function applyTheme(theme) {
-  var resolved = theme === 'auto' ? resolveAutoTheme() : theme;
-  document.documentElement.setAttribute('data-theme', resolved);
-  if (typeof paintChart === 'function') setTimeout(paintChart, 50);
-  if (typeof updateAgentFloor === 'function' && window._lastAgentData) {
-    setTimeout(function() { updateAgentFloor(window._lastAgentData); }, 80);
-  }
-  var mt = document.getElementById('meta-theme-color');
-  if (mt) mt.setAttribute('content', resolved === 'light' ? '#ffffff' : '#111111');
-  document.querySelectorAll('.theme-btn').forEach(function(btn) {
-    btn.classList.toggle('active', btn.getAttribute('data-theme') === theme);
-  });
-  if (_autoTimer) { clearInterval(_autoTimer); _autoTimer = null; }
-  if (theme === 'auto') {
-    _autoTimer = setInterval(function() {
-      var nr = resolveAutoTheme();
-      if (nr !== document.documentElement.getAttribute('data-theme')) {
-        document.documentElement.setAttribute('data-theme', nr);
-        if (typeof paintChart === 'function') setTimeout(paintChart, 50);
-      }
-    }, 60000);
-  }
-}
-function initThemeToggle() {
-  var tog = document.getElementById('theme-toggle');
-  if (!tog) return;
-  tog.addEventListener('click', function(e) {
-    var btn = e.target.closest('.theme-btn');
-    if (!btn) return;
-    var t = btn.getAttribute('data-theme');
-    storeTheme(t);
-    applyTheme(t);
-  });
-  applyTheme(getStoredTheme());
-}
-
-// ── Keyboard shortcuts ──
-function initKeyboardShortcuts() {
-  document.addEventListener('keydown', function(e) {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    switch (e.key.toLowerCase()) {
-      case 't': if (typeof switchTab === 'function') switchTab('trading'); break;
-      case 'r': if (typeof switchTab === 'function') switchTab('research'); break;
-      case 'h': if (typeof switchTab === 'function') switchTab('health'); break;
-      case 'e': if (typeof switchTab === 'function') switchTab('events'); break;
-      case 's': if (typeof switchTab === 'function') switchTab('system'); break;
-      // 'm' key was Monitor tab — removed
-      case 'l':
-        var cur = getStoredTheme();
-        var next = cur === 'dark' ? 'light' : cur === 'light' ? 'auto' : 'dark';
-        storeTheme(next); applyTheme(next);
-        break;
-    }
-  });
-}
-
-// ── Scroll-triggered reveals ──
-var _scrollObserver = null;
-function initScrollReveals() {
-  var staggerCounters = {};
-  _scrollObserver = new IntersectionObserver(function(entries) {
-    entries.forEach(function(entry) {
-      if (!entry.isIntersecting) return;
-      var el = entry.target;
-      var parent = el.parentElement;
-      var pid = parent ? parent.id || parent.className.slice(0,30) : 'root';
-      if (!staggerCounters[pid]) staggerCounters[pid] = 0;
-      var delay = staggerCounters[pid] * 0.06;
-      staggerCounters[pid]++;
-      if (delay > 0.4) delay = 0;
-      el.style.transitionDelay = delay + 's';
-      el.classList.add('sr-visible');
-      setTimeout(function() { el.style.transitionDelay = '0s'; staggerCounters[pid] = 0; }, (delay + 0.6) * 1000);
-    });
-  }, { threshold: 0.06, rootMargin: '0px 0px -60px 0px' });
-  document.querySelectorAll('.section, .card, .mon-card, .research-card, .pnl-item, .metric').forEach(function(el) {
-    _scrollObserver.observe(el);
-  });
-}
-
-// ── Count-up animation for KPI values ──
-function animateCountUp(el) {
-  var text = el.textContent;
-  var match = text.match(/^([^0-9]*)([\d,]+\.?\d*)(.*)/);
-  if (!match) return;
-  var prefix = match[1], numStr = match[2], suffix = match[3];
-  var target = parseFloat(numStr.replace(/,/g, ''));
-  if (isNaN(target) || target === 0) return;
-  var decimals = numStr.includes('.') ? numStr.split('.')[1].length : 0;
-  var hasCommas = numStr.includes(',');
-  var startTime = null, duration = 800;
-  function fmt(n) {
-    var s = n.toFixed(decimals);
-    if (hasCommas) { var p = s.split('.'); p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ','); s = p.join('.'); }
-    return s;
-  }
-  function step(ts) {
-    if (!startTime) startTime = ts;
-    var prog = Math.min((ts - startTime) / duration, 1);
-    var eased = prog === 1 ? 1 : 1 - Math.pow(2, -10 * prog);
-    el.textContent = prefix + fmt(target * eased) + suffix;
-    if (prog < 1) requestAnimationFrame(step); else el.textContent = text;
-  }
-  requestAnimationFrame(step);
-}
-function initCountUps() {
-  var vo = new IntersectionObserver(function(entries) {
-    entries.forEach(function(e) {
-      if (!e.isIntersecting) return;
-      animateCountUp(e.target); vo.unobserve(e.target);
-    });
-  }, { threshold: 0.5 });
-  document.querySelectorAll('.card-value').forEach(function(el) { vo.observe(el); });
-}
-
-// ── Enhanced section toggle ──
-function enhanceSectionToggle() {
-  if (typeof window.toggle !== 'function') return;
-  var orig = window.toggle;
-  window.toggle = function(id) {
-    var body = document.getElementById('body-' + id);
-    if (!body) return orig(id);
-    var isCollapsed = body.classList.contains('collapsed');
-    if (isCollapsed) {
-      body.classList.remove('collapsed');
-      body.style.display = '';
-      var th = body.scrollHeight;
-      body.style.maxHeight = '0px'; body.style.opacity = '0';
-      body.offsetHeight;
-      body.style.maxHeight = th + 'px'; body.style.opacity = '1';
-      setTimeout(function() { body.style.maxHeight = ''; }, 650);
-    } else {
-      body.style.maxHeight = body.scrollHeight + 'px';
-      body.offsetHeight;
-      body.style.maxHeight = '0px'; body.style.opacity = '0';
-      setTimeout(function() { body.classList.add('collapsed'); body.style.maxHeight = ''; body.style.opacity = ''; }, 650);
-    }
-    var chev = document.getElementById('chev-' + id);
-    if (chev) { chev.classList.toggle('down'); chev.classList.toggle('right'); }
-  };
-}
-
-// ── Enhanced tab switch with crossfade ──
-function enhanceTabSwitch() {
-  if (typeof window.switchTab !== 'function') return;
-  var origST = window.switchTab;
-  window.switchTab = function(tabId) {
-    var ac = document.querySelector('.tab-content.active');
-    if (ac && ac.id !== 'tab-' + tabId) {
-      ac.style.opacity = '0'; ac.style.transform = 'translateY(8px)';
-      setTimeout(function() {
-        origST(tabId);
-        var nc = document.querySelector('.tab-content.active');
-        if (nc) { nc.style.opacity = '0'; nc.style.transform = 'translateY(8px)'; nc.offsetHeight; nc.style.opacity = ''; nc.style.transform = ''; }
-      }, 200);
-    } else { origST(tabId); }
-  };
-}
-
-// ── MutationObserver for dynamic elements ──
-function initMutationWatcher() {
-  if (!_scrollObserver) return;
-  var mo = new MutationObserver(function(mutations) {
-    mutations.forEach(function(m) {
-      m.addedNodes.forEach(function(node) {
-        if (node.nodeType !== 1) return;
-        var sel = '.section, .card, .mon-card, .research-card, .pnl-item, .metric';
-        if (node.matches && node.matches(sel)) _scrollObserver.observe(node);
-        if (node.querySelectorAll) {
-          node.querySelectorAll(sel).forEach(function(el) { _scrollObserver.observe(el); });
-          node.querySelectorAll('.card-value').forEach(function(el) { animateCountUp(el); });
-        }
-      });
-    });
-  });
-  mo.observe(document.body, { childList: true, subtree: true });
-}
-
-// ── Apply theme immediately to prevent flash ──
-(function() {
-  var t = getStoredTheme();
-  var r = t === 'auto' ? resolveAutoTheme() : t;
-  document.documentElement.setAttribute('data-theme', r);
-})();
-
-// ── Boot on DOMContentLoaded ──
-document.addEventListener('DOMContentLoaded', function() {
-  initThemeToggle();
-  initScrollReveals();
-  initCountUps();
-  initKeyboardShortcuts();
-  initMutationWatcher();
-  setTimeout(function() { enhanceSectionToggle(); enhanceTabSwitch(); }, 100);
-});
+init();
 </script>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- LIVE PRICE UPDATER                                             -->
-<!-- Polls /api/prices every 15s during market hours, updates       -->
-<!-- position prices + P&L in-place without a full page reload.     -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<script>
-(function() {
-  'use strict';
-
-  var POLL_INTERVAL = 10000;     // 10s — matches backend refresh cycle
-  var POLL_INTERVAL_SLOW = 10000; // same — pre/post market matters too
-  var _liveTimer = null;
-  var _lastLiveUpdate = null;
-  var _liveQuotes = {};
-  var _consecutiveFailures = 0;
-  var MAX_FAILURES = 3;
-
-  // ── Market hours check (approximate, AEST-based) ──────────
-  function isAnyMarketOpen() {
-    var now = new Date();
-    var h = now.getUTCHours();
-    // ASX: 00:00-06:00 UTC (10:00-16:00 AEST)
-    // US:  14:30-21:00 UTC (00:30-07:00 AEST next day)
-    // HK:  01:30-08:00 UTC (11:30-18:00 AEST)
-    // Generous window: any market could be open 00:00-21:00 UTC Mon-Fri
-    var day = now.getUTCDay();
-    if (day === 0 || day === 6) return false; // weekend
-    return (h >= 0 && h < 21);
-  }
-
-  // ── Formatting helpers (reuse from main scope) ─────────────
-  function fmt(v) {
-    if (v == null) return '—';
-    return v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  }
-  function fmtPct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
-  function pnlCls(v) { return v > 0.005 ? 'green' : v < -0.005 ? 'red' : ''; }
-
-  // ── Flash animation ────────────────────────────────────────
-  function flashCell(el, direction) {
-    el.style.transition = 'background 0.3s';
-    el.style.background = direction > 0
-      ? 'rgba(127,184,88,0.15)'
-      : 'rgba(208,88,88,0.15)';
-    setTimeout(function() { el.style.background = ''; }, 800);
-  }
-
-  // ── Update positions table with live prices ────────────────
-  function updatePositions(quotes) {
-    var rows = document.querySelectorAll('#tbl-pos tbody tr[data-ticker], #tbl-manual tbody tr[data-ticker]');
-    var totalMktValue = 0;
-    var totalEntryValue = 0;
-
-    rows.forEach(function(row) {
-      var ticker = row.getAttribute('data-ticker');
-      var entry = parseFloat(row.getAttribute('data-entry')) || 0;
-      var shares = parseFloat(row.getAttribute('data-shares')) || 0;
-      var q = quotes[ticker];
-      if (!q || !q.price) return;
-
-      var newPrice = q.price;
-      // Use CSS class selectors instead of hardcoded indices
-      var priceCell = row.querySelector('.live-price');
-      var pnlCell = row.querySelector('.live-pnl');
-
-      var oldPrice = parseFloat(priceCell.getAttribute('data-v')) || 0;
-      if (Math.abs(newPrice - oldPrice) < 0.0001) return; // no change
-
-      // Update price cell
-      var direction = newPrice > oldPrice ? 1 : -1;
-      priceCell.setAttribute('data-v', newPrice);
-      priceCell.innerHTML = fmt(newPrice) + '<span class="live-dot" title="Live price"></span>';
-      flashCell(priceCell, direction);
-
-      // Recalculate P&L
-      if (entry > 0 && shares > 0) {
-        var pnl = (newPrice - entry) * shares;
-        var pnlPct = ((newPrice - entry) / entry) * 100;
-        pnlCell.setAttribute('data-v', pnl);
-        pnlCell.className = 'mono live-pnl ' + pnlCls(pnl);
-        pnlCell.innerHTML = fmt(pnl) + ' <span style="font-size:10px;opacity:0.7">' + fmtPct(pnlPct) + '</span>';
-        flashCell(pnlCell, pnl > 0 ? 1 : -1);
-      }
-
-      totalMktValue += newPrice * shares;
-      totalEntryValue += entry * shares;
-    });
-  }
-
-  // ── Update benchmark indices ───────────────────────────────
-  function updateIndices(quotes) {
-    var indexMap = {'^GSPC': 'S&P 500', '^AXJO': 'ASX 200', '^HSI': 'HSI'};
-    Object.keys(indexMap).forEach(function(sym) {
-      var q = quotes[sym];
-      if (!q) return;
-      // Update any benchmark display elements that exist
-      var els = document.querySelectorAll('[data-benchmark="' + sym + '"]');
-      els.forEach(function(el) {
-        el.textContent = fmt(q.price) + ' (' + fmtPct(q.change_pct) + ')';
-        el.className = pnlCls(q.change_pct);
-      });
-    });
-
-    // Update FX in freshness bar
-    var fxq = quotes['AUDUSD=X'];
-    if (fxq) {
-      var freshBar = document.getElementById('freshness-bar');
-      if (freshBar) {
-        var fxSpan = freshBar.querySelector('[data-fx]');
-        if (fxSpan) {
-          fxSpan.textContent = 'FX: 1 AUD = ' + fxq.price.toFixed(4) + ' USD';
-        }
-      }
-    }
-  }
-
-  // ── Update Today's P&L card from live quotes ────────────────
-  function updateTodayPnl(quotes) {
-    if (!_rawData) return;
-    var CSYM = {AUD: 'A$', USD: 'US$', GBP: '£', EUR: '€', JPY: '¥', HKD: 'HK$'};
-    // Collect all positions across all markets (atlas + manual)
-    var allPos = [];
-    var markets = _rawData.markets || {};
-    Object.keys(markets).forEach(function(mid) {
-      var md = markets[mid];
-      var pf = md.portfolio || {};
-      (pf.open_positions || []).forEach(function(p) { allPos.push(p); });
-    });
-    // Add manual portfolio positions (Moomoo)
-    ((_rawData.manual_portfolio || {}).positions || []).forEach(function(p) { allPos.push(p);
-    });
-    if (allPos.length === 0) return;
-
-    // Compute today's P&L per currency from live quotes
-    var byCcy = {};
-    allPos.forEach(function(p) {
-      var ticker = p.ticker || '';
-      var shares = p.shares || 0;
-      var ccy = p.currency || 'AUD';
-      var q = quotes[ticker];
-      if (q && q.prev_close && q.price && shares) {
-        var dayPnl = (q.price - q.prev_close) * shares;
-        byCcy[ccy] = (byCcy[ccy] || 0) + dayPnl;
-      } else {
-        // Fallback: use broker's today_pnl if no live quote
-        byCcy[ccy] = (byCcy[ccy] || 0) + (p.today_pnl || 0);
-      }
-    });
-
-    // Convert to AUD
-    var rates = (_rawData.exchange_rates || {});
-    var usdaud = rates.USDAUD || 1.42;
-    // Try live FX from quotes
-    var fxq = quotes['AUDUSD=X'];
-    if (fxq && fxq.price) usdaud = 1 / fxq.price;
-    var totalAud = 0;
-    Object.keys(byCcy).forEach(function(ccy) {
-      byCcy[ccy] = Math.round(byCcy[ccy] * 100) / 100;
-      if (ccy === 'AUD') totalAud += byCcy[ccy];
-      else if (ccy === 'USD') totalAud += byCcy[ccy] * usdaud;
-      else totalAud += byCcy[ccy];
-    });
-    totalAud = Math.round(totalAud * 100) / 100;
-
-    // Filter current market view
-    var viewByCcy = byCcy;
-    if (_currentMarket !== 'all') {
-      viewByCcy = {};
-      var md = markets[_currentMarket];
-      if (md) {
-        var viewPos = (md.portfolio || {}).open_positions || [];
-        var manPos = ((_rawData.manual_portfolio || {}).positions || []);
-        viewPos.concat(manPos).forEach(function(p) {
-          var ticker = p.ticker || '';
-          var shares = p.shares || 0;
-          var ccy = p.currency || 'AUD';
-          var q = quotes[ticker];
-          if (q && q.prev_close && q.price && shares) {
-            viewByCcy[ccy] = (viewByCcy[ccy] || 0) + (q.price - q.prev_close) * shares;
-          } else {
-            viewByCcy[ccy] = (viewByCcy[ccy] || 0) + (p.today_pnl || 0);
-          }
-        });
-        Object.keys(viewByCcy).forEach(function(k) { viewByCcy[k] = Math.round(viewByCcy[k] * 100) / 100; });
-      }
-    }
-
-    // Compute display value in view currency
-    var viewCcy = _currentMarket === 'all' ? 'AUD' : ((markets[_currentMarket] || {}).currency || 'AUD');
-    var viewTotal = 0;
-    Object.keys(viewByCcy).forEach(function(ccy) {
-      if (ccy === viewCcy) viewTotal += viewByCcy[ccy];
-      else if (ccy === 'USD' && viewCcy === 'AUD') viewTotal += viewByCcy[ccy] * usdaud;
-      else if (ccy === 'AUD' && viewCcy === 'USD') viewTotal += viewByCcy[ccy] / usdaud;
-      else viewTotal += viewByCcy[ccy];
-    });
-    viewTotal = Math.round(viewTotal * 100) / 100;
-
-    // Update the card DOM
-    var cards = document.querySelectorAll('.card');
-    var pnlCard = cards[2]; // 3rd card = Today's P&L
-    if (!pnlCard) return;
-
-    var valEl = pnlCard.querySelector('.card-value');
-    var subEl = pnlCard.querySelector('.card-sub');
-    if (!valEl) return;
-
-    var dispSym = CSYM[viewCcy] || '$';
-    var newVal = (viewTotal >= 0 ? '+' : '-') + dispSym + Math.abs(viewTotal).toLocaleString('en-AU', {minimumFractionDigits:2, maximumFractionDigits:2});
-    var oldVal = valEl.textContent;
-
-    // Update value with flash
-    valEl.textContent = newVal;
-    valEl.className = 'card-value ' + (viewTotal > 0.005 ? 'up' : viewTotal < -0.005 ? 'down' : 'flat');
-    if (newVal !== oldVal) {
-      valEl.style.transition = 'background 0.3s';
-      valEl.style.background = viewTotal > 0 ? 'rgba(127,184,88,0.1)' : 'rgba(208,88,88,0.1)';
-      setTimeout(function() { valEl.style.background = ''; }, 800);
-    }
-
-    // Update subtitle
-    if (subEl) {
-      var parts = [];
-      Object.keys(viewByCcy).sort().forEach(function(ccy) {
-        var val = viewByCcy[ccy];
-        if (Math.abs(val) < 0.005) return;
-        var sym = CSYM[ccy] || (ccy + ' ');
-        var c = val > 0.005 ? 'up' : val < -0.005 ? 'down' : 'flat';
-        parts.push('<span class="' + c + '">' + (val >= 0 ? '+' : '-') + sym + Math.abs(val).toFixed(2) + '</span>');
-      });
-      // Keep position info from existing subtitle
-      var existingSub = subEl.innerHTML;
-      var posMatch = existingSub.match(/(\d+ positions? ·[^<]*)/);
-      var posInfo = posMatch ? posMatch[1] : '';
-      subEl.innerHTML = (parts.length > 0 ? parts.join(' · ') + (posInfo ? ' · ' : '') : '') + posInfo;
-    }
-
-    // Also update the raw data so full re-render stays consistent
-    if (_currentMarket === 'all') {
-      _rawData.portfolio.today_pnl_by_ccy = byCcy;
-      _rawData.portfolio.today_pnl_aud = totalAud;
-    }
-  }
-
-  // ── Update live indicator ──────────────────────────────────
-  function updateLiveIndicator(data) {
-    var el = document.getElementById('live-indicator');
-    if (!el) {
-      // Create live indicator next to updated timestamp
-      var updEl = document.getElementById('updated');
-      if (updEl && updEl.parentNode) {
-        el = document.createElement('div');
-        el.id = 'live-indicator';
-        el.className = 'status-pill';
-        el.style.cssText = 'font-size:11px; gap:4px;';
-        el.innerHTML = '<span class="pulse-live" style="width:6px;height:6px"></span><span></span>';
-        updEl.parentNode.insertBefore(el, updEl.nextSibling);
-      }
-    }
-    if (el) {
-      var label = el.querySelector('span:last-child');
-      var n = data.ticker_count || 0;
-      var ago = Math.round((Date.now() - _lastLiveUpdate) / 1000);
-      label.textContent = 'Live · ' + n + ' quotes · ' + ago + 's ago';
-    }
-  }
-
-  // ── Poll /api/prices ──────────────────────────────────────
-  function fetchLivePrices() {
-    fetch('/api/prices?t=' + Date.now(), {credentials: 'same-origin'})
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      })
-      .then(function(data) {
-        if (!data.ok || !data.quotes) return;
-        _consecutiveFailures = 0;
-        _liveQuotes = data.quotes;
-        _lastLiveUpdate = Date.now();
-        updatePositions(data.quotes);
-        updateIndices(data.quotes);
-        updateTodayPnl(data.quotes);
-        updateLiveIndicator(data);
-        // Expose for re-application after full render
-        window._cachedLiveQuotes = data.quotes;
-        // Clear error indicator on success
-        var errEl = document.getElementById('live-price-error');
-        if (errEl) errEl.remove();
-      })
-      .catch(function(e) {
-        console.warn('Live price fetch failed:', e.message);
-        _consecutiveFailures++;
-        if (_consecutiveFailures >= MAX_FAILURES) {
-          // Show visual error in header after 3 consecutive failures
-          var errEl = document.getElementById('live-price-error');
-          if (!errEl) {
-            var updEl = document.getElementById('updated');
-            if (updEl && updEl.parentNode) {
-              errEl = document.createElement('div');
-              errEl.id = 'live-price-error';
-              errEl.className = 'status-pill';
-              errEl.style.cssText = 'border-color:rgba(208,88,88,0.4);background:var(--red-dim);';
-              errEl.innerHTML = '<span style="color:var(--red)">⚠ Prices offline</span>';
-              updEl.parentNode.insertBefore(errEl, updEl);
-            }
-          }
-        }
-      });
-  }
-
-  // ── Always poll at 15s — pre/post market and AH trading matters ──
-  function startLivePoll() {
-    if (_liveTimer) clearInterval(_liveTimer);
-    fetchLivePrices(); // immediate first fetch
-    _liveTimer = setInterval(fetchLivePrices, POLL_INTERVAL);
-  }
-
-  function stopLivePoll() {
-    if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
-  }
-
-  // ── Sync with page visibility ─────────────────────────────
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) { stopLivePoll(); }
-    else { startLivePoll(); }
-  });
-
-  // ── Update "X seconds ago" display every second ───────────
-  setInterval(function() {
-    if (_lastLiveUpdate) updateLiveIndicator({ticker_count: Object.keys(_liveQuotes).length});
-  }, 1000);
-
-  // ── Start staggered from main data poll (avoid simultaneous DOM updates) ──
-  setTimeout(startLivePoll, 5000);
-
-})();
-</script>
-<script src="ceasefire_widget.js"></script>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- Animated icons removed (decorative) -->
 </body>
 </html>
