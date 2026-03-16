@@ -1021,6 +1021,7 @@ def cmd_autoresearch(args):
         hours=args.hours,
         notify=args.notify,
         snapshot_id=args.snapshot,
+        fast_screen=args.fast_screen,
     )
 
 
@@ -1090,6 +1091,10 @@ def main():
     p_ar.add_argument("--hours", type=float, required=True, help="Time budget in hours (e.g. 8.0)")
     p_ar.add_argument("--notify", action="store_true", help="Send Telegram notification on completion")
     p_ar.add_argument("--snapshot", type=str, default=None, help="Optional snapshot ID to resume from")
+    p_ar.add_argument("--fast-screen", action="store_true", default=True, dest="fast_screen",
+                       help="Two-stage: solo top-50 screen → combined verify (default)")
+    p_ar.add_argument("--no-fast-screen", action="store_false", dest="fast_screen",
+                       help="Every experiment runs full combined backtest (max rigor)")
     args = parser.parse_args()
     if not args.command:
         parser.print_help()

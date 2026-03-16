@@ -3,7 +3,7 @@
   "generated_at": "2026-03-03T08:31:39.383280",
   "market_id": "asx",
   "config_version": "asx_ibkr_tf_only_v1.0",
-  "status": "APPROVED",
+  "status": "EXPIRED",
   "portfolio_snapshot": {
     "equity": 3999.0,
     "cash": 3999.0,
@@ -906,5 +906,6 @@
   },
   "open_positions": [],
   "allocation_summary": {},
-  "approved_at": "2026-03-03T09:32:26.770810"
+  "approved_at": "2026-03-03T09:32:26.770810",
+  "expired_reason": "ASX market is in passive mode \u2014 plan was never executed; auto-expired by reconciler cleanup"
 }

@@ -6,6 +6,18 @@ LLM API.  For each parameter in the strategy's current best config the runner
 generates a set of candidate values, consults the brain history to skip
 already-discarded values, and runs backtest experiments via ResearchSession.
 
+Two-stage gating (``--fast-screen``, default on):
+
+1. **Solo screen** — solo backtest on top-50 tickers (~20-25 s).
+   ``keep_or_discard()`` applied on solo Sharpe.  Discards are logged and
+   skipped immediately.
+2. **Combined verify** — full combined portfolio backtest on the complete
+   universe (~13 min).  ``keep_or_discard()`` applied on combined Sharpe.
+   Only experiments that pass *both* stages are kept.
+
+When ``--no-fast-screen`` is passed, every experiment runs the full combined
+backtest directly (original behaviour, maximum rigor, lower throughput).
+
 Typical usage (CLI)::
 
     python3 research/autoresearch_runner.py \\
@@ -13,6 +25,10 @@ Typical usage (CLI)::
         --market sp500 \\
         --hours 4 \\
         --notify
+
+    # Disable fast screen for maximum rigor:
+    python3 research/autoresearch_runner.py \\
+        --strategy mean_reversion --hours 8 --no-fast-screen
 
 Or from Python::
 
@@ -319,27 +335,65 @@ def _try_send_telegram(text: str) -> None:
 # ─── Session Runner ──────────────────────────────────────────────────────────
 
 
+def _run_solo_screen(
+    strategy: str,
+    config: dict,
+    data_subset: dict,
+    baseline_metrics: dict,
+    params: dict,
+    description: str,
+) -> Tuple[dict, dict]:
+    """Stage 1: fast solo backtest on a ticker subset (~20-25 s).
+
+    Runs a solo backtest (only *strategy*, no other strategies) on
+    *data_subset* (typically top-50 tickers by volume).  Applies
+    ``keep_or_discard()`` against a solo baseline.
+
+    Args:
+        strategy:         Strategy name.
+        config:           Active config dict.
+        data_subset:      Ticker data subset (top N tickers).
+        baseline_metrics: Solo baseline metrics on the same subset.
+        params:           Candidate parameter dict (full, already merged).
+        description:      Human-readable experiment description.
+
+    Returns:
+        ``(metrics, verdict)`` where *verdict* is the ``keep_or_discard()``
+        result dict.
+    """
+    from scripts.strategy_evaluator import make_config_with_strategy, run_backtest
+    from research.loop import keep_or_discard
+
+    cfg = make_config_with_strategy(config, strategy, params_override=params, solo=True)
+    t0 = time.time()
+    metrics = run_backtest(cfg, data_subset)
+    metrics["runtime_s"] = round(time.time() - t0, 1)
+
+    verdict = keep_or_discard(baseline_metrics, metrics)
+    return metrics, verdict
+
+
 def run_session(
     strategy: str,
     market: str = "sp500",
     hours: float = 4.0,
     notify: bool = False,
     snapshot_id: Optional[str] = None,
+    fast_screen: bool = True,
 ) -> dict:
     """Run a headless parameter-sweep research session for *strategy*.
 
-    Flow:
-    1. Set up logging and print session banner.
-    2. Create :class:`~research.loop.ResearchSession` (loads data + eval lock).
-    3. Run ``session.baseline()`` to establish the bar.
-    4. Build sweep plan from baseline params.
-    5. Loop through sweep plan:
-       - Skip if brain history says already discarded.
-       - Run ``session.experiment()``; call ``session.keep()`` or ``session.discard()``.
-       - Count consecutive crashes; abort after 5.
-       - Break when time budget is exhausted.
-    6. Print session summary.
-    7. Send Telegram notification if ``notify=True``.
+    When *fast_screen* is ``True`` (the default) each candidate goes through a
+    two-stage gate:
+
+    1. **Solo screen** — solo backtest on top-50 tickers (~20-25 s).  If
+       ``keep_or_discard()`` says DISCARD, the candidate is rejected
+       immediately.
+    2. **Combined verify** — full combined portfolio backtest on the complete
+       universe (~13 min).  Only candidates that pass *both* stages are kept.
+
+    When *fast_screen* is ``False`` every candidate runs the full combined
+    backtest directly (maximum rigor, lower throughput).
 
     Args:
         strategy:    Strategy name to optimise.
@@ -347,10 +401,12 @@ def run_session(
         hours:       Wall-clock time budget in hours.
         notify:      Send Telegram summary when session completes.
         snapshot_id: Specific snapshot to use (auto-discovered if ``None``).
+        fast_screen: Use two-stage solo-screen + combined-verify gating
+                     (default ``True``).  Pass ``False`` for full-rigour mode.
 
     Returns:
-        Summary dict with ``experiments_run``, ``experiments_kept``,
-        ``experiments_skipped``, ``starting_sharpe``, ``final_sharpe``,
+        Summary dict with ``screened``, ``promoted``, ``kept``,
+        ``skipped``, ``starting_sharpe``, ``final_sharpe``,
         ``runtime_s``, and ``status``.
     """
     # ── Logging ──────────────────────────────────────────────────────────────
@@ -364,18 +420,46 @@ def run_session(
     deadline = time.time() + hours * 3600
     session_start = time.time()
 
-    _print_banner(strategy, market, hours, snapshot_id)
+    _print_banner(strategy, market, hours, snapshot_id, fast_screen)
 
     # ── Create session ────────────────────────────────────────────────────────
     logger.info("Initialising ResearchSession(%s, %s) ...", strategy, market)
-    from research.loop import ResearchSession
+    from research.loop import ResearchSession, keep_or_discard, _append_result
     from research.lockfile import EvaluationLockViolation
 
     session = ResearchSession(strategy, market, snapshot_id=snapshot_id)
     logger.info("Session ID: %s", session.session_id)
 
-    # ── Baseline ──────────────────────────────────────────────────────────────
-    logger.info("Running baseline ...")
+    # ── Prepare fast-screen data (top-50 subset) ─────────────────────────────
+    solo_baseline_metrics: Optional[dict] = None
+    data_subset: Optional[dict] = None
+
+    if fast_screen:
+        from research.quick_screen import _top_n_tickers
+        from scripts.strategy_evaluator import make_config_with_strategy, run_backtest
+
+        data_subset = _top_n_tickers(session._data, n=50)
+        logger.info(
+            "Fast-screen enabled: solo baseline on %d tickers ...", len(data_subset)
+        )
+
+        # Run solo baseline on the subset to establish the solo bar
+        solo_cfg = make_config_with_strategy(
+            session._config, strategy,
+            params_override=session._best_params, solo=True,
+        )
+        t0 = time.time()
+        solo_baseline_metrics = run_backtest(solo_cfg, data_subset)
+        solo_baseline_metrics["runtime_s"] = round(time.time() - t0, 1)
+        logger.info(
+            "Solo baseline (top-50): Sharpe %.4f, %d trades, %.1f s",
+            solo_baseline_metrics.get("sharpe", 0),
+            solo_baseline_metrics.get("total_trades", 0),
+            solo_baseline_metrics["runtime_s"],
+        )
+
+    # ── Full combined baseline ────────────────────────────────────────────────
+    logger.info("Running combined baseline ...")
     try:
         baseline_metrics = session.baseline()
     except Exception as exc:
@@ -389,7 +473,7 @@ def run_session(
 
     starting_sharpe: float = baseline_metrics.get("sharpe", 0.0) or 0.0
     current_sharpe: float = starting_sharpe
-    logger.info("Baseline Sharpe: %.4f", starting_sharpe)
+    logger.info("Combined baseline Sharpe: %.4f", starting_sharpe)
 
     # ── Sweep plan ────────────────────────────────────────────────────────────
     current_best_params = dict(session._best_params)
@@ -398,9 +482,11 @@ def run_session(
     logger.info("Sweep plan: %d experiments queued.", len(plan))
 
     # ── Counters ──────────────────────────────────────────────────────────────
-    experiments_run = 0
-    experiments_kept = 0
-    experiments_skipped = 0
+    screened = 0       # experiments that ran solo screen (fast_screen only)
+    promoted = 0       # passed solo screen → promoted to combined verify
+    kept = 0           # passed both stages (or combined-only when no fast_screen)
+    skipped = 0        # brain history skip
+    solo_pass_combined_fail = 0
     consecutive_crashes = 0
     MAX_CONSECUTIVE_CRASHES = 5
 
@@ -421,13 +507,8 @@ def run_session(
                 "[%d/%d] SKIP  %s — %s",
                 idx + 1, len(plan), display_name, reason,
             )
-            experiments_skipped += 1
+            skipped += 1
             continue
-
-        logger.info(
-            "[%d/%d] RUNNING  %s",
-            idx + 1, len(plan), display_name,
-        )
 
         # Build params: apply candidate to current best (handles nested keys)
         try:
@@ -438,72 +519,162 @@ def run_session(
             logger.warning("Could not build params for %s: %s", display_name, exc)
             continue
 
-        # Run experiment
+        # ── Stage 1: Solo screen (if fast_screen) ────────────────────────────
+        if fast_screen:
+            logger.info(
+                "[%d/%d] SCREEN (solo top-50)  %s",
+                idx + 1, len(plan), display_name,
+            )
+            try:
+                solo_metrics, solo_verdict = _run_solo_screen(
+                    strategy, session._config, data_subset,
+                    solo_baseline_metrics, exp_params, display_name,
+                )
+            except Exception as exc:
+                logger.error("Solo screen CRASHED: %s", exc)
+                traceback.print_exc()
+                consecutive_crashes += 1
+                if consecutive_crashes >= MAX_CONSECUTIVE_CRASHES:
+                    logger.error(
+                        "%d consecutive crashes — aborting session.",
+                        consecutive_crashes,
+                    )
+                    break
+                continue
+
+            screened += 1
+            consecutive_crashes = 0
+
+            solo_sharpe = solo_metrics.get("sharpe", 0) or 0
+            solo_decision = solo_verdict["decision"]
+
+            if solo_decision == "discard":
+                # Failed solo screen — no need for expensive combined backtest
+                logger.info(
+                    "  → SOLO DISCARD  Sharpe %.4f (%+.4f)  %s  [%.1f s]",
+                    solo_sharpe,
+                    solo_verdict["delta_sharpe"],
+                    solo_verdict["rationale"],
+                    solo_metrics.get("runtime_s", 0),
+                )
+                # Log solo discard to TSV
+                _append_result(
+                    strategy, solo_metrics,
+                    f"{dotted_key}={candidate_value}",
+                    "discard_solo",
+                    f"[solo screen] {display_name}",
+                )
+                continue
+
+            # Passed solo screen — promote to combined verification
+            promoted += 1
+            logger.info(
+                "  → SOLO PASS  Sharpe %.4f (%+.4f)  [%.1f s] → promoting to combined verify",
+                solo_sharpe,
+                solo_verdict["delta_sharpe"],
+                solo_metrics.get("runtime_s", 0),
+            )
+
+        else:
+            # No fast screen — go straight to combined
+            logger.info(
+                "[%d/%d] RUNNING (combined)  %s",
+                idx + 1, len(plan), display_name,
+            )
+
+        # ── Stage 2: Combined verify (full universe) ─────────────────────────
+        if time.time() >= deadline:
+            logger.info(
+                "Time budget exhausted before combined verify — ending cleanly.",
+            )
+            break
+
         try:
             result = session.experiment(exp_params, description=display_name)
         except EvaluationLockViolation as exc:
-            # This is fatal — the engine or data changed mid-session
             logger.error("EVALUATION LOCK VIOLATED — aborting session: %s", exc)
+            runtime_s = time.time() - session_start
             _summarise_and_notify(
-                strategy, market, experiments_run, experiments_kept,
-                experiments_skipped, starting_sharpe, current_sharpe,
-                time.time() - session_start, notify,
+                strategy, market, screened, promoted, kept, skipped,
+                solo_pass_combined_fail, starting_sharpe, current_sharpe,
+                runtime_s, notify, fast_screen,
                 status="lock_violated",
             )
             return {
                 "status": "lock_violated",
                 "error": str(exc),
                 "changed_files": exc.changed,
-                "experiments_run": experiments_run,
-                "experiments_kept": experiments_kept,
-                "experiments_skipped": experiments_skipped,
+                "screened": screened,
+                "promoted": promoted,
+                "kept": kept,
+                "skipped": skipped,
             }
         except Exception as exc:
-            logger.error(
-                "Experiment %d CRASHED: %s", experiments_run + 1, exc
-            )
+            logger.error("Combined backtest CRASHED: %s", exc)
             traceback.print_exc()
             consecutive_crashes += 1
             if consecutive_crashes >= MAX_CONSECUTIVE_CRASHES:
                 logger.error(
-                    "%d consecutive crashes — aborting session.", consecutive_crashes
+                    "%d consecutive crashes — aborting session.",
+                    consecutive_crashes,
                 )
                 break
             continue
 
-        experiments_run += 1
-        consecutive_crashes = 0  # Reset on any successful experiment
-
+        consecutive_crashes = 0
         recommendation = result.get("recommendation", "discard")
-        sharpe = result.get("metrics", {}).get("sharpe", 0.0) or 0.0
+        combined_sharpe = result.get("metrics", {}).get("sharpe", 0.0) or 0.0
         rationale = result.get("rationale", "")
 
         if recommendation == "keep":
             session.keep()
-            experiments_kept += 1
-            current_sharpe = sharpe
+            kept += 1
+            current_sharpe = combined_sharpe
             logger.info(
-                "  → KEPT   Sharpe %.4f (+%.4f)  %s",
-                sharpe,
+                "  → COMBINED KEEP  Sharpe %.4f (%+.4f)  %s",
+                combined_sharpe,
                 result.get("delta", {}).get("sharpe", 0.0),
                 rationale,
             )
             # Update current best so subsequent experiments build on it
             current_best_params = dict(session._best_params)
+
+            # Refresh solo baseline when params improve (fast_screen only)
+            if fast_screen:
+                from scripts.strategy_evaluator import (
+                    make_config_with_strategy,
+                    run_backtest,
+                )
+                solo_cfg = make_config_with_strategy(
+                    session._config, strategy,
+                    params_override=session._best_params, solo=True,
+                )
+                solo_baseline_metrics = run_backtest(solo_cfg, data_subset)
+                logger.info(
+                    "  → Solo baseline refreshed: Sharpe %.4f",
+                    solo_baseline_metrics.get("sharpe", 0),
+                )
         else:
             session.discard()
-            logger.info(
-                "  → DISCARD Sharpe %.4f  %s",
-                sharpe,
-                rationale,
-            )
+            if fast_screen:
+                # Passed solo but failed combined — log distinctly
+                solo_pass_combined_fail += 1
+                logger.info(
+                    "  → SOLO PASS / COMBINED DISCARD  Sharpe %.4f  %s",
+                    combined_sharpe, rationale,
+                )
+            else:
+                logger.info(
+                    "  → DISCARD  Sharpe %.4f  %s",
+                    combined_sharpe, rationale,
+                )
 
     # ── Final summary ─────────────────────────────────────────────────────────
     runtime_s = time.time() - session_start
     summary = _summarise_and_notify(
-        strategy, market, experiments_run, experiments_kept,
-        experiments_skipped, starting_sharpe, current_sharpe,
-        runtime_s, notify,
+        strategy, market, screened, promoted, kept, skipped,
+        solo_pass_combined_fail, starting_sharpe, current_sharpe,
+        runtime_s, notify, fast_screen,
     )
     return summary
 
@@ -516,9 +687,11 @@ def _print_banner(
     market: str,
     hours: float,
     snapshot_id: Optional[str],
+    fast_screen: bool = True,
 ) -> None:
     """Print a start-of-session banner to stdout."""
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    mode = "fast-screen (solo top-50 → combined)" if fast_screen else "full combined"
     print(
         f"\n{'='*65}\n"
         f"  Atlas AutoResearch — Headless Parameter Sweep\n"
@@ -526,6 +699,7 @@ def _print_banner(
         f"  Strategy : {strategy}\n"
         f"  Market   : {market}\n"
         f"  Budget   : {hours:.1f} h\n"
+        f"  Mode     : {mode}\n"
         f"  Snapshot : {snapshot_id or 'auto-discover'}\n"
         f"  Started  : {ts}\n"
         f"{'='*65}\n"
@@ -535,71 +709,104 @@ def _print_banner(
 def _print_summary(
     strategy: str,
     market: str,
-    experiments_run: int,
-    experiments_kept: int,
-    experiments_skipped: int,
+    screened: int,
+    promoted: int,
+    kept: int,
+    skipped: int,
+    solo_pass_combined_fail: int,
     starting_sharpe: float,
     final_sharpe: float,
     runtime_s: float,
+    fast_screen: bool = True,
     status: str = "complete",
 ) -> None:
     """Print an end-of-session summary to stdout."""
     delta = final_sharpe - starting_sharpe
     mins = runtime_s / 60.0
-    print(
-        f"\n{'='*65}\n"
-        f"  AutoResearch Session Summary — {strategy} / {market}\n"
-        f"{'='*65}\n"
-        f"  Status         : {status}\n"
-        f"  Experiments    : {experiments_run} run, {experiments_kept} kept, "
-        f"{experiments_skipped} skipped\n"
-        f"  Starting Sharpe: {starting_sharpe:.4f}\n"
-        f"  Final Sharpe   : {final_sharpe:.4f}  ({delta:+.4f})\n"
-        f"  Runtime        : {mins:.1f} min\n"
-        f"{'='*65}\n"
-    )
+
+    lines = [
+        f"\n{'='*65}",
+        f"  AutoResearch Session Summary — {strategy} / {market}",
+        f"{'='*65}",
+        f"  Status         : {status}",
+    ]
+    if fast_screen:
+        lines.extend([
+            f"  Screened (solo): {screened}",
+            f"  Promoted (→comb): {promoted}",
+            f"  Kept (final)   : {kept}",
+            f"  Solo✓ / Comb✗  : {solo_pass_combined_fail}",
+            f"  Skipped (brain): {skipped}",
+        ])
+    else:
+        total_run = promoted + screened  # in no-fast-screen mode screened=0
+        lines.extend([
+            f"  Experiments    : {total_run} run, {kept} kept, {skipped} skipped",
+        ])
+    lines.extend([
+        f"  Starting Sharpe: {starting_sharpe:.4f}",
+        f"  Final Sharpe   : {final_sharpe:.4f}  ({delta:+.4f})",
+        f"  Runtime        : {mins:.1f} min",
+        f"{'='*65}",
+    ])
+    print("\n".join(lines))
 
 
 def _summarise_and_notify(
     strategy: str,
     market: str,
-    experiments_run: int,
-    experiments_kept: int,
-    experiments_skipped: int,
+    screened: int,
+    promoted: int,
+    kept: int,
+    skipped: int,
+    solo_pass_combined_fail: int,
     starting_sharpe: float,
     final_sharpe: float,
     runtime_s: float,
     notify: bool,
+    fast_screen: bool = True,
     status: str = "complete",
 ) -> dict:
     """Print summary, optionally send Telegram, and return summary dict."""
     _print_summary(
-        strategy, market, experiments_run, experiments_kept,
-        experiments_skipped, starting_sharpe, final_sharpe, runtime_s, status,
+        strategy, market, screened, promoted, kept, skipped,
+        solo_pass_combined_fail, starting_sharpe, final_sharpe,
+        runtime_s, fast_screen, status,
     )
 
     summary = {
         "status": status,
         "strategy": strategy,
         "market": market,
-        "experiments_run": experiments_run,
-        "experiments_kept": experiments_kept,
-        "experiments_skipped": experiments_skipped,
+        "screened": screened,
+        "promoted": promoted,
+        "kept": kept,
+        "skipped": skipped,
+        "solo_pass_combined_fail": solo_pass_combined_fail,
         "starting_sharpe": round(starting_sharpe, 4),
         "final_sharpe": round(final_sharpe, 4),
         "delta_sharpe": round(final_sharpe - starting_sharpe, 4),
         "runtime_s": round(runtime_s, 1),
+        "fast_screen": fast_screen,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     if notify:
         delta = final_sharpe - starting_sharpe
         mins = runtime_s / 60.0
+        if fast_screen:
+            detail = (
+                f"Screened: {screened} | Promoted: {promoted} | "
+                f"Kept: {kept} | Solo✓Comb✗: {solo_pass_combined_fail} | "
+                f"Skipped: {skipped}"
+            )
+        else:
+            total_run = promoted + screened
+            detail = f"Run: {total_run} | Kept: {kept} | Skipped: {skipped}"
         msg = (
             f"<b>AutoResearch complete — {strategy} / {market}</b>\n"
             f"Status: {status}\n"
-            f"Experiments: {experiments_run} run | {experiments_kept} kept "
-            f"| {experiments_skipped} skipped\n"
+            f"{detail}\n"
             f"Sharpe: {starting_sharpe:.4f} → {final_sharpe:.4f} "
             f"({delta:+.4f})\n"
             f"Runtime: {mins:.1f} min"
@@ -621,6 +828,10 @@ def _parse_args(argv=None) -> argparse.Namespace:
             "Example:\n"
             "  python3 research/autoresearch_runner.py \\\n"
             "      --strategy mean_reversion --hours 4 --notify\n"
+            "\n"
+            "  # Full-rigour mode (no solo screen, every experiment is combined):\n"
+            "  python3 research/autoresearch_runner.py \\\n"
+            "      --strategy mean_reversion --hours 8 --no-fast-screen\n"
         ),
     )
     parser.add_argument(
@@ -650,6 +861,20 @@ def _parse_args(argv=None) -> argparse.Namespace:
         default=None,
         help="Snapshot ID to use (auto-discovered if omitted).",
     )
+    # --fast-screen (default) / --no-fast-screen
+    parser.add_argument(
+        "--fast-screen",
+        action="store_true",
+        default=True,
+        dest="fast_screen",
+        help="Two-stage gating: solo top-50 screen → combined verify (default).",
+    )
+    parser.add_argument(
+        "--no-fast-screen",
+        action="store_false",
+        dest="fast_screen",
+        help="Disable fast screen — every experiment runs full combined backtest.",
+    )
     return parser.parse_args(argv)
 
 
@@ -661,5 +886,6 @@ if __name__ == "__main__":
         hours=args.hours,
         notify=args.notify,
         snapshot_id=args.snapshot,
+        fast_screen=args.fast_screen,
     )
     sys.exit(0 if result.get("status") in ("complete", None) else 1)

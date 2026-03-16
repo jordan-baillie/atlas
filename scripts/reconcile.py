@@ -108,25 +108,45 @@ class StateReconciler:
     def _get_local_positions(self) -> Dict[str, dict]:
         """Get local position tracking state.
 
-        Reads from journal/trade_ledger.json and logs/live_executions.jsonl.
+        Reads from journal/trade_ledger.json — a flat list of entry/exit events.
+        Open positions are derived by net-quantity: sum entries, subtract exits.
         """
         positions = {}
 
-        # Read trade ledger
         ledger_path = PROJECT / "journal" / "trade_ledger.json"
         if ledger_path.exists():
             try:
                 with open(ledger_path) as f:
-                    ledger = json.load(f)
-                for trade in ledger.get("open_positions", ledger.get("positions", [])):
-                    ticker = trade.get("ticker", "")
-                    if ticker and trade.get("status", "open") == "open":
+                    trades = json.load(f)
+
+                if not isinstance(trades, list):
+                    logger.warning("trade_ledger.json is not a list — unexpected format")
+                    self.report.local_positions = 0
+                    return positions
+
+                # Derive open positions: net qty per ticker (entries - exits)
+                net_qty: Dict[str, int] = {}
+                last_entry: Dict[str, dict] = {}
+                for t in trades:
+                    ticker = t.get("ticker", "")
+                    if not ticker:
+                        continue
+                    qty = int(t.get("shares", 0))
+                    if t.get("type") == "entry":
+                        net_qty[ticker] = net_qty.get(ticker, 0) + qty
+                        last_entry[ticker] = t
+                    elif t.get("type") == "exit":
+                        net_qty[ticker] = net_qty.get(ticker, 0) - qty
+
+                for ticker, qty in net_qty.items():
+                    if qty > 0:
+                        entry = last_entry.get(ticker, {})
                         positions[ticker] = {
-                            "strategy": trade.get("strategy", "unknown"),
-                            "entry_date": trade.get("entry_date", ""),
-                            "entry_price": trade.get("entry_price", 0),
-                            "shares": trade.get("shares", 0),
-                            "direction": trade.get("direction", "long"),
+                            "strategy": entry.get("strategy", "unknown"),
+                            "entry_date": entry.get("timestamp", ""),
+                            "entry_price": entry.get("fill_price", 0),
+                            "shares": qty,
+                            "direction": entry.get("direction", "long"),
                         }
             except Exception as e:
                 logger.warning(f"Failed to read trade ledger: {e}")
@@ -191,11 +211,12 @@ class StateReconciler:
                     category="missing_local",
                     ticker=ticker,
                     description=(
-                        f"Position on broker ({qty} shares) not tracked locally"
+                        f"Position on broker ({qty} shares) not in trade ledger"
+                        " — likely a manual trade; add entry via cli or manually"
                     ),
                     severity="high",
-                    auto_fixable=True,
-                    fix_action="Add to local tracking",
+                    auto_fixable=False,
+                    fix_action="Manual: record entry in journal/trade_ledger.json",
                 )
             )
 
@@ -283,10 +304,6 @@ class StateReconciler:
                     # In real implementation: update trade_ledger.json
                     disc.fixed = True
                     fixes.append(f"Marked {disc.ticker} closed (SL filled during outage)")
-                elif disc.category == "missing_local":
-                    logger.info(f"Auto-fix: adding {disc.ticker} to local tracking")
-                    disc.fixed = True
-                    fixes.append(f"Added {disc.ticker} to local tracking")
 
         self.report.fixes_applied = fixes
         return fixes
