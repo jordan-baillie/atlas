@@ -67,6 +67,14 @@ Steps:
    - `atlas_risk_list_config_backups`
    - `atlas_risk_restore_config_backup` (if needed)
 
+### Timing & Resource Notes
+
+- Reoptimization typically takes **15–45 minutes** depending on universe size and parameter sweep breadth
+- It is CPU-intensive — avoid running during market hours or alongside active research experiments
+- Coordinate descent may require multiple rounds to converge; watch for the `converged` flag in the artifact summary
+- If a run exceeds 60 minutes, check for stuck worker processes: `systemctl status atlas-research-runner`
+- Schedule reoptimization after market close and after the daily post-close cron has completed
+
 ### Phase 3: OOS validation (against the staged candidate)
 
 1. Run:
@@ -79,6 +87,28 @@ Steps:
    - `atlas_artifacts_compare(leftPath="backtest/results/v92_oos_validation.json", rightPath=<candidate_validation_path>, kind="validate_oos")`
 5. Update workflow state with summary + verdict notes
 
+### Validation Interpretation Guide
+
+Each OOS validation runs three tests:
+
+| Test | What It Measures | Pass Threshold |
+|------|-----------------|----------------|
+| **OOS ratio** | CAGR_oos / CAGR_is — how much IS performance survived out-of-sample | ≥ 0.5 |
+| **Window win rate** | % of rolling OOS windows with positive CAGR | ≥ 55% |
+| **Perturbation robustness** | Stability of results under slight parameter nudges | All or all-but-1 trials positive |
+
+**Green flags (strong candidate):**
+- OOS Sharpe ≥ 0.5 and OOS Sharpe / IS Sharpe ≥ 0.7
+- Window win rate ≥ 60%
+- All perturbation trials positive
+- Trade count ≥ 20 in the OOS period (statistically meaningful)
+
+**Red flags (reject or defer):**
+- OOS Sharpe < 0 — strategy loses money out-of-sample, a clear failure
+- CAGR degradation > 50% (OOS CAGR less than half IS CAGR) — likely overfit
+- Perturbation collapses ≥ 2 — parameter region is fragile, not robust
+- Trade count < 10 in OOS — too few trades to trust any derived metrics
+
 ### Phase 4: Promotion decision checkpoint (human-in-the-loop)
 
 1. Run the reoptimization promotion gate (config + artifact thresholds):
@@ -89,6 +119,33 @@ Steps:
    - candidate OOS validation summary
    - candidate-vs-baseline validation comparison
    - promotion gate verdict + blockers/warnings
+### Decision Framework
+
+Use this guide to frame your recommendation before asking for human input:
+
+**Promote** when all of:
+- Promotion gate returns no blockers (warnings are acceptable)
+- Clear improvement on ≥ 2 key metrics (Sharpe, CAGR, or max drawdown) vs baseline
+- OOS validation passes all 3 tests
+- Trade count ≥ 20 in OOS period
+
+**Reject** when any of:
+- Promotion gate fails with blocker-level issues
+- OOS Sharpe < 0 or CAGR degradation > 50%
+- Perturbation collapses ≥ 2 (fragile parameter region)
+- Improvement < 5% across all metrics — marginal gain not worth operational risk
+
+**Defer** when:
+- Mixed signals (some tests pass, some are marginal)
+- Close to end of week or an upcoming market session
+- Trade count too low for statistical confidence
+- Additional live data would meaningfully change the decision
+
+**Rollback** when (post-promotion issue discovered):
+- Post-promotion health check surfaces new degradation
+- Live performance diverges significantly from backtested expectations within 1–2 weeks
+- Use `atlas_risk_restore_config_backup` with the pre-promotion timestamped backup
+
 3. Ask for explicit human decision:
    - promote candidate now:
      - `atlas_risk_promote_config(candidatePath=<candidate_config_path>, confirmed=true, ...)`
@@ -155,3 +212,54 @@ Use this when a run fails or Pi session is interrupted.
 - `reoptimize_full_universe.py` now stages a candidate by default; `--promote-active` is opt-in and high-risk.
 - `atlas_risk_check_reopt_promotion` applies conservative artifact thresholds; tune thresholds before unattended use.
 - `auto_reoptimize.py` remains high-risk legacy automation even after staged-candidate improvements.
+
+## Comparison Workflow
+
+Use `atlas_artifacts_compare` to produce numeric deltas between the candidate and baseline validation artifacts:
+
+```
+atlas_artifacts_compare(
+    leftPath="backtest/results/v92_oos_validation.json",   # baseline (left = before)
+    rightPath=<candidate_validation_path>,                  # candidate (right = after)
+    kind="validate_oos"
+)
+```
+
+**Key degradation thresholds:**
+
+| Metric | Reject candidate if degraded by |
+|--------|---------------------------------|
+| Sharpe ratio | > 10% drop |
+| CAGR | > 20% drop |
+| Max drawdown | > 15% worse (higher absolute value) |
+| Win rate | > 10% drop |
+| Trade count | > 30% fewer (may indicate over-filtering) |
+
+- Also compare IS reoptimization results: `atlas_artifacts_compare(leftPath=<baseline_reopt>, rightPath="backtest/results/reoptimization_full_universe.json", kind="reoptimization_full_universe")`
+- If no baseline artifact exists, use `atlas_risk_list_config_backups` to identify the nearest pre-promotion backup and treat its corresponding artifact as the reference
+- Numeric deltas alone are not sufficient — always read full artifact summaries for qualitative context
+
+## Known Pitfalls
+
+Lessons learned from Atlas operational history. Check these before and after each reoptimization run.
+
+**Pitfall 1 — stage_candidate() clobbering the active config** (Lesson #34)
+Always verify `candidate_config_path ≠ active_config_path` before and after reoptimization. If `active_config_overwritten: true` appears in the artifact summary, stop immediately and restore from backup with `atlas_risk_restore_config_backup`. This is a silent failure mode — the workflow does not error out.
+
+**Pitfall 2 — Degenerate optimization: 3–4 trades, PF = Infinity** (Lesson #2)
+A result showing very few trades and profit factor = Infinity means the optimizer found parameters that almost never trade. This is not alpha — it is overfitting to silence. Check the `min_trades` threshold in the reoptimization config; set it to ≥ 20 for any statistically meaningful result.
+
+**Pitfall 3 — Blending config parameters across competing peaks** (Lesson #3)
+If reoptimization surfaces two competing parameter peaks (e.g., fast vs slow lookback), do not average them. Blended configs degrade performance at both peaks. Identify the dominant peak via OOS validation and use it exclusively.
+
+**Pitfall 4 — Skipping OOS validation before promotion** (Lesson #6)
+Reoptimization in-sample performance alone cannot justify promotion. All three OOS tests (OOS ratio, window win rate, perturbation robustness) must pass. Skipping even one test has historically led to promoted configs that failed in live trading within weeks.
+
+**Pitfall 5 — Solo parameter sweeps at low equity** (Lesson #30)
+At low account equity (< $10k), single-parameter sweeps produce noisy results because position sizing amplifies variance on each individual trade. Use combined mode (sweeping multiple parameters together under constraints) for more stable results. Solo sweeps are acceptable only after 30+ closed trades have accumulated.
+
+**Pitfall 6 — Running reoptimization during market hours**
+The reoptimizer and the intraday monitor can conflict on the candidate config path. Check `atlas_state_lock_status(name="daily-workflow")` before starting; if the daily workflow lock is held, wait until after market close before proceeding.
+
+**Pitfall 7 — Stale candidate configs from interrupted prior runs**
+An interrupted reoptimization may have left a stale `config_candidate_reoptimized_*.json` on disk. Always use a fresh timestamped path; verify with `ls config/` before the run to avoid accidentally loading a previous run's candidate as the baseline.
