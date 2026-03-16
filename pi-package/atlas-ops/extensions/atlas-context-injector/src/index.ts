@@ -77,29 +77,44 @@ interface ConfigSnapshot {
 
 interface SystemSnapshot {
   services: ServiceStatus[];
-  failedServices: string[];
+  failedServices: string[];      // core services that are not active
+  failedOptional: string[];      // optional services that crashed (status=failed)
+  stoppedOptional: string[];     // optional services intentionally stopped (inactive)
+  coreCount: number;
+  coreUp: number;
   equity: Record<string, EquitySnapshot | null>;
   configs: ConfigSnapshot[];
   timestamp: string;
 }
 
-const ATLAS_SERVICES = [
+// Core services must be running for daily trading operations.
+// Optional services (research) may be intentionally stopped.
+const CORE_SERVICES = [
   "atlas-dashboard",
   "atlas-dashboard-refresh",
   "atlas-telegram-bot",
+];
+
+const OPTIONAL_SERVICES = [
   "atlas-director",
   "atlas-research-runner",
   "atlas-research-window",
 ];
+
+const ATLAS_SERVICES = [...CORE_SERVICES, ...OPTIONAL_SERVICES];
 
 const MARKETS = ["sp500", "asx"];
 
 async function getSystemSnapshot(pi: ExtensionAPI): Promise<SystemSnapshot> {
   const root = atlasRoot();
 
-  // Check services
+  // Check services — distinguish core (must run) from optional (may be stopped)
   const services: ServiceStatus[] = [];
   const failedServices: string[] = [];
+  const failedOptional: string[] = [];
+  const stoppedOptional: string[] = [];
+  const coreSet = new Set(CORE_SERVICES);
+  let coreUp = 0;
   try {
     const result = await pi.exec("systemctl", [
       "is-active",
@@ -111,12 +126,22 @@ async function getSystemSnapshot(pi: ExtensionAPI): Promise<SystemSnapshot> {
       const status = statuses[i]?.trim() ?? "unknown";
       const active = status === "active";
       services.push({ name, active, status });
-      if (!active) failedServices.push(name);
+
+      if (coreSet.has(name)) {
+        if (active) coreUp++;
+        else failedServices.push(name);
+      } else {
+        // Optional service
+        if (active) { /* fine */ }
+        else if (status === "failed") failedOptional.push(name);
+        else stoppedOptional.push(name); // inactive = intentionally stopped
+      }
     }
   } catch {
     for (const name of ATLAS_SERVICES) {
       services.push({ name, active: false, status: "unknown" });
-      failedServices.push(name);
+      if (coreSet.has(name)) failedServices.push(name);
+      else failedOptional.push(name);
     }
   }
 
@@ -154,6 +179,10 @@ async function getSystemSnapshot(pi: ExtensionAPI): Promise<SystemSnapshot> {
   return {
     services,
     failedServices,
+    failedOptional,
+    stoppedOptional,
+    coreCount: CORE_SERVICES.length,
+    coreUp,
     equity,
     configs,
     timestamp: new Date().toISOString(),
@@ -262,10 +291,19 @@ function buildInjection(intent: Intent, state: SystemSnapshot): string {
   const sections: string[] = [];
 
   // Always inject: system health summary
-  const healthLine = state.failedServices.length === 0
-    ? "🟢 All Atlas services healthy."
-    : `🔴 Failed services: ${state.failedServices.join(", ")}`;
-  sections.push(`## Atlas System State (auto-injected)\n${healthLine}`);
+  const healthParts: string[] = [];
+  if (state.failedServices.length === 0) {
+    healthParts.push(`🟢 Core services: ${state.coreUp}/${state.coreCount} up`);
+  } else {
+    healthParts.push(`🔴 Core services down: ${state.failedServices.join(", ")}`);
+  }
+  if (state.failedOptional.length > 0) {
+    healthParts.push(`⚠️ Crashed optional: ${state.failedOptional.join(", ")}`);
+  }
+  if (state.stoppedOptional.length > 0) {
+    healthParts.push(`Research stopped (intentional): ${state.stoppedOptional.join(", ")}`);
+  }
+  sections.push(`## Atlas System State (auto-injected)\n${healthParts.join("\n")}`);
 
   // Always inject: equity & config summary
   const equityLines: string[] = [];
@@ -408,22 +446,32 @@ function formatStatusWidget(state: SystemSnapshot): string[] {
     lines.push(`💰 ${eqParts.join("  |  ")}`);
   }
 
-  // Line 2: Config versions + strategies
+  // Line 2: Config versions + strategies (compact)
   const cfgParts: string[] = [];
   for (const cfg of state.configs) {
-    cfgParts.push(`${cfg.market.toUpperCase()} ${cfg.version} (${cfg.enabledStrategies.length} strategies, ${cfg.mode})`);
+    cfgParts.push(`${cfg.market.toUpperCase()} ${cfg.version} · ${cfg.enabledStrategies.length} strats · ${cfg.mode}`);
   }
   if (cfgParts.length > 0) {
     lines.push(`📊 ${cfgParts.join("  |  ")}`);
   }
 
-  // Line 3: Service health
+  // Line 3: Service health — core vs optional
+  const coreParts: string[] = [];
   if (state.failedServices.length === 0) {
-    lines.push(`🟢 All ${state.services.length} services healthy`);
+    coreParts.push(`🟢 ${state.coreUp}/${state.coreCount} core up`);
   } else {
-    const active = state.services.filter(s => s.active).length;
-    lines.push(`🔴 ${state.failedServices.length} failed: ${state.failedServices.map(s => s.replace("atlas-", "")).join(", ")}  (${active}/${state.services.length} up)`);
+    coreParts.push(`🔴 Core down: ${state.failedServices.map(s => s.replace("atlas-", "")).join(", ")}`);
   }
+
+  // Optional services: only mention if crashed (failed), skip if just stopped
+  if (state.failedOptional.length > 0) {
+    coreParts.push(`⚠️ crashed: ${state.failedOptional.map(s => s.replace("atlas-", "")).join(", ")}`);
+  }
+  if (state.stoppedOptional.length > 0) {
+    coreParts.push(`${state.stoppedOptional.length} research stopped`);
+  }
+
+  lines.push(coreParts.join("  |  "));
 
   return lines;
 }
