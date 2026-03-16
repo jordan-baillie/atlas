@@ -756,6 +756,14 @@ class AlpacaBroker(BrokerAdapter):
 
         trade_date_label = trade_date or "today"
 
+        # Sort by position value descending so highest-risk positions
+        # consume the limited PDT day-trade slots first.
+        positions = sorted(
+            positions,
+            key=lambda p: p.entry_price * p.shares,
+            reverse=True,
+        )
+
         for pos in positions:
             ticker = pos.ticker
             ticker_result: dict = {}

@@ -210,6 +210,7 @@ def sync_market(
                 "sl_skipped": 0,
                 "tp_skipped": 0,
                 "errors": sync_result.get("errors", 0),
+                "pdt_deferred": sync_result.get("pdt_deferred", 0),
             }
             # Convert per_ticker → results with summary strings
             per_ticker = sync_result.get("per_ticker", {})
@@ -242,6 +243,8 @@ def sync_market(
                             f"[DRY RUN] SL @ ${tdata.get('stop_price', 0):.2f} "
                             f"qty={tdata.get('qty', '?')}"
                         )
+                elif sl_action == "pdt_deferred":
+                    sl_part = "⏳ PDT deferred (same-day entry — stop will be placed pre-market tomorrow)"
                 elif sl_action == "error":
                     sl_part = f"SL ERROR: {tdata.get('sl_message') or tdata.get('message', '?')}"
                     tdata["errors"] = [tdata.get("sl_message") or tdata.get("message", "unknown")]
@@ -258,6 +261,8 @@ def sync_market(
                     tp_part = "TP skipped (no target)"
                 elif tp_action == "dry_run_placed":
                     tp_part = f"[DRY RUN] TP @ ${tdata.get('take_profit', 0):.2f}"
+                elif tp_action == "pdt_deferred":
+                    tp_part = ""  # already captured in sl_part for trailing stops
                 elif tp_action == "error":
                     tp_part = f"TP ERROR: {tdata.get('tp_message', '?')}"
                     tdata.setdefault("errors", []).append(
@@ -330,15 +335,20 @@ def format_telegram_message(
         sl_exists = counts.get("sl_already_exists", 0)
         tp_exists = counts.get("tp_already_exists", 0)
         errors = counts.get("errors", 0)
+        pdt_deferred = counts.get("pdt_deferred", 0)
         sl_skip = counts.get("sl_skipped", 0)
         tp_skip = counts.get("tp_skipped", 0)
 
         icon = "❌" if errors else ("✅" if (sl_placed + tp_placed) > 0 else "ℹ️")
+        if pdt_deferred and not errors and not (sl_placed + tp_placed):
+            icon = "⏳"
         lines.append(
             f"{icon} <b>{market}</b> ({n_checked} positions)\n"
             f"  SL: {sl_placed} placed | {sl_exists} existed | {sl_skip} skipped\n"
             f"  TP: {tp_placed} placed | {tp_exists} existed | {tp_skip} skipped"
             + (f"\n  ⚠️ {errors} errors" if errors else "")
+            + (f"\n  ⏳ {pdt_deferred} PDT-deferred (same-day entries, account < $25k — "
+               f"stops placed pre-market tomorrow)" if pdt_deferred else "")
         )
 
         # Per-ticker detail
@@ -347,6 +357,8 @@ def format_telegram_message(
             if errs:
                 for e in errs:
                     lines.append(f"  └─ {ticker}: ⚠️ {e}")
+            elif tresult.get("sl_action") == "pdt_deferred":
+                lines.append(f"  └─ {ticker}: ⏳ PDT deferred — stop placed tomorrow pre-market")
 
         lines.append("")
 
@@ -460,6 +472,7 @@ def main() -> int:
             any_error = True
         elif result["counts"].get("errors", 0) > 0:
             any_error = True
+        # pdt_deferred is a regulatory constraint, not an operational error
 
     # ── Summary to stdout ─────────────────────────────────────
     print()

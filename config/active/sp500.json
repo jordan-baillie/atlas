@@ -43,7 +43,7 @@
     "live_safety": {
       "require_double_approval": true,
       "max_order_value": 5000,
-      "max_daily_orders": 10,
+      "max_daily_orders": 3,
       "dry_run_first": false
     }
   },
