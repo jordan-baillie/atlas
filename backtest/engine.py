@@ -102,6 +102,22 @@ class BacktestResult:
             f"Max Drawdown:    {self.benchmark_metrics.get('max_drawdown', 0)*100:.2f}%",
             f"Sharpe Ratio:    {self.benchmark_metrics.get('sharpe', 0):.4f}",
             f"Total Return:    {self.benchmark_metrics.get('total_return', 0)*100:.2f}%",
+            "-" * 60,
+            "ALPHA DECOMPOSITION",
+            "-" * 60,
+            f"Alpha (ann):     {self.metrics.get('alpha', 0)*100:.2f}%",
+            f"Beta:            {self.metrics.get('beta', 0):.4f}",
+            f"R²:              {self.metrics.get('r_squared', 0)*100:.1f}%",
+            f"Info Ratio:      {self.metrics.get('information_ratio', 0):.4f}",
+            f"Up Capture:      {self.metrics.get('up_capture', 0)*100:.1f}%",
+            f"Down Capture:    {self.metrics.get('down_capture', 0)*100:.1f}%",
+            "-" * 60,
+            "SHUFFLE ROBUSTNESS",
+            "-" * 60,
+            f"Shuffle DD p50:  {self.metrics.get('shuffle_p50_dd', 0)*100:.2f}%",
+            f"Shuffle DD p95:  {self.metrics.get('shuffle_p95_dd', 0)*100:.2f}%",
+            f"Shuffle pctile:  {self.metrics.get('shuffle_percentile', 0)*100:.0f}%"
+            f" {self.metrics.get('shuffle_impact', '')}",
             "=" * 60,
         ]
         # Strategy correlation warnings
@@ -139,6 +155,9 @@ class BacktestEngine:
         self.test_window = self.backtest_config.get("test_window_days", _bt_defaults["test_window_days"])
         self.step_days = self.backtest_config.get("step_days", _bt_defaults["step_days"])
         self.min_history = self.backtest_config.get("min_history_days", _bt_defaults["min_history_days"])
+        # Task: Volume participation limit — skip entries where order > limit% of daily volume
+        # Default 0.0 = disabled (backward-compatible)
+        self.volume_participation_limit = self.backtest_config.get("volume_participation_limit", 0.0)
 
         # Risk parameters
         self.starting_equity = self.risk_config.get("starting_equity", 5000)
@@ -163,6 +182,9 @@ class BacktestEngine:
         self.commission_per_trade = self.fees_config.get("commission_per_trade", 5.0)
         self.commission_pct = self.fees_config.get("commission_pct", 0.0008)
         self.slippage_pct = self.fees_config.get("slippage_pct", 0.001)
+        # Task 3: Volume-aware slippage model
+        self.slippage_model = self.fees_config.get("slippage_model", "fixed")
+        self.slippage_impact_exponent = self.fees_config.get("slippage_impact_exponent", 0.5)
         # Threshold below which flat fee is waived (pct-only mode)
         self.flat_fee_threshold = self.fees_config.get("flat_fee_threshold", 2000.0)
         # Minimum position value to avoid commission-dominated micro-trades
@@ -283,16 +305,37 @@ class BacktestEngine:
             return pct_commission
         return max(self.commission_per_trade, pct_commission)
 
-    def _apply_slippage(self, price: float, direction: str) -> float:
+    def _apply_slippage(
+        self, price: float, direction: str,
+        order_shares: int = 0, bar_volume: float = 0,
+    ) -> float:
         """Apply slippage to a price.
 
         For buys: price goes up (adverse).
         For sells: price goes down (adverse).
+
+        In volume_aware mode, slippage scales with market participation:
+            effective_slippage = slippage_pct * (participation ** impact_exponent)
+        where participation = order_shares / bar_volume.  Falls back to fixed
+        when bar_volume=0 or order_shares=0.
         """
-        if direction == "buy":
-            return price * (1 + self.slippage_pct)
+        if (
+            self.slippage_model == "volume_aware"
+            and bar_volume > 0
+            and order_shares > 0
+        ):
+            participation = order_shares / bar_volume
+            effective_slippage = self.slippage_pct * (
+                participation ** self.slippage_impact_exponent
+            )
+            effective_slippage = max(0.0001, min(0.02, effective_slippage))
         else:
-            return price * (1 - self.slippage_pct)
+            effective_slippage = self.slippage_pct
+
+        if direction == "buy":
+            return price * (1 + effective_slippage)
+        else:
+            return price * (1 - effective_slippage)
 
     def _get_data_window(
         self, data: Dict[str, pd.DataFrame], start: pd.Timestamp, end: pd.Timestamp
@@ -381,7 +424,14 @@ class BacktestEngine:
                 if today_df is None or today not in today_df.index:
                     fill_price = self._apply_slippage(rec["exit_price"], "sell")
                 else:
-                    fill_price = self._apply_slippage(today_df.loc[today, "open"], "sell")
+                    _bar_vol_exit = (
+                        float(today_df.loc[today, "volume"])
+                        if "volume" in today_df.columns else 0.0
+                    )
+                    fill_price = self._apply_slippage(
+                        today_df.loc[today, "open"], "sell",
+                        order_shares=pos["shares"], bar_volume=_bar_vol_exit,
+                    )
 
                 trade = self._build_trade_record(pos, fill_price, today, rec["reason"])
                 closed_trades.append(trade)
@@ -454,17 +504,21 @@ class BacktestEngine:
             else:
                 unrealized = (yest_close - pos["fill_price"]) * pos["shares"]
             if unrealized <= -abs(self.max_loss_per_trade):
-                exits.append((pi, df.loc[today, "close"]))
+                _exit_vol = float(df.loc[today, "volume"]) if "volume" in df.columns else 0.0
+                exits.append((pi, df.loc[today, "close"], _exit_vol))
                 logger.debug(
                     f"MAX_LOSS_CAP {ticker}: unrealized ${unrealized:.2f} "
                     f"<= -${abs(self.max_loss_per_trade):.2f}"
                 )
 
-        for pi, exit_price in reversed(exits):
+        for pi, exit_price, _bar_vol in reversed(exits):
             pos = open_positions[pi]
             # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
             _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
-            fill = self._apply_slippage(exit_price, _exit_side)
+            fill = self._apply_slippage(
+                exit_price, _exit_side,
+                order_shares=pos["shares"], bar_volume=_bar_vol,
+            )
             trade = self._build_trade_record(pos, fill, today, "max_loss_cap")
             closed_trades.append(trade)
             equity += trade["pnl"]
@@ -492,6 +546,7 @@ class BacktestEngine:
             today_high = df.loc[today, "high"]
             today_low = df.loc[today, "low"]
             today_close = df.loc[today, "close"]
+            today_volume = float(df.loc[today, "volume"]) if "volume" in df.columns else 0.0
             fill = pos["fill_price"]
             yest_close = (df.loc[_yest, "close"]
                           if _yest is not None and _yest in df.index else None)
@@ -533,7 +588,7 @@ class BacktestEngine:
                     )
                     # Trigger when yesterday's close RISES above the trailing stop ceiling
                     if yest_close is not None and yest_close >= pos["trailing_stop_price"]:
-                        trail_exits.append((pi, today_close))
+                        trail_exits.append((pi, today_close, today_volume))
                         logger.debug(f"TRAIL EXIT (short) {ticker}: yest_close={yest_close:.3f} "
                                      f">= trail_stop={pos['trailing_stop_price']:.3f}")
             else:
@@ -556,15 +611,18 @@ class BacktestEngine:
                         new_trail, pos["stop_price"],
                     )
                     if yest_close is not None and yest_close <= pos["trailing_stop_price"]:
-                        trail_exits.append((pi, today_close))
+                        trail_exits.append((pi, today_close, today_volume))
                         logger.debug(f"TRAIL EXIT {ticker}: yest_close={yest_close:.3f} "
                                      f"<= trail_stop={pos['trailing_stop_price']:.3f}")
 
-        for pi, exit_price in reversed(trail_exits):
+        for pi, exit_price, _bar_vol in reversed(trail_exits):
             pos = open_positions[pi]
             # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
             _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
-            fill = self._apply_slippage(exit_price, _exit_side)
+            fill = self._apply_slippage(
+                exit_price, _exit_side,
+                order_shares=pos["shares"], bar_volume=_bar_vol,
+            )
             # Override stop_price to show trailing stop value
             saved_stop = pos.get("stop_price", 0.0)
             pos["stop_price"] = pos.get("trailing_stop_price", saved_stop)
@@ -825,7 +883,14 @@ class BacktestEngine:
                     # Long entry (buy): slippage raises price (adverse)
                     # Short entry (sell): slippage lowers price (adverse)
                     _entry_side = "buy" if signal.direction == "long" else "sell"
-                    fill_price = self._apply_slippage(today_open, _entry_side)
+                    # order_shares=0 at entry: shares not computed yet, falls back to fixed
+                    _bar_vol_entry = (
+                        float(today_df.loc[today, "volume"])
+                        if "volume" in today_df.columns else 0.0
+                    )
+                    fill_price = self._apply_slippage(
+                        today_open, _entry_side, order_shares=0, bar_volume=_bar_vol_entry
+                    )
 
                     if fill_price <= 0:
                         continue
@@ -928,6 +993,17 @@ class BacktestEngine:
                             )
                             continue
 
+                    # Volume participation check — skip if order too large vs daily volume
+                    if self.volume_participation_limit > 0:
+                        bar_volume = today_df.loc[today, "volume"]
+                        if bar_volume > 0 and shares > bar_volume * self.volume_participation_limit:
+                            logger.debug(
+                                f"SKIP {ticker}: position {shares} shares > "
+                                f"{self.volume_participation_limit*100:.1f}% of volume "
+                                f"({bar_volume:.0f})"
+                            )
+                            continue
+
                     # Entry commission
                     entry_commission = self._calc_commission(position_value)
 
@@ -979,14 +1055,26 @@ class BacktestEngine:
 
             if today_df is not None and close_date in today_df.index:
                 close_price = today_df.loc[close_date, "close"]
+                _fc_bar_vol = (
+                    float(today_df.loc[close_date, "volume"])
+                    if "volume" in today_df.columns else 0.0
+                )
             elif today_df is not None and len(today_df) > 0:
                 close_price = today_df["close"].iloc[-1]
+                _fc_bar_vol = (
+                    float(today_df["volume"].iloc[-1])
+                    if "volume" in today_df.columns else 0.0
+                )
             else:
                 close_price = pos["fill_price"]  # fallback
+                _fc_bar_vol = 0.0
 
             # FIX-1: shorts exit by buying to cover (adverse slippage = price rises)
             _exit_side = "sell" if pos.get("direction", "long") == "long" else "buy"
-            fill_price = self._apply_slippage(close_price, _exit_side)
+            fill_price = self._apply_slippage(
+                close_price, _exit_side,
+                order_shares=pos["shares"], bar_volume=_fc_bar_vol,
+            )
             exit_value = pos["shares"] * fill_price
             exit_commission = self._calc_commission(exit_value)
 
@@ -1058,13 +1146,13 @@ class BacktestEngine:
                 f"Benchmark {self.benchmark_ticker} data unavailable, "
                 f"returning empty metrics"
             )
-            return {"cagr": 0, "max_drawdown": 0, "sharpe": 0, "total_return": 0}
+            return {"cagr": 0, "max_drawdown": 0, "sharpe": 0, "total_return": 0}, pd.Series(dtype=float)
 
         mask = (bench_df.index >= start) & (bench_df.index <= end)
         bench = bench_df.loc[mask, "close"]
 
         if len(bench) < 10:
-            return {"cagr": 0, "max_drawdown": 0, "sharpe": 0, "total_return": 0}
+            return {"cagr": 0, "max_drawdown": 0, "sharpe": 0, "total_return": 0}, pd.Series(dtype=float)
 
         # Simulate buy-and-hold: invest starting_equity at first close
         initial_price = bench.iloc[0]
@@ -1080,7 +1168,7 @@ class BacktestEngine:
             calc_sortino,
         )
 
-        return {
+        metrics_dict = {
             "cagr": calc_cagr(bench_equity),
             "max_drawdown": calc_max_drawdown(bench_equity),
             "sharpe": calc_sharpe(bench_returns),
@@ -1090,6 +1178,7 @@ class BacktestEngine:
             ),
             "final_equity": round(bench_equity.iloc[-1], 2),
         }
+        return metrics_dict, bench_returns
 
     def run_walkforward(
         self,
@@ -1431,21 +1520,37 @@ class BacktestEngine:
         else:
             equity_curve = pd.Series(dtype=float)
 
-        # Calculate strategy metrics
-        metrics = calc_all_metrics(
-            equity_curve=equity_curve,
-            trades=all_trades,
-            positions_log=all_trades,
-            rf=self._risk_free_rate,
-        )
-
-        # Phase1-Fix1: Calculate benchmark metrics (loads data independently)
+        # Phase1-Fix1: Calculate benchmark metrics first (needed for alpha/beta calc)
+        bench_returns = None
         if all_dates is not None and len(all_dates) > 0:
             bench_start = all_dates[self.train_window]  # same start as first test
             bench_end = all_dates[-1]
-            benchmark_metrics = self._calc_benchmark(bench_start, bench_end)
+            benchmark_metrics, bench_returns = self._calc_benchmark(bench_start, bench_end)
         else:
             benchmark_metrics = {}
+
+        # Calculate strategy metrics (pass benchmark_returns for alpha/beta decomposition)
+        # benchmark_returns is optional — handled gracefully if metrics version doesn't
+        # support it yet (backward-compatible with older calc_all_metrics signature)
+        _metrics_extra = {}
+        if bench_returns is not None:
+            _metrics_extra["benchmark_returns"] = bench_returns
+        try:
+            metrics = calc_all_metrics(
+                equity_curve=equity_curve,
+                trades=all_trades,
+                positions_log=all_trades,
+                rf=self._risk_free_rate,
+                **_metrics_extra,
+            )
+        except TypeError:
+            # calc_all_metrics doesn't accept benchmark_returns yet
+            metrics = calc_all_metrics(
+                equity_curve=equity_curve,
+                trades=all_trades,
+                positions_log=all_trades,
+                rf=self._risk_free_rate,
+            )
 
         result = BacktestResult(
             trades=all_trades,
