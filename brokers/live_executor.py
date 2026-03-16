@@ -866,7 +866,7 @@ class LiveExecutor:
             logger.info("DRY RUN: would place %s for %s", log_label, ticker)
             return None
 
-        # Build order kwargs
+        # Build order kwargs — all protective orders use GTC
         if use_trailing:
             # TRAILING_STOP: trail_price is the dollar trail distance (Alpaca)
             order_result = self._broker.place_order(
@@ -877,6 +877,7 @@ class LiveExecutor:
                 order_type=order_type,
                 remark=f"atlas_stop_{strategy}_{trade_date}"[:64],
                 trail_price=trailing_atr,
+                tif="gtc",
             )
         else:
             # Fixed STOP: aux_price is the trigger
@@ -888,6 +889,7 @@ class LiveExecutor:
                 order_type=order_type,
                 stop_price=stop_price,  # trigger price
                 remark=f"atlas_stop_{strategy}_{trade_date}"[:64],
+                tif="gtc",
             )
 
         if not order_result.success:
@@ -931,6 +933,82 @@ class LiveExecutor:
             )
         return result.success
 
+    def place_take_profit(
+        self,
+        ticker: str,
+        qty: int,
+        take_profit: float,
+        strategy: str = "",
+        trade_date: str = "",
+        direction: str = "long",
+    ) -> Optional[str]:
+        """Place a take-profit LIMIT SELL GTC order on the exchange.
+
+        Args:
+            ticker: Position ticker.
+            qty: Number of shares.
+            take_profit: Target limit price.
+            strategy: Strategy name (for remark/journal).
+            trade_date: For remark/journal.
+            direction: "long" or "short".
+
+        Returns:
+            Order ID string if placed, None if failed or dry-run.
+        """
+        if not self._connected or not self._broker:
+            logger.error("Cannot place take-profit — not connected")
+            return None
+
+        # TP side: long = SELL to close, short = BUY to cover
+        if direction == "short":
+            tp_side = OrderSide.BUY
+        else:
+            tp_side = OrderSide.SELL
+
+        logger.info(
+            "Placing take-profit: %s LIMIT %s %d shares @ $%.2f (GTC) [%s]",
+            ticker, tp_side.value, qty, take_profit, strategy,
+        )
+
+        if self.is_dry_run:
+            _journal_entry("dry_run_take_profit", {
+                "ticker": ticker, "qty": qty, "take_profit": take_profit,
+                "strategy": strategy, "direction": direction,
+            })
+            logger.info("DRY RUN: would place TP LIMIT %s %s @ $%.2f",
+                        tp_side.value, ticker, take_profit)
+            return None
+
+        tp_result = self._broker.place_order(
+            ticker=ticker,
+            side=tp_side,
+            qty=qty,
+            price=round(take_profit, 2),
+            order_type=OrderType.LIMIT,
+            remark=f"atlas_tp_{strategy}_{trade_date}"[:64],
+            tif="gtc",
+        )
+
+        if not tp_result.success:
+            logger.error(
+                "Take-profit FAILED for %s: %s", ticker, tp_result.message,
+            )
+            _journal_entry("take_profit_failed", {
+                "ticker": ticker, "error": tp_result.message,
+            })
+            return None
+
+        order_id = tp_result.order_id
+        logger.info(
+            "Take-profit placed: %s LIMIT %s @ $%.2f → order_id=%s",
+            ticker, tp_side.value, take_profit, order_id,
+        )
+        _journal_entry("take_profit_placed", {
+            "ticker": ticker, "order_id": order_id,
+            "take_profit": take_profit, "strategy": strategy,
+        })
+        return order_id
+
     def place_stops_for_plan(
         self,
         plan: dict,
@@ -938,13 +1016,14 @@ class LiveExecutor:
         config: dict,
         trade_date: str,
     ) -> dict[str, str]:
-        """Place protective stops for all successfully filled entries.
+        """Place protective orders for all successfully filled entries.
 
-        Called after execute_plan(). Reads strategy config to determine
-        stop type (fixed vs trailing) and calculates trail amount.
+        Called after execute_plan(). For each filled entry:
+          - If strategy provides take_profit: fixed SL (GTC) + TP limit (GTC)
+          - If no take_profit: trailing stop (GTC) — combined SL + profit capture
 
         Returns:
-            Dict of ticker → stop_order_id for successfully placed stops.
+            Dict of ticker → order_id for successfully placed protective orders.
         """
         stop_orders = {}
         entries = plan.get("proposed_entries", [])
@@ -957,6 +1036,8 @@ class LiveExecutor:
             qty = entry_rec.get("position_size", 0)
             stop_price = entry_rec.get("stop_price", 0)
             strategy = entry_rec.get("strategy", "")
+            take_profit = entry_rec.get("take_profit")
+            direction = entry_rec.get("direction", "long")
 
             if not ticker or not qty or not stop_price:
                 continue
@@ -968,35 +1049,75 @@ class LiveExecutor:
             if entry_status in ("SUBMITTED", "NEW", "ACCEPTED", "PENDING_NEW",
                                 "PENDING", "PARTIALLY_FILLED"):
                 logger.info(
-                    "Skipping immediate stop for %s (order status=%s) — "
-                    "sync_protective_orders will place stop after fill.",
+                    "Skipping immediate protective orders for %s (order status=%s) — "
+                    "sync_protective_orders will place after fill.",
                     ticker, entry_status,
                 )
                 continue
 
-            # Determine if this strategy uses trailing stops
-            strat_cfg = config.get("strategies", {}).get(strategy, {})
-            trailing_mult = strat_cfg.get("trailing_stop_atr_mult", 0)
+            has_tp = take_profit is not None and float(take_profit) > 0
 
-            trailing_atr = 0.0
-            if trailing_mult > 0:
-                # Calculate trail amount from entry signal features
+            if has_tp:
+                # ── Strategy has TP: fixed SL (GTC) + TP limit (GTC) ──
+                # Place fixed SL
+                sl_id = self.place_protective_stop(
+                    ticker=ticker,
+                    qty=qty,
+                    stop_price=stop_price,
+                    strategy=strategy,
+                    trailing_atr=0.0,  # fixed stop, not trailing
+                    trade_date=trade_date,
+                    direction=direction,
+                )
+                if sl_id:
+                    stop_orders[ticker] = sl_id
+
+                # Place TP limit order
+                tp_id = self.place_take_profit(
+                    ticker=ticker,
+                    qty=qty,
+                    take_profit=float(take_profit),
+                    strategy=strategy,
+                    trade_date=trade_date,
+                    direction=direction,
+                )
+                if tp_id:
+                    stop_orders[f"{ticker}_tp"] = tp_id
+
+            else:
+                # ── No TP: trailing stop (GTC) — combined SL + profit capture ──
+                # Trail distance = entry - stop (same initial risk).
+                # Use strategy trailing_stop_atr_mult × ATR if configured,
+                # otherwise fall back to the plan's stop distance.
+                strat_cfg = config.get("strategies", {}).get(strategy, {})
+                trailing_mult = strat_cfg.get("trailing_stop_atr_mult", 0)
                 atr_value = entry_rec.get("features", {}).get("atr", 0)
-                if atr_value > 0:
+
+                if trailing_mult > 0 and atr_value > 0:
                     trailing_atr = round(trailing_mult * atr_value, 4)
+                else:
+                    # Default: use the plan's stop distance as trail
+                    entry_price = entry_rec.get("entry_price", 0)
+                    trailing_atr = round(abs(entry_price - stop_price), 2)
+                    if trailing_atr <= 0:
+                        trailing_atr = round(entry_price * 0.05, 2)
 
-            order_id = self.place_protective_stop(
-                ticker=ticker,
-                qty=qty,
-                stop_price=stop_price,
-                strategy=strategy,
-                trailing_atr=trailing_atr,
-                trade_date=trade_date,
-                direction=entry_rec.get("direction", "long"),
-            )
+                logger.info(
+                    "No TP for %s — placing trailing stop with trail=$%.2f",
+                    ticker, trailing_atr,
+                )
 
-            if order_id:
-                stop_orders[ticker] = order_id
+                order_id = self.place_protective_stop(
+                    ticker=ticker,
+                    qty=qty,
+                    stop_price=stop_price,
+                    strategy=strategy,
+                    trailing_atr=trailing_atr,
+                    trade_date=trade_date,
+                    direction=direction,
+                )
+                if order_id:
+                    stop_orders[ticker] = order_id
 
         return stop_orders
 

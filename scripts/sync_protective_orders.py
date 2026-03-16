@@ -218,18 +218,30 @@ def sync_market(
                 tp_action = tdata.get("tp_action", "")
 
                 # Build SL part of summary
-                if sl_action == "placed":
+                if sl_action == "trailing_placed":
+                    sl_part = (
+                        f"Trailing stop placed trail=${tdata.get('trail_distance', 0):.2f} "
+                        f"qty={tdata.get('qty', '?')} (GTC)"
+                    )
+                elif sl_action == "placed":
                     sl_part = (
                         f"SL placed @ ${tdata.get('stop_price', 0):.2f} "
-                        f"qty={tdata.get('qty', '?')}"
+                        f"qty={tdata.get('qty', '?')} (GTC)"
                     )
                 elif sl_action in ("skipped",):
                     sl_part = "SL exists"
-                elif sl_action == "dry_run_placed":
-                    sl_part = (
-                        f"[DRY RUN] SL @ ${tdata.get('stop_price', 0):.2f} "
-                        f"qty={tdata.get('qty', '?')}"
-                    )
+                elif sl_action in ("dry_run_placed", "dry_run_trailing"):
+                    trail = tdata.get("trail_distance")
+                    if trail:
+                        sl_part = (
+                            f"[DRY RUN] Trailing stop trail=${trail:.2f} "
+                            f"qty={tdata.get('qty', '?')}"
+                        )
+                    else:
+                        sl_part = (
+                            f"[DRY RUN] SL @ ${tdata.get('stop_price', 0):.2f} "
+                            f"qty={tdata.get('qty', '?')}"
+                        )
                 elif sl_action == "error":
                     sl_part = f"SL ERROR: {tdata.get('sl_message') or tdata.get('message', '?')}"
                     tdata["errors"] = [tdata.get("sl_message") or tdata.get("message", "unknown")]

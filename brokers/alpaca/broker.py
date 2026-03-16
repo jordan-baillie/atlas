@@ -455,7 +455,8 @@ class AlpacaBroker(BrokerAdapter):
         self._require_connected()
         alpaca_symbol = mapper.to_alpaca(ticker)
         alpaca_side = _map_side(side)
-        tif = _map_tif(self._tif)
+        tif_str = kwargs.pop("tif", "") or self._tif
+        tif = _map_tif(tif_str)
         # Always append a UUID suffix to guarantee uniqueness across multiple
         # orders with the same strategy/remark on the same day.
         _remark_slug = remark[:10] if remark else "ord"
@@ -616,12 +617,17 @@ class AlpacaBroker(BrokerAdapter):
     ) -> dict:
         """Sync protective SL and TP orders for all live positions.
 
-        Idempotent — existing stop/stop_limit and limit sell orders are
-        detected and skipped.  Only missing SL/TP orders are placed.
+        Idempotent — existing stop/stop_limit/trailing_stop and limit sell
+        orders are detected and skipped.  Only missing orders are placed.
+        All protective orders use GTC (Good Till Cancelled) time-in-force.
 
         For each position:
-          - SL: STOP SELL at stop_price (from plan or 5% fallback)
-          - TP: LIMIT SELL at take_profit price (from plan or position; skipped if none)
+          If strategy provides take_profit:
+            - SL: STOP SELL GTC at stop_price (from plan or 5% fallback)
+            - TP: LIMIT SELL GTC at take_profit price
+          If no take_profit (or current price already past TP):
+            - TRAILING_STOP SELL GTC with trail = entry_price - stop_price
+              (acts as combined SL + profit capture; ratchets up with price)
 
         Args:
             positions:   List of PositionInfo objects (fetched from Alpaca if empty).
@@ -708,7 +714,10 @@ class AlpacaBroker(BrokerAdapter):
                     if t:
                         plan_by_ticker[t] = e
             elif isinstance(plan, dict):
-                entries = plan.get("entries") or plan.get("plan_entries") or []
+                entries = (plan.get("entries")
+                          or plan.get("plan_entries")
+                          or plan.get("proposed_entries")
+                          or [])
                 if entries:
                     for e in entries:
                         t = e.get("ticker", "")
@@ -728,36 +737,57 @@ class AlpacaBroker(BrokerAdapter):
             try:
                 plan_entry = plan_by_ticker.get(ticker, {})
 
-                # ── SL (Stop-Loss) ─────────────────────────────
-                has_sl = ticker in tickers_with_stop
-                if has_sl:
-                    sl_already_exists += 1
-                    ticker_result["sl_action"] = "skipped"
-                    ticker_result["sl_reason"] = "stop_exists"
-                    logger.debug("sync_protective: %s already has stop order — skipping SL", ticker)
-                else:
-                    # Resolve stop price: plan entry → fallback 5% below entry price
-                    stop_price = (
-                        plan_entry.get("stop_price")
-                        or plan_entry.get("sl_price")
-                        or plan_entry.get("stop")
+                # ── Resolve stop price (needed for all paths) ──
+                stop_price = (
+                    plan_entry.get("stop_price")
+                    or plan_entry.get("sl_price")
+                    or plan_entry.get("stop")
+                )
+                if not stop_price:
+                    stop_price = round(pos.entry_price * 0.95, 2)
+                    logger.warning(
+                        "sync_protective: no stop_price in plan for %s (%s) — "
+                        "using 5%% fallback: %.2f",
+                        ticker, trade_date_label, stop_price,
                     )
-                    if not stop_price:
-                        stop_price = round(pos.entry_price * 0.95, 2)
-                        logger.warning(
-                            "sync_protective: no stop_price in plan for %s (%s) — "
-                            "using 5%% fallback: %.2f",
-                            ticker, trade_date_label, stop_price,
-                        )
-                    else:
-                        stop_price = round(float(stop_price), 2)
+                else:
+                    stop_price = round(float(stop_price), 2)
+                ticker_result["stop_price"] = stop_price
 
-                    ticker_result["stop_price"] = stop_price
+                # ── Resolve take-profit ────────────────────────
+                take_profit = (
+                    plan_entry.get("take_profit")
+                    or plan_entry.get("tp_price")
+                    or getattr(pos, "take_profit", None)
+                )
+                has_tp = take_profit is not None and float(take_profit) > 0
 
-                    if dry_run:
+                # If current price already exceeds TP, TP is stale → use trailing stop
+                if has_tp and pos.current_price > float(take_profit) * 1.005:
+                    logger.info(
+                        "sync_protective: %s current $%.2f already past TP $%.2f — "
+                        "using trailing stop instead",
+                        ticker, pos.current_price, float(take_profit),
+                    )
+                    has_tp = False
+
+                has_existing_stop = ticker in tickers_with_stop
+
+                if has_tp:
+                    # ═══ Path A: Strategy has TP → fixed SL (GTC) + fixed TP (GTC) ═══
+                    take_profit = round(float(take_profit), 2)
+                    ticker_result["take_profit"] = take_profit
+
+                    # ── SL (fixed STOP SELL GTC) ───────────────
+                    if has_existing_stop:
+                        sl_already_exists += 1
+                        ticker_result["sl_action"] = "skipped"
+                        ticker_result["sl_reason"] = "stop_exists"
+                        logger.debug("sync_protective: %s already has stop order — skipping SL", ticker)
+                    elif dry_run:
                         logger.info(
                             "sync_protective [DRY RUN]: would place STOP SELL %s "
-                            "qty=%d stop=%.2f",
+                            "qty=%d stop=%.2f (GTC)",
                             ticker, pos.shares, stop_price,
                         )
                         sl_placed += 1
@@ -771,13 +801,14 @@ class AlpacaBroker(BrokerAdapter):
                             order_type=OrderType.STOP,
                             stop_price=stop_price,
                             remark="sync_sl",
+                            tif="gtc",
                         )
                         if sl_result.success:
                             sl_placed += 1
                             ticker_result["sl_action"] = "placed"
                             ticker_result["sl_order_id"] = sl_result.order_id
                             logger.info(
-                                "sync_protective: placed STOP SELL %s qty=%d stop=%.2f → id=%s",
+                                "sync_protective: placed STOP SELL GTC %s qty=%d stop=%.2f → id=%s",
                                 ticker, pos.shares, stop_price, sl_result.order_id,
                             )
                         else:
@@ -789,33 +820,19 @@ class AlpacaBroker(BrokerAdapter):
                                 ticker, sl_result.message,
                             )
 
-                # ── TP (Take-Profit) ───────────────────────────
-                take_profit = (
-                    plan_entry.get("take_profit")
-                    or plan_entry.get("tp_price")
-                    or getattr(pos, "take_profit", None)
-                )
-
-                if not take_profit or float(take_profit) <= 0:
-                    ticker_result["tp_action"] = "skipped"
-                    ticker_result["tp_reason"] = "no_take_profit"
-                    logger.debug("sync_protective: no take_profit for %s — skipping TP", ticker)
-                elif ticker in tickers_with_tp and _prices_match(tickers_with_tp[ticker], float(take_profit)):
-                    tp_already_exists += 1
-                    ticker_result["tp_action"] = "skipped"
-                    ticker_result["tp_reason"] = "tp_exists"
-                    logger.debug(
-                        "sync_protective: %s already has LIMIT SELL @ %.2f (matches TP %.2f) — skipping",
-                        ticker, tickers_with_tp[ticker], float(take_profit),
-                    )
-                else:
-                    take_profit = round(float(take_profit), 2)
-                    ticker_result["take_profit"] = take_profit
-
-                    if dry_run:
+                    # ── TP (LIMIT SELL GTC) ────────────────────
+                    if ticker in tickers_with_tp and _prices_match(tickers_with_tp[ticker], take_profit):
+                        tp_already_exists += 1
+                        ticker_result["tp_action"] = "skipped"
+                        ticker_result["tp_reason"] = "tp_exists"
+                        logger.debug(
+                            "sync_protective: %s already has LIMIT SELL @ %.2f (matches TP %.2f) — skipping",
+                            ticker, tickers_with_tp[ticker], take_profit,
+                        )
+                    elif dry_run:
                         logger.info(
                             "sync_protective [DRY RUN]: would place LIMIT SELL %s "
-                            "qty=%d tp=%.2f",
+                            "qty=%d tp=%.2f (GTC)",
                             ticker, pos.shares, take_profit,
                         )
                         tp_placed += 1
@@ -828,13 +845,14 @@ class AlpacaBroker(BrokerAdapter):
                             price=take_profit,
                             order_type=OrderType.LIMIT,
                             remark="sync_tp",
+                            tif="gtc",
                         )
                         if tp_result.success:
                             tp_placed += 1
                             ticker_result["tp_action"] = "placed"
                             ticker_result["tp_order_id"] = tp_result.order_id
                             logger.info(
-                                "sync_protective: placed LIMIT SELL %s qty=%d tp=%.2f → id=%s",
+                                "sync_protective: placed LIMIT SELL GTC %s qty=%d tp=%.2f → id=%s",
                                 ticker, pos.shares, take_profit, tp_result.order_id,
                             )
                         else:
@@ -844,6 +862,68 @@ class AlpacaBroker(BrokerAdapter):
                             logger.error(
                                 "sync_protective: TP place_order failed for %s: %s",
                                 ticker, tp_result.message,
+                            )
+
+                else:
+                    # ═══ Path B: No TP → trailing stop GTC (combined SL + profit capture) ═══
+                    # Trail distance = entry - stop (same initial risk distance).
+                    # As price rises, the trailing stop ratchets up automatically.
+                    trail_distance = round(pos.entry_price - stop_price, 2)
+                    if trail_distance <= 0:
+                        trail_distance = round(pos.entry_price * 0.05, 2)
+                    ticker_result["trail_distance"] = trail_distance
+
+                    if has_existing_stop:
+                        sl_already_exists += 1
+                        ticker_result["sl_action"] = "skipped"
+                        ticker_result["sl_reason"] = "stop_exists"
+                        ticker_result["tp_action"] = "skipped"
+                        ticker_result["tp_reason"] = "trailing_stop_covers"
+                        logger.debug(
+                            "sync_protective: %s already has stop order — "
+                            "skipping trailing stop", ticker,
+                        )
+                    elif dry_run:
+                        logger.info(
+                            "sync_protective [DRY RUN]: would place TRAILING_STOP SELL %s "
+                            "qty=%d trail=$%.2f (GTC, no TP → trailing)",
+                            ticker, pos.shares, trail_distance,
+                        )
+                        sl_placed += 1
+                        ticker_result["sl_action"] = "dry_run_trailing"
+                        ticker_result["tp_action"] = "trailing"
+                        ticker_result["tp_reason"] = "no_tp_using_trailing"
+                    else:
+                        trail_result = self.place_order(
+                            ticker=ticker,
+                            side=OrderSide.SELL,
+                            qty=pos.shares,
+                            price=0.0,
+                            order_type=OrderType.TRAILING_STOP,
+                            remark="sync_trail",
+                            tif="gtc",
+                            trail_price=trail_distance,
+                        )
+                        if trail_result.success:
+                            sl_placed += 1
+                            ticker_result["sl_action"] = "trailing_placed"
+                            ticker_result["sl_order_id"] = trail_result.order_id
+                            ticker_result["tp_action"] = "trailing"
+                            ticker_result["tp_reason"] = "no_tp_using_trailing"
+                            logger.info(
+                                "sync_protective: placed TRAILING_STOP SELL GTC %s "
+                                "qty=%d trail=$%.2f → id=%s",
+                                ticker, pos.shares, trail_distance,
+                                trail_result.order_id,
+                            )
+                        else:
+                            errors += 1
+                            ticker_result["sl_action"] = "error"
+                            ticker_result["sl_error"] = trail_result.message
+                            ticker_result["tp_action"] = "error"
+                            logger.error(
+                                "sync_protective: trailing stop failed for %s: %s",
+                                ticker, trail_result.message,
                             )
 
                 # Build combined action summary
@@ -1066,7 +1146,7 @@ def _summarise_ticker_action(ticker_result: dict) -> str:
     """Build a combined action string from SL and TP sub-actions.
 
     Returns a human-readable summary like 'sl_placed+tp_placed',
-    'sl_skipped+tp_skipped', etc.
+    'trailing_placed', 'sl_skipped+tp_skipped', etc.
     """
     sl = ticker_result.get("sl_action", "unknown")
     tp = ticker_result.get("tp_action", "unknown")
@@ -1074,6 +1154,9 @@ def _summarise_ticker_action(ticker_result: dict) -> str:
     # If both errored, overall is 'error'
     if sl == "error" and tp == "error":
         return "error"
+    # Trailing stop covers both SL and TP
+    if "trailing" in sl:
+        return "trailing_placed" if "placed" in sl else "trailing_exists"
     # If either placed something, reflect that
     if "placed" in sl or "placed" in tp:
         parts = []

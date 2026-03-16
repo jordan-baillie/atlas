@@ -25,9 +25,9 @@
     "require_planned_exit": true,
     "min_confidence": 0.65,
     "trailing_stop": {
-      "enabled": false,
+      "enabled": true,
       "activation_pct": 0.02,
-      "atr_multiplier": 1.5
+      "atr_multiplier": 2.0
     }
   },
   "trading": {
