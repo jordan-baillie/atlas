@@ -4,16 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-16 07:06 | keltner_reversion | 1.5 → 2.5 | ❌ discard | -0.3434 | -0.3352 |
-| 2026-03-16 07:06 | keltner_reversion | 1.5 → 2.0 | ❌ discard | -0.1736 | -0.1654 |
-| 2026-03-16 10:08 | adx_trend_pullback | 1.5 → 2.5 | ❌ discard | -0.4454 | 0.4739 |
-| 2026-03-16 10:08 | adx_trend_pullback | 1.5 → 2.0 | ❌ discard | -0.4450 | 0.4743 |
-| 2026-03-16 10:08 | adx_trend_pullback | 1.5 → 3.0 | ❌ discard | -0.4574 | 0.4619 |
-| 2026-03-16 10:14 | demark_sequential | 1.5 → 2.5 | ❌ discard | -0.7810 | 0.1854 |
-| 2026-03-16 10:14 | demark_sequential | 1.5 → 2.0 | ❌ discard | -0.7626 | 0.2038 |
-| 2026-03-16 10:14 | demark_sequential | 1.5 → 3.0 | ❌ discard | -0.8908 | 0.0756 |
-| 2026-03-16 10:19 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -0.4683 | 0.4919 |
-| 2026-03-16 10:19 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -0.4536 | 0.5066 |
 | 2026-03-16 10:19 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -0.5105 | 0.4497 |
 | 2026-03-16 10:25 | williams_percent_r | 1.5 → 3.0 | ❌ discard | -2.3399 | -1.3735 |
 | 2026-03-16 10:25 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -1.5472 | -0.5808 |
@@ -54,3 +44,13 @@
 | 2026-03-16 13:08 | adx_trend_pullback | 1.5 → 3.0 | ❌ discard | -0.4889 | 0.4628 |
 | 2026-03-16 13:08 | adx_trend_pullback | 1.5 → 2.5 | ❌ discard | -0.4767 | 0.4750 |
 | 2026-03-16 13:08 | adx_trend_pullback | 1.5 → 2.0 | ❌ discard | -0.4769 | 0.4748 |
+| 2026-03-16 13:16 | consecutive_down_days | None → 2.0 | ❌ discard | -0.4305 | 0.4923 |
+| 2026-03-16 13:16 | consecutive_down_days | None → 2.5 | ❌ discard | -0.4179 | 0.5049 |
+| 2026-03-16 13:16 | consecutive_down_days | None → 1.5 | ❌ discard | -0.4312 | 0.4916 |
+| 2026-03-16 13:16 | consecutive_down_days | None → 3.0 | ❌ discard | -0.4178 | 0.5050 |
+| 2026-03-16 13:22 | demark_sequential | 1.5 → 3.0 | ❌ discard | -0.8946 | 0.0825 |
+| 2026-03-16 13:22 | demark_sequential | 1.5 → 2.0 | ❌ discard | -0.7658 | 0.2113 |
+| 2026-03-16 13:22 | demark_sequential | 1.5 → 2.5 | ❌ discard | -0.7832 | 0.1939 |
+| 2026-03-16 13:27 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -0.5212 | 0.4553 |
+| 2026-03-16 13:27 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -0.4689 | 0.5076 |
+| 2026-03-16 13:27 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -0.4847 | 0.4918 |

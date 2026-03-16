@@ -44,3 +44,6 @@
 | 2026-03-16 10:18 | donchian_breakout | 20 → 50 | ❌ discard | -0.8056 | 0.1546 |
 | 2026-03-16 10:18 | donchian_breakout | 20 → 10 | ❌ discard | -0.6302 | 0.3300 |
 | 2026-03-16 10:18 | donchian_breakout | 20 → 30 | ❌ discard | -0.7574 | 0.2028 |
+| 2026-03-16 13:26 | donchian_breakout | 20 → 50 | ❌ discard | -0.8157 | 0.1608 |
+| 2026-03-16 13:26 | donchian_breakout | 20 → 30 | ❌ discard | -0.7720 | 0.2045 |
+| 2026-03-16 13:26 | donchian_breakout | 20 → 10 | ❌ discard | -0.6362 | 0.3403 |

@@ -313,32 +313,6 @@ class LiveExecutor:
             "errors": [],
         }
 
-        # Preflight: filter short entries when short_enabled=False
-        _plan_entries = plan.get("proposed_entries", [])
-        _filtered_entries = []
-        for _entry in _plan_entries:
-            if _entry.get("direction") == "short":
-                _short_enabled = (
-                    self.config.get("mean_reversion", {}).get("short_enabled", False)
-                    or self.config.get("strategies", {}).get(
-                        _entry.get("strategy", "mean_reversion"), {}
-                    ).get("short_enabled", False)
-                )
-                if not _short_enabled:
-                    logger.warning(
-                        "Short entry rejected — short_enabled=false: %s",
-                        _entry.get("ticker"),
-                    )
-                    _journal_entry("short_entry_rejected", {
-                        "ticker": _entry.get("ticker"), "trade_date": trade_date,
-                        "reason": "short_enabled=false",
-                    })
-                    continue
-            _filtered_entries.append(_entry)
-        if len(_filtered_entries) != len(_plan_entries):
-            plan = dict(plan)  # shallow copy — don't mutate original
-            plan["proposed_entries"] = _filtered_entries
-
         # Execute exits first (frees cash) — protective orders always proceed
         for exit_rec in plan.get("proposed_exits", []):
             result = self._execute_exit(exit_rec, trade_date)
@@ -432,12 +406,8 @@ class LiveExecutor:
         confidence = entry.get("confidence", 0)
         stop_price = entry.get("stop_price", 0)
 
-        # Direction: long = BUY to open, short = SELL to open
-        direction = entry.get("direction", "long")
-        if direction == "short":
-            order_side = OrderSide.SELL  # short sell to open
-        else:
-            order_side = OrderSide.BUY  # buy to open
+        direction = "long"
+        order_side = OrderSide.BUY
         side_label = order_side.value
 
         # Pre-flight check
@@ -611,15 +581,7 @@ class LiveExecutor:
         except Exception:
             pass
 
-        # Refine direction from live position if it has direction info (dict fallback)
-        if isinstance(pos, dict):
-            direction = pos.get("direction", direction)
-
-        # Exit order side: long = SELL to close, short = BUY to cover
-        if direction == "short":
-            exit_side = OrderSide.BUY   # buy to cover short position
-        else:
-            exit_side = OrderSide.SELL  # sell to close long position
+        exit_side = OrderSide.SELL
         exit_side_label = exit_side.value
 
         # Pre-flight check
@@ -767,13 +729,8 @@ class LiveExecutor:
                 from journal.logger import TradeLedger
                 _ledger = TradeLedger()
                 _fill_price = result.get("fill_price") or _exit_price
-                # Short PnL: profit when price falls (entry - fill); long: (fill - entry)
-                if direction == "short":
-                    _pnl = round((entry_price - _fill_price) * qty, 2) if entry_price else None
-                    _pnl_pct = round((entry_price - _fill_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
-                else:
-                    _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
-                    _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
+                _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
+                _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
                 _ledger.record_exit({
                     "ticker": ticker,
                     "strategy": pos.strategy if pos and hasattr(pos, 'strategy') else "",
@@ -813,7 +770,6 @@ class LiveExecutor:
         """Place a protective STOP or TRAILING_STOP on the exchange.
 
         For long positions: STOP SELL (triggers below entry).
-        For short positions: STOP BUY (triggers above entry, buy-to-cover).
 
         Called after an entry LIMIT order fills. Returns the stop order ID,
         or None on failure.
@@ -827,7 +783,7 @@ class LiveExecutor:
                          instead of a fixed STOP. Calculated as
                          trailing_stop_atr_mult × ATR at entry time.
             trade_date: For remark/journal.
-            direction: "long" or "short" — determines stop order side.
+            direction: Trade direction (always "long").
 
         Returns:
             Order ID string if placed, None if failed or dry-run.
@@ -836,11 +792,7 @@ class LiveExecutor:
             logger.error("Cannot place protective stop — not connected")
             return None
 
-        # Stop order side: long positions close with SELL, short positions cover with BUY
-        if direction == "short":
-            stop_side = OrderSide.BUY   # buy-to-cover stop for short position
-        else:
-            stop_side = OrderSide.SELL  # sell stop for long position
+        stop_side = OrderSide.SELL
         stop_side_label = stop_side.value
 
         use_trailing = trailing_atr > 0
@@ -950,7 +902,7 @@ class LiveExecutor:
             take_profit: Target limit price.
             strategy: Strategy name (for remark/journal).
             trade_date: For remark/journal.
-            direction: "long" or "short".
+            direction: Trade direction (always "long").
 
         Returns:
             Order ID string if placed, None if failed or dry-run.
@@ -959,11 +911,7 @@ class LiveExecutor:
             logger.error("Cannot place take-profit — not connected")
             return None
 
-        # TP side: long = SELL to close, short = BUY to cover
-        if direction == "short":
-            tp_side = OrderSide.BUY
-        else:
-            tp_side = OrderSide.SELL
+        tp_side = OrderSide.SELL
 
         logger.info(
             "Placing take-profit: %s LIMIT %s %d shares @ $%.2f (GTC) [%s]",

@@ -4,8 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-15 02:32 | demark_sequential | None → False | ❌ discard | +0.0000 | -1.7879 |
-| 2026-03-15 02:34 | donchian_breakout | None → True | ❌ discard | +0.0000 | 0.3649 |
 | 2026-03-15 02:34 | donchian_breakout | None → False | ❌ discard | -0.1416 | 0.2233 |
 | 2026-03-15 03:06 | stochastic_oversold | None → True | ❌ discard | +0.0000 | 0.3991 |
 | 2026-03-15 03:06 | stochastic_oversold | None → False | ❌ discard | +0.0007 | 0.3998 |
@@ -54,3 +52,5 @@
 | 2026-03-16 11:48 | heikin_ashi_reversal | None → False | ❌ discard | -2.4008 | -1.4345 |
 | 2026-03-16 12:02 | overnight_return | None → True | ❌ discard | -2.6003 | -1.6731 |
 | 2026-03-16 12:02 | overnight_return | None → False | ❌ discard | -2.4383 | -1.5111 |
+| 2026-03-16 13:18 | consecutive_down_days | False → True | ❌ discard | -0.6808 | 0.2420 |
+| 2026-03-16 13:23 | demark_sequential | True → False | ❌ discard | -0.8200 | 0.1571 |

@@ -4,13 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-16 10:09 | adx_trend_pullback | 7 → 15 | ❌ discard | -0.4715 | 0.4478 |
-| 2026-03-16 10:09 | adx_trend_pullback | 7 → 10 | ❌ discard | -0.4729 | 0.4464 |
-| 2026-03-16 10:09 | adx_trend_pullback | 7 → 5 | ❌ discard | -0.5148 | 0.4045 |
-| 2026-03-16 10:14 | demark_sequential | 7 → 10 | ❌ discard | -0.8932 | 0.0732 |
-| 2026-03-16 10:14 | demark_sequential | 7 → 15 | ❌ discard | -0.8329 | 0.1335 |
-| 2026-03-16 10:14 | demark_sequential | 7 → 5 | ❌ discard | -1.1079 | -0.1415 |
-| 2026-03-16 10:19 | donchian_breakout | 30 → 10 | ❌ discard | -0.6809 | 0.2793 |
 | 2026-03-16 10:19 | donchian_breakout | 30 → 20 | ❌ discard | -1.6164 | -0.6562 |
 | 2026-03-16 10:19 | donchian_breakout | 30 → 15 | ❌ discard | -1.9993 | -1.0391 |
 | 2026-03-16 10:26 | williams_percent_r | 7 → 5 | ❌ discard | -1.7913 | -0.8249 |
@@ -54,3 +47,10 @@
 | 2026-03-16 13:09 | adx_trend_pullback | 7 → 15 | ❌ discard | -0.5038 | 0.4479 |
 | 2026-03-16 13:09 | adx_trend_pullback | 7 → 5 | ❌ discard | -0.5461 | 0.4056 |
 | 2026-03-16 13:09 | adx_trend_pullback | 7 → 10 | ❌ discard | -0.5044 | 0.4473 |
+| 2026-03-16 13:17 | consecutive_down_days | None → 3 | ❌ discard | -0.4283 | 0.4945 |
+| 2026-03-16 13:17 | consecutive_down_days | None → 5 | ❌ discard | -0.4305 | 0.4923 |
+| 2026-03-16 13:17 | consecutive_down_days | None → 7 | ❌ discard | -0.4313 | 0.4915 |
+| 2026-03-16 13:17 | consecutive_down_days | None → 10 | ❌ discard | -0.4322 | 0.4906 |
+| 2026-03-16 13:22 | demark_sequential | 7 → 5 | ❌ discard | -1.1006 | -0.1235 |
+| 2026-03-16 13:22 | demark_sequential | 7 → 10 | ❌ discard | -0.8957 | 0.0814 |
+| 2026-03-16 13:22 | demark_sequential | 7 → 15 | ❌ discard | -0.8346 | 0.1425 |
