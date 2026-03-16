@@ -178,8 +178,8 @@ TELEGRAM: Only send a notification if you actually FIXED something:
   python3 -c \"import sys; sys.path.insert(0,'/root/atlas'); from utils.telegram import send_message; send_message('''YOUR_MSG''')\"
 
 Rules:
-- ONLY send Telegram if you applied a fix (restarted a service, cleaned logs, refreshed data, etc.)
-- Do NOT send Telegram if you just observed issues but couldn't or didn't fix anything
+- Send Telegram if you applied a fix (restarted a service, cleaned logs, refreshed data, etc.)
+- Send Telegram if there are issues you CANNOT fix (needs manual intervention)
 - Do NOT send Telegram for warnings that are informational only (weekend gaps, expected states)
 - Keep it under 10 lines, use HTML (<b>, <code>)
 - Be concise — this runs every hour, nobody wants a novel"
