@@ -164,7 +164,7 @@ class JobManager:
 
         pi_cmd_parts = [
             "pi", "--print", "--no-session",
-            "--model", "claude-sonnet-4-6",
+            "--model", "claude-opus-4-6",
             "--append-system-prompt",
         ]
         # System prompt must be quoted as a single shell argument
