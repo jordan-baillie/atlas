@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0a0a0a" id="meta-theme">
+<meta name="theme-color" content="#09090b" id="meta-theme">
 <title>Atlas Dashboard</title>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atlas.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
 
   <!-- ── Header ── -->
   <header class="header">
-    <div class="logo">Atlas</div>
+    <div class="logo">▲ Atlas</div>
     <div class="header-right">
       <div class="market-clocks" id="market-clocks"></div>
       <button class="theme-btn" id="theme-btn" title="Toggle theme (L)">◑</button>
@@ -65,14 +65,14 @@
 
 // ── Strategy colour map ──────────────────────────────────────
 var STRATEGY_COLORS = {
-  momentum_breakout: '#fb923c',
-  mean_reversion:    '#60a5fa',
-  trend_following:   '#4ade80',
-  opening_gap:       '#fbbf24',
-  sector_rotation:   '#c084fc',
-  short_term_mr:     '#22d3ee',
-  connors_rsi2:      '#fb7185',
-  manual:            '#9ca3af'
+  momentum_breakout: '#f97316',
+  mean_reversion:    '#6366f1',
+  trend_following:   '#22c55e',
+  opening_gap:       '#eab308',
+  sector_rotation:   '#a855f7',
+  short_term_mr:     '#06b6d4',
+  connors_rsi2:      '#f43f5e',
+  manual:            '#71717a'
 };
 
 // ── Theme ────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ function applyTheme(t) {
     ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
     : t;
   document.documentElement.setAttribute('data-theme', eff);
-  document.getElementById('meta-theme').content = eff === 'light' ? '#fafafa' : '#0a0a0a';
+  document.getElementById('meta-theme').content = eff === 'light' ? '#fafafa' : '#09090b';
   localStorage.setItem('atlas-theme', t);
 }
 
@@ -97,6 +97,7 @@ document.getElementById('theme-btn').onclick = function() {
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'l' || e.key === 'L') {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     var idx = (THEMES.indexOf(currentTheme) + 1) % THEMES.length;
     applyTheme(THEMES[idx]);
     if (window._chartData) drawChart(window._chartData);
@@ -122,7 +123,7 @@ function fmtCcy(v, ccy) {
 
 function fmtPct(v) {
   if (v == null || isNaN(v)) return '—';
-  return (v >= 0 ? '+' : '-') + Math.abs(v).toFixed(2) + '%';
+  return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
 }
 
 function pnlClass(v) { return v > 0 ? 'green' : v < 0 ? 'red' : ''; }
@@ -199,13 +200,13 @@ function tickClocks() {
 
 // ── Sparkline SVG ────────────────────────────────────────────
 function renderSparkline(prices, pnlPct) {
-  var w = 100, h = 32;
+  var w = 120, h = 36;
   var color = (pnlPct || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+  var colorFill = (pnlPct || 0) >= 0 ? 'var(--green-soft)' : 'var(--red-soft)';
 
   if (!prices || prices.length < 2) {
-    // Not enough data — show flat line
-    return '<svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:32px">' +
-      '<line x1="0" y1="16" x2="100" y2="16" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.3"/></svg>';
+    return '<svg viewBox="0 0 120 36" preserveAspectRatio="none" style="width:100%;height:36px">' +
+      '<line x1="0" y1="18" x2="120" y2="18" stroke="' + color + '" stroke-width="1" stroke-opacity="0.2"/></svg>';
   }
 
   var minV = Math.min.apply(null, prices);
@@ -219,7 +220,13 @@ function renderSparkline(prices, pnlPct) {
     return x.toFixed(1) + ',' + y.toFixed(1);
   });
 
-  return '<svg viewBox="0 0 100 32" preserveAspectRatio="none" style="width:100%;height:32px">' +
+  // Build fill path (area under curve)
+  var fillPts = pts.slice();
+  fillPts.push(w + ',' + h);
+  fillPts.push('0,' + h);
+
+  return '<svg viewBox="0 0 120 36" preserveAspectRatio="none" style="width:100%;height:36px">' +
+    '<polygon points="' + fillPts.join(' ') + '" fill="' + colorFill + '" />' +
     '<polyline points="' + pts.join(' ') +
     '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
     '</svg>';
@@ -230,18 +237,15 @@ function renderPositions(data) {
   var grid = document.getElementById('positions-grid');
   var label = document.getElementById('positions-label');
 
-  // Flat positions array from simple dashboard data — no assembly needed
   var positions = (data.positions || []).slice();
-
-  // Sort by absolute P&L descending
   positions.sort(function(a, b) { return Math.abs(b.pnl_local || 0) - Math.abs(a.pnl_local || 0); });
 
   label.textContent = 'Open Positions (' + positions.length + ')';
 
   if (!positions.length) {
     var strategies = 7;
-    grid.innerHTML = '<div class="empty-state">Waiting for signals — ' +
-      strategies + ' strategies active</div>';
+    grid.innerHTML = '<div class="empty-state">No open positions — ' +
+      strategies + ' strategies scanning for signals</div>';
     return;
   }
 
@@ -252,8 +256,9 @@ function renderPositions(data) {
     var mktLabel = p.market === 'asx' ? 'ASX' : (p.market === 'sp500' ? 'SP500' : 'USD');
     var ccy      = (p.currency && p.currency.toUpperCase() === 'AUD') ? 'AUD' : 'USD';
     var strat    = p.strategy || 'manual';
-    var stratColor = STRATEGY_COLORS[strat] || '#9ca3af';
+    var stratColor = STRATEGY_COLORS[strat] || '#71717a';
     var pnlDisp  = p.pnl_display || ((isPos ? '+' : '') + fmtCcy(pnl, ccy));
+    var stratLabel = strat.replace(/_/g, ' ');
 
     return '<div class="pos-card' + (isPos ? '' : ' negative') + '" ' +
       'data-ticker="' + (p.ticker || '') + '">' +
@@ -261,21 +266,21 @@ function renderPositions(data) {
         '<span class="card-ticker">' + (p.ticker || '—') + '</span>' +
         '<span class="market-pill">' + mktLabel + '</span>' +
       '</div>' +
-      '<span class="strategy-pill" style="background:' + stratColor + '22;color:' + stratColor + ';border:1px solid ' + stratColor + '44">' + strat + '</span>' +
+      '<span class="strategy-pill" style="background:' + stratColor + '15;color:' + stratColor + ';border:1px solid ' + stratColor + '30">' + stratLabel + '</span>' +
       '<div class="card-prices">' +
         '<span><span class="label">Entry</span><span class="val">' + fmtCcy(p.entry_price, ccy) + '</span></span>' +
-        '<span><span class="label">Now</span>' +
+        '<span><span class="label">Current</span>' +
           '<span class="val live-price" data-ticker="' + (p.ticker || '') + '">' + fmtCcy(p.current_price, ccy) + '</span>' +
         '</span>' +
-        (p.stop_price ? '<span><span class="label">Stop</span><span class="val">' + fmtCcy(p.stop_price, ccy) + '</span></span>' : '') +
+        (p.stop_price ? '<span><span class="label">Stop</span><span class="val" style="color:var(--red)">' + fmtCcy(p.stop_price, ccy) + '</span></span>' : '') +
       '</div>' +
       '<div class="card-pnl ' + pnlClass(pnl) + '" data-ticker="' + (p.ticker || '') + '">' +
         pnlDisp +
-        ' <span style="font-size:12px;opacity:0.8">(' + fmtPct(pnlPct) + ')</span>' +
+        ' <span style="font-size:12px;opacity:0.6;font-weight:400">(' + fmtPct(pnlPct) + ')</span>' +
       '</div>' +
       '<div class="card-meta">' +
-        (p.days_held != null ? p.days_held + 'd held' : '') +
-        (p.sector && p.sector !== 'Unknown' ? ' · ' + p.sector : '') +
+        (p.days_held ? p.days_held + 'd held' : '') +
+        (p.sector && p.sector !== 'Unknown' ? (p.days_held ? ' · ' : '') + p.sector : '') +
       '</div>' +
       '<div class="sparkline">' + renderSparkline(p.sparkline || [], pnlPct) + '</div>' +
     '</div>';
@@ -299,7 +304,7 @@ function renderSummary(data) {
   // Today P&L
   var today = s.today_pnl_aud || 0;
   var todEl = document.getElementById('stat-today');
-  todEl.textContent = (today >= 0 ? '+' : '') + fmtCcy(today, 'AUD');
+  todEl.textContent = (today >= 0 ? '+' : '-') + fmtCcy(today, 'AUD');
   todEl.className   = 'stat-value ' + pnlClass(today);
 
   // Position count
@@ -319,7 +324,7 @@ function drawChart(curve) {
 
   var dpr = window.devicePixelRatio || 1;
   var w   = canvas.offsetWidth;
-  var h   = 200;
+  var h   = canvas.offsetHeight || 240;
   canvas.width  = w * dpr;
   canvas.height = h * dpr;
   canvas.style.width  = w + 'px';
@@ -329,15 +334,23 @@ function drawChart(curve) {
   ctx.scale(dpr, dpr);
 
   var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  var lineColor = isDark ? '#4ade80' : '#16a34a';
+  var lineColor = isDark ? '#22c55e' : '#16a34a';
+  var gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  var labelColor = isDark ? '#52525b' : '#a1a1aa';
 
   var vals  = curve.map(function(d) { return d.equity_aud || d.equity || 0; });
   var dates = curve.map(function(d) { return d.date; });
   var minV  = Math.min.apply(null, vals);
   var maxV  = Math.max.apply(null, vals);
-  var range = maxV - minV || 1;
 
-  var pad = { t: 10, r: 10, b: 36, l: 60 };
+  // Add 5% padding to Y range
+  var yRange = maxV - minV || 1;
+  var yPad   = yRange * 0.08;
+  minV -= yPad;
+  maxV += yPad;
+  var range = maxV - minV;
+
+  var pad = { t: 16, r: 16, b: 40, l: 64 };
   var cw  = w - pad.l - pad.r;
   var ch  = h - pad.t - pad.b;
 
@@ -346,63 +359,86 @@ function drawChart(curve) {
 
   ctx.clearRect(0, 0, w, h);
 
-  // Y-axis labels (3-4 values)
-  ctx.fillStyle = isDark ? '#71717a' : '#71717a';
+  // ── Grid lines and Y-axis labels ──
   ctx.font = '11px JetBrains Mono, monospace';
   ctx.textAlign = 'right';
-  var ySteps = 3;
+  var ySteps = 4;
   for (var yi = 0; yi <= ySteps; yi++) {
     var yv = minV + (yi / ySteps) * range;
     var yp = yOf(yv);
-    ctx.fillText('$' + Math.round(yv).toLocaleString(), pad.l - 6, yp + 4);
-    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+
+    // Grid line
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, yp);
+    ctx.lineTo(pad.l + cw, yp);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.fillStyle = labelColor;
+    ctx.fillText('$' + Math.round(yv).toLocaleString(), pad.l - 10, yp + 4);
   }
 
-  // X-axis date labels (~5 evenly spaced)
+  // ── X-axis date labels ──
   ctx.textAlign = 'center';
   var xCount = Math.min(6, curve.length);
-  var step   = Math.floor((curve.length - 1) / Math.max(xCount - 1, 1));
+  var step   = Math.max(1, Math.floor((curve.length - 1) / Math.max(xCount - 1, 1)));
   for (var xi = 0; xi < curve.length; xi += step) {
     var xp = xOf(xi);
     var dl = dates[xi] || '';
-    var parts = dl.split('-');
-    var label = parts.length === 3 ? parts[1] + '/' + parts[2] : dl;
-    ctx.fillStyle = isDark ? '#71717a' : '#71717a';
-    ctx.fillText(label, xp, h - 8);
+    var dParts = dl.split('-');
+    var monthNames = ['', 'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var xLabel = dParts.length === 3
+      ? monthNames[parseInt(dParts[1])] + ' ' + parseInt(dParts[2])
+      : dl;
+    ctx.fillStyle = labelColor;
+    ctx.fillText(xLabel, xp, h - 12);
+
+    // Vertical grid
+    if (xi > 0 && xi < curve.length - 1) {
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(xp, pad.t);
+      ctx.lineTo(xp, pad.t + ch);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   if (curve.length === 0) return;
 
-  // Gradient fill
-  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-  grad.addColorStop(0, isDark ? 'rgba(74,222,128,0.18)' : 'rgba(22,163,74,0.12)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-
-  // Draw path
-  ctx.beginPath();
+  // ── Single point ──
   if (curve.length === 1) {
-    // Single dot
+    ctx.beginPath();
     ctx.arc(xOf(0), yOf(vals[0]), 4, 0, Math.PI * 2);
     ctx.fillStyle = lineColor;
     ctx.fill();
     return;
   }
 
+  // ── Area gradient fill ──
+  ctx.beginPath();
   ctx.moveTo(xOf(0), yOf(vals[0]));
   for (var i = 1; i < curve.length; i++) {
     ctx.lineTo(xOf(i), yOf(vals[i]));
   }
-
-  // Fill
   ctx.lineTo(xOf(curve.length - 1), pad.t + ch);
   ctx.lineTo(xOf(0), pad.t + ch);
   ctx.closePath();
+
+  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, isDark ? 'rgba(34,197,94,0.15)' : 'rgba(22,163,74,0.10)');
+  grad.addColorStop(0.6, isDark ? 'rgba(34,197,94,0.04)' : 'rgba(22,163,74,0.03)');
+  grad.addColorStop(1, 'transparent');
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Line (animate draw-in on first render)
+  // ── Line ──
   ctx.beginPath();
   ctx.moveTo(xOf(0), yOf(vals[0]));
   for (var j = 1; j < curve.length; j++) {
@@ -414,15 +450,27 @@ function drawChart(curve) {
   ctx.lineCap     = 'round';
   ctx.stroke();
 
+  // ── Data point dots ──
+  for (var k = 0; k < curve.length; k++) {
+    ctx.beginPath();
+    ctx.arc(xOf(k), yOf(vals[k]), 3, 0, Math.PI * 2);
+    ctx.fillStyle = isDark ? '#131316' : '#ffffff';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(xOf(k), yOf(vals[k]), 3, 0, Math.PI * 2);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
   // Store layout for hover
   canvas._chart = { pad: pad, cw: cw, ch: ch, vals: vals, dates: dates, minV: minV, range: range, curve: curve };
 }
 
-// Chart hover tooltip
+// ── Chart hover tooltip ──
 (function() {
   var canvas  = document.getElementById('equity-canvas');
   var tooltip = document.getElementById('chart-tooltip');
-  var animDone = false;
 
   function onMove(e) {
     if (!canvas._chart) return;
@@ -435,10 +483,20 @@ function drawChart(curve) {
     idx = Math.max(0, Math.min(n - 1, idx));
     var val  = c.curve[idx].equity_aud || c.curve[idx].equity || 0;
     var date = c.curve[idx].date || '';
+
+    // Format date nicely
+    var dp = date.split('-');
+    var monthNames = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var niceDate = dp.length === 3 ? monthNames[parseInt(dp[1])] + ' ' + parseInt(dp[2]) + ', ' + dp[0] : date;
+
     tooltip.style.opacity  = '1';
-    tooltip.style.left     = (mx + 12) + 'px';
-    tooltip.style.top      = '40px';
-    tooltip.textContent    = date + '  $' + Math.round(val).toLocaleString();
+    // Position tooltip, keep it within bounds
+    var tLeft = mx + 16;
+    if (tLeft + 180 > rect.width) tLeft = mx - 180;
+    tooltip.style.left     = tLeft + 'px';
+    tooltip.style.top      = '50px';
+    tooltip.innerHTML      = '<div style="color:var(--text-2);font-size:10px;margin-bottom:2px">' + niceDate + '</div>' +
+                             '<div style="font-size:14px;font-weight:600">$' + Math.round(val).toLocaleString() + '</div>';
   }
 
   function onLeave() { tooltip.style.opacity = '0'; }
@@ -446,22 +504,16 @@ function drawChart(curve) {
   canvas.addEventListener('mousemove', onMove);
   canvas.addEventListener('mouseleave', onLeave);
 
-  // Draw-in animation on first load
+  // Animate chart entrance
   window._animateChart = function(curve) {
-    if (animDone) { drawChart(curve); return; }
-    animDone = true;
-    var progress = 0;
-    var start = null;
-    var dur = 500;
-    function step(ts) {
-      if (!start) start = ts;
-      progress = Math.min((ts - start) / dur, 1);
-      var partial = curve.slice(0, Math.max(1, Math.round(progress * curve.length)));
-      drawChart(partial);
-      if (progress < 1) requestAnimationFrame(step);
-      else drawChart(curve);
-    }
-    requestAnimationFrame(step);
+    drawChart(curve);
+    canvas.style.opacity = '0';
+    canvas.style.transform = 'translateY(8px)';
+    requestAnimationFrame(function() {
+      canvas.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      canvas.style.opacity = '1';
+      canvas.style.transform = 'none';
+    });
   };
 })();
 
@@ -469,10 +521,8 @@ function drawChart(curve) {
 function renderReturnBadge(data) {
   var s = data.summary || {};
   var badge = document.getElementById('return-badge');
-  // Prefer pre-computed total_pnl_pct from summary
   var retPct = s.total_pnl_pct;
   if (retPct == null) {
-    // Fallback: compute from equity curve
     var curve = data.equity_curve || [];
     if (!curve.length) return;
     var first = curve[0].equity_aud;
@@ -487,7 +537,6 @@ function renderReturnBadge(data) {
 // ── Live Price Updates ───────────────────────────────────────
 var POLL_INTERVAL = 15000;
 var _pollTimer    = null;
-var _marketData   = null;
 
 function isAnyMarketOpen() {
   return MARKETS.some(function(mk) { return marketState(mk).open; });
@@ -497,21 +546,19 @@ function flashCard(card, isPositive) {
   card.classList.add(isPositive ? 'flash-pos' : 'flash-neg');
   setTimeout(function() {
     card.classList.remove('flash-pos', 'flash-neg');
-  }, 300);
+  }, 400);
 }
 
 function applyPrices(resp) {
   if (!resp || !resp.ok) return;
   var positions = resp.positions || {};
 
-  // Update summary strip today P&L
   if (resp.today_pnl_display) {
     var todEl = document.getElementById('stat-today');
     todEl.textContent = resp.today_pnl_display;
     todEl.className = 'stat-value ' + pnlClass(resp.today_pnl_aud || 0);
   }
 
-  // Update each position card
   var cards = document.querySelectorAll('#positions-grid .pos-card');
   cards.forEach(function(card) {
     var ticker = card.getAttribute('data-ticker');
@@ -521,19 +568,15 @@ function applyPrices(resp) {
 
     var ccy = ticker.endsWith('.AX') ? 'AUD' : 'USD';
 
-    // Update current price
     var priceEl = card.querySelector('.live-price[data-ticker="' + ticker + '"]');
     if (priceEl) priceEl.textContent = fmtCcy(q.price, ccy);
 
-    // Update P&L display (pre-computed server-side)
     var pnlEl = card.querySelector('.card-pnl[data-ticker="' + ticker + '"]');
     if (pnlEl && q.pnl_display != null) {
       var isPos = (q.pnl_local || 0) >= 0;
       pnlEl.className = 'card-pnl ' + (isPos ? 'green' : 'red');
       pnlEl.innerHTML = q.pnl_display +
-        ' <span style="font-size:12px;opacity:0.8">(' + fmtPct(q.pnl_pct) + ')</span>';
-
-      // Update card border color
+        ' <span style="font-size:12px;opacity:0.6;font-weight:400">(' + fmtPct(q.pnl_pct) + ')</span>';
       card.className = 'pos-card' + (isPos ? '' : ' negative');
     }
 
@@ -556,10 +599,9 @@ function startPricePolling() {
 // ── Main Init ────────────────────────────────────────────────
 async function init() {
   try {
-    var resp = await fetch('/data/simple-dashboard-data.json');
+    var resp = await fetch('/simple-dashboard-data.json');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     var data = await resp.json();
-    _marketData = data;
 
     renderSummary(data);
     renderReturnBadge(data);

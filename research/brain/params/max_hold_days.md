@@ -4,16 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-15 10:09 | donchian_breakout | 30 → 15 | ❌ discard | -0.3418 | 0.0231 |
-| 2026-03-15 10:09 | donchian_breakout | 30 → 10 | ❌ discard | -0.2453 | 0.1196 |
-| 2026-03-15 10:13 | stochastic_oversold | None → 7 | ❌ discard | +0.0002 | 0.3993 |
-| 2026-03-15 10:13 | stochastic_oversold | None → 5 | ❌ discard | +0.0017 | 0.4008 |
-| 2026-03-15 10:13 | stochastic_oversold | None → 15 | ❌ discard | +0.0000 | 0.3991 |
-| 2026-03-15 10:13 | stochastic_oversold | None → 10 | ❌ discard | +0.0000 | 0.3991 |
-| 2026-03-15 10:42 | williams_percent_r | 7 → 15 | ❌ discard | -1.7531 | -1.6270 |
-| 2026-03-15 10:42 | williams_percent_r | 7 → 10 | ❌ discard | -1.7422 | -1.6161 |
-| 2026-03-15 10:42 | williams_percent_r | 7 → 5 | ❌ discard | -1.8086 | -1.6825 |
-| 2026-03-15 11:12 | lower_band_reversion | None → 10 | ❌ discard | +0.0012 | 0.3946 |
 | 2026-03-15 11:12 | lower_band_reversion | None → 5 | ❌ discard | -0.0180 | 0.3754 |
 | 2026-03-15 11:12 | lower_band_reversion | None → 3 | ❌ discard | -4.1122 | -3.7188 |
 | 2026-03-15 11:12 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3934 |
@@ -54,3 +44,13 @@
 | 2026-03-16 01:13 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3934 |
 | 2026-03-16 01:13 | lower_band_reversion | None → 5 | ❌ discard | -0.0180 | 0.3754 |
 | 2026-03-16 01:13 | lower_band_reversion | None → 10 | ❌ discard | +0.0012 | 0.3946 |
+| 2026-03-16 05:36 | adx_trend_pullback | 7 → 5 | ❌ discard | -0.0679 | 0.3942 |
+| 2026-03-16 05:36 | adx_trend_pullback | 7 → 15 | ❌ discard | -0.0370 | 0.4251 |
+| 2026-03-16 05:36 | adx_trend_pullback | 7 → 10 | ❌ discard | -0.0375 | 0.4246 |
+| 2026-03-16 05:40 | consecutive_down_days | None → 7 | ❌ discard | -0.0017 | 0.4916 |
+| 2026-03-16 05:40 | consecutive_down_days | None → 10 | ❌ discard | -0.0020 | 0.4913 |
+| 2026-03-16 05:40 | consecutive_down_days | None → 3 | ❌ discard | +0.0002 | 0.4935 |
+| 2026-03-16 05:40 | consecutive_down_days | None → 5 | ❌ discard | +0.0000 | 0.4933 |
+| 2026-03-16 05:43 | demark_sequential | 7 → 10 | ❌ discard | -0.3113 | -0.2072 |
+| 2026-03-16 05:43 | demark_sequential | 7 → 5 | ❌ discard | -0.4323 | -0.3282 |
+| 2026-03-16 05:43 | demark_sequential | 7 → 15 | ❌ discard | -2.1501 | -2.0460 |

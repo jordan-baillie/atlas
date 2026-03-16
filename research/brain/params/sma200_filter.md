@@ -4,7 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-13 23:37 | donchian_breakout | None → False | ❌ discard | +0.0048 | 0.5343 |
 | 2026-03-13 23:37 | donchian_breakout | None → True | ❌ discard | +0.0000 | 0.5295 |
 | 2026-03-14 02:10 | demark_sequential | None → True | ❌ discard | -2.6036 | -5.7595 |
 | 2026-03-14 02:10 | demark_sequential | None → False | ❌ discard | +0.0000 | -3.1559 |
@@ -54,3 +53,4 @@
 | 2026-03-16 01:03 | donchian_breakout | None → True | ❌ discard | +0.0000 | 0.3649 |
 | 2026-03-16 01:03 | donchian_breakout | None → False | ❌ discard | -0.1416 | 0.2233 |
 | 2026-03-16 01:10 | williams_percent_r | False → True | ❌ discard | -2.0433 | -1.9172 |
+| 2026-03-16 05:41 | consecutive_down_days | False → True | ❌ discard | -0.7340 | -0.2407 |

@@ -22,3 +22,6 @@
 | 2026-03-16 00:54 | consecutive_down_days | 2 → 5 | ❌ discard | -4.3256 | -3.8331 |
 | 2026-03-16 00:54 | consecutive_down_days | 2 → 4 | ❌ discard | -3.6868 | -3.1943 |
 | 2026-03-16 00:54 | consecutive_down_days | 2 → 3 | ❌ discard | -0.1711 | 0.3214 |
+| 2026-03-16 05:37 | consecutive_down_days | 2 → 5 | ❌ discard | -4.1121 | -3.6188 |
+| 2026-03-16 05:37 | consecutive_down_days | 2 → 4 | ❌ discard | -3.4061 | -2.9128 |
+| 2026-03-16 05:37 | consecutive_down_days | 2 → 3 | ❌ discard | -0.1652 | 0.3281 |
