@@ -4,9 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-16 05:36 | adx_trend_pullback | 7 → 10 | ❌ discard | -0.0375 | 0.4246 |
-| 2026-03-16 05:40 | consecutive_down_days | None → 7 | ❌ discard | -0.0017 | 0.4916 |
-| 2026-03-16 05:40 | consecutive_down_days | None → 10 | ❌ discard | -0.0020 | 0.4913 |
 | 2026-03-16 05:40 | consecutive_down_days | None → 3 | ❌ discard | +0.0002 | 0.4935 |
 | 2026-03-16 05:40 | consecutive_down_days | None → 5 | ❌ discard | +0.0000 | 0.4933 |
 | 2026-03-16 05:43 | demark_sequential | 7 → 10 | ❌ discard | -0.3113 | -0.2072 |
@@ -54,3 +51,6 @@
 | 2026-03-16 10:41 | triple_rsi | None → 5 | ❌ discard | -2.1697 | -1.2033 |
 | 2026-03-16 10:41 | triple_rsi | None → 3 | ❌ discard | -2.1688 | -1.2024 |
 | 2026-03-16 10:41 | triple_rsi | None → 10 | ❌ discard | -0.5229 | 0.4435 |
+| 2026-03-16 10:49 | keltner_reversion | 7 → 5 | ❌ discard | -0.7685 | 0.1979 |
+| 2026-03-16 10:49 | keltner_reversion | 7 → 10 | ❌ discard | -0.6391 | 0.3273 |
+| 2026-03-16 10:49 | keltner_reversion | 7 → 15 | ❌ discard | -0.6924 | 0.2740 |
