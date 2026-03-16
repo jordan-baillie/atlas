@@ -29,3 +29,6 @@
 | 2026-03-16 01:04 | stochastic_oversold | 5 → 21 | ❌ discard | -3.9531 | -3.5540 |
 | 2026-03-16 01:04 | stochastic_oversold | 5 → 10 | ❌ discard | -3.8325 | -3.4334 |
 | 2026-03-16 01:04 | stochastic_oversold | 5 → 14 | ❌ discard | -4.0341 | -3.6350 |
+| 2026-03-16 06:13 | stochastic_oversold | 5 → 10 | ❌ discard | -3.7637 | -3.3625 |
+| 2026-03-16 06:13 | stochastic_oversold | 5 → 21 | ❌ discard | -3.7851 | -3.3839 |
+| 2026-03-16 06:13 | stochastic_oversold | 5 → 14 | ❌ discard | -3.9262 | -3.5250 |

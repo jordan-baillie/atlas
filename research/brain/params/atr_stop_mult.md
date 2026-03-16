@@ -4,19 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-15 10:12 | stochastic_oversold | None → 1.5 | ❌ discard | -0.4507 | -0.0516 |
-| 2026-03-15 10:12 | stochastic_oversold | None → 3.0 | ❌ discard | -0.0167 | 0.3824 |
-| 2026-03-15 10:41 | williams_percent_r | 1.5 → 3.0 | ❌ discard | -3.6461 | -3.5200 |
-| 2026-03-15 10:41 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -2.6797 | -2.5536 |
-| 2026-03-15 10:41 | williams_percent_r | 1.5 → 2.0 | ❌ discard | -1.8486 | -1.7225 |
-| 2026-03-15 11:13 | lower_band_reversion | 2.5 → 3.0 | ❌ discard | -0.0293 | 0.3641 |
-| 2026-03-15 11:13 | lower_band_reversion | 2.5 → 2.0 | ❌ discard | -0.0116 | 0.3818 |
-| 2026-03-15 11:13 | lower_band_reversion | 2.5 → 1.5 | ❌ discard | -0.3731 | 0.0203 |
-| 2026-03-15 11:18 | triple_rsi | 2.0 → 3.0 | ❌ discard | -0.2249 | -0.0261 |
-| 2026-03-15 11:18 | triple_rsi | 2.0 → 1.5 | ❌ discard | -0.1776 | 0.0212 |
-| 2026-03-15 11:18 | triple_rsi | 2.0 → 2.5 | ❌ discard | -0.1345 | 0.0643 |
-| 2026-03-15 11:50 | keltner_reversion | 1.5 → 2.0 | ❌ discard | -0.1698 | -0.1514 |
-| 2026-03-15 11:50 | keltner_reversion | 1.5 → 2.5 | ❌ discard | -4.3968 | -4.3784 |
 | 2026-03-15 11:50 | keltner_reversion | 1.5 → 3.0 | ❌ discard | +0.0088 | 0.0272 |
 | 2026-03-15 23:32 | short_term_mr | None → 2.0 | ❌ discard | -0.0823 | 0.4142 |
 | 2026-03-15 23:32 | short_term_mr | None → 1.5 | ❌ discard | +0.0000 | 0.4965 |
@@ -54,3 +41,16 @@
 | 2026-03-16 05:43 | demark_sequential | 1.5 → 2.5 | ❌ discard | -0.2178 | -0.1137 |
 | 2026-03-16 05:43 | demark_sequential | 1.5 → 2.0 | ❌ discard | -0.1449 | -0.0408 |
 | 2026-03-16 05:43 | demark_sequential | 1.5 → 3.0 | ❌ discard | -0.4074 | -0.3033 |
+| 2026-03-16 05:45 | donchian_breakout | 1.5 → 3.0 | ❌ discard | -0.3669 | -0.0550 |
+| 2026-03-16 05:45 | donchian_breakout | 1.5 → 2.5 | ❌ discard | -0.2896 | 0.0223 |
+| 2026-03-16 05:45 | donchian_breakout | 1.5 → 2.0 | ❌ discard | -0.0848 | 0.2271 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 2.5 | ❌ discard | -0.0051 | 0.3961 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 3.0 | ❌ discard | -0.0164 | 0.3848 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 1.5 | ❌ discard | -0.4116 | -0.0104 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 2.0 | ❌ discard | +0.0000 | 0.4012 |
+| 2026-03-16 06:18 | williams_percent_r | 1.5 → 3.0 | ❌ discard | -3.5290 | -3.3514 |
+| 2026-03-16 06:18 | williams_percent_r | 1.5 → 2.0 | ❌ discard | -2.1125 | -1.9349 |
+| 2026-03-16 06:18 | williams_percent_r | 1.5 → 2.5 | ❌ discard | -2.7384 | -2.5608 |
+| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 1.5 | ❌ discard | -0.3521 | 0.0432 |
+| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 2.0 | ❌ discard | -0.0106 | 0.3847 |
+| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 3.0 | ❌ discard | -0.0310 | 0.3643 |

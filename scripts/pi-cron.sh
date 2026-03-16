@@ -420,3 +420,9 @@ if [ $EXIT_CODE -ne 0 ]; then
 fi
 
 exit $EXIT_CODE
+
+# ══════════════════════════════════════════════════════════════
+# Overnight autoresearch — uncomment to enable
+# ══════════════════════════════════════════════════════════════
+# 22:00 Mon-Fri: 8-hour research session on mean_reversion
+# 0 22 * * 1-5 cd /root/atlas && python3 research/autoresearch_runner.py --strategy mean_reversion --market sp500 --hours 8 --notify > logs/autoresearch_$(date +\%Y\%m\%d_\%H\%M).log 2>&1

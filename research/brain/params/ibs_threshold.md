@@ -36,3 +36,5 @@
 | 2026-03-16 05:38 | consecutive_down_days | 1.0 → 0.2 | ❌ discard | -0.1219 | 0.3714 |
 | 2026-03-16 05:38 | consecutive_down_days | 1.0 → 0.3 | ❌ discard | -0.1185 | 0.3748 |
 | 2026-03-16 05:38 | consecutive_down_days | 1.0 → 0.5 | ❌ discard | +0.0006 | 0.4939 |
+| 2026-03-16 06:21 | lower_band_reversion | 0.5 → 0.2 | ❌ discard | -0.0003 | 0.3950 |
+| 2026-03-16 06:21 | lower_band_reversion | 0.5 → 0.3 | ❌ discard | -3.4507 | -3.0554 |

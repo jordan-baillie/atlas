@@ -35,7 +35,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 ATLAS_ROOT = Path(__file__).resolve().parent.parent
 if str(ATLAS_ROOT) not in sys.path:
@@ -279,6 +279,51 @@ def keep_or_discard(
     }
 
 
+# ─── Snapshot Discovery ──────────────────────────────────────────────────────
+
+
+def _find_latest_snapshot(market: str) -> str:
+    """Find the most recent snapshot directory matching *market*.
+
+    Searches ``data/snapshots/`` for directories whose name contains the market
+    identifier (case-insensitive), then returns the one with the latest
+    modification time.
+
+    Args:
+        market: Market ID (e.g. ``'sp500'``).
+
+    Returns:
+        Snapshot directory name (e.g. ``'sp500_v3_unadj_20260310_7yr'``).
+
+    Raises:
+        RuntimeError: If no snapshot directory exists for this market.
+    """
+    snapshots_root = ATLAS_ROOT / "data" / "snapshots"
+    if not snapshots_root.exists():
+        raise RuntimeError(
+            f"Snapshots directory not found: {snapshots_root}. "
+            f"Create a snapshot first with: "
+            f"from scripts.strategy_evaluator import save_snapshot; "
+            f"save_snapshot('{market}', '<snapshot_id>')"
+        )
+
+    matching = [
+        d for d in snapshots_root.iterdir()
+        if d.is_dir() and market.lower() in d.name.lower()
+    ]
+    if not matching:
+        raise RuntimeError(
+            f"No snapshot found for market '{market}' in {snapshots_root}. "
+            f"Create one first with: "
+            f"from scripts.strategy_evaluator import save_snapshot; "
+            f"save_snapshot('{market}', '<snapshot_id>')"
+        )
+
+    # Most recent by modification time
+    matching.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    return matching[0].name
+
+
 # ─── Research Session ────────────────────────────────────────────────────────
 
 
@@ -303,7 +348,26 @@ class ResearchSession:
         print(s.history())
     """
 
-    def __init__(self, strategy: str, market: str = "sp500", top_n: Optional[int] = None):
+    def __init__(
+        self,
+        strategy: str,
+        market: str = "sp500",
+        top_n: Optional[int] = None,
+        snapshot_id: Optional[str] = None,
+    ):
+        """Initialise a research session for *strategy* on *market*.
+
+        Args:
+            strategy:    Strategy name (e.g. ``'mean_reversion'``).
+            market:      Market ID (default ``'sp500'``).
+            top_n:       Number of tickers to use (default ``None`` = all).
+                         Set to 50 for faster ~15 s iterations during screening.
+            snapshot_id: Data snapshot to use for all backtests in this session.
+                         If ``None``, the most recent snapshot matching *market*
+                         is auto-discovered.  Raises ``RuntimeError`` if no
+                         snapshot exists — create one first with
+                         ``save_snapshot(market, snapshot_id)``.
+        """
         self.strategy = strategy
         self.market = market
         self.top_n = top_n
@@ -315,10 +379,24 @@ class ResearchSession:
         self._experiments_kept = 0
         self._session_start = time.time()
 
-        # Load market data (one-time, ~3-5s)
-        logger.info("Loading market data for %s...", market)
+        # Unique session identifier used for lock files
+        self.session_id = (
+            datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            + f"_{strategy}"
+        )
+
+        # ── Resolve snapshot ────────────────────────────────────────────────
+        if snapshot_id is not None:
+            self.snapshot_id = snapshot_id
+        else:
+            self.snapshot_id = _find_latest_snapshot(market)
+
+        logger.info("Using snapshot: %s", self.snapshot_id)
+
+        # Load market data from the snapshot (one-time, ~3-5 s)
+        logger.info("Loading market data for %s from snapshot...", market)
         from scripts.strategy_evaluator import load_market_data
-        data = load_market_data(market)
+        data = load_market_data(market, snapshot_id=self.snapshot_id)
 
         # Optionally subset to top N tickers by volume for speed
         if top_n is not None and len(data) > top_n:
@@ -331,6 +409,23 @@ class ResearchSession:
         # Load active config
         from utils.config import get_active_config
         self._config = get_active_config(market)
+
+        # ── Evaluation lock ─────────────────────────────────────────────────
+        # Hash all engine files + snapshot parquet files.  Any modification
+        # during the session will be caught by verify_lock() in experiment().
+        from research.lockfile import (
+            LOCKED_FILES,
+            compute_lock,
+            save_lock,
+        )
+        _snapshot_dir = ATLAS_ROOT / "data" / "snapshots" / self.snapshot_id
+        self._eval_lock = compute_lock(LOCKED_FILES, _snapshot_dir)
+        save_lock(self._eval_lock, self.session_id)
+        logger.info(
+            "Evaluation lock computed (%d files) → research/locks/%s.json",
+            len(self._eval_lock),
+            self.session_id,
+        )
 
         # Load best-known params if they exist
         best = load_best(strategy)
@@ -388,6 +483,15 @@ class ResearchSession:
         """
         if self._baseline_metrics is None:
             raise RuntimeError("Call baseline() first to establish the bar.")
+
+        # ── Evaluation lock check ────────────────────────────────────────────
+        from research.lockfile import verify_lock, EvaluationLockViolation
+        ok, changed = verify_lock(self._eval_lock)
+        if not ok:
+            raise EvaluationLockViolation(
+                f"Evaluation files changed during session: {changed}",
+                changed=changed,
+            )
 
         # Merge overrides onto best params
         merged = {**self._best_params, **params}
@@ -542,20 +646,49 @@ class ResearchSession:
     # ── Internal ─────────────────────────────────────────────────────────
 
     def _run_backtest(self, params: dict) -> dict:
-        """Run a solo backtest with given params. Returns metrics dict."""
+        """Run a combined portfolio backtest with given params for this strategy.
+
+        Runs the full portfolio (all active strategies from the current config)
+        with the target strategy using *params*.  Combined portfolio Sharpe is
+        the primary metric; solo Sharpe is recorded as ``solo_sharpe`` for
+        diagnostic purposes.
+
+        Args:
+            params: Parameter dict for ``self.strategy``.  These are applied on
+                    top of the active config values for that strategy.
+
+        Returns:
+            Metrics dict with combined portfolio metrics as primary values plus
+            a ``solo_sharpe`` key for the isolated strategy Sharpe.
+        """
         from scripts.strategy_evaluator import (
             make_config_with_strategy,
             run_backtest,
         )
 
         t0 = time.time()
-        cfg = make_config_with_strategy(
+
+        # Combined: all active strategies + this one with candidate params
+        combined_cfg = make_config_with_strategy(
+            self._config, self.strategy,
+            params_override=params, solo=False,
+        )
+        combined_metrics = run_backtest(combined_cfg, self._data)
+
+        # Solo: only this strategy with candidate params (diagnostics)
+        solo_cfg = make_config_with_strategy(
             self._config, self.strategy,
             params_override=params, solo=True,
         )
-        metrics = run_backtest(cfg, self._data)
-        metrics["runtime_s"] = round(time.time() - t0, 1)
-        return metrics
+        solo_metrics = run_backtest(solo_cfg, self._data)
+
+        elapsed = round(time.time() - t0, 1)
+
+        # Primary result is the combined portfolio metrics
+        result = dict(combined_metrics)
+        result["solo_sharpe"] = solo_metrics.get("sharpe", 0)
+        result["runtime_s"] = elapsed
+        return result
 
 
 # ─── Standalone Helpers ──────────────────────────────────────────────────────

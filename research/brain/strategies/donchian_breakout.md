@@ -1,7 +1,7 @@
 # donchian_breakout
 
-> **Status:** active | **Best Sharpe:** 0.5547 | **Trades:** 74
-> **Updated:** 2026-03-14 02:36
+> **Status:** active | **Best Sharpe:** 0.3440 | **Trades:** 136
+> **Updated:** 2026-03-16 06:11
 
 ## Current Best Params
 
@@ -10,22 +10,24 @@
 | atr_stop_mult | 1.5 |
 | entry_period | 20 |
 | max_hold_days | 30 |
+| sma200_filter | False |
 
 ## Current Metrics
 
 | Metric | Value |
 |--------|-------|
-| Sharpe | 0.5547 |
-| CAGR | 20.9% |
-| Profit Factor | 8.14 |
-| Max Drawdown | 6.9% |
-| Total Trades | 74 |
-| Win Rate | 47.3% |
+| Sharpe | 0.3440 |
+| CAGR | 9.8% |
+| Profit Factor | 2.80 |
+| Max Drawdown | 4.4% |
+| Total Trades | 136 |
+| Win Rate | 46.3% |
 
 ## History
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
+| Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
@@ -37,3 +39,4 @@
 | 2026-03-13 13:57 | 0.4096 | 60 | 7.18 | 13.0% | max_hold_days=30 |
 | 2026-03-13 23:36 | 0.5295 | 67 | 7.39 | 20.0% | atr_stop_mult=1.5 |
 | 2026-03-14 02:36 | 0.5547 | 74 | 8.14 | 20.9% | entry_period=20 |
+| 2026-03-16 06:11 | 0.3440 | 136 | 2.80 | 9.8% | sma200_filter=False |

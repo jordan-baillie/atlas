@@ -1012,6 +1012,18 @@ def cmd_calibrate(args):
     print("Report saved to %s" % report_path)
 
 
+def cmd_autoresearch(args):
+    """Run an autonomous research session for a single strategy."""
+    from research.autoresearch_runner import run_session
+    run_session(
+        strategy=args.strategy,
+        market=args.market,
+        hours=args.hours,
+        notify=args.notify,
+        snapshot_id=args.snapshot,
+    )
+
+
 def cmd_reconcile(args):
     """Run broker-local state reconciliation."""
     import subprocess
@@ -1072,6 +1084,12 @@ def main():
     p_reconcile.add_argument("--dry-run", action="store_true", help="Report only, no fixes or Telegram")
     p_reconcile.add_argument("--auto-fix", action="store_true", help="Apply automatic fixes")
     p_reconcile.set_defaults(func=cmd_reconcile)
+    p_ar = subparsers.add_parser("autoresearch", help="Run autonomous research session for a strategy")
+    p_ar.add_argument("--strategy", type=str, required=True, help="Strategy name to research (e.g. mean_reversion)")
+    p_ar.add_argument("--market", type=str, default="sp500", help="Market to research against (default: sp500)")
+    p_ar.add_argument("--hours", type=float, required=True, help="Time budget in hours (e.g. 8.0)")
+    p_ar.add_argument("--notify", action="store_true", help="Send Telegram notification on completion")
+    p_ar.add_argument("--snapshot", type=str, default=None, help="Optional snapshot ID to resume from")
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1090,6 +1108,7 @@ def main():
         "schedule": cmd_schedule,
         "calibrate": cmd_calibrate,
         "reconcile": cmd_reconcile,
+        "autoresearch": cmd_autoresearch,
     }
     cmd_func = commands.get(args.command)
     if cmd_func:

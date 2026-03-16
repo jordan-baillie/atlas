@@ -7380,5 +7380,28 @@
     "promoted": false,
     "runtime_s": 66.7,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260316_161158",
+    "timestamp": "2026-03-16T06:11:58.033048+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "donchian_breakout",
+    "hypothesis": "sma200_filter: None\u2192False",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.344,
+      "cagr_pct": 9.7983,
+      "max_drawdown_pct": 4.4472,
+      "total_trades": 136,
+      "profit_factor": 2.7991
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 sma200_filter: None\u2192False"
+    ],
+    "promoted": false,
+    "runtime_s": 20.0,
+    "agent_id": "autoresearch"
   }
 ]

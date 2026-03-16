@@ -4,20 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-15 11:12 | lower_band_reversion | None → 5 | ❌ discard | -0.0180 | 0.3754 |
-| 2026-03-15 11:12 | lower_band_reversion | None → 3 | ❌ discard | -4.1122 | -3.7188 |
-| 2026-03-15 11:12 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3934 |
-| 2026-03-15 11:17 | triple_rsi | None → 5 | ❌ discard | -0.3342 | -0.1354 |
-| 2026-03-15 11:17 | triple_rsi | None → 7 | ❌ discard | -0.2914 | -0.0926 |
-| 2026-03-15 11:17 | triple_rsi | None → 3 | ❌ discard | -0.3132 | -0.1144 |
-| 2026-03-15 11:17 | triple_rsi | None → 10 | ❌ discard | +0.0000 | 0.1988 |
-| 2026-03-15 11:51 | keltner_reversion | None → 5 | ❌ discard | -0.0539 | -0.0355 |
-| 2026-03-15 11:51 | keltner_reversion | None → 10 | ❌ discard | +0.0000 | 0.0184 |
-| 2026-03-15 11:51 | keltner_reversion | None → 15 | ❌ discard | -0.0177 | 0.0007 |
-| 2026-03-15 11:51 | keltner_reversion | None → 7 | ❌ discard | -0.0002 | 0.0182 |
-| 2026-03-15 23:32 | short_term_mr | None → 3 | ❌ discard | -0.0615 | 0.4350 |
-| 2026-03-15 23:32 | short_term_mr | None → 7 | ❌ discard | +0.0015 | 0.4980 |
-| 2026-03-15 23:32 | short_term_mr | None → 5 | ❌ discard | +0.0000 | 0.4965 |
 | 2026-03-15 23:32 | short_term_mr | None → 2 | ❌ discard | -0.0626 | 0.4339 |
 | 2026-03-16 00:51 | adx_trend_pullback | None → 7 | ✅ kept | +0.0313 | 0.4423 |
 | 2026-03-16 00:51 | adx_trend_pullback | None → 5 | ❌ discard | -0.0189 | 0.3921 |
@@ -54,3 +40,17 @@
 | 2026-03-16 05:43 | demark_sequential | 7 → 10 | ❌ discard | -0.3113 | -0.2072 |
 | 2026-03-16 05:43 | demark_sequential | 7 → 5 | ❌ discard | -0.4323 | -0.3282 |
 | 2026-03-16 05:43 | demark_sequential | 7 → 15 | ❌ discard | -2.1501 | -2.0460 |
+| 2026-03-16 05:45 | donchian_breakout | 30 → 20 | ❌ discard | -2.5246 | -2.2127 |
+| 2026-03-16 05:45 | donchian_breakout | 30 → 15 | ❌ discard | -0.1079 | 0.2040 |
+| 2026-03-16 05:45 | donchian_breakout | 30 → 10 | ❌ discard | -0.1795 | 0.1324 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 15 | ❌ discard | +0.0000 | 0.4012 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 7 | ❌ discard | +0.0004 | 0.4016 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 10 | ❌ discard | +0.0000 | 0.4012 |
+| 2026-03-16 06:15 | stochastic_oversold | None → 5 | ❌ discard | +0.0001 | 0.4013 |
+| 2026-03-16 06:18 | williams_percent_r | 7 → 10 | ❌ discard | -0.1899 | -0.0123 |
+| 2026-03-16 06:18 | williams_percent_r | 7 → 15 | ❌ discard | -0.1264 | 0.0512 |
+| 2026-03-16 06:18 | williams_percent_r | 7 → 5 | ❌ discard | -1.6665 | -1.4889 |
+| 2026-03-16 06:22 | lower_band_reversion | None → 10 | ❌ discard | +0.0012 | 0.3965 |
+| 2026-03-16 06:22 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3953 |
+| 2026-03-16 06:22 | lower_band_reversion | None → 5 | ❌ discard | -0.0182 | 0.3771 |
+| 2026-03-16 06:22 | lower_band_reversion | None → 3 | ❌ discard | -4.0901 | -3.6948 |
