@@ -4,10 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-16 06:22 | lower_band_reversion | None → 7 | ❌ discard | +0.0000 | 0.3953 |
-| 2026-03-16 06:22 | lower_band_reversion | None → 5 | ❌ discard | -0.0182 | 0.3771 |
-| 2026-03-16 06:22 | lower_band_reversion | None → 3 | ❌ discard | -4.0901 | -3.6948 |
-| 2026-03-16 07:01 | triple_rsi | None → 10 | ❌ discard | +0.0000 | 0.2749 |
 | 2026-03-16 07:01 | triple_rsi | None → 3 | ❌ discard | -2.8061 | -2.5312 |
 | 2026-03-16 07:01 | triple_rsi | None → 7 | ❌ discard | -0.3471 | -0.0722 |
 | 2026-03-16 07:01 | triple_rsi | None → 5 | ❌ discard | -2.8540 | -2.5791 |
@@ -54,3 +50,7 @@
 | 2026-03-16 11:41 | heikin_ashi_reversal | None → 5 | ❌ discard | -2.1293 | -1.1630 |
 | 2026-03-16 11:41 | heikin_ashi_reversal | None → 15 | ❌ discard | -1.9525 | -0.9862 |
 | 2026-03-16 11:41 | heikin_ashi_reversal | None → 7 | ❌ discard | -2.4603 | -1.4940 |
+| 2026-03-16 11:54 | macd_divergence | None → 10 | ❌ discard | -0.8175 | 0.1489 |
+| 2026-03-16 11:54 | macd_divergence | None → 15 | ❌ discard | -0.8055 | 0.1609 |
+| 2026-03-16 11:54 | macd_divergence | None → 5 | ❌ discard | -1.9944 | -1.0280 |
+| 2026-03-16 11:54 | macd_divergence | None → 7 | ❌ discard | -3.6276 | -2.6612 |
