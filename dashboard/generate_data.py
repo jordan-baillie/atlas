@@ -3529,5 +3529,405 @@ def generate():
           f" (1 USD = {exchange_rates['USDAUD']:.4f} AUD)")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Simple Dashboard Data — flat JSON for the Bloomberg-terminal redesign
+# ─────────────────────────────────────────────────────────────────────────────
+
+SIMPLE_OUTPUT = PROJECT_ROOT / "dashboard" / "data" / "simple-dashboard-data.json"
+
+# Market config: (tz_name, open_hhmm, close_hhmm)
+_MARKET_HOURS = {
+    "sp500": ("America/New_York",   "09:30", "16:00"),
+    "asx":   ("Australia/Sydney",  "10:00", "16:00"),
+}
+
+
+def _market_status(market_id: str) -> dict:
+    """Compute open/closed status + seconds until next open/close event.
+
+    Returns:
+        {
+            "status": "open" | "closed",
+            "next_open_secs":  int | None,   # None when market is open
+            "next_close_secs": int | None,   # None when market is closed
+        }
+
+    Weekends are treated as always-closed.
+    Holidays are not modelled — use exchange calendars for precision.
+    """
+    cfg = _MARKET_HOURS.get(market_id)
+    if not cfg:
+        return {"status": "unknown", "next_open_secs": None, "next_close_secs": None}
+
+    tz_name, open_hhmm, close_hhmm = cfg
+    tz = ZoneInfo(tz_name)
+    now = datetime.now(tz)
+
+    # Weekends are always closed (0=Mon … 6=Sun)
+    weekday = now.weekday()
+    is_weekday = weekday < 5
+
+    oh, om = int(open_hhmm[:2]), int(open_hhmm[3:])
+    ch, cm = int(close_hhmm[:2]), int(close_hhmm[3:])
+
+    open_dt  = now.replace(hour=oh, minute=om, second=0, microsecond=0)
+    close_dt = now.replace(hour=ch, minute=cm, second=0, microsecond=0)
+
+    if is_weekday and open_dt <= now < close_dt:
+        secs = int((close_dt - now).total_seconds())
+        return {"status": "open", "next_open_secs": None, "next_close_secs": max(0, secs)}
+
+    # Market is closed — compute seconds until next open (skip to Mon if weekend)
+    days_ahead = 0
+    if not is_weekday:
+        # Sat → 2 days, Sun → 1 day until Monday
+        days_ahead = {5: 2, 6: 1}[weekday]
+    elif now >= close_dt:
+        # After close today — next open is tomorrow (or Mon if Fri)
+        days_ahead = 3 if weekday == 4 else 1  # Friday → Monday
+    # If before open on a weekday days_ahead stays 0
+
+    next_open = open_dt + __import__("datetime").timedelta(days=days_ahead)
+    secs = int((next_open - now).total_seconds())
+    return {"status": "closed", "next_open_secs": max(0, secs), "next_close_secs": None}
+
+
+def _load_sparkline(ticker: str, n: int = 15) -> list[float]:
+    """Load last *n* daily closes for a ticker.
+
+    Search order:
+      1. data/snapshots/<latest_snapshot>/<ticker>.parquet
+      2. data/processed/sp500/  or  data/processed/asx/
+      3. Fallback: empty list (caller uses [entry_price, current_price])
+    """
+    snapshots_dir = PROJECT_ROOT / "data" / "snapshots"
+    processed_dirs = [
+        PROJECT_ROOT / "data" / "processed" / "sp500",
+        PROJECT_ROOT / "data" / "processed" / "asx",
+        PROJECT_ROOT / "data" / "processed" / "hk",
+    ]
+
+    safe_ticker = ticker.replace(".", "_")
+
+    # ── 1. Latest snapshot directory ─────────────────────────────
+    if snapshots_dir.exists():
+        snap_dirs = sorted(snapshots_dir.iterdir(), reverse=True)
+        for sdir in snap_dirs:
+            if not sdir.is_dir():
+                continue
+            fp = sdir / f"{safe_ticker}.parquet"
+            if fp.exists():
+                try:
+                    df = pd.read_parquet(fp)
+                    closes = df["close"].dropna().tolist()
+                    return [round(float(v), 4) for v in closes[-n:]]
+                except Exception:
+                    pass
+
+    # ── 2. Processed data directories ────────────────────────────
+    for pdir in processed_dirs:
+        fp = pdir / f"{safe_ticker}.parquet"
+        if fp.exists():
+            try:
+                df = pd.read_parquet(fp)
+                closes = df["close"].dropna().tolist()
+                return [round(float(v), 4) for v in closes[-n:]]
+            except Exception:
+                pass
+
+    return []
+
+
+def generate_simple_dashboard_data() -> dict:
+    """Generate a flat, pre-computed JSON payload for the simple dashboard.
+
+    IMPORTANT: This function does NOT connect to brokers directly.  It reads
+    from the already-generated ``dashboard-data.json`` (written by ``generate()``).
+    This keeps broker logic in one place and ensures the simple format is always
+    consistent with the authoritative data.
+
+    Output schema::
+
+        {
+          "timestamp": str (ISO-8601),
+          "equity_curve": [{"date": str, "equity_aud": float}, ...],
+          "positions": [
+            {
+              "ticker": str,
+              "market": str,
+              "strategy": str,
+              "entry_price": float,
+              "current_price": float,
+              "shares": int | float,
+              "pnl_local": float,     # in position's native currency
+              "pnl_pct": float,
+              "pnl_aud": float,
+              "pnl_display": str,     # e.g. "+$3.20" / "-A$12.50"
+              "value_aud": float,
+              "currency": str,
+              "sparkline": [float, ...],   # last ≤15 daily closes
+              "sector": str,
+              "days_held": int,
+              "entry_date": str,
+              "stop_price": float,
+              "is_atlas": bool,
+            },
+            ...
+          ],
+          "summary": {
+            "total_equity_aud": float,
+            "today_pnl_aud": float,
+            "win_rate_pct": float,
+            "open_position_count": int,
+            "total_pnl_aud": float,
+            "total_pnl_pct": float,
+          },
+          "markets": {
+            "sp500": {"status": str, "next_open_secs": int|None, "next_close_secs": int|None},
+            "asx":   {"status": str, "next_open_secs": int|None, "next_close_secs": int|None},
+          }
+        }
+
+    If ``dashboard-data.json`` does not yet exist the function returns a safe
+    empty skeleton and writes it to ``simple-dashboard-data.json``.
+    """
+    now = datetime.now(BRISBANE)
+
+    # ── Load authoritative data produced by generate() ───────────
+    source = safe_json(OUTPUT, None)
+    if source is None:
+        # No data yet — return empty skeleton
+        result: dict = {
+            "timestamp": now.isoformat(),
+            "equity_curve": [],
+            "positions": [],
+            "summary": {
+                "total_equity_aud": 0.0,
+                "today_pnl_aud": 0.0,
+                "win_rate_pct": 0.0,
+                "open_position_count": 0,
+                "total_pnl_aud": 0.0,
+                "total_pnl_pct": 0.0,
+            },
+            "markets": {mid: _market_status(mid) for mid in _MARKET_HOURS},
+        }
+        SIMPLE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+        tmp = SIMPLE_OUTPUT.with_suffix(".tmp")
+        with open(tmp, "w") as f:
+            json.dump(result, f, indent=2, default=str)
+        tmp.rename(SIMPLE_OUTPUT)
+        return result
+
+    fx = source.get("exchange_rates", {"AUDUSD": 0.70, "USDAUD": 1.43})
+    usdaud = fx.get("USDAUD", 1.43)
+
+    def _to_aud(amount: float, currency: str) -> float:
+        """Convert a native-currency amount to AUD."""
+        ccy = (currency or "AUD").upper()
+        if ccy == "AUD":
+            return round(amount, 2)
+        if ccy == "USD":
+            return round(amount * usdaud, 2)
+        if ccy == "HKD":
+            hkdaud = fx.get("HKDAUD", usdaud / 7.8)  # approx if not available
+            return round(amount * hkdaud, 2)
+        return round(amount, 2)  # unknown — pass through
+
+    # ── Equity curve ──────────────────────────────────────────────
+    # The combined equity_curve already stores AUD-normalised equity
+    # (generate() converts per-market equity to AUD before writing the curve).
+    raw_curve = source.get("equity_curve", [])
+    equity_curve = []
+    for pt in raw_curve:
+        d = pt.get("date", "")
+        eq = pt.get("equity", 0.0)
+        if d and eq is not None:
+            equity_curve.append({"date": str(d), "equity_aud": round(float(eq), 2)})
+
+    # ── Positions ─────────────────────────────────────────────────
+    positions_out: list[dict] = []
+
+    markets_data = source.get("markets", {})
+    for market_id, md in markets_data.items():
+        pf = md.get("portfolio", {})
+        currency = md.get("currency", "AUD")
+        open_pos = pf.get("open_positions", [])
+
+        for p in open_pos:
+            ticker  = p.get("ticker", "")
+            ep      = float(p.get("entry_price", 0) or 0)
+            cp      = float(p.get("current_price", ep) or ep)
+            shares  = p.get("shares", 0)
+            pos_ccy = p.get("currency", currency) or currency
+
+            # P&L in native currency
+            pnl_local = round((cp - ep) * shares, 2)
+            pnl_pct   = round((cp / ep - 1) * 100, 4) if ep > 0 else 0.0
+
+            # Override with broker-reported P&L when available (more accurate
+            # for shorts, fees, and corporate actions)
+            broker_pnl = p.get("unrealized_pnl")
+            if broker_pnl is not None:
+                pnl_local = round(float(broker_pnl), 2)
+
+            # P&L display string — currency symbol + sign
+            ccy_sym = "A$" if pos_ccy == "AUD" else "$"
+            sign    = "+" if pnl_local >= 0 else "-"
+            pnl_display = f"{sign}{ccy_sym}{abs(pnl_local):,.2f}"
+
+            # AUD-converted values
+            pnl_aud  = _to_aud(pnl_local, pos_ccy)
+            value_aud = _to_aud(cp * shares, pos_ccy)
+
+            # Sparkline — last 15 closes; fallback to [entry, current]
+            sparkline = _load_sparkline(ticker, n=15)
+            if not sparkline:
+                sparkline = [round(ep, 4), round(cp, 4)] if ep != cp else [round(cp, 4)]
+
+            positions_out.append({
+                "ticker":        ticker,
+                "market":        market_id,
+                "strategy":      p.get("strategy", ""),
+                "entry_price":   round(ep, 4),
+                "current_price": round(cp, 4),
+                "shares":        shares,
+                "pnl_local":     pnl_local,
+                "pnl_pct":       round(pnl_pct, 4),
+                "pnl_aud":       pnl_aud,
+                "pnl_display":   pnl_display,
+                "value_aud":     value_aud,
+                "currency":      pos_ccy,
+                "sparkline":     sparkline,
+                "sector":        p.get("sector", "Unknown"),
+                "days_held":     int(p.get("days_held", 0) or 0),
+                "entry_date":    p.get("entry_date", ""),
+                "stop_price":    round(float(p.get("stop_price", 0) or 0), 4),
+                "is_atlas":      bool(p.get("is_atlas", True)),
+            })
+
+    # Also include manual positions (Moomoo)
+    manual_pos = source.get("manual_portfolio", {}).get("positions", []) or []
+    # Avoid double-counting positions already in markets_data (cross-broker duplicates)
+    existing_tickers = {p["ticker"] for p in positions_out}
+    for p in manual_pos:
+        ticker = p.get("ticker", "")
+        if ticker in existing_tickers:
+            continue
+        ep      = float(p.get("entry_price", 0) or 0)
+        cp      = float(p.get("current_price", ep) or ep)
+        shares  = p.get("shares", 0)
+        pos_ccy = p.get("currency", "USD")
+
+        pnl_local = round(float(p.get("pnl", (cp - ep) * shares) or 0), 2)
+        pnl_pct   = round(float(p.get("pnl_pct", 0) or 0), 4)
+        ccy_sym   = "A$" if pos_ccy == "AUD" else "$"
+        sign      = "+" if pnl_local >= 0 else "-"
+        pnl_display = f"{sign}{ccy_sym}{abs(pnl_local):,.2f}"
+        pnl_aud   = _to_aud(pnl_local, pos_ccy)
+        value_aud = _to_aud(cp * shares, pos_ccy)
+
+        sparkline = _load_sparkline(ticker, n=15)
+        if not sparkline:
+            sparkline = [round(ep, 4), round(cp, 4)] if ep != cp else [round(cp, 4)]
+
+        # Infer market from ticker suffix
+        if ticker.endswith(".AX"):
+            mkt = "asx"
+        elif ticker.endswith(".HK"):
+            mkt = "hk"
+        else:
+            mkt = "sp500"
+
+        positions_out.append({
+            "ticker":        ticker,
+            "market":        mkt,
+            "strategy":      "manual",
+            "entry_price":   round(ep, 4),
+            "current_price": round(cp, 4),
+            "shares":        shares,
+            "pnl_local":     pnl_local,
+            "pnl_pct":       pnl_pct,
+            "pnl_aud":       pnl_aud,
+            "pnl_display":   pnl_display,
+            "value_aud":     value_aud,
+            "currency":      pos_ccy,
+            "sparkline":     sparkline,
+            "sector":        p.get("sector", "Unknown"),
+            "days_held":     0,
+            "entry_date":    "",
+            "stop_price":    0.0,
+            "is_atlas":      False,
+        })
+
+    # ── Summary ───────────────────────────────────────────────────
+    acct          = source.get("account", {})
+    portfolio     = source.get("portfolio", {})
+
+    total_equity_aud = float(acct.get("equity", 0) or 0)
+    total_pnl_aud    = float(portfolio.get("total_pnl", 0) or 0)
+    total_pnl_pct    = float(portfolio.get("total_pnl_pct", 0) or 0)
+    win_rate_pct     = float(portfolio.get("win_rate", 0) or 0)
+    today_pnl_aud    = float(portfolio.get("today_pnl_aud", 0) or 0)
+    open_pos_count   = len(positions_out)
+
+    summary = {
+        "total_equity_aud":   round(total_equity_aud, 2),
+        "today_pnl_aud":      round(today_pnl_aud, 2),
+        "win_rate_pct":       round(win_rate_pct, 2),
+        "open_position_count": open_pos_count,
+        "total_pnl_aud":      round(total_pnl_aud, 2),
+        "total_pnl_pct":      round(total_pnl_pct, 2),
+    }
+
+    # ── Markets status ────────────────────────────────────────────
+    markets_status = {mid: _market_status(mid) for mid in _MARKET_HOURS}
+
+    # ── Assemble ──────────────────────────────────────────────────
+    result = {
+        "timestamp":    now.isoformat(),
+        "equity_curve": equity_curve,
+        "positions":    positions_out,
+        "summary":      summary,
+        "markets":      markets_status,
+    }
+
+    # Atomic write
+    SIMPLE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    tmp = SIMPLE_OUTPUT.with_suffix(".tmp")
+    with open(tmp, "w") as f:
+        json.dump(result, f, indent=2, default=str)
+    tmp.rename(SIMPLE_OUTPUT)
+
+    print(f"\nSimple dashboard data written to {SIMPLE_OUTPUT}")
+    print(f"  equity_curve:    {len(equity_curve)} points")
+    print(f"  positions:       {open_pos_count}")
+    print(f"  total_equity:    A${total_equity_aud:,.2f}")
+    print(f"  today_pnl:       A${today_pnl_aud:+,.2f}")
+    print(f"  win_rate:        {win_rate_pct:.1f}%")
+    for mid, ms in markets_status.items():
+        tag = f"next_close={ms['next_close_secs']}s" if ms["status"] == "open" else f"next_open={ms['next_open_secs']}s"
+        print(f"  {mid:6s}: {ms['status']:6s} ({tag})")
+
+    return result
+
+
 if __name__ == "__main__":
-    generate()
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Atlas dashboard data generator")
+    ap.add_argument(
+        "--simple",
+        action="store_true",
+        help="Generate simple flat JSON (reads from dashboard-data.json, no broker connections)",
+    )
+    args = ap.parse_args()
+
+    if args.simple:
+        data = generate_simple_dashboard_data()
+        print("\n--- simple-dashboard-data.json (first 60 lines) ---")
+        lines = json.dumps(data, indent=2, default=str).splitlines()
+        print("\n".join(lines[:60]))
+        if len(lines) > 60:
+            print(f"  ... ({len(lines) - 60} more lines)")
+    else:
+        generate()
