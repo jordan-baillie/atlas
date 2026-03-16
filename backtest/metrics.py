@@ -14,6 +14,7 @@ Usage:
         calc_r_multiples, calc_expectancy_r, calc_edge_ttest,
         calc_var, calc_cvar, calc_calmar,
         calc_strategy_correlation, calc_monte_carlo_drawdown,
+        calc_alpha_beta, calc_trade_shuffle_analysis,
     )
 """
 
@@ -741,11 +742,222 @@ def calc_monte_carlo_drawdown(
     }
 
 
+
+def calc_alpha_beta(
+    strategy_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    risk_free_rate: float = 0.0,
+) -> Dict[str, float]:
+    """Alpha/beta decomposition of strategy returns against a benchmark.
+
+    Computes Jensen's alpha, beta, R², information ratio, tracking error,
+    Treynor ratio, Pearson correlation, and up/down capture ratios.
+
+    Args:
+        strategy_returns: Daily returns of the strategy (decimal).
+        benchmark_returns: Daily returns of the benchmark (decimal).
+        risk_free_rate: Annual risk-free rate (default 0.0).
+
+    Returns:
+        Dict with alpha (annualized), beta, r_squared, information_ratio,
+        tracking_error, treynor_ratio, correlation, up_capture, down_capture.
+        Returns zeros if fewer than 30 overlapping days.
+    """
+    _zero = {
+        "alpha": 0.0,
+        "beta": 0.0,
+        "r_squared": 0.0,
+        "information_ratio": 0.0,
+        "tracking_error": 0.0,
+        "treynor_ratio": 0.0,
+        "correlation": 0.0,
+        "up_capture": 0.0,
+        "down_capture": 0.0,
+    }
+
+    if strategy_returns is None or benchmark_returns is None:
+        return _zero
+
+    # Align on common index (inner join), drop NaN/inf
+    combined = pd.concat(
+        [strategy_returns.rename("strategy"), benchmark_returns.rename("benchmark")],
+        axis=1, join="inner",
+    )
+    combined = combined.replace([np.inf, -np.inf], np.nan).dropna()
+
+    n = len(combined)
+    if n < 30:
+        return _zero
+
+    s = combined["strategy"].values
+    b = combined["benchmark"].values
+
+    # Beta = Cov(strategy, benchmark) / Var(benchmark)
+    cov_matrix = np.cov(s, b, ddof=1)
+    var_b = cov_matrix[1, 1]
+    cov_sb = cov_matrix[0, 1]
+
+    if var_b <= 0:
+        return _zero
+
+    beta = cov_sb / var_b
+
+    # Daily risk-free rate
+    daily_rf = (1.0 + risk_free_rate) ** (1.0 / 252.0) - 1.0
+
+    # Jensen's Alpha (annualized)
+    # alpha_daily = E[Rp] - (Rf + beta * (E[Rm] - Rf))
+    alpha_daily = s.mean() - (daily_rf + beta * (b.mean() - daily_rf))
+    alpha = alpha_daily * 252.0
+
+    # Pearson correlation; R² = correlation²
+    corr_mat = np.corrcoef(s, b)
+    correlation = float(corr_mat[0, 1])
+    r_squared = correlation ** 2
+
+    # Active returns: strategy - benchmark
+    active = s - b
+
+    # Tracking Error = std(active returns) * sqrt(252)
+    active_std = float(np.std(active, ddof=1))
+    tracking_error = active_std * np.sqrt(252.0)
+
+    # Information Ratio = annualized active return / tracking error
+    if tracking_error > 0:
+        information_ratio = float(active.mean() * 252.0) / tracking_error
+    else:
+        information_ratio = 0.0
+
+    # Treynor Ratio = (annualized excess return of strategy) / beta
+    strategy_excess_annual = float(s.mean() - daily_rf) * 252.0
+    treynor_ratio = strategy_excess_annual / beta if beta != 0 else 0.0
+
+    # Up/Down Capture Ratios
+    up_mask = b > 0
+    down_mask = b < 0
+
+    if up_mask.sum() > 0 and b[up_mask].mean() != 0:
+        up_capture = float(s[up_mask].mean() / b[up_mask].mean())
+    else:
+        up_capture = 0.0
+
+    if down_mask.sum() > 0 and b[down_mask].mean() != 0:
+        down_capture = float(s[down_mask].mean() / b[down_mask].mean())
+    else:
+        down_capture = 0.0
+
+    return {
+        "alpha": round(alpha, 6),
+        "beta": round(beta, 6),
+        "r_squared": round(r_squared, 6),
+        "information_ratio": round(information_ratio, 6),
+        "tracking_error": round(tracking_error, 6),
+        "treynor_ratio": round(treynor_ratio, 6),
+        "correlation": round(correlation, 6),
+        "up_capture": round(up_capture, 6),
+        "down_capture": round(down_capture, 6),
+    }
+
+
+
+def calc_trade_shuffle_analysis(
+    trades: List[Dict],
+    starting_equity: float,
+    n_simulations: int = 10000,
+    seed: int = 42,
+) -> Dict[str, Any]:
+    """Monte Carlo trade shuffling to assess trade-sequence risk.
+
+    Shuffles the order of closed-trade P&Ls N times and computes max drawdown
+    for each permutation. Classifies the actual drawdown's percentile rank in
+    the shuffled distribution to determine whether sequencing was LUCKY,
+    NEUTRAL, UNLUCKY, or CORRELATED.
+
+    Classification:
+        LUCKY       -- actual DD < 25th pct of shuffled  (sequencing helped)
+        NEUTRAL     -- 25th-75th pct                     (random sequencing)
+        UNLUCKY     -- 75th-95th pct                     (sequencing hurt)
+        CORRELATED  -- > 95th pct                        (returns are clustered)
+
+    Args:
+        trades: List of trade dicts (must have 'pnl' key).
+        starting_equity: Initial portfolio equity.
+        n_simulations: Number of shuffle iterations (default 10000).
+        seed: Random seed for reproducibility.
+
+    Returns:
+        Dict with actual_max_drawdown, shuffled_mean_dd, shuffled_p5_dd,
+        shuffled_p50_dd, shuffled_p95_dd, actual_dd_percentile,
+        sequencing_impact, n_simulations.
+    """
+    _zero = {
+        "actual_max_drawdown": 0.0,
+        "shuffled_mean_dd": 0.0,
+        "shuffled_p5_dd": 0.0,
+        "shuffled_p50_dd": 0.0,
+        "shuffled_p95_dd": 0.0,
+        "actual_dd_percentile": 0.0,
+        "sequencing_impact": "NEUTRAL",
+        "n_simulations": 0,
+    }
+
+    if not trades or starting_equity <= 0:
+        return _zero
+
+    # Extract pnls as a numpy copy -- do not modify original trades list
+    pnls = np.array(
+        [t.get("pnl", 0) for t in trades if t.get("pnl") is not None],
+        dtype=float,
+    )
+
+    if len(pnls) < 1:
+        return _zero
+
+    def _max_dd(pnl_seq: np.ndarray) -> float:
+        equity = starting_equity + np.cumsum(pnl_seq)
+        equity = np.insert(equity, 0, starting_equity)
+        peak = np.maximum.accumulate(equity)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            dd = np.where(peak > 0, (equity - peak) / peak, 0.0)
+        return float(abs(dd.min()))
+
+    actual_dd = _max_dd(pnls)
+
+    rng = np.random.RandomState(seed)
+    shuffled_dds = np.empty(n_simulations, dtype=float)
+    for i in range(n_simulations):
+        shuffled_dds[i] = _max_dd(rng.permutation(pnls))
+
+    # Percentile rank of actual DD in the shuffled distribution
+    actual_dd_pct = float(np.mean(shuffled_dds <= actual_dd) * 100.0)
+
+    if actual_dd_pct < 25.0:
+        impact = "LUCKY"
+    elif actual_dd_pct <= 75.0:
+        impact = "NEUTRAL"
+    elif actual_dd_pct <= 95.0:
+        impact = "UNLUCKY"
+    else:
+        impact = "CORRELATED"
+
+    return {
+        "actual_max_drawdown": round(actual_dd, 6),
+        "shuffled_mean_dd": round(float(shuffled_dds.mean()), 6),
+        "shuffled_p5_dd": round(float(np.percentile(shuffled_dds, 5)), 6),
+        "shuffled_p50_dd": round(float(np.percentile(shuffled_dds, 50)), 6),
+        "shuffled_p95_dd": round(float(np.percentile(shuffled_dds, 95)), 6),
+        "actual_dd_percentile": round(actual_dd_pct, 2),
+        "sequencing_impact": impact,
+        "n_simulations": n_simulations,
+    }
+
+
 def calc_all_metrics(
     equity_curve: pd.Series,
     trades: List[Dict[str, Any]],
     positions_log: Optional[List[Dict[str, Any]]] = None,
     rf: float = DEFAULT_RF,
+    benchmark_returns: Optional[pd.Series] = None,
 ) -> Dict[str, Any]:
     """Calculate all performance metrics in one call.
 
@@ -754,6 +966,9 @@ def calc_all_metrics(
         trades: List of completed trade dicts.
         positions_log: Optional list of position dicts for exposure calc.
         rf: Annual risk-free rate.
+        benchmark_returns: Optional Series of daily benchmark returns.
+            When provided and >= 30 overlapping days exist, alpha/beta
+            decomposition keys (alpha, beta, r_squared, etc.) are added.
 
     Returns:
         Dict with all metric values.
@@ -838,6 +1053,20 @@ def calc_all_metrics(
     metrics["mc_p99_drawdown"] = mc["p99_drawdown"]
     metrics["mc_fragile"] = mc["fragile"]
     metrics["monte_carlo"] = mc
+
+    # Alpha/Beta decomposition vs benchmark (Task #3)
+    if benchmark_returns is not None:
+        ab = calc_alpha_beta(returns, benchmark_returns, risk_free_rate=rf)
+        metrics.update(ab)
+
+    # Monte Carlo trade-shuffle sequencing analysis (Task #5)
+    if len(trades) >= 20:
+        shuffle = calc_trade_shuffle_analysis(trades, starting_eq)
+        metrics["shuffle_actual_dd"] = shuffle["actual_max_drawdown"]
+        metrics["shuffle_p50_dd"] = shuffle["shuffled_p50_dd"]
+        metrics["shuffle_p95_dd"] = shuffle["shuffled_p95_dd"]
+        metrics["shuffle_percentile"] = shuffle["actual_dd_percentile"]
+        metrics["shuffle_impact"] = shuffle["sequencing_impact"]
 
     # Per-regime metrics (Task #84)
     metrics["regime_metrics"] = calc_regime_metrics(trades)
