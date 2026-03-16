@@ -4,12 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-12 13:17 | connors_rsi2 | 4 → 2 | ❌ discard | -1.4097 | -1.0194 |
-| 2026-03-12 13:20 | short_term_mr | None → 5 | ❌ discard | -0.1162 | 0.3917 |
-| 2026-03-12 13:20 | short_term_mr | None → 4 | ❌ discard | -0.1148 | 0.3931 |
-| 2026-03-12 13:20 | short_term_mr | None → 3 | ❌ discard | -0.0939 | 0.4140 |
-| 2026-03-12 13:20 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.5079 |
-| 2026-03-12 23:30 | mean_reversion | 14 → 21 | ❌ discard | -1.3285 | -1.8980 |
 | 2026-03-12 23:30 | mean_reversion | 14 → 10 | ❌ discard | -0.1070 | -0.6765 |
 | 2026-03-12 23:30 | mean_reversion | 14 → 5 | ❌ discard | -0.2610 | -0.8305 |
 | 2026-03-12 23:30 | mean_reversion | 14 → 7 | ❌ discard | -0.6367 | -1.2062 |
@@ -54,3 +48,9 @@
 | 2026-03-14 23:00 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.5137 |
 | 2026-03-14 23:17 | triple_rsi | 7 → 5 | ❌ discard | -0.2446 | -0.1803 |
 | 2026-03-14 23:17 | triple_rsi | 7 → 3 | ❌ discard | -0.3232 | -0.2589 |
+| 2026-03-15 11:15 | triple_rsi | 7 → 5 | ❌ discard | -0.2204 | -0.0216 |
+| 2026-03-15 11:15 | triple_rsi | 7 → 3 | ❌ discard | -0.2391 | -0.0403 |
+| 2026-03-15 23:31 | short_term_mr | None → 5 | ❌ discard | -0.0444 | 0.4521 |
+| 2026-03-15 23:31 | short_term_mr | None → 4 | ❌ discard | -0.0572 | 0.4393 |
+| 2026-03-15 23:31 | short_term_mr | None → 3 | ❌ discard | -0.0308 | 0.4657 |
+| 2026-03-15 23:31 | short_term_mr | None → 2 | ❌ discard | +0.0000 | 0.4965 |

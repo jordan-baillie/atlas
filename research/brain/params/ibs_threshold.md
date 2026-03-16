@@ -23,3 +23,11 @@
 | 2026-03-14 10:12 | lower_band_reversion | 0.5 → 0.3 | ❌ discard | -0.0021 | 0.3945 |
 | 2026-03-14 23:14 | lower_band_reversion | 0.5 → 0.2 | ❌ discard | -0.0053 | 0.3913 |
 | 2026-03-14 23:14 | lower_band_reversion | 0.5 → 0.3 | ❌ discard | -0.0021 | 0.3945 |
+| 2026-03-15 10:02 | consecutive_down_days | 1.0 → 0.2 | ❌ discard | -0.1256 | 0.3669 |
+| 2026-03-15 10:02 | consecutive_down_days | 1.0 → 0.3 | ❌ discard | -0.1217 | 0.3708 |
+| 2026-03-15 10:02 | consecutive_down_days | 1.0 → 0.5 | ❌ discard | -0.0005 | 0.4920 |
+| 2026-03-15 11:11 | lower_band_reversion | 0.5 → 0.2 | ❌ discard | +0.0027 | 0.3961 |
+| 2026-03-15 11:11 | lower_band_reversion | 0.5 → 0.3 | ❌ discard | -3.4832 | -3.0898 |
+| 2026-03-16 00:55 | consecutive_down_days | 1.0 → 0.2 | ❌ discard | -0.1256 | 0.3669 |
+| 2026-03-16 00:55 | consecutive_down_days | 1.0 → 0.3 | ❌ discard | -0.1217 | 0.3708 |
+| 2026-03-16 00:55 | consecutive_down_days | 1.0 → 0.5 | ❌ discard | -0.0005 | 0.4920 |

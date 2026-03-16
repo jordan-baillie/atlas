@@ -32,3 +32,9 @@
 | 2026-03-15 06:25 | donchian_breakout | 20 → 50 | ❌ discard | -0.2162 | 0.1487 |
 | 2026-03-15 06:25 | donchian_breakout | 20 → 30 | ❌ discard | -0.2098 | 0.1551 |
 | 2026-03-15 06:25 | donchian_breakout | 20 → 10 | ❌ discard | -1.3922 | -1.0273 |
+| 2026-03-15 10:08 | donchian_breakout | 20 → 50 | ❌ discard | -0.2162 | 0.1487 |
+| 2026-03-15 10:08 | donchian_breakout | 20 → 30 | ❌ discard | -0.2098 | 0.1551 |
+| 2026-03-15 10:08 | donchian_breakout | 20 → 10 | ❌ discard | -1.3922 | -1.0273 |
+| 2026-03-16 01:01 | donchian_breakout | 20 → 50 | ❌ discard | -0.2162 | 0.1487 |
+| 2026-03-16 01:01 | donchian_breakout | 20 → 30 | ❌ discard | -0.2098 | 0.1551 |
+| 2026-03-16 01:01 | donchian_breakout | 20 → 10 | ❌ discard | -1.3922 | -1.0273 |

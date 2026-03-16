@@ -7081,5 +7081,304 @@
     "promoted": false,
     "runtime_s": 37.0,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260315_204050",
+    "timestamp": "2026-03-15T10:40:50.554579+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "williams_percent_r",
+    "hypothesis": "wr_period: 10\u219214",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.1261,
+      "cagr_pct": 5.771,
+      "max_drawdown_pct": 2.4821,
+      "total_trades": 262,
+      "profit_factor": 2.1826
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 wr_period: 10\u219214"
+    ],
+    "promoted": false,
+    "runtime_s": 33.7,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260315_211051",
+    "timestamp": "2026-03-15T11:10:51.487507+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "lower_band_reversion",
+    "hypothesis": "band_mult: 2.0\u21921.5",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.3934,
+      "cagr_pct": 28.3632,
+      "max_drawdown_pct": 3.9779,
+      "total_trades": 393,
+      "profit_factor": 7.8981
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 band_mult: 2.0\u21921.5"
+    ],
+    "promoted": false,
+    "runtime_s": 33.8,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260315_214936",
+    "timestamp": "2026-03-15T11:49:36.806205+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "keltner_reversion",
+    "hypothesis": "atr_mult: None\u21921.5",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.0184,
+      "cagr_pct": 4.7602,
+      "max_drawdown_pct": 1.3623,
+      "total_trades": 113,
+      "profit_factor": 2.8717
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_mult: None\u21921.5"
+    ],
+    "promoted": false,
+    "runtime_s": 46.4,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "director_mean_reversion_combined_20260311",
+    "timestamp": "2026-03-15T23:34:43.120663+00:00",
+    "market": "sp500",
+    "category": "active",
+    "strategy": "mean_reversion",
+    "hypothesis": "mean_reversion annealing crossed the solo threshold: Sharpe trajectory 0.2043\u21920.2375\u21920.2525\u21920.2734\u21920.3564. Combined test will determine if this marginal solo pass (0.3564 vs 0.30 threshold) holds under position contention with trend_following and opening_gap. Solo was borderline \u2014 combined outcome is uncertain and must be run before any promotion discussion.",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 260,
+      "cagr_pct": 1.6342,
+      "cagr_full_period_pct": 1.3814,
+      "sharpe": -0.9918,
+      "sortino": -1.3599,
+      "max_drawdown_pct": 4.6827,
+      "win_rate_pct": 52.31,
+      "profit_factor": 1.2281,
+      "total_pnl": 359.52,
+      "avg_trade": 1.38,
+      "final_equity": 3872.92,
+      "expectancy_r": 0.1496,
+      "avg_r": 0.1496,
+      "r_count": 260,
+      "edge_p_value": 0.08646,
+      "edge_significant": false,
+      "var_95_pct": 0.314,
+      "cvar_95_pct": 0.471,
+      "calmar": 0.349,
+      "mc_p95_drawdown_pct": 7.18,
+      "mc_fragile": false,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 260,
+          "total_pnl": 359.52,
+          "win_rate_pct": 52.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 4,
+          "win_rate_pct": 25.0,
+          "avg_trade": -7.86,
+          "total_pnl": -31.43,
+          "profit_factor": 0.2711,
+          "sharpe_approx": -0.3972,
+          "avg_r": -0.6147
+        },
+        "bull": {
+          "trades": 90,
+          "win_rate_pct": 50.0,
+          "avg_trade": -0.13,
+          "total_pnl": -12.06,
+          "profit_factor": 0.9812,
+          "sharpe_approx": -0.0082,
+          "avg_r": 0.0184
+        },
+        "neutral": {
+          "trades": 166,
+          "win_rate_pct": 54.2,
+          "avg_trade": 2.43,
+          "total_pnl": 403.01,
+          "profit_factor": 1.4529,
+          "sharpe_approx": 0.1614,
+          "avg_r": 0.2391
+        }
+      }
+    },
+    "delta_vs_baseline": {
+      "cagr_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0.0,
+      "total_trades": 0
+    },
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 1556.7,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "ar-20260316_101102",
+    "timestamp": "2026-03-16T00:11:02.076025+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "adx_period: 21\u21927",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.411,
+      "cagr_pct": 41.0721,
+      "max_drawdown_pct": 6.1668,
+      "total_trades": 215,
+      "profit_factor": 8.6598
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 adx_period: 21\u21927"
+    ],
+    "promoted": false,
+    "runtime_s": 63.0,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "20260313_110651_fd220f",
+    "timestamp": "2026-03-16T00:21:08.954645+00:00",
+    "market": "sp500",
+    "category": "sharpe_roadmap",
+    "strategy": null,
+    "hypothesis": "Conditional vol scaling (lookback=60d, target=10% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+    "verdict": "partial",
+    "key_metrics": {
+      "total_trades": 483,
+      "cagr_pct": 7.8305,
+      "cagr_full_period_pct": 6.5887,
+      "sharpe": 0.2511,
+      "sortino": 0.9058,
+      "max_drawdown_pct": 7.2542,
+      "win_rate_pct": 50.72,
+      "profit_factor": 1.5768,
+      "total_pnl": 1954.56,
+      "avg_trade": 4.05,
+      "final_equity": 5500.28,
+      "expectancy_r": 0.3131,
+      "avg_r": 0.3131,
+      "r_count": 483,
+      "edge_p_value": 0.077906,
+      "edge_significant": false,
+      "var_95_pct": 0.47,
+      "cvar_95_pct": 0.731,
+      "calmar": 1.0794,
+      "mc_p95_drawdown_pct": 9.83,
+      "mc_fragile": true,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 26,
+          "total_pnl": 123.13,
+          "win_rate_pct": 65.4
+        },
+        "momentum_breakout": {
+          "trades": 280,
+          "total_pnl": 1407.66,
+          "win_rate_pct": 50.4
+        },
+        "sector_rotation": {
+          "trades": 166,
+          "total_pnl": 421.7,
+          "win_rate_pct": 48.2
+        },
+        "trend_following": {
+          "trades": 5,
+          "total_pnl": -35.07,
+          "win_rate_pct": 40.0
+        },
+        "opening_gap": {
+          "trades": 1,
+          "total_pnl": 7.63,
+          "win_rate_pct": 100.0
+        },
+        "short_term_mr": {
+          "trades": 5,
+          "total_pnl": 29.51,
+          "win_rate_pct": 80.0
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 13,
+          "win_rate_pct": 30.8,
+          "avg_trade": -2.22,
+          "total_pnl": -28.9,
+          "profit_factor": 0.7192,
+          "sharpe_approx": -0.1348,
+          "avg_r": -0.1808
+        },
+        "bull": {
+          "trades": 151,
+          "win_rate_pct": 53.6,
+          "avg_trade": 2.7,
+          "total_pnl": 407.35,
+          "profit_factor": 1.4126,
+          "sharpe_approx": 0.128,
+          "avg_r": 0.1712
+        },
+        "neutral": {
+          "trades": 319,
+          "win_rate_pct": 50.2,
+          "avg_trade": 4.94,
+          "total_pnl": 1576.11,
+          "profit_factor": 1.6858,
+          "sharpe_approx": 0.081,
+          "avg_r": 0.4004
+        }
+      },
+      "variant_name": "disabled",
+      "variant_value": {
+        "enabled": false
+      }
+    },
+    "delta_vs_baseline": {},
+    "learnings": [],
+    "promoted": false,
+    "runtime_s": 0,
+    "agent_id": "atlas-research"
+  },
+  {
+    "experiment_id": "ar-20260316_105145",
+    "timestamp": "2026-03-16T00:51:45.262774+00:00",
+    "market": "sp500",
+    "category": "autoresearch",
+    "strategy": "adx_trend_pullback",
+    "hypothesis": "max_hold_days: None\u21927",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4423,
+      "cagr_pct": 48.2645,
+      "max_drawdown_pct": 6.3945,
+      "total_trades": 274,
+      "profit_factor": 9.0256
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: None\u21927"
+    ],
+    "promoted": false,
+    "runtime_s": 66.7,
+    "agent_id": "autoresearch"
   }
 ]

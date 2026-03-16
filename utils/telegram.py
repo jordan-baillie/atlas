@@ -255,6 +255,81 @@ def _build_market_block(market_id: str, md: dict) -> list[str]:
     return lines
 
 
+def _build_combined_snapshot(dash: dict) -> str:
+    """Build a combined portfolio snapshot with key metrics.
+
+    Shows: total equity, return vs benchmark, alpha, today's P&L,
+    and all open positions with P&L.  Used by both premarket and
+    postclose notifications.
+    """
+    lines = []
+    acct = dash.get("account", {})
+    pf = dash.get("portfolio", {})
+
+    # Headline equity
+    total_equity = acct.get("equity", pf.get("equity", 0))
+    acur = acct.get("currency", "AUD")
+    alp_usd = acct.get("alpaca_equity_usd", 0)
+    moo_aud = acct.get("moomoo_equity_aud", 0)
+    lines.append(f"<b>Portfolio: {_fmt_currency(total_equity, acur)}</b>")
+    if alp_usd > 0 and moo_aud > 0:
+        lines.append(f"  Alpaca ${alp_usd:,.0f} · Moomoo A${moo_aud:,.0f}")
+
+    # Return vs benchmark
+    atlas_ret = pf.get("total_pnl_pct", 0)
+    bench_ret = dash.get("benchmark_return_pct", 0)
+    bench_ticker = dash.get("benchmark_ticker", "Benchmark")
+    alpha = round(atlas_ret - bench_ret, 2)
+    atlas_icon = "🟢" if atlas_ret >= 0 else "🔴"
+    bench_icon = "🟢" if bench_ret >= 0 else "🔴"
+    alpha_icon = "🟢" if alpha >= 0 else "🔴"
+    lines.append(
+        f"  {atlas_icon} Return: <b>{atlas_ret:+.1f}%</b>"
+        f"  {bench_icon} {_esc(bench_ticker)}: {bench_ret:+.1f}%"
+        f"  {alpha_icon} α: {alpha:+.1f}%"
+    )
+
+    # Today's P&L
+    today_pnl = pf.get("today_pnl_aud", 0)
+    if abs(today_pnl) > 0.01:
+        today_icon = "📈" if today_pnl >= 0 else "📉"
+        lines.append(f"  {today_icon} Today: <b>{_fmt_pnl(today_pnl, 'AUD')}</b>")
+
+    # Open positions (compact)
+    positions = pf.get("open_positions", [])
+    if positions:
+        lines.append("")
+        lines.append(f"<b>Positions ({len(positions)}):</b>")
+        sorted_pos = sorted(positions, key=lambda p: abs(p.get("pnl", 0)), reverse=True)
+        for p in sorted_pos[:8]:
+            ticker = p.get("ticker", "?")
+            pnl = p.get("pnl", 0)
+            pnl_pct = p.get("pnl_pct", 0)
+            strategy = p.get("strategy", "")
+            days = p.get("days_held", 0)
+            icon = "🟢" if pnl >= 0 else "🔴"
+            market = p.get("market", "")
+            ccy = "AUD" if market == "asx" else "USD"
+            strat_tag = f" [{strategy[:8]}]" if strategy else ""
+            line = (
+                f"  {icon} <b>{_esc(ticker)}</b>{strat_tag}"
+                f"  {_fmt_pnl(pnl, ccy)} ({pnl_pct:+.1f}%)"
+            )
+            if days > 0:
+                line += f"  {days}d"
+            lines.append(line)
+        if len(sorted_pos) > 8:
+            lines.append(f"  … +{len(sorted_pos) - 8} more")
+
+    # Exposure
+    risk = dash.get("risk", {})
+    exposure = risk.get("exposure_pct", 0)
+    if exposure > 0:
+        lines.append(f"\n  Exposure: {exposure:.0f}% | Max pos: {risk.get('max_positions', 0)}")
+
+    return "\n".join(lines)
+
+
 def _build_portfolio_snapshot(market_id: str = "sp500") -> Optional[str]:
     """Build an HTML portfolio snapshot from dashboard-data.json.
 
@@ -294,7 +369,8 @@ def _build_portfolio_snapshot(market_id: str = "sp500") -> Optional[str]:
 def send_premarket_summary(plan_path: Optional[str] = None, market_id: str = "sp500") -> bool:
     """Send a summary of the pre-market plan generation.
 
-    Includes portfolio snapshot from dashboard data and plan details.
+    Includes portfolio snapshot, benchmark comparison, plan details,
+    and open positions with P&L.  Always sends — guaranteed by cron.
     """
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
@@ -302,17 +378,14 @@ def send_premarket_summary(plan_path: Optional[str] = None, market_id: str = "sp
         today = datetime.now().strftime("%Y-%m-%d")
         plan_path = str(PROJECT_ROOT / f"plans/plan_{market_id}_{today}.json")
 
-    # Portfolio snapshot from dashboard data
-    snapshot = _build_portfolio_snapshot(market_id)
+    # Dashboard data for portfolio and benchmark
+    dash = _read_dashboard_data()
 
     plan_file = Path(plan_path)
     if not plan_file.exists():
-        msg = (
-            f"📊 <b>Atlas Pre-Market [{market_id.upper()}]</b>\n"
-            f"<i>{now}</i>\n\n"
-        )
-        if snapshot:
-            msg += snapshot + "\n\n"
+        msg = f"📊 <b>Atlas Pre-Market [{market_id.upper()}]</b>\n<i>{now}</i>\n\n"
+        if dash:
+            msg += _build_combined_snapshot(dash) + "\n\n"
         msg += "⚠️ No plan file generated today.\nCheck logs for errors."
         return send_message(msg)
 
@@ -366,16 +439,15 @@ def send_premarket_summary(plan_path: Optional[str] = None, market_id: str = "sp
         exposure = risk.get("portfolio_exposure_pct", 0)
         risk_line = f"\n⚠️ Cost ${cost:,.0f} | Risk ${risk_amt:,.0f} | Exposure {exposure:.0f}%\n"
 
-    msg = (
-        f"📊 <b>Atlas Pre-Market [{market_id.upper()}]</b>\n"
-        f"<i>{now}</i>\n\n"
-    )
-    if snapshot:
-        msg += snapshot + "\n\n"
-    msg += (
-        f"<b>Today's Plan:</b>\n"
-        f"  Entries: {len(entries)} | Exits: {len(exits)}\n"
-    )
+    # Header
+    msg = f"📊 <b>Atlas Pre-Market [{market_id.upper()}]</b>\n<i>{now}</i>\n\n"
+
+    # Combined portfolio snapshot with benchmark
+    if dash:
+        msg += _build_combined_snapshot(dash) + "\n\n"
+
+    # Plan
+    msg += f"<b>Today's Plan:</b>\n  Entries: {len(entries)} | Exits: {len(exits)}\n"
     if entries:
         msg += f"\n<b>🟢 Entries ({len(entries)}):</b>\n{entry_text}\n"
     if exits:
@@ -389,11 +461,10 @@ def send_premarket_summary(plan_path: Optional[str] = None, market_id: str = "sp
 
 
 def send_postclose_summary(market_id: str = "sp500") -> bool:
-    """Send post-close summary with multi-market data and exits.
+    """Send post-close summary with portfolio snapshot, positions, and exits.
 
-    Reads from dashboard-data.json (just refreshed by cron) for accurate
-    per-market equity, positions, and P&L.  Also reads EOD reports for
-    exit details.  Single message covers all active markets.
+    Always sends — guaranteed by cron after every postclose run.
+    Uses the combined snapshot for key metrics + per-market position detail.
     """
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     today = datetime.now().strftime("%Y-%m-%d")
@@ -412,26 +483,11 @@ def send_postclose_summary(market_id: str = "sp500") -> bool:
         "",
     ]
 
-    # Broker account totals
-    acct = dash.get("account")
-    if acct:
-        acur = acct.get("currency", "AUD")
-        lines.extend([
-            f"<b>Broker Account</b>",
-            f"  Equity: <b>{_fmt_currency(acct['equity'], acur)}</b>",
-            f"  Cash: {_fmt_currency(acct['cash'], acur)}",
-            f"  Buying Power: {_fmt_currency(acct.get('buying_power', 0), acur)}",
-            "",
-        ])
-
-    # Per-market blocks
-    markets = dash.get("markets", {})
-    for mid in sorted(markets.keys()):
-        lines.extend(_build_market_block(mid, markets[mid]))
-        lines.append("")
+    # Combined snapshot (equity, return, benchmark, positions)
+    lines.append(_build_combined_snapshot(dash))
+    lines.append("")
 
     # EOD exits (from EOD report or closed trades in dashboard data)
-    eod_report = _read_eod_report(today)
     closed_today = [
         t for t in dash.get("closed_trades", [])
         if t.get("exit_date", "") == today
@@ -446,7 +502,6 @@ def send_postclose_summary(market_id: str = "sp500") -> bool:
             pnl_pct = t.get("pnl_pct", 0)
             reason = t.get("exit_reason", t.get("reason", "?"))
             strategy = t.get("strategy", "")
-            mid_tag = t.get("market", "")
             icon = "🟢" if pnl >= 0 else "🔴"
             line = f"  {icon} <b>{_esc(ticker)}</b>"
             if strategy:
@@ -477,11 +532,6 @@ def send_postclose_summary(market_id: str = "sp500") -> bool:
             lines.append("✅ No exits triggered. All positions held.")
     elif not closed_today:
         lines.append("✅ No exits triggered.")
-
-    # Timestamp from dashboard
-    ts = dash.get("timestamp", "")
-    if ts:
-        lines.append(f"\n<i>Data as of {_esc(ts[:19])}</i>")
 
     return send_message("\n".join(lines))
 

@@ -3342,12 +3342,12 @@
     "priority": "P1",
     "hypothesis": "mean_reversion annealing crossed the solo threshold: Sharpe trajectory 0.2043\u21920.2375\u21920.2525\u21920.2734\u21920.3564. Combined test will determine if this marginal solo pass (0.3564 vs 0.30 threshold) holds under position contention with trend_following and opening_gap. Solo was borderline \u2014 combined outcome is uncertain and must be run before any promotion discussion.",
     "params_override": {},
-    "status": "queued",
+    "status": "partial",
     "created_at": "2026-03-11T08:43:40.239276+00:00",
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-03-15T23:08:45.029277+00:00",
     "market": "sp500",
-    "updated_at": "2026-03-13T10:00:03.664590+00:00",
+    "updated_at": "2026-03-15T23:34:43.110699+00:00",
     "notes": " | Auto-reset from claimed after 13h (zombie cleanup 2026-03-11 23:05) | Auto-reset from stale claim after 8h (2026-03-13 10:00)"
   },
   {
@@ -3558,7 +3558,7 @@
     "acceptance_criteria": {},
     "estimated_runtime_min": 15,
     "priority": "P1",
-    "status": "queued",
+    "status": "partial",
     "strategy_name": null,
     "params_override": {
       "filter_param": "vol_scaling",
@@ -3593,10 +3593,10 @@
       ]
     },
     "config_snapshot": null,
-    "claimed_by": null,
-    "claimed_at": null,
+    "claimed_by": "atlas-research",
+    "claimed_at": "2026-03-15T23:38:05.353511+00:00",
     "created_at": "2026-03-13T01:06:51.896875+00:00",
-    "updated_at": "2026-03-13T10:00:03.664590+00:00",
+    "updated_at": "2026-03-16T00:21:08.942664+00:00",
     "tags": [
       "sharpe_roadmap",
       "vol_scaling"

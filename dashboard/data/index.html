@@ -1146,9 +1146,9 @@ function render(d) {
   var risk = d.risk || {};
 
   var mp = d.manual_portfolio || {};
-  var manualPnl = mp.unrealized_pnl || 0;
-  var manualEquity = mp.equity || 0;
-  var manualCash = mp.cash || 0;
+  var manualPnl = mp.unrealized_pnl_aud || mp.unrealized_pnl || 0;
+  var manualEquity = mp.equity_aud || mp.equity || 0;
+  var manualCash = mp.cash_aud || mp.cash || 0;
   var manualConnected = mp.connected || false;
 
   // Market session countdowns — init from active markets in data
@@ -1221,21 +1221,26 @@ function render(d) {
   var alpha = atlasRet - benchRet;
 
   // Cards — 5 KPIs
-  // Headline equity: prefer broker-reported total (matches broker app)
-  var headlineEquity = p.broker_equity || p.equity || 0;
-
-  // Combined equity: Atlas (Alpaca) + Manual (Moomoo)
-  var totalEquity = headlineEquity + manualEquity;
+  // Headline equity: account.equity = SP500 (Alpaca) + ASX (Moomoo .AX) in AUD
+  var acct = d.account || {};
+  var totalEquity = acct.equity || p.equity || 0;
   var mob = isMobile();
   var cards = [
     {
       label: 'Total Equity',
       value: $(totalEquity),
-      c: cls(p.total_pnl + manualPnl),
+      c: cls((p.total_pnl || 0) + manualPnl),
       accent: 'accent-blue',
-      sub: mob
-        ? $(headlineEquity) + ' Atlas ' + sparkHtml
-        : 'Atlas ' + $(headlineEquity) + ' · Manual ' + $(manualEquity) + ' ' + sparkHtml
+      sub: (function() {
+        var alpUsd = acct.alpaca_equity_usd || 0;
+        var mooAud = acct.moomoo_equity_aud || 0;
+        if (alpUsd > 0 && mooAud > 0) {
+          return 'Alpaca $' + alpUsd.toLocaleString('en',{minimumFractionDigits:0, maximumFractionDigits:0})
+            + ' · Moomoo A$' + mooAud.toLocaleString('en',{minimumFractionDigits:0, maximumFractionDigits:0})
+            + ' ' + sparkHtml;
+        }
+        return $(totalEquity) + ' ' + (acct.currency || '') + ' ' + sparkHtml;
+      })()
     },
     {
       label: 'vs ' + benchTk,

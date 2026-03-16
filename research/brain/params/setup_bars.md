@@ -22,3 +22,7 @@
 | 2026-03-15 05:28 | demark_sequential | None → 7 | ✅ kept | +1.4958 | -0.2921 |
 | 2026-03-15 05:28 | demark_sequential | None → 9 | ❌ discard | +0.0000 | -1.7879 |
 | 2026-03-15 05:28 | demark_sequential | None → 13 | ❌ discard | -2.3959 | -4.1838 |
+| 2026-03-15 10:06 | demark_sequential | 7 → 13 | ❌ discard | -6.4388 | -6.3142 |
+| 2026-03-15 10:06 | demark_sequential | 7 → 9 | ❌ discard | -2.7995 | -2.6749 |
+| 2026-03-16 00:59 | demark_sequential | 7 → 13 | ❌ discard | -6.4388 | -6.3142 |
+| 2026-03-16 00:59 | demark_sequential | 7 → 9 | ❌ discard | -2.7995 | -2.6749 |

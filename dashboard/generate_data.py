@@ -358,12 +358,35 @@ def get_moomoo_manual_portfolio() -> dict:
                 raise ConnectionError(f"Moomoo accinfo_query failed: ret={ret}")
 
             row = acct_df.iloc[0]
-            equity = float(row.get("total_assets", 0) or 0)
-            cash = float(row.get("cash", 0) or 0)
-            buying_power = float(row.get("power", 0) or row.get("buying_power", 0) or 0)
 
-            if equity == 0 and cash == 0:
-                raise ConnectionError("Moomoo returned zeroed data")
+            # Moomoo Futu AU reports total_assets/cash in HKD (account base
+            # currency). Use per-currency breakdowns for accurate equity:
+            #   aud_assets / au_cash — Australian holdings
+            #   usd_assets / us_cash — US holdings
+            aud_assets = float(row.get("aud_assets", 0) or 0)
+            usd_assets = float(row.get("usd_assets", 0) or 0)
+            au_cash = float(row.get("au_cash", 0) or 0)
+            us_cash = float(row.get("us_cash", 0) or 0)
+
+            # Fetch live USDAUD rate for combining currencies
+            fx = _get_exchange_rates()
+            usdaud = fx.get("USDAUD", 1.43)
+
+            # Total equity in AUD = AUD assets + USD assets converted to AUD
+            equity = round(aud_assets + usd_assets * usdaud, 2)
+            cash = round(au_cash + us_cash * usdaud, 2)
+            buying_power = float(row.get("power", 0) or .0)
+
+            if aud_assets == 0 and usd_assets == 0:
+                # Fallback: try total_assets (HKD) if per-currency not available
+                hkd_total = float(row.get("total_assets", 0) or 0)
+                if hkd_total == 0:
+                    raise ConnectionError("Moomoo returned zeroed data")
+                # Can't convert HKD accurately — flag as unreliable
+                equity = hkd_total
+                cash = float(row.get("cash", 0) or 0)
+                logger.warning("Moomoo: per-currency breakdown unavailable, "
+                               "using HKD total_assets (inaccurate)")
 
             # Positions
             ret, pos_df = ctx.position_list_query(trd_env=TrdEnv.REAL)
@@ -389,6 +412,9 @@ def get_moomoo_manual_portfolio() -> dict:
                     if qty == 0:
                         continue
 
+                    # Moomoo reports .AX positions in AUD (native currency),
+                    # US positions in USD (account base currency).
+                    pos_ccy = "AUD" if ticker.endswith(".AX") else "USD"
                     pos_list.append({
                         "ticker": ticker,
                         "entry_price": round(float(p.get("cost_price", 0) or 0), 4),
@@ -399,7 +425,7 @@ def get_moomoo_manual_portfolio() -> dict:
                         "pnl_pct": round(float(p.get("pl_ratio", 0) or 0) * 100, 2),
                         "cost_basis": round(float(p.get("cost_price", 0) or 0) * qty, 2),
                         "today_pnl": round(float(p.get("today_pl_val", 0) or 0), 2),
-                        "currency": "USD",
+                        "currency": pos_ccy,
                         "strategy": "manual",
                         "is_atlas": False,
                     })
@@ -411,7 +437,12 @@ def get_moomoo_manual_portfolio() -> dict:
             "equity": round(equity, 2),
             "cash": round(cash, 2),
             "buying_power": round(buying_power, 2),
-            "currency": "USD",
+            "currency": "AUD",  # equity/cash are AUD-normalised totals
+            # Per-currency breakdown for display
+            "aud_assets": round(aud_assets, 2),
+            "usd_assets": round(usd_assets, 2),
+            "au_cash": round(au_cash, 2),
+            "us_cash": round(us_cash, 2),
             "positions": pos_list,
             "num_open": len(pos_list),
             "unrealized_pnl": round(sum(p["pnl"] for p in pos_list), 2),
@@ -1039,10 +1070,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
         market_pnl = round(pos_value - total_entry_value, 2)
 
     # Realized P&L from closed trades
-    # In live mode, use live state file; otherwise cached state
+    # Use only per-market state files — never the global trade_ledger
+    # (which is market-agnostic and would mix SP500 paper trades into ASX).
     live_state_file = PROJECT_ROOT / "brokers" / "state" / f"live_{market_id}.json"
     live_closed = safe_json(live_state_file, {}).get("closed_trades", [])
-    closed = live_closed or portfolio.get("closed_trades", []) or ledger or []
+    closed = live_closed or portfolio.get("closed_trades", []) or []
     realized_pnl = round(sum(t.get("pnl", 0) for t in closed), 2)
 
     # ── Open positions ──────────────────────────────────────────
@@ -2482,9 +2514,8 @@ def _merge_equity_curves(market_data: dict, exchange_rates: dict) -> list:
     start_vals = {}   # {mid: starting equity in AUD}
     all_dates = set()
     for mid, md in market_data.items():
-        # Skip cross-broker markets — their equity is already inside
-        # the primary broker's curve.
-        if md.get("data_source") == "cross-broker":
+        # Skip unfunded/passive markets with no positions or history
+        if not md.get("funded", True):
             continue
         ccy = md.get("currency", "AUD")
         currencies[mid] = ccy
@@ -2527,13 +2558,69 @@ def _merge_equity_curves(market_data: dict, exchange_rates: dict) -> list:
     return combined
 
 
+def _load_benchmark_prices(ticker: str, start_date: str) -> list[tuple[str, float]]:
+    """Load benchmark close prices from parquet cache + yfinance from start_date.
+
+    Returns list of (date_str, close_price) sorted by date, starting on or
+    just before start_date.  Extends with yfinance for dates beyond the cache.
+    """
+    result: list[tuple[str, float]] = []
+
+    # ── Try parquet cache first ──
+    for subdir in ["sp500", "asx", "hk", ""]:
+        cache = PROJECT_ROOT / "data" / "cache" / subdir if subdir else PROJECT_ROOT / "data" / "cache"
+        fp = cache / (ticker.replace(".", "_") + ".parquet")
+        if not fp.exists():
+            continue
+        try:
+            df = pd.read_parquet(fp)
+            # Anchor: find close on or just before start_date
+            on_or_before = df[df.index <= start_date]
+            if len(on_or_before) == 0:
+                continue
+            anchor_date = str(on_or_before.index[-1].date())
+            df = df[df.index >= anchor_date]
+            for idx, row in df.iterrows():
+                result.append((str(idx.date()), float(row["close"])))
+            break
+        except Exception:
+            continue
+
+    if not result:
+        return result
+
+    # ── Extend with yfinance for recent days beyond cache ──
+    last_cached_date = result[-1][0]
+    try:
+        import yfinance as yf
+        recent = yf.download(ticker, period="10d", interval="1d",
+                             progress=False, auto_adjust=True)
+        if not recent.empty:
+            close_s = recent["Close"]
+            if hasattr(close_s, "columns"):
+                close_s = close_s.iloc[:, 0]
+            for ridx, val in close_s.dropna().items():
+                rd = str(ridx.date())
+                if rd > last_cached_date:
+                    result.append((rd, float(val)))
+            if len(result) > len(df):
+                logger.info("_load_benchmark_prices: %s extended %d days via yfinance",
+                            ticker, len(result) - len(df))
+    except Exception as e:
+        logger.debug("_load_benchmark_prices: yfinance extension failed for %s: %s",
+                     ticker, e)
+
+    return result
+
+
 def _merge_benchmark_curves(market_data: dict, exchange_rates: dict,
                             combined_starting_aud: float) -> tuple:
     """Merge per-market benchmark curves into a combined AUD-normalised curve.
 
     Each market has its own benchmark (SP500→SPY, ASX→IOZ.AX) in native currency.
-    We convert each to AUD, forward-fill gaps, sum them, and scale so day-1
-    equals combined starting equity.
+    Unlike per-market benchmarks (which start when each market's equity curve
+    starts), the combined benchmark loads price data from the EARLIEST combined
+    equity curve date so that all markets are fairly represented from day 1.
 
     Returns (combined_curve, ticker_label) e.g. ([{date, equity}], "SPY + IOZ")
     """
@@ -2544,61 +2631,85 @@ def _merge_benchmark_curves(market_data: dict, exchange_rates: dict,
             return amount * exchange_rates.get("USDAUD", 1.41)
         return amount
 
-    # Build per-market date→equity dicts (in AUD) and per-market starting values
-    per_market = {}   # {mid: {date: equity_aud}}
-    start_vals = {}   # {mid: starting equity in AUD, used as fill-value before first data point}
+    # ── 1. Find earliest date across ALL equity curves ──
+    earliest_date = None
+    for md in market_data.values():
+        if not md.get("funded", True):
+            continue
+        eq = md.get("equity_curve", [])
+        if len(eq) < 2:
+            continue
+        first_date = eq[0].get("date", "")
+        if first_date and (earliest_date is None or first_date < earliest_date):
+            earliest_date = first_date
+
+    if not earliest_date:
+        return [], "Benchmark"
+
+    # ── 2. For each market, load benchmark prices from earliest_date ──
+    per_market = {}   # {mid: {date: scaled_equity_aud}}
+    start_vals = {}   # {mid: starting equity in AUD}
     tickers = []
     all_dates = set()
     for mid, md in market_data.items():
-        # Skip cross-broker markets (their equity is in the primary broker's curve)
-        if md.get("data_source") == "cross-broker":
+        if not md.get("funded", True):
             continue
-        # Issue #10: skip markets with no meaningful equity history (< 2 points)
         eq_curve_len = len(md.get("equity_curve", []))
         if eq_curve_len < 2:
             logger.debug("_merge_benchmark_curves: skipping %s (equity_curve has %d points)",
                          mid, eq_curve_len)
             continue
-        bench = md.get("benchmark_curve", [])
-        if not bench:
-            continue
-        ccy = md.get("currency", "AUD")
+
         ticker = md.get("benchmark_ticker", "?")
+        ccy = md.get("currency", "AUD")
+        seq = md.get("portfolio", {}).get("starting_equity", 0)
+        if seq <= 0:
+            continue
+
         if ticker not in tickers:
             tickers.append(ticker)
+
+        # Load benchmark prices from the COMBINED start date (not per-market)
+        prices = _load_benchmark_prices(ticker, earliest_date)
+        if not prices:
+            # Fallback: use pre-computed per-market benchmark if available
+            bench = md.get("benchmark_curve", [])
+            if bench:
+                series = {}
+                for pt in bench:
+                    d_str = pt.get("date", "")
+                    e_val = pt.get("equity", 0)
+                    if d_str and e_val:
+                        series[d_str] = _to_aud(e_val, ccy)
+                        all_dates.add(d_str)
+                per_market[mid] = series
+                start_vals[mid] = _to_aud(seq, ccy)
+            continue
+
+        # Scale prices to starting_equity, convert to AUD
+        base_price = prices[0][1]
+        if base_price <= 0:
+            continue
         series = {}
-        for pt in bench:
-            date = pt.get("date", "")
-            eq = pt.get("equity", 0)
-            if date and eq:
-                series[date] = _to_aud(eq, ccy)
-                all_dates.add(date)
+        for date, price in prices:
+            scaled = price / base_price * seq
+            series[date] = _to_aud(scaled, ccy)
+            all_dates.add(date)
+
         per_market[mid] = series
-        # Starting equity for this market (AUD) — used as fill-value before first
-        # benchmark data point so the combined sum equals combined_starting_aud
-        # from day 1 and the scale factor stays at 1.0.
-        seq = md.get("portfolio", {}).get("starting_equity", 0)
-        if seq > 0:
-            start_vals[mid] = _to_aud(seq, ccy)
-        elif series:
-            # Fallback: use first available benchmark value
-            start_vals[mid] = min(series.values())
-        else:
-            start_vals[mid] = 0
+        start_vals[mid] = _to_aud(seq, ccy)
 
     if not all_dates or not per_market:
         return [], "Benchmark"
 
-    # Forward-fill each market series across all dates, then sum.
-    # Markets with no data yet contribute their starting equity so the combined
-    # sum is stable from day 1 and the scale factor is 1.0 (no inflation).
+    # ── 3. Forward-fill and sum across markets ──
     sorted_dates = sorted(all_dates)
     combined = []
     for d in sorted_dates:
         total = 0
         for mid, series in per_market.items():
             if d in series:
-                series["_last"] = series[d]  # track last known value
+                series["_last"] = series[d]
             total += series.get("_last", start_vals.get(mid, 0))
         combined.append((d, total))
 
@@ -3095,6 +3206,24 @@ def generate():
     print("\n  Fetching Moomoo manual portfolio...")
     moomoo_manual = get_moomoo_manual_portfolio()
 
+    # ── Wire Moomoo .AX positions as ASX cross-broker data ──────
+    # ASX market is passive (no direct broker connection) but the user
+    # holds .AX stocks on Moomoo. Feed these as cross-broker positions
+    # so ASX market view shows real position data.
+    moomoo_positions = moomoo_manual.get("positions", [])
+    moomoo_ax_positions = [p for p in moomoo_positions if p.get("ticker", "").endswith(".AX")]
+    moomoo_us_positions = [p for p in moomoo_positions if not p.get("ticker", "").endswith(".AX")]
+    if moomoo_ax_positions and "asx" not in broker_caches:
+        broker_caches["asx"] = {
+            "acct": None,
+            "positions": moomoo_ax_positions,
+            "ok": True,
+            "orders": [],
+        }
+        ax_val = sum(p.get("market_value", 0) for p in moomoo_ax_positions)
+        print(f"  asx: {len(moomoo_ax_positions)} cross-broker positions from Moomoo "
+              f"(${ax_val:,.2f} AUD)")
+
     # ── Generate per-market data ────────────────────────────────
     market_data = {}
     for mid in markets:
@@ -3173,6 +3302,16 @@ def generate():
     # ── Combined equity curve (sum across markets) ──────────────
     combined_curve = _merge_equity_curves(market_data, exchange_rates)
 
+    # ── Derive combined starting equity from equity curve ──────
+    # Use invested capital (equity - pnl) from first combined point.
+    # This includes ALL funded markets (broker + cross-broker) and
+    # correctly represents the initial capital base for return calcs.
+    if combined_curve:
+        _first_pt = combined_curve[0]
+        _curve_starting = _first_pt["equity"] - _first_pt.get("pnl", 0)
+        if _curve_starting > 0:
+            combined_starting_aud = round(_curve_starting, 2)
+
     # ── Combined benchmark curve (AUD-normalised blend) ────────
     combined_bench, combined_bench_label = _merge_benchmark_curves(
         market_data, exchange_rates, combined_starting_aud
@@ -3180,9 +3319,18 @@ def generate():
 
     # ── Build combined result ───────────────────────────────────
     now = datetime.now(BRISBANE)
-    # P&L from Atlas strategy performance (not broker total)
-    combined_pnl = round(combined_atlas_equity_aud - combined_starting_aud, 2)
-    combined_pnl_pct = round(combined_pnl / combined_starting_aud * 100, 2) if combined_starting_aud > 0 else 0
+    # Deposit-adjusted P&L: use pnl from the combined equity curve.
+    # This is the sum of all unrealized + realized profits across markets,
+    # independent of deposits/withdrawals. Return = pnl / invested,
+    # where invested = equity - pnl.  Consistent with the chart's method.
+    if combined_curve:
+        _latest_pt = combined_curve[-1]
+        combined_pnl = round(_latest_pt.get("pnl", 0), 2)
+        _invested = _latest_pt["equity"] - combined_pnl
+        combined_pnl_pct = round(combined_pnl / _invested * 100, 2) if _invested > 0 else 0
+    else:
+        combined_pnl = round(combined_atlas_equity_aud - combined_starting_aud, 2)
+        combined_pnl_pct = round(combined_pnl / combined_starting_aud * 100, 2) if combined_starting_aud > 0 else 0
 
     # ── Research data ──────────────────────────────────────────
     research_data = generate_research_data()
@@ -3243,6 +3391,30 @@ def generate():
         to_aud(v, ccy) for ccy, v in _combined_today_pnl_by_ccy.items()
     ), 2)
 
+    # ── Total equity: Alpaca + full Moomoo account ────────────────
+    # Moomoo equity is already AUD-normalised (aud_assets + usd_assets * USDAUD)
+    moomoo_equity_aud = moomoo_manual.get("equity", 0)
+    moomoo_cash_aud = moomoo_manual.get("cash", 0)
+    total_equity_aud = round(combined_broker_equity_aud + moomoo_equity_aud, 2)
+    total_cash_aud = round(combined_broker_cash_aud + moomoo_cash_aud, 2)
+
+    # Moomoo manual portfolio (US positions only — .AX positions are in ASX market)
+    us_unrealized = round(sum(p.get("pnl", 0) for p in moomoo_us_positions), 2)
+    us_market_val = round(sum(p.get("market_value", 0) for p in moomoo_us_positions), 2)
+    moomoo_manual_display = {
+        **moomoo_manual,
+        # Override positions list to exclude .AX (already shown under ASX market)
+        "positions": moomoo_us_positions,
+        "num_open": len(moomoo_us_positions),
+        "unrealized_pnl": us_unrealized,
+        "market_value": us_market_val,
+        # AUD-equivalent values (equity/cash already in AUD from Moomoo function)
+        "equity_aud": moomoo_manual.get("equity", 0),
+        "cash_aud": moomoo_manual.get("cash", 0),
+        "unrealized_pnl_aud": round(to_aud(us_unrealized, "USD"), 2),
+        "market_value_aud": round(to_aud(us_market_val, "USD"), 2),
+    }
+
     result = {
         "timestamp": now.isoformat(),
         "project": "Atlas",
@@ -3255,10 +3427,17 @@ def generate():
         "broker": {mid: get_config(mid).get("trading", {}).get("broker", "alpaca") for mid in markets},
         "config_version": {mid: md.get("config_version", "?") for mid, md in market_data.items()},
         "account": {
-            "equity": round(combined_broker_equity_aud, 2),
-            "cash": round(combined_broker_cash_aud, 2),
-            "buying_power": round(combined_broker_cash_aud, 2),
+            # Total across both brokers in AUD
+            "equity": total_equity_aud,
+            "cash": total_cash_aud,
+            "buying_power": total_cash_aud,
             "currency": "AUD",
+            # Per-broker breakdown
+            "alpaca_equity_usd": round(
+                sum(md.get("portfolio", {}).get("broker_equity", 0) or md.get("portfolio", {}).get("equity", 0)
+                    for mid, md in market_data.items()
+                    if md.get("data_source") in ("broker", "cached")), 2),
+            "moomoo_equity_aud": round(moomoo_equity_aud, 2),
         },
         "portfolio": {
             "equity": round(combined_broker_equity_aud, 2),
@@ -3283,7 +3462,7 @@ def generate():
             "today_pnl_by_ccy": _combined_today_pnl_by_ccy,
             "today_pnl_aud": _combined_today_pnl_aud,
         },
-        "manual_portfolio": moomoo_manual,
+        "manual_portfolio": moomoo_manual_display,
         "strategy_summary": list(combined_strats.values()),
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
@@ -3343,8 +3522,8 @@ def generate():
                if moomoo_manual.get("connected")
                else "🔴 offline")
     print(f"  MOOMOO  Manual: {moo_tag}")
-    print(f"  COMBINED (AUD): A${combined_broker_equity_aud:,.2f} equity, "
-          f"A${combined_broker_cash_aud:,.2f} cash, "
+    print(f"  COMBINED (AUD): A${total_equity_aud:,.2f} total "
+          f"(Alpaca A${combined_broker_equity_aud:,.2f} + Moomoo A${moomoo_equity_aud:,.2f}), "
           f"Atlas P&L A${combined_pnl:,.2f} ({combined_pnl_pct:+.2f}%), "
           f"{len(all_positions)} positions across {len(market_data)} markets"
           f" (1 USD = {exchange_rates['USDAUD']:.4f} AUD)")
