@@ -16,7 +16,7 @@
     "point_in_time": false
   },
   "risk": {
-    "starting_equity": 3518.12,
+    "starting_equity": 5011.79,
     "leverage": 2.0,
     "max_risk_per_trade_pct": 0.0035,
     "max_open_positions": 10,
@@ -26,7 +26,7 @@
     "require_planned_exit": true,
     "min_confidence": 0.65,
     "trailing_stop": {
-      "enabled": true,
+      "enabled": false,
       "activation_pct": 0.02,
       "atr_multiplier": 2.0
     }
