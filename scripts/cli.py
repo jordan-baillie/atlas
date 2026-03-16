@@ -235,8 +235,12 @@ def cmd_plan(args):
     n_atlas = len(portfolio.atlas_positions) if hasattr(portfolio, 'atlas_positions') else len(portfolio.positions)
     n_manual = len(portfolio.manual_positions) if hasattr(portfolio, 'manual_positions') else 0
     manual_note = f" + {n_manual} manual" if n_manual else ""
-    print("LIVE MODE: Planning against $%.2f atlas equity (%d atlas positions%s) via %s" %
-          (portfolio.equity(prices), n_atlas, manual_note, broker_name))
+    leverage = config.get("risk", {}).get("leverage", 1.0)
+    atlas_equity = portfolio.equity(prices)
+    effective_equity = atlas_equity * leverage
+    leverage_note = f" (x{leverage:.0f} leverage → ${effective_equity:,.2f} buying power)" if leverage > 1.0 else ""
+    print("LIVE MODE: Planning against $%.2f atlas equity (%d atlas positions%s) via %s%s" %
+          (atlas_equity, n_atlas, manual_note, broker_name, leverage_note))
 
     plan_gen = TradePlanGenerator(portfolio, config)
     decision_journal = DecisionJournal()
@@ -270,7 +274,7 @@ def cmd_plan(args):
             # but live plan generation must also call it)
             if hasattr(strat, 'precompute') and not getattr(strat, '_precomputed', False):
                 strat.precompute(data)
-            signals = strat.generate_signals(data, portfolio.equity(prices), existing_positions)
+            signals = strat.generate_signals(data, effective_equity, existing_positions)
             for sig in signals:
                 all_signals.append(sig)
                 decision_journal.record_signal(sig, "proposed", config_version=config["version"], market_id=market_id)

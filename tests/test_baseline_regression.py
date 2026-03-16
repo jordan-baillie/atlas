@@ -17,7 +17,7 @@ from scripts.strategy_evaluator import get_active_config, load_market_data, run_
 
 # Expected bounds — update these after each validated config promotion
 EXPECTED_MIN_TRADES = 80
-EXPECTED_MAX_TRADES = 400
+EXPECTED_MAX_TRADES = 700
 EXPECTED_MIN_SHARPE = -2.0  # Allow negative but not catastrophic
 EXPECTED_STRATEGIES = {"mean_reversion", "trend_following"}  # OG may have 0 trades
 

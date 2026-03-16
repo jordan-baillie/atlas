@@ -17,6 +17,7 @@
   },
   "risk": {
     "starting_equity": 3518.12,
+    "leverage": 2.0,
     "max_risk_per_trade_pct": 0.0035,
     "max_open_positions": 10,
     "max_sector_concentration": 2,

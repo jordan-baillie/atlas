@@ -53,6 +53,7 @@ class LivePortfolio:
         self.max_positions = risk.get("max_open_positions", 10)
         self.max_sector_conc = risk.get("max_sector_concentration", 2)
         self.max_daily_dd = risk.get("max_daily_drawdown_pct", 0.02)
+        self.leverage = risk.get("leverage", 1.0)
 
         fees = config.get("fees", {})
         self.commission_flat = fees.get("commission_per_trade", 0)
@@ -61,6 +62,7 @@ class LivePortfolio:
         # State read from broker (populated on connect)
         self.positions: list[Position] = []
         self.cash: float = 0.0
+        self.buying_power: float = 0.0
         self._broker_equity: float = 0.0
 
         # True when broker returned meaningful data; False when broker
@@ -195,6 +197,7 @@ class LivePortfolio:
 
         self.broker_data_valid = True
         self.cash = acct.cash
+        self.buying_power = getattr(acct, 'buying_power', 0.0) or (acct.cash * self.leverage)
         self._broker_equity = acct.equity
 
         # Convert broker PositionInfo → engine Position objects
@@ -367,13 +370,15 @@ class LivePortfolio:
 
         risk_amount = abs(signal.entry_price - signal.stop_price) * signal.position_size
         eq = self.equity()
-        max_risk = eq * self.max_risk_per_trade
+        effective_eq = eq * self.leverage
+        max_risk = effective_eq * self.max_risk_per_trade
         if risk_amount > max_risk * 1.1:
             reasons.append(f"Risk ${risk_amount:.2f} exceeds max ${max_risk:.2f}")
 
         cost = signal.entry_price * signal.position_size
-        if cost > self.cash:
-            reasons.append(f"Insufficient cash: need ${cost:.2f}, have ${self.cash:.2f}")
+        available_buying_power = self.buying_power if self.buying_power > 0 else self.cash * self.leverage
+        if cost > available_buying_power:
+            reasons.append(f"Insufficient buying power: need ${cost:.2f}, have ${available_buying_power:.2f}")
 
         if self.halted:
             reasons.append(f"Trading halted: {self.halt_reason}")

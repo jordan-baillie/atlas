@@ -142,6 +142,7 @@ class BacktestEngine:
 
         # Risk parameters
         self.starting_equity = self.risk_config.get("starting_equity", 5000)
+        self.leverage = self.risk_config.get("leverage", 1.0)
         self.max_positions = self.risk_config.get("max_open_positions", 5)
 
         # Trailing stop configuration
@@ -751,7 +752,7 @@ class BacktestEngine:
                     break
 
                 signals = strategy.generate_signals(
-                    signal_data, equity, open_positions
+                    signal_data, equity * self.leverage, open_positions
                 )
 
                 # ── FIX-3: Signal enrichment via pipeline orchestrator ────────
@@ -865,7 +866,7 @@ class BacktestEngine:
                         else 1.0
                     )
                     vol_scale = self.vol_scaler.scale_factor() if self.vol_scaler.enabled else 1.0
-                    risk_budget = equity * _risk_pct * regime_scale * _effective_macro_scale * vol_scale
+                    risk_budget = equity * self.leverage * _risk_pct * regime_scale * _effective_macro_scale * vol_scale
                     shares = int(risk_budget / risk_per_share)
 
                     if shares <= 0:
@@ -889,11 +890,11 @@ class BacktestEngine:
                         )
                         continue
 
-                    # Don't exceed available equity
+                    # Don't exceed available buying power (equity × leverage)
                     invested = sum(
                         p["position_value"] for p in open_positions
                     )
-                    available = equity - invested
+                    available = equity * self.leverage - invested
                     if position_value > available:
                         shares = int(available / fill_price)
                         if shares <= 0:
