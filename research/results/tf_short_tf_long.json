@@ -1,0 +1,116 @@
+{
+  "timestamp": "20260316T220557",
+  "label": "TF Long",
+  "metrics": {
+    "total_return": 0.2747,
+    "cagr": 0.041741,
+    "max_drawdown": 0.042693,
+    "sharpe": -0.1257,
+    "sortino": -0.179,
+    "win_rate": 0.5495,
+    "profit_factor": 1.4442,
+    "avg_trade": 3.7,
+    "total_trades": 273,
+    "total_pnl": 1009.03,
+    "exposure": 0.8498,
+    "turnover": 50.8679,
+    "avg_equity": 3957.61,
+    "final_equity": 4484.64,
+    "avg_winner": 21.87,
+    "avg_loser": -18.62,
+    "largest_winner": 82.89,
+    "largest_loser": -80.7,
+    "avg_hold_days": 12.1,
+    "calmar": 0.9777,
+    "var_95": 0.005036,
+    "var_99": 0.008655,
+    "cvar_95": 0.007184,
+    "var_95_parametric": 0.005133,
+    "expectancy_r": 0.2757,
+    "avg_r": 0.2757,
+    "avg_winner_r": 1.4055,
+    "avg_loser_r": -1.102,
+    "win_rate_r": 0.5495,
+    "total_r": 75.2771,
+    "r_count": 273,
+    "largest_winner_r": 19.6114,
+    "largest_loser_r": -8.7862,
+    "edge_t_statistic": 1.9817,
+    "edge_p_value": 0.048522,
+    "edge_significant": true,
+    "strategy_correlation": {
+      "strategies": [
+        "trend_following"
+      ],
+      "matrix": [
+        [
+          1.0
+        ]
+      ],
+      "concentrated_pairs": [],
+      "daily_returns": {}
+    },
+    "mc_p95_drawdown": 0.091651,
+    "mc_p99_drawdown": 0.115148,
+    "mc_fragile": true,
+    "monte_carlo": {
+      "p50_drawdown": 0.05623,
+      "p75_drawdown": 0.068616,
+      "p95_drawdown": 0.091651,
+      "p99_drawdown": 0.115148,
+      "worst_drawdown": 0.14003,
+      "actual_drawdown": 0.045451,
+      "n_simulations": 1000,
+      "n_trades": 273,
+      "fragile": true
+    },
+    "alpha": -0.008755,
+    "beta": 0.020785,
+    "r_squared": 0.003959,
+    "information_ratio": -0.678334,
+    "tracking_error": 0.160491,
+    "treynor_ratio": -0.318974,
+    "correlation": 0.06292,
+    "up_capture": 0.041532,
+    "down_capture": -0.002253,
+    "shuffle_actual_dd": 0.045451,
+    "shuffle_p50_dd": 0.055863,
+    "shuffle_p95_dd": 0.089866,
+    "shuffle_percentile": 20.18,
+    "shuffle_impact": "LUCKY",
+    "regime_metrics": {
+      "bear": {
+        "trades": 23,
+        "win_rate_pct": 47.8,
+        "avg_trade": -0.14,
+        "total_pnl": -3.2,
+        "profit_factor": 0.985,
+        "sharpe_approx": -0.0061,
+        "avg_r": -0.2499
+      },
+      "bull": {
+        "trades": 189,
+        "win_rate_pct": 56.1,
+        "avg_trade": 4.76,
+        "total_pnl": 899.76,
+        "profit_factor": 1.6238,
+        "sharpe_approx": 0.1852,
+        "avg_r": 0.3177
+      },
+      "neutral": {
+        "trades": 61,
+        "win_rate_pct": 54.1,
+        "avg_trade": 1.84,
+        "total_pnl": 112.47,
+        "profit_factor": 1.1827,
+        "sharpe_approx": 0.0692,
+        "avg_r": 0.3438
+      }
+    }
+  },
+  "trade_count": 273,
+  "long_trades": 273,
+  "short_trades": 0,
+  "yearly_short": {},
+  "short_trade_details": []
+}

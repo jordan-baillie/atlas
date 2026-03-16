@@ -1,0 +1,137 @@
+{
+  "test_date": "2026-03-16",
+  "config_version": "v3.0",
+  "market": "sp500",
+  "results": [
+    {
+      "label": "TF Long",
+      "elapsed_s": 128.9,
+      "sharpe": -0.1257,
+      "cagr_pct": 4.1741,
+      "max_dd_pct": 4.2693,
+      "profit_factor": 1.4442,
+      "total_trades": 273,
+      "long_trades": 273,
+      "short_trades": 0,
+      "win_rate_pct": 54.949999999999996,
+      "long_win_rate": 54.9,
+      "short_win_rate": 0.0,
+      "long_pnl": 1009.03,
+      "short_pnl": 0,
+      "avg_long_pnl": 3.7,
+      "avg_short_pnl": 0.0,
+      "total_return_pct": 27.47,
+      "sortino": -0.179,
+      "calmar": 0.9777,
+      "yearly_short": {}
+    },
+    {
+      "label": "TF Long+Short",
+      "elapsed_s": 175.1,
+      "sharpe": -0.4687,
+      "cagr_pct": 1.9244,
+      "max_dd_pct": 7.1030999999999995,
+      "profit_factor": 1.1618,
+      "total_trades": 312,
+      "long_trades": 242,
+      "short_trades": 70,
+      "win_rate_pct": 50.32,
+      "long_win_rate": 53.3,
+      "short_win_rate": 40.0,
+      "long_pnl": 725.48,
+      "short_pnl": -316.12,
+      "avg_long_pnl": 3.0,
+      "avg_short_pnl": -4.52,
+      "total_return_pct": 11.98,
+      "sortino": -0.6157,
+      "calmar": 0.2709,
+      "yearly_short": {
+        "2021": {
+          "count": 5,
+          "wins": 0,
+          "pnl": -96.0
+        },
+        "2022": {
+          "count": 17,
+          "wins": 10,
+          "pnl": 28.75
+        },
+        "2023": {
+          "count": 21,
+          "wins": 7,
+          "pnl": -102.59
+        },
+        "2024": {
+          "count": 13,
+          "wins": 5,
+          "pnl": -87.93
+        },
+        "2025": {
+          "count": 14,
+          "wins": 6,
+          "pnl": -58.349999999999994
+        }
+      }
+    },
+    {
+      "label": "Full Base",
+      "elapsed_s": 520.4,
+      "sharpe": 0.3372,
+      "cagr_pct": 7.8553999999999995,
+      "max_dd_pct": 10.374600000000001,
+      "profit_factor": 1.3439,
+      "total_trades": 607,
+      "long_trades": 607,
+      "short_trades": 0,
+      "win_rate_pct": 53.21,
+      "long_win_rate": 53.2,
+      "short_win_rate": 0.0,
+      "long_pnl": 1973.37,
+      "short_pnl": 0,
+      "avg_long_pnl": 3.25,
+      "avg_short_pnl": 0.0,
+      "total_return_pct": 56.65,
+      "sortino": 0.4451,
+      "calmar": 0.7572,
+      "yearly_short": {}
+    },
+    {
+      "label": "Full+TF Shorts",
+      "elapsed_s": 580.3,
+      "sharpe": -0.0099,
+      "cagr_pct": 4.4673,
+      "max_dd_pct": 10.1408,
+      "profit_factor": 1.1826,
+      "total_trades": 602,
+      "long_trades": 596,
+      "short_trades": 6,
+      "win_rate_pct": 50.5,
+      "long_win_rate": 50.7,
+      "short_win_rate": 33.3,
+      "long_pnl": 1029.07,
+      "short_pnl": -15.33,
+      "avg_long_pnl": 1.73,
+      "avg_short_pnl": -2.55,
+      "total_return_pct": 29.62,
+      "sortino": -0.0126,
+      "calmar": 0.4405,
+      "yearly_short": {
+        "2022": {
+          "count": 3,
+          "wins": 2,
+          "pnl": 7.770000000000002
+        },
+        "2023": {
+          "count": 1,
+          "wins": 0,
+          "pnl": -8.25
+        },
+        "2025": {
+          "count": 2,
+          "wins": 0,
+          "pnl": -14.85
+        }
+      }
+    }
+  ]
+}

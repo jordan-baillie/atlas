@@ -300,9 +300,9 @@
       "params": {}
     }
   },
-  "last_sweep_session": "20260312_031041",
-  "last_sweep_runtime_s": 54.5,
-  "total_experiments": 8,
+  "last_sweep_session": "20260316_100002",
+  "last_sweep_runtime_s": 7335.3,
+  "total_experiments": 183,
   "total_kept": 0,
-  "updated_at": "2026-03-12T03:11:35Z"
+  "updated_at": "2026-03-16T12:02:17Z"
 }

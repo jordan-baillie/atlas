@@ -54,6 +54,7 @@ class TrendFollowing(BaseStrategy):
         self.vol_boost_threshold = vol_cfg.get("boost_threshold", 1.5)
         self.vol_boost_amount = vol_cfg.get("boost_amount", 0.1)
         self.vol_penalty_amount = vol_cfg.get("penalty_amount", 0.15)
+        self.sma200_filter = strat_cfg.get("sma200_filter", False)
         self._logger.info(
             f"TrendFollowing initialized: fast_ma={self.fast_ma_period}, "
             f"slow_ma={self.slow_ma_period}, pullback={self.pullback_pct*100}%, "

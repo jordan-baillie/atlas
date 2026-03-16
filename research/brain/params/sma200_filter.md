@@ -4,8 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-14 23:53 | triple_rsi | None → False | ❌ discard | -3.5851 | -3.3863 |
-| 2026-03-15 02:32 | demark_sequential | None → True | ❌ discard | -0.1668 | -1.9547 |
 | 2026-03-15 02:32 | demark_sequential | None → False | ❌ discard | +0.0000 | -1.7879 |
 | 2026-03-15 02:34 | donchian_breakout | None → True | ❌ discard | +0.0000 | 0.3649 |
 | 2026-03-15 02:34 | donchian_breakout | None → False | ❌ discard | -0.1416 | 0.2233 |
@@ -54,3 +52,5 @@
 | 2026-03-16 11:02 | gap_and_go | None → False | ❌ discard | -2.2184 | -1.2518 |
 | 2026-03-16 11:48 | heikin_ashi_reversal | None → True | ❌ discard | -2.0810 | -1.1147 |
 | 2026-03-16 11:48 | heikin_ashi_reversal | None → False | ❌ discard | -2.4008 | -1.4345 |
+| 2026-03-16 12:02 | overnight_return | None → True | ❌ discard | -2.6003 | -1.6731 |
+| 2026-03-16 12:02 | overnight_return | None → False | ❌ discard | -2.4383 | -1.5111 |

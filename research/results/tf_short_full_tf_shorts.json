@@ -1,0 +1,249 @@
+{
+  "timestamp": "20260316T222713",
+  "label": "Full+TF Shorts",
+  "metrics": {
+    "total_return": 0.2962,
+    "cagr": 0.044673,
+    "max_drawdown": 0.101408,
+    "sharpe": -0.0099,
+    "sortino": -0.0126,
+    "win_rate": 0.505,
+    "profit_factor": 1.1826,
+    "avg_trade": 1.68,
+    "total_trades": 602,
+    "total_pnl": 1013.74,
+    "exposure": 0.9839,
+    "turnover": 155.748,
+    "avg_equity": 3921.83,
+    "final_equity": 4560.06,
+    "avg_winner": 21.59,
+    "avg_loser": -18.75,
+    "largest_winner": 151.29,
+    "largest_loser": -158.92,
+    "avg_hold_days": 14.1,
+    "calmar": 0.4405,
+    "var_95": 0.008556,
+    "var_99": 0.016824,
+    "cvar_95": 0.013647,
+    "var_95_parametric": 0.009107,
+    "expectancy_r": -0.0322,
+    "avg_r": -0.0322,
+    "avg_winner_r": 2.1381,
+    "avg_loser_r": -2.2462,
+    "win_rate_r": 0.505,
+    "total_r": -19.3894,
+    "r_count": 602,
+    "largest_winner_r": 57.971,
+    "largest_loser_r": -64.4226,
+    "edge_t_statistic": -0.1301,
+    "edge_p_value": 0.896507,
+    "edge_significant": false,
+    "strategy_correlation": {
+      "strategies": [
+        "connors_rsi2",
+        "mean_reversion",
+        "momentum_breakout",
+        "sector_rotation",
+        "short_term_mr",
+        "trend_following"
+      ],
+      "matrix": [
+        [
+          1.0,
+          0.0011,
+          0.0023,
+          0.0017,
+          -0.0462,
+          0.0011
+        ],
+        [
+          0.0011,
+          1.0,
+          -0.0426,
+          0.0631,
+          -0.0073,
+          -0.0327
+        ],
+        [
+          0.0023,
+          -0.0426,
+          1.0,
+          0.0862,
+          -0.0015,
+          0.0368
+        ],
+        [
+          0.0017,
+          0.0631,
+          0.0862,
+          1.0,
+          -0.0048,
+          -0.0293
+        ],
+        [
+          -0.0462,
+          -0.0073,
+          -0.0015,
+          -0.0048,
+          1.0,
+          -0.0032
+        ],
+        [
+          0.0011,
+          -0.0327,
+          0.0368,
+          -0.0293,
+          -0.0032,
+          1.0
+        ]
+      ],
+      "concentrated_pairs": [],
+      "n_active_days": 1467
+    },
+    "mc_p95_drawdown": 0.164161,
+    "mc_p99_drawdown": 0.192522,
+    "mc_fragile": false,
+    "monte_carlo": {
+      "p50_drawdown": 0.106783,
+      "p75_drawdown": 0.127693,
+      "p95_drawdown": 0.164161,
+      "p99_drawdown": 0.192522,
+      "worst_drawdown": 0.245045,
+      "actual_drawdown": 0.102611,
+      "n_simulations": 1000,
+      "n_trades": 602,
+      "fragile": false
+    },
+    "alpha": 0.001567,
+    "beta": 0.01098,
+    "r_squared": 0.000361,
+    "information_ratio": -0.559497,
+    "tracking_error": 0.177922,
+    "treynor_ratio": 0.244966,
+    "correlation": 0.019,
+    "up_capture": 0.047327,
+    "down_capture": -0.009122,
+    "shuffle_actual_dd": 0.102611,
+    "shuffle_p50_dd": 0.105806,
+    "shuffle_p95_dd": 0.165326,
+    "shuffle_percentile": 45.57,
+    "shuffle_impact": "NEUTRAL",
+    "regime_metrics": {
+      "bear": {
+        "trades": 69,
+        "win_rate_pct": 44.9,
+        "avg_trade": -2.41,
+        "total_pnl": -166.24,
+        "profit_factor": 0.7657,
+        "sharpe_approx": -0.0905,
+        "avg_r": -0.4896
+      },
+      "bull": {
+        "trades": 383,
+        "win_rate_pct": 50.1,
+        "avg_trade": 1.78,
+        "total_pnl": 681.54,
+        "profit_factor": 1.1847,
+        "sharpe_approx": 0.0635,
+        "avg_r": 0.1073
+      },
+      "neutral": {
+        "trades": 150,
+        "win_rate_pct": 54.0,
+        "avg_trade": 3.32,
+        "total_pnl": 498.44,
+        "profit_factor": 1.433,
+        "sharpe_approx": 0.1441,
+        "avg_r": -0.1781
+      }
+    }
+  },
+  "trade_count": 602,
+  "long_trades": 596,
+  "short_trades": 6,
+  "yearly_short": {
+    "2022": {
+      "count": 3,
+      "wins": 2,
+      "pnl": 7.770000000000002
+    },
+    "2023": {
+      "count": 1,
+      "wins": 0,
+      "pnl": -8.25
+    },
+    "2025": {
+      "count": 2,
+      "wins": 0,
+      "pnl": -14.85
+    }
+  },
+  "short_trade_details": [
+    {
+      "ticker": "WMT",
+      "entry_date": "2022-06-03 00:00:00",
+      "exit_date": "2022-06-16 00:00:00",
+      "entry_price": 40.4997,
+      "exit_price": 37.746225,
+      "pnl": 22.03,
+      "direction": "short",
+      "exit_reason": "signal_exit",
+      "hold_days": 13
+    },
+    {
+      "ticker": "MAR",
+      "entry_date": "2022-07-05 00:00:00",
+      "exit_date": "2022-07-20 00:00:00",
+      "entry_price": 130.6047,
+      "exit_price": 145.47545100000002,
+      "pnl": -14.87,
+      "direction": "short",
+      "exit_reason": "stop_hit",
+      "hold_days": 15
+    },
+    {
+      "ticker": "EOG",
+      "entry_date": "2022-07-20 00:00:00",
+      "exit_date": "2022-08-04 00:00:00",
+      "entry_price": 88.0859,
+      "exit_price": 87.781221,
+      "pnl": 0.61,
+      "direction": "short",
+      "exit_reason": "signal_exit",
+      "hold_days": 15
+    },
+    {
+      "ticker": "GS",
+      "entry_date": "2023-03-22 00:00:00",
+      "exit_date": "2023-04-03 00:00:00",
+      "entry_price": 295.1923,
+      "exit_price": 303.44034100000005,
+      "pnl": -8.25,
+      "direction": "short",
+      "exit_reason": "trailing_stop",
+      "hold_days": 12
+    },
+    {
+      "ticker": "MU",
+      "entry_date": "2025-04-10 00:00:00",
+      "exit_date": "2025-04-28 00:00:00",
+      "entry_price": 72.4138,
+      "exit_price": 78.26217299999999,
+      "pnl": -11.7,
+      "direction": "short",
+      "exit_reason": "time_exit",
+      "hold_days": 18
+    },
+    {
+      "ticker": "BKR",
+      "entry_date": "2025-04-28 00:00:00",
+      "exit_date": "2025-05-06 00:00:00",
+      "entry_price": 35.6921,
+      "exit_price": 36.216378,
+      "pnl": -3.15,
+      "direction": "short",
+      "exit_reason": "signal_exit",
+      "hold_days": 8
+    }
+  ]
+}

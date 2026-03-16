@@ -4,10 +4,6 @@
 
 | Date | Strategy | Change | Result | Sharpe Δ | New Sharpe |
 |------|----------|--------|--------|----------|------------|
-| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 1.5 | ❌ discard | -0.3521 | 0.0432 |
-| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 2.0 | ❌ discard | -0.0106 | 0.3847 |
-| 2026-03-16 06:23 | lower_band_reversion | 2.5 → 3.0 | ❌ discard | -0.0310 | 0.3643 |
-| 2026-03-16 07:02 | triple_rsi | 2.0 → 3.0 | ❌ discard | -0.5675 | -0.2926 |
 | 2026-03-16 07:02 | triple_rsi | 2.0 → 1.5 | ❌ discard | -0.0134 | 0.2615 |
 | 2026-03-16 07:02 | triple_rsi | 2.0 → 2.5 | ❌ discard | -0.1483 | 0.1266 |
 | 2026-03-16 07:06 | keltner_reversion | 1.5 → 3.0 | ❌ discard | -0.0171 | -0.0089 |
@@ -54,3 +50,7 @@
 | 2026-03-16 11:53 | macd_divergence | None → 2.5 | ❌ discard | -0.8472 | 0.1192 |
 | 2026-03-16 11:53 | macd_divergence | None → 2.0 | ❌ discard | -0.8175 | 0.1489 |
 | 2026-03-16 11:53 | macd_divergence | None → 3.0 | ❌ discard | -0.9045 | 0.0619 |
+| 2026-03-16 12:00 | overnight_return | None → 3.0 | ❌ discard | -3.0495 | -2.1223 |
+| 2026-03-16 12:00 | overnight_return | None → 1.5 | ❌ discard | -2.1106 | -1.1834 |
+| 2026-03-16 12:00 | overnight_return | None → 2.5 | ❌ discard | -2.7894 | -1.8622 |
+| 2026-03-16 12:00 | overnight_return | None → 2.0 | ❌ discard | -2.6003 | -1.6731 |

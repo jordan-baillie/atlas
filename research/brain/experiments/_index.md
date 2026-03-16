@@ -1,6 +1,6 @@
 # Experiments Index
 
-> Last 78 experiments (newest first). Older experiments pruned.
+> Last 100 experiments (newest first). Older experiments pruned.
 
 | ID | Strategy | Parameter | Result | Sharpe Δ |
 |----|----------|-----------|--------|----------|
@@ -28,6 +28,54 @@
 | wave2_exit_og | ? | Shorter hold periods better match gap-fill resolution timeline | discarded | n/a (migrated) |
 | wave2_exit_mr | ? | Shorter hold periods improve MR risk-adjusted returns | discarded | n/a (migrated) |
 | wave2_chandelier_tf | ? | Wider trailing stop ATR multiplier captures more trend profit | discarded | n/a (migrated) |
+| ar-20260316_173747 | ? | max_hold_days | kept | +0.0326 |
+| ar-20260316_165857 | ? | rsi_period | kept | +0.0431 |
+| ar-20260316_161158 | ? | sma200_filter | kept | +0.0321 |
+| ar-20260316_142314 | ? | atr_stop_mult | kept | +1.7520 |
+| ar-20260316_135643 | ? | atr_stop_mult | kept | +0.0259 |
+| ar-20260316_133154 | ? | nr_lookback | kept | +0.0744 |
+| ar-20260316_105145 | ? | max_hold_days | kept | +0.0313 |
+| ar-20260316_101102 | ? | adx_period | kept | +1.9172 |
+| ar-20260315_214936 | ? | atr_mult | kept | +0.0986 |
+| ar-20260315_211051 | ? | band_mult | kept | +0.6508 |
+| ar-20260315_204050 | ? | wr_period | kept | +0.1568 |
+| ar-20260315_165945 | ? | wr_entry | kept | +0.0173 |
+| ar-20260315_162439 | ? | sma200_filter | kept | +0.2324 |
+| ar-20260315_155610 | ? | max_hold_days | kept | +0.1843 |
+| ar-20260315_152802 | ? | setup_bars | kept | +1.4958 |
+| ar-20260315_133718 | ? | wr_period | kept | +1.4529 |
+| ar-20260315_130504 | ? | stoch_entry | kept | +0.2133 |
+| ar-20260315_123146 | ? | max_hold_days | kept | +0.1618 |
+| ar-20260315_105913 | ? | atr_stop_mult | kept | +0.3455 |
+| ar-20260315_102607 | ? | ema_period | kept | +5.5845 |
+| ar-20260315_095241 | ? | atr_stop_mult | kept | +0.1345 |
+| ar-20260314_215610 | ? | atr_stop_mult | kept | +0.1422 |
+| ar-20260314_212128 | ? | decline_days | kept | +0.2497 |
+| ar-20260314_204821 | ? | rsi_entry | kept | +0.0380 |
+| ar-20260314_170336 | ? | rsi_period | kept | +4.3510 |
+| ar-20260314_162839 | ? | atr_stop_mult | kept | +0.0110 |
+| ar-20260314_160010 | ? | ibs_threshold | kept | +0.5505 |
+| ar-20260314_153036 | ? | wr_period | kept | +1.3176 |
+| ar-20260314_134040 | ? | band_mult | kept | +0.0359 |
+| ar-20260314_131333 | ? | sma200_filter | kept | +0.4820 |
+| ar-20260314_123633 | ? | entry_period | kept | +0.0252 |
+| ar-20260314_103939 | ? | max_hold_days | kept | +0.4254 |
+| ar-20260314_101112 | ? | atr_stop_mult | kept | +0.4687 |
+| ar-20260314_093630 | ? | atr_stop_mult | kept | +0.1199 |
+| ar-20260314_005747 | ? | wr_period | kept | +0.8678 |
+| ar-20260314_002602 | ? | stoch_period | kept | +0.4601 |
+| ar-20260313_235755 | ? | max_hold_days | kept | +0.2044 |
+| ar-20260313_233330 | ? | atr_stop_mult | kept | +0.4337 |
+| ar-20260313_215942 | ? | entry_period | kept | +0.0329 |
+| ar-20260313_213426 | ? | max_hold_days | kept | +0.3198 |
+| ar-20260313_210717 | ? | atr_stop_mult | kept | +1.2304 |
+| ar-20260313_203414 | ? | adx_period | kept | +0.2015 |
+| ar-20260313_162404 | ? | ema_touch_pct | kept | +0.1150 |
+| ar-20260313_155952 | ? | adx_threshold | kept | +0.0391 |
+| ar-20260312_213643 | ? | adx_threshold | kept | +0.0833 |
+| ar-20260312_204612 | ? | rsi_oversold | kept | +0.0938 |
+| ar-20260312_203132 | ? | max_hold_days | kept | +0.0426 |
+| ar-20260312_170031 | ? | ema_touch_pct | kept | +0.1271 |
 | ar-20260312_124147 | ? | rsi_period: 10→14 | kept | n/a (migrated) |
 | ar-20260312_110553 | ? | sma200_filter: None→False | kept | n/a (migrated) |
 | ar-20260312_104004 | ? | atr_stop_mult: None→1.5 | kept | n/a (migrated) |
@@ -56,29 +104,3 @@
 | ar-20260311_173914 | ? | pullback_pct: 0.05→0.06 | kept | n/a (migrated) |
 | ar-20260311_173736 | ? | slow_ma: 175→20 | kept | n/a (migrated) |
 | ar-20260311_173539 | ? | fast_ma: 25→50 | kept | n/a (migrated) |
-| ar-20260311_172526 | ? | zscore lookback 10→7: even faster | kept | n/a (migrated) |
-| ar-20260311_153100 | ? | RSI period 8 — between grid points | kept | n/a (migrated) |
-| ar-20260311_152720 | ? | trail=2.8 (between 2.5 and 3.0) | kept | n/a (migrated) |
-| ar-20260311_152317 | ? | atr_period: 14→20 | kept | n/a (migrated) |
-| ar-20260311_152116 | ? | Asymmetric risk: 1.5x stop, 3x target | kept | n/a (migrated) |
-| ar-20260311_151649 | ? | fast_ma: 25→50 | kept | n/a (migrated) |
-| ar-20260311_150729 | ? | atr_stop=1.9 (just below 2.0) | kept | n/a (migrated) |
-| ar-20260311_150658 | ? | max_hold_days: 10→20 | kept | n/a (migrated) |
-| ar-20260311_145916 | ? | atr_stop_mult: 2.5→1.5 | kept | n/a (migrated) |
-| ar-20260311_145350 | ? | atr_stop=1.8 (between 1.5 and 2.0) | kept | n/a (migrated) |
-| ar-20260311_145315 | ? | zscore_entry: -2.0→-1.0 | kept | n/a (migrated) |
-| ar-20260311_144909 | ? | zscore_lookback: 20→10 | kept | n/a (migrated) |
-| ar-20260311_144117 | ? | Disable SMA200 filter — trade in all conditions | kept | n/a (migrated) |
-| 20260310_185804_9ff181 | ? | Test if connors_rsi2 is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185804_7a6d6d | ? | Test if bb_squeeze is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185804_730b2e | ? | Test if momentum_breakout is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185804_461735 | ? | Test if short_term_mr is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185801_dd443f | ? | Test if momentum_breakout is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185801_754a55 | ? | Test if short_term_mr is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_185801_5ee089 | ? | Test if bb_squeeze is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_183205_f86e93 | ? | Test if short_term_mr is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_183205_1eac79 | ? | Test if momentum_breakout is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_181024_f7508b | ? | Test if bb_squeeze is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_181024_d2d7b3 | ? | Test if mtf_momentum is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_181024_d14b81 | ? | Test if short_term_mr is viable as standalone strategy | discarded | n/a (migrated) |
-| 20260310_181024_9b3400 | ? | Test if momentum_breakout is viable as standalone strategy | discarded | n/a (migrated) |
