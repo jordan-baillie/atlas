@@ -303,7 +303,7 @@ def get_alpaca_account_details() -> dict:
 
         api_key = get_secret("ALPACA_API_KEY")
         api_secret = get_secret("ALPACA_SECRET_KEY")
-        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+        paper = (get_secret("ALPACA_PAPER") or "false").lower() in ("true", "1")
 
         from alpaca.trading.client import TradingClient
         client = TradingClient(api_key, api_secret, paper=paper)
@@ -368,7 +368,7 @@ def get_alpaca_portfolio_history(period: str = "3M") -> list[dict]:
         from brokers.secrets import get_secret
         api_key = get_secret("ALPACA_API_KEY")
         api_secret = get_secret("ALPACA_SECRET_KEY")
-        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+        paper = (get_secret("ALPACA_PAPER") or "false").lower() in ("true", "1")
 
         from alpaca.trading.client import TradingClient
         from alpaca.trading.requests import GetPortfolioHistoryRequest
@@ -433,7 +433,7 @@ def get_alpaca_recent_orders(limit: int = 20) -> list[dict]:
         from brokers.secrets import get_secret
         api_key = get_secret("ALPACA_API_KEY")
         api_secret = get_secret("ALPACA_SECRET_KEY")
-        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+        paper = (get_secret("ALPACA_PAPER") or "false").lower() in ("true", "1")
 
         from alpaca.trading.client import TradingClient
         from alpaca.trading.requests import GetOrdersRequest
@@ -501,7 +501,7 @@ def get_alpaca_market_clock() -> dict:
         from brokers.secrets import get_secret
         api_key = get_secret("ALPACA_API_KEY")
         api_secret = get_secret("ALPACA_SECRET_KEY")
-        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+        paper = (get_secret("ALPACA_PAPER") or "false").lower() in ("true", "1")
 
         from alpaca.trading.client import TradingClient
         client = TradingClient(api_key, api_secret, paper=paper)
@@ -3289,7 +3289,7 @@ def _get_alpaca_raw_positions() -> dict:
         from brokers.secrets import get_secret
         api_key = get_secret("ALPACA_API_KEY")
         api_secret = get_secret("ALPACA_SECRET_KEY")
-        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+        paper = (get_secret("ALPACA_PAPER") or "false").lower() in ("true", "1")
 
         from alpaca.trading.client import TradingClient
         client = TradingClient(api_key, api_secret, paper=paper)
