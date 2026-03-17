@@ -84,54 +84,6 @@ def _load_broker_cache(market_id: str, max_age_minutes: int = 60,
         return None
 
 
-# ── FX cache (M4): hourly exchange rate caching ───────────────
-
-def _get_exchange_rates() -> dict:
-    """Get AUDUSD exchange rates with hourly file cache.
-
-    Priority: 1) cache if < 1 hour old, 2) fresh yfinance, 3) stale cache any age,
-    4) last dashboard output, 5) hardcoded fallback.
-    """
-    fx_cache_path = CACHE_DIR / "fx_rates.json"
-
-    # Check cache freshness
-    cached = safe_json(fx_cache_path, None)
-    if cached and "timestamp" in cached:
-        try:
-            age_s = (datetime.now() - datetime.fromisoformat(cached["timestamp"])).total_seconds()
-            if age_s < 3600:  # < 1 hour
-                return cached["rates"]
-        except Exception:
-            pass
-
-    # Fetch fresh from yfinance
-    try:
-        import yfinance as yf
-        audusd_data = yf.Ticker("AUDUSD=X").history(period="1d")
-        if not audusd_data.empty:
-            audusd = float(audusd_data["Close"].iloc[-1])
-            rates = {"AUDUSD": round(audusd, 5), "USDAUD": round(1 / audusd, 5)}
-            # Save to cache
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            with open(fx_cache_path, "w") as f:
-                json.dump({"timestamp": datetime.now().isoformat(), "rates": rates}, f)
-            print(f"  Exchange rate: 1 AUD = {audusd:.4f} USD (1 USD = {1/audusd:.4f} AUD)")
-            return rates
-    except Exception as e:
-        print(f"  Exchange rate fetch failed ({e})")
-
-    # Fallback chain: stale cache → previous dashboard output → hardcoded
-    if cached and "rates" in cached:
-        print(f"  Exchange rate: using stale cache ({cached.get('timestamp', '?')})")
-        return cached["rates"]
-    prev_data = safe_json(OUTPUT, {})
-    prev_rates = prev_data.get("exchange_rates")
-    if prev_rates:
-        print(f"  Exchange rate: using last dashboard output")
-        return prev_rates
-    print("  Exchange rate: using hardcoded fallback (0.70)")
-    return {"AUDUSD": 0.70, "USDAUD": 1.43}
-
 
 # ── Freshness helpers (M3) ────────────────────────────────────
 
@@ -324,155 +276,251 @@ def get_live_broker_data(config):
         return None, [], False, []
 
 
-def get_moomoo_manual_portfolio() -> dict:
-    """Fetch manual portfolio from Moomoo OpenD (read-only, no order placement).
+# ── New Alpaca-rich data functions ────────────────────────────
 
-    Connects directly to Moomoo OpenD gateway to read account info and
-    positions.  These are treated as manual (user's discretionary trades),
-    separate from Atlas automated trades on Alpaca.
+def get_alpaca_account_details() -> dict:
+    """Fetch rich account details from Alpaca beyond basic equity/cash.
 
-    Returns dict with keys: connected, equity, cash, buying_power,
-    currency, positions, num_open, unrealized_pnl, market_value.
-    Falls back to cached data if OpenD is unreachable.
+    Returns:
+        {
+            "equity": float, "cash": float, "buying_power": float,
+            "last_equity": float,       # yesterday's closing equity
+            "initial_margin": float, "maintenance_margin": float,
+            "long_market_value": float, "short_market_value": float,
+            "multiplier": int,          # margin multiplier (2 for margin account)
+            "daytrade_count": int,
+            "account_created": str,     # ISO date
+            "pattern_day_trader": bool,
+            "trading_blocked": bool,
+            "shorting_enabled": bool,
+            "equity_change_today": float,  # equity - last_equity
+            "equity_change_today_pct": float,
+        }
     """
-    cache_path = CACHE_DIR / "moomoo_manual.json"
-    empty = {
-        "connected": False, "equity": 0, "cash": 0, "buying_power": 0,
-        "currency": "USD", "positions": [], "num_open": 0,
-        "unrealized_pnl": 0, "market_value": 0, "stale_minutes": None,
-    }
-
     try:
-        from moomoo import (
-            OpenSecTradeContext, TrdMarket, TrdEnv, SecurityFirm,
-        )
+        from brokers.alpaca.broker import AlpacaBroker
+        from brokers.secrets import get_secret
 
-        ctx = OpenSecTradeContext(
-            host="127.0.0.1", port=11111,
-            security_firm=SecurityFirm.FUTUAU,
-        )
-        try:
-            # Account info
-            ret, acct_df = ctx.accinfo_query(trd_env=TrdEnv.REAL)
-            if ret != 0 or acct_df is None or acct_df.empty:
-                raise ConnectionError(f"Moomoo accinfo_query failed: ret={ret}")
+        api_key = get_secret("ALPACA_API_KEY")
+        api_secret = get_secret("ALPACA_SECRET_KEY")
+        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
 
-            row = acct_df.iloc[0]
+        from alpaca.trading.client import TradingClient
+        client = TradingClient(api_key, api_secret, paper=paper)
+        acct = client.get_account()
 
-            # Moomoo Futu AU reports total_assets/cash in HKD (account base
-            # currency). Use per-currency breakdowns for accurate equity:
-            #   aud_assets / au_cash — Australian holdings
-            #   usd_assets / us_cash — US holdings
-            aud_assets = float(row.get("aud_assets", 0) or 0)
-            usd_assets = float(row.get("usd_assets", 0) or 0)
-            au_cash = float(row.get("au_cash", 0) or 0)
-            us_cash = float(row.get("us_cash", 0) or 0)
+        equity = float(getattr(acct, "equity", 0) or 0)
+        last_equity = float(getattr(acct, "last_equity", equity) or equity)
+        cash = float(getattr(acct, "cash", 0) or 0)
+        buying_power = float(getattr(acct, "buying_power", 0) or 0)
+        long_market_value = float(getattr(acct, "long_market_value", 0) or 0)
+        short_market_value = float(getattr(acct, "short_market_value", 0) or 0)
+        initial_margin = float(getattr(acct, "initial_margin", 0) or 0)
+        maintenance_margin = float(getattr(acct, "maintenance_margin", 0) or 0)
+        multiplier = int(float(getattr(acct, "multiplier", 1) or 1))
+        daytrade_count = int(getattr(acct, "daytrade_count", 0) or 0)
+        pattern_day_trader = bool(getattr(acct, "pattern_day_trader", False))
+        trading_blocked = bool(getattr(acct, "trading_blocked", False))
+        shorting_enabled = bool(getattr(acct, "shorting_enabled", False))
+        created_at = getattr(acct, "created_at", None)
+        account_created = str(created_at)[:10] if created_at else ""
 
-            # Fetch live USDAUD rate for combining currencies
-            fx = _get_exchange_rates()
-            usdaud = fx.get("USDAUD", 1.43)
+        equity_change = round(equity - last_equity, 2)
+        equity_change_pct = round(equity_change / last_equity * 100, 2) if last_equity > 0 else 0.0
 
-            # Total equity in AUD = AUD assets + USD assets converted to AUD
-            equity = round(aud_assets + usd_assets * usdaud, 2)
-            cash = round(au_cash + us_cash * usdaud, 2)
-            buying_power = float(row.get("power", 0) or .0)
-
-            if aud_assets == 0 and usd_assets == 0:
-                # Fallback: try total_assets (HKD) if per-currency not available
-                hkd_total = float(row.get("total_assets", 0) or 0)
-                if hkd_total == 0:
-                    raise ConnectionError("Moomoo returned zeroed data")
-                # Can't convert HKD accurately — flag as unreliable
-                equity = hkd_total
-                cash = float(row.get("cash", 0) or 0)
-                logger.warning("Moomoo: per-currency breakdown unavailable, "
-                               "using HKD total_assets (inaccurate)")
-
-            # Positions
-            ret, pos_df = ctx.position_list_query(trd_env=TrdEnv.REAL)
-            pos_list = []
-            if ret == 0 and pos_df is not None and not pos_df.empty:
-                for _, p in pos_df.iterrows():
-                    ticker_raw = str(p.get("code", ""))
-                    # Moomoo format: "US.AAPL" → "AAPL", "AU.WDS" → "WDS.AX"
-                    if "." in ticker_raw:
-                        market_prefix, symbol = ticker_raw.split(".", 1)
-                        if market_prefix == "US":
-                            ticker = symbol
-                        elif market_prefix == "AU":
-                            ticker = f"{symbol}.AX"
-                        elif market_prefix == "HK":
-                            ticker = f"{symbol}.HK"
-                        else:
-                            ticker = ticker_raw
-                    else:
-                        ticker = ticker_raw
-
-                    qty = int(float(p.get("qty", 0) or 0))
-                    if qty == 0:
-                        continue
-
-                    # Moomoo reports .AX positions in AUD (native currency),
-                    # US positions in USD (account base currency).
-                    pos_ccy = "AUD" if ticker.endswith(".AX") else "USD"
-                    pos_list.append({
-                        "ticker": ticker,
-                        "entry_price": round(float(p.get("cost_price", 0) or 0), 4),
-                        "shares": qty,
-                        "current_price": round(float(p.get("market_val", 0) or 0) / qty if qty else 0, 4),
-                        "market_value": round(float(p.get("market_val", 0) or 0), 2),
-                        "pnl": round(float(p.get("pl_val", 0) or 0), 2),
-                        "pnl_pct": round(float(p.get("pl_ratio", 0) or 0) * 100, 2),
-                        "cost_basis": round(float(p.get("cost_price", 0) or 0) * qty, 2),
-                        "today_pnl": round(float(p.get("today_pl_val", 0) or 0), 2),
-                        "currency": pos_ccy,
-                        "strategy": "manual",
-                        "is_atlas": False,
-                    })
-        finally:
-            ctx.close()
-
-        result = {
-            "connected": True,
+        return {
             "equity": round(equity, 2),
             "cash": round(cash, 2),
             "buying_power": round(buying_power, 2),
-            "currency": "AUD",  # equity/cash are AUD-normalised totals
-            # Per-currency breakdown for display
-            "aud_assets": round(aud_assets, 2),
-            "usd_assets": round(usd_assets, 2),
-            "au_cash": round(au_cash, 2),
-            "us_cash": round(us_cash, 2),
-            "positions": pos_list,
-            "num_open": len(pos_list),
-            "unrealized_pnl": round(sum(p["pnl"] for p in pos_list), 2),
-            "market_value": round(sum(p["market_value"] for p in pos_list), 2),
-            "stale_minutes": None,
+            "last_equity": round(last_equity, 2),
+            "initial_margin": round(initial_margin, 2),
+            "maintenance_margin": round(maintenance_margin, 2),
+            "long_market_value": round(long_market_value, 2),
+            "short_market_value": round(short_market_value, 2),
+            "multiplier": multiplier,
+            "daytrade_count": daytrade_count,
+            "account_created": account_created,
+            "pattern_day_trader": pattern_day_trader,
+            "trading_blocked": trading_blocked,
+            "shorting_enabled": shorting_enabled,
+            "equity_change_today": equity_change,
+            "equity_change_today_pct": equity_change_pct,
         }
-
-        # Cache for fallback
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        cache_data = {**result, "timestamp": datetime.now(BRISBANE).isoformat()}
-        with open(cache_path, "w") as f:
-            json.dump(cache_data, f, indent=2, default=str)
-
-        logger.info("Moomoo manual: $%.2f equity, %d positions, $%.2f unrealised",
-                     result["equity"], result["num_open"], result["unrealized_pnl"])
-        return result
-
     except Exception as e:
-        logger.warning("Moomoo manual portfolio fetch failed: %s — trying cache", e)
-        if cache_path.exists():
+        logger.warning("get_alpaca_account_details failed: %s", e)
+        return {}
+
+
+def get_alpaca_portfolio_history(period: str = "3M") -> list[dict]:
+    """Fetch daily portfolio equity history from Alpaca API.
+
+    Uses Alpaca's get_portfolio_history endpoint so the equity curve reflects
+    the broker's own calculation (no local state needed).
+
+    Args:
+        period: History period string — '1M', '3M', '6M', '1Y'. Default '3M'.
+
+    Returns:
+        [{"date": "YYYY-MM-DD", "equity": float, "pnl": float, "pnl_pct": float}, ...]
+        Sorted ascending by date, zeroed-pnl entries excluded.
+    """
+    try:
+        from brokers.secrets import get_secret
+        api_key = get_secret("ALPACA_API_KEY")
+        api_secret = get_secret("ALPACA_SECRET_KEY")
+        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+
+        from alpaca.trading.client import TradingClient
+        from alpaca.trading.requests import GetPortfolioHistoryRequest
+        client = TradingClient(api_key, api_secret, paper=paper)
+        req = GetPortfolioHistoryRequest(period=period, timeframe="1D")
+        history = client.get_portfolio_history(req)
+
+        timestamps = list(getattr(history, "timestamp", []) or [])
+        equities = list(getattr(history, "equity", []) or [])
+        profit_losses = list(getattr(history, "profit_loss", []) or [])
+        profit_loss_pcts = list(getattr(history, "profit_loss_pct", []) or [])
+
+        result = []
+        for i, ts in enumerate(timestamps):
+            equity = equities[i] if i < len(equities) else None
+            if equity is None or equity == 0:
+                continue
+            # Alpaca timestamps are Unix epoch integers
             try:
-                cached = json.load(open(cache_path))
-                age = (datetime.now(BRISBANE) - datetime.fromisoformat(cached["timestamp"])).total_seconds() / 60
-                cached["connected"] = False
-                cached["stale_minutes"] = round(age, 1)
-                logger.info("Moomoo manual: using cache (%.0f min old)", age)
-                return cached
+                if isinstance(ts, (int, float)):
+                    from datetime import timezone
+                    date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+                else:
+                    date_str = str(ts)[:10]
             except Exception:
-                pass
-        return empty
+                date_str = str(ts)[:10]
+
+            pnl = profit_losses[i] if i < len(profit_losses) else 0.0
+            pnl_pct = profit_loss_pcts[i] if i < len(profit_loss_pcts) else 0.0
+
+            result.append({
+                "date": date_str,
+                "equity": round(float(equity), 2),
+                "pnl": round(float(pnl or 0), 2),
+                "pnl_pct": round(float(pnl_pct or 0) * 100, 4),
+            })
+
+        return sorted(result, key=lambda x: x["date"])
+    except Exception as e:
+        logger.warning("get_alpaca_portfolio_history failed: %s", e)
+        return []
+
+
+def get_alpaca_recent_orders(limit: int = 20) -> list[dict]:
+    """Fetch recent orders from Alpaca including filled, pending, canceled.
+
+    Args:
+        limit: Max number of orders to return. Default 20.
+
+    Returns:
+        [{
+            "id": str, "symbol": str, "side": str, "qty": int,
+            "type": str,    # market, limit, stop, trailing_stop
+            "status": str,  # new, filled, canceled, rejected
+            "filled_qty": int, "filled_price": float,
+            "stop_price": float, "trail_price": float, "trail_percent": float,
+            "submitted_at": str, "filled_at": str,
+            "limit_price": float,
+        }, ...]
+    """
+    try:
+        from brokers.secrets import get_secret
+        api_key = get_secret("ALPACA_API_KEY")
+        api_secret = get_secret("ALPACA_SECRET_KEY")
+        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+
+        from alpaca.trading.client import TradingClient
+        from alpaca.trading.requests import GetOrdersRequest
+        from alpaca.trading.enums import QueryOrderStatus
+        client = TradingClient(api_key, api_secret, paper=paper)
+
+        req = GetOrdersRequest(status=QueryOrderStatus.ALL, limit=limit, direction="desc")
+        orders = client.get_orders(req) or []
+
+        result = []
+        for o in orders:
+            symbol = str(getattr(o, "symbol", "") or "")
+            side_raw = getattr(o, "side", None)
+            side = str(side_raw.value if hasattr(side_raw, "value") else side_raw or "").lower()
+            order_type_raw = getattr(o, "order_type", None)
+            order_type = str(order_type_raw.value if hasattr(order_type_raw, "value") else order_type_raw or "").lower()
+            status_raw = getattr(o, "status", None)
+            status = str(status_raw.value if hasattr(status_raw, "value") else status_raw or "").lower()
+
+            filled_qty = int(float(getattr(o, "filled_qty", 0) or 0))
+            filled_avg_price = float(getattr(o, "filled_avg_price", 0) or 0)
+            qty = int(float(getattr(o, "qty", 0) or 0))
+            limit_price = float(getattr(o, "limit_price", 0) or 0)
+            stop_price = float(getattr(o, "stop_price", 0) or 0)
+            trail_price = float(getattr(o, "trail_price", 0) or 0)
+            trail_percent = float(getattr(o, "trail_percent", 0) or 0)
+
+            submitted_at = getattr(o, "submitted_at", None)
+            filled_at = getattr(o, "filled_at", None)
+
+            result.append({
+                "id": str(getattr(o, "id", "") or ""),
+                "symbol": symbol,
+                "side": side,
+                "qty": qty,
+                "type": order_type,
+                "status": status,
+                "filled_qty": filled_qty,
+                "filled_price": round(filled_avg_price, 4),
+                "stop_price": round(stop_price, 4),
+                "trail_price": round(trail_price, 4),
+                "trail_percent": round(trail_percent, 4),
+                "submitted_at": str(submitted_at)[:19] if submitted_at else "",
+                "filled_at": str(filled_at)[:19] if filled_at else "",
+                "limit_price": round(limit_price, 4),
+            })
+        return result
+    except Exception as e:
+        logger.warning("get_alpaca_recent_orders failed: %s", e)
+        return []
+
+
+def get_alpaca_market_clock() -> dict:
+    """Get real-time market status from Alpaca clock API.
+
+    Returns:
+        {
+            "is_open": bool,
+            "next_open": str (ISO),
+            "next_close": str (ISO),
+            "timestamp": str (ISO),
+        }
+    """
+    try:
+        from brokers.secrets import get_secret
+        api_key = get_secret("ALPACA_API_KEY")
+        api_secret = get_secret("ALPACA_SECRET_KEY")
+        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+
+        from alpaca.trading.client import TradingClient
+        client = TradingClient(api_key, api_secret, paper=paper)
+        clock = client.get_clock()
+
+        return {
+            "is_open": bool(getattr(clock, "is_open", False)),
+            "next_open": str(getattr(clock, "next_open", "") or ""),
+            "next_close": str(getattr(clock, "next_close", "") or ""),
+            "timestamp": str(getattr(clock, "timestamp", datetime.now().isoformat()) or ""),
+        }
+    except Exception as e:
+        logger.warning("get_alpaca_market_clock failed: %s", e)
+        return {
+            "is_open": False,
+            "next_open": "",
+            "next_close": "",
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def get_latest_plan(market_id: str = ""):
@@ -855,12 +903,11 @@ def _get_benchmark_curve(ticker: str, eq_curve: list, starting_equity: float) ->
 
 def generate_market(market_id: str, broker_cache: dict | None = None,
                     fx_rates: dict | None = None):
-    """Generate dashboard data for a single market.
+    """Generate dashboard data for a single market (SP500 / Alpaca-only).
 
     broker_cache: optional dict to reuse a single broker connection.
       Keys: "acct", "positions", "ok". If None, connects fresh.
-    fx_rates: exchange rates dict (e.g. {"USDAUD": 1.41}) passed from
-      generate() so equity curve points can store the FX rate used.
+    fx_rates: unused, kept for call-site compatibility.
     """
     config = get_config(market_id)
     portfolio = get_portfolio(config)  # live state fallback
@@ -879,61 +926,33 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
 
     # ── Try live broker data first ──────────────────────────────
     broker_acct, broker_positions, broker_ok = None, [], False
-    # Also check for cross-broker positions (e.g. positions in markets not
-    # in live trading mode but held on the same broker account).
-    cross_broker_positions = []
     if is_live_mode:
         if broker_cache and broker_cache.get("ok"):
-            # Reuse shared broker connection — filter positions to this market
+            # Reuse shared broker connection — all positions are SP500 (USD)
             broker_acct = broker_cache["acct"]
-            all_broker_pos = broker_cache["positions"]
-            # Filter positions by market
-            if market_id == "sp500":
-                broker_positions = [p for p in all_broker_pos if not p.get("ticker", "").endswith(".AX") and not p.get("ticker", "").endswith(".HK")]
-            elif market_id == "asx":
-                broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".AX")]
-            elif market_id == "hk":
-                broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".HK")]
-            else:
-                broker_positions = all_broker_pos
+            broker_positions = broker_cache["positions"]
             broker_ok = True
         elif broker_cache is None:
             # broker_cache=None means standalone call (not from generate()) — try connecting.
             # broker_cache={"ok": False} means upstream already tried and failed — skip retry.
             broker_acct, broker_positions, broker_ok, _orders = get_live_broker_data(config)
-        # else: broker_cache is {"ok": False} — upstream tried and failed, skip re-connect.
-    elif broker_cache and broker_cache.get("ok"):
-        # Not in live mode, but we have shared broker data (cross-broker).
-        # Extract positions that belong to THIS market as manual holdings.
-        all_broker_pos = broker_cache["positions"]
-        if market_id == "asx":
-            cross_broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".AX")]
-        elif market_id == "hk":
-            cross_broker_positions = [p for p in all_broker_pos if p.get("ticker", "").endswith(".HK")]
-        if cross_broker_positions:
-            logger.info("Cross-broker positions for %s: %d from shared broker",
-                        market_id, len(cross_broker_positions))
 
     # Detect cached broker data (M1: last-known-good fallback)
     is_cached = broker_cache.get("_cached", False) if broker_cache else False
     cache_age = broker_cache.get("_cache_age_minutes", 0) if broker_cache else 0
 
     if broker_ok and broker_acct:
-        # Broker is the sole source of truth
+        # Broker is the sole source of truth (Alpaca, all positions are Atlas-managed)
         positions = broker_positions
-        atlas_positions = [p for p in positions if p.get("is_atlas", True)]
-        manual_positions = [p for p in positions if not p.get("is_atlas", True)]
+        atlas_positions = positions
         all_positions = positions
         data_source = "cached" if is_cached else "broker"
 
-        # Atlas P&L: only from Atlas-managed positions
+        # Atlas P&L from positions
         total_entry_value = sum(p.get("entry_value", 0) for p in atlas_positions)
         atlas_value = sum(p.get("market_value", 0) for p in atlas_positions)
         market_pnl = round(atlas_value - total_entry_value, 2)
         total_commissions = round(len(atlas_positions) * commission, 2)
-
-        # Manual positions value (not managed by Atlas)
-        manual_value = sum(p.get("market_value", 0) for p in manual_positions)
 
         # Broker is sole source of truth for headline equity/cash.
         # This includes ALL positions (Atlas + manual) so the dashboard
@@ -1005,37 +1024,6 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
                     p["unrealized_pnl"] = expected_pnl
                     p["unrealized_pnl_pct"] = round((cp - ep) / ep * 100, 2)
 
-    elif cross_broker_positions:
-        # Not in live mode, but we have cross-broker positions from a shared
-        # broker account. Show their real value.
-        positions = portfolio.get("positions", [])
-        atlas_positions = positions
-        all_positions = list(positions) + cross_broker_positions
-        data_source = "cross-broker"
-
-        # Equity = value of cross-broker positions (real broker data)
-        cross_value = sum(p.get("market_value", 0) for p in cross_broker_positions)
-        cross_cost = sum(
-            p.get("cost_basis", p.get("entry_price", 0) * p.get("shares", 0))
-            for p in cross_broker_positions
-        )
-        cross_pnl = sum(p.get("unrealized_pnl", 0) for p in cross_broker_positions)
-
-        pos_value = cross_value
-        cash = 0  # no separate cash allocation for cross-broker markets
-        equity = round(cross_value, 2)
-        # Use cost basis as starting reference for P&L
-        seq = round(cross_cost, 2) if cross_cost > 0 else 0
-        total_pnl = round(cross_pnl, 2)
-        total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
-
-        total_entry_value = round(cross_cost, 2)
-        total_commissions = 0
-        market_pnl = round(cross_pnl, 2)
-
-        # Define broker vars for cross-broker markets
-        broker_equity = equity
-        broker_cash = 0
 
     else:
         # Paper/fallback mode — no broker, no cross-broker positions
@@ -1142,7 +1130,12 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             "days_held": dh, "sector": sector_val,
             "is_atlas": is_atlas,
             "today_pnl": p.get("today_pnl", 0),
-            "currency": p.get("currency", ""),
+            "currency": "USD",
+            # Intraday fields (populated from raw Alpaca position data)
+            "intraday_pnl": p.get("intraday_pnl", 0),
+            "intraday_pnl_pct": p.get("intraday_pnl_pct", 0),
+            "change_today": p.get("change_today", 0),
+            "lastday_price": p.get("lastday_price", 0),
         })
 
     # Strategy performance summary
@@ -1171,10 +1164,8 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
     wins = sum(1 for t in closed if t.get("pnl", 0) > 0)
     win_rate = round(wins / len(closed) * 100, 1) if closed else 0
 
-    # Currency from market profile (needed before equity curve for FX rate tagging)
-    from markets.registry import get_market
-    market_profile = get_market(market_id)
-    currency = getattr(market_profile, "currency", "AUD")
+    # All SP500 / Alpaca positions are in USD
+    currency = "USD"
 
     # ── Equity curve (per-market, persistent) ─────────────────
     curve_path = PROJECT_ROOT / "logs" / f"equity_curve_{market_id}.json"
@@ -1199,31 +1190,20 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             logger.info("Market %s treated as UNFUNDED (offline, no positions, no history)",
                         market_id)
 
-    # Update equity curve for any market with real data (broker, cached, or
-    # cross-broker). Use broker_equity when available so the chart matches
-    # what the broker app shows. Skip only pure offline/paper markets.
-    if data_source in ("broker", "cached", "cross-broker"):
-        # Store the equity that matches the headline (broker total for live
-        # markets, cross-broker position value for passive markets).
-        chart_equity = equity
-        if data_source in ("broker", "cached") and broker_ok:
-            chart_equity = broker_equity if broker_equity else equity
+    # Update equity curve for any market with real data (broker or cached).
+    # Use broker_equity when available so the chart matches broker app.
+    if data_source in ("broker", "cached"):
+        chart_equity = broker_equity if broker_ok and broker_equity else equity
 
-        # Compute total P&L across ALL positions (Atlas + manual) for
-        # deposit-adjusted return calculation.  invested = equity - pnl
-        # so deposits cancel out (both sides increase equally).
+        # Compute total P&L for deposit-adjusted return calculation.
         all_unrealized = sum(p.get("unrealized_pnl", 0) for p in all_positions)
-        all_realized = realized_pnl  # already computed above from closed_trades
+        all_realized = realized_pnl
         total_investment_pnl = round(all_unrealized + all_realized, 2)
 
         point: dict = {"date": today_str, "equity": round(chart_equity, 2)}
         point["pnl"] = total_investment_pnl
-        if fx_rates is not None:
-            point["fx_rate"] = fx_rates.get("USDAUD", 1.0) if currency != "AUD" else 1.0
         if data_source == "cached":
             point["estimated"] = True
-        if data_source == "cross-broker":
-            point["cross_broker"] = True
 
         if not eq_curve or eq_curve[-1].get("date") != today_str:
             eq_curve.append(point)
@@ -1260,21 +1240,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
     else:
         mode_label = "offline"
 
-    # Split positions into Atlas-managed and manual
-    atlas_open = [p for p in open_pos if p.get("is_atlas", True)]
-    manual_open = [p for p in open_pos if not p.get("is_atlas", True)]
+    # All SP500 positions are Atlas-managed (Alpaca, USD only)
+    atlas_open = open_pos
 
-    # Manual positions P&L
-    manual_pnl = round(sum(p.get("pnl", 0) for p in manual_open), 2)
-    manual_value = round(sum(p.get("current_price", 0) * p.get("shares", 0) for p in manual_open), 2)
-
-    # Today's P&L — aggregated from broker's today_pl_val per position
-    # Grouped by native currency for the breakdown, then converted for total
-    today_pnl_by_ccy: dict[str, float] = {}
-    for p in open_pos:
-        ccy = p.get("currency", currency) or currency
-        today_pnl_by_ccy[ccy] = today_pnl_by_ccy.get(ccy, 0) + p.get("today_pnl", 0)
-    today_pnl_by_ccy = {k: round(v, 2) for k, v in today_pnl_by_ccy.items() if abs(v) > 0.005}
+    # Today's P&L — aggregated from broker's today_pnl per position (USD)
+    today_pnl_usd = round(sum(p.get("today_pnl", 0) for p in open_pos), 2)
 
     # Assemble
     result = {
@@ -1298,18 +1268,9 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
             "realized_pnl": realized_pnl,
             "open_positions": atlas_open,
             "buying_power": broker_acct["buying_power"] if broker_ok else round(cash, 2),
-            # Broker-reported totals (includes manual positions).
-            # Used by dashboard for headline equity that matches broker app.
-            "broker_equity": broker_equity if (broker_ok or data_source == "cross-broker") else None,
-            "broker_cash": broker_cash if (broker_ok or data_source == "cross-broker") else None,
-            # Today's P&L from broker, grouped by native currency
-            "today_pnl_by_ccy": today_pnl_by_ccy,
-        },
-        "manual_positions": {
-            "positions": manual_open,
-            "num_open": len(manual_open),
-            "unrealized_pnl": manual_pnl,
-            "market_value": manual_value,
+            "broker_equity": broker_equity if broker_ok else None,
+            "broker_cash": broker_cash if broker_ok else None,
+            "today_pnl_usd": today_pnl_usd,
         },
         "strategy_summary": strat_summary,
         "equity_curve": eq_curve,
@@ -2495,69 +2456,21 @@ def _build_discoveries(journal: list) -> list:
     return unique[:15]  # Cap at 15
 
 
-def _merge_equity_curves(market_data: dict, exchange_rates: dict) -> list:
-    """Merge per-market equity curves into a combined AUD-normalised curve.
+def _merge_equity_curves(market_data: dict, exchange_rates: dict = None) -> list:
+    """Return the SP500 equity curve directly (single market, USD only).
 
-    For each date, converts each market's equity to AUD and sums.
-    Markets that start later are backfilled with their starting_equity
-    (capital was allocated, just idle) so the combined curve doesn't
-    jump when a new market's first data point appears.
+    Previously merged multiple markets in AUD. Now SP500-only — no currency
+    conversion needed. exchange_rates kept for call-site compatibility.
     """
-    def _to_aud(amount, currency):
-        if currency == "AUD":
-            return amount
-        if currency == "USD":
-            return amount * exchange_rates.get("USDAUD", 1.41)
-        return amount
-
-    per_market = {}   # {mid: {date: equity_in_native}}
-    pnl_markets = {}  # {mid: {date: pnl_in_native}}
-    currencies = {}   # {mid: currency}
-    start_vals = {}   # {mid: starting equity in AUD}
-    all_dates = set()
-    for mid, md in market_data.items():
-        # Skip unfunded/passive markets with no positions or history
-        if not md.get("funded", True):
-            continue
-        ccy = md.get("currency", "AUD")
-        currencies[mid] = ccy
-        series = {}
-        pnl_series = {}
-        for pt in md.get("equity_curve", []):
-            date = pt.get("date", "")
-            eq = pt.get("equity", 0)
-            if date and eq:
-                series[date] = eq
-                pnl_series[date] = pt.get("pnl", 0)
-                all_dates.add(date)
-        if series:
-            per_market[mid] = series
-            pnl_markets[mid] = pnl_series
-            seq = md.get("portfolio", {}).get("starting_equity", 0)
-            start_vals[mid] = _to_aud(
-                seq if seq > 0 else min(series.values()), ccy
-            )
-
-    if not all_dates or not per_market:
+    sp500 = market_data.get("sp500", {})
+    if not sp500.get("funded", True):
         return []
-
-    sorted_dates = sorted(all_dates)
-    combined = []
-    for d in sorted_dates:
-        total = 0
-        total_pnl = 0
-        for mid, series in per_market.items():
-            ccy = currencies[mid]
-            if d in series:
-                series["_last"] = _to_aud(series[d], ccy)
-                pnl_markets[mid]["_last"] = _to_aud(pnl_markets[mid].get(d, 0), ccy)
-            # Before first data point → use starting equity in AUD
-            total += series.get("_last", start_vals.get(mid, 0))
-            total_pnl += pnl_markets.get(mid, {}).get("_last", 0)
-        pt = {"date": d, "equity": round(total, 2), "pnl": round(total_pnl, 2)}
-        combined.append(pt)
-
-    return combined
+    eq_curve = sp500.get("equity_curve", [])
+    return [
+        {"date": pt["date"], "equity": pt["equity"], "pnl": pt.get("pnl", 0)}
+        for pt in eq_curve
+        if pt.get("date") and pt.get("equity")
+    ]
 
 
 def _load_benchmark_prices(ticker: str, start_date: str) -> list[tuple[str, float]]:
@@ -2615,116 +2528,33 @@ def _load_benchmark_prices(ticker: str, start_date: str) -> list[tuple[str, floa
     return result
 
 
-def _merge_benchmark_curves(market_data: dict, exchange_rates: dict,
-                            combined_starting_aud: float) -> tuple:
-    """Merge per-market benchmark curves into a combined AUD-normalised curve.
+def _merge_benchmark_curves(market_data: dict, exchange_rates: dict = None,
+                            combined_starting_usd: float = 0) -> tuple:
+    """Return SPY benchmark curve scaled to combined starting equity (USD only).
 
-    Each market has its own benchmark (SP500→SPY, ASX→IOZ.AX) in native currency.
-    Unlike per-market benchmarks (which start when each market's equity curve
-    starts), the combined benchmark loads price data from the EARLIEST combined
-    equity curve date so that all markets are fairly represented from day 1.
+    Previously merged SPY + IOZ.AX in AUD. Now SP500/SPY only, all USD.
+    exchange_rates kept for call-site compatibility.
 
-    Returns (combined_curve, ticker_label) e.g. ([{date, equity}], "SPY + IOZ")
+    Returns (curve, "SPY") where curve = [{"date": str, "equity": float}, ...]
     """
-    def _to_aud(amount, currency):
-        if currency == "AUD":
-            return amount
-        if currency == "USD":
-            return amount * exchange_rates.get("USDAUD", 1.41)
-        return amount
+    sp500 = market_data.get("sp500", {})
+    if not sp500.get("funded", True):
+        return [], "SPY"
 
-    # ── 1. Find earliest date across ALL equity curves ──
-    earliest_date = None
-    for md in market_data.values():
-        if not md.get("funded", True):
-            continue
-        eq = md.get("equity_curve", [])
-        if len(eq) < 2:
-            continue
-        first_date = eq[0].get("date", "")
-        if first_date and (earliest_date is None or first_date < earliest_date):
-            earliest_date = first_date
+    # Use the pre-computed per-market benchmark curve (already USD-scaled)
+    bench = sp500.get("benchmark_curve", [])
+    if not bench:
+        return [], "SPY"
 
-    if not earliest_date:
-        return [], "Benchmark"
+    # Rescale so first point matches combined_starting_usd if provided
+    if combined_starting_usd > 0 and bench:
+        first_val = bench[0].get("equity", 0)
+        if first_val > 0:
+            scale = combined_starting_usd / first_val
+            bench = [{"date": pt["date"], "equity": round(pt["equity"] * scale, 2)}
+                     for pt in bench]
 
-    # ── 2. For each market, load benchmark prices from earliest_date ──
-    per_market = {}   # {mid: {date: scaled_equity_aud}}
-    start_vals = {}   # {mid: starting equity in AUD}
-    tickers = []
-    all_dates = set()
-    for mid, md in market_data.items():
-        if not md.get("funded", True):
-            continue
-        eq_curve_len = len(md.get("equity_curve", []))
-        if eq_curve_len < 2:
-            logger.debug("_merge_benchmark_curves: skipping %s (equity_curve has %d points)",
-                         mid, eq_curve_len)
-            continue
-
-        ticker = md.get("benchmark_ticker", "?")
-        ccy = md.get("currency", "AUD")
-        seq = md.get("portfolio", {}).get("starting_equity", 0)
-        if seq <= 0:
-            continue
-
-        if ticker not in tickers:
-            tickers.append(ticker)
-
-        # Load benchmark prices from the COMBINED start date (not per-market)
-        prices = _load_benchmark_prices(ticker, earliest_date)
-        if not prices:
-            # Fallback: use pre-computed per-market benchmark if available
-            bench = md.get("benchmark_curve", [])
-            if bench:
-                series = {}
-                for pt in bench:
-                    d_str = pt.get("date", "")
-                    e_val = pt.get("equity", 0)
-                    if d_str and e_val:
-                        series[d_str] = _to_aud(e_val, ccy)
-                        all_dates.add(d_str)
-                per_market[mid] = series
-                start_vals[mid] = _to_aud(seq, ccy)
-            continue
-
-        # Scale prices to starting_equity, convert to AUD
-        base_price = prices[0][1]
-        if base_price <= 0:
-            continue
-        series = {}
-        for date, price in prices:
-            scaled = price / base_price * seq
-            series[date] = _to_aud(scaled, ccy)
-            all_dates.add(date)
-
-        per_market[mid] = series
-        start_vals[mid] = _to_aud(seq, ccy)
-
-    if not all_dates or not per_market:
-        return [], "Benchmark"
-
-    # ── 3. Forward-fill and sum across markets ──
-    sorted_dates = sorted(all_dates)
-    combined = []
-    for d in sorted_dates:
-        total = 0
-        for mid, series in per_market.items():
-            if d in series:
-                series["_last"] = series[d]
-            total += series.get("_last", start_vals.get(mid, 0))
-        combined.append((d, total))
-
-    # Scale so first point = combined_starting_aud
-    first_val = combined[0][1]
-    if first_val <= 0:
-        first_val = combined_starting_aud or 1
-    scale = combined_starting_aud / first_val if combined_starting_aud > 0 else 1
-
-    curve = [{"date": d, "equity": round(e * scale, 2)} for d, e in combined]
-    label = " + ".join(t.replace(".AX", "") for t in tickers) if tickers else "Benchmark"
-
-    return curve, label
+    return bench, "SPY"
 
 
 def generate_ceasefire_data() -> dict:
@@ -3116,380 +2946,152 @@ def generate_system_data() -> dict:
 
 
 def generate():
-    """Generate multi-market dashboard data.
+    """Generate SP500 (Alpaca-only) dashboard data.
 
-    Each market connects to its own broker independently, then results are
-    merged into a combined payload.
+    Single-market, USD-only. Removes multi-market loop and Moomoo integration.
     """
-    from markets.registry import list_markets
-
-    markets = list_markets()  # ['asx', 'sp500']
-
-    # ── Per-market broker connections (each market has its own broker) ──
-    broker_caches = {}
-
     import signal
 
     def _broker_timeout_handler(signum, frame):
         raise TimeoutError("Broker connection timed out")
 
-    for mid in markets:
-        cfg = get_config(mid)
-        trading = cfg.get("trading", {})
-        broker_name = trading.get("broker", "alpaca")
-        if (trading.get("mode") == "live"
-                and trading.get("live_enabled", False)):
-            # Per-broker timeout — don't let one broker block others
-            broker_timeout = 15
-            try:
-                signal.signal(signal.SIGALRM, _broker_timeout_handler)
-                signal.alarm(broker_timeout)
-                acct, positions, ok, orders = get_live_broker_data(cfg)
-                signal.alarm(0)  # cancel alarm on success
-            except TimeoutError:
-                signal.alarm(0)
-                print(f"  {mid}: broker TIMEOUT after {broker_timeout}s ({broker_name})")
-                acct, positions, ok, orders = None, [], False, []
-            if ok:
-                cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
-                broker_caches[mid] = cache
-                # M1: persist last-known-good broker data
-                _save_broker_cache(mid, acct, positions, orders)
-                print(f"  {mid}: broker connected ({broker_name}), "
-                      f"{len(positions)} positions")
+    mid = "sp500"
+    cfg = get_config(mid)
+    trading = cfg.get("trading", {})
+    broker_name = trading.get("broker", "alpaca")
+    broker_cache = None
+
+    if trading.get("mode") == "live" and trading.get("live_enabled", False):
+        broker_timeout = 15
+        try:
+            signal.signal(signal.SIGALRM, _broker_timeout_handler)
+            signal.alarm(broker_timeout)
+            acct, positions, ok, orders = get_live_broker_data(cfg)
+            signal.alarm(0)
+        except TimeoutError:
+            signal.alarm(0)
+            print(f"  {mid}: broker TIMEOUT after {broker_timeout}s ({broker_name})")
+            acct, positions, ok, orders = None, [], False, []
+
+        if ok:
+            broker_cache = {"acct": acct, "positions": positions, "ok": True, "orders": orders}
+            _save_broker_cache(mid, acct, positions, orders)
+            print(f"  {mid}: broker connected ({broker_name}), {len(positions)} positions")
+        else:
+            cached = _load_broker_cache(mid, allow_stale=True)
+            if cached:
+                is_stale = cached.get("_stale", False)
+                broker_cache = {
+                    "acct": cached["acct"],
+                    "positions": cached["positions"],
+                    "ok": True,
+                    "orders": cached.get("orders", []),
+                    "_cached": True,
+                    "_cache_age_minutes": cached.get("cache_age_minutes", 0),
+                }
+                stale_tag = " (STALE)" if is_stale else ""
+                print(f"  {mid}: broker FAILED — using cache{stale_tag} "
+                      f"({cached['cache_age_minutes']:.0f}m old, "
+                      f"{len(cached['positions'])} positions)")
             else:
-                # M1: try last-known-good cache (allow stale as last resort
-                # so positions don't vanish when broker is temporarily offline)
-                cached = _load_broker_cache(mid, allow_stale=True)
-                if cached:
-                    is_stale = cached.get("_stale", False)
-                    cache_entry = {
-                        "acct": cached["acct"],
-                        "positions": cached["positions"],
-                        "ok": True,
-                        "orders": cached.get("orders", []),
-                        "_cached": True,
-                        "_cache_age_minutes": cached.get("cache_age_minutes", 0),
-                    }
-                    broker_caches[mid] = cache_entry
-                    stale_tag = " (STALE)" if is_stale else ""
-                    print(f"  {mid}: broker FAILED — using cached data{stale_tag} "
-                          f"({cached['cache_age_minutes']:.0f}m old, "
-                          f"{len(cached['positions'])} positions)")
-                else:
-                    print(f"  {mid}: broker connect FAILED ({broker_name}), no cache available")
-                    # Sentinel: tells generate_market() not to retry — upstream already tried.
-                    broker_caches[mid] = {"ok": False}
+                print(f"  {mid}: broker FAILED, no cache available")
+                broker_cache = {"ok": False}
 
-    # Fallback: markets with stale cache but no live data.
-    for mid in markets:
-        if mid in broker_caches:
-            continue
-        cached = _load_broker_cache(mid, allow_stale=True)
-        if cached and cached.get("positions"):
-            cache_entry = {
-                "acct": cached["acct"],
-                "positions": cached["positions"],
-                "ok": True,
-                "orders": cached.get("orders", []),
-                "_cached": True,
-                "_cache_age_minutes": cached.get("cache_age_minutes", 0),
-            }
-            broker_caches[mid] = cache_entry
-            print(f"  {mid}: loaded own broker cache "
-                  f"({cached['cache_age_minutes']:.0f}m old, "
-                  f"{len(cached['positions'])} positions)")
+    # ── Generate SP500 market data ───────────────────────────────
+    print(f"\n  Generating {mid}...")
+    sp500_data = generate_market(mid, broker_cache=broker_cache)
+    market_data = {mid: sp500_data}
 
-    # ── Fetch exchange rates before generating market data so we can pass
-    # them into generate_market() for equity curve FX rate tagging (Issue #3)
-    exchange_rates = _get_exchange_rates()
+    # ── Equity curve (SP500 is the only market) ──────────────────
+    combined_curve = _merge_equity_curves(market_data)
 
-    # ── Fetch Moomoo manual portfolio (read-only, independent of market configs) ──
-    print("\n  Fetching Moomoo manual portfolio...")
-    moomoo_manual = get_moomoo_manual_portfolio()
-
-    # ── Wire Moomoo .AX positions as ASX cross-broker data ──────
-    # ASX market is passive (no direct broker connection) but the user
-    # holds .AX stocks on Moomoo. Feed these as cross-broker positions
-    # so ASX market view shows real position data.
-    moomoo_positions = moomoo_manual.get("positions", [])
-    moomoo_ax_positions = [p for p in moomoo_positions if p.get("ticker", "").endswith(".AX")]
-    moomoo_us_positions = [p for p in moomoo_positions if not p.get("ticker", "").endswith(".AX")]
-    if moomoo_ax_positions and "asx" not in broker_caches:
-        broker_caches["asx"] = {
-            "acct": None,
-            "positions": moomoo_ax_positions,
-            "ok": True,
-            "orders": [],
-        }
-        ax_val = sum(p.get("market_value", 0) for p in moomoo_ax_positions)
-        print(f"  asx: {len(moomoo_ax_positions)} cross-broker positions from Moomoo "
-              f"(${ax_val:,.2f} AUD)")
-
-    # ── Generate per-market data ────────────────────────────────
-    market_data = {}
-    for mid in markets:
-        print(f"\n  Generating {mid}...")
-        # Pass market-specific broker cache (not shared)
-        cache = broker_caches.get(mid)
-        data = generate_market(mid, broker_cache=cache, fx_rates=exchange_rates)
-        market_data[mid] = data
-
-    # exchange_rates already fetched above (before generate_market calls) — reuse it.
-
-    def to_aud(amount, currency):
-        """Convert any currency amount to AUD."""
-        if currency == "AUD":
-            return amount
-        if currency == "USD":
-            return amount * exchange_rates["USDAUD"]
-        return amount  # unknown currency — pass through
-
-    # ── Merge: combine positions and stats from all markets ─────
-    all_positions = []
-    all_manual = []
-    all_closed = []
-    combined_strats = {}
-    combined_broker_equity_aud = 0   # headline (matches broker app)
-    combined_broker_cash_aud = 0
-    combined_atlas_equity_aud = 0    # for P&L / benchmark
-    combined_starting_aud = 0
-
-    for mid, md in market_data.items():
-        pf = md.get("portfolio", {})
-        ccy = md.get("currency", "AUD")
-        # Only include markets with real data in combined totals.
-        # Offline/paper markets with no positions (HK unfunded) would inflate
-        # the combined number with phantom capital that doesn't exist.
-        has_broker = md.get("data_source") in ("broker", "cached")
-        is_cross_broker = md.get("data_source") == "cross-broker"
-        is_funded = md.get("funded", True)
-        include_in_combined = has_broker and is_funded
-        if include_in_combined:
-            # Headline equity from broker (matches broker app).
-            # broker_equity is the FULL account including positions from
-            # other markets. Cross-broker markets are skipped below to
-            # avoid double-counting those positions.
-            be = pf.get("broker_equity") or pf.get("equity", 0)
-            bc = pf.get("broker_cash") or pf.get("cash", 0)
-            combined_broker_equity_aud += to_aud(be, ccy)
-            combined_broker_cash_aud += to_aud(bc, ccy)
-            # Atlas equity for P&L tracking
-            combined_atlas_equity_aud += to_aud(pf.get("equity", 0), ccy)
-            combined_starting_aud += to_aud(pf.get("starting_equity", 0), ccy)
-        # Cross-broker markets: equity is already a SUBSET
-        # of the parent broker's equity. Don't add to combined headline
-        # to avoid double-counting. Positions are still included below.
-        # Tag positions with market (include all markets for position display)
-        for p in pf.get("open_positions", []):
-            p["market"] = mid
-            all_positions.append(p)
-        for p in md.get("manual_positions", {}).get("positions", []):
-            p["market"] = mid
-            all_manual.append(p)
-        for t in md.get("closed_trades", []):
-            t["market"] = mid
-            all_closed.append(t)
-        # Strategy summary merge (only broker-connected funded markets)
-        if include_in_combined:
-            for s in md.get("strategy_summary", []):
-                key = s["strategy"]
-                if key not in combined_strats:
-                    combined_strats[key] = {"strategy": key, "positions": 0, "unrealized_pnl": 0, "market_value": 0}
-                combined_strats[key]["positions"] += s["positions"]
-                # C3: convert to AUD before summing (strategy values are in native market currency)
-                combined_strats[key]["unrealized_pnl"] += round(to_aud(s["unrealized_pnl"], ccy), 2)
-                combined_strats[key]["market_value"] += round(to_aud(s["market_value"], ccy), 2)
-
-    # ── Combined equity curve (sum across markets) ──────────────
-    combined_curve = _merge_equity_curves(market_data, exchange_rates)
-
-    # ── Derive combined starting equity from equity curve ──────
-    # Use invested capital (equity - pnl) from first combined point.
-    # This includes ALL funded markets (broker + cross-broker) and
-    # correctly represents the initial capital base for return calcs.
+    # Derive starting equity from curve first point
+    combined_starting = sp500_data.get("portfolio", {}).get("starting_equity", 0)
     if combined_curve:
         _first_pt = combined_curve[0]
         _curve_starting = _first_pt["equity"] - _first_pt.get("pnl", 0)
         if _curve_starting > 0:
-            combined_starting_aud = round(_curve_starting, 2)
+            combined_starting = round(_curve_starting, 2)
 
-    # ── Combined benchmark curve (AUD-normalised blend) ────────
+    # ── Benchmark (SPY) ──────────────────────────────────────────
     combined_bench, combined_bench_label = _merge_benchmark_curves(
-        market_data, exchange_rates, combined_starting_aud
+        market_data, combined_starting_usd=combined_starting
     )
 
-    # ── Build combined result ───────────────────────────────────
+    # ── P&L ─────────────────────────────────────────────────────
     now = datetime.now(BRISBANE)
-    # Deposit-adjusted P&L: use pnl from the combined equity curve.
-    # This is the sum of all unrealized + realized profits across markets,
-    # independent of deposits/withdrawals. Return = pnl / invested,
-    # where invested = equity - pnl.  Consistent with the chart's method.
     if combined_curve:
         _latest_pt = combined_curve[-1]
         combined_pnl = round(_latest_pt.get("pnl", 0), 2)
         _invested = _latest_pt["equity"] - combined_pnl
         combined_pnl_pct = round(combined_pnl / _invested * 100, 2) if _invested > 0 else 0
     else:
-        combined_pnl = round(combined_atlas_equity_aud - combined_starting_aud, 2)
-        combined_pnl_pct = round(combined_pnl / combined_starting_aud * 100, 2) if combined_starting_aud > 0 else 0
+        pf = sp500_data.get("portfolio", {})
+        combined_pnl = pf.get("total_pnl", 0)
+        combined_pnl_pct = pf.get("total_pnl_pct", 0)
 
-    # ── Research data ──────────────────────────────────────────
     research_data = generate_research_data()
-
-    # Pick primary for fields that don't merge well (plan, risk)
-    primary = "sp500" if "sp500" in market_data else markets[0]
-    primary_data = market_data[primary]
-
-    # W3: Prefer APPROVED/PENDING_APPROVAL plans over stale EXECUTED ones
-    # Scan all markets: an actionable plan today is more useful than yesterday's SP500 plan.
-    primary_plan = None
-    for status_pref in ("PENDING_APPROVAL", "APPROVED"):
-        for md in market_data.values():
-            p = md.get("plan")
-            if p and p.get("status") == status_pref:
-                primary_plan = p
-                break
-        if primary_plan:
-            break
-    if not primary_plan:
-        primary_plan = primary_data.get("plan")
-
-    # W1/W10: Build combined risk block across all markets
-    combined_pos_value_aud = sum(
-        to_aud(
-            sum(p.get("current_price", 0) * p.get("shares", 0)
-                for p in md.get("portfolio", {}).get("open_positions", [])),
-            md.get("currency", "AUD"),
-        )
-        for md in market_data.values()
-    )
-    combined_risk = {
-        "exposure_pct": round(combined_pos_value_aud / combined_broker_equity_aud * 100, 2)
-                        if combined_broker_equity_aud > 0 else 0,
-        "max_positions": sum(md.get("risk", {}).get("max_positions", 0) for md in market_data.values()),
-        "halted": any(md.get("risk", {}).get("halted", False) for md in market_data.values()),
-        "risk_per_trade": "varies",
-        "max_portfolio_risk": 0.05,
-    }
-
-    # Issue #9: Collect stale warnings from all markets for the top-level result
-    stale_warnings = [
-        md["stale_warning"]
-        for md in market_data.values()
-        if md.get("stale_warning")
-    ]
-
     ceasefire_data = generate_ceasefire_data()
 
-    # Today's P&L — merge per-currency breakdowns from all markets
-    _combined_today_pnl_by_ccy: dict[str, float] = {}
-    for md in market_data.values():
-        pf = md.get("portfolio", {})
-        for ccy, val in pf.get("today_pnl_by_ccy", {}).items():
-            _combined_today_pnl_by_ccy[ccy] = _combined_today_pnl_by_ccy.get(ccy, 0) + val
-    _combined_today_pnl_by_ccy = {k: round(v, 2) for k, v in _combined_today_pnl_by_ccy.items()}
-    _combined_today_pnl_aud = round(sum(
-        to_aud(v, ccy) for ccy, v in _combined_today_pnl_by_ccy.items()
-    ), 2)
+    pf = sp500_data.get("portfolio", {})
+    all_positions = [dict(p, market=mid) for p in pf.get("open_positions", [])]
+    all_closed = [dict(t, market=mid) for t in sp500_data.get("closed_trades", [])]
 
-    # ── Total equity: Alpaca + full Moomoo account ────────────────
-    # Moomoo equity is already AUD-normalised (aud_assets + usd_assets * USDAUD)
-    moomoo_equity_aud = moomoo_manual.get("equity", 0)
-    moomoo_cash_aud = moomoo_manual.get("cash", 0)
-    total_equity_aud = round(combined_broker_equity_aud + moomoo_equity_aud, 2)
-    total_cash_aud = round(combined_broker_cash_aud + moomoo_cash_aud, 2)
-
-    # Moomoo manual portfolio (US positions only — .AX positions are in ASX market)
-    us_unrealized = round(sum(p.get("pnl", 0) for p in moomoo_us_positions), 2)
-    us_market_val = round(sum(p.get("market_value", 0) for p in moomoo_us_positions), 2)
-    moomoo_manual_display = {
-        **moomoo_manual,
-        # Override positions list to exclude .AX (already shown under ASX market)
-        "positions": moomoo_us_positions,
-        "num_open": len(moomoo_us_positions),
-        "unrealized_pnl": us_unrealized,
-        "market_value": us_market_val,
-        # AUD-equivalent values (equity/cash already in AUD from Moomoo function)
-        "equity_aud": moomoo_manual.get("equity", 0),
-        "cash_aud": moomoo_manual.get("cash", 0),
-        "unrealized_pnl_aud": round(to_aud(us_unrealized, "USD"), 2),
-        "market_value_aud": round(to_aud(us_market_val, "USD"), 2),
-    }
+    stale_warnings = [sp500_data["stale_warning"]] if sp500_data.get("stale_warning") else []
 
     result = {
         "timestamp": now.isoformat(),
         "project": "Atlas",
         "markets": market_data,
-        "exchange_rates": exchange_rates,
-        "ceasefire": ceasefire_data,
-        # Top-level summary (combined across ALL markets, AUD-normalised)
-        "trading_mode": "live" if any(md.get("trading_mode") == "live" for md in market_data.values()) else "offline",
-        "data_source": "broker" if broker_caches else "offline",
-        "broker": {mid: get_config(mid).get("trading", {}).get("broker", "alpaca") for mid in markets},
-        "config_version": {mid: md.get("config_version", "?") for mid, md in market_data.items()},
+        "trading_mode": sp500_data.get("trading_mode", "offline"),
+        "data_source": sp500_data.get("data_source", "offline"),
+        "broker": {"sp500": broker_name},
+        "config_version": {"sp500": sp500_data.get("config_version", "?")},
         "account": {
-            # Total across both brokers in AUD
-            "equity": total_equity_aud,
-            "cash": total_cash_aud,
-            "buying_power": total_cash_aud,
-            "currency": "AUD",
-            # Per-broker breakdown
-            "alpaca_equity_usd": round(
-                sum(md.get("portfolio", {}).get("broker_equity", 0) or md.get("portfolio", {}).get("equity", 0)
-                    for mid, md in market_data.items()
-                    if md.get("data_source") in ("broker", "cached")), 2),
-            "moomoo_equity_aud": round(moomoo_equity_aud, 2),
+            "equity": pf.get("broker_equity") or pf.get("equity", 0),
+            "cash": pf.get("broker_cash") or pf.get("cash", 0),
+            "buying_power": pf.get("buying_power", 0),
+            "currency": "USD",
         },
         "portfolio": {
-            "equity": round(combined_broker_equity_aud, 2),
-            "cash": round(combined_broker_cash_aud, 2),
-            "starting_equity": round(combined_starting_aud, 2),
+            "equity": pf.get("broker_equity") or pf.get("equity", 0),
+            "cash": pf.get("broker_cash") or pf.get("cash", 0),
+            "starting_equity": combined_starting,
             "total_pnl": combined_pnl,
             "total_pnl_pct": combined_pnl_pct,
             "num_open": len(all_positions),
             "open_positions": all_positions,
-            "win_rate": round(sum(1 for t in all_closed if t.get("pnl", 0) > 0) / len(all_closed) * 100, 1) if all_closed else 0,
-            "market_pnl": round(sum(
-                to_aud(md.get("portfolio", {}).get("market_pnl", 0), md.get("currency", "AUD"))
-                for md in market_data.values()), 2),
-            "realized_pnl": round(sum(
-                to_aud(md.get("portfolio", {}).get("realized_pnl", 0), md.get("currency", "AUD"))
-                for md in market_data.values()), 2),
-            "total_commissions": round(sum(
-                to_aud(md.get("portfolio", {}).get("total_commissions", 0), md.get("currency", "AUD"))
-                for md in market_data.values()), 2),
-            "commission_per_trade": 0,
-            # Today's P&L combined across all markets, in AUD
-            "today_pnl_by_ccy": _combined_today_pnl_by_ccy,
-            "today_pnl_aud": _combined_today_pnl_aud,
+            "win_rate": pf.get("win_rate", 0),
+            "market_pnl": pf.get("market_pnl", 0),
+            "realized_pnl": pf.get("realized_pnl", 0),
+            "total_commissions": pf.get("total_commissions", 0),
+            "commission_per_trade": pf.get("commission_per_trade", 0),
+            "today_pnl_usd": pf.get("today_pnl_usd", 0),
         },
-        "manual_portfolio": moomoo_manual_display,
-        "strategy_summary": list(combined_strats.values()),
+        "strategy_summary": sp500_data.get("strategy_summary", []),
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
         "benchmark_ticker": combined_bench_label,
         "benchmark_return_pct": round(
-            (combined_bench[-1]["equity"] / combined_starting_aud - 1) * 100, 2
-        ) if combined_bench and combined_starting_aud > 0 else 0,
-        "plan": primary_plan,
+            (combined_bench[-1]["equity"] / combined_starting - 1) * 100, 2
+        ) if combined_bench and combined_starting > 0 else 0,
+        "plan": sp500_data.get("plan"),
         "closed_trades": all_closed,
-        "risk": combined_risk,
-        "tasks": primary_data.get("tasks", {}),
+        "risk": sp500_data.get("risk", {}),
+        "tasks": sp500_data.get("tasks", {}),
         "research": research_data,
-        # Issue #9: stale warnings propagated from per-market results
+        "ceasefire": ceasefire_data,
         "stale_warnings": stale_warnings,
     }
 
-    # Issue #8: Atomic write — write to .tmp then rename to avoid readers
-    # seeing a half-written JSON file if the process is killed mid-write.
+    # Atomic write
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     tmp_output = OUTPUT.with_suffix(".tmp")
     with open(tmp_output, "w") as f:
         json.dump(result, f, indent=2, default=str)
     tmp_output.rename(OUTPUT)
 
-    # ── Health / Events / System tab data (WP-5.3) ────────────────────────────
+    # ── Health / Events / System tab data ────────────────────────
     for _gen_fn, _fname in [
         (generate_strategy_health_data, "health-data.json"),
         (generate_events_data,          "events-data.json"),
@@ -3507,31 +3109,16 @@ def generate():
         _tab_tmp.rename(_tab_out)
     print("  Tab data written: health-data.json, events-data.json, system-data.json")
 
-
     print(f"\nDashboard data written to {OUTPUT}")
-    for mid, md in market_data.items():
-        pf = md.get("portfolio", {})
-        label = f"{'🔴 LIVE' if md.get('trading_mode') == 'live' else '📝 PAPER'}"
-        n_atlas = pf.get('num_open', 0)
-        n_manual = md.get('manual_positions', {}).get('num_open', 0)
-        n_total = n_atlas + n_manual
-        pos_detail = f"{n_atlas} atlas + {n_manual} manual" if n_manual else f"{n_atlas} positions"
-        ds_tag = f" [{md.get('data_source', '?')}]" if md.get('data_source') not in ('broker',) else ""
-        print(f"  {mid.upper():6s} {label}: ${pf.get('equity',0):,.2f} equity, "
-              f"{pos_detail}{ds_tag}, "
-              f"v{md.get('config_version','?')}")
-    moo_tag = (f"🟢 {moomoo_manual['num_open']} pos, ${moomoo_manual['equity']:,.2f}"
-               if moomoo_manual.get("connected")
-               else "🔴 offline")
-    print(f"  MOOMOO  Manual: {moo_tag}")
-    print(f"  COMBINED (AUD): A${total_equity_aud:,.2f} total "
-          f"(Alpaca A${combined_broker_equity_aud:,.2f} + Moomoo A${moomoo_equity_aud:,.2f}), "
-          f"Atlas P&L A${combined_pnl:,.2f} ({combined_pnl_pct:+.2f}%), "
-          f"{len(all_positions)} positions across {len(market_data)} markets"
-          f" (1 USD = {exchange_rates['USDAUD']:.4f} AUD)")
+    label = f"{'🔴 LIVE' if sp500_data.get('trading_mode') == 'live' else '📝 PAPER'}"
+    ds_tag = f" [{sp500_data.get('data_source', '?')}]" if sp500_data.get('data_source') not in ('broker',) else ""
+    print(f"  SP500  {label}: ${pf.get('equity', 0):,.2f} equity, "
+          f"{len(all_positions)} positions{ds_tag}, "
+          f"v{sp500_data.get('config_version', '?')}")
+    print(f"  P&L: ${combined_pnl:,.2f} ({combined_pnl_pct:+.2f}%) | "
+          f"Starting: ${combined_starting:,.2f}")
 
-    # Always regenerate the simple dashboard data that the HTML frontend reads.
-    # This ensures positions/equity update on every refresh cycle (~10s).
+    # Regenerate simple dashboard data
     try:
         generate_simple_dashboard_data()
     except Exception as e:
@@ -3544,10 +3131,9 @@ def generate():
 
 SIMPLE_OUTPUT = PROJECT_ROOT / "dashboard" / "data" / "simple-dashboard-data.json"
 
-# Market config: (tz_name, open_hhmm, close_hhmm)
+# Market config: NYSE only (Alpaca-only, SP500)
 _MARKET_HOURS = {
-    "sp500": ("America/New_York",   "09:30", "16:00"),
-    "asx":   ("Australia/Sydney",  "10:00", "16:00"),
+    "sp500": ("America/New_York", "09:30", "16:00"),
 }
 
 
@@ -3647,257 +3233,306 @@ def _load_sparkline(ticker: str, n: int = 15) -> list[float]:
     return []
 
 
-def generate_simple_dashboard_data() -> dict:
-    """Generate a flat, pre-computed JSON payload for the simple dashboard.
-
-    IMPORTANT: This function does NOT connect to brokers directly.  It reads
-    from the already-generated ``dashboard-data.json`` (written by ``generate()``).
-    This keeps broker logic in one place and ensures the simple format is always
-    consistent with the authoritative data.
-
-    Output schema::
-
-        {
-          "timestamp": str (ISO-8601),
-          "equity_curve": [{"date": str, "equity_aud": float}, ...],
-          "positions": [
-            {
-              "ticker": str,
-              "market": str,
-              "strategy": str,
-              "entry_price": float,
-              "current_price": float,
-              "shares": int | float,
-              "pnl_local": float,     # in position's native currency
-              "pnl_pct": float,
-              "pnl_aud": float,
-              "pnl_display": str,     # e.g. "+$3.20" / "-A$12.50"
-              "value_aud": float,
-              "currency": str,
-              "sparkline": [float, ...],   # last ≤15 daily closes
-              "sector": str,
-              "days_held": int,
-              "entry_date": str,
-              "stop_price": float,
-              "is_atlas": bool,
-            },
-            ...
-          ],
-          "summary": {
-            "total_equity_aud": float,
-            "today_pnl_aud": float,
-            "win_rate_pct": float,
-            "open_position_count": int,
-            "total_pnl_aud": float,
-            "total_pnl_pct": float,
-          },
-          "markets": {
-            "sp500": {"status": str, "next_open_secs": int|None, "next_close_secs": int|None},
-            "asx":   {"status": str, "next_open_secs": int|None, "next_close_secs": int|None},
-          }
+def _calc_trade_stats(trades: list) -> dict:
+    """Compute win rate, avg win/loss, profit factor, expectancy for a list of trades."""
+    if not trades:
+        return {
+            "trades": 0, "win_rate": 0, "avg_win": 0,
+            "avg_loss": 0, "profit_factor": 0, "expectancy": 0,
         }
+    wins = [t.get("pnl", 0) for t in trades if (t.get("pnl", 0) or 0) > 0]
+    losses = [t.get("pnl", 0) for t in trades if (t.get("pnl", 0) or 0) <= 0]
+    total = len(trades)
+    win_rate = len(wins) / total * 100 if total > 0 else 0
+    avg_win = sum(wins) / len(wins) if wins else 0
+    avg_loss = sum(losses) / len(losses) if losses else 0
+    gross_profit = sum(wins)
+    gross_loss = abs(sum(losses))
+    if gross_loss > 0:
+        pf = round(gross_profit / gross_loss, 2)
+    elif gross_profit > 0:
+        pf = 999.0
+    else:
+        pf = 0.0
+    expectancy = (sum(wins) + sum(losses)) / total if total > 0 else 0
+    return {
+        "trades": total,
+        "win_rate": round(win_rate, 1),
+        "avg_win": round(avg_win, 2),
+        "avg_loss": round(avg_loss, 2),
+        "profit_factor": pf,
+        "expectancy": round(expectancy, 2),
+    }
 
-    If ``dashboard-data.json`` does not yet exist the function returns a safe
-    empty skeleton and writes it to ``simple-dashboard-data.json``.
+
+def _compute_strategy_performance(closed_trades: list) -> dict:
+    """Compute strategy performance stats from closed trades list."""
+    overall = _calc_trade_stats(closed_trades)
+    by_strategy: dict = {}
+    for t in closed_trades:
+        s = t.get("strategy", "unknown") or "unknown"
+        if s not in by_strategy:
+            by_strategy[s] = []
+        by_strategy[s].append(t)
+    return {
+        "overall": overall,
+        "by_strategy": {s: _calc_trade_stats(ts) for s, ts in by_strategy.items()},
+    }
+
+
+def _get_alpaca_raw_positions() -> dict:
+    """Fetch raw Alpaca positions to extract intraday fields not in Atlas's PositionInfo.
+
+    Returns {symbol: {"intraday_pnl", "intraday_pnl_pct", "change_today", "lastday_price"}}
+    """
+    try:
+        from brokers.secrets import get_secret
+        api_key = get_secret("ALPACA_API_KEY")
+        api_secret = get_secret("ALPACA_SECRET_KEY")
+        paper = get_secret("ALPACA_PAPER", default="false").lower() in ("true", "1")
+
+        from alpaca.trading.client import TradingClient
+        client = TradingClient(api_key, api_secret, paper=paper)
+        positions = client.get_all_positions() or []
+
+        result = {}
+        for pos in positions:
+            symbol = str(getattr(pos, "symbol", "") or "")
+            if not symbol:
+                continue
+            result[symbol] = {
+                "intraday_pnl": round(float(getattr(pos, "unrealized_intraday_pl", 0) or 0), 2),
+                "intraday_pnl_pct": round(float(getattr(pos, "unrealized_intraday_plpc", 0) or 0) * 100, 4),
+                "change_today": round(float(getattr(pos, "change_today", 0) or 0) * 100, 4),
+                "lastday_price": round(float(getattr(pos, "lastday_price", 0) or 0), 4),
+            }
+        return result
+    except Exception as e:
+        logger.warning("_get_alpaca_raw_positions failed: %s", e)
+        return {}
+
+
+def generate_simple_dashboard_data() -> dict:
+    """Generate rich Alpaca-only flat JSON payload for the simple dashboard.
+
+    Calls Alpaca API directly for:
+    - Rich account details (margin, daytrade count, etc.)
+    - Portfolio history (daily equity curve from broker)
+    - Recent orders
+    - Market clock (real-time open/close status)
+    - Intraday position fields
+
+    Then computes:
+    - strategy_allocation from current positions
+    - strategy_performance from closed trades
+    - SPY benchmark curve
+
+    Output schema:
+        {
+          "timestamp": str,
+          "account": {equity, cash, buying_power, last_equity, ...},
+          "portfolio_history": [{"date", "equity", "pnl", "pnl_pct"}, ...],
+          "positions": [{"ticker", "strategy", ..., "intraday_pnl", "change_today", ...}, ...],
+          "strategy_allocation": [{"strategy", "value", "pct", "positions"}, ...],
+          "strategy_performance": {"overall": {...}, "by_strategy": {...}},
+          "recent_orders": [...],
+          "market_clock": {"is_open", "next_open", "next_close", "timestamp"},
+          "summary": {equity, today_pnl, total_pnl, total_pnl_pct, open_positions, win_rate},
+          "benchmark": {"ticker": "SPY", "curve": [...], "return_pct": float},
+        }
     """
     now = datetime.now(BRISBANE)
+    config = get_config("sp500")
 
-    # ── Load authoritative data produced by generate() ───────────
-    source = safe_json(OUTPUT, None)
-    if source is None:
-        # No data yet — return empty skeleton
-        result: dict = {
-            "timestamp": now.isoformat(),
-            "equity_curve": [],
-            "positions": [],
-            "summary": {
-                "total_equity_aud": 0.0,
-                "today_pnl_aud": 0.0,
-                "win_rate_pct": 0.0,
-                "open_position_count": 0,
-                "total_pnl_aud": 0.0,
-                "total_pnl_pct": 0.0,
-            },
-            "markets": {mid: _market_status(mid) for mid in _MARKET_HOURS},
-        }
-        SIMPLE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-        tmp = SIMPLE_OUTPUT.with_suffix(".tmp")
-        with open(tmp, "w") as f:
-            json.dump(result, f, indent=2, default=str)
-        tmp.rename(SIMPLE_OUTPUT)
-        return result
+    # ── Broker data: positions, account ──────────────────────────
+    acct_data, broker_positions, broker_ok, _ = get_live_broker_data(config)
 
-    fx = source.get("exchange_rates", {"AUDUSD": 0.70, "USDAUD": 1.43})
-    usdaud = fx.get("USDAUD", 1.43)
+    # ── Rich Alpaca API data ─────────────────────────────────────
+    account_details = get_alpaca_account_details()
+    portfolio_history = get_alpaca_portfolio_history(period="3M")
+    recent_orders = get_alpaca_recent_orders(limit=20)
+    market_clock = get_alpaca_market_clock()
 
-    def _to_aud(amount: float, currency: str) -> float:
-        """Convert a native-currency amount to AUD."""
-        ccy = (currency or "AUD").upper()
-        if ccy == "AUD":
-            return round(amount, 2)
-        if ccy == "USD":
-            return round(amount * usdaud, 2)
-        if ccy == "HKD":
-            hkdaud = fx.get("HKDAUD", usdaud / 7.8)  # approx if not available
-            return round(amount * hkdaud, 2)
-        return round(amount, 2)  # unknown — pass through
+    # ── Raw intraday position fields ─────────────────────────────
+    raw_positions = _get_alpaca_raw_positions()  # {symbol: {intraday fields}}
 
-    # ── Equity curve ──────────────────────────────────────────────
-    # The combined equity_curve already stores AUD-normalised equity
-    # (generate() converts per-market equity to AUD before writing the curve).
-    raw_curve = source.get("equity_curve", [])
-    equity_curve = []
-    for pt in raw_curve:
-        d = pt.get("date", "")
-        eq = pt.get("equity", 0.0)
-        if d and eq is not None:
-            equity_curve.append({"date": str(d), "equity_aud": round(float(eq), 2)})
+    # ── Plan metadata (strategy, stop, sector per ticker) ────────
+    plan_meta = _load_plan_metadata()
 
-    # ── Positions ─────────────────────────────────────────────────
+    # ── Closed trades for performance calc ───────────────────────
+    live_state_path = PROJECT_ROOT / "brokers" / "state" / "live_sp500.json"
+    live_state = safe_json(live_state_path, {})
+    closed_trades = live_state.get("closed_trades", []) or []
+
+    # Fallback to portfolio file
+    if not closed_trades:
+        portfolio = get_portfolio(config)
+        closed_trades = portfolio.get("closed_trades", []) or []
+
+    # ── Starting equity ───────────────────────────────────────────
+    portfolio_state = get_portfolio(config)
+    seq = (portfolio_state.get("starting_equity")
+           or config.get("risk", {}).get("starting_equity", 5000))
+
+    # ── Build positions with enriched fields ─────────────────────
     positions_out: list[dict] = []
+    strategy_value: dict = {}
 
-    markets_data = source.get("markets", {})
-    for market_id, md in markets_data.items():
-        pf = md.get("portfolio", {})
-        currency = md.get("currency", "AUD")
-        open_pos = pf.get("open_positions", [])
-
-        for p in open_pos:
-            ticker  = p.get("ticker", "")
-            ep      = float(p.get("entry_price", 0) or 0)
-            cp      = float(p.get("current_price", ep) or ep)
-            shares  = p.get("shares", 0)
-            pos_ccy = p.get("currency", currency) or currency
-
-            # P&L in native currency
-            pnl_local = round((cp - ep) * shares, 2)
-            pnl_pct   = round((cp / ep - 1) * 100, 4) if ep > 0 else 0.0
-
-            # Override with broker-reported P&L when available (more accurate
-            # for shorts, fees, and corporate actions)
-            broker_pnl = p.get("unrealized_pnl")
-            if broker_pnl is not None:
-                pnl_local = round(float(broker_pnl), 2)
-
-            # P&L display string — currency symbol + sign
-            ccy_sym = "A$" if pos_ccy == "AUD" else "$"
-            sign    = "+" if pnl_local >= 0 else "-"
-            pnl_display = f"{sign}{ccy_sym}{abs(pnl_local):,.2f}"
-
-            # AUD-converted values
-            pnl_aud  = _to_aud(pnl_local, pos_ccy)
-            value_aud = _to_aud(cp * shares, pos_ccy)
-
-            # Sparkline — last 15 closes; fallback to [entry, current]
-            sparkline = _load_sparkline(ticker, n=15)
-            if not sparkline:
-                sparkline = [round(ep, 4), round(cp, 4)] if ep != cp else [round(cp, 4)]
-
-            positions_out.append({
-                "ticker":        ticker,
-                "market":        market_id,
-                "strategy":      p.get("strategy", ""),
-                "entry_price":   round(ep, 4),
-                "current_price": round(cp, 4),
-                "shares":        shares,
-                "pnl_local":     pnl_local,
-                "pnl_pct":       round(pnl_pct, 4),
-                "pnl_aud":       pnl_aud,
-                "pnl_display":   pnl_display,
-                "value_aud":     value_aud,
-                "currency":      pos_ccy,
-                "sparkline":     sparkline,
-                "sector":        p.get("sector", "Unknown"),
-                "days_held":     int(p.get("days_held", 0) or 0),
-                "entry_date":    p.get("entry_date", ""),
-                "stop_price":    round(float(p.get("stop_price", 0) or 0), 4),
-                "is_atlas":      bool(p.get("is_atlas", True)),
-            })
-
-    # Also include manual positions (Moomoo)
-    manual_pos = source.get("manual_portfolio", {}).get("positions", []) or []
-    # Avoid double-counting positions already in markets_data (cross-broker duplicates)
-    existing_tickers = {p["ticker"] for p in positions_out}
-    for p in manual_pos:
+    for p in broker_positions:
         ticker = p.get("ticker", "")
-        if ticker in existing_tickers:
-            continue
-        ep      = float(p.get("entry_price", 0) or 0)
-        cp      = float(p.get("current_price", ep) or ep)
-        shares  = p.get("shares", 0)
-        pos_ccy = p.get("currency", "USD")
+        # Map Atlas ticker to Alpaca symbol (e.g. "AAPL" stays "AAPL")
+        alpaca_symbol = ticker  # US equities have no suffix in Alpaca
+        raw = raw_positions.get(alpaca_symbol, {})
+        meta = plan_meta.get(ticker, {})
+        strat = meta.get("strategy") or p.get("strategy") or "unknown"
+        sector = meta.get("sector") or p.get("sector") or "Unknown"
 
-        pnl_local = round(float(p.get("pnl", (cp - ep) * shares) or 0), 2)
-        pnl_pct   = round((cp / ep - 1) * 100, 4) if ep > 0 else 0.0
-        ccy_sym   = "A$" if pos_ccy == "AUD" else "$"
-        sign      = "+" if pnl_local >= 0 else "-"
-        pnl_display = f"{sign}{ccy_sym}{abs(pnl_local):,.2f}"
-        pnl_aud   = _to_aud(pnl_local, pos_ccy)
-        value_aud = _to_aud(cp * shares, pos_ccy)
+        ep = float(p.get("entry_price", 0) or 0)
+        cp = float(p.get("current_price", ep) or ep)
+        shares = int(p.get("shares", 0) or 0)
+        market_value = float(p.get("market_value", cp * shares) or cp * shares)
+        unrealized_pnl = float(p.get("unrealized_pnl", (cp - ep) * shares) or 0)
+        unrealized_pnl_pct = float(p.get("unrealized_pnl_pct",
+                                         (cp - ep) / ep * 100 if ep > 0 else 0) or 0)
 
+        # Sparkline
         sparkline = _load_sparkline(ticker, n=15)
         if not sparkline:
             sparkline = [round(ep, 4), round(cp, 4)] if ep != cp else [round(cp, 4)]
 
-        # Infer market from ticker suffix
-        if ticker.endswith(".AX"):
-            mkt = "asx"
-        elif ticker.endswith(".HK"):
-            mkt = "hk"
-        else:
-            mkt = "sp500"
+        pos_out = {
+            "ticker":             ticker,
+            "strategy":           strat,
+            "entry_date":         meta.get("entry_date", p.get("entry_date", "")),
+            "entry_price":        round(ep, 4),
+            "current_price":      round(cp, 4),
+            "shares":             shares,
+            "market_value":       round(market_value, 2),
+            "unrealized_pnl":     round(unrealized_pnl, 2),
+            "unrealized_pnl_pct": round(unrealized_pnl_pct, 4),
+            "cost_basis":         round(float(p.get("cost_basis", ep * shares) or 0), 2),
+            "today_pnl":          round(float(p.get("today_pnl", 0) or 0), 2),
+            "stop_price":         round(float(meta.get("stop_price", p.get("stop_price", 0)) or 0), 4),
+            "sector":             sector,
+            "currency":           "USD",
+            "is_atlas":           bool(p.get("is_atlas", True)),
+            "sparkline":          sparkline,
+            # Intraday fields from raw Alpaca position
+            "intraday_pnl":       raw.get("intraday_pnl", 0),
+            "intraday_pnl_pct":   raw.get("intraday_pnl_pct", 0),
+            "change_today":       raw.get("change_today", 0),
+            "lastday_price":      raw.get("lastday_price", 0),
+        }
+        positions_out.append(pos_out)
 
-        positions_out.append({
-            "ticker":        ticker,
-            "market":        mkt,
-            "strategy":      "manual",
-            "entry_price":   round(ep, 4),
-            "current_price": round(cp, 4),
-            "shares":        shares,
-            "pnl_local":     pnl_local,
-            "pnl_pct":       pnl_pct,
-            "pnl_aud":       pnl_aud,
-            "pnl_display":   pnl_display,
-            "value_aud":     value_aud,
-            "currency":      pos_ccy,
-            "sparkline":     sparkline,
-            "sector":        p.get("sector", "Unknown"),
-            "days_held":     0,
-            "entry_date":    "",
-            "stop_price":    0.0,
-            "is_atlas":      False,
-        })
+        # Accumulate strategy allocation
+        if strat not in strategy_value:
+            strategy_value[strat] = {"value": 0.0, "positions": 0}
+        strategy_value[strat]["value"] += market_value
+        strategy_value[strat]["positions"] += 1
 
-    # ── Summary ───────────────────────────────────────────────────
-    acct          = source.get("account", {})
-    portfolio     = source.get("portfolio", {})
+    # ── Strategy allocation ───────────────────────────────────────
+    total_market_value = sum(p["market_value"] for p in positions_out)
+    strategy_allocation = [
+        {
+            "strategy": s,
+            "value": round(v["value"], 2),
+            "pct": round(v["value"] / total_market_value * 100, 1) if total_market_value > 0 else 0,
+            "positions": v["positions"],
+        }
+        for s, v in sorted(strategy_value.items(), key=lambda x: x[1]["value"], reverse=True)
+    ]
 
-    total_equity_aud = float(acct.get("equity", 0) or 0)
-    total_pnl_aud    = float(portfolio.get("total_pnl", 0) or 0)
-    total_pnl_pct    = float(portfolio.get("total_pnl_pct", 0) or 0)
-    win_rate_pct     = float(portfolio.get("win_rate", 0) or 0)
-    today_pnl_aud    = float(portfolio.get("today_pnl_aud", 0) or 0)
-    open_pos_count   = len(positions_out)
+    # ── Strategy performance ──────────────────────────────────────
+    strategy_performance = _compute_strategy_performance(closed_trades)
 
-    summary = {
-        "total_equity_aud":   round(total_equity_aud, 2),
-        "today_pnl_aud":      round(today_pnl_aud, 2),
-        "win_rate_pct":       round(win_rate_pct, 2),
-        "open_position_count": open_pos_count,
-        "total_pnl_aud":      round(total_pnl_aud, 2),
-        "total_pnl_pct":      round(total_pnl_pct, 2),
+    # ── Account section ───────────────────────────────────────────
+    equity = float(account_details.get("equity") or
+                   (acct_data.get("equity", 0) if acct_data else 0))
+    cash = float(account_details.get("cash") or
+                 (acct_data.get("cash", 0) if acct_data else 0))
+    last_equity = float(account_details.get("last_equity", equity) or equity)
+    equity_change = float(account_details.get("equity_change_today",
+                                               round(equity - last_equity, 2)))
+    equity_change_pct = float(account_details.get("equity_change_today_pct",
+                                                    round(equity_change / last_equity * 100, 2)
+                                                    if last_equity > 0 else 0))
+    initial_margin = float(account_details.get("initial_margin", 0))
+    maintenance_margin = float(account_details.get("maintenance_margin", 0))
+    margin_usage_pct = round(maintenance_margin / equity * 100, 2) if equity > 0 else 0
+
+    account_created = account_details.get("account_created", "")
+    account_age_days = 0
+    if account_created:
+        try:
+            created_dt = datetime.strptime(account_created[:10], "%Y-%m-%d")
+            account_age_days = (now.replace(tzinfo=None) - created_dt).days
+        except Exception:
+            pass
+
+    account_section = {
+        "equity":               round(equity, 2),
+        "cash":                 round(cash, 2),
+        "buying_power":         round(float(account_details.get("buying_power",
+                                             acct_data.get("buying_power", cash) if acct_data else cash)), 2),
+        "long_market_value":    round(float(account_details.get("long_market_value", total_market_value)), 2),
+        "last_equity":          round(last_equity, 2),
+        "equity_change":        round(equity_change, 2),
+        "equity_change_pct":    round(equity_change_pct, 2),
+        "initial_margin":       round(initial_margin, 2),
+        "maintenance_margin":   round(maintenance_margin, 2),
+        "margin_usage_pct":     margin_usage_pct,
+        "daytrade_count":       account_details.get("daytrade_count", 0),
+        "multiplier":           account_details.get("multiplier", 1),
+        "account_age_days":     account_age_days,
+        "shorting_enabled":     account_details.get("shorting_enabled", False),
+        "pattern_day_trader":   account_details.get("pattern_day_trader", False),
+        "starting_equity":      round(seq, 2),
     }
 
-    # ── Markets status ────────────────────────────────────────────
-    markets_status = {mid: _market_status(mid) for mid in _MARKET_HOURS}
+    # ── Total P&L ─────────────────────────────────────────────────
+    total_pnl = round(equity - seq, 2)
+    total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
+    today_pnl = round(sum(p.get("today_pnl", 0) for p in positions_out), 2)
+    win_rate = strategy_performance["overall"].get("win_rate", 0)
 
-    # ── Assemble ──────────────────────────────────────────────────
+    # ── Benchmark curve (SPY) ─────────────────────────────────────
+    # Use portfolio_history dates as the eq_curve anchor for alignment
+    eq_curve_for_bench = [{"date": pt["date"], "equity": pt["equity"]}
+                          for pt in portfolio_history] if portfolio_history else []
+    spy_curve = _get_benchmark_curve("SPY", eq_curve_for_bench, seq)
+    spy_return_pct = 0.0
+    if spy_curve and seq > 0:
+        spy_return_pct = round((spy_curve[-1]["equity"] / seq - 1) * 100, 2)
+
+    benchmark_section = {
+        "ticker": "SPY",
+        "curve": spy_curve,
+        "return_pct": spy_return_pct,
+    }
+
+    # ── Summary strip ─────────────────────────────────────────────
+    summary = {
+        "equity":          round(equity, 2),
+        "today_pnl":       today_pnl,
+        "total_pnl":       total_pnl,
+        "total_pnl_pct":   total_pnl_pct,
+        "open_positions":  len(positions_out),
+        "win_rate":        win_rate,
+    }
+
+    # ── Assemble result ───────────────────────────────────────────
     result = {
-        "timestamp":    now.isoformat(),
-        "equity_curve": equity_curve,
-        "positions":    positions_out,
-        "summary":      summary,
-        "markets":      markets_status,
+        "timestamp":            now.isoformat(),
+        "account":              account_section,
+        "portfolio_history":    portfolio_history,
+        "positions":            positions_out,
+        "strategy_allocation":  strategy_allocation,
+        "strategy_performance": strategy_performance,
+        "recent_orders":        recent_orders,
+        "market_clock":         market_clock,
+        "summary":              summary,
+        "benchmark":            benchmark_section,
     }
 
     # Atomic write
@@ -3908,14 +3543,17 @@ def generate_simple_dashboard_data() -> dict:
     tmp.rename(SIMPLE_OUTPUT)
 
     print(f"\nSimple dashboard data written to {SIMPLE_OUTPUT}")
-    print(f"  equity_curve:    {len(equity_curve)} points")
-    print(f"  positions:       {open_pos_count}")
-    print(f"  total_equity:    A${total_equity_aud:,.2f}")
-    print(f"  today_pnl:       A${today_pnl_aud:+,.2f}")
-    print(f"  win_rate:        {win_rate_pct:.1f}%")
-    for mid, ms in markets_status.items():
-        tag = f"next_close={ms['next_close_secs']}s" if ms["status"] == "open" else f"next_open={ms['next_open_secs']}s"
-        print(f"  {mid:6s}: {ms['status']:6s} ({tag})")
+    print(f"  equity:            ${equity:,.2f}")
+    print(f"  today_pnl:         ${today_pnl:+,.2f}")
+    print(f"  total_pnl:         ${total_pnl:+,.2f} ({total_pnl_pct:+.2f}%)")
+    print(f"  positions:         {len(positions_out)}")
+    print(f"  portfolio_history: {len(portfolio_history)} days")
+    print(f"  recent_orders:     {len(recent_orders)}")
+    ms = market_clock
+    if ms.get("is_open"):
+        print(f"  market:            OPEN — closes {ms.get('next_close', '')[:16]}")
+    else:
+        print(f"  market:            CLOSED — opens {ms.get('next_open', '')[:16]}")
 
     return result
 
