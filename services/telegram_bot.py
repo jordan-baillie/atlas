@@ -209,7 +209,7 @@ def approval_keyboard(trade_date: str, market_id: str = "sp500") -> InlineKeyboa
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "✅ Approve & Execute",
+                "✅ Approve",
                 callback_data=f"plan:{trade_date}:approve:{market_id}",
             ),
             InlineKeyboardButton(
@@ -224,10 +224,35 @@ def approval_keyboard(trade_date: str, market_id: str = "sp500") -> InlineKeyboa
 # Plan execution (runs in thread pool — blocking I/O)
 # ═══════════════════════════════════════════════════════════════
 
+def _do_approve_only(trade_date: str, market_id: str) -> str:
+    """Approve plan WITHOUT executing. Execution is deferred to the
+    23:15 AEST cron (15 min before US market open) so LIMIT orders
+    use fresh pre-open prices instead of sitting for hours.
+
+    This runs in a thread (file I/O only, no broker).
+    """
+    config = get_active_config(market_id)
+
+    plan_gen = TradePlanGenerator(None, config)
+    plan = plan_gen.approve_plan(trade_date, market_id=market_id)
+    if not plan:
+        return "❌ No plan found for %s (%s)" % (trade_date, market_id)
+
+    n_entries = len(plan.get("proposed_entries", []))
+    n_exits = len(plan.get("proposed_exits", []))
+    return (
+        f"✅ <b>Plan APPROVED</b> ({market_id.upper()} {trade_date})\n"
+        f"  Entries: {n_entries} | Exits: {n_exits}\n\n"
+        f"⏰ <b>Orders will be submitted at 23:15 AEST</b> "
+        f"(15 min before US market open)."
+    )
+
+
 def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
     """Approve plan and execute via live broker. Returns result text.
 
     This runs in a thread (blocking broker I/O).
+    Kept for manual/emergency use — daily flow uses _do_approve_only.
     """
     config = get_active_config(market_id)
 
@@ -322,6 +347,16 @@ def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> 
                 live_pf.record_closed_trade(trade_record)
 
         live_pf.record_equity(trade_date)
+
+        # Mark plan as EXECUTED on disk (prevents re-execution)
+        if not report.get("error"):
+            try:
+                plan["status"] = "EXECUTED"
+                plan["executed_at"] = datetime.now().isoformat()
+                plan_gen = TradePlanGenerator(None, config)
+                plan_gen._save_plan(plan, trade_date)
+            except Exception as _e:
+                logger.warning("Failed to mark plan as EXECUTED: %s", _e)
     finally:
         executor.disconnect()
 
@@ -537,24 +572,22 @@ async def handle_approval_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
         return
 
     if action == "approve":
-        # Show "executing..." feedback
+        # Approve only — execution deferred to 23:15 AEST cron
         await query.edit_message_text(
-            query.message.text_html + f"\n\n⏳ <b>Approving and executing [{market_id.upper()}]…</b>",
+            query.message.text_html + f"\n\n⏳ <b>Approving [{market_id.upper()}]…</b>",
             parse_mode="HTML",
         )
 
-        # Run execution in thread pool (blocking broker I/O)
         try:
             loop = asyncio.get_event_loop()
             result_text = await loop.run_in_executor(
                 None,
-                partial(_do_approve_and_execute, trade_date, market_id),
+                partial(_do_approve_only, trade_date, market_id),
             )
         except Exception as e:
-            logger.error("Execution failed: %s", e, exc_info=True)
-            result_text = f"❌ <b>Execution failed</b>\n\n<pre>{_esc(traceback.format_exc()[-500:])}</pre>"
+            logger.error("Approval failed: %s", e, exc_info=True)
+            result_text = f"❌ <b>Approval failed</b>\n\n<pre>{_esc(traceback.format_exc()[-500:])}</pre>"
 
-        # Send result as a new message (original is already long)
         await query.message.reply_text(result_text, parse_mode="HTML")
 
 
@@ -769,7 +802,7 @@ def send_plan_for_approval(
     else:
         keyboard = {
             "inline_keyboard": [[
-                {"text": "✅ Approve & Execute", "callback_data": f"plan:{trade_date}:approve:{market_id}"},
+                {"text": "✅ Approve", "callback_data": f"plan:{trade_date}:approve:{market_id}"},
                 {"text": "❌ Reject", "callback_data": f"plan:{trade_date}:reject:{market_id}"},
             ]]
         }
