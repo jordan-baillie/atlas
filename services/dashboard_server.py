@@ -14,6 +14,7 @@ Run:
 
 import base64
 import json
+import logging
 import os
 import secrets
 import signal
@@ -26,6 +27,8 @@ from functools import partial
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+logger = logging.getLogger("dashboard_server")
 
 # Rate limiting for expensive endpoints
 _last_evaluate_time = 0.0
@@ -79,7 +82,9 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
     if plan.get("status") == "APPROVED":
         return {"ok": False, "error": "Plan already approved (awaiting execution)"}
 
-    plan_gen.approve_plan(trade_date)
+    plan = plan_gen.approve_plan(trade_date)
+    if not plan or plan.get("status") != "APPROVED":
+        return {"ok": False, "error": "Failed to approve plan"}
 
     # Always execute live — live broker is sole source of truth
     result = _execute_live(plan, trade_date, config, market_id)
@@ -106,6 +111,16 @@ def _execute_live(plan, trade_date, config, market_id) -> dict:
     try:
         report = executor.execute_plan(plan, trade_date)
 
+        # Only mark EXECUTED if at least one order succeeded or plan had no orders
+        entries_ok = sum(1 for e in report.get("entries", []) if e.get("success"))
+        exits_ok = sum(1 for e in report.get("exits", []) if e.get("success"))
+        total_entries = len(report.get("entries", []))
+        total_exits = len(report.get("exits", []))
+
+        if report.get("error"):
+            # execute_plan returned an error (e.g. status check failed)
+            return {"ok": False, "error": report["error"]}
+
         # Mark plan as executed
         plan["status"] = "EXECUTED"
         plan["executed_at"] = __import__("datetime").datetime.now().isoformat()
@@ -113,11 +128,6 @@ def _execute_live(plan, trade_date, config, market_id) -> dict:
         from brokers.live_portfolio import LivePortfolio
         tpg = TradePlanGenerator(LivePortfolio(config, market_id=market_id), config)
         tpg._save_plan(plan, trade_date)
-
-        entries_ok = sum(1 for e in report.get("entries", []) if e.get("success"))
-        exits_ok = sum(1 for e in report.get("exits", []) if e.get("success"))
-        total_entries = len(report.get("entries", []))
-        total_exits = len(report.get("exits", []))
 
         return {
             "ok": True,
@@ -184,8 +194,12 @@ class AuthHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if not self._check_auth():
             return self._send_401()
+        if self.path.startswith("/api/stream"):
+            return self._handle_sse_stream()
         if self.path.startswith("/api/prices"):
             return self._handle_prices()
+        if self.path.startswith("/api/snapshot"):
+            return self._handle_snapshot()
         if self.path.startswith("/api/monitor"):
             return self._send_json(410, {"error": "Monitor tab removed"})
         super().do_GET()
@@ -227,6 +241,53 @@ class AuthHandler(SimpleHTTPRequestHandler):
             self._send_json(200 if ok else 404, {"ok": ok})
         else:
             self._send_json(404, {"error": "Not found"})
+
+    def _handle_sse_stream(self):
+        """GET /api/stream — Server-Sent Events stream of live Alpaca data.
+
+        Pushes events whenever the poller state changes:
+          event: snapshot
+          data: {account, positions, orders, market_clock, summary, timestamp}
+
+        The client connects once and receives updates every 10s (market open)
+        or 60s (market closed).
+        """
+        try:
+            from dashboard.alpaca_stream import get_state, get_seq
+
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+
+            last_seq = -1
+            while True:
+                current_seq = get_seq()
+                if current_seq != last_seq:
+                    state = get_state()
+                    last_seq = current_seq
+
+                    payload = json.dumps(state, default=str)
+                    self.wfile.write(f"event: snapshot\ndata: {payload}\n\n".encode())
+                    self.wfile.flush()
+
+                time.sleep(2)  # Check for changes every 2s
+
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # Client disconnected
+        except Exception as e:
+            logger.warning("SSE stream error: %s", e)
+
+    def _handle_snapshot(self):
+        """GET /api/snapshot — One-shot JSON of current Alpaca state."""
+        try:
+            from dashboard.alpaca_stream import get_state
+            state = get_state()
+            self._send_json(200, state)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
 
     def _handle_prices(self):
         """GET /api/prices — pre-computed P&L for open positions.
@@ -509,12 +570,27 @@ def main():
     sys.path.insert(0, str(PROJECT_ROOT))
     os.chdir(PROJECT_ROOT)
 
+    # Start Alpaca background poller for SSE streaming
+    try:
+        from dashboard.alpaca_stream import start as start_stream
+        start_stream(interval_open=10, interval_closed=60)
+        print("Alpaca live poller started", flush=True)
+    except Exception as e:
+        print(f"⚠️ Alpaca poller failed to start: {e}", flush=True)
+        print("  Dashboard will serve static JSON only", flush=True)
+
     handler = partial(AuthHandler, directory=str(SERVE_DIR))
 
     class ReusableHTTPServer(HTTPServer):
         allow_reuse_address = True
+        # Use threading to handle SSE streams without blocking other requests
+        request_queue_size = 32
 
-    with ReusableHTTPServer((BIND, PORT), handler) as server:
+    # Use ThreadingMixIn so SSE connections don't block the server
+    from http.server import ThreadingHTTPServer
+
+    with ThreadingHTTPServer((BIND, PORT), handler) as server:
+        server.allow_reuse_address = True
         print(
             f"Atlas dashboard serving on {BIND}:{PORT} "
             f"(auth: {user}) pid={os.getpid()}",
