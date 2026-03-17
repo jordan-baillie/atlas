@@ -1,0 +1,263 @@
+# Atlas Skill Catalog
+# Single source of truth for all agentic assets in the Atlas system.
+# Updated: 2026-03-17
+#
+# Type classification:
+#   reference  — Pure lookup: knowledge base, recipes, architecture maps
+#   workflow   — Step-by-step operational procedures (daily ops, reoptimization)
+#   agent      — Autonomous decision-making personas (director, research loop)
+#
+# Quality levels:
+#   good       — Recently enriched, comprehensive, tested in operations
+#   adequate   — Functional but could be deeper
+#   stale      — Hasn't been updated to reflect current system state
+#   paused     — Intentionally dormant (e.g., research skills during accumulation phase)
+
+updated: "2026-03-17"
+
+skills:
+  atlas-daily:
+    type: workflow
+    location: atlas-daily/SKILL.md
+    lines: 364
+    cookbooks: 0
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on:
+      - atlas_jobs_run
+      - atlas_risk_approve_plan
+      - atlas_risk_check_plan_gate
+    used_by:
+      - "pi-cron.sh premarket"
+      - "pi-cron.sh postclose"
+      - ".pi/prompts/premarket.md"
+      - ".pi/prompts/postclose.md"
+    description: "Daily live-trading workflow: ingest, plan, approve, execute, settle"
+
+  atlas-healthz:
+    type: reference
+    location: atlas-healthz/SKILL.md
+    lines: 391
+    cookbooks: 0
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on:
+      - "scripts/healthz.py"
+      - atlas_artifacts_summarize
+    used_by:
+      - "pi-cron.sh health-check"
+      - ".pi/prompts/health-report.md"
+    description: "System health audit — 10 sections, Saturday reports, pre-operation gates"
+
+  atlas-reoptimize:
+    type: workflow
+    location: atlas-reoptimize/SKILL.md
+    lines: 265
+    cookbooks: 0
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on:
+      - atlas_jobs_run
+      - atlas_risk_check_reopt_promotion
+      - atlas_risk_promote_config
+      - atlas_state_lock_acquire
+    used_by: []
+    description: "Multi-phase reoptimization with human-in-the-loop promotion gates"
+
+  atlas-incident:
+    type: reference
+    location: atlas-incident/SKILL.md
+    lines: 97
+    cookbooks: 6
+    cookbook_files:
+      - cookbooks/service-failures.md
+      - cookbooks/broker-trading.md
+      - cookbooks/data-cache.md
+      - cookbooks/strategy-backtest.md
+      - cookbooks/cron-automation.md
+      - cookbooks/research-system.md
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on: []
+    used_by:
+      - ".pi/prompts/incident-triage.md"
+    description: "20+ failure patterns with diagnosis and fix recipes, organized as cookbooks"
+
+  atlas-strategy-discovery:
+    type: reference
+    location: atlas-strategy-discovery/SKILL.md
+    lines: 122
+    cookbooks: 6
+    cookbook_files:
+      - cookbooks/scaffold-implement.md
+      - cookbooks/validate-screen.md
+      - cookbooks/queue-manage.md
+      - cookbooks/optimize-tune.md
+      - cookbooks/promote-deploy.md
+      - cookbooks/common-failures.md
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on:
+      - "research/strategy_factory.py"
+      - "scripts/sanity_check.py"
+    used_by: []
+    description: "Strategy lifecycle: scaffold, validate, queue, optimize, promote"
+
+  atlas-state-queries:
+    type: reference
+    location: atlas-state-queries/SKILL.md
+    lines: 40
+    cookbooks: 5
+    cookbook_files:
+      - cookbooks/services-infra.md
+      - cookbooks/broker-portfolio.md
+      - cookbooks/data-config.md
+      - cookbooks/research-logs.md
+      - cookbooks/dashboard-disk.md
+    last_enriched: "2026-03-17"
+    quality: good
+    depends_on: []
+    used_by:
+      - ".pi/prompts/premarket.md"
+      - ".pi/prompts/postclose.md"
+    description: "Quick-lookup recipes for every system state query"
+
+  atlas-backtest:
+    type: reference
+    location: atlas-backtest/SKILL.md
+    lines: 277
+    cookbooks: 0
+    last_enriched: "2026-03-14"
+    quality: good
+    depends_on:
+      - atlas_jobs_run
+      - atlas_artifacts_summarize
+      - atlas_artifacts_compare
+    used_by:
+      - ".pi/prompts/research-session.md"
+    description: "Backtest execution, result interpretation, OOS validation pipeline"
+
+  atlas-brain:
+    type: reference
+    location: atlas-brain/SKILL.md
+    lines: 210
+    cookbooks: 0
+    last_enriched: "2026-03-14"
+    quality: good
+    depends_on:
+      - "memory/SUMMARY.md"
+      - "research/results/*.tsv"
+    used_by:
+      - ".pi/prompts/research-session.md"
+    description: "Research knowledge base navigation — prior results, closed decisions, patterns"
+
+  atlas-codebase:
+    type: reference
+    location: atlas-codebase/SKILL.md
+    lines: 329
+    cookbooks: 0
+    last_enriched: "2026-03-15"
+    quality: good
+    depends_on: []
+    used_by: []
+    description: "Architecture map — module responsibilities, file locations, CLI commands"
+
+  atlas-lessons:
+    type: reference
+    location: atlas-lessons/SKILL.md
+    lines: 162
+    cookbooks: 0
+    last_enriched: "2026-03-14"
+    quality: good
+    depends_on:
+      - "tasks/lessons.md"
+    used_by:
+      - ".pi/prompts/premarket.md"
+      - ".pi/prompts/postclose.md"
+      - ".pi/prompts/research-session.md"
+    description: "35+ operational lessons, confirmed patterns, closed decisions, anti-patterns"
+
+  atlas-director:
+    type: agent
+    location: atlas-director/SKILL.md
+    lines: 238
+    cookbooks: 0
+    last_enriched: "2026-03-11"
+    quality: paused
+    depends_on:
+      - "research/queue.json"
+      - "research/journal.json"
+    used_by:
+      - "atlas-director.service"
+    description: "Research Director — autonomous JSON directive agent for research orchestration"
+    notes: "Research paused during accumulation phase. Update when research resumes."
+
+  atlas-research-loop:
+    type: agent
+    location: atlas-research-loop/SKILL.md
+    lines: 233
+    cookbooks: 0
+    last_enriched: "2026-03-10"
+    quality: paused
+    depends_on:
+      - "research/loop.py"
+      - "research/program.md"
+    used_by:
+      - "pi-cron.sh research"
+      - ".pi/prompts/research-session.md"
+    description: "Autonomous research agent — hypothesis, experiment, analysis, promotion gating"
+    notes: "Research paused during accumulation phase. Update when research resumes."
+
+# Slash command prompts (orchestration layer)
+prompts:
+  premarket:
+    location: .pi/prompts/premarket.md
+    type: cron-workflow
+    skills_used: [atlas-daily, atlas-state-queries, atlas-incident, atlas-lessons]
+    cron: "30 8 * * 1-5 AEST"
+
+  postclose:
+    location: .pi/prompts/postclose.md
+    type: cron-workflow
+    skills_used: [atlas-daily, atlas-state-queries, atlas-incident, atlas-lessons]
+    cron: "00 8 * * 2-6 AEST"
+
+  research-session:
+    location: .pi/prompts/research-session.md
+    type: cron-workflow
+    skills_used: [atlas-research-loop, atlas-brain, atlas-backtest, atlas-lessons, atlas-codebase]
+    cron: "paused"
+
+  weekly-digest:
+    location: .pi/prompts/weekly-digest.md
+    type: cron-workflow
+    skills_used: []
+    cron: "00 8 * * 0 AEST"
+
+  health-report:
+    location: .pi/prompts/health-report.md
+    type: interactive
+    skills_used: [atlas-healthz, atlas-state-queries]
+
+  plan-review:
+    location: .pi/prompts/plan-review.md
+    type: interactive
+    skills_used: [atlas-daily]
+
+  incident-triage:
+    location: .pi/prompts/incident-triage.md
+    type: interactive
+    skills_used: [atlas-incident, atlas-state-queries]
+
+# Summary statistics
+stats:
+  total_skills: 12
+  total_cookbooks: 17
+  total_prompts: 7
+  by_type:
+    reference: 8
+    workflow: 2
+    agent: 2
+  by_quality:
+    good: 10
+    paused: 2
