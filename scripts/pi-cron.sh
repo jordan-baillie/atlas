@@ -3,6 +3,11 @@
 # Triggers pi in non-interactive mode for scheduled daily operations.
 # Sends Telegram alerts on success and failure.
 #
+# NOTE: Canonical prompt templates live in .pi/prompts/*.md for interactive use.
+# The PROMPT= variables below are inline copies with dynamic context injection
+# (volatility gate, config validation) that slash commands can't provide.
+# Keep these in sync with the .pi/prompts/ versions.
+#
 # Cron schedule (AEST via TZ=Australia/Brisbane in crontab):
 #   30 8  * * 1-5  /root/atlas/scripts/pi-cron.sh premarket
 #   00 08 * * 2-6  /root/atlas/scripts/pi-cron.sh postclose
@@ -149,6 +154,9 @@ ${CONFIG_ERRORS}"
             VOL_CONTEXT="✅ Volatility gate: OK — no macro flags."
         fi
 
+        # Canonical prompt: .pi/prompts/premarket.md
+        # This inline version adds dynamic context (VOL_CONTEXT, CONFIG_CONTEXT)
+        # that can't be passed via slash commands in non-interactive mode.
         PROMPT="You have these skills loaded — read them FIRST before acting:
 - atlas-daily: main workflow (READ THIS FIRST: /skill:atlas-daily)
 - atlas-state-queries: how to check data freshness, services, broker
@@ -162,6 +170,9 @@ NOTE: A Telegram summary is sent automatically after this workflow completes —
         SKILL_FLAGS=$(build_skill_flags "$SKILL_DIR" "$SKILL_STATE" "$SKILL_INCIDENT" "$SKILL_LESSONS")
         ;;
     postclose)
+        # Canonical prompt: .pi/prompts/postclose.md
+        # This inline version adds dynamic context (MARKET, TIMESTAMP)
+        # that can't be passed via slash commands in non-interactive mode.
         PROMPT="You have these skills loaded — read them FIRST before acting:
 - atlas-daily: main workflow (READ THIS FIRST: /skill:atlas-daily)
 - atlas-state-queries: how to check equity, broker, settlement
@@ -196,6 +207,9 @@ NOTE: A Telegram summary is sent automatically after this workflow completes —
             HEARTBEAT=$(cat /tmp/autoresearch-heartbeat.json 2>/dev/null || echo "{}")
         fi
 
+        # Canonical prompt: .pi/prompts/research-session.md
+        # This inline version adds dynamic context (SWEEPER_STATUS, HEARTBEAT)
+        # that can't be passed via slash commands in non-interactive mode.
         PROMPT="You have these skills loaded — read them FIRST before acting:
 - atlas-research-loop: main workflow (READ THIS FIRST: /skill:atlas-research-loop)
 - atlas-brain: check prior results and closed decisions BEFORE running experiments
