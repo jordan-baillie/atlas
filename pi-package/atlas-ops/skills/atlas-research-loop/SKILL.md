@@ -1,6 +1,7 @@
 ---
 name: atlas-research-loop
 description: "Drive the daily Atlas research cycle: hypothesis generation, experiment execution, result analysis, and promotion gating. Single agent wearing 4 hats (researcher, backtester, analyst, risk), structured for future multi-agent split."
+type: agent
 ---
 
 # Atlas Autoresearch Loop

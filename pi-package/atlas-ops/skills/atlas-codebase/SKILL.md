@@ -1,6 +1,7 @@
 ---
 name: atlas-codebase
 description: "Atlas codebase architecture map, module responsibilities, file locations, config structure, CLI commands, services, and Pi extension tools. Use when navigating the codebase, finding files, understanding module boundaries, or checking what CLI commands and tools are available."
+type: reference
 ---
 
 # Atlas Codebase Reference

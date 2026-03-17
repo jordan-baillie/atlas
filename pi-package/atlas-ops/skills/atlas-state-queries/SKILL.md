@@ -1,6 +1,7 @@
 ---
 name: atlas-state-queries
 description: "How to check every piece of Atlas system state — services, broker, positions, equity, config, research, dashboard, logs, and data freshness. Use when you need to inspect system status, diagnose issues, or verify health before operations."
+type: reference
 ---
 
 # Atlas State Queries

@@ -1,6 +1,7 @@
 ---
 name: atlas-healthz
 description: "Run a complete Atlas system health audit covering infrastructure, data, config, broker, portfolio, cron, research, logging, disk, and backtest performance. Use when asked to check system health, diagnose issues, run a status audit, verify Atlas is working, or troubleshoot why something failed. Also use proactively before major operations (deployments, config promotions, re-optimizations)."
+type: reference
 ---
 
 # Atlas Health Check

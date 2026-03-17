@@ -1,6 +1,7 @@
 ---
 name: atlas-strategy-discovery
 description: "Design, implement, validate, and queue new Atlas trading strategies. Covers BaseStrategy interface, working code templates, sandbox workflow, sanity checks, queue format, and common failure patterns. Use when asked to build a new strategy, screen an experimental strategy, or add experiments to the research queue."
+type: reference
 ---
 
 # Atlas Strategy Discovery

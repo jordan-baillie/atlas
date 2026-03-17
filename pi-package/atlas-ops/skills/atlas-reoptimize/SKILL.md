@@ -1,6 +1,7 @@
 ---
 name: atlas-reoptimize
 description: Orchestrate Atlas degradation checks, re-optimization, validation, and config promotion decisions with human approval. Use when performance degrades, after data refreshes, or when testing candidate parameter updates.
+type: workflow
 ---
 
 # Atlas Reoptimize

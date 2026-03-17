@@ -1,6 +1,7 @@
 ---
 name: atlas-brain
 description: "Navigate and query the Atlas research knowledge base. Search prior experiment results, check closed decisions, review confirmed patterns, and record new findings. Use when asked about prior research, checking if something was already tested, querying strategy performance history, or recording experiment outcomes."
+type: reference
 ---
 
 # Atlas Brain — Research Knowledge Base

@@ -1,6 +1,7 @@
 ---
 name: atlas-director
 description: "Research Director skill. Reviews Atlas system state (queue, experiments, heartbeats, best results) and responds with structured JSON directives. Drives promotion decisions, retirement recommendations, partition rebalancing, and experiment queuing."
+type: agent
 ---
 
 # Atlas Research Director

@@ -1,6 +1,7 @@
 ---
 name: atlas-lessons
 description: "Atlas operational lessons, confirmed patterns, closed decisions, and anti-patterns accumulated from project history. Use when making decisions about strategies, config changes, broker operations, research experiments, or deployments. Also use when something goes wrong — check here first for known patterns."
+type: reference
 ---
 
 # Atlas Lessons & Institutional Knowledge

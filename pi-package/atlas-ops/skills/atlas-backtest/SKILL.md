@@ -1,6 +1,7 @@
 ---
 name: atlas-backtest
 description: "Run, interpret, and record Atlas backtests. Covers CLI and atlas_jobs_run workflows, result interpretation, comparison with baselines, brain recording, and the full OOS validation pipeline. Use when asked to backtest, evaluate strategies, compare results, or run validation."
+type: reference
 ---
 
 # Atlas Backtesting

@@ -1,6 +1,7 @@
 ---
 name: atlas-incident
 description: "Diagnose and resolve Atlas system errors, service failures, and operational issues. Covers 20+ known failure patterns with root causes and fixes. Use when something is broken, a service is down, an error appears in logs, a cron job fails, or the user reports an incident. Also use proactively when atlas-context-injector reports failed services."
+type: reference
 ---
 
 # Atlas Incident Response
