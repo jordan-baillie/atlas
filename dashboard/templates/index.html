@@ -289,9 +289,9 @@ function renderSummary(data) {
   todEl.textContent = fmtSignedCcy(today);
   todEl.className   = 'stat-value ' + pnlClass(today);
 
-  // Total P&L (account.equity_change from Alpaca)
-  var totalPnl    = acc.equity_change    || 0;
-  var totalPnlPct = acc.equity_change_pct || 0;
+  // Total P&L (summary tracks actual trading gains, not deposits)
+  var totalPnl    = s.total_pnl     || 0;
+  var totalPnlPct = s.total_pnl_pct || 0;
   var totalEl     = document.getElementById('stat-total-pnl');
   totalEl.innerHTML  = fmtSignedCcy(totalPnl, 0);
   totalEl.className  = 'stat-value ' + pnlClass(totalPnl);
@@ -320,7 +320,7 @@ function renderReturnBadge(data) {
   var acc     = data.account   || {};
   var bench   = data.benchmark || {};
 
-  var portRet  = acc.equity_change_pct || 0;
+  var portRet  = (data.summary || {}).total_pnl_pct || 0;
   var portSign = portRet >= 0 ? '+' : '';
 
   if (bench.return_pct != null) {
@@ -363,13 +363,22 @@ function drawEquityChart(portfolioHistory, benchmarkCurve, animate) {
 
   // ── Not enough history ──
   if (!portfolioHistory || portfolioHistory.length < 3) {
-    ctx.clearRect(0, 0, w, h);
+    var noDataH = 80;
+    canvas.style.height = noDataH + 'px';
+    w = canvas.offsetWidth || 800;
+    canvas.width = w * dpr;
+    canvas.height = noDataH * dpr;
+    canvas.style.width = w + 'px';
+    ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, noDataH);
     ctx.fillStyle = labelColor;
-    ctx.font = '14px Inter, sans-serif';
+    ctx.font = '13px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Building history…', w / 2, h / 2);
+    ctx.fillText('Building history… (' + (portfolioHistory ? portfolioHistory.length : 0) + '/3 days)', w / 2, noDataH / 2);
     return;
   }
+  canvas.style.height = '200px';
 
   var portVals  = portfolioHistory.map(function(d) { return d.equity || 0; });
   var portDates = portfolioHistory.map(function(d) { return d.date; });

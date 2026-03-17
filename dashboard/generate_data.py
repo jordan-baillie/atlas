@@ -3470,6 +3470,9 @@ def generate_simple_dashboard_data() -> dict:
         except Exception:
             pass
 
+    # NOTE: equity_change / equity_change_pct are day-over-day from Alpaca
+    # and include deposits/withdrawals. Do NOT use for P&L display.
+    # Use summary.total_pnl (= equity - starting_equity) for actual trading P&L.
     account_section = {
         "equity":               round(equity, 2),
         "cash":                 round(cash, 2),
