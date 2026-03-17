@@ -19,7 +19,7 @@ skills:
   atlas-daily:
     type: workflow
     location: atlas-daily/SKILL.md
-    lines: 364
+    lines: 365
     cookbooks: 0
     last_enriched: "2026-03-17"
     quality: good
@@ -37,7 +37,7 @@ skills:
   atlas-healthz:
     type: reference
     location: atlas-healthz/SKILL.md
-    lines: 391
+    lines: 392
     cookbooks: 0
     last_enriched: "2026-03-17"
     quality: good
@@ -52,7 +52,7 @@ skills:
   atlas-reoptimize:
     type: workflow
     location: atlas-reoptimize/SKILL.md
-    lines: 265
+    lines: 266
     cookbooks: 0
     last_enriched: "2026-03-17"
     quality: good
@@ -67,7 +67,7 @@ skills:
   atlas-incident:
     type: reference
     location: atlas-incident/SKILL.md
-    lines: 97
+    lines: 98
     cookbooks: 6
     cookbook_files:
       - cookbooks/service-failures.md
@@ -86,7 +86,7 @@ skills:
   atlas-strategy-discovery:
     type: reference
     location: atlas-strategy-discovery/SKILL.md
-    lines: 122
+    lines: 123
     cookbooks: 6
     cookbook_files:
       - cookbooks/scaffold-implement.md
@@ -106,7 +106,7 @@ skills:
   atlas-state-queries:
     type: reference
     location: atlas-state-queries/SKILL.md
-    lines: 40
+    lines: 41
     cookbooks: 5
     cookbook_files:
       - cookbooks/services-infra.md
@@ -125,7 +125,7 @@ skills:
   atlas-backtest:
     type: reference
     location: atlas-backtest/SKILL.md
-    lines: 277
+    lines: 278
     cookbooks: 0
     last_enriched: "2026-03-14"
     quality: good
@@ -140,7 +140,7 @@ skills:
   atlas-brain:
     type: reference
     location: atlas-brain/SKILL.md
-    lines: 210
+    lines: 211
     cookbooks: 0
     last_enriched: "2026-03-14"
     quality: good
@@ -154,7 +154,7 @@ skills:
   atlas-codebase:
     type: reference
     location: atlas-codebase/SKILL.md
-    lines: 329
+    lines: 330
     cookbooks: 0
     last_enriched: "2026-03-15"
     quality: good
@@ -165,7 +165,7 @@ skills:
   atlas-lessons:
     type: reference
     location: atlas-lessons/SKILL.md
-    lines: 162
+    lines: 163
     cookbooks: 0
     last_enriched: "2026-03-14"
     quality: good
@@ -180,7 +180,7 @@ skills:
   atlas-director:
     type: agent
     location: atlas-director/SKILL.md
-    lines: 238
+    lines: 239
     cookbooks: 0
     last_enriched: "2026-03-11"
     quality: paused
@@ -195,7 +195,7 @@ skills:
   atlas-research-loop:
     type: agent
     location: atlas-research-loop/SKILL.md
-    lines: 233
+    lines: 234
     cookbooks: 0
     last_enriched: "2026-03-10"
     quality: paused
