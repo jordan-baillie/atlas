@@ -94,5 +94,47 @@
     "timestamp": "2026-03-16T13:30:00.771000+00:00",
     "recorded_at": "2026-03-17T01:18:59.463790",
     "note": "Backfilled from Alpaca fill data \u2014 original ledger write failed"
+  },
+  {
+    "type": "entry",
+    "ticker": "SYK",
+    "strategy": "connors_rsi2",
+    "shares": 2,
+    "fill_price": 336.82,
+    "planned_price": 336.82,
+    "stop_price": 325.05,
+    "slippage_bps": null,
+    "order_id": "52b31e76-69bb-42fa-9a54-442cca92df04",
+    "timestamp": "2026-03-17T20:00:45.658646",
+    "direction": "long",
+    "recorded_at": "2026-03-17T20:00:45.658672"
+  },
+  {
+    "type": "entry",
+    "ticker": "FITB",
+    "strategy": "short_term_mr",
+    "shares": 14,
+    "fill_price": 43.395,
+    "planned_price": 43.395,
+    "stop_price": 41.0136,
+    "slippage_bps": null,
+    "order_id": "6db50358-f41b-49fd-b571-b56f0294d56c",
+    "timestamp": "2026-03-17T20:00:46.161426",
+    "direction": "long",
+    "recorded_at": "2026-03-17T20:00:46.161434"
+  },
+  {
+    "type": "entry",
+    "ticker": "FITB",
+    "strategy": "mean_reversion",
+    "shares": 15,
+    "fill_price": 43.395,
+    "planned_price": 43.395,
+    "stop_price": 41.1013,
+    "slippage_bps": null,
+    "order_id": "8aebfbe1-ce09-47fa-ba3f-75426c712d6b",
+    "timestamp": "2026-03-17T20:00:46.689248",
+    "direction": "long",
+    "recorded_at": "2026-03-17T20:00:46.689254"
   }
 ]

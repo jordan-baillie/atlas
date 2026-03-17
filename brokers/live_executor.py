@@ -482,6 +482,45 @@ class LiveExecutor:
             remark=f"atlas_{strategy}_{trade_date}"[:64],
         )
 
+        # Poll for fill — LIMIT orders submitted pre-market return
+        # fill_price=0 and status=SUBMITTED.  If the market is open the
+        # fill may arrive within seconds; poll briefly to capture it.
+        if (order_result.success
+                and order_result.fill_price == 0
+                and order_result.order_id
+                and order_result.status not in (
+                    OrderStatus.FILLED, OrderStatus.FAILED, OrderStatus.CANCELLED)):
+            import time as _time
+            _poll_start = _time.time()
+            _max_wait = 15   # seconds — short poll; full reconciliation runs later
+            _poll_interval = 3
+            logger.info("Polling for entry fill on %s (order %s)...",
+                        ticker, order_result.order_id)
+            while _time.time() - _poll_start < _max_wait:
+                _time.sleep(_poll_interval)
+                try:
+                    status_result = self._broker.get_order_status(
+                        order_result.order_id)
+                    if status_result.fill_price > 0:
+                        order_result = status_result
+                        logger.info(
+                            "Entry fill confirmed: %s @ $%.4f (waited %.0fs)",
+                            ticker, status_result.fill_price,
+                            _time.time() - _poll_start,
+                        )
+                        break
+                    if status_result.status in (OrderStatus.FAILED,
+                                                OrderStatus.CANCELLED):
+                        order_result = status_result
+                        logger.warning("Entry order %s for %s: %s",
+                                       order_result.order_id, ticker,
+                                       status_result.status.value)
+                        break
+                except Exception as _poll_exc:
+                    logger.warning("Entry fill poll error for %s: %s",
+                                   ticker, _poll_exc)
+                    break
+
         result = {
             "ticker": ticker, "side": side_label, "qty": qty, "price": _order_price,
             "strategy": strategy, "confidence": confidence,
@@ -510,24 +549,35 @@ class LiveExecutor:
         if order_result.success:
             self._daily_order_count += 1
             logger.info(
-                "LIVE %s: %s %d x $%.2f → order_id=%s",
+                "LIVE %s: %s %d x $%.2f → order_id=%s status=%s",
                 side_label, ticker, qty, price, order_result.order_id,
+                order_result.status.value,
             )
-            # Record entry to TradeLedger — telemetry must never crash execution
-            try:
-                from journal.logger import TradeLedger
-                _ledger = TradeLedger()
-                _ledger.record_entry({
-                    "ticker": ticker, "strategy": strategy, "shares": qty,
-                    "fill_price": order_result.fill_price or price,
-                    "planned_price": price, "stop_price": stop_price,
-                    "slippage_bps": result.get("slippage_bps"),
-                    "order_id": order_result.order_id,
-                    "timestamp": datetime.now().isoformat(),
-                    "direction": direction,
-                })
-            except Exception as _ledger_exc:
-                logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
+            # Only record to TradeLedger when the order is actually FILLED.
+            # A LIMIT order accepted by the exchange returns success=True but
+            # status=SUBMITTED — recording it now would create phantom
+            # positions for orders that may never fill.
+            if order_result.status == OrderStatus.FILLED:
+                try:
+                    from journal.logger import TradeLedger
+                    _ledger = TradeLedger()
+                    _ledger.record_entry({
+                        "ticker": ticker, "strategy": strategy, "shares": qty,
+                        "fill_price": order_result.fill_price or price,
+                        "planned_price": price, "stop_price": stop_price,
+                        "slippage_bps": result.get("slippage_bps"),
+                        "order_id": order_result.order_id,
+                        "timestamp": datetime.now().isoformat(),
+                        "direction": direction,
+                    })
+                except Exception as _ledger_exc:
+                    logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
+            else:
+                logger.info(
+                    "Order %s for %s accepted but not yet filled (status=%s) — "
+                    "TradeLedger entry deferred to fill confirmation.",
+                    order_result.order_id, ticker, order_result.status.value,
+                )
         else:
             logger.error(
                 "LIVE %s FAILED: %s — %s",
@@ -1436,6 +1486,130 @@ class LiveExecutor:
             cutoff_hour,
         )
         return cancelled
+
+    # ── Fill reconciliation ───────────────────────────────────
+
+    def reconcile_entry_fills(self, plan: dict | None = None) -> list:
+        """Reconcile pending entry orders — record fills missed at submission.
+
+        Checks the broker for the status of entry orders that were accepted
+        but not yet filled at execution time.  For each order that is now
+        FILLED, a TradeLedger entry is recorded.
+
+        Safe to call repeatedly — already-recorded orders are skipped.
+
+        Args:
+            plan: Optional trade plan dict (provides stop_price/strategy
+                  context).  If None, entries are recorded with available
+                  broker data only.
+
+        Returns:
+            List of dicts describing each reconciled order.
+        """
+        if not self._connected or not self._broker:
+            logger.warning("reconcile_entry_fills: not connected")
+            return []
+
+        # Build lookup from plan entries keyed by ticker (approximate)
+        plan_by_ticker: dict = {}
+        if plan:
+            for entry in plan.get("proposed_entries", []):
+                t = entry.get("ticker", "")
+                if t:
+                    plan_by_ticker[t] = entry
+
+        # Load existing ledger order IDs to skip duplicates
+        try:
+            from journal.logger import TradeLedger
+            _ledger = TradeLedger()
+        except Exception as e:
+            logger.error("reconcile_entry_fills: cannot load TradeLedger: %s", e)
+            return []
+
+        recorded_order_ids = {
+            t.get("order_id") for t in _ledger.trades if t.get("order_id")
+        }
+
+        # Get recent orders from broker (BUY side, all statuses)
+        try:
+            from alpaca.trading.client import TradingClient
+            from alpaca.trading.requests import GetOrdersRequest
+            from alpaca.trading.enums import QueryOrderStatus
+            client = self._broker._trade_client
+            req = GetOrdersRequest(status=QueryOrderStatus.ALL, limit=50)
+            orders = client.get_orders(filter=req)
+        except Exception as e:
+            logger.error("reconcile_entry_fills: cannot fetch orders: %s", e)
+            return []
+
+        reconciled = []
+        for order in orders:
+            order_id = str(order.id)
+            if order_id in recorded_order_ids:
+                continue  # already in ledger
+
+            # Only reconcile BUY LIMIT/MARKET orders that are now FILLED
+            if order.side.value.lower() != "buy":
+                continue
+            status_val = order.status.value.lower() if hasattr(order.status, 'value') else str(order.status).lower()
+            if status_val != "filled":
+                continue
+
+            # Skip protective orders (remark starts with atlas_stop_ or atlas_tp_)
+            client_order_id = str(getattr(order, "client_order_id", ""))
+            if "atlas_stop_" in client_order_id or "atlas_tp_" in client_order_id:
+                continue
+
+            ticker = str(order.symbol)
+            fill_price = float(order.filled_avg_price or 0)
+            qty = int(float(order.filled_qty or order.qty or 0))
+
+            if fill_price <= 0 or qty <= 0:
+                continue
+
+            # Get plan context
+            plan_entry = plan_by_ticker.get(ticker, {})
+            strategy = plan_entry.get("strategy", "unknown")
+            stop_price = plan_entry.get("stop_price", 0)
+            planned_price = plan_entry.get("entry_price", 0)
+
+            # Record to TradeLedger
+            ledger_record = {
+                "ticker": ticker,
+                "strategy": strategy,
+                "shares": qty,
+                "fill_price": fill_price,
+                "planned_price": planned_price,
+                "stop_price": stop_price,
+                "slippage_bps": round(
+                    (fill_price - planned_price) / planned_price * 10000, 1
+                ) if planned_price > 0 else None,
+                "order_id": order_id,
+                "timestamp": str(getattr(order, "filled_at", ""))[:19],
+                "direction": "long",
+                "reconciled": True,  # flag to distinguish from inline records
+            }
+            try:
+                _ledger.record_entry(ledger_record)
+                logger.info(
+                    "Reconciled fill: BUY %s %d @ $%.2f (order %s)",
+                    ticker, qty, fill_price, order_id[:12],
+                )
+                reconciled.append(ledger_record)
+            except Exception as e:
+                logger.error(
+                    "Failed to reconcile fill for %s: %s", ticker, e,
+                )
+
+        if reconciled:
+            logger.info(
+                "reconcile_entry_fills: recorded %d deferred fills",
+                len(reconciled),
+            )
+        else:
+            logger.info("reconcile_entry_fills: no deferred fills to reconcile")
+
+        return reconciled
 
     # ── Volatility gate ────────────────────────────────────────
 

@@ -179,6 +179,24 @@ def sync_market(
             logger.error("Broker connect failed for %s", market_id)
             return result
 
+        # ── Reconcile deferred entry fills ────────────────────
+        # Entry LIMIT orders may fill after submission.  Record any
+        # fills that were not captured at execution time.
+        try:
+            from brokers.live_executor import LiveExecutor
+            _exec = LiveExecutor.__new__(LiveExecutor)
+            _exec._broker = broker
+            _exec._connected = True
+            reconciled = _exec.reconcile_entry_fills(plan=plan)
+            if reconciled:
+                logger.info(
+                    "Reconciled %d deferred entry fills for %s",
+                    len(reconciled), market_id,
+                )
+                result["reconciled_fills"] = len(reconciled)
+        except Exception as _recon_exc:
+            logger.warning("Entry fill reconciliation failed (non-fatal): %s", _recon_exc)
+
         # ── Sync protective orders ────────────────────────────
 
         if broker_name == "alpaca":
