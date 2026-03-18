@@ -176,12 +176,18 @@ class StateReconciler:
 
             fills = []
             for order in orders:
-                if str(getattr(order, "status", "")).lower() in ("filled", "partially_filled"):
+                # Use .value for Alpaca enums — str() returns "OrderStatus.FILLED",
+                # but .value returns "filled".
+                raw_status = getattr(order, "status", "")
+                status_str = (raw_status.value if hasattr(raw_status, "value") else str(raw_status)).lower()
+                if status_str in ("filled", "partially_filled"):
                     client_oid = str(getattr(order, "client_order_id", ""))
+                    raw_side = getattr(order, "side", "")
+                    side_str = raw_side.value if hasattr(raw_side, "value") else str(raw_side)
                     fills.append(
                         {
                             "ticker": str(getattr(order, "symbol", "")),
-                            "side": str(getattr(order, "side", "")),
+                            "side": side_str,
                             "qty": float(getattr(order, "filled_qty", 0) or 0),
                             "fill_price": float(getattr(order, "filled_avg_price", 0) or 0),
                             "limit_price": float(getattr(order, "limit_price", 0) or 0),
@@ -347,9 +353,72 @@ class StateReconciler:
         for disc in self.report.discrepancies:
             if disc.auto_fixable and not disc.fixed:
                 if disc.category == "sl_filled":
-                    logger.info(f"Auto-fix: marking {disc.ticker} as closed (SL filled)")
-                    disc.fixed = True
-                    fixes.append(f"Marked {disc.ticker} closed (SL filled during outage)")
+                    # Find the actual sell fill from broker
+                    sell_fill = next(
+                        (f for f in recent_fills
+                         if f["ticker"] == disc.ticker and "sell" in f["side"].lower()),
+                        None,
+                    )
+                    if sell_fill:
+                        # Get entry info from ledger to build complete exit record
+                        local_pos = self._get_local_positions().get(disc.ticker, {})
+                        entry_price = local_pos.get("entry_price", 0)
+                        strategy = local_pos.get("strategy", "unknown")
+                        shares = int(sell_fill["qty"])
+                        fill_price = sell_fill["fill_price"]
+                        pnl = round((fill_price - entry_price) * shares, 2) if entry_price else 0
+
+                        ledger_exit = {
+                            "type": "exit",
+                            "ticker": disc.ticker,
+                            "strategy": strategy,
+                            "shares": shares,
+                            "fill_price": fill_price,
+                            "entry_price": entry_price,
+                            "pnl": pnl,
+                            "exit_reason": "broker_stop_fill",
+                            "order_id": sell_fill.get("order_id", ""),
+                            "timestamp": sell_fill.get("filled_at", datetime.now().isoformat()),
+                            "recorded_at": datetime.now().isoformat(),
+                            "note": "Auto-backfilled by reconciliation — broker protective stop filled",
+                        }
+
+                        try:
+                            ledger_path = PROJECT / "journal" / "trade_ledger.json"
+                            ledger = []
+                            if ledger_path.exists():
+                                with open(ledger_path) as f:
+                                    ledger = json.load(f)
+
+                            # Avoid duplicate exit entries
+                            existing_exit_oids = {
+                                e.get("order_id") for e in ledger
+                                if e.get("type") == "exit" and e.get("order_id")
+                            }
+                            if ledger_exit["order_id"] and ledger_exit["order_id"] in existing_exit_oids:
+                                logger.info(f"Exit for {disc.ticker} already in ledger — skipping")
+                                disc.fixed = True
+                                fixes.append(f"Skipped {disc.ticker} exit — already in ledger")
+                                continue
+
+                            ledger.append(ledger_exit)
+                            with open(ledger_path, "w") as f:
+                                json.dump(ledger, f, indent=2)
+
+                            disc.fixed = True
+                            fixes.append(
+                                f"Recorded exit for {disc.ticker}: {shares} shares "
+                                f"@ ${fill_price:.2f} (broker stop fill, PnL=${pnl:+.2f})"
+                            )
+                            logger.info(
+                                "Auto-fix: recorded exit for %s — %d shares @ $%.2f, PnL=$%+.2f",
+                                disc.ticker, shares, fill_price, pnl,
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to record exit for {disc.ticker}: {e}")
+                    else:
+                        logger.warning(f"sl_filled for {disc.ticker} but no sell fill found in recent orders")
+                        disc.fixed = False
 
                 elif disc.category == "missing_local":
                     # Backfill trade ledger from broker fill data
