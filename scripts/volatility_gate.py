@@ -82,8 +82,9 @@ def _fetch_overnight_data(ticker: str, lookback_days: int = 5) -> Optional[dict]
     Returns a dict with keys: prev_close, open, high, low, close, volume
     for the most recent session, or None if data unavailable.
     """
-    # Index symbols (^VIX, ^AXJO, etc.) — use yfinance directly
-    use_yfinance_only = ticker.startswith("^")
+    # Index symbols (^VIX, ^AXJO) and futures symbols (CL=F, GC=F) →
+    # use yfinance directly.  Alpaca's stock API does not carry these.
+    use_yfinance_only = ticker.startswith("^") or "=F" in ticker
 
     # ── Alpaca path (non-index tickers) ──────────────────────────────────────
     if not use_yfinance_only:

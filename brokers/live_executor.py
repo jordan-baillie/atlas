@@ -595,7 +595,14 @@ class LiveExecutor:
         # Direction: long = SELL to close, short = BUY to cover
         direction = exit_rec.get("direction", "long")
 
-        # Cancel any protective stop order first (prevent double-sell)
+        # Cancel ALL open sell-side orders for this ticker (stops, trailing
+        # stops, take-profits) before placing the exit.  The plan generator
+        # doesn't always include stop_order_id, and there may be multiple
+        # GTC orders (SL + TP) holding shares.  If we don't cancel them
+        # Alpaca rejects the sell with "insufficient qty available".
+        self._cancel_open_orders_for_ticker(ticker)
+
+        # Legacy path: also cancel the tracked stop if explicitly provided
         stop_order_id = exit_rec.get("stop_order_id", "")
         if stop_order_id:
             self.cancel_protective_stop(stop_order_id, ticker)
@@ -775,28 +782,41 @@ class LiveExecutor:
                 pass
 
             # Record exit to TradeLedger — telemetry must never crash execution
+            _fill_price = result.get("fill_price") or _exit_price
+            _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
+            _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
+            _exit_record = {
+                "ticker": ticker,
+                "strategy": pos.strategy if pos and hasattr(pos, 'strategy') else "",
+                "shares": qty,
+                "fill_price": _fill_price,
+                "entry_price": entry_price,
+                "pnl": _pnl,
+                "pnl_pct": _pnl_pct,
+                "holding_days": holding_days,
+                "exit_reason": reason,
+                "slippage_bps": result.get("slippage_bps"),
+                "order_id": order_result.order_id,
+                "direction": direction,
+            }
             try:
                 from journal.logger import TradeLedger
                 _ledger = TradeLedger()
-                _fill_price = result.get("fill_price") or _exit_price
-                _pnl = round((_fill_price - entry_price) * qty, 2) if entry_price else None
-                _pnl_pct = round((_fill_price - entry_price) / entry_price * 100, 2) if entry_price and entry_price > 0 else None
-                _ledger.record_exit({
-                    "ticker": ticker,
-                    "strategy": pos.strategy if pos and hasattr(pos, 'strategy') else "",
-                    "shares": qty,
-                    "fill_price": _fill_price,
-                    "entry_price": entry_price,
-                    "pnl": _pnl,
-                    "pnl_pct": _pnl_pct,
-                    "holding_days": holding_days,
-                    "exit_reason": reason,
-                    "slippage_bps": result.get("slippage_bps"),
-                    "order_id": order_result.order_id,
-                    "direction": direction,
-                })
+                _ledger.record_exit(_exit_record)
             except Exception as _ledger_exc:
                 logger.warning("TradeLedger exit record failed (non-fatal): %s", _ledger_exc)
+
+            # Record round-trip trade for post-trade analysis
+            try:
+                from journal.round_trip import RoundTripStore
+                _market_id = self.config.get("market_id", "sp500")
+                RoundTripStore().build_and_record(
+                    exit_data=_exit_record,
+                    position=pos,
+                    market_id=_market_id,
+                )
+            except Exception as _rt_exc:
+                logger.warning("Round-trip record failed (non-fatal): %s", _rt_exc)
         else:
             logger.error(
                 "LIVE %s FAILED: %s — %s", exit_side_label, ticker, order_result.message,
@@ -934,6 +954,54 @@ class LiveExecutor:
                 order_id, ticker, result.message,
             )
         return result.success
+
+    def _cancel_open_orders_for_ticker(self, ticker: str) -> int:
+        """Cancel all open sell-side orders for *ticker* (stops, TPs, etc.).
+
+        This ensures shares are not "held_for_orders" when we need to
+        place an exit order.  Returns the number of orders cancelled.
+        """
+        if not self._connected or not self._broker:
+            return 0
+
+        try:
+            open_orders = self._broker.get_open_orders()
+        except Exception as e:
+            logger.warning(
+                "Could not fetch open orders for %s cleanup: %s", ticker, e,
+            )
+            return 0
+
+        cancelled = 0
+        for order in open_orders:
+            if getattr(order, "ticker", "") != ticker:
+                continue
+            # Cancel any sell-side order (STOP, TRAILING_STOP, LIMIT SELL, etc.)
+            side_val = getattr(order, "side", None)
+            if hasattr(side_val, "value"):
+                side_val = side_val.value
+            if str(side_val).upper() not in ("SELL",):
+                continue
+            oid = getattr(order, "order_id", "")
+            if not oid:
+                continue
+            result = self._broker.cancel_order(oid)
+            if result.success:
+                cancelled += 1
+                logger.info(
+                    "Pre-exit cancel: cancelled %s order %s for %s",
+                    getattr(order, "order_type", "?"), oid[:12], ticker,
+                )
+            else:
+                logger.warning(
+                    "Pre-exit cancel failed for %s order %s: %s",
+                    ticker, oid[:12], result.message,
+                )
+        if cancelled:
+            _journal_entry("pre_exit_orders_cancelled", {
+                "ticker": ticker, "count": cancelled,
+            })
+        return cancelled
 
     def place_take_profit(
         self,
