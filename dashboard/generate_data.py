@@ -619,11 +619,11 @@ def _get_alpaca_market_data():
 
 
 def get_live_prices(tickers):
-    """Fetch live intraday prices — Alpaca-first for US tickers, yfinance for others.
+    """Fetch live intraday prices — Tiingo IEX primary, yfinance fallback.
 
-    For US equities (no .AX / .HK suffix): tries Alpaca snapshots first,
-    falls back to yfinance on failure or missing data.
-    For non-US tickers: uses yfinance directly (Alpaca is US-only).
+    For US equities (no .AX / .HK suffix): uses Tiingo IEX (real-time
+    composite prices), falls back to yfinance on failure or missing data.
+    For non-US tickers: uses yfinance directly (Tiingo is US-only).
 
     Returns dict of ticker -> {"close": float, "prev_close": float|None, "date": str, "live": bool}
     """
@@ -633,7 +633,7 @@ def get_live_prices(tickers):
 
     ticker_list = list(tickers)
 
-    # Split tickers by market: US equities → Alpaca, ASX/HK → yfinance
+    # Split tickers by market: US equities → Tiingo, ASX/HK → yfinance
     us_tickers = [t for t in ticker_list
                   if not t.endswith(".AX") and not t.endswith(".HK")
                   and not t.startswith("^") and "=F" not in t]
@@ -641,31 +641,27 @@ def get_live_prices(tickers):
                       if t.endswith(".AX") or t.endswith(".HK")
                       or t.startswith("^") or "=F" in t]
 
-    # ── US tickers via Alpaca snapshots ──────────────────────────
+    # ── US tickers via Tiingo IEX (primary) ──────────────────────
     if us_tickers:
         try:
-            alpaca = _get_alpaca_market_data()
-            if alpaca is not None:
-                snapshots = alpaca.get_snapshots(us_tickers)
-                for ticker, snap in snapshots.items():
-                    price = snap.get("price", 0.0)
-                    if not price:
+            from data.tiingo import get_tiingo_client
+            tiingo = get_tiingo_client()
+            if tiingo is not None:
+                quotes = tiingo.get_quotes(us_tickers)
+                for ticker, q in quotes.items():
+                    price = q.get("price", 0)
+                    if not price or price <= 0:
                         continue
-                    prev_daily = snap.get("prev_daily_bar", {}) or {}
-                    prev_close = prev_daily.get("close") or None
-                    # Best available timestamp: minute bar > daily bar
-                    ts = (snap.get("minute_bar", {}) or {}).get("timestamp") \
-                        or (snap.get("daily_bar", {}) or {}).get("timestamp") \
-                        or str(datetime.now(BRISBANE).date())
+                    prev_close = q.get("prev_close") or 0
                     prices[ticker] = {
                         "close":      round(float(price), 4),
                         "prev_close": round(float(prev_close), 4) if prev_close else None,
-                        "date":       str(ts),
+                        "date":       q.get("timestamp", str(datetime.now(BRISBANE).date())),
                         "live":       True,
                     }
-                logger.debug("Alpaca snapshots: %d/%d US tickers", len(prices), len(us_tickers))
+                logger.debug("Tiingo IEX: %d/%d US tickers", len(prices), len(us_tickers))
         except Exception as e:
-            print(f"  WARN: Alpaca live price fetch failed: {e}")
+            print(f"  WARN: Tiingo live price fetch failed: {e}")
 
     # ── Fallback to yfinance for missing US tickers + all non-US ─
     yf_tickers = [t for t in us_tickers if t not in prices] + non_us_tickers
@@ -942,87 +938,68 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
     cache_age = broker_cache.get("_cache_age_minutes", 0) if broker_cache else 0
 
     if broker_ok and broker_acct:
-        # Broker is the sole source of truth (Alpaca, all positions are Atlas-managed)
+        # Alpaca provides structural data (positions held, entry_price, shares).
+        # ALL prices and P&L are computed from Tiingo — Alpaca prices are never trusted.
         positions = broker_positions
         atlas_positions = positions
         all_positions = positions
         data_source = "cached" if is_cached else "broker"
 
-        # Atlas P&L from positions
+        total_commissions = round(len(atlas_positions) * commission, 2)
+        broker_cash = round(broker_acct["cash"], 2)
+
+        # ── Fetch Tiingo prices for ALL positions ────────────────────
+        pos_tickers = [p.get("ticker", "") for p in atlas_positions]
+        pos_tickers = [t for t in pos_tickers if t]
+        tiingo_prices = {}
+        try:
+            from data.tiingo import get_tiingo_client
+            tiingo = get_tiingo_client()
+            if tiingo:
+                tiingo_prices = tiingo.get_quotes(pos_tickers)
+        except Exception as e:
+            logger.warning("Tiingo price fetch failed in generate_data: %s", e)
+
+        # ── Override ALL position prices and P&L with Tiingo data ────
+        for p in atlas_positions:
+            t = p.get("ticker", "")
+            ep = p.get("entry_price", 0)
+            sh = p.get("shares", 0)
+            tq = tiingo_prices.get(t)
+
+            if tq and tq.get("price", 0) > 0:
+                cp = tq["price"]
+                prev_close = tq.get("prev_close", 0) or ep
+            else:
+                # No Tiingo data — use entry_price (shows 0 P&L, not wrong P&L)
+                cp = ep
+                prev_close = ep
+
+            p["current_price"] = round(cp, 4)
+            p["market_value"] = round(cp * sh, 2)
+            p["unrealized_pnl"] = round((cp - ep) * sh, 2)
+            p["unrealized_pnl_pct"] = round((cp - ep) / ep * 100, 2) if ep > 0 else 0
+            p["today_pnl"] = round((cp - prev_close) * sh, 2) if prev_close > 0 else 0
+            p["intraday_pnl"] = p["today_pnl"]
+            p["intraday_pnl_pct"] = round((cp - prev_close) / prev_close * 100, 2) if prev_close > 0 else 0
+            p["change_today"] = p["intraday_pnl_pct"]
+            p["lastday_price"] = round(prev_close, 4) if prev_close else 0
+            # Keep entry_value consistent
+            p["entry_value"] = round(ep * sh, 2)
+
+        # ── Compute all portfolio-level P&L from Tiingo prices ───────
         total_entry_value = sum(p.get("entry_value", 0) for p in atlas_positions)
         atlas_value = sum(p.get("market_value", 0) for p in atlas_positions)
         market_pnl = round(atlas_value - total_entry_value, 2)
-        total_commissions = round(len(atlas_positions) * commission, 2)
-
-        # Broker is sole source of truth for headline equity/cash.
-        # This includes ALL positions (Atlas + manual) so the dashboard
-        # equity matches what the broker app shows.
-        broker_equity = round(broker_acct["equity"], 2)
-        broker_cash = round(broker_acct["cash"], 2)
-
-        # Atlas P&L: computed from Atlas-managed positions only.
-        # Don't mix broker total equity with Atlas starting_equity — that
-        # conflates manual trade gains with strategy performance.
         pos_value = atlas_value
-        cash = round(seq - total_entry_value, 2) if total_entry_value > 0 else seq
-        equity = round(cash + atlas_value, 2)  # Atlas virtual equity
+
+        # Equity = cash (Alpaca) + market value (Tiingo)
+        cash = broker_cash
+        equity = round(cash + atlas_value, 2)
+        broker_equity = equity  # our computed equity IS the headline equity
 
         total_pnl = round(equity - seq, 2)
         total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
-
-        # ── C1: Refresh stale prices for same-day MOO fills ──────────
-        # Broker may return fill price as marketPrice when no market data snapshot exists
-        # (common for ASX MOO orders with no market data subscription).
-        # Detect: current_price ≈ entry_price → override with Yahoo Finance price.
-        if data_source in ("broker", "cached"):
-            stale_tickers = set()
-            for p in atlas_positions:
-                if abs(p.get("current_price", 0) - p.get("entry_price", 0)) < 0.0001:
-                    stale_tickers.add(p.get("ticker", ""))
-            stale_tickers.discard("")
-            refreshed: dict = {}
-            if stale_tickers:
-                refreshed = get_prices(stale_tickers)
-                for p in atlas_positions:
-                    t = p.get("ticker", "")
-                    if t in refreshed and t in stale_tickers:
-                        new_price = refreshed[t]["close"]
-                        p["current_price"] = round(new_price, 4)
-                        ep = p.get("entry_price", 0)
-                        sh = p.get("shares", 0)
-                        p["unrealized_pnl"] = round((new_price - ep) * sh, 2)
-                        p["market_value"] = round(new_price * sh, 2)
-                        logger.info(
-                            "C1 stale price refresh [%s]: entry=%.4f → yf=%.4f, pnl=%.2f",
-                            t, ep, new_price, p["unrealized_pnl"],
-                        )
-                # Recalculate Atlas P&L after price refresh
-                atlas_value = sum(p.get("market_value", 0) for p in atlas_positions)
-                market_pnl = round(atlas_value - total_entry_value, 2)
-                pos_value = atlas_value
-                equity = round(cash + atlas_value, 2)
-                total_pnl = round(equity - seq, 2)
-                total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0
-
-        # ── C2: P&L consistency validation ──────────────────────────
-        # Brokers may return unrealized_pnl from a stale snapshot
-        # while current_price comes from a different snapshot.
-        # If |broker_pnl - (cp-ep)*shares| > 10%, recalculate from prices.
-        for p in all_positions:
-            ep = p.get("entry_price", 0)
-            cp = p.get("current_price", 0)
-            sh = p.get("shares", 0)
-            if ep > 0 and cp > 0 and sh > 0:
-                expected_pnl = round((cp - ep) * sh, 2)
-                actual_pnl = p.get("unrealized_pnl", 0)
-                if abs(actual_pnl - expected_pnl) > max(abs(expected_pnl) * 0.10, 1.0):
-                    logger.warning(
-                        "P&L inconsistency [%s]: broker_pnl=%.2f, calc_pnl=%.2f "
-                        "(cp=%.4f, ep=%.4f, sh=%d) — using calculated",
-                        p.get("ticker"), actual_pnl, expected_pnl, cp, ep, sh,
-                    )
-                    p["unrealized_pnl"] = expected_pnl
-                    p["unrealized_pnl_pct"] = round((cp - ep) / ep * 100, 2)
 
 
     else:
@@ -1079,22 +1056,15 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
         t = p.get("ticker", "")
         is_atlas = p.get("is_atlas", True)
 
-        # Cross-broker positions already have
-        # market_value and unrealized_pnl from the broker even in paper mode.
-        has_broker_data = broker_ok or p.get("market_value", 0) > 0
-        if has_broker_data:
-            # Broker already provides current_price and unrealized_pnl
-            ep = p.get("entry_price", 0)
-            sh = p.get("shares", 0)
-            cp = p.get("current_price", ep)
-            upnl = p.get("unrealized_pnl", round((cp - ep) * sh, 2))
-            upnl_pct = p.get("unrealized_pnl_pct", round((cp - ep) / ep * 100, 2) if ep > 0 else 0)
-        else:
-            ep = p.get("entry_price", 0)
-            sh = p.get("shares", 0)
-            cp = prices[t]["close"] if t in prices else ep
-            upnl = round((cp - ep) * sh, 2)
-            upnl_pct = round((cp - ep) / ep * 100, 2) if ep > 0 else 0
+        # All P&L already computed from Tiingo prices (or from get_prices
+        # in offline mode). Never trust broker-reported P&L values.
+        ep = p.get("entry_price", 0)
+        sh = p.get("shares", 0)
+        cp = p.get("current_price", ep)
+        if not broker_ok and t in prices:
+            cp = prices[t]["close"]
+        upnl = round((cp - ep) * sh, 2)
+        upnl_pct = round((cp - ep) / ep * 100, 2) if ep > 0 else 0
 
         ed = p.get("entry_date", "")
         dh = 0
@@ -1191,9 +1161,9 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
                         market_id)
 
     # Update equity curve for any market with real data (broker or cached).
-    # Use broker_equity when available so the chart matches broker app.
+    # Use our Tiingo-computed equity (broker_equity is already Tiingo-based).
     if data_source in ("broker", "cached"):
-        chart_equity = broker_equity if broker_ok and broker_equity else equity
+        chart_equity = equity
 
         # Compute total P&L for deposit-adjusted return calculation.
         all_unrealized = sum(p.get("unrealized_pnl", 0) for p in all_positions)
@@ -3030,14 +3000,26 @@ def generate():
         combined_pnl = pf.get("total_pnl", 0)
         combined_pnl_pct = pf.get("total_pnl_pct", 0)
 
-    research_data = generate_research_data()
-    ceasefire_data = generate_ceasefire_data()
+    try:
+        research_data = generate_research_data()
+    except Exception as e:
+        logger.warning("generate_research_data() failed: %s", e)
+        research_data = {}
+
+    try:
+        ceasefire_data = generate_ceasefire_data()
+    except Exception as e:
+        logger.warning("generate_ceasefire_data() failed: %s", e)
+        ceasefire_data = {}
 
     pf = sp500_data.get("portfolio", {})
     all_positions = [dict(p, market=mid) for p in pf.get("open_positions", [])]
     all_closed = [dict(t, market=mid) for t in sp500_data.get("closed_trades", [])]
 
     stale_warnings = [sp500_data["stale_warning"]] if sp500_data.get("stale_warning") else []
+
+    # Strategy performance from closed trades (for performance metrics panel)
+    strategy_performance = _compute_strategy_performance(all_closed)
 
     result = {
         "timestamp": now.isoformat(),
@@ -3069,6 +3051,7 @@ def generate():
             "today_pnl_usd": pf.get("today_pnl_usd", 0),
         },
         "strategy_summary": sp500_data.get("strategy_summary", []),
+        "strategy_performance": strategy_performance,
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
         "benchmark_ticker": combined_bench_label,
@@ -3234,7 +3217,11 @@ def _load_sparkline(ticker: str, n: int = 15) -> list[float]:
 
 
 def _calc_trade_stats(trades: list) -> dict:
-    """Compute win rate, avg win/loss, profit factor, expectancy for a list of trades."""
+    """Compute win rate, avg win/loss, profit factor, expectancy for a list of trades.
+
+    IMPORTANT: win_rate is returned as a fraction (0.0–1.0), NOT a percentage.
+    The dashboard JS multiplies by 100 for display: ``(wr * 100).toFixed(1) + '%'``.
+    """
     if not trades:
         return {
             "trades": 0, "win_rate": 0, "avg_win": 0,
@@ -3243,7 +3230,7 @@ def _calc_trade_stats(trades: list) -> dict:
     wins = [t.get("pnl", 0) for t in trades if (t.get("pnl", 0) or 0) > 0]
     losses = [t.get("pnl", 0) for t in trades if (t.get("pnl", 0) or 0) <= 0]
     total = len(trades)
-    win_rate = len(wins) / total * 100 if total > 0 else 0
+    win_rate = len(wins) / total if total > 0 else 0  # fraction, not pct
     avg_win = sum(wins) / len(wins) if wins else 0
     avg_loss = sum(losses) / len(losses) if losses else 0
     gross_profit = sum(wins)
@@ -3257,7 +3244,7 @@ def _calc_trade_stats(trades: list) -> dict:
     expectancy = (sum(wins) + sum(losses)) / total if total > 0 else 0
     return {
         "trades": total,
-        "win_rate": round(win_rate, 1),
+        "win_rate": round(win_rate, 3),
         "avg_win": round(avg_win, 2),
         "avg_loss": round(avg_loss, 2),
         "profit_factor": pf,
@@ -3563,6 +3550,7 @@ def generate_simple_dashboard_data() -> dict:
 
 if __name__ == "__main__":
     import argparse
+    import traceback
 
     ap = argparse.ArgumentParser(description="Atlas dashboard data generator")
     ap.add_argument(
@@ -3580,4 +3568,23 @@ if __name__ == "__main__":
         if len(lines) > 60:
             print(f"  ... ({len(lines) - 60} more lines)")
     else:
-        generate()
+        try:
+            generate()
+        except Exception:
+            # Log full traceback so dashboard_loop.sh captures it in the log.
+            # Without this, unhandled exceptions print to stderr which still
+            # goes to the log, but the traceback format can be swallowed by
+            # log rotation before anyone investigates.
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            tb = traceback.format_exc()
+            print(f"\n[{ts}] FATAL: generate() crashed:\n{tb}", flush=True)
+
+            # Also append to a dedicated error log that won't be rotated away
+            err_log = PROJECT_ROOT / "logs" / "dashboard-errors.log"
+            try:
+                with open(err_log, "a") as f:
+                    f.write(f"[{ts}] generate() crashed:\n{tb}\n")
+            except Exception:
+                pass
+
+            sys.exit(1)
