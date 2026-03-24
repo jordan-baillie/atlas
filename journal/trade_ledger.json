@@ -314,5 +314,35 @@
     "order_id": "exit-456",
     "direction": "long",
     "recorded_at": "2026-03-25T01:11:47.946742"
+  },
+  {
+    "type": "entry",
+    "ticker": "AAPL",
+    "strategy": "momentum_breakout",
+    "shares": 10,
+    "fill_price": 150.0,
+    "planned_price": 150.0,
+    "stop_price": 145.0,
+    "slippage_bps": 0.0,
+    "order_id": "test-123",
+    "timestamp": "2026-03-25T01:28:47.528450",
+    "direction": "long",
+    "recorded_at": "2026-03-25T01:28:47.528456"
+  },
+  {
+    "type": "exit",
+    "ticker": "AAPL",
+    "strategy": "momentum_breakout",
+    "shares": 10,
+    "fill_price": 155.0,
+    "entry_price": 140.0,
+    "pnl": 150.0,
+    "pnl_pct": 10.71,
+    "holding_days": null,
+    "exit_reason": "signal_exit",
+    "slippage_bps": 101.0,
+    "order_id": "exit-456",
+    "direction": "long",
+    "recorded_at": "2026-03-25T01:28:47.532075"
   }
 ]
