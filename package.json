@@ -1,0 +1,16 @@
+{
+  "name": "atlas-pi-extensions",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Pi extensions for Atlas — swarm coordination and subagent delegation with live TUI widgets",
+  "keywords": ["pi-package"],
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions/swarm", "./extensions/subagent"]
+  }
+}
