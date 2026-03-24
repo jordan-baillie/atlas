@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus Fundamentals Agent Timer (daily 07:00 UTC, Mon–Fri)
+Requires=cronus-fundamentals.service
+
+[Timer]
+OnCalendar=Mon..Fri 07:00
+Persistent=true
+Unit=cronus-fundamentals.service
+
+[Install]
+WantedBy=timers.target

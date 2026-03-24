@@ -1,0 +1,17 @@
+[Unit]
+Description=Cronus Fundamentals Agent — score pending signals with macro and COT data
+After=network.target
+Documentation=https://github.com/cronus-trade/cronus
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/cronus
+Environment=CRONUS_CONFIG=/root/cronus/config/trading_paper.yaml
+Environment=PYTHONPATH=/root/cronus
+User=root
+ExecStart=/usr/bin/python3 /root/cronus/agents/tier2/fundamentals.py
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus Rollover Agent Timer (daily 05:00 UTC, Mon–Fri)
+Requires=cronus-rollover.service
+
+[Timer]
+OnCalendar=Mon..Fri 05:00
+Persistent=true
+Unit=cronus-rollover.service
+
+[Install]
+WantedBy=timers.target

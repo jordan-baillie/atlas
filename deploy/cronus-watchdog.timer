@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus Agent Watchdog Timer (every 2 minutes)
+Requires=cronus-watchdog.service
+
+[Timer]
+OnCalendar=*:0/2
+Persistent=true
+Unit=cronus-watchdog.service
+
+[Install]
+WantedBy=timers.target

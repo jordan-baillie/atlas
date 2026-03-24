@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus Calendar Events Timer (weekly Monday 06:00 UTC)
+Requires=cronus-calendar.service
+
+[Timer]
+OnCalendar=Mon 06:00
+Persistent=true
+Unit=cronus-calendar.service
+
+[Install]
+WantedBy=timers.target

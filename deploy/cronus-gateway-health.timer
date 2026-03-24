@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus IB Gateway Health Check Timer (every 5 minutes)
+Requires=cronus-gateway-health.service
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+Unit=cronus-gateway-health.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Cronus Seasonal Scanner Timer (daily 06:00 UTC, Mon–Fri)
+Requires=cronus-scanner.service
+
+[Timer]
+OnCalendar=Mon..Fri 06:00
+Persistent=true
+Unit=cronus-scanner.service
+
+[Install]
+WantedBy=timers.target
