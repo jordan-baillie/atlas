@@ -1,7 +1,99 @@
 {
   "market_id": "sp500",
   "mode": "live",
-  "closed_trades": [],
+  "closed_trades": [
+    {
+      "ticker": "ADBE",
+      "strategy": "opening_gap",
+      "entry_price": 248.0,
+      "exit_price": 250.35,
+      "shares": 2,
+      "pnl": 4.7,
+      "pnl_pct": 0.95,
+      "holding_days": 2,
+      "exit_reason": "trailing_stop",
+      "exit_date": "2026-03-18",
+      "order_id": "ff52c18d-9906-4771-aa59-436cd34d71f9"
+    },
+    {
+      "ticker": "DHR",
+      "strategy": "mean_reversion",
+      "entry_price": 186.25,
+      "exit_price": 188.69,
+      "shares": 1,
+      "pnl": 2.44,
+      "pnl_pct": 1.31,
+      "holding_days": 6,
+      "exit_reason": "trailing_stop",
+      "exit_date": "2026-03-19",
+      "order_id": "6d437765-a29f-43a7-8429-e274fd390dab"
+    },
+    {
+      "ticker": "HCA",
+      "strategy": "connors_rsi2",
+      "entry_price": 509.8,
+      "exit_price": 496.5994,
+      "shares": 2,
+      "pnl": -26.4,
+      "pnl_pct": -2.59,
+      "holding_days": 1,
+      "exit_reason": "trailing_stop",
+      "exit_date": "2026-03-19",
+      "order_id": "6b395c86-88a1-4d68-980b-4ec334d685d9"
+    },
+    {
+      "ticker": "ULTA",
+      "strategy": "opening_gap",
+      "entry_price": 532.92,
+      "exit_price": 533.57,
+      "shares": 1,
+      "pnl": 0.65,
+      "pnl_pct": 0.12,
+      "holding_days": 4,
+      "exit_reason": "signal",
+      "exit_date": "2026-03-20",
+      "order_id": "c499893c-86fd-4faf-9066-ba57d3e9d4c1"
+    },
+    {
+      "ticker": "BKR",
+      "strategy": "connors_rsi2",
+      "entry_price": 54.27,
+      "exit_price": 60.83,
+      "shares": 11,
+      "pnl": 72.16,
+      "pnl_pct": 12.09,
+      "holding_days": 4,
+      "exit_reason": "signal",
+      "exit_date": "2026-03-20",
+      "order_id": "2bb7d062-9374-4db2-b461-a62d05113e9f"
+    },
+    {
+      "ticker": "OXY",
+      "strategy": "momentum_breakout",
+      "entry_price": 57.63,
+      "exit_price": 58.44,
+      "shares": 2,
+      "pnl": 1.62,
+      "pnl_pct": 1.41,
+      "holding_days": 10,
+      "exit_reason": "trailing_stop",
+      "exit_date": "2026-03-23",
+      "order_id": "3d0b3334-8cf7-4ed4-9d4f-f2e0979b8dca"
+    },
+    {
+      "ticker": "NOW",
+      "strategy": "trend_following",
+      "entry_price": 114.97,
+      "exit_price": 108.4551,
+      "shares": 3,
+      "pnl": -19.54,
+      "pnl_pct": -5.67,
+      "holding_days": 6,
+      "exit_reason": "trailing_stop",
+      "exit_date": "2026-03-24",
+      "order_id": "1437c05e-06b4-4493-b7eb-d31a8730f77a"
+    }
+  ],
   "equity_history": [
     {
       "date": "2026-03-13",
@@ -60,5 +152,71 @@
   "daily_high_water": 3519.83,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-14T08:00:55.993745"
+  "last_saved": "2026-03-14T08:00:55.993745",
+  "positions": [
+    {
+      "ticker": "DOW",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-03-16",
+      "entry_price": 36.39,
+      "shares": 3,
+      "order_id": "e5daf890-066b-49bc-9705-90104b20c870"
+    },
+    {
+      "ticker": "COP",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-03-16",
+      "entry_price": 121.06,
+      "shares": 1,
+      "order_id": "dbfcd250-32c9-407f-9170-fbc0b0073ba4"
+    },
+    {
+      "ticker": "ORLY",
+      "strategy": "short_term_mr",
+      "entry_date": "2026-03-18",
+      "entry_price": 88.5,
+      "shares": 10,
+      "order_id": "7bb24e21-89d8-4064-8487-62065bec24ee"
+    },
+    {
+      "ticker": "NFLX",
+      "strategy": "trend_following",
+      "entry_date": "2026-03-19",
+      "entry_price": 94.38,
+      "shares": 3,
+      "order_id": "ffe8f912-63df-4991-93d1-4c9d6b55aa20"
+    },
+    {
+      "ticker": "ECL",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-03-20",
+      "entry_price": 257.03,
+      "shares": 4,
+      "order_id": "4fc2d68a-daf5-4a6b-a838-1f86d0573606"
+    },
+    {
+      "ticker": "D",
+      "strategy": "mean_reversion",
+      "entry_date": "2026-03-23",
+      "entry_price": 59.38,
+      "shares": 13,
+      "order_id": "c3d4d2a6-2d9f-4f30-a04f-11b2397d59cd"
+    },
+    {
+      "ticker": "NOC",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-03-24",
+      "entry_price": 670.0,
+      "shares": 1,
+      "order_id": "92bac1bf-b26f-4507-adae-4ba7dde9bf49"
+    },
+    {
+      "ticker": "WM",
+      "strategy": "short_term_mr",
+      "entry_date": "2026-03-24",
+      "entry_price": 226.28,
+      "shares": 2,
+      "order_id": "3931f0d1-f01f-4580-b0a7-72e6012d32b5"
+    }
+  ]
 }

@@ -130,30 +130,51 @@ def _load_plan_metadata() -> dict:
     """Load strategy/entry metadata from recent plans for position enrichment.
 
     Returns {ticker: {strategy, entry_date, stop_price, confidence, sector, ...}}
-    from the most recent executed/approved plans.
+    from the most recent executed/approved plans, with fallback to the
+    live portfolio state file (which has authoritative strategy info from
+    Alpaca client_order_id parsing).
     """
     plans_dir = PROJECT_ROOT / "plans"
-    if not plans_dir.exists():
-        return {}
-
     meta = {}
-    # Scan last 90 plans (covers ~3 months — needed for open positions held 30–90 days)
-    for plan_file in sorted(plans_dir.glob("plan_*.json"), reverse=True)[:90]:
-        plan = safe_json(plan_file, None)
-        if not plan:
+
+    # Primary source: plan files (last 90 plans)
+    if plans_dir.exists():
+        for plan_file in sorted(plans_dir.glob("plan_*.json"), reverse=True)[:90]:
+            plan = safe_json(plan_file, None)
+            if not plan:
+                continue
+            trade_date = plan.get("trade_date", "")
+            for entry in plan.get("proposed_entries", []):
+                ticker = entry.get("ticker", "")
+                if ticker and ticker not in meta:
+                    meta[ticker] = {
+                        "strategy": entry.get("strategy", ""),
+                        "entry_date": trade_date,
+                        "stop_price": entry.get("stop_price", 0),
+                        "confidence": entry.get("confidence", 0),
+                        "sector": entry.get("sector", "Unknown"),
+                        "rationale": entry.get("rationale", ""),
+                    }
+
+    # Fallback: live portfolio state (has authoritative strategy names from
+    # trade ledger / Alpaca order history reconciliation)
+    for state_file in (PROJECT_ROOT / "brokers" / "state").glob("live_*.json"):
+        state = safe_json(state_file, None)
+        if not state:
             continue
-        trade_date = plan.get("trade_date", "")
-        for entry in plan.get("proposed_entries", []):
-            ticker = entry.get("ticker", "")
-            if ticker and ticker not in meta:
+        for pos in state.get("positions", []):
+            ticker = pos.get("ticker", "")
+            strategy = pos.get("strategy", "")
+            if ticker and strategy and (ticker not in meta or not meta[ticker].get("strategy")):
                 meta[ticker] = {
-                    "strategy": entry.get("strategy", ""),
-                    "entry_date": trade_date,
-                    "stop_price": entry.get("stop_price", 0),
-                    "confidence": entry.get("confidence", 0),
-                    "sector": entry.get("sector", "Unknown"),
-                    "rationale": entry.get("rationale", ""),
+                    "strategy": strategy,
+                    "entry_date": pos.get("entry_date", ""),
+                    "stop_price": pos.get("stop_price", 0),
+                    "confidence": pos.get("confidence", 0),
+                    "sector": pos.get("sector", "Unknown"),
+                    "rationale": "",
                 }
+
     return meta
 
 
