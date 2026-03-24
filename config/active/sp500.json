@@ -2,7 +2,7 @@
   "version": "v3.0",
   "project": "Atlas",
   "market": "sp500",
-  "description": "SP500 v2.2 — max_open_positions 10→15 (Task #26 research: Sharpe 0.868→0.983, CAGR 11.7%→13.3%, PnL +15%). Base: v2.1 parallel coordinate descent optimized.",
+  "description": "SP500 v2.2 \u2014 max_open_positions 10\u219215 (Task #26 research: Sharpe 0.868\u21920.983, CAGR 11.7%\u219213.3%, PnL +15%). Base: v2.1 parallel coordinate descent optimized.",
   "universe": {
     "method": "top_liquid",
     "top_n": 200,
@@ -44,7 +44,8 @@
       "require_double_approval": true,
       "max_order_value": 5000,
       "max_daily_orders": 3,
-      "dry_run_first": false
+      "dry_run_first": false,
+      "max_daily_loss_pct": 0.02
     }
   },
   "fees": {
@@ -54,7 +55,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "_previous_moomoo": "commission_per_trade=$1.10, commission_pct=0.001 (retired 2026-03-12)",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
@@ -335,7 +336,7 @@
   },
   "volatility_gate": {
     "enabled": true,
-    "_comment": "Pre-market macro volatility check — blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
+    "_comment": "Pre-market macro volatility check \u2014 blocks/reduces new entries on overnight shocks. Protective stops and exits always proceed.",
     "thresholds": {
       "oil_gap_pct": 5.0,
       "gold_gap_pct": 2.0,
@@ -349,8 +350,8 @@
       "vix": true,
       "asx_futures": false
     },
-    "_behavior": "1 flag → 50% position size reduction | 2+ flags → block all entries + Telegram alert",
-    "_note": "ASX futures disabled for SP500 market — not relevant for US trading session"
+    "_behavior": "1 flag \u2192 50% position size reduction | 2+ flags \u2192 block all entries + Telegram alert",
+    "_note": "ASX futures disabled for SP500 market \u2014 not relevant for US trading session"
   },
   "intraday": {
     "enabled": false,
@@ -383,13 +384,13 @@
     "created_at": "2026-03-02T07:55:00.000000",
     "previous_version": "v2.1",
     "market": "sp500",
-    "change": "max_open_positions 10→15 (Task #26 research, Task #51 promotion)",
-    "oos_validation": "ALL PASS — IS Sharpe 0.534, OOS Sharpe 0.962, 76% WF windows profitable, perturbation robust (2/10 collapse, mean CAGR +2.4%)"
+    "change": "max_open_positions 10\u219215 (Task #26 research, Task #51 promotion)",
+    "oos_validation": "ALL PASS \u2014 IS Sharpe 0.534, OOS Sharpe 0.962, 76% WF windows profitable, perturbation robust (2/10 collapse, mean CAGR +2.4%)"
   },
   "_upgrade_notes": {
     "from": "v2.2",
     "date": "2026-03-15",
-    "change": "Enable dynamic position sizing with graduated drawdown tiers (4%→0.75x, 7%→0.50x, 10%→0.25x). MaxDD 13.46%→11.51% (-1.95pp), CAGR 44.56%→42.75% (-1.81pp), Calmar 3.31→3.72 (+0.40).",
+    "change": "Enable dynamic position sizing with graduated drawdown tiers (4%\u21920.75x, 7%\u21920.50x, 10%\u21920.25x). MaxDD 13.46%\u219211.51% (-1.95pp), CAGR 44.56%\u219242.75% (-1.81pp), Calmar 3.31\u21923.72 (+0.40).",
     "portfolio_sharpe": 1.0927,
     "previous_sharpe": "~0.50 (3-strategy equal-weight)"
   }
