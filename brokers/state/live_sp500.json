@@ -160,7 +160,10 @@
       "entry_date": "2026-03-16",
       "entry_price": 36.39,
       "shares": 3,
-      "order_id": "e5daf890-066b-49bc-9705-90104b20c870"
+      "order_id": "e5daf890-066b-49bc-9705-90104b20c870",
+      "stop_price": 34.0,
+      "stop_type": "trailing",
+      "trail_amount": 4.58
     },
     {
       "ticker": "COP",
@@ -168,7 +171,10 @@
       "entry_date": "2026-03-16",
       "entry_price": 121.06,
       "shares": 1,
-      "order_id": "dbfcd250-32c9-407f-9170-fbc0b0073ba4"
+      "order_id": "dbfcd250-32c9-407f-9170-fbc0b0073ba4",
+      "stop_price": 122.03,
+      "stop_type": "trailing",
+      "trail_amount": 8.87
     },
     {
       "ticker": "ORLY",
@@ -176,7 +182,10 @@
       "entry_date": "2026-03-18",
       "entry_price": 88.5,
       "shares": 10,
-      "order_id": "7bb24e21-89d8-4064-8487-62065bec24ee"
+      "order_id": "7bb24e21-89d8-4064-8487-62065bec24ee",
+      "stop_price": 85.29,
+      "stop_type": "trailing",
+      "trail_amount": 4.42
     },
     {
       "ticker": "NFLX",
@@ -184,7 +193,10 @@
       "entry_date": "2026-03-19",
       "entry_price": 94.38,
       "shares": 3,
-      "order_id": "ffe8f912-63df-4991-93d1-4c9d6b55aa20"
+      "order_id": "ffe8f912-63df-4991-93d1-4c9d6b55aa20",
+      "stop_price": 88.515,
+      "stop_type": "trailing",
+      "trail_amount": 5.48
     },
     {
       "ticker": "ECL",
@@ -192,7 +204,10 @@
       "entry_date": "2026-03-20",
       "entry_price": 257.03,
       "shares": 4,
-      "order_id": "4fc2d68a-daf5-4a6b-a838-1f86d0573606"
+      "order_id": "4fc2d68a-daf5-4a6b-a838-1f86d0573606",
+      "stop_price": 258.17,
+      "stop_type": "trailing",
+      "trail_amount": 6.04
     },
     {
       "ticker": "D",
@@ -200,7 +215,9 @@
       "entry_date": "2026-03-23",
       "entry_price": 59.38,
       "shares": 13,
-      "order_id": "c3d4d2a6-2d9f-4f30-a04f-11b2397d59cd"
+      "order_id": "c3d4d2a6-2d9f-4f30-a04f-11b2397d59cd",
+      "stop_price": 62.54,
+      "stop_type": "limit_exit"
     },
     {
       "ticker": "NOC",
@@ -208,7 +225,10 @@
       "entry_date": "2026-03-24",
       "entry_price": 670.0,
       "shares": 1,
-      "order_id": "92bac1bf-b26f-4507-adae-4ba7dde9bf49"
+      "order_id": "92bac1bf-b26f-4507-adae-4ba7dde9bf49",
+      "stop_price": 673.53,
+      "stop_type": "trailing",
+      "trail_amount": 11.54
     },
     {
       "ticker": "WM",
@@ -216,7 +236,9 @@
       "entry_date": "2026-03-24",
       "entry_price": 226.28,
       "shares": 2,
-      "order_id": "3931f0d1-f01f-4580-b0a7-72e6012d32b5"
+      "order_id": "3931f0d1-f01f-4580-b0a7-72e6012d32b5",
+      "stop_price": 220.83,
+      "stop_type": "stop"
     }
   ]
 }
