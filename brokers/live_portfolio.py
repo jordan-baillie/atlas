@@ -618,6 +618,51 @@ class LivePortfolio:
         })
         self.save_state()
 
+    def execute_exit(self, ticker: str, exit_price: float, trade_date: str, exit_type: str) -> dict | None:
+        """Remove a position by ticker, record a closed trade, and persist.
+
+        Args:
+            ticker: Symbol to exit.
+            exit_price: Fill price for the exit.
+            trade_date: Date string (YYYY-MM-DD) of the exit.
+            exit_type: Reason — 'stop_loss', 'take_profit', etc.
+
+        Returns:
+            The closed-trade record dict, or None if ticker not found.
+        """
+        pos = next((p for p in self.positions if p.ticker == ticker), None)
+        if pos is None:
+            logger.warning("execute_exit: ticker %s not found in positions", ticker)
+            return None
+
+        pnl = round((exit_price - pos.entry_price) * pos.shares, 2)
+        commission = round(self.commission_flat + pos.entry_value * self.commission_pct, 2)
+        trade_record = {
+            "ticker": ticker,
+            "strategy": pos.strategy,
+            "entry_date": pos.entry_date,
+            "entry_price": pos.entry_price,
+            "exit_date": trade_date,
+            "exit_price": exit_price,
+            "shares": pos.shares,
+            "pnl": round(pnl - commission - pos.entry_commission, 2),
+            "pnl_pct": round((exit_price - pos.entry_price) / pos.entry_price * 100, 2) if pos.entry_price else 0.0,
+            "exit_type": exit_type,
+            "exit_reason": exit_type,
+            "mae": pos.mae,
+            "mfe": pos.mfe,
+            "sector": pos.sector,
+            "holding_days": pos.holding_days(trade_date),
+        }
+
+        self.positions = [p for p in self.positions if p.ticker != ticker]
+        self.record_closed_trade(trade_record)
+        logger.info(
+            "execute_exit: %s exited at $%.2f (%s) — PnL $%.2f (%.2f%%)",
+            ticker, exit_price, exit_type, trade_record["pnl"], trade_record["pnl_pct"],
+        )
+        return trade_record
+
     def record_closed_trade(self, trade_record: dict):
         """Append a closed trade and persist."""
         self.closed_trades.append(trade_record)
