@@ -492,18 +492,33 @@ def cmd_broker_status(args):
 
 
 def cmd_live_run(args):
-    """Execute approved plan via live broker with safety gates."""
+    """Execute approved plan via LiveExecutor with all safety features.
+
+    Uses LiveExecutor.execute_plan() which handles:
+    - Cancelling existing protective orders (SL/TP) before exits
+    - Fill polling for LIMIT orders
+    - Circuit breaker (daily loss limit)
+    - Volatility gate
+    - Protective stop placement after entries
+    - Full journal recording to live_executions.jsonl
+    - TradeLedger + RoundTrip recording
+
+    Flags:
+        --auto  Skip interactive confirmation (for cron/automation).
+                Plan must still be APPROVED and all safety gates still apply.
+    """
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
     mode = config.get("trading", {}).get("mode", "live")
     broker_name = config.get("trading", {}).get("broker", "alpaca")
+    auto_mode = getattr(args, "auto", False)
 
     if broker_name != "alpaca":
         print("ERROR: trading.broker must be 'alpaca'.")
-        return
+        sys.exit(1)
     if mode != "live":
         print("ERROR: trading.mode must be 'live'")
-        return
+        sys.exit(1)
 
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
 
@@ -514,22 +529,22 @@ def cmd_live_run(args):
     if not plan:
         print("ERROR: No plan found for %s. Run 'plan' first." % trade_date)
         _disconnect_portfolio(portfolio)
-        return
+        sys.exit(1)
     if plan["status"] != "APPROVED":
         print("Plan status is '%s'. Need APPROVED to execute." % plan["status"])
         _disconnect_portfolio(portfolio)
-        return
+        sys.exit(1)
 
     safety = config.get("trading", {}).get("live_safety", {})
-
-    # Safety gate 1: dry run preview
-    print("\n" + "=" * 55)
-    print("  LIVE EXECUTION PREVIEW — %s" % trade_date)
-    print("  Broker: %s | Mode: %s" % (broker_name, mode))
-    print("=" * 55)
-
     entries = plan.get("proposed_entries", [])
     exits = plan.get("proposed_exits", [])
+
+    # Safety gate 1: preview
+    print("\n" + "=" * 55)
+    print("  LIVE EXECUTION — %s" % trade_date)
+    print("  Broker: %s | Mode: %s | Auto: %s" % (broker_name, mode, auto_mode))
+    print("=" * 55)
+
     print("\n  Exits:   %d" % len(exits))
     for ex in exits:
         print("    SELL %s — %s" % (ex.get("ticker"), ex.get("reason", "planned")))
@@ -540,119 +555,110 @@ def cmd_live_run(args):
             e["ticker"], e["position_size"], e["entry_price"],
             value, e["strategy"]))
 
+    if not entries and not exits:
+        print("\n  No trades to execute. Done.")
+        return
+
     # Safety gate 2: max daily orders
     max_orders = safety.get("max_daily_orders", 10)
     total_orders = len(entries) + len(exits)
     if total_orders > max_orders:
         print("\n⚠️  %d orders exceeds max_daily_orders (%d). Aborting." % (total_orders, max_orders))
-        return
+        sys.exit(1)
 
-    # Safety gate 3: require double approval for live
-    if mode == "live" and safety.get("require_double_approval", True):
+    # Safety gate 3: interactive confirmation (skipped in --auto mode)
+    if not auto_mode and safety.get("require_double_approval", True):
         print("\n⚠️  LIVE MODE — This will place REAL orders with REAL money.")
-        confirm = input("  Type 'EXECUTE' to confirm: ").strip()
+        try:
+            confirm = input("  Type 'EXECUTE' to confirm: ").strip()
+        except EOFError:
+            print("  Non-interactive terminal — use --auto for automation.")
+            sys.exit(1)
         if confirm != "EXECUTE":
             print("  Aborted.")
             return
 
-    # Connect broker and execute
-    from brokers.registry import get_broker
-    broker = get_broker(market_id, config)
-    if not broker.connect():
-        print("ERROR: Failed to connect to broker")
-        return
+    # Execute via LiveExecutor — the single code path for all live orders.
+    # LiveExecutor handles: stop cancellation before exits, fill polling,
+    # circuit breaker, volatility gate, protective stop placement, journaling.
+    from brokers.live_executor import LiveExecutor
+
+    executor = LiveExecutor(config)
+    if not executor.connect():
+        print("ERROR: LiveExecutor failed to connect to broker")
+        sys.exit(1)
 
     try:
-        print("\nExecuting via %s..." % broker.name)
-        ledger = TradeLedger()
-        mistake_log = MistakeLog()
+        print("\nExecuting via LiveExecutor...")
+        report = executor.execute_plan(plan, trade_date)
 
-        # Get real prices if broker supports it
-        all_tickers = [e.get("ticker") for e in entries] + [ex.get("ticker") for ex in exits]
-        all_tickers = [t for t in all_tickers if t]
-        broker_prices = broker.get_prices(all_tickers)
+        # Print execution report
+        print("\n" + "-" * 55)
+        print("  EXECUTION REPORT")
+        print("-" * 55)
 
-        # Execute exits first
-        for exit_rec in exits:
-            ticker = exit_rec.get("ticker")
-            if not ticker:
-                continue
-            price = broker_prices.get(ticker, exit_rec.get("entry_price", 0))
-            reason = exit_rec.get("reason", "planned_exit")
+        if report.get("errors"):
+            for err in report["errors"]:
+                print("  ❌ ERROR: %s" % err)
+            sys.exit(1)
 
-            if broker.is_live:
-                # Live: place sell order via broker
-                pos_info = next((p for p in broker.get_positions() if p.ticker == ticker), None)
-                if not pos_info:
-                    print("  ⚠️  No position for %s — skipping exit" % ticker)
-                    continue
-                result = broker.sell(ticker, pos_info.shares, price)
-                print("  EXIT %s: %s (order_id=%s)" % (ticker, result.status.value, result.order_id))
+        # Exits
+        for ex in report.get("exits", []):
+            ticker = ex.get("ticker", "?")
+            status = ex.get("status", ex.get("message", "?"))
+            fill = ex.get("fill_price", 0)
+            success = "✅" if ex.get("success") else "❌"
+            if fill > 0:
+                print("  %s EXIT  %s  @ $%.2f  [%s]" % (success, ticker, fill, status))
             else:
-                # Paper broker: direct execution
-                result = broker.sell(ticker, 0, price, remark=reason, trade_date=trade_date)
-                if result.success:
-                    ledger.record_exit(result.raw)
-                    print("  EXIT %s: PnL %s" % (ticker, format_aud(result.raw.get("pnl", 0))))
+                print("  %s EXIT  %s  [%s] %s" % (
+                    success, ticker, status, ex.get("message", "")))
 
-        # Execute entries
-        for entry in entries:
-            ticker = entry.get("ticker")
-            if not ticker:
-                continue
-            price = broker_prices.get(ticker, entry["entry_price"])
-
-            if broker.is_live:
-                # Live: place buy order via broker
-                result = broker.buy(
-                    ticker, entry["position_size"], price,
-                    remark="atlas_%s_%s" % (entry["strategy"], trade_date),
-                )
-                print("  ENTRY %s: %s %d @ $%.2f (order_id=%s)" % (
-                    ticker, result.status.value, entry["position_size"],
-                    price, result.order_id))
+        # Entries
+        for en in report.get("entries", []):
+            ticker = en.get("ticker", "?")
+            status = en.get("status", en.get("message", "?"))
+            fill = en.get("fill_price", 0)
+            qty = en.get("qty", 0)
+            success = "✅" if en.get("success") else "❌"
+            blocked = en.get("blocked", False)
+            if blocked:
+                print("  ⛔ ENTRY %s  BLOCKED: %s" % (ticker, en.get("reason", "?")))
+            elif fill > 0:
+                print("  %s ENTRY %s  %d @ $%.2f  [%s]" % (success, ticker, qty, fill, status))
             else:
-                # Paper broker: direct execution
-                result = broker.place_order(
-                    ticker, side=__import__('broker.base', fromlist=['OrderSide']).OrderSide.BUY,
-                    qty=entry["position_size"], price=price,
-                    strategy=entry["strategy"], stop_price=entry["stop_price"],
-                    take_profit=entry.get("take_profit"), confidence=entry["confidence"],
-                    rationale=entry["rationale"], sector=entry.get("sector", "Unknown"),
-                    trade_date=trade_date,
-                )
-                if result.success:
-                    ledger.record_entry(result.raw)
-                    print("  ENTRY %s: %d @ %s" % (ticker, result.filled_qty,
-                          format_aud(result.fill_price)))
+                print("  %s ENTRY %s  %d  [%s] %s" % (
+                    success, ticker, qty, status, en.get("message", "")))
 
-        # Post-execution account check
-        info = broker.get_account_info()
-        print("\n  Post-execution:")
-        print("    Equity: %s" % format_aud(info.equity))
-        print("    Cash:   %s" % format_aud(info.cash))
-        print("    PnL:    %s (%.1f%%)" % (format_aud(info.total_pnl), info.total_pnl_pct))
+        # Stops
+        stop_orders = report.get("stop_orders", [])
+        if stop_orders:
+            print("\n  Protective stops:")
+            for so in stop_orders:
+                ticker = so.get("ticker", "?")
+                stop_id = so.get("order_id", "?")
+                print("    🛡️  %s → %s" % (ticker, stop_id[:12] if stop_id else "failed"))
 
-        # Place protective orders (SL + TP) on the broker for all positions
-        if broker.is_live and entries:
-            print("\n  Syncing protective orders (SL/TP) on broker...")
-            try:
-                if hasattr(broker, "sync_all_protective_orders"):
-                    # Pass [] so broker fetches live positions; pass plan for stop/TP metadata
-                    sync_result = broker.sync_all_protective_orders([], plan=plan)
-                    sl_placed = sync_result.get("sl_placed", sync_result.get("counts", {}).get("sl_placed", 0))
-                    tp_placed = sync_result.get("tp_placed", sync_result.get("counts", {}).get("tp_placed", 0))
-                    errors = sync_result.get("errors", sync_result.get("counts", {}).get("errors", 0))
-                    print("    SL placed: %d | TP placed: %d | errors: %d" % (sl_placed, tp_placed, errors))
-                else:
-                    print("    Broker does not support protective orders — skipping")
-            except Exception as e:
-                print("    WARNING: Protective order sync failed: %s" % e)
-                import traceback
-                traceback.print_exc()
+        # Summary
+        print("\n  Summary: %d/%d exits, %d/%d entries" % (
+            report.get("successful_exits", 0), report.get("total_exits", 0),
+            report.get("successful_entries", 0), report.get("total_entries", 0),
+        ))
+
+        if report.get("dry_run"):
+            print("  ⚠️  DRY RUN — no real orders placed")
+
+        if report.get("circuit_breaker_tripped"):
+            print("  🔴 CIRCUIT BREAKER TRIPPED — entries blocked")
+
+        vol_gate = report.get("volatility_gate", {})
+        if vol_gate.get("action") == "block":
+            print("  🔴 VOLATILITY GATE — entries blocked: %s" % vol_gate.get("message", ""))
+        elif vol_gate.get("action") == "reduce":
+            print("  ⚠️  VOLATILITY GATE — entries size-reduced: %s" % vol_gate.get("message", ""))
 
     finally:
-        broker.disconnect()
+        executor.disconnect()
 
 
 def cmd_orders(args):
@@ -1093,6 +1099,8 @@ def main():
     subparsers.add_parser("broker", help="Show broker connection & account status")
     p = subparsers.add_parser("live-run", help="Execute approved plan via live broker")
     p.add_argument("--date", type=str, default=None)
+    p.add_argument("--auto", action="store_true", default=False,
+                   help="Skip interactive confirmation (for cron/automation)")
     subparsers.add_parser("orders", help="Show open orders from broker")
     subparsers.add_parser("halt", help="Emergency: cancel all open orders")
     subparsers.add_parser("sync", help="Reconcile Atlas state with broker positions")

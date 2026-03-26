@@ -129,7 +129,7 @@ function commandString(cmd: string, args: string[]): string {
 
 function pythonExecutable(): string {
   const envBin = process.env.ATLAS_PYTHON_BIN || process.env.PI_ATLAS_PYTHON_BIN;
-  return envBin && envBin.trim() ? envBin.trim() : "python";
+  return envBin && envBin.trim() ? envBin.trim() : "python3";
 }
 
 function asArgsObject(value: unknown): RunArgs {
@@ -166,7 +166,7 @@ function buildPythonScriptInvocation(scriptPath: string, scriptArgs: string[]) {
   return { cmd, args, command: commandString(cmd, args) };
 }
 
-function buildCliInvocation(subcommand: string, params?: RunArgs) {
+function buildCliInvocation(subcommand: string, params?: RunArgs, extraFlags?: string[]) {
   const args = { ...(params ?? {}) };
   const cliArgs = ["scripts/cli.py", subcommand];
   const market = consumeArg<string>(args, "market");
@@ -180,6 +180,9 @@ function buildCliInvocation(subcommand: string, params?: RunArgs) {
   const days = consumeArg<number | string>(args, "days");
   if (days !== undefined) {
     cliArgs.push("--days", String(days));
+  }
+  if (extraFlags) {
+    cliArgs.push(...extraFlags);
   }
   assertNoExtraArgs(subcommand as AtlasJobName, args);
   return buildPythonScriptInvocation(cliArgs[0], cliArgs.slice(1));
@@ -250,7 +253,7 @@ function resolveJobCommand(job: AtlasJobName, rawArgs?: RunArgs) {
     case "cli_approve":
       return buildCliInvocation("approve", args);
     case "cli_paper_run":
-      return buildCliInvocation("paper-run", args);
+      return buildCliInvocation("live-run", args, ["--auto"]);
     case "cli_status":
       return buildCliInvocation("status", args);
     case "cli_ledger":

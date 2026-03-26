@@ -279,11 +279,11 @@ export const ATLAS_JOB_CATALOG: AtlasJobSpec[] = [
   {
     name: "cli_paper_run",
     category: "cli",
-    summary: "Execute an approved daily paper-trading plan.",
-    commandPreview: "python scripts/cli.py -m <market> paper-run [--date YYYY-MM-DD]",
+    summary: "Execute an approved daily trade plan via live broker (automated mode).",
+    commandPreview: "python3 scripts/cli.py -m <market> live-run --auto [--date YYYY-MM-DD]",
     estimatedRuntimeSec: 120,
-    reads: ["paper_engine/plans/plan_YYYY-MM-DD.json", "paper_engine/portfolio_state.json", "data/cache/*.parquet"],
-    writes: ["paper_engine/portfolio_state.json", "journal/trade_ledger.json", "journal/mistake_log.json"],
+    reads: ["plans/plan_YYYY-MM-DD.json", "config/active/*.json", "data/cache/*.parquet"],
+    writes: ["logs/live_executions.jsonl", "journal/trade_ledger.json", "journal/round_trips.jsonl"],
     args: [
       {
         name: "market",

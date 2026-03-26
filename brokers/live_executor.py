@@ -762,12 +762,24 @@ class LiveExecutor:
         # doesn't always include stop_order_id, and there may be multiple
         # GTC orders (SL + TP) holding shares.  If we don't cancel them
         # Alpaca rejects the sell with "insufficient qty available".
-        self._cancel_open_orders_for_ticker(ticker)
+        cancelled_count = self._cancel_open_orders_for_ticker(ticker)
 
         # Legacy path: also cancel the tracked stop if explicitly provided
         stop_order_id = exit_rec.get("stop_order_id", "")
         if stop_order_id:
             self.cancel_protective_stop(stop_order_id, ticker)
+            cancelled_count += 1
+
+        # Brief settle delay after cancelling protective orders.
+        # Alpaca's cancel API is synchronous, but the internal state
+        # change (releasing held shares) can take a moment to propagate.
+        if cancelled_count > 0 and not self.is_dry_run:
+            import time as _settle_time
+            _settle_time.sleep(1.0)
+            logger.info(
+                "Settled 1s after cancelling %d protective order(s) for %s",
+                cancelled_count, ticker,
+            )
 
         # Get current position to determine qty and price
         if self._broker:

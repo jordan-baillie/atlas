@@ -134,3 +134,6 @@ Fee drag at low equity destroys strategy performance metrics. The same strategy 
 
 ### 17. Infrastructure blockers masquerade as research failures
 8 infra blockers contaminated 15+ experiments in the weekly report. Always verify whether a failing experiment is a hypothesis failure or an infrastructure failure before drawing conclusions. Key tells: identical results across variants (test harness not varying the param), confidence filtering killing all signals, wrong default config paths.
+
+### 18. cli_paper_run → live-run execution path: use LiveExecutor, not broker.sell()
+The old `cmd_live_run` called `broker.sell()` directly, bypassing `LiveExecutor._execute_exit()` which handles cancelling protective orders (SL/TP) before selling. This caused Alpaca "insufficient qty" rejections when stop-loss orders held shares. **Fix (2026-03-26):** Rewrote `cmd_live_run` to route through `LiveExecutor.execute_plan()`. Also fixed: `pythonExecutable()` defaulted to `"python"` (not found on system, only `python3`), and `cli_paper_run` mapped to non-existent `paper-run` command instead of `live-run --auto`. All live execution MUST go through `LiveExecutor` — never call `broker.sell()` directly for exits.
