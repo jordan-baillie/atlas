@@ -778,7 +778,7 @@ class AlpacaBroker(BrokerAdapter):
                 if order_type_str in ("stop", "stop_limit", "trailing_stop"):
                     stop_price = float(getattr(order, "stop_price", 0) or 0)
                     order_id = str(getattr(order, "id", ""))
-                    tickers_with_stop[atlas_ticker] = {"price": stop_price, "order_id": order_id}
+                    tickers_with_stop[atlas_ticker] = {"price": stop_price, "order_id": order_id, "type": order_type_str}
                     logger.debug(
                         "sync_protective: found existing stop SELL for %s (type=%s, price=%.2f, id=%s)",
                         atlas_ticker, order_type_str, stop_price, order_id,
@@ -973,7 +973,7 @@ class AlpacaBroker(BrokerAdapter):
                                             stop_loss=StopLossRequest(stop_price=round(ideal_stop, 2)),
                                             time_in_force=TimeInForce.GTC,
                                         )
-                                        order = self._client.submit_order(request)
+                                        order = self._trade_client.submit_order(request)
                                         
                                         logger.info(
                                             "sync_protective: tightened %s stop from $%.2f to $%.2f "
@@ -1071,7 +1071,7 @@ class AlpacaBroker(BrokerAdapter):
                                 stop_loss=StopLossRequest(stop_price=stop_price),
                                 time_in_force=TimeInForce.GTC,
                             )
-                            order = self._client.submit_order(request)
+                            order = self._trade_client.submit_order(request)
 
                             # Success
                             sl_placed += 1
@@ -1215,15 +1215,110 @@ class AlpacaBroker(BrokerAdapter):
                     ticker_result["trail_distance"] = trail_distance
 
                     if has_existing_stop:
-                        sl_already_exists += 1
-                        ticker_result["sl_action"] = "skipped"
-                        ticker_result["sl_reason"] = "stop_exists"
-                        ticker_result["tp_action"] = "skipped"
-                        ticker_result["tp_reason"] = "trailing_stop_covers"
-                        logger.debug(
-                            "sync_protective: %s already has stop order — "
-                            "skipping trailing stop", ticker,
+                        # Check if we should upgrade a stale static stop to
+                        # a tighter trailing stop.  This handles positions that
+                        # blew through TP while the OCO path was broken (the
+                        # fallback SL is far too loose once price has moved).
+                        existing_stop_price = tickers_with_stop[ticker]["price"]
+                        existing_stop_type = tickers_with_stop[ticker].get("type", "stop")
+                        trailing_would_be = round(pos.current_price - trail_distance, 2)
+                        should_upgrade = (
+                            existing_stop_type != "trailing_stop"  # don't replace trailing with trailing
+                            and pos.current_price > pos.entry_price * 1.01   # profitable
+                            and trailing_would_be > existing_stop_price * 1.02  # meaningfully tighter
                         )
+
+                        if should_upgrade and not dry_run:
+                            # Cancel existing static stop, place trailing stop
+                            cancel_ok = False
+                            try:
+                                existing_order_id = tickers_with_stop[ticker]["order_id"]
+                                cr = self.cancel_order(existing_order_id)
+                                cancel_ok = cr.success
+                                if cancel_ok:
+                                    logger.info(
+                                        "sync_protective: canceled static stop %s for %s "
+                                        "(upgrading to trailing stop, static=$%.2f trailing≈$%.2f)",
+                                        existing_order_id, ticker,
+                                        existing_stop_price, trailing_would_be,
+                                    )
+                            except Exception as ce:
+                                logger.warning(
+                                    "sync_protective: cancel failed for %s static stop: %s",
+                                    ticker, ce,
+                                )
+
+                            if cancel_ok:
+                                trail_result = self.place_order(
+                                    ticker=ticker,
+                                    side=OrderSide.SELL,
+                                    qty=pos.shares,
+                                    price=0.0,
+                                    order_type=OrderType.TRAILING_STOP,
+                                    remark="sync_trail_upgrade",
+                                    tif="gtc",
+                                    trail_price=trail_distance,
+                                )
+                                if trail_result.success:
+                                    sl_placed += 1
+                                    ticker_result["sl_action"] = "trailing_upgraded"
+                                    ticker_result["sl_order_id"] = trail_result.order_id
+                                    ticker_result["sl_upgraded_from"] = existing_stop_price
+                                    ticker_result["sl_upgraded_to_trail"] = trail_distance
+                                    ticker_result["tp_action"] = "trailing"
+                                    ticker_result["tp_reason"] = "upgraded_to_trailing"
+                                    logger.info(
+                                        "sync_protective: upgraded %s from static stop $%.2f "
+                                        "to trailing stop trail=$%.2f (≈$%.2f) → id=%s",
+                                        ticker, existing_stop_price, trail_distance,
+                                        trailing_would_be, trail_result.order_id,
+                                    )
+                                else:
+                                    # Trailing failed — re-place static stop as safety net
+                                    errors += 1
+                                    ticker_result["sl_action"] = "error"
+                                    ticker_result["sl_message"] = trail_result.message
+                                    logger.error(
+                                        "sync_protective: trailing upgrade failed for %s: %s "
+                                        "— re-placing static stop",
+                                        ticker, trail_result.message,
+                                    )
+                                    self.place_order(
+                                        ticker=ticker,
+                                        side=OrderSide.SELL,
+                                        qty=pos.shares,
+                                        price=0.0,
+                                        order_type=OrderType.STOP,
+                                        stop_price=existing_stop_price,
+                                        remark="sync_sl_restore",
+                                        tif="gtc",
+                                    )
+                            else:
+                                sl_already_exists += 1
+                                ticker_result["sl_action"] = "skipped"
+                                ticker_result["sl_reason"] = "upgrade_cancel_failed"
+                                ticker_result["tp_action"] = "skipped"
+                                ticker_result["tp_reason"] = "trailing_stop_covers"
+                        elif should_upgrade and dry_run:
+                            logger.info(
+                                "sync_protective [DRY RUN]: would upgrade %s from "
+                                "static stop $%.2f to trailing stop trail=$%.2f (≈$%.2f)",
+                                ticker, existing_stop_price, trail_distance, trailing_would_be,
+                            )
+                            sl_placed += 1
+                            ticker_result["sl_action"] = "dry_run_trailing_upgrade"
+                            ticker_result["tp_action"] = "trailing"
+                            ticker_result["tp_reason"] = "would_upgrade_to_trailing"
+                        else:
+                            sl_already_exists += 1
+                            ticker_result["sl_action"] = "skipped"
+                            ticker_result["sl_reason"] = "stop_exists"
+                            ticker_result["tp_action"] = "skipped"
+                            ticker_result["tp_reason"] = "trailing_stop_covers"
+                            logger.debug(
+                                "sync_protective: %s already has stop order — "
+                                "skipping trailing stop", ticker,
+                            )
                     elif dry_run:
                         logger.info(
                             "sync_protective [DRY RUN]: would place TRAILING_STOP SELL %s "
