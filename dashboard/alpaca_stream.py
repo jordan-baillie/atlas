@@ -153,24 +153,59 @@ def _fetch_snapshot(client, data_client) -> dict:
         except Exception as e:
             logger.warning("Snapshot fetch failed: %s", e)
 
+    # ── Fetch authoritative prices from Tiingo ─────────────────
+    # Alpaca position current_price can be stale/incorrect (observed 8%+ error).
+    tiingo_prices: dict[str, float] = {}
+    us_tickers = [p.symbol for p in raw_positions if not p.symbol.endswith(".AX")]
+    if us_tickers:
+        try:
+            from data.tiingo import get_tiingo_client
+            tiingo = get_tiingo_client()
+            if tiingo is not None:
+                quotes = tiingo.get_quotes(us_tickers)
+                for t, q in quotes.items():
+                    price = q.get("price", 0)
+                    if price and float(price) > 0:
+                        tiingo_prices[t.upper()] = {
+                            "price": float(price),
+                            "prev_close": float(q.get("prev_close", 0) or 0),
+                        }
+        except Exception as e:
+            logger.warning("Tiingo price fetch failed in alpaca_stream: %s", e)
+
     positions_data = []
     today_pnl = 0.0
     for p in raw_positions:
         sym = p.symbol
         meta = plan_meta.get(sym, {})
         entry_price = float(p.avg_entry_price)
-        current_price = float(p.current_price)
         shares = int(p.qty)
-        market_value = float(p.market_value)
-        unrealized_pnl = float(p.unrealized_pl)
-        unrealized_pnl_pct = float(p.unrealized_plpc) * 100
-        change_today = float(p.change_today) * 100
+        cost_basis = float(p.cost_basis)
 
-        lastday_price = float(p.lastday_price) if hasattr(p, 'lastday_price') and p.lastday_price else 0
+        # Use Tiingo price if available; fall back to Alpaca
+        alpaca_price = float(p.current_price)
+        tq = tiingo_prices.get(sym.upper())
+        if tq and tq["price"] > 0:
+            current_price = tq["price"]
+            lastday_price = tq["prev_close"] if tq["prev_close"] > 0 else entry_price
+            if abs(current_price - alpaca_price) / alpaca_price > 0.02:
+                logger.warning(
+                    "alpaca_stream: %s price mismatch — Tiingo=$%.2f Alpaca=$%.2f (using Tiingo)",
+                    sym, current_price, alpaca_price,
+                )
+        else:
+            current_price = alpaca_price
+            lastday_price = float(p.lastday_price) if hasattr(p, 'lastday_price') and p.lastday_price else 0
+
+        # Recalculate PnL from authoritative price
+        market_value = round(current_price * shares, 2)
+        unrealized_pnl = round(market_value - cost_basis, 2)
+        unrealized_pnl_pct = round(unrealized_pnl / cost_basis * 100, 2) if cost_basis > 0 else 0
+
         intraday_pnl = round((current_price - lastday_price) * shares, 2) if lastday_price > 0 else 0
-        intraday_pnl_pct = round(change_today, 2)
+        intraday_pnl_pct = round((current_price - lastday_price) / lastday_price * 100, 2) if lastday_price > 0 else 0
 
-        today_pnl += float(p.unrealized_intraday_pl)
+        today_pnl += intraday_pnl
 
         positions_data.append({
             "ticker": sym,
@@ -179,17 +214,17 @@ def _fetch_snapshot(client, data_client) -> dict:
             "entry_price": round(entry_price, 4),
             "current_price": round(current_price, 4),
             "shares": shares,
-            "market_value": round(market_value, 2),
-            "unrealized_pnl": round(unrealized_pnl, 2),
-            "unrealized_pnl_pct": round(unrealized_pnl_pct, 2),
-            "cost_basis": round(float(p.cost_basis), 2),
-            "today_pnl": round(float(p.unrealized_intraday_pl), 2),
+            "market_value": market_value,
+            "unrealized_pnl": unrealized_pnl,
+            "unrealized_pnl_pct": unrealized_pnl_pct,
+            "cost_basis": round(cost_basis, 2),
+            "today_pnl": round(intraday_pnl, 2),
             "stop_price": round(float(meta.get("stop_price", 0) or 0), 4),
             "sector": meta.get("sector", "Unknown"),
             "currency": "USD",
             "intraday_pnl": round(intraday_pnl, 2),
             "intraday_pnl_pct": round(intraday_pnl_pct, 2),
-            "change_today": round(change_today, 2),
+            "change_today": round(intraday_pnl_pct, 2),
             "lastday_price": round(lastday_price, 2),
         })
 
