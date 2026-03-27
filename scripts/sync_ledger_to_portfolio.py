@@ -145,8 +145,21 @@ def main():
         except Exception as e:
             logger.error(f"Failed to write updated ledger: {e}")
 
+    # Fix "unknown" strategies in open positions from ledger entry records
+    ledger_entries = {e["ticker"]: e["strategy"] for e in ledger
+                      if e.get("type") == "entry" and e.get("strategy")
+                      and e["strategy"] != "unknown"}
+    fixed_positions = 0
+    for pos in state.get("positions", []):
+        ticker = pos.get("ticker", "")
+        if pos.get("strategy", "unknown") == "unknown" and ticker in ledger_entries:
+            old = pos["strategy"]
+            pos["strategy"] = ledger_entries[ticker]
+            logger.info(f"Fixed open position {ticker} strategy: {old} → {pos['strategy']}")
+            fixed_positions += 1
+
     # Add new trades to state
-    if new_trades:
+    if new_trades or fixed_positions > 0:
         state["closed_trades"] = existing_closed + new_trades
         try:
             with open(state_path, "w") as f:

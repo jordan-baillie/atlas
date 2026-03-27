@@ -1,10 +1,10 @@
 {
   "baseline": 12,
-  "probability": 35,
-  "probability_label": "COIN FLIP",
-  "timeline": "1-2 weeks",
-  "portfolio_action": "\u26a0\ufe0f Reduce energy concentration. Trim INSW, partial XOP profits.",
-  "last_updated": "2026-03-25T01:00:54",
+  "probability": 55,
+  "probability_label": "POSSIBLE",
+  "timeline": "Days to 1 week",
+  "portfolio_action": "\ud83d\udea8 Execute kill switch. Exit INSW, sell 50% XOP, trim RTX.",
+  "last_updated": "2026-03-27T11:07:04",
   "change_log": [
     {
       "timestamp": "2026-03-05T14:05:22",
@@ -131,6 +131,78 @@
       "confidence": "medium",
       "reason": "Toggled via CLI",
       "source": "WSJ/Statesman/CBS March 24 2026: Confirmed back-channel diplomacy through Oman+Egypt mediators - Egypt called IRGC directly, Iran receiving US messages; Trump 5-day energy-strike pause follows"
+    },
+    {
+      "timestamp": "2026-03-25T04:07:32",
+      "factor_id": "supreme_leader",
+      "old_active": false,
+      "new_active": true,
+      "confidence": "medium",
+      "reason": "Toggled via CLI",
+      "source": "Al Arabiya March 24 2026: Iranian FM secretly informed Witkoff of supreme leader's agreement to negotiate; Firstpost/News18 March 24: Mojtaba Khamenei agrees to negotiate; Pakistan organizing conclusive US-Iran talks this week (Bloomberg, Guardian, Al Jazeera); New SL Mojtaba confirmed by BBC/NBC/Reuters March 8-9"
+    },
+    {
+      "timestamp": "2026-03-25T13:06:28",
+      "factor_id": "coalition_fracture",
+      "old_active": false,
+      "new_active": true,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "NYT/Guardian March 24-25 2026: Trump sours on Starmer over UK decision not to join Iran attacks; UK offers to host international Hormuz reopening summit"
+    },
+    {
+      "timestamp": "2026-03-25T15:06:51",
+      "factor_id": "oil_100",
+      "old_active": true,
+      "new_active": false,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "AP Markets March 25 2026: Brent crude fell 5.9% to $94.42/barrel in early Asian trading on ceasefire optimism (15-point plan + Trump deadline pause); was ~$104 Tuesday. Breaks sustained-above-$100 criterion."
+    },
+    {
+      "timestamp": "2026-03-25T20:04:19",
+      "factor_id": "supreme_leader",
+      "old_active": true,
+      "new_active": false,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "Reuters March 25 2026: Exclusive - Iran's new supreme leader rejects de-escalation proposals conveyed by intermediaries; corroborated by AL-Monitor, Times of Israel, multiple outlets"
+    },
+    {
+      "timestamp": "2026-03-25T20:04:26",
+      "factor_id": "backchannel",
+      "old_active": true,
+      "new_active": false,
+      "confidence": "medium",
+      "reason": "Toggled via CLI",
+      "source": "Reuters/AP/WaPo/Al Jazeera March 25 2026: Iran FM denies ceasefire talks, Tehran dismisses idea of negotiating, Iran military mocks US, 'US talking to itself' - all channels rejected by Tehran"
+    },
+    {
+      "timestamp": "2026-03-26T06:08:17",
+      "factor_id": "backchannel",
+      "old_active": false,
+      "new_active": true,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "Al Jazeera two senior diplomatic sources March 25 2026: Egypt, Turkiye and Pakistan established indirect channel between US and Iranian officials; 15-point plan sent via Pakistan, Iran received and issued 5 counter-conditions"
+    },
+    {
+      "timestamp": "2026-03-26T13:07:35",
+      "factor_id": "hezbollah_major",
+      "old_active": true,
+      "new_active": false,
+      "confidence": "medium",
+      "reason": "Toggled via CLI",
+      "source": "Times of Israel March 26 2026: Hezbollah fires 6 rockets at central Israel \u2014 well below 50+ barrage threshold; AP/JNS corroborate small-scale ongoing attacks only"
+    },
+    {
+      "timestamp": "2026-03-26T23:05:15",
+      "factor_id": "oil_100",
+      "old_active": false,
+      "new_active": true,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "yfinance/Bloomberg data March 26 2026: Brent crude closed above $100 for 3 consecutive days \u2014 Mar 24 $104.49, Mar 25 $102.22, Mar 26 $102.11; prior FALSE was based on intraday Asian-session dip to $94.42 that fully recovered by NY close"
     }
   ],
   "factors": [
@@ -141,9 +213,9 @@
       "weight": 18,
       "direction": "ceasefire",
       "active": false,
-      "confidence": "low",
-      "last_checked": "2026-03-05T12:53:22",
-      "source": "revert",
+      "confidence": "high",
+      "last_checked": "2026-03-25T20:04:19",
+      "source": "Reuters March 25 2026: Exclusive - Iran's new supreme leader rejects de-escalation proposals conveyed by intermediaries; corroborated by AL-Monitor, Times of Israel, multiple outlets",
       "description": "",
       "search_keywords": [
         "iran supreme leader successor",
@@ -160,9 +232,9 @@
       "weight": 14,
       "direction": "ceasefire",
       "active": true,
-      "confidence": "medium",
-      "last_checked": "2026-03-24T23:07:03",
-      "source": "WSJ/Statesman/CBS March 24 2026: Egypt called IRGC directly; Oman mediated; Trump 5-day energy strike pause follows back-channel contact",
+      "confidence": "high",
+      "last_checked": "2026-03-26T06:08:17",
+      "source": "Al Jazeera two senior diplomatic sources March 25 2026: Egypt, Turkiye and Pakistan established indirect channel between US and Iranian officials; 15-point plan sent via Pakistan, Iran received and issued 5 counter-conditions",
       "description": "",
       "search_keywords": [
         "iran backchannel talks",
@@ -215,10 +287,10 @@
       "label": "Key US coalition partner publicly withdraws support / calls for ceasefire",
       "weight": 8,
       "direction": "ceasefire",
-      "active": false,
-      "confidence": "low",
-      "last_checked": null,
-      "source": "",
+      "active": true,
+      "confidence": "high",
+      "last_checked": "2026-03-25T13:06:28",
+      "source": "NYT/Guardian March 24-25 2026: Trump sours on Starmer over UK decision not to join Iran attacks; UK offers to host international Hormuz reopening summit",
       "description": "",
       "search_keywords": [
         "US coalition fracture iran",
@@ -327,10 +399,10 @@
       "label": "Hezbollah launches major offensive (hundreds of rockets, multi-front attack)",
       "weight": -12,
       "direction": "escalation",
-      "active": true,
-      "confidence": "high",
-      "last_checked": "2026-03-05T13:18:20",
-      "source": "Rockets on Haifa, IDF ground troops in Lebanon, 60 Hezbollah sites struck",
+      "active": false,
+      "confidence": "medium",
+      "last_checked": "2026-03-26T13:07:35",
+      "source": "Times of Israel March 26 2026: Hezbollah fires 6 rockets at central Israel \u2014 well below 50+ barrage threshold; AP/JNS corroborate small-scale ongoing attacks only",
       "description": "Hezbollah active offensive ongoing",
       "search_keywords": [
         "hezbollah attack rockets",
@@ -533,8 +605,8 @@
       "direction": "ceasefire",
       "active": true,
       "confidence": "high",
-      "last_checked": "2026-03-12T16:03:30",
-      "source": "Euronews/BusinessTimes/EconomicTimes March 12 2026: Oil surges above 00 again as Iraq halts ports, IEA release fails to quell rally",
+      "last_checked": "2026-03-26T23:05:15",
+      "source": "yfinance/Bloomberg data March 26 2026: Brent crude closed above $100 for 3 consecutive days \u2014 Mar 24 $104.49, Mar 25 $102.22, Mar 26 $102.11; prior FALSE was based on intraday Asian-session dip to $94.42 that fully recovered by NY close",
       "description": "",
       "search_keywords": [
         "oil price $100 barrel",

@@ -156,8 +156,7 @@ def _load_plan_metadata() -> dict:
                         "rationale": entry.get("rationale", ""),
                     }
 
-    # Fallback: live portfolio state (has authoritative strategy names from
-    # trade ledger / Alpaca order history reconciliation)
+    # Fallback 1: live portfolio state
     for state_file in (PROJECT_ROOT / "brokers" / "state").glob("live_*.json"):
         state = safe_json(state_file, None)
         if not state:
@@ -165,7 +164,7 @@ def _load_plan_metadata() -> dict:
         for pos in state.get("positions", []):
             ticker = pos.get("ticker", "")
             strategy = pos.get("strategy", "")
-            if ticker and strategy and (ticker not in meta or not meta[ticker].get("strategy")):
+            if ticker and strategy and strategy != "unknown" and (ticker not in meta or not meta[ticker].get("strategy")):
                 meta[ticker] = {
                     "strategy": strategy,
                     "entry_date": pos.get("entry_date", ""),
@@ -173,6 +172,25 @@ def _load_plan_metadata() -> dict:
                     "confidence": pos.get("confidence", 0),
                     "sector": pos.get("sector", "Unknown"),
                     "rationale": "",
+                }
+
+    # Fallback 2: trade ledger (authoritative strategy from execution records)
+    ledger_path = PROJECT_ROOT / "journal" / "trade_ledger.json"
+    ledger = safe_json(ledger_path, None)
+    if ledger:
+        for entry in ledger:
+            if entry.get("type") != "entry":
+                continue
+            ticker = entry.get("ticker", "")
+            strategy = entry.get("strategy", "")
+            if ticker and strategy and strategy != "unknown" and (ticker not in meta or not meta[ticker].get("strategy") or meta[ticker]["strategy"] == "unknown"):
+                meta[ticker] = {
+                    "strategy": strategy,
+                    "entry_date": entry.get("timestamp", "")[:10] if entry.get("timestamp") else "",
+                    "stop_price": entry.get("stop_price", 0),
+                    "confidence": entry.get("confidence", 0),
+                    "sector": meta.get(ticker, {}).get("sector", "Unknown"),
+                    "rationale": entry.get("note", ""),
                 }
 
     return meta
@@ -640,11 +658,10 @@ def _get_alpaca_market_data():
 
 
 def get_live_prices(tickers):
-    """Fetch live intraday prices — Tiingo IEX primary, yfinance fallback.
+    """Fetch live prices via Tiingo IEX (US equities only, no yfinance fallback).
 
-    For US equities (no .AX / .HK suffix): uses Tiingo IEX (real-time
-    composite prices), falls back to yfinance on failure or missing data.
-    For non-US tickers: uses yfinance directly (Tiingo is US-only).
+    For US equities (no .AX / .HK suffix): uses Tiingo IEX composite prices.
+    Non-US tickers (.AX, .HK, ^index, futures) fall back to cache prices.
 
     Returns dict of ticker -> {"close": float, "prev_close": float|None, "date": str, "live": bool}
     """
@@ -654,7 +671,7 @@ def get_live_prices(tickers):
 
     ticker_list = list(tickers)
 
-    # Split tickers by market: US equities → Tiingo, ASX/HK → yfinance
+    # Split tickers by market: US equities → Tiingo, non-US → cache only
     us_tickers = [t for t in ticker_list
                   if not t.endswith(".AX") and not t.endswith(".HK")
                   and not t.startswith("^") and "=F" not in t]
@@ -662,7 +679,7 @@ def get_live_prices(tickers):
                       if t.endswith(".AX") or t.endswith(".HK")
                       or t.startswith("^") or "=F" in t]
 
-    # ── US tickers via Tiingo IEX (primary) ──────────────────────
+    # ── US tickers via Tiingo IEX ────────────────────────────────
     if us_tickers:
         try:
             from data.tiingo import get_tiingo_client
@@ -681,38 +698,15 @@ def get_live_prices(tickers):
                         "live":       True,
                     }
                 logger.debug("Tiingo IEX: %d/%d US tickers", len(prices), len(us_tickers))
+            else:
+                print("  WARN: Tiingo client unavailable — check TIINGO_API_TOKEN")
         except Exception as e:
             print(f"  WARN: Tiingo live price fetch failed: {e}")
 
-    # ── Fallback to yfinance for missing US tickers + all non-US ─
-    yf_tickers = [t for t in us_tickers if t not in prices] + non_us_tickers
-    if yf_tickers:
-        try:
-            import yfinance as yf
-            data = yf.download(yf_tickers, period="2d", interval="15m",
-                               progress=False, threads=True)
-            if not data.empty:
-                for t in yf_tickers:
-                    try:
-                        if len(yf_tickers) > 1:
-                            series = data["Close"][t].dropna()
-                        else:
-                            series = data["Close"].dropna()
-                        if len(series) == 0:
-                            continue
-                        last_price = float(series.iloc[-1])
-                        prev_price = float(series.iloc[-2]) if len(series) > 1 else None
-                        last_ts = series.index[-1]
-                        prices[t] = {
-                            "close":      last_price,
-                            "prev_close": prev_price,
-                            "date":       str(last_ts),
-                            "live":       True,
-                        }
-                    except Exception:
-                        pass
-        except Exception as e:
-            print(f"  WARN: yfinance live price fetch failed: {e}")
+    # ── Non-US tickers: cache prices only (Tiingo is US-only) ────
+    if non_us_tickers:
+        cache_prices = get_cache_prices(non_us_tickers)
+        prices.update(cache_prices)
 
     return prices
 
@@ -831,91 +825,124 @@ def parse_tasks():
     return tasks
 
 
-def _get_benchmark_curve(ticker: str, eq_curve: list, starting_equity: float) -> list:
-    """Build a benchmark equity curve scaled to the same starting equity.
+def _get_benchmark_curve(ticker: str, eq_curve: list, starting_equity: float) -> tuple:
+    """Build a deposit-adjusted benchmark equity curve using Tiingo.
 
-    Uses cached parquet data so no extra API calls needed.
-    The benchmark is scaled so that on the first equity curve date,
-    its value equals starting_equity — making visual comparison fair.
+    Answers the question: "What would my portfolio be worth if I had put
+    all the same money (including deposits/withdrawals) into the benchmark
+    instead?"
+
+    Primary data source: Tiingo EOD API (same source as dashboard prices).
+    Extends to today's live price via Tiingo IEX when EOD hasn't settled.
+    Falls back to parquet cache only if Tiingo is unavailable.
     """
     if not eq_curve:
         return []
 
     start_date = eq_curve[0]["date"]
+    end_date = eq_curve[-1]["date"]
 
-    # Load benchmark from cache
-    for subdir in ["sp500", "asx", "hk", ""]:
-        cache = PROJECT_ROOT / "data" / "cache" / subdir if subdir else PROJECT_ROOT / "data" / "cache"
-        fp = cache / (ticker.replace(".", "_") + ".parquet")
-        if fp.exists():
-            try:
-                df = pd.read_parquet(fp)
+    # ── Build deposit schedule from equity curve ────────────────
+    # deposit = (equity_delta) - (pnl_delta).  Use a $500 threshold
+    # to avoid false positives from PnL recording artifacts.
+    DEPOSIT_THRESHOLD = 500
+    deposits = {}  # date -> deposit amount
+    for i in range(1, len(eq_curve)):
+        equity_delta = eq_curve[i]["equity"] - eq_curve[i - 1]["equity"]
+        pnl_delta = eq_curve[i].get("pnl", 0) - eq_curve[i - 1].get("pnl", 0)
+        implied_deposit = equity_delta - pnl_delta
+        if abs(implied_deposit) >= DEPOSIT_THRESHOLD:
+            deposits[eq_curve[i]["date"]] = round(implied_deposit, 2)
+    if deposits:
+        logger.info("Benchmark deposit adjustments: %s", deposits)
 
-                # Find the base price on or just before the start date
-                on_or_before = df[df.index <= start_date]
-                if len(on_or_before) == 0:
+    # ── Load daily prices from Tiingo (primary) ─────────────────
+    daily_prices = []  # [(date_str, close_float), ...]
+    tiingo = None
+    try:
+        from data.tiingo import get_tiingo_client
+        tiingo = get_tiingo_client()
+    except Exception:
+        pass
+
+    if tiingo:
+        try:
+            bars = tiingo.get_daily_prices(ticker, start_date, end_date)
+            daily_prices = [(b["date"], b["close"]) for b in bars if b["close"] > 0]
+        except Exception as e:
+            logger.warning("Benchmark Tiingo EOD failed for %s: %s", ticker, e)
+
+    # ── Fallback to parquet cache if Tiingo returned nothing ────
+    if not daily_prices:
+        logger.info("Benchmark: Tiingo unavailable, falling back to parquet cache")
+        for subdir in ["sp500", "asx", "hk", ""]:
+            cache = PROJECT_ROOT / "data" / "cache" / subdir if subdir else PROJECT_ROOT / "data" / "cache"
+            fp = cache / (ticker.replace(".", "_") + ".parquet")
+            if fp.exists():
+                try:
+                    df = pd.read_parquet(fp)
+                    on_or_before = df[df.index <= start_date]
+                    if len(on_or_before) == 0:
+                        continue
+                    from_date = str(on_or_before.index[-1].date())
+                    df = df[df.index >= from_date]
+                    daily_prices = [(str(idx.date()), float(row["close"]))
+                                    for idx, row in df.iterrows()
+                                    if float(row["close"]) > 0]
+                    break
+                except Exception:
                     continue
-                base_price = float(on_or_before["close"].iloc[-1])
 
-                # Include data from start date onward (use on_or_before's
-                # last row as the anchor point even if it's the day before)
-                from_date = str(on_or_before.index[-1].date())
-                df = df[df.index >= from_date]
-                if len(df) == 0:
-                    continue
+    if not daily_prices:
+        return []
 
-                benchmark = []
-                for idx, row in df.iterrows():
-                    d = str(idx.date())
-                    scaled = round(float(row["close"]) / base_price * starting_equity, 2)
-                    benchmark.append({"date": d, "equity": scaled})
+    # ── Extend to today with Tiingo IEX (intraday) if needed ───
+    last_eod_date = daily_prices[-1][0]
+    if last_eod_date < end_date and tiingo:
+        try:
+            quote = tiingo.get_quotes([ticker])
+            q = quote.get(ticker, {})
+            live_price = q.get("price", 0)
+            if live_price > 0:
+                # Use the equity curve's last date for the live price point
+                daily_prices.append((end_date, live_price))
+                logger.info("Benchmark %s: extended to %s via Tiingo IEX ($%.2f)",
+                            ticker, end_date, live_price)
+        except Exception as e:
+            logger.debug("Benchmark IEX extension failed: %s", e)
 
-                # Extend benchmark with live prices for dates beyond cache.
-                # The cache may lag by 1-2 days — fetch actual recent closes
-                # from yfinance so the benchmark tracks real returns.
-                if benchmark and eq_curve:
-                    last_bench_date = benchmark[-1]["date"]
-                    missing_dates = [pt["date"] for pt in eq_curve
-                                     if pt["date"] > last_bench_date]
-                    if missing_dates:
-                        try:
-                            import yfinance as yf
-                            recent = yf.download(
-                                ticker, period="5d", interval="1d",
-                                progress=False, auto_adjust=True,
-                            )
-                            if not recent.empty:
-                                # Handle both flat and MultiIndex columns
-                                close_s = recent["Close"]
-                                if hasattr(close_s, "columns"):
-                                    close_s = close_s.iloc[:, 0]
-                                for ridx, val in close_s.dropna().items():
-                                    rd = str(ridx.date())
-                                    if rd > last_bench_date:
-                                        scaled = round(
-                                            float(val) / base_price
-                                            * starting_equity, 2,
-                                        )
-                                        benchmark.append(
-                                            {"date": rd, "equity": scaled}
-                                        )
-                                logger.info(
-                                    "Benchmark %s: extended %d days via yfinance",
-                                    ticker, len(benchmark) - len(df),
-                                )
-                        except Exception as e:
-                            # Last resort: forward-fill so there's *some* line
-                            logger.debug("Benchmark live fetch failed: %s", e)
-                            last_val = benchmark[-1]["equity"]
-                            for date in missing_dates:
-                                benchmark.append(
-                                    {"date": date, "equity": last_val}
-                                )
+    # ── Build deposit-adjusted benchmark curve ──────────────────
+    # Start at the first equity curve value so both lines begin at
+    # the same point on the chart.
+    bench_value = eq_curve[0]["equity"]
+    prev_price = daily_prices[0][1]
+    benchmark = [{"date": daily_prices[0][0], "equity": round(bench_value, 2)}]
 
-                return benchmark
-            except Exception:
-                continue
-    return []
+    # Track pure benchmark return (no deposits) for benchmark_return_pct
+    pure_bench_value = bench_value
+
+    for i in range(1, len(daily_prices)):
+        d, price = daily_prices[i]
+
+        # Apply daily benchmark return
+        if prev_price > 0:
+            daily_ret = price / prev_price
+            bench_value *= daily_ret
+            pure_bench_value *= daily_ret
+
+        # Add deposit/withdrawal on this date
+        if d in deposits:
+            bench_value += deposits[d]
+
+        benchmark.append({"date": d, "equity": round(bench_value, 2)})
+        prev_price = price
+
+    # Compute the pure benchmark market return (excludes deposits)
+    pure_return_pct = round(
+        (pure_bench_value / eq_curve[0]["equity"] - 1) * 100, 2
+    ) if eq_curve[0]["equity"] > 0 else 0.0
+
+    return benchmark, pure_return_pct
 
 
 def generate_market(market_id: str, broker_cache: dict | None = None,
@@ -992,9 +1019,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
                 cp = tq["price"]
                 prev_close = tq.get("prev_close", 0) or ep
             else:
-                # No Tiingo data — use entry_price (shows 0 P&L, not wrong P&L)
-                cp = ep
-                prev_close = ep
+                # No Tiingo data — use broker's current_price (already from Alpaca).
+                # Only fall back to entry_price if broker price is also missing.
+                broker_cp = p.get("current_price", 0)
+                cp = broker_cp if broker_cp > 0 else ep
+                prev_close = p.get("lastday_price", 0) or ep
 
             p["current_price"] = round(cp, 4)
             p["market_value"] = round(cp * sh, 2)
@@ -1183,7 +1212,11 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
 
     # Update equity curve for any market with real data (broker or cached).
     # Use our Tiingo-computed equity (broker_equity is already Tiingo-based).
-    if data_source in ("broker", "cached"):
+    # Skip weekends — markets are closed and stale data pollutes the chart.
+    from datetime import date as _date_cls
+    _is_weekend = _date_cls.fromisoformat(today_str).weekday() >= 5
+
+    if data_source in ("broker", "cached") and not _is_weekend:
         chart_equity = equity
 
         # Compute total P&L for deposit-adjusted return calculation.
@@ -1212,7 +1245,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
 
     # ── Benchmark (SPY for sp500, IOZ.AX for asx) ──────────
     benchmark_ticker = config.get("universe", {}).get("benchmark_ticker", "SPY")
-    benchmark_curve = _get_benchmark_curve(benchmark_ticker, eq_curve, seq)
+    benchmark_curve, benchmark_pure_return = _get_benchmark_curve(benchmark_ticker, eq_curve, seq)
 
     # Risk
     risk_cfg = config.get("risk", {})
@@ -1267,9 +1300,7 @@ def generate_market(market_id: str, broker_cache: dict | None = None,
         "equity_curve": eq_curve,
         "benchmark_curve": benchmark_curve,
         "benchmark_ticker": benchmark_ticker,
-        "benchmark_return_pct": round(
-            (benchmark_curve[-1]["equity"] / seq - 1) * 100, 2
-        ) if benchmark_curve and seq > 0 else 0,
+        "benchmark_return_pct": benchmark_pure_return,
         "plan": plan_data,
         "closed_trades": closed,
         "risk": {
@@ -3005,8 +3036,11 @@ def generate():
             combined_starting = round(_curve_starting, 2)
 
     # ── Benchmark (SPY) ──────────────────────────────────────────
+    # Use the first equity curve value (not starting_equity) so both
+    # lines start at the same point on the chart.
+    _bench_start = combined_curve[0]["equity"] if combined_curve else combined_starting
     combined_bench, combined_bench_label = _merge_benchmark_curves(
-        market_data, combined_starting_usd=combined_starting
+        market_data, combined_starting_usd=_bench_start
     )
 
     # ── P&L ─────────────────────────────────────────────────────
@@ -3076,9 +3110,7 @@ def generate():
         "equity_curve": combined_curve,
         "benchmark_curve": combined_bench,
         "benchmark_ticker": combined_bench_label,
-        "benchmark_return_pct": round(
-            (combined_bench[-1]["equity"] / combined_starting - 1) * 100, 2
-        ) if combined_bench and combined_starting > 0 else 0,
+        "benchmark_return_pct": sp500_data.get("benchmark_return_pct", 0),
         "plan": sp500_data.get("plan"),
         "closed_trades": all_closed,
         "risk": sp500_data.get("risk", {}),
@@ -3355,9 +3387,66 @@ def generate_simple_dashboard_data() -> dict:
     # ── Broker data: positions, account ──────────────────────────
     acct_data, broker_positions, broker_ok, _ = get_live_broker_data(config)
 
+    # ── Enrich positions with Tiingo prices and recompute equity ──
+    # get_live_broker_data() returns raw Alpaca prices which can be stale.
+    # Fetch authoritative prices from Tiingo and recompute all P&L values.
+    if broker_ok and broker_positions:
+        pos_tickers = [p.get("ticker", "") for p in broker_positions if p.get("ticker")]
+        tiingo_prices = {}
+        try:
+            from data.tiingo import get_tiingo_client
+            tiingo = get_tiingo_client()
+            if tiingo:
+                tiingo_prices = tiingo.get_quotes(pos_tickers)
+        except Exception as e:
+            logger.warning("Tiingo price fetch failed in _build_simple_data: %s", e)
+
+        # Override ALL position prices and P&L with Tiingo data
+        for p in broker_positions:
+            t = p.get("ticker", "")
+            ep = p.get("entry_price", 0)
+            sh = p.get("shares", 0)
+            tq = tiingo_prices.get(t)
+
+            if tq and tq.get("price", 0) > 0:
+                cp = tq["price"]
+                prev_close = tq.get("prev_close", 0) or ep
+            else:
+                # No Tiingo data — use broker's current_price (already from Alpaca).
+                broker_cp = p.get("current_price", 0)
+                cp = broker_cp if broker_cp > 0 else ep
+                prev_close = p.get("lastday_price", 0) or ep
+
+            p["current_price"] = round(cp, 4)
+            p["market_value"] = round(cp * sh, 2)
+            p["unrealized_pnl"] = round((cp - ep) * sh, 2)
+            p["unrealized_pnl_pct"] = round((cp - ep) / ep * 100, 2) if ep > 0 else 0
+            p["today_pnl"] = round((cp - prev_close) * sh, 2) if prev_close > 0 else 0
+            p["cost_basis"] = round(ep * sh, 2)
+
+        # Recompute account-level equity from Tiingo-enriched positions
+        tiingo_market_value = sum(p.get("market_value", 0) for p in broker_positions)
+        tiingo_cash = acct_data.get("cash", 0) if acct_data else 0
+        tiingo_equity = round(tiingo_cash + tiingo_market_value, 2)
+
+        # Update acct_data with Tiingo-recomputed equity
+        if acct_data:
+            acct_data["equity"] = tiingo_equity
+            acct_data["market_value"] = round(tiingo_market_value, 2)
+
     # ── Rich Alpaca API data ─────────────────────────────────────
     account_details = get_alpaca_account_details()
     portfolio_history = get_alpaca_portfolio_history(period="3M")
+
+    # Trim portfolio history to start at the equity curve's first date.
+    # Alpaca history includes pre-deposit days which create a misleading
+    # spike on the chart.
+    _eq_curve_file = PROJECT_ROOT / "logs" / "equity_curve_sp500.json"
+    _eq_curve_raw = safe_json(_eq_curve_file, [])
+    if _eq_curve_raw and portfolio_history:
+        _curve_start = _eq_curve_raw[0]["date"]
+        portfolio_history = [p for p in portfolio_history if p["date"] >= _curve_start]
+
     recent_orders = get_alpaca_recent_orders(limit=20)
     market_clock = get_alpaca_market_clock()
 
@@ -3455,10 +3544,15 @@ def generate_simple_dashboard_data() -> dict:
     strategy_performance = _compute_strategy_performance(closed_trades)
 
     # ── Account section ───────────────────────────────────────────
-    equity = float(account_details.get("equity") or
-                   (acct_data.get("equity", 0) if acct_data else 0))
-    cash = float(account_details.get("cash") or
-                 (acct_data.get("cash", 0) if acct_data else 0))
+    # Prioritize acct_data (Tiingo-recomputed) over account_details (raw Alpaca)
+    # acct_data comes from get_live_broker_data() which enriches positions with
+    # Tiingo prices and recomputes equity = cash + Tiingo market values.
+    # account_details comes from get_alpaca_account_details() which has raw
+    # Alpaca equity that can be stale/incorrect.
+    equity = float(acct_data.get("equity", 0) if acct_data else
+                   account_details.get("equity", 0))
+    cash = float(acct_data.get("cash", 0) if acct_data else
+                 account_details.get("cash", 0))
     last_equity = float(account_details.get("last_equity", equity) or equity)
     equity_change = float(account_details.get("equity_change_today",
                                                round(equity - last_equity, 2)))
@@ -3467,6 +3561,7 @@ def generate_simple_dashboard_data() -> dict:
                                                     if last_equity > 0 else 0))
     initial_margin = float(account_details.get("initial_margin", 0))
     maintenance_margin = float(account_details.get("maintenance_margin", 0))
+    # Use Tiingo-recomputed equity for margin calculation
     margin_usage_pct = round(maintenance_margin / equity * 100, 2) if equity > 0 else 0
 
     account_created = account_details.get("account_created", "")
@@ -3486,7 +3581,8 @@ def generate_simple_dashboard_data() -> dict:
         "cash":                 round(cash, 2),
         "buying_power":         round(float(account_details.get("buying_power",
                                              acct_data.get("buying_power", cash) if acct_data else cash)), 2),
-        "long_market_value":    round(float(account_details.get("long_market_value", total_market_value)), 2),
+        "long_market_value":    round(float(acct_data.get("market_value", total_market_value) if acct_data else
+                                            account_details.get("long_market_value", total_market_value)), 2),
         "last_equity":          round(last_equity, 2),
         "equity_change":        round(equity_change, 2),
         "equity_change_pct":    round(equity_change_pct, 2),
@@ -3511,10 +3607,7 @@ def generate_simple_dashboard_data() -> dict:
     # Use portfolio_history dates as the eq_curve anchor for alignment
     eq_curve_for_bench = [{"date": pt["date"], "equity": pt["equity"]}
                           for pt in portfolio_history] if portfolio_history else []
-    spy_curve = _get_benchmark_curve("SPY", eq_curve_for_bench, seq)
-    spy_return_pct = 0.0
-    if spy_curve and seq > 0:
-        spy_return_pct = round((spy_curve[-1]["equity"] / seq - 1) * 100, 2)
+    spy_curve, spy_return_pct = _get_benchmark_curve("SPY", eq_curve_for_bench, seq)
 
     benchmark_section = {
         "ticker": "SPY",

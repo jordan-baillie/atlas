@@ -231,6 +231,24 @@ def _fetch_snapshot(client, data_client) -> dict:
     # Sort by |unrealized_pnl| descending
     positions_data.sort(key=lambda x: abs(x["unrealized_pnl"]), reverse=True)
 
+    # ── Recompute account-level values from Tiingo-enriched positions ───
+    # Alpaca's account.equity and account.long_market_value use Alpaca prices,
+    # which can be stale or incorrect. Recompute using Tiingo market values.
+    long_market_value = sum(p["market_value"] for p in positions_data)
+    equity = round(account_data["cash"] + long_market_value, 2)
+    total_pnl = round(equity - seq, 2)
+    total_pnl_pct = round(total_pnl / seq * 100, 2) if seq > 0 else 0.0
+    margin_usage_pct = round(account_data["maintenance_margin"] / equity * 100, 2) if equity > 0 else 0.0
+
+    # Update account_data with recomputed values
+    account_data.update({
+        "equity": equity,
+        "long_market_value": round(long_market_value, 2),
+        "total_pnl": total_pnl,
+        "total_pnl_pct": total_pnl_pct,
+        "margin_usage_pct": margin_usage_pct,
+    })
+
     # Orders (last 20)
     from alpaca.trading.requests import GetOrdersRequest
     from alpaca.trading.enums import QueryOrderStatus
@@ -267,12 +285,12 @@ def _fetch_snapshot(client, data_client) -> dict:
         "timestamp": clock.timestamp.isoformat() if clock.timestamp else now.isoformat(),
     }
 
-    # Summary
+    # Summary (use recomputed account values)
     summary = {
-        "equity": round(equity, 2),
+        "equity": account_data["equity"],
         "today_pnl": round(today_pnl, 2),
-        "total_pnl": total_pnl,
-        "total_pnl_pct": total_pnl_pct,
+        "total_pnl": account_data["total_pnl"],
+        "total_pnl_pct": account_data["total_pnl_pct"],
         "open_positions": len(positions_data),
     }
 

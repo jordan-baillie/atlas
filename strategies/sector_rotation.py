@@ -59,6 +59,7 @@ class SectorRotation(BaseStrategy):
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 3.0)
         self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 3.5)
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 0.0)  # 0 = disabled
         self.max_hold_days = strat_cfg.get("max_hold_days", 25)
         self.min_sector_stocks = strat_cfg.get("min_sector_stocks", 3)
         self.stocks_per_sector = strat_cfg.get("stocks_per_sector", 2)
@@ -67,7 +68,7 @@ class SectorRotation(BaseStrategy):
         self._logger.info(
             f"SectorRotation init: momentum={self.sector_momentum_period}, "
             f"top={self.top_sectors}, bottom={self.bottom_sectors}, "
-            f"sectors={len(self.sector_map)}"
+            f"profit_target={self.profit_target_atr_mult}x, sectors={len(self.sector_map)}"
         )
 
     @property
@@ -199,6 +200,12 @@ class SectorRotation(BaseStrategy):
                 if stop_price <= 0 or stop_price >= entry_price:
                     continue
 
+                # Take profit: entry + profit_target_atr_mult * ATR (0 = disabled)
+                if self.profit_target_atr_mult > 0:
+                    take_profit = round(entry_price + (self.profit_target_atr_mult * atr), 4)
+                else:
+                    take_profit = None
+
                 try:
                     pos = calc_position_size(
                         equity=equity, risk_pct=risk_pct,
@@ -231,7 +238,7 @@ class SectorRotation(BaseStrategy):
                     signal = Signal(
                         ticker=ticker, strategy=self.name,
                         direction="long", entry_price=entry_price,
-                        stop_price=stop_price, take_profit=None,
+                        stop_price=stop_price, take_profit=take_profit,
                         position_size=position_size,
                         position_value=position_value,
                         risk_amount=risk_amount,
@@ -301,7 +308,19 @@ class SectorRotation(BaseStrategy):
                 })
                 continue
 
-            # Exit 2: Trailing stop
+            # Exit 2: Take-profit (before trailing stop)
+            if self.profit_target_atr_mult > 0:
+                take_profit = pos.get("take_profit")
+                if take_profit and today_close >= take_profit:
+                    exit_recs.append({
+                        "ticker": ticker,
+                        "reason": "take_profit",
+                        "exit_price": take_profit,
+                        "details": f"TP hit at {take_profit:.2f} ({self.profit_target_atr_mult}x ATR)"
+                    })
+                    continue  # Skip other checks for this position
+
+            # Exit 3: Trailing stop
             if entry_date:
                 try:
                     entry_dt = pd.Timestamp(entry_date)
@@ -323,7 +342,7 @@ class SectorRotation(BaseStrategy):
                 except Exception:
                     pass
 
-            # Exit 3: Max hold period
+            # Exit 4: Max hold period
             if days_held >= self.max_hold_days:
                 exit_recs.append({
                     "ticker": ticker, "reason": "time_exit",

@@ -46,6 +46,7 @@ class TrendFollowing(BaseStrategy):
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 2.0)
         self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 3.0)
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 0.0)  # 0 = disabled
         self.max_hold_days = strat_cfg.get("max_hold_days", 7)
         # Phase 7A: Volume confirmation parameters
         vol_cfg = strat_cfg.get("volume", {})
@@ -58,7 +59,8 @@ class TrendFollowing(BaseStrategy):
         self._logger.info(
             f"TrendFollowing initialized: fast_ma={self.fast_ma_period}, "
             f"slow_ma={self.slow_ma_period}, pullback={self.pullback_pct*100}%, "
-            f"vol_boost={self.vol_boost_threshold}x, vol_min={self.vol_min_ratio}x"
+            f"vol_boost={self.vol_boost_threshold}x, vol_min={self.vol_min_ratio}x, "
+            f"profit_target={self.profit_target_atr_mult}x"
         )
 
     @property
@@ -197,6 +199,12 @@ class TrendFollowing(BaseStrategy):
                     self._logger.debug(f"{ticker}: stop price <= 0, skipping")
                     continue
 
+                # Take profit: entry + profit_target_atr_mult * ATR (0 = disabled)
+                if self.profit_target_atr_mult > 0:
+                    take_profit = round(entry_price + (self.profit_target_atr_mult * current_atr), 4)
+                else:
+                    take_profit = None
+
                 # Position sizing
                 try:
                     pos = calc_position_size(
@@ -254,7 +262,7 @@ class TrendFollowing(BaseStrategy):
                     direction="long",
                     entry_price=entry_price,
                     stop_price=round(stop_price, 4),
-                    take_profit=None,  # trailing stop only
+                    take_profit=take_profit,
                     position_size=pos["shares"],
                     position_value=pos["position_value"],
                     risk_amount=pos["total_risk"],
@@ -366,7 +374,18 @@ class TrendFollowing(BaseStrategy):
                             f"Close=${today_close:.2f}, held {days_held} days."
                         ),
                     })
-                # 2. Trend reversal: fast MA < slow MA
+                # 2. Take-profit (before trailing stop)
+                elif self.profit_target_atr_mult > 0:
+                    take_profit = pos.get("take_profit")
+                    if take_profit and today_close >= take_profit:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "take_profit",
+                            "exit_price": take_profit,
+                            "details": f"TP hit at {take_profit:.2f} ({self.profit_target_atr_mult}x ATR)"
+                        })
+                        continue  # Skip other checks for this position
+                # 3. Trend reversal: fast MA < slow MA
                 # 2-day confirmed reversal: require fast < slow on both current and previous day
                 elif (not pd.isna(current_fast) and not pd.isna(current_slow)
                       and current_fast < current_slow
@@ -383,7 +402,7 @@ class TrendFollowing(BaseStrategy):
                             f"Close=${today_close:.2f}, held {days_held} days."
                         ),
                     })
-                # 3. Trailing stop hit
+                # 4. Trailing stop hit
                 elif today_close <= trailing_stop:
                     exits.append({
                         "ticker": ticker,
@@ -395,7 +414,7 @@ class TrendFollowing(BaseStrategy):
                             f"Held {days_held} days."
                         ),
                     })
-                # 4. Time exit
+                # 5. Time exit
                 elif days_held >= self.max_hold_days:
                     exits.append({
                         "ticker": ticker,

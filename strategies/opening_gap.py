@@ -38,6 +38,7 @@ class OpeningGap(BaseStrategy):
         self.vol_surge_threshold = strat_cfg.get("vol_surge_threshold", 1.5)
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 2.5)
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 0.0)  # 0 = disabled
         self.sma_exit_period = strat_cfg.get("sma_exit_period", 5)
         self.ibs_exit_threshold = strat_cfg.get("ibs_exit_threshold", 0.8)
         self.max_hold_days = strat_cfg.get("max_hold_days", 7)
@@ -53,12 +54,12 @@ class OpeningGap(BaseStrategy):
 
         self._logger.info(
             "OpeningGap initialized: gap_thresh=%.3f, ibs_confirm=%.2f, "
-            "rsi14_max=%d, vol_surge=%.1fx, atr=%d, stop=%.1fx, "
+            "rsi14_max=%d, vol_surge=%.1fx, atr=%d, stop=%.1fx, profit_target=%.1fx, "
             "sma_exit=%d, ibs_exit=%.2f, max_hold=%d, "
             "sma200_filter=%s, earnings_blackout=%s",
             self.gap_threshold, self.ibs_confirm, self.rsi14_max,
             self.vol_surge_threshold, self.atr_period,
-            self.atr_stop_mult, self.sma_exit_period,
+            self.atr_stop_mult, self.profit_target_atr_mult, self.sma_exit_period,
             self.ibs_exit_threshold, self.max_hold_days,
             'ON' if self.sma200_filter else 'OFF',
             'ON' if self.earnings_blackout_enabled else 'OFF',
@@ -235,8 +236,11 @@ class OpeningGap(BaseStrategy):
                 if stop_price <= 0:
                     continue
 
-                # No fixed take profit (exits via SMA/IBS/time)
-                take_profit = None
+                # Take profit: entry + profit_target_atr_mult * ATR (0 = disabled, rely on signal exits)
+                if self.profit_target_atr_mult > 0:
+                    take_profit = round(entry_price + (self.profit_target_atr_mult * current_atr), 4)
+                else:
+                    take_profit = None
 
                 # Position sizing
                 try:
@@ -291,15 +295,16 @@ class OpeningGap(BaseStrategy):
                     if vol_surge
                     else "Volume %.1fx avg" % current_vol_ratio
                 )
+                tp_note = f" TP $%.2f (+%.1fx ATR)." % (take_profit, self.profit_target_atr_mult) if take_profit else ""
 
                 rationale = (
                     "%s gap down %.2f%% (open $%.2f vs prev close $%.2f). "
                     "Oversold confirm: %s. RSI(14)=%.1f. %s. "
-                    "Stop $%.2f (-%.1fx ATR). Exit via SMA(%d)/IBS/time(%dd)."
+                    "Stop $%.2f (-%.1fx ATR).%s Exit via SMA(%d)/IBS/time(%dd)."
                     % (
                         ticker, gap_pct * 100, today_open, yesterday_close,
                         confirm_type, current_rsi, vol_note,
-                        stop_price, self.atr_stop_mult,
+                        stop_price, self.atr_stop_mult, tp_note,
                         self.sma_exit_period, self.max_hold_days,
                     )
                 )
@@ -378,7 +383,13 @@ class OpeningGap(BaseStrategy):
                 if current_price <= stop_price:
                     exit_reason = f"Stop loss: {current_price:.4f} <= {stop_price:.4f}"
 
-                # 2. SMA exit: price closes above SMA (mean reverted)
+                # 2. Take profit hit
+                if exit_reason is None and self.profit_target_atr_mult > 0:
+                    take_profit = pos.get("take_profit")
+                    if take_profit and current_price >= take_profit:
+                        exit_reason = f"Take profit: {current_price:.4f} >= TP {take_profit:.4f} ({self.profit_target_atr_mult}x ATR)"
+
+                # 3. SMA exit: price closes above SMA (mean reverted)
                 if exit_reason is None:
                     if self._precomputed:
                         sma_val = float(df["_og_sma_exit"].iloc[-1])
@@ -387,7 +398,7 @@ class OpeningGap(BaseStrategy):
                     if not np.isnan(sma_val) and current_price > sma_val:
                         exit_reason = f"SMA exit: {current_price:.4f} > SMA({self.sma_exit_period})={sma_val:.4f}"
 
-                # 3. IBS exit: high IBS indicates overbought intraday
+                # 4. IBS exit: high IBS indicates overbought intraday
                 if exit_reason is None:
                     if self._precomputed:
                         current_ibs_val = float(df["_og_ibs"].iloc[-1])
@@ -398,7 +409,7 @@ class OpeningGap(BaseStrategy):
                     if not np.isnan(current_ibs_val) and current_ibs_val > self.ibs_exit_threshold:
                         exit_reason = f"IBS exit: IBS={current_ibs_val:.4f} > {self.ibs_exit_threshold}"
 
-                # 4. Time exit
+                # 5. Time exit
                 if exit_reason is None and entry_date is not None:
                     if hasattr(entry_date, "date"):
                         entry_dt = entry_date

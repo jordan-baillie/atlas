@@ -602,4 +602,17 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as exc:
+        # Top-level crash guard — alert via Telegram so cron failures aren't silent
+        try:
+            from utils.telegram import send_message
+            send_message(
+                f"🚨 <b>reconcile CRASHED</b>\n\n"
+                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"Check logs/reconciliation/ for details"
+            )
+        except Exception:
+            pass
+        raise

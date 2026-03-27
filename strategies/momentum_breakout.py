@@ -48,6 +48,7 @@ class MomentumBreakout(BaseStrategy):
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 3.5)
         self.trailing_stop_atr_mult = strat_cfg.get("trailing_stop_atr_mult", 4.0)
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 0.0)  # 0 = disabled
         self.max_hold_days = strat_cfg.get("max_hold_days", 20)
         self.trend_ma_period = strat_cfg.get("trend_ma_period", 50)
         # Risk-adjusted / idiosyncratic momentum signal modes
@@ -57,7 +58,7 @@ class MomentumBreakout(BaseStrategy):
         self._logger.info(
             f"MomentumBreakout initialized: lookback={self.lookback_days}, "
             f"atr_stop={self.atr_stop_mult}, trailing={self.trailing_stop_atr_mult}, "
-            f"trend_ma={self.trend_ma_period}"
+            f"profit_target={self.profit_target_atr_mult}x, trend_ma={self.trend_ma_period}"
         )
         self._logger.info(
             f"MomentumBreakout: signal_mode={self.signal_mode}, "
@@ -150,6 +151,12 @@ class MomentumBreakout(BaseStrategy):
                 stop_price = entry_price - (self.atr_stop_mult * current_atr)
                 if stop_price <= 0:
                     continue
+
+                # Take profit: entry + profit_target_atr_mult * ATR (0 = disabled)
+                if self.profit_target_atr_mult > 0:
+                    take_profit = round(entry_price + (self.profit_target_atr_mult * current_atr), 4)
+                else:
+                    take_profit = None
 
                 # Position sizing
                 try:
@@ -273,7 +280,7 @@ class MomentumBreakout(BaseStrategy):
                     direction="long",
                     entry_price=entry_price,
                     stop_price=round(stop_price, 4),
-                    take_profit=None,
+                    take_profit=take_profit,
                     position_size=pos["shares"],
                     position_value=pos["position_value"],
                     risk_amount=pos["total_risk"],
@@ -354,6 +361,17 @@ class MomentumBreakout(BaseStrategy):
                             f"Close=${today_close:.2f}, held {days_held} days."
                         ),
                     })
+                # Check take-profit (before trailing stop)
+                elif self.profit_target_atr_mult > 0:
+                    take_profit = pos.get("take_profit")
+                    if take_profit and today_close >= take_profit:
+                        exits.append({
+                            "ticker": ticker,
+                            "reason": "take_profit",
+                            "exit_price": take_profit,
+                            "details": f"TP hit at {take_profit:.2f} ({self.profit_target_atr_mult}x ATR)"
+                        })
+                        continue  # Skip other checks for this position
                 elif today_close <= trailing_stop:
                     exits.append({
                         "ticker": ticker,

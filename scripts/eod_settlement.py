@@ -41,7 +41,7 @@ def load_config(market_id="asx"):
 
 
 def fetch_closing_prices(tickers, market_id=None):
-    """Fetch latest OHLC prices for held tickers.
+    """Fetch latest OHLC prices for held tickers via Tiingo IEX.
 
     Returns three dicts:
       prices  - closing prices  (used for equity, MAE/MFE, report)
@@ -51,33 +51,33 @@ def fetch_closing_prices(tickers, market_id=None):
     Using intraday lows/highs ensures a stop or TP that was breached
     during the session is caught even if the close recovered above/below
     the trigger level — matching the backtest engine behaviour.
-    """
-    import pandas as pd
-    from data.ingest import download_universe
 
-    log.info(f"Fetching OHLC prices for {len(tickers)} tickers")
+    Data source: Tiingo IEX only (no yfinance/Alpaca fallback).
+    """
+    from data.tiingo import get_tiingo_client
+
+    log.info(f"Fetching OHLC prices from Tiingo for {len(tickers)} tickers")
     prices = {}  # close prices
     lows   = {}  # intraday lows  (stop-loss)
     highs  = {}  # intraday highs (take-profit)
 
-    # Download fresh data and use returned DataFrames directly.
-    # use_cache=True ensures the cache is also updated for other consumers.
-    downloaded = download_universe(tickers, use_cache=True, market_id=market_id)
+    tiingo = get_tiingo_client()
+    if tiingo is None:
+        log.error("Tiingo client unavailable — check TIINGO_API_TOKEN in ~/.atlas-secrets.json")
+        return prices, lows, highs
+
+    quotes = tiingo.get_quotes(tickers)
 
     for ticker in tickers:
-        df = downloaded.get(ticker)
-        if df is not None and not df.empty and "close" in df.columns:
-            data_age = (pd.Timestamp.now() - df.index[-1]).days
-            if data_age > 2:
-                log.warning(f"STALE DATA: {ticker} latest data is {data_age} days old ({df.index[-1].date()})")
-            last = df.iloc[-1]
-            prices[ticker] = float(last["close"])
-            lows[ticker]   = float(last["low"])  if "low"  in df.columns else prices[ticker]
-            highs[ticker]  = float(last["high"]) if "high" in df.columns else prices[ticker]
+        q = quotes.get(ticker)
+        if q and q.get("price", 0) > 0:
+            prices[ticker] = q["price"]
+            lows[ticker]   = q.get("low", q["price"]) or q["price"]
+            highs[ticker]  = q.get("high", q["price"]) or q["price"]
         else:
-            log.warning(f"No data returned for {ticker}")
+            log.warning(f"No Tiingo data for {ticker}")
 
-    log.info(f"Got OHLC prices for {len(prices)}/{len(tickers)} tickers")
+    log.info(f"Got OHLC prices for {len(prices)}/{len(tickers)} tickers (Tiingo)")
     return prices, lows, highs
 
 
@@ -527,7 +527,20 @@ def run_position_monitor():
 
 
 if __name__ == "__main__":
-    main()
-    # Run position monitor after EOD settlement
-    # (main() broker connection is closed at end of main, so clientId is free)
-    run_position_monitor()
+    try:
+        main()
+        # Run position monitor after EOD settlement
+        # (main() broker connection is closed at end of main, so clientId is free)
+        run_position_monitor()
+    except Exception as exc:
+        # Top-level crash guard — alert via Telegram so cron failures aren't silent
+        try:
+            from utils.telegram import send_message
+            send_message(
+                f"🚨 <b>eod_settlement CRASHED</b>\n\n"
+                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"Check logs/eod_settlement.log"
+            )
+        except Exception:
+            pass
+        raise

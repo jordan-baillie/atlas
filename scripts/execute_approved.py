@@ -165,4 +165,17 @@ def _notify_error(market_id: str, trade_date: str, error: str):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        # Top-level crash guard — alert via Telegram so cron failures aren't silent
+        try:
+            from utils.telegram import send_message
+            send_message(
+                f"🚨 <b>execute_approved CRASHED</b>\n\n"
+                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"Check logs/execute_approved.log"
+            )
+        except Exception:
+            pass
+        raise

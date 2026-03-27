@@ -68,7 +68,8 @@
       "max_hold_days": 15,
       "lookback_days": 15,
       "atr_period": 20,
-      "trend_ma_period": 20
+      "trend_ma_period": 20,
+      "profit_target_atr_mult": 6.0
     },
     "mean_reversion": {
       "enabled": true,
@@ -143,7 +144,8 @@
         "high_boost": 0.0
       },
       "sma200_filter": true,
-      "weight": 0.2082
+      "weight": 0.2082,
+      "profit_target_atr_mult": 3.5
     },
     "opening_gap": {
       "enabled": true,
@@ -166,7 +168,8 @@
     },
     "sector_rotation": {
       "enabled": true,
-      "weight": 0.2423
+      "weight": 0.2423,
+      "profit_target_atr_mult": 3.5
     },
     "short_term_mr": {
       "enabled": true,

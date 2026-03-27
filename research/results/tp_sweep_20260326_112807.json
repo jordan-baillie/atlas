@@ -1,0 +1,119 @@
+{
+  "type": "tp_multiplier_sweep",
+  "timestamp": "2026-03-26T11:28:07.828150",
+  "tp_values": [
+    0.0,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    5.0
+  ],
+  "results": [
+    {
+      "label": "OG=1.5",
+      "og_tp": 1.5,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=2.5",
+      "og_tp": 2.5,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=3.5",
+      "og_tp": 3.5,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=5.0",
+      "og_tp": 5.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=4.0",
+      "og_tp": 4.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "CR=1.0",
+      "og_tp": 0.0,
+      "cr_tp": 1.0,
+      "error": "No data"
+    },
+    {
+      "label": "CR=1.5",
+      "og_tp": 0.0,
+      "cr_tp": 1.5,
+      "error": "No data"
+    },
+    {
+      "label": "CR=2.0",
+      "og_tp": 0.0,
+      "cr_tp": 2.0,
+      "error": "No data"
+    },
+    {
+      "label": "CR=3.0",
+      "og_tp": 0.0,
+      "cr_tp": 3.0,
+      "error": "No data"
+    },
+    {
+      "label": "CR=2.5",
+      "og_tp": 0.0,
+      "cr_tp": 2.5,
+      "error": "No data"
+    },
+    {
+      "label": "CR=3.5",
+      "og_tp": 0.0,
+      "cr_tp": 3.5,
+      "error": "No data"
+    },
+    {
+      "label": "CR=4.0",
+      "og_tp": 0.0,
+      "cr_tp": 4.0,
+      "error": "No data"
+    },
+    {
+      "label": "CR=5.0",
+      "og_tp": 0.0,
+      "cr_tp": 5.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=0.0",
+      "og_tp": 0.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=2.0",
+      "og_tp": 2.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=1.0",
+      "og_tp": 1.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    },
+    {
+      "label": "OG=3.0",
+      "og_tp": 3.0,
+      "cr_tp": 0.0,
+      "error": "No data"
+    }
+  ]
+}

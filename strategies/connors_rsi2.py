@@ -71,16 +71,17 @@ class ConnorsRSI2(BaseStrategy):
         # Risk parameters
         self.atr_period = strat_cfg.get("atr_period", 14)
         self.atr_stop_mult = strat_cfg.get("atr_stop_mult", 3.0)  # Wide stop — MR needs room
+        self.profit_target_atr_mult = strat_cfg.get("profit_target_atr_mult", 0.0)  # 0 = disabled
 
         self._precomputed = False
         self._logger.info(
             "ConnorsRSI2 initialized: rsi_period=%d, rsi_entry=%d, "
             "sma_trend=%d, sma_exit=%d, exit_mode=%s, max_hold=%d, "
-            "atr=%d, stop=%.1fx, sma200=%s, ibs_filter=%s",
+            "atr=%d, stop=%.1fx, profit_target=%.1fx, sma200=%s, ibs_filter=%s",
             self.rsi_period, self.rsi_entry,
             self.sma_trend_period, self.sma_exit_period,
             self.exit_mode, self.max_hold_days,
-            self.atr_period, self.atr_stop_mult,
+            self.atr_period, self.atr_stop_mult, self.profit_target_atr_mult,
             'ON' if self.sma200_filter else 'OFF',
             'ON' if self.ibs_filter_enabled else 'OFF',
         )
@@ -241,13 +242,19 @@ class ConnorsRSI2(BaseStrategy):
                     f"Expecting short-term mean reversion bounce."
                 )
 
+                # Take profit: entry + profit_target_atr_mult * ATR (0 = disabled)
+                if self.profit_target_atr_mult > 0:
+                    take_profit = round(entry_price + (self.profit_target_atr_mult * atr), 2)
+                else:
+                    take_profit = None
+
                 signals.append(Signal(
                     ticker=ticker,
                     strategy=self.name,
                     direction="long",
                     entry_price=entry_price,
                     stop_price=round(stop_price, 2),
-                    take_profit=None,  # Exit via SMA or RSI recovery
+                    take_profit=take_profit,
                     position_size=position_size,
                     position_value=round(position_value, 2),
                     risk_amount=round(risk_amount, 2),
@@ -302,6 +309,27 @@ class ConnorsRSI2(BaseStrategy):
                         "details": f"Close {close:.2f} <= stop {stop_price:.2f}",
                     })
                     continue
+
+                # --- Take profit ---
+                if self.profit_target_atr_mult > 0:
+                    if self._precomputed:
+                        atr = df["_cr_atr"].iloc[-1]
+                    else:
+                        atr_series = calc_atr(df["high"], df["low"], df["close"], period=self.atr_period)
+                        atr = atr_series.iloc[-1] if atr_series is not None else 0
+                    if not pd.isna(atr) and atr > 0:
+                        tp_price = entry_price + (self.profit_target_atr_mult * atr)
+                        if close >= tp_price:
+                            exits.append({
+                                "ticker": ticker,
+                                "reason": "take_profit",
+                                "exit_price": close,
+                                "details": (
+                                    f"Close {close:.2f} >= TP {tp_price:.2f} "
+                                    f"({self.profit_target_atr_mult}x ATR)"
+                                ),
+                            })
+                            continue
 
                 # --- Time exit ---
                 if entry_date:

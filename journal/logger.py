@@ -164,13 +164,18 @@ class TradeLedger:
             results = [t for t in results if t.get("recorded_at", "") >= cutoff]
         return results
 
+    @staticmethod
+    def _n(v):
+        """Coerce to number, treating None/missing as 0."""
+        return v if isinstance(v, (int, float)) else 0
+
     def performance_summary(self, days: int = None) -> dict:
         """Calculate performance metrics from trade ledger."""
         trades = self.get_closed_trades(days=days)
         if not trades:
             return {"total_trades": 0}
 
-        pnls = [t.get("pnl", 0) for t in trades]
+        pnls = [self._n(t.get("pnl")) for t in trades]
         winners = [p for p in pnls if p > 0]
         losers = [p for p in pnls if p <= 0]
 
@@ -190,13 +195,13 @@ class TradeLedger:
             "largest_win": round(max(pnls), 2),
             "largest_loss": round(min(pnls), 2),
             "avg_mae": round(
-                sum(t.get("mae", 0) for t in trades) / len(trades), 2
+                sum(self._n(t.get("mae")) for t in trades) / len(trades), 2
             ),
             "avg_mfe": round(
-                sum(t.get("mfe", 0) for t in trades) / len(trades), 2
+                sum(self._n(t.get("mfe")) for t in trades) / len(trades), 2
             ),
             "avg_holding_days": round(
-                sum(t.get("holding_days", 0) for t in trades) / len(trades), 1
+                sum(self._n(t.get("holding_days")) for t in trades) / len(trades), 1
             ),
             "by_strategy": self._by_strategy(trades),
         }
@@ -209,8 +214,8 @@ class TradeLedger:
             if s not in strategies:
                 strategies[s] = {"trades": 0, "pnl": 0, "winners": 0}
             strategies[s]["trades"] += 1
-            strategies[s]["pnl"] += t.get("pnl", 0)
-            if t.get("pnl", 0) > 0:
+            strategies[s]["pnl"] += self._n(t.get("pnl"))
+            if self._n(t.get("pnl")) > 0:
                 strategies[s]["winners"] += 1
 
         for s in strategies:

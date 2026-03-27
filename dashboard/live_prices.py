@@ -100,6 +100,53 @@ def _classify_freshness(ticker: str, market_time) -> str:
         return "unknown"
 
 
+def _fetch_tiingo_quote(ticker: str) -> Optional[dict]:
+    """Fetch a live quote from Tiingo API for US equities.
+
+    Returns the same dict shape as ``_fetch_alpaca_quote()`` so callers are
+    source-agnostic.  Returns None on failure or if Tiingo unavailable.
+    """
+    try:
+        from data.tiingo import get_tiingo_client
+        client = get_tiingo_client()
+        if not client:
+            return None
+
+        quotes = client.get_quotes([ticker])
+        if not quotes or ticker not in quotes:
+            return None
+
+        quote_data = quotes[ticker]
+        price = quote_data.get("price", 0.0)
+        if not price or price <= 0:
+            return None
+
+        prev_close = quote_data.get("prev_close", 0.0) or 0
+        change = round(price - prev_close, 4) if prev_close else 0
+        change_pct = round(change / prev_close * 100, 2) if prev_close else 0
+
+        market_time = quote_data.get("timestamp")
+        return {
+            "ticker": ticker,
+            "price": round(price, 4),
+            "prev_close": round(prev_close, 4) if prev_close else None,
+            "change": round(change, 4),
+            "change_pct": round(change_pct, 2),
+            "day_high": quote_data.get("high", price),
+            "day_low": quote_data.get("low", price),
+            "volume": quote_data.get("volume", 0),
+            "currency": "USD",
+            "exchange": "NYSE/NASDAQ",
+            "market_time": market_time,
+            "freshness": _classify_freshness(ticker, market_time),
+            "source": "tiingo",
+            "_fetched_at": time.time(),
+        }
+    except Exception as e:
+        logger.debug("Tiingo quote failed for %s: %s", ticker, e)
+        return None
+
+
 def _fetch_alpaca_quote(ticker: str) -> Optional[dict]:
     """Fetch a live quote from Alpaca snapshot API for a US equity.
 
@@ -220,10 +267,17 @@ def _fetch_yf_quote(ticker: str) -> Optional[dict]:
 def _fetch_best_quote(ticker: str) -> Optional[dict]:
     """Fetch a quote from the best available source for this ticker.
 
-    For US equities: tries Alpaca first (real-time), falls back to Yahoo.
+    For US equities: tries Tiingo first (most reliable), then Alpaca, then Yahoo.
     For indices / FX / non-US tickers: uses Yahoo directly.
     """
     if _is_alpaca_supported(ticker):
+        # Try Tiingo first (primary authoritative source)
+        quote = _fetch_tiingo_quote(ticker)
+        if quote:
+            return quote
+        logger.debug("Tiingo miss for %s — trying Alpaca", ticker)
+
+        # Fallback to Alpaca
         quote = _fetch_alpaca_quote(ticker)
         if quote:
             return quote
