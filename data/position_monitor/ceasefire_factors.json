@@ -1,10 +1,10 @@
 {
   "baseline": 12,
-  "probability": 55,
-  "probability_label": "POSSIBLE",
-  "timeline": "Days to 1 week",
-  "portfolio_action": "\ud83d\udea8 Execute kill switch. Exit INSW, sell 50% XOP, trim RTX.",
-  "last_updated": "2026-03-27T11:07:04",
+  "probability": 43,
+  "probability_label": "COIN FLIP",
+  "timeline": "1-2 weeks",
+  "portfolio_action": "\u26a0\ufe0f Reduce energy concentration. Trim INSW, partial XOP profits.",
+  "last_updated": "2026-03-27T23:00:53",
   "change_log": [
     {
       "timestamp": "2026-03-05T14:05:22",
@@ -203,6 +203,15 @@
       "confidence": "high",
       "reason": "Toggled via CLI",
       "source": "yfinance/Bloomberg data March 26 2026: Brent crude closed above $100 for 3 consecutive days \u2014 Mar 24 $104.49, Mar 25 $102.22, Mar 26 $102.11; prior FALSE was based on intraday Asian-session dip to $94.42 that fully recovered by NY close"
+    },
+    {
+      "timestamp": "2026-03-27T22:03:50",
+      "factor_id": "hezbollah_major",
+      "old_active": false,
+      "new_active": true,
+      "confidence": "high",
+      "reason": "Toggled via CLI",
+      "source": "Jerusalem Post March 27 2026: Hezbollah unleashes over 600 attacks on Israel in past 24 hours, doubling prior peak; Middle East Monitor March 27 2026: Hezbollah launches 500 rockets in one day"
     }
   ],
   "factors": [
@@ -399,10 +408,10 @@
       "label": "Hezbollah launches major offensive (hundreds of rockets, multi-front attack)",
       "weight": -12,
       "direction": "escalation",
-      "active": false,
-      "confidence": "medium",
-      "last_checked": "2026-03-26T13:07:35",
-      "source": "Times of Israel March 26 2026: Hezbollah fires 6 rockets at central Israel \u2014 well below 50+ barrage threshold; AP/JNS corroborate small-scale ongoing attacks only",
+      "active": true,
+      "confidence": "high",
+      "last_checked": "2026-03-27T22:03:50",
+      "source": "Jerusalem Post March 27 2026: Hezbollah unleashes over 600 attacks on Israel in past 24 hours, doubling prior peak; Middle East Monitor March 27 2026: Hezbollah launches 500 rockets in one day",
       "description": "Hezbollah active offensive ongoing",
       "search_keywords": [
         "hezbollah attack rockets",
