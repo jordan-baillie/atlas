@@ -1,0 +1,4 @@
+papers/
+logs/
+*.log
+node_modules/

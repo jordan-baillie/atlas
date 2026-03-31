@@ -1,0 +1,9 @@
+{
+  "total_runs": 0,
+  "papers_found": 0,
+  "papers_filtered": 0,
+  "specs_extracted": 0,
+  "strategies_generated": 0,
+  "strategies_passed_quickcheck": 0,
+  "monthly": {}
+}
