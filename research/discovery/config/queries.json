@@ -1,0 +1,36 @@
+{
+  "momentum": [
+    "momentum breakout individual stocks daily bars",
+    "52-week high momentum stock strategy",
+    "trend following equity daily simple rules"
+  ],
+  "mean_reversion": [
+    "short-term reversal large cap daily",
+    "RSI oversold large cap strategy",
+    "bollinger band mean reversion stocks",
+    "consecutive down days stock returns"
+  ],
+  "volume": [
+    "volume anomaly stock returns daily",
+    "volume spike reversal individual stocks"
+  ],
+  "event": [
+    "earnings announcement drift trading strategy",
+    "PEAD post-earnings announcement drift strategy"
+  ],
+  "volatility": [
+    "volatility regime switching equity returns",
+    "VIX regime stock selection daily"
+  ],
+  "calendar": [
+    "calendar effects stock market daily",
+    "day of week effect S&P 500 stocks"
+  ],
+  "other": [
+    "opening gap fill stock returns",
+    "overnight return vs intraday return equity",
+    "ATR trailing stop equity strategy",
+    "sector rotation momentum monthly rebalance",
+    "mean reversion equity daily holding period"
+  ]
+}
