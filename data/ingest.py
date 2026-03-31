@@ -151,6 +151,37 @@ def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) 
         import os
         os.replace(str(tmp_path), str(path))
         logger.debug(f"Cached {ticker}: {len(df)} rows -> {path}")
+        # SQLite dual-write — batch insert for performance; failure is non-fatal
+        try:
+            from db.atlas_db import get_db as _get_db
+            _rows = []
+            for _idx, _row in df.iterrows():
+                _date_str = _idx.strftime('%Y-%m-%d') if hasattr(_idx, 'strftime') else str(_idx)[:10]
+                _rows.append((
+                    ticker,
+                    _date_str,
+                    float(_row.get('open', 0) or 0),
+                    float(_row.get('high', 0) or 0),
+                    float(_row.get('low', 0) or 0),
+                    float(_row.get('close', 0) or 0),
+                    None,  # adj_close — not stored in canonical format
+                    int(_row.get('volume', 0) or 0),
+                    (market_id or 'sp500').lower(),
+                    'yfinance',
+                ))
+            if _rows:
+                with _get_db() as _db:
+                    _db.executemany(
+                        """
+                        INSERT OR REPLACE INTO ohlcv
+                            (ticker, date, open, high, low, close, adj_close, volume, universe, source)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        _rows,
+                    )
+                logger.debug(f"SQLite OHLCV dual-write: {len(_rows)} rows for {ticker}")
+        except Exception as _db_exc:
+            logger.warning(f"SQLite OHLCV dual-write failed for {ticker}: {_db_exc}")
     except Exception as e:
         logger.warning(f"Cache write error for {ticker}: {e}")
 

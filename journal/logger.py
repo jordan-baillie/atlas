@@ -76,6 +76,32 @@ class DecisionJournal:
         }
         self.entries.append(entry)
         self._save()
+        # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
+        try:
+            from db import atlas_db
+            atlas_db.record_signal(
+                timestamp=entry['timestamp'],
+                ticker=entry['ticker'],
+                strategy=entry['strategy'],
+                universe=entry.get('market_id') or 'sp500',
+                direction=entry.get('direction', 'long'),
+                entry_price=entry['entry_price'],
+                stop_price=entry['stop_price'],
+                take_profit=entry.get('take_profit'),
+                position_size=entry.get('position_size', 0),
+                position_value=entry.get('position_value', 0),
+                risk_amount=entry.get('risk_amount', 0),
+                confidence=entry.get('confidence', 0),
+                rationale=entry.get('rationale'),
+                features=entry.get('features'),
+                sector=entry.get('sector'),
+                action=entry.get('action', 'proposed'),
+                action_reason=entry.get('action_reason'),
+                config_version=entry.get('config_version'),
+                market_id=entry.get('market_id', 'sp500'),
+            )
+        except Exception as _db_exc:
+            logger.warning(f"SQLite signal dual-write failed for {signal.ticker}: {_db_exc}")
         logger.info(f"Decision recorded: {signal.ticker} ({signal.strategy}) -> {action}")
 
     def get_entries(self, ticker: str = None, strategy: str = None,
@@ -143,6 +169,22 @@ class TradeLedger:
         fill_record["recorded_at"] = datetime.now().isoformat()
         self.trades.append({"type": "entry", **fill_record})
         self._save()
+        # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
+        try:
+            from db import atlas_db
+            atlas_db.record_trade_entry(
+                ticker=fill_record.get('ticker', ''),
+                strategy=fill_record.get('strategy', ''),
+                universe=fill_record.get('market_id', 'sp500') or 'sp500',
+                entry_price=float(fill_record.get('fill_price', 0) or 0),
+                shares=int(fill_record.get('shares', 0) or 0),
+                stop_price=float(fill_record.get('stop_price', 0) or 0),
+                take_profit=None,
+                confidence=float(fill_record.get('confidence', 0) or 0),
+                regime_state=fill_record.get('regime_state'),
+            )
+        except Exception as _db_exc:
+            logger.warning(f"SQLite trade entry dual-write failed for {fill_record.get('ticker')}: {_db_exc}")
         logger.info(f"Ledger entry: BUY {fill_record.get('ticker')} "
                     f"{fill_record.get('shares')}@{fill_record.get('fill_price')}")
 
@@ -151,6 +193,17 @@ class TradeLedger:
         trade_record["recorded_at"] = datetime.now().isoformat()
         self.trades.append({"type": "exit", **trade_record})
         self._save()
+        # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
+        try:
+            from db import atlas_db
+            atlas_db.record_trade_exit(
+                ticker=trade_record.get('ticker', ''),
+                strategy=trade_record.get('strategy', ''),
+                exit_price=float(trade_record.get('fill_price', trade_record.get('exit_price', 0)) or 0),
+                exit_reason=trade_record.get('exit_reason', ''),
+            )
+        except Exception as _db_exc:
+            logger.warning(f"SQLite trade exit dual-write failed for {trade_record.get('ticker')}: {_db_exc}")
         logger.info(f"Ledger exit: SELL {trade_record.get('ticker')} "
                     f"PnL=${trade_record.get('pnl', 0):.2f}")
 
