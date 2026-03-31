@@ -477,5 +477,19 @@
     "timestamp": "2026-03-27 13:30:02.227000",
     "reconciled": true,
     "recorded_at": "2026-03-31T21:00:36.662653"
+  },
+  {
+    "type": "entry",
+    "ticker": "BSX",
+    "strategy": "opening_gap",
+    "shares": 7,
+    "fill_price": 62.7378,
+    "planned_price": 62.93000030517578,
+    "stop_price": 60.6487,
+    "slippage_bps": -30.5,
+    "order_id": "ce9506cf-68f9-4ae1-8b02-2f6595583851",
+    "timestamp": "2026-03-31T23:32:18.394491",
+    "direction": "long",
+    "recorded_at": "2026-03-31T23:32:18.394503"
   }
 ]
