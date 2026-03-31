@@ -98406,5 +98406,27 @@
     "action": "rejected",
     "action_reason": "Max positions (10) would be exceeded",
     "config_version": "v3.0"
+  },
+  {
+    "timestamp": "2026-03-31T23:41:25.565720",
+    "ticker": "AAPL",
+    "strategy": "momentum_breakout",
+    "direction": "long",
+    "entry_price": 150.0,
+    "stop_price": 145.0,
+    "take_profit": 160.0,
+    "position_size": 10,
+    "position_value": 1500.0,
+    "risk_amount": 50.0,
+    "confidence": 0.8,
+    "rationale": "test",
+    "features": {
+      "rsi": 60
+    },
+    "sector": "Tech",
+    "market_id": "sp500",
+    "action": "accepted",
+    "action_reason": "test",
+    "config_version": "v1"
   }
 ]
