@@ -499,7 +499,7 @@
     "shares": 10,
     "fill_price": 150.0,
     "stop_price": 145.0,
-    "recorded_at": "2026-03-31T23:41:25.654938"
+    "recorded_at": "2026-03-31T23:39:54.559730"
   },
   {
     "type": "exit",
@@ -508,6 +508,6 @@
     "fill_price": 155.0,
     "exit_reason": "target",
     "pnl": 50.0,
-    "recorded_at": "2026-03-31T23:41:25.661702"
+    "recorded_at": "2026-03-31T23:39:54.560349"
   }
 ]

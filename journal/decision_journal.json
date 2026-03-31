@@ -98408,7 +98408,7 @@
     "config_version": "v3.0"
   },
   {
-    "timestamp": "2026-03-31T23:41:25.565720",
+    "timestamp": "2026-03-31T23:39:54.475193",
     "ticker": "AAPL",
     "strategy": "momentum_breakout",
     "direction": "long",
@@ -98427,6 +98427,50 @@
     "market_id": "sp500",
     "action": "accepted",
     "action_reason": "test",
+    "config_version": "v1"
+  },
+  {
+    "timestamp": "2026-03-31T23:40:27.077667",
+    "ticker": "MSFT",
+    "strategy": "trend_following",
+    "direction": "long",
+    "entry_price": 300.0,
+    "stop_price": 290.0,
+    "take_profit": 320.0,
+    "position_size": 5,
+    "position_value": 1500.0,
+    "risk_amount": 50.0,
+    "confidence": 0.75,
+    "rationale": "test",
+    "features": {
+      "rsi": 55
+    },
+    "sector": "Tech",
+    "market_id": "sp500",
+    "action": "accepted",
+    "action_reason": "ok",
+    "config_version": "v1"
+  },
+  {
+    "timestamp": "2026-03-31T23:40:44.548247",
+    "ticker": "MSFT",
+    "strategy": "trend_following",
+    "direction": "long",
+    "entry_price": 300.0,
+    "stop_price": 290.0,
+    "take_profit": 320.0,
+    "position_size": 5,
+    "position_value": 1500.0,
+    "risk_amount": 50.0,
+    "confidence": 0.75,
+    "rationale": "test",
+    "features": {
+      "rsi": 55
+    },
+    "sector": "Tech",
+    "market_id": "sp500",
+    "action": "accepted",
+    "action_reason": "ok",
     "config_version": "v1"
   }
 ]
