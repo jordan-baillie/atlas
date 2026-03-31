@@ -44,6 +44,7 @@ def db(db_file, monkeypatch):
     All tests in this module use an isolated DB — no shared state.
     """
     monkeypatch.setattr(atlas_db_module, "DB_PATH", db_file)
+    monkeypatch.setattr(atlas_db_module, "_db_path_override", None)
     init_db()
     yield db_file
 
@@ -799,7 +800,7 @@ class TestOverlayDecisions:
         decisions = atlas_db_module.get_overlay_decisions()
         overlay_id = decisions[0]["id"]
         atlas_db_module.update_overlay_outcome(
-            overlay_id=overlay_id,
+            decision_id=overlay_id,
             outcome_correct=1,
             outcome_notes="Correctly avoided TSLA drawdown",
         )
@@ -822,7 +823,7 @@ class TestOverlayDecisions:
 class TestCeasefire:
     def test_upsert_and_get_ceasefire_factor(self):
         atlas_db_module.upsert_ceasefire_factor(
-            factor_id="iran_nuclear_talks",
+            id="iran_nuclear_talks",
             category="ceasefire",
             description="Iran nuclear negotiations ongoing",
             weight=0.3,
@@ -838,7 +839,7 @@ class TestCeasefire:
     def test_upsert_overwrites_factor(self):
         for weight in [0.3, 0.5]:
             atlas_db_module.upsert_ceasefire_factor(
-                factor_id="iran_nuclear_talks",
+                id="iran_nuclear_talks",
                 category="ceasefire",
                 description="Iran nuclear negotiations",
                 weight=weight,
@@ -880,7 +881,7 @@ class TestCeasefire:
     def test_multiple_ceasefire_factors(self):
         for fid, cat in [("a", "ceasefire"), ("b", "escalation"), ("c", "ceasefire")]:
             atlas_db_module.upsert_ceasefire_factor(
-                factor_id=fid,
+                id=fid,
                 category=cat,
                 description=f"Factor {fid}",
                 weight=0.2,
@@ -942,7 +943,7 @@ class TestResearch:
     def _record_exp(self, exp_id="exp-001", strategy="mean_reversion",
                     status="running", sharpe=None):
         atlas_db_module.record_experiment(
-            experiment_id=exp_id,
+            id=exp_id,
             strategy=strategy,
             universe="sp500",
             experiment_type="param_sweep",
