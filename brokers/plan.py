@@ -221,6 +221,37 @@ class TradePlanGenerator:
         with open(path, "w") as f:
             json.dump(plan, f, indent=2, default=str)
         logger.info(f"Trade plan saved: {path}")
+        # SQLite dual-write (non-fatal — JSON file is source of truth)
+        try:
+            from db import atlas_db
+            plan_status = plan.get("status", "PENDING_APPROVAL")
+            if plan_status == "APPROVED":
+                # Update the existing SQLite record rather than inserting a duplicate
+                existing = atlas_db.get_plan(
+                    plan.get("trade_date", ""),
+                    plan.get("market_id", "sp500"),
+                )
+                if existing:
+                    atlas_db.update_plan_status(
+                        existing["id"],
+                        "approved",
+                        approved_at=plan.get("approved_at"),
+                    )
+                else:
+                    # No prior record — insert one carrying the approved plan
+                    atlas_db.record_plan(
+                        date=plan.get("trade_date", ""),
+                        market_id=plan.get("market_id", "sp500"),
+                        plan_data=plan,
+                    )
+            else:
+                atlas_db.record_plan(
+                    date=plan.get("trade_date", ""),
+                    market_id=plan.get("market_id", "sp500"),
+                    plan_data=plan,
+                )
+        except Exception as e:
+            logger.warning(f"SQLite plan dual-write failed: {e}")
 
     def load_plan(self, trade_date: str, market_id: str = "") -> Optional[dict]:
         plans_dir = PROJECT_ROOT / self.PLANS_DIR

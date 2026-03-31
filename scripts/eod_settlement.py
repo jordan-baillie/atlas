@@ -113,6 +113,17 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                 result = portfolio.execute_exit(pos.ticker, exit_price, trade_date, "stop_loss")
                 if result:
                     exits.append(result)
+                    # SQLite dual-write (non-fatal — ledger is source of truth)
+                    try:
+                        from db import atlas_db
+                        atlas_db.record_trade_exit(
+                            ticker=pos.ticker,
+                            strategy=getattr(pos, "strategy", ""),
+                            exit_price=exit_price,
+                            exit_reason="stop_loss",
+                        )
+                    except Exception as _e:
+                        log.warning(f"SQLite trade exit dual-write failed: {_e}")
             else:
                 exits.append({"ticker": pos.ticker, "type": "stop_loss",
                               "intraday_low": intraday_low, "stop_price": pos.stop_price,
@@ -144,6 +155,17 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                 result = portfolio.execute_exit(pos.ticker, exit_price, trade_date, "take_profit")
                 if result:
                     exits.append(result)
+                    # SQLite dual-write (non-fatal — ledger is source of truth)
+                    try:
+                        from db import atlas_db
+                        atlas_db.record_trade_exit(
+                            ticker=pos.ticker,
+                            strategy=getattr(pos, "strategy", ""),
+                            exit_price=exit_price,
+                            exit_reason="take_profit",
+                        )
+                    except Exception as _e:
+                        log.warning(f"SQLite trade exit dual-write failed: {_e}")
             else:
                 exits.append({"ticker": pos.ticker, "type": "take_profit",
                               "intraday_high": intraday_high, "take_profit": pos.take_profit,
@@ -527,6 +549,29 @@ def main():
 
     # Record daily portfolio snapshot to logs/portfolio_snapshots.jsonl
     record_daily_snapshot(portfolio, prices, eq, daily_pnl, trade_date)
+
+    # SQLite dual-write: equity curve + portfolio snapshot (non-fatal)
+    try:
+        from db import atlas_db
+        positions_value = round(eq - portfolio.cash, 2)
+        atlas_db.record_equity(
+            date=trade_date,
+            market_id=market_id,
+            equity=eq,
+            cash=portfolio.cash,
+            positions_value=positions_value,
+            day_pnl=daily_pnl,
+            regime_state=None,
+        )
+        atlas_db.record_snapshot(
+            timestamp=datetime.now().isoformat(),
+            total_equity=eq,
+            cash=portfolio.cash,
+            positions=position_snapshot,
+            regime_state=None,
+        )
+    except Exception as _e:
+        log.warning(f"SQLite equity dual-write failed: {_e}")
 
     # Disconnect broker to free clientId for position monitor
     portfolio.disconnect()
