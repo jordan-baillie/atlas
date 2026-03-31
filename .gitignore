@@ -87,3 +87,6 @@ backtest/results/oos_promotion_*.json
 research/mr_creative.py
 research/mr_research.py
 dashboard/data/
+data/atlas.db
+data/atlas.db-wal
+data/atlas.db-shm
