@@ -491,5 +491,19 @@
     "timestamp": "2026-03-31 17:23:45.726000",
     "reconciled": true,
     "recorded_at": "2026-04-01T03:30:03.731908"
+  },
+  {
+    "type": "entry",
+    "ticker": "AAPL",
+    "strategy": "momentum_breakout",
+    "shares": 10,
+    "fill_price": 150.0,
+    "planned_price": 150.0,
+    "stop_price": 145.0,
+    "slippage_bps": 0.0,
+    "order_id": "test-123",
+    "timestamp": "2026-04-01T13:46:08.611172",
+    "direction": "long",
+    "recorded_at": "2026-04-01T13:46:08.611194"
   }
 ]

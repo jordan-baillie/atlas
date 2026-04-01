@@ -1136,3 +1136,95 @@ def get_system_logs(
                     pass
             result.append(r)
         return result
+
+
+# ── Macro Indicators ──────────────────────────────────────────────────────────
+
+# Columns allowed in the macro_indicators table (excludes date and updated_at).
+_MACRO_INDICATOR_COLS: frozenset = frozenset({
+    "vix", "vix3m", "vix_term_ratio",
+    "yield_10y", "yield_2y", "yield_3m",
+    "yield_curve_10y2y", "yield_curve_10y3m",
+    "credit_oas", "dxy",
+    "gold", "copper", "gold_copper_ratio",
+    "fed_funds", "unemployment_claims",
+    "spy_close", "spy_200dma", "spy_above_200dma", "spy_200dma_slope",
+})
+
+
+def upsert_macro_indicators(date: str, **fields) -> None:
+    """Insert or replace a macro indicators row for the given date.
+
+    Pass field values as keyword arguments matching the macro_indicators
+    schema columns.  Unknown columns are silently ignored.  NaN/inf float
+    values are stored as NULL.
+
+    Example::
+
+        upsert_macro_indicators(
+            "2024-01-02",
+            vix=15.3, vix3m=16.1, vix_term_ratio=0.95,
+            credit_oas=50.2, dxy=104.1,
+        )
+    """
+    import math
+
+    def _clean(v: Any) -> Any:
+        """Convert NaN/inf to None so SQLite stores NULL."""
+        if v is None:
+            return None
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return v
+
+    safe = {k: _clean(v) for k, v in fields.items() if k in _MACRO_INDICATOR_COLS}
+
+    if not safe:
+        # Nothing to update — at least record the date.
+        with get_db() as db:
+            db.execute(
+                "INSERT OR IGNORE INTO macro_indicators (date) VALUES (?)",
+                (date,),
+            )
+        return
+
+    # Sort for deterministic SQL (easier to test/debug).
+    sorted_keys = sorted(safe.keys())
+    cols = ["date"] + sorted_keys
+    placeholders = ", ".join(["?"] * len(cols))
+    cols_str = ", ".join(cols)
+    values = [date] + [safe[k] for k in sorted_keys]
+
+    with get_db() as db:
+        db.execute(
+            f"INSERT OR REPLACE INTO macro_indicators ({cols_str}) VALUES ({placeholders})",
+            values,
+        )
+
+
+def get_macro_indicators(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    days: Optional[int] = None,
+) -> List[Dict]:
+    """Return macro indicators rows ordered by date ascending.
+
+    Args:
+        start_date: Only rows with date >= start_date.
+        end_date:   Only rows with date <= end_date.
+        days:       Shortcut: include last *days* calendar days.
+    """
+    with get_db() as db:
+        query = "SELECT * FROM macro_indicators WHERE 1=1"
+        params: List[Any] = []
+        if days:
+            query += " AND date >= date('now', ?)"
+            params.append(f"-{days} days")
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date ASC"
+        return [dict(r) for r in db.execute(query, params).fetchall()]

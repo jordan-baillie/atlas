@@ -72,6 +72,22 @@ SERIES_REGISTRY = {
         "frequency": "daily",
         "description": "CBOE Volatility Index (closing). Alternative to ^VIX from Yahoo.",
     },
+    "BAMLC0A0CM": {
+        "name": "IG Corporate Bond OAS",
+        "frequency": "daily",
+        "description": (
+            "ICE BofA US Corporate Index Option-Adjusted Spread (basis points). "
+            "Widening = credit stress = risk-off signal."
+        ),
+    },
+    "DTWEXBGS": {
+        "name": "Trade-Weighted US Dollar Index (Broad, Goods)",
+        "frequency": "daily",
+        "description": (
+            "Broad trade-weighted US dollar index. Rising USD = global liquidity "
+            "tightening = headwind for risk assets and EM."
+        ),
+    },
 }
 
 # Default series for regime analysis
@@ -233,6 +249,24 @@ class FREDClient:
         """Get the 2-Year Treasury constant maturity rate."""
         return self.fetch_series("GS2", **kwargs)
 
+    def get_credit_oas(self, **kwargs) -> pd.Series:
+        """Get IG corporate bond OAS (BAMLC0A0CM, basis points).
+
+        The ICE BofA US Corporate Index Option-Adjusted Spread measures the
+        yield premium of investment-grade corporate bonds over Treasuries.
+        Widening spreads signal increasing credit stress and are a risk-off
+        indicator for equities.
+        """
+        return self.fetch_series("BAMLC0A0CM", **kwargs)
+
+    def get_dxy(self, **kwargs) -> pd.Series:
+        """Get the broad trade-weighted US dollar index (DTWEXBGS).
+
+        A rising dollar signals tightening of global USD liquidity conditions,
+        which tends to be a headwind for risk assets and emerging markets.
+        """
+        return self.fetch_series("DTWEXBGS", **kwargs)
+
     def get_regime_snapshot(self) -> Dict[str, Any]:
         """Get a comprehensive macro regime snapshot.
 
@@ -329,3 +363,84 @@ class FREDClient:
     def list_series() -> Dict[str, Dict[str, str]]:
         """List all registered FRED series with descriptions."""
         return SERIES_REGISTRY.copy()
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Module-level convenience functions
+# ───────────────────────────────────────────────────────────────────────────────
+
+
+def fetch_fred_data(
+    series_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    api_key: Optional[str] = None,
+    max_age_hours: int = 12,
+) -> pd.Series:
+    """Fetch a single FRED series by ID.  Module-level convenience wrapper.
+
+    Thin wrapper around :meth:`FREDClient.fetch_series` that constructs a
+    client instance and returns a single :class:`pandas.Series`.
+
+    Args:
+        series_id:      FRED series identifier (e.g. ``'T10Y2Y'``,
+                        ``'BAMLC0A0CM'``, ``'DTWEXBGS'``).
+        start_date:     Observation start date ``'YYYY-MM-DD'`` (default: 5 yrs ago).
+        end_date:       Observation end date ``'YYYY-MM-DD'`` (default: today).
+        api_key:        Optional FRED API key override (reads from
+                        ``~/.atlas-secrets.json`` if omitted).
+        max_age_hours:  Cache TTL in hours.
+
+    Returns:
+        :class:`pandas.Series` indexed by :class:`pandas.Timestamp`, or an
+        empty Series if the API key is missing or the request fails.
+
+    Example::
+
+        from data.fred import fetch_fred_data
+
+        oas = fetch_fred_data("BAMLC0A0CM", start_date="2020-01-01")
+        dxy = fetch_fred_data("DTWEXBGS", start_date="2020-01-01")
+    """
+    client = FREDClient(api_key=api_key)
+    return client.fetch_series(
+        series_id,
+        observation_start=start_date,
+        observation_end=end_date,
+        max_age_hours=max_age_hours,
+    )
+
+
+def fetch_regime_macro_series(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> Dict[str, pd.Series]:
+    """Fetch all FRED series needed for the regime model.
+
+    Returns a dict mapping logical name → pd.Series for:
+        - ``yield_2y``           (GS2)
+        - ``credit_oas``         (BAMLC0A0CM)
+        - ``dxy``                (DTWEXBGS)
+        - ``fed_funds``          (FEDFUNDS)
+        - ``unemployment_claims``(ICSA)
+        - ``yield_curve_10y2y``  (T10Y2Y, pre-computed by FRED)
+
+    Series are *not* aligned to each other here — the caller is
+    responsible for reindexing and forward-filling.
+    """
+    client = FREDClient(api_key=api_key)
+    kwargs: Dict[str, Any] = {}
+    if start_date:
+        kwargs["observation_start"] = start_date
+    if end_date:
+        kwargs["observation_end"] = end_date
+
+    return {
+        "yield_2y": client.fetch_series("GS2", **kwargs),
+        "credit_oas": client.fetch_series("BAMLC0A0CM", **kwargs),
+        "dxy": client.fetch_series("DTWEXBGS", **kwargs),
+        "fed_funds": client.fetch_series("FEDFUNDS", **kwargs),
+        "unemployment_claims": client.fetch_series("ICSA", **kwargs),
+        "yield_curve_10y2y_fred": client.fetch_series("T10Y2Y", **kwargs),
+    }
