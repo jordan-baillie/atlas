@@ -2,28 +2,6 @@
   {
     "position_id": "0a70124996f3",
     "ticker": "INSW",
-    "condition_id": "insw_entry",
-    "condition_label": "Entry status",
-    "old_status": "failing",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-05T01:17:50"
-  },
-  {
-    "position_id": "7adf5478dec9",
-    "ticker": "CIBR",
-    "condition_id": "cibr_entry",
-    "condition_label": "Entry status",
-    "old_status": "failing",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-05T01:17:50"
-  },
-  {
-    "position_id": "0a70124996f3",
-    "ticker": "INSW",
     "condition_id": "insw_sector",
     "condition_label": "Tanker sector sentiment (FRO/DHT)",
     "old_status": "passing",
@@ -1984,5 +1962,25 @@
     "type": "invalidation_breach",
     "message": "Price $99.34 breached invalidation $100.00",
     "timestamp": "2026-03-27T08:01:00"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_floor",
+    "condition_label": "NEM above $100 floor",
+    "old_status": "failing",
+    "new_status": "warning",
+    "value": 108.23,
+    "timestamp": "2026-04-01T08:00:49"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "warning",
+    "value": 215.9,
+    "timestamp": "2026-04-01T08:00:52"
   }
 ]

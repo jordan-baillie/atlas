@@ -2019,6 +2019,34 @@ class LiveExecutor:
                     "Failed to reconcile exit for %s: %s", ticker, e,
                 )
 
+            # Also record to LivePortfolio.closed_trades (broker state JSON)
+            try:
+                from brokers.live_portfolio import LivePortfolio
+                _market_id = self.config.get("market_id", "sp500")
+                _portfolio = LivePortfolio(self.config, market_id=_market_id)
+                _portfolio.load_state()
+                _closed_trade = {
+                    "ticker": ticker,
+                    "strategy": strategy,
+                    "entry_price": entry_price,
+                    "exit_price": fill_price,
+                    "shares": qty,
+                    "pnl": pnl,
+                    "pnl_pct": pnl_pct,
+                    "holding_days": entry.get("holding_days"),
+                    "exit_reason": reason,
+                    "exit_date": str(getattr(order, "filled_at", ""))[:10],
+                    "order_id": order_id,
+                    "reconciled": True,
+                }
+                _portfolio.record_closed_trade(_closed_trade)
+                logger.debug("Recorded reconciled exit to LivePortfolio: %s", ticker)
+            except Exception as _port_exc:
+                logger.error(
+                    "Failed to record reconciled exit to LivePortfolio for %s: %s",
+                    ticker, _port_exc, exc_info=True,
+                )
+
         if reconciled:
             logger.info(
                 "reconcile_exit_fills: recorded %d deferred exit fills",

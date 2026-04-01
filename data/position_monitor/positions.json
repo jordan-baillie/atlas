@@ -29,8 +29,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 93.79,
-        "last_checked": "2026-03-27T08:00:57",
+        "current_value": 101.56,
+        "last_checked": "2026-04-01T08:00:46",
         "notes": "<$65 = INVALIDATION (geopolitical premium unwound)"
       },
       {
@@ -43,8 +43,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 185.29,
-        "last_checked": "2026-03-27T08:00:57",
+        "current_value": 181.78,
+        "last_checked": "2026-04-01T08:00:46",
         "notes": "<$142 = BREAKEVEN STOP. >$155 = green"
       },
       {
@@ -58,7 +58,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:57",
+        "last_checked": "2026-04-01T08:00:46",
         "notes": "Green=closed/restricted, Amber=partial escorts, Red=fully reopened"
       },
       {
@@ -72,7 +72,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:57",
+        "last_checked": "2026-04-01T08:00:46",
         "notes": "Green=backwardation, Amber=flat, Red=contango"
       },
       {
@@ -85,8 +85,8 @@
         "direction": "above",
         "weight": 1,
         "status": "passing",
-        "current_value": 185.29,
-        "last_checked": "2026-03-27T08:00:57",
+        "current_value": 181.78,
+        "last_checked": "2026-04-01T08:00:46",
         "notes": ""
       },
       {
@@ -100,14 +100,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:57",
+        "last_checked": "2026-04-01T08:00:46",
         "notes": "Green=escalating/holding, Amber=stalemate, Red=de-escalation confirmed"
       }
     ],
     "health_score": 10.0,
-    "current_price": 185.29,
-    "unrealized_pnl": 214.0,
-    "unrealized_pnl_pct": 30.04,
+    "current_price": 181.78,
+    "unrealized_pnl": 196.45,
+    "unrealized_pnl_pct": 27.57,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -339,7 +339,7 @@
       }
     ],
     "created_at": "2026-03-02T18:39:39",
-    "updated_at": "2026-03-27T08:00:58",
+    "updated_at": "2026-04-01T08:00:48",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -375,7 +375,7 @@
         "weight": 3,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:59",
+        "last_checked": "2026-04-01T08:00:48",
         "notes": "Green=no ceasefire, Amber=backchannel talks reported, Red=formal ceasefire announced. Red \u2260 auto-exit \u2192 trim to 3 shares."
       },
       {
@@ -388,8 +388,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 192.87,
-        "last_checked": "2026-03-27T08:00:59",
+        "current_value": 192.81,
+        "last_checked": "2026-04-01T08:00:48",
         "notes": "<$195 = INVALIDATION. $185 = full exit."
       },
       {
@@ -403,7 +403,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:59",
+        "last_checked": "2026-04-01T08:00:48",
         "notes": "Green=supplemental appropriations/budget increase, Amber=no change, Red=budget cuts proposed"
       },
       {
@@ -416,8 +416,8 @@
         "direction": "above",
         "weight": 1,
         "status": "failing",
-        "current_value": 192.87,
-        "last_checked": "2026-03-27T08:00:59",
+        "current_value": 192.81,
+        "last_checked": "2026-04-01T08:00:48",
         "notes": ""
       },
       {
@@ -431,7 +431,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:59",
+        "last_checked": "2026-04-01T08:00:48",
         "notes": "Green=<4wk ongoing, Amber=4-8wk (munition depletion thesis strengthens), Red=>8wk (broader market drag)"
       },
       {
@@ -445,14 +445,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:00:59",
+        "last_checked": "2026-04-01T08:00:48",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 5.5,
-    "current_price": 192.87,
-    "unrealized_pnl": -88.35,
-    "unrealized_pnl_pct": -7.09,
+    "current_price": 192.81,
+    "unrealized_pnl": -88.68,
+    "unrealized_pnl_pct": -7.12,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -680,7 +680,7 @@
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-27T08:01:00",
+    "updated_at": "2026-04-01T08:00:49",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -719,7 +719,7 @@
         "weight": 4,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=closed (<20% normal traffic), Amber=partial (20-60% normal, escorted), Red=open (>60%) = IMMEDIATE EXIT. Never sit at amber >1 cycle."
       },
       {
@@ -733,7 +733,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=>$300k/day, Amber=$150-300k/day, Red=<$150k/day"
       },
       {
@@ -747,7 +747,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=cancelled/suspended in Gulf, Amber=elevated premiums (>5x normal), Red=reinstated at normal rates"
       },
       {
@@ -761,7 +761,7 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=above, Amber=within 3% of trigger, Red=below = IMMEDIATE EXIT. Agent: check 30d high from price data."
       },
       {
@@ -775,7 +775,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=filled at target, Amber=filled but gapped up >10%, Red=not yet filled"
       },
       {
@@ -789,14 +789,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=up week-over-week, Amber=flat, Red=down week-over-week"
       }
     ],
     "health_score": 8.0,
-    "current_price": 69.99,
-    "unrealized_pnl": -70.07,
-    "unrealized_pnl_pct": -12.51,
+    "current_price": 72.89,
+    "unrealized_pnl": -49.77,
+    "unrealized_pnl_pct": -8.89,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1032,7 +1032,7 @@
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-27T08:01:00",
+    "updated_at": "2026-04-01T08:00:49",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1068,8 +1068,8 @@
         "direction": "above",
         "weight": 3,
         "status": "failing",
-        "current_value": 4376.9,
-        "last_checked": "2026-03-27T08:01:00",
+        "current_value": 4699.6,
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "<$4800 (3 consecutive closes) = INVALIDATION"
       },
       {
@@ -1081,9 +1081,9 @@
         "warning_threshold": 115.0,
         "direction": "above",
         "weight": 2,
-        "status": "failing",
-        "current_value": 99.34,
-        "last_checked": "2026-03-27T08:01:00",
+        "status": "warning",
+        "current_value": 108.23,
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "<$100 = INVALIDATION"
       },
       {
@@ -1097,7 +1097,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=cuts priced in (dovish), Amber=hold (neutral), Red=hikes priced in (hawkish)"
       },
       {
@@ -1110,8 +1110,8 @@
         "direction": "above",
         "weight": 1,
         "status": "failing",
-        "current_value": 99.34,
-        "last_checked": "2026-03-27T08:01:00",
+        "current_value": 108.23,
+        "last_checked": "2026-04-01T08:00:49",
         "notes": ""
       },
       {
@@ -1125,7 +1125,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=continued/accelerating, Amber=stable, Red=net selling reported"
       },
       {
@@ -1139,7 +1139,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=falling, Amber=flat, Red=rising >2.5%"
       },
       {
@@ -1153,14 +1153,14 @@
         "weight": 1,
         "status": "failing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:00",
+        "last_checked": "2026-04-01T08:00:49",
         "notes": "Green=rising (gold outpacing oil), Amber=neutral, Red=falling (oil outpacing gold \u2192 stagflation shift). If this + real yields both red \u2192 trim."
       }
     ],
-    "health_score": 1.5,
-    "current_price": 99.34,
-    "unrealized_pnl": -114.1,
-    "unrealized_pnl_pct": -18.68,
+    "health_score": 2.5,
+    "current_price": 108.23,
+    "unrealized_pnl": -69.65,
+    "unrealized_pnl_pct": -11.4,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1388,7 +1388,7 @@
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-27T08:01:01",
+    "updated_at": "2026-04-01T08:00:50",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1425,7 +1425,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:01",
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "Green=elevated/active incidents, Amber=stable/background, Red=significantly reduced post-ceasefire"
       },
       {
@@ -1438,8 +1438,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 63.16,
-        "last_checked": "2026-03-27T08:01:01",
+        "current_value": 62.67,
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "$55-59 = amber, <$55 = red"
       },
       {
@@ -1452,8 +1452,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 63.16,
-        "last_checked": "2026-03-27T08:01:01",
+        "current_value": 62.67,
+        "last_checked": "2026-04-01T08:00:50",
         "notes": ""
       },
       {
@@ -1467,7 +1467,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:01",
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "Green=still understaffed (<50%), Amber=partial restoration, Red=fully restored"
       },
       {
@@ -1481,7 +1481,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:01",
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "Green=beat + raised guidance, Amber=in-line, Red=miss + lowered"
       },
       {
@@ -1495,7 +1495,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:01",
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "Green=accelerating, Amber=stable, Red=decelerating"
       },
       {
@@ -1509,14 +1509,14 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:01",
+        "last_checked": "2026-04-01T08:00:50",
         "notes": "Green=filled at target, Amber=filled but gapped, Red=not yet filled"
       }
     ],
     "health_score": 8.0,
-    "current_price": 63.16,
-    "unrealized_pnl": 11.6,
-    "unrealized_pnl_pct": 1.87,
+    "current_price": 62.67,
+    "unrealized_pnl": 6.7,
+    "unrealized_pnl_pct": 1.08,
     "notes": [
       {
         "timestamp": "2026-03-04",
@@ -1748,7 +1748,7 @@
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-27T08:01:02",
+    "updated_at": "2026-04-01T08:00:51",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -1784,8 +1784,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 27.44,
-        "last_checked": "2026-03-27T08:01:02",
+        "current_value": 25.25,
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "<18 = hedge unnecessary, EXIT. 18-25 amber. >25 green."
       },
       {
@@ -1798,8 +1798,8 @@
         "direction": "above",
         "weight": 2,
         "status": "failing",
-        "current_value": 574.5,
-        "last_checked": "2026-03-27T08:01:02",
+        "current_value": 577.38,
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "Agent: INVERT this \u2014 QQQ below MA = GREEN for PSQ, above = RED. Set toggle accordingly."
       },
       {
@@ -1813,7 +1813,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:02",
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "Green=declining, Amber=flat, Red=rising (hedge is a drag). Agent: check ^GSPC 5d change."
       },
       {
@@ -1827,7 +1827,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:02",
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "Green=escalating, Amber=stalemate, Red=de-escalating"
       },
       {
@@ -1841,7 +1841,7 @@
         "weight": 1,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:02",
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "Green=rising (inflationary pressure on tech), Amber=flat, Red=falling. Agent: check CL=F 5d change."
       },
       {
@@ -1855,14 +1855,14 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:02",
+        "last_checked": "2026-04-01T08:00:51",
         "notes": "Green=<10 days, Amber=10-20 days, Red=>20 days (decay risk). Agent: calculate from entry_date."
       }
     ],
     "health_score": 7.5,
-    "current_price": 32.29,
-    "unrealized_pnl": 35.97,
-    "unrealized_pnl_pct": 3.49,
+    "current_price": 32.15,
+    "unrealized_pnl": 31.35,
+    "unrealized_pnl_pct": 3.04,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -2086,7 +2086,7 @@
       }
     ],
     "created_at": "2026-03-04T10:00:00",
-    "updated_at": "2026-03-27T08:01:03",
+    "updated_at": "2026-04-01T08:00:52",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,
@@ -2121,8 +2121,8 @@
         "direction": "above",
         "weight": 3,
         "status": "passing",
-        "current_value": 218.57,
-        "last_checked": "2026-03-27T08:01:03",
+        "current_value": 215.9,
+        "last_checked": "2026-04-01T08:00:52",
         "notes": "<$200 = structural break (red)"
       },
       {
@@ -2135,8 +2135,8 @@
         "direction": "above",
         "weight": 2,
         "status": "passing",
-        "current_value": 218.57,
-        "last_checked": "2026-03-27T08:01:03",
+        "current_value": 215.9,
+        "last_checked": "2026-04-01T08:00:52",
         "notes": "<$180 = INVALIDATION"
       },
       {
@@ -2150,7 +2150,7 @@
         "weight": 2,
         "status": "passing",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:03",
+        "last_checked": "2026-04-01T08:00:52",
         "notes": "Green=capex declining, Amber=flat, Red=increasing (thesis broken). Quarterly check only."
       },
       {
@@ -2162,9 +2162,9 @@
         "warning_threshold": null,
         "direction": "above",
         "weight": 1,
-        "status": "passing",
-        "current_value": 218.57,
-        "last_checked": "2026-03-27T08:01:03",
+        "status": "warning",
+        "current_value": 215.9,
+        "last_checked": "2026-04-01T08:00:52",
         "notes": ""
       },
       {
@@ -2178,7 +2178,7 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:03",
+        "last_checked": "2026-04-01T08:00:52",
         "notes": "Green=losses moderating/gains, Amber=stable losses, Red=accelerating losses"
       },
       {
@@ -2192,14 +2192,14 @@
         "weight": 1,
         "status": "warning",
         "current_value": null,
-        "last_checked": "2026-03-27T08:01:03",
+        "last_checked": "2026-04-01T08:00:52",
         "notes": "Green=>1.5M net adds annualized, Amber=1-1.5M, Red=<1M (growth stalling)"
       }
     ],
-    "health_score": 9.0,
-    "current_price": 218.57,
-    "unrealized_pnl": -9.81,
-    "unrealized_pnl_pct": -4.29,
+    "health_score": 8.5,
+    "current_price": 215.9,
+    "unrealized_pnl": -12.48,
+    "unrealized_pnl_pct": -5.46,
     "notes": [
       {
         "timestamp": "2026-03-04 20:25",
@@ -2423,7 +2423,7 @@
       }
     ],
     "created_at": "2026-02-27T00:00:00",
-    "updated_at": "2026-03-27T08:01:04",
+    "updated_at": "2026-04-01T08:00:53",
     "closed_at": null,
     "close_price": null,
     "close_reason": null,

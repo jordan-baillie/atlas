@@ -101,7 +101,7 @@ class DecisionJournal:
                 market_id=entry.get('market_id', 'sp500'),
             )
         except Exception as _db_exc:
-            logger.warning(f"SQLite signal dual-write failed for {signal.ticker}: {_db_exc}")
+            logger.error(f"SQLite signal dual-write FAILED for {signal.ticker}: {_db_exc}", exc_info=True)
         logger.info(f"Decision recorded: {signal.ticker} ({signal.strategy}) -> {action}")
 
     def get_entries(self, ticker: str = None, strategy: str = None,
@@ -170,8 +170,10 @@ class TradeLedger:
         self.trades.append({"type": "entry", **fill_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
+        _dw_ticker = fill_record.get('ticker', '?')
         try:
             from db import atlas_db
+            logger.debug(f"SQLite dual-write: inserting entry for {_dw_ticker}")
             atlas_db.record_trade_entry(
                 ticker=fill_record.get('ticker', ''),
                 strategy=fill_record.get('strategy', ''),
@@ -183,8 +185,9 @@ class TradeLedger:
                 confidence=float(fill_record.get('confidence', 0) or 0),
                 regime_state=fill_record.get('regime_state'),
             )
+            logger.info(f"SQLite dual-write: entry for {_dw_ticker} succeeded")
         except Exception as _db_exc:
-            logger.warning(f"SQLite trade entry dual-write failed for {fill_record.get('ticker')}: {_db_exc}")
+            logger.error(f"SQLite trade entry dual-write FAILED for {_dw_ticker}: {_db_exc}", exc_info=True)
         logger.info(f"Ledger entry: BUY {fill_record.get('ticker')} "
                     f"{fill_record.get('shares')}@{fill_record.get('fill_price')}")
 
@@ -194,16 +197,19 @@ class TradeLedger:
         self.trades.append({"type": "exit", **trade_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
+        _dw_ticker = trade_record.get('ticker', '?')
         try:
             from db import atlas_db
+            logger.debug(f"SQLite dual-write: inserting exit for {_dw_ticker}")
             atlas_db.record_trade_exit(
-                ticker=trade_record.get('ticker', ''),
+                ticker=_dw_ticker,
                 strategy=trade_record.get('strategy', ''),
                 exit_price=float(trade_record.get('fill_price', trade_record.get('exit_price', 0)) or 0),
                 exit_reason=trade_record.get('exit_reason', ''),
             )
+            logger.info(f"SQLite dual-write: exit for {_dw_ticker} succeeded")
         except Exception as _db_exc:
-            logger.warning(f"SQLite trade exit dual-write failed for {trade_record.get('ticker')}: {_db_exc}")
+            logger.error(f"SQLite trade exit dual-write FAILED for {_dw_ticker}: {_db_exc}", exc_info=True)
         logger.info(f"Ledger exit: SELL {trade_record.get('ticker')} "
                     f"PnL=${trade_record.get('pnl', 0):.2f}")
 

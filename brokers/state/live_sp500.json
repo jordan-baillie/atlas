@@ -5,64 +5,73 @@
     {
       "ticker": "AMT",
       "strategy": "mean_reversion",
-      "entry_date": "2026-03-31",
+      "entry_date": "2026-04-01",
       "entry_price": 167.53,
       "shares": 4,
-      "stop_price": 159.8,
+      "stop_price": 164.73,
+      "order_id": ""
+    },
+    {
+      "ticker": "BSX",
+      "strategy": "opening_gap",
+      "entry_date": "2026-04-01",
+      "entry_price": 62.7378,
+      "shares": 7,
+      "stop_price": 61.21,
       "order_id": ""
     },
     {
       "ticker": "CARR",
       "strategy": "short_term_mr",
-      "entry_date": "2026-03-31",
+      "entry_date": "2026-04-01",
       "entry_price": 54.65,
       "shares": 5,
-      "stop_price": 51.53,
+      "stop_price": 54.0,
       "order_id": ""
     },
     {
       "ticker": "COP",
       "strategy": "sector_rotation",
-      "entry_date": "2026-03-31",
+      "entry_date": "2026-04-01",
       "entry_price": 121.06,
       "shares": 1,
       "stop_price": 127.0,
       "order_id": ""
     },
     {
-      "ticker": "CVX",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-03-31",
-      "entry_price": 205.32,
-      "shares": 3,
-      "stop_price": 208.91,
-      "order_id": ""
-    },
-    {
       "ticker": "D",
       "strategy": "mean_reversion",
-      "entry_date": "2026-03-31",
+      "entry_date": "2026-04-01",
       "entry_price": 59.38,
       "shares": 13,
       "stop_price": 60.62,
       "order_id": ""
     },
     {
-      "ticker": "DOW",
-      "strategy": "sector_rotation",
-      "entry_date": "2026-03-31",
-      "entry_price": 36.39,
-      "shares": 3,
-      "stop_price": 40.68,
+      "ticker": "HCA",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-04-01",
+      "entry_price": 467.83,
+      "shares": 1,
+      "stop_price": 458.9,
+      "order_id": ""
+    },
+    {
+      "ticker": "MSI",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-04-01",
+      "entry_price": 426.78,
+      "shares": 1,
+      "stop_price": 423.27,
       "order_id": ""
     },
     {
       "ticker": "NFLX",
       "strategy": "trend_following",
-      "entry_date": "2026-03-31",
+      "entry_date": "2026-04-01",
       "entry_price": 94.38,
       "shares": 3,
-      "stop_price": 90.38,
+      "stop_price": 90.78,
       "order_id": ""
     }
   ],
@@ -227,32 +236,6 @@
       "holding_days": -1
     },
     {
-      "ticker": "AAPL",
-      "strategy": "momentum_breakout",
-      "entry_price": 140.0,
-      "exit_price": 155.0,
-      "shares": 10,
-      "pnl": 150.0,
-      "pnl_pct": 10.71,
-      "holding_days": null,
-      "exit_reason": "signal_exit",
-      "exit_date": "",
-      "order_id": "exit-456"
-    },
-    {
-      "ticker": "AAPL",
-      "strategy": "momentum_breakout",
-      "entry_price": 140.0,
-      "exit_price": 155.0,
-      "shares": 10,
-      "pnl": 150.0,
-      "pnl_pct": 10.71,
-      "holding_days": null,
-      "exit_reason": "signal_exit",
-      "exit_date": "",
-      "order_id": "exit-456"
-    },
-    {
       "ticker": "WM",
       "strategy": "short_term_mr",
       "entry_price": 226.28,
@@ -294,6 +277,32 @@
       "pnl_pct": -0.8,
       "exit_type": "broker_trailing_stop",
       "exit_reason": "broker_trailing_stop",
+      "reconciled": true
+    },
+    {
+      "ticker": "CVX",
+      "strategy": "momentum_breakout",
+      "entry_price": 205.32,
+      "exit_price": 208.93,
+      "shares": 3,
+      "pnl": 10.82,
+      "pnl_pct": 5.27,
+      "holding_days": 1,
+      "exit_reason": "trailing_stop_fill",
+      "exit_date": "2026-04-01",
+      "reconciled": true
+    },
+    {
+      "ticker": "DOW",
+      "strategy": "sector_rotation",
+      "entry_price": 36.39,
+      "exit_price": 40.91,
+      "shares": 3,
+      "pnl": 13.56,
+      "pnl_pct": 12.42,
+      "holding_days": 1,
+      "exit_reason": "trailing_stop_fill",
+      "exit_date": "2026-04-01",
       "reconciled": true
     }
   ],
@@ -748,10 +757,109 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-03-31",
+      "equity": 5100.45,
+      "cash": 1710.58,
+      "positions_value": 3389.87,
+      "num_positions": 8,
+      "total_realized_pnl": 434.56,
+      "total_closed_trades": 16,
+      "positions": [
+        {
+          "ticker": "AMT",
+          "strategy": "mean_reversion",
+          "shares": 4,
+          "entry_price": 167.53,
+          "current_price": 172.58,
+          "unrealized_pnl": 20.2,
+          "mae": 0.0,
+          "mfe": 3.01,
+          "holding_days": -1
+        },
+        {
+          "ticker": "BSX",
+          "strategy": "opening_gap",
+          "shares": 7,
+          "entry_price": 62.7378,
+          "current_price": 62.72,
+          "unrealized_pnl": -0.12,
+          "mae": -0.03,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "CARR",
+          "strategy": "short_term_mr",
+          "shares": 5,
+          "entry_price": 54.65,
+          "current_price": 56.31,
+          "unrealized_pnl": 8.3,
+          "mae": 0.0,
+          "mfe": 3.04,
+          "holding_days": -1
+        },
+        {
+          "ticker": "COP",
+          "strategy": "sector_rotation",
+          "shares": 1,
+          "entry_price": 121.06,
+          "current_price": 132.0,
+          "unrealized_pnl": 10.94,
+          "mae": 0.0,
+          "mfe": 9.04,
+          "holding_days": -1
+        },
+        {
+          "ticker": "D",
+          "strategy": "mean_reversion",
+          "shares": 13,
+          "entry_price": 59.38,
+          "current_price": 61.82,
+          "unrealized_pnl": 31.72,
+          "mae": 0.0,
+          "mfe": 4.11,
+          "holding_days": -1
+        },
+        {
+          "ticker": "HCA",
+          "strategy": "connors_rsi2",
+          "shares": 1,
+          "entry_price": 467.83,
+          "current_price": 472.95,
+          "unrealized_pnl": 5.12,
+          "mae": 0.0,
+          "mfe": 1.09,
+          "holding_days": -1
+        },
+        {
+          "ticker": "MSI",
+          "strategy": "connors_rsi2",
+          "shares": 1,
+          "entry_price": 426.78,
+          "current_price": 433.97,
+          "unrealized_pnl": 7.19,
+          "mae": 0.0,
+          "mfe": 1.68,
+          "holding_days": -1
+        },
+        {
+          "ticker": "NFLX",
+          "strategy": "trend_following",
+          "shares": 3,
+          "entry_price": 94.38,
+          "current_price": 96.15,
+          "unrealized_pnl": 5.31,
+          "mae": 0.0,
+          "mfe": 1.88,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 5094.56,
+  "daily_high_water": 5100.45,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-03-31T08:00:29.603397"
+  "last_saved": "2026-04-01T08:00:34.305427"
 }
