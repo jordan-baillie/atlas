@@ -359,7 +359,8 @@ class TestBareExceptionFixes:
             "stop_price": 145.0,
         }
 
-        with patch("brokers.live_executor._journal_entry"):
+        with patch("brokers.live_executor._journal_entry"), \
+             patch("journal.logger.TradeLedger.record_entry"):
             result = ex._execute_entry(entry, "2026-03-24")
 
         # The order should still be placed despite spread failure
@@ -402,10 +403,11 @@ class TestBareExceptionFixes:
 
         exit_rec = {"ticker": "AAPL", "reason": "signal_exit", "direction": "long"}
 
-        with patch("brokers.live_executor._journal_entry"):
-            with patch("brokers.live_executor.LiveExecutor._cancel_open_orders_for_ticker"):
-                with patch("brokers.live_executor.LiveExecutor.cancel_protective_stop"):
-                    result = ex._execute_exit(exit_rec, "2026-03-24")
+        with patch("brokers.live_executor._journal_entry"), \
+             patch("journal.logger.TradeLedger.record_exit"), \
+             patch("brokers.live_executor.LiveExecutor._cancel_open_orders_for_ticker", return_value=0), \
+             patch("brokers.live_executor.LiveExecutor.cancel_protective_stop"):
+            result = ex._execute_exit(exit_rec, "2026-03-24")
 
         # Exit should succeed even with bad entry date
         assert result["success"] is True
