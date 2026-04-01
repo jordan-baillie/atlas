@@ -536,6 +536,7 @@ def _run_solo_screen(
 def run_session(
     strategy: str,
     market: str = "sp500",
+    universe: str = "sp500",
     hours: float = 4.0,
     notify: bool = False,
     snapshot_id: Optional[str] = None,
@@ -557,7 +558,14 @@ def run_session(
 
     Args:
         strategy:    Strategy name to optimise.
-        market:      Market ID (default ``'sp500'``).
+        market:      Market ID used for config and snapshot discovery
+                     (default ``'sp500'``).
+        universe:    Universe name for data loading.  When set to a value
+                     other than ``'sp500'``, data is loaded via
+                     ``build_from_definition(universe)`` instead of the
+                     snapshot pipeline (default ``'sp500'``).  Backward
+                     compatible — omitting this arg behaves identically to
+                     the pre-universe-flag behaviour.
         hours:       Wall-clock time budget in hours.
         notify:      Send Telegram summary when session completes.
         snapshot_id: Specific snapshot to use (auto-discovered if ``None``).
@@ -588,6 +596,33 @@ def run_session(
     from research.lockfile import EvaluationLockViolation
 
     session = ResearchSession(strategy, market, snapshot_id=snapshot_id)
+
+    # ── Override data source for non-sp500 universes ──────────────────────────
+    # When --universe is specified, replace session data with data loaded via
+    # build_from_definition() so that parameter sweeps run against the correct
+    # ticker set.  The config (strategy params, thresholds) is still read from
+    # the sp500 active config since strategies share the same parameter schema.
+    if universe != "sp500":
+        logger.info(
+            "Loading %s universe data via build_from_definition() ...", universe
+        )
+        try:
+            from universe.builder import build_from_definition
+            universe_data = build_from_definition(universe)
+            session._data = universe_data
+            # Tag session so results / brain writes use the correct universe key
+            session.market = universe
+            logger.info(
+                "Loaded %d tickers from universe '%s'.",
+                len(session._data), universe,
+            )
+        except Exception as exc:
+            logger.error(
+                "Failed to load universe '%s' via build_from_definition: %s — "
+                "falling back to snapshot data.",
+                universe, exc,
+            )
+            # Don't abort the session — use snapshot data as fallback
     logger.info("Session ID: %s", session.session_id)
 
     # ── Prepare fast-screen data (top-50 subset) ─────────────────────────────
@@ -1007,7 +1042,16 @@ def _parse_args(argv=None) -> argparse.Namespace:
     parser.add_argument(
         "--market",
         default="sp500",
-        help="Market ID (default: sp500).",
+        help="Market ID used for config and snapshot discovery (default: sp500).",
+    )
+    parser.add_argument(
+        "--universe",
+        default="sp500",
+        help=(
+            "Universe name for data loading.  When set to a value other than "
+            "'sp500', data is loaded via build_from_definition(universe) instead "
+            "of the snapshot pipeline (default: sp500)."
+        ),
     )
     parser.add_argument(
         "--hours",
@@ -1048,6 +1092,7 @@ if __name__ == "__main__":
     result = run_session(
         strategy=args.strategy,
         market=args.market,
+        universe=args.universe,
         hours=args.hours,
         notify=args.notify,
         snapshot_id=args.snapshot,

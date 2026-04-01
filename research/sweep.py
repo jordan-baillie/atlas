@@ -1027,6 +1027,7 @@ _brain_session: Optional[SweepSession] = None
 def run_sweep(
     strategies: Optional[List[str]] = None,
     market: str = "sp500",
+    universe: str = "sp500",
     top_n: Optional[int] = None,
     max_consecutive_fails: int = 5,
     cycles: int = 0,
@@ -1042,7 +1043,11 @@ def run_sweep(
 
     Args:
         strategies:            List of strategy names, or None for all.
-        market:                Market ID.
+        market:                Market ID (used for config + snapshot discovery).
+        universe:              Universe name for data loading.  When set to a
+                               value other than 'sp500', data is loaded via
+                               ``build_from_definition(universe)`` instead of
+                               the snapshot pipeline (default: 'sp500').
         top_n:                 Ticker subset size (None = full universe).
         max_consecutive_fails: Stop a strategy after this many discards.
         cycles:                Number of full cycles (0 = infinite).
@@ -1125,7 +1130,7 @@ def run_sweep(
             # Expand grid with jittered values around current best
             # (prevents stalling when the fixed grid is exhausted)
             try:
-                current_best_params = load_best(strategy_name, market).get("params", {})
+                current_best_params = load_best(strategy_name).get("params", {})  # type: ignore[arg-type]
             except Exception:
                 current_best_params = {}
             if current_best_params:
@@ -1193,6 +1198,25 @@ def run_sweep(
 
             try:
                 session = ResearchSession(strategy_name, market, top_n=top_n)
+                # Override data source for non-sp500 universes so that
+                # per-universe parameter sweeps use the correct ticker set.
+                if universe != "sp500":
+                    logger.info(
+                        "Loading %s universe data via build_from_definition() ...",
+                        universe,
+                    )
+                    from universe.builder import build_from_definition
+                    universe_data = build_from_definition(universe)
+                    if top_n is not None and len(universe_data) > top_n:
+                        from research.quick_screen import _top_n_tickers
+                        universe_data = _top_n_tickers(universe_data, n=top_n)
+                    session._data = universe_data
+                    # Tag session so save_best / brain writes use the correct key
+                    session.market = universe
+                    logger.info(
+                        "Loaded %d tickers from universe '%s'.",
+                        len(session._data), universe,
+                    )
                 _write_heartbeat(
                     "running", strategy_name,
                     total_experiments, total_kept, session_start,
@@ -1312,7 +1336,15 @@ def main():
     )
     parser.add_argument(
         "--market", type=str, default="sp500",
-        help="Market ID (default: sp500)",
+        help="Market ID used for config and snapshot discovery (default: sp500)",
+    )
+    parser.add_argument(
+        "--universe", type=str, default="sp500",
+        help=(
+            "Universe name for data loading.  When set to a value other than "
+            "'sp500', data is loaded via build_from_definition(universe) instead "
+            "of the snapshot pipeline (default: sp500)"
+        ),
     )
     parser.add_argument(
         "--top-n", type=int, default=None,
@@ -1412,6 +1444,7 @@ def main():
     run_sweep(
         strategies=strategies,
         market=args.market,
+        universe=args.universe,
         top_n=args.top_n,
         max_consecutive_fails=args.max_fails,
         cycles=args.cycles,

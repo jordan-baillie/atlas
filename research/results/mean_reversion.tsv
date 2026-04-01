@@ -335,3 +335,5 @@ timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
 2026-03-16T09:19:03	0.3910	193	6.01	2.4952	12.18	rsi_oversold=32	discard_solo	[solo screen] rsi_oversold: 35 → 32
 2026-03-16T09:33:23	0.5359	650	10.19	1.6590	31.06	rsi_period=14, rsi_oversold=38, zscore_lookback=30, zscore_entry=-2.0, atr_period=20, atr_stop_mult=1.5, profit_target_atr_mult=2.5, max_hold_days=20, sma200_filter=False, ibs_max=0.7, volume={'lookback': 20, 'min_ratio': 0.5, 'surge_threshold': 1.5, 'surge_boost': 0.0, 'dry_penalty': 0.0}, earnings_blackout={'enabled': True, 'days_before': 5, 'days_after': 1}, breadth={'enabled': True, 'metric': 'pct_above_50ma', 'low_threshold': 48.0, 'high_threshold': 58.0, 'low_boost': 0.015, 'high_penalty': 0.015}, relative_strength={'enabled': False}, cointegration_filter={'enabled': False}	discard	rsi_oversold: 35 → 38
 2026-03-16T09:34:06	0.0083	115	5.78	1.9797	4.91	rsi_oversold=26	discard_solo	[solo screen] rsi_oversold: 35 → 26
+2026-04-01T06:18:21	0.3306	351	16.23	1.5703	11.21		keep	baseline
+2026-04-01T06:32:54	-0.0063	380	14.97	1.2751	4.64	rsi_period=7	discard	rsi_period: 14→7
