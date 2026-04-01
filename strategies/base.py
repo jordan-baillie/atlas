@@ -36,6 +36,7 @@ class Signal:
         rationale: Plain English explanation of why this signal was generated.
         features: Dict of key indicators that triggered the signal.
         market_id: Market this signal belongs to (e.g., 'asx', 'sp500').
+        universe: Universe this signal was generated for (e.g., 'sp500', 'sector_etfs').
         timestamp: When the signal was generated.
     """
     ticker: str
@@ -52,6 +53,7 @@ class Signal:
     features: Dict[str, Any] = field(default_factory=dict)
     market_id: str = ""
     sector: str = "Unknown"
+    universe: str = "sp500"
     timestamp: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
@@ -90,6 +92,7 @@ class Signal:
             "confidence": self.confidence,
             "rationale": self.rationale,
             "features": self.features,
+            "universe": self.universe,
             "timestamp": self.timestamp.isoformat(),
         }
 
