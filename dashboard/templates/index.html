@@ -128,26 +128,24 @@
   <!-- ── Finance Tab ── -->
   <div id="tab-finance" class="tab-content">
 
-    <!-- Hero: Net Worth + Spent This Month -->
-    <div class="fin-hero">
-      <div class="fin-hero-main">
-        <div class="fin-hero-label">Net Worth</div>
-        <div class="fin-hero-value" id="fin-stat-total">—</div>
-        <div class="fin-hero-sub" id="fin-hero-breakdown"></div>
+    <!-- Summary Strip -->
+    <div class="summary-strip fin-strip">
+      <div class="stat fin-stat-wide">
+        <div class="stat-label">Net Worth</div>
+        <div class="stat-value" id="fin-stat-total">—</div>
+        <div class="stat-sub" id="fin-hero-breakdown"></div>
       </div>
-      <div class="fin-hero-right">
-        <div class="fin-hero-stat">
-          <div class="fin-hero-label">Spent This Month</div>
-          <div class="fin-hero-stat-value" id="fin-stat-spent">—</div>
-        </div>
-        <div class="fin-hero-stat">
-          <div class="fin-hero-label">Daily Average</div>
-          <div class="fin-hero-stat-value" id="fin-stat-daily">—</div>
-        </div>
-        <div class="fin-hero-stat">
-          <div class="fin-hero-label">Runway</div>
-          <div class="fin-hero-stat-value" id="fin-stat-runway">—</div>
-        </div>
+      <div class="stat">
+        <div class="stat-label">Spent This Month</div>
+        <div class="stat-value" id="fin-stat-spent">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Daily Average</div>
+        <div class="stat-value" id="fin-stat-daily">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Runway</div>
+        <div class="stat-value" id="fin-stat-runway">—</div>
       </div>
     </div>
 
@@ -1175,17 +1173,14 @@ function renderFinanceHero(d) {
 
   var bdEl = document.getElementById('fin-hero-breakdown');
   if (bdEl) {
-    bdEl.innerHTML =
-      '<span>' + fmtCcy(nw.up_bank_aud, 0) + ' cash</span>' +
-      '<span class="fin-hero-dot"></span>' +
-      '<span>' + fmtCcy(nw.invested_aud, 0) + ' invested</span>';
+    bdEl.textContent = fmtCcy(nw.up_bank_aud, 0) + ' cash · ' + fmtCcy(nw.invested_aud, 0) + ' invested';
   }
 
   var spentEl = document.getElementById('fin-stat-spent');
   if (spentEl) spentEl.textContent = fmtCcy(ms.total || 0, 0);
 
   var dailyEl = document.getElementById('fin-stat-daily');
-  if (dailyEl) dailyEl.textContent = fmtCcy(ins.daily_avg || 0, 0) + '/day';
+  if (dailyEl) dailyEl.textContent = fmtCcy(ins.daily_avg || 0, 0);
 
   var runEl = document.getElementById('fin-stat-runway');
   if (runEl) runEl.textContent = perf.runway_months != null ? perf.runway_months.toFixed(0) + ' mo' : '—';
