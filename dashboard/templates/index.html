@@ -128,91 +128,63 @@
   <!-- ── Finance Tab ── -->
   <div id="tab-finance" class="tab-content">
 
-    <!-- Net Worth Summary Strip -->
-    <div class="summary-strip">
-      <div class="stat">
-        <div class="stat-label">Net Worth</div>
-        <div class="stat-value" id="fin-stat-total">—</div>
+    <!-- Hero: Net Worth + Spent This Month -->
+    <div class="fin-hero">
+      <div class="fin-hero-main">
+        <div class="fin-hero-label">Net Worth</div>
+        <div class="fin-hero-value" id="fin-stat-total">—</div>
+        <div class="fin-hero-sub" id="fin-hero-breakdown"></div>
       </div>
-      <div class="stat">
-        <div class="stat-label">Cash (Up Bank)</div>
-        <div class="stat-value" id="fin-stat-cash">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Invested</div>
-        <div class="stat-value" id="fin-stat-invested">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Savings Rate</div>
-        <div class="stat-value" id="fin-stat-savings-rate">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Runway</div>
-        <div class="stat-value" id="fin-stat-runway">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">Cash / Invested</div>
-        <div class="stat-value fin-split" id="fin-stat-split">—</div>
+      <div class="fin-hero-right">
+        <div class="fin-hero-stat">
+          <div class="fin-hero-label">Spent This Month</div>
+          <div class="fin-hero-stat-value" id="fin-stat-spent">—</div>
+        </div>
+        <div class="fin-hero-stat">
+          <div class="fin-hero-label">Daily Average</div>
+          <div class="fin-hero-stat-value" id="fin-stat-daily">—</div>
+        </div>
+        <div class="fin-hero-stat">
+          <div class="fin-hero-label">Runway</div>
+          <div class="fin-hero-stat-value" id="fin-stat-runway">—</div>
+        </div>
       </div>
     </div>
 
     <!-- Budget Pace Chart -->
     <div class="chart-section">
       <div class="chart-header">
-        <div class="chart-legend">
-          <span class="chart-title" id="pace-chart-title">Spending Pace</span>
-        </div>
-        <span class="return-badge" id="fin-updated" style="background:var(--surface-2);color:var(--text-3);font-weight:400"></span>
+        <span class="chart-title" id="pace-chart-title">Spending Pace</span>
+        <span class="return-badge" id="fin-pace-badge" style="display:none"></span>
       </div>
       <canvas id="pace-canvas"></canvas>
       <div class="pace-legend" id="pace-legend"></div>
     </div>
 
-    <!-- Net Worth Chart -->
-    <div class="chart-section">
-      <div class="chart-header">
-        <div class="chart-legend">
-          <span class="chart-title">Net Worth (AUD)</span>
-          <span class="chart-legend-item">
-            <span class="chart-legend-line solid"></span>Total
-          </span>
-        </div>
-      </div>
-      <canvas id="finance-nw-canvas"></canvas>
-    </div>
-
-    <!-- Two-Column: Accounts + Monthly Spending -->
+    <!-- Two-Column: Spending Breakdown + Transactions -->
     <div class="two-col-layout">
       <div class="fin-section">
-        <div class="section-header">Bank Accounts</div>
-        <div id="fin-accounts-grid" class="fin-accounts-grid"></div>
-      </div>
-      <div class="fin-section">
-        <div class="section-header">Monthly Spending</div>
+        <div class="section-header">By Category</div>
         <div id="fin-spending-bars"></div>
       </div>
-    </div>
-
-    <!-- Insights Strip -->
-    <div class="summary-strip fin-insights-strip" id="fin-insights-strip" style="margin-bottom:14px"></div>
-
-    <!-- Recent Transactions -->
-    <div class="fin-section" style="margin-bottom:32px">
-      <div class="section-header">Recent Transactions</div>
-      <div class="orders-scroll">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Category</th>
-            </tr>
-          </thead>
-          <tbody id="fin-txns-tbody"></tbody>
-        </table>
+      <div class="fin-section">
+        <div class="section-header">Recent Transactions</div>
+        <div class="orders-scroll">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th style="text-align:right">Amount</th>
+              </tr>
+            </thead>
+            <tbody id="fin-txns-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
+
+    <div class="fin-updated-row" id="fin-updated"></div>
 
   </div><!-- /tab-finance -->
 
@@ -984,9 +956,6 @@ function redrawCharts() {
   if (_donutData) {
     drawDonutChart(_donutData);
   }
-  if (_nwChartData) {
-    drawNetWorthChart(_nwChartData);
-  }
   if (_paceChartData) {
     drawPaceChart(_paceChartData);
   }
@@ -1174,7 +1143,6 @@ async function init() {
 }
 
 // ── Finance Tab ──────────────────────────────────────────────────────────
-var _nwChartData = null;
 var _paceChartData = null;
 
 function loadFinance() {
@@ -1182,53 +1150,45 @@ function loadFinance() {
   fetch('/finance-data.json')
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(d) {
-      renderFinanceSummary(d);
+      renderFinanceHero(d);
       drawPaceChart(d.insights || {});
-      drawNetWorthChart(d.balance_history || []);
-      renderFinanceAccounts(d.accounts || []);
       renderFinanceSpending(d.monthly_spending || {});
-      renderFinanceInsights(d.insights || {}, d.performance || {});
       renderFinanceTransactions(d.recent_transactions || []);
       var updEl = document.getElementById('fin-updated');
       if (updEl && d.last_updated) {
-        updEl.textContent = 'updated ' + fmtRelativeTime(d.last_updated);
+        updEl.textContent = 'Updated ' + fmtRelativeTime(d.last_updated);
       }
     })
     .catch(function(e) {
       console.error('Finance load failed:', e);
-      document.getElementById('fin-accounts-grid').innerHTML =
-        '<div class="empty-state">Failed to load finance data — ' + e.message + '</div>';
     });
 }
 
-function renderFinanceSummary(d) {
-  var nw   = d.net_worth   || {};
-  var sr   = d.savings_rate || {};
-  var perf = d.performance  || {};
+function renderFinanceHero(d) {
+  var nw   = d.net_worth || {};
+  var perf = d.performance || {};
+  var ins  = d.insights || {};
+  var ms   = d.monthly_spending || {};
 
-  var totalEl  = document.getElementById('fin-stat-total');
-  var cashEl   = document.getElementById('fin-stat-cash');
-  var invEl    = document.getElementById('fin-stat-invested');
-  var srEl     = document.getElementById('fin-stat-savings-rate');
-  var runEl    = document.getElementById('fin-stat-runway');
-  var splitEl  = document.getElementById('fin-stat-split');
+  var totalEl = document.getElementById('fin-stat-total');
+  if (totalEl) totalEl.textContent = fmtCcy(nw.total_aud, 0);
 
-  if (totalEl)  totalEl.textContent  = fmtCcy(nw.total_aud, 0);
-  if (cashEl)   cashEl.textContent   = fmtCcy(nw.up_bank_aud, 0);
-  if (invEl)    invEl.textContent    = fmtCcy(nw.invested_aud, 0);
-  if (srEl) {
-    var rate = sr.rate_pct;
-    if (rate == null) { srEl.textContent = '—'; srEl.className = 'stat-value'; }
-    else {
-      srEl.textContent = (rate >= 0 ? '+' : '') + rate.toFixed(1) + '%';
-      srEl.className   = 'stat-value ' + (rate >= 0 ? 'green' : 'red');
-    }
+  var bdEl = document.getElementById('fin-hero-breakdown');
+  if (bdEl) {
+    bdEl.innerHTML =
+      '<span>' + fmtCcy(nw.up_bank_aud, 0) + ' cash</span>' +
+      '<span class="fin-hero-dot"></span>' +
+      '<span>' + fmtCcy(nw.invested_aud, 0) + ' invested</span>';
   }
-  if (runEl)   runEl.textContent   = perf.runway_months != null ? perf.runway_months.toFixed(1) + ' mo' : '—';
-  if (splitEl) splitEl.innerHTML   =
-    '<span style="color:var(--green)">' + (nw.pct_cash     || 0).toFixed(1) + '%</span>' +
-    ' <span style="color:var(--text-3)">/</span> ' +
-    '<span style="color:var(--accent)">' + (nw.pct_invested || 0).toFixed(1) + '%</span>';
+
+  var spentEl = document.getElementById('fin-stat-spent');
+  if (spentEl) spentEl.textContent = fmtCcy(ms.total || 0, 0);
+
+  var dailyEl = document.getElementById('fin-stat-daily');
+  if (dailyEl) dailyEl.textContent = fmtCcy(ins.daily_avg || 0, 0) + '/day';
+
+  var runEl = document.getElementById('fin-stat-runway');
+  if (runEl) runEl.textContent = perf.runway_months != null ? perf.runway_months.toFixed(0) + ' mo' : '—';
 }
 
 function drawPaceChart(insights) {
@@ -1237,12 +1197,23 @@ function drawPaceChart(insights) {
   var paceStatus  = insights.pace_status || 'under';
   _paceChartData  = insights;
 
-  // Set title with current month
+  // Title
   var titleEl = document.getElementById('pace-chart-title');
   if (titleEl) {
     var now = new Date();
     var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    titleEl.textContent = 'Spending Pace \u2014 ' + monthNames[now.getMonth()] + ' ' + now.getFullYear();
+    titleEl.textContent = monthNames[now.getMonth()] + ' ' + now.getFullYear();
+  }
+
+  // Pace badge
+  var badgeEl = document.getElementById('fin-pace-badge');
+  if (badgeEl && currentPace.length > 0) {
+    var last = currentPace[currentPace.length - 1];
+    var diff = Math.abs(last.actual - last.budget);
+    var isOver = last.actual > last.budget;
+    badgeEl.textContent = (isOver ? '+' : '-') + fmtCcy(diff, 0) + ' ' + (isOver ? 'over' : 'under');
+    badgeEl.className = 'return-badge' + (isOver ? ' negative' : '');
+    badgeEl.style.display = '';
   }
 
   var canvas = document.getElementById('pace-canvas');
@@ -1250,7 +1221,7 @@ function drawPaceChart(insights) {
 
   var dpr = window.devicePixelRatio || 1;
   var w   = canvas.offsetWidth || 800;
-  var h   = 240;
+  var h   = 220;
   canvas.width        = w * dpr;
   canvas.height       = h * dpr;
   canvas.style.width  = w + 'px';
@@ -1260,40 +1231,38 @@ function drawPaceChart(insights) {
   ctx.scale(dpr, dpr);
 
   var isDark     = document.documentElement.getAttribute('data-theme') !== 'light';
-  var gridColor  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  var gridColor  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
   var labelColor = isDark ? '#52525b' : '#a1a1aa';
-  var budgetColor = isDark ? '#52525b' : '#a1a1aa';
+  var budgetColor = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
   var currentColor = paceStatus === 'over' ? (isDark ? '#ef4444' : '#dc2626') : (isDark ? '#22c55e' : '#16a34a');
   var currentFill  = paceStatus === 'over'
-    ? (isDark ? 'rgba(239,68,68,0.10)' : 'rgba(220,38,38,0.06)')
-    : (isDark ? 'rgba(34,197,94,0.10)' : 'rgba(22,163,74,0.06)');
+    ? (isDark ? 'rgba(239,68,68,0.08)' : 'rgba(220,38,38,0.05)')
+    : (isDark ? 'rgba(34,197,94,0.08)' : 'rgba(22,163,74,0.05)');
   var surfaceFill = isDark ? '#131316' : '#ffffff';
 
   var histColors = [
-    isDark ? 'rgba(99,102,241,0.35)' : 'rgba(79,70,229,0.30)',
-    isDark ? 'rgba(168,85,247,0.35)' : 'rgba(147,51,234,0.30)',
-    isDark ? 'rgba(236,72,153,0.35)' : 'rgba(219,39,119,0.30)',
+    isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)',
+    isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)',
+    isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.15)',
   ];
 
-  // Find max days (31) and max value across all series
+  // Scales
   var maxDays = 31;
   var allVals = [];
   history.forEach(function(m) {
     (m.pace_data || []).forEach(function(d) { allVals.push(d.actual, d.budget); });
   });
   currentPace.forEach(function(d) { allVals.push(d.actual, d.budget); });
-  // Extend budget line to full month
   if (currentPace.length > 0) {
-    var lastBudget = currentPace[currentPace.length - 1].budget;
-    var budgetPerDay = lastBudget / currentPace.length;
+    var budgetPerDay = currentPace[currentPace.length - 1].budget / currentPace.length;
     allVals.push(budgetPerDay * maxDays);
   } else if (history.length > 0) {
     allVals.push(history[0].total_budget || 5000);
   }
   var maxVal = Math.max.apply(null, allVals) || 5000;
-  maxVal *= 1.08; // padding
+  maxVal *= 1.08;
 
-  var pad = { t: 16, r: 16, b: 40, l: 60 };
+  var pad = { t: 12, r: 12, b: 32, l: 52 };
   var cw  = w - pad.l - pad.r;
   var ch  = h - pad.t - pad.b;
 
@@ -1302,8 +1271,8 @@ function drawPaceChart(insights) {
 
   ctx.clearRect(0, 0, w, h);
 
-  // Grid + Y labels
-  ctx.font = '11px JetBrains Mono, monospace';
+  // Y grid
+  ctx.font = '10px JetBrains Mono, monospace';
   ctx.textAlign = 'right';
   for (var yi = 0; yi <= 4; yi++) {
     var yv = (yi / 4) * maxVal;
@@ -1314,29 +1283,28 @@ function drawPaceChart(insights) {
     ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = labelColor;
-    ctx.fillText(yv >= 1000 ? '$' + (yv / 1000).toFixed(1) + 'k' : '$' + Math.round(yv), pad.l - 8, yp + 4);
+    ctx.fillText(yv >= 1000 ? '$' + (yv / 1000).toFixed(1) + 'k' : '$' + Math.round(yv), pad.l - 6, yp + 3);
   }
 
-  // X labels (day numbers)
+  // X labels
   ctx.textAlign = 'center';
-  [1, 5, 10, 15, 20, 25, 31].forEach(function(d) {
-    if (d > maxDays) return;
+  [1, 10, 20, 31].forEach(function(d) {
     ctx.fillStyle = labelColor;
-    ctx.fillText(d.toString(), xOf(d), h - 10);
+    ctx.fillText(d.toString(), xOf(d), h - 8);
   });
 
-  // Budget line (dashed, full 31 days)
-  var budgetPerDay = 0;
+  // Budget line (dashed)
+  var bpd = 0;
   if (currentPace.length > 0) {
-    budgetPerDay = currentPace[currentPace.length - 1].budget / currentPace.length;
+    bpd = currentPace[currentPace.length - 1].budget / currentPace.length;
   } else if (history.length > 0 && history[0].pace_data && history[0].pace_data.length > 0) {
     var h0 = history[0].pace_data;
-    budgetPerDay = h0[h0.length - 1].budget / h0.length;
+    bpd = h0[h0.length - 1].budget / h0.length;
   }
-  if (budgetPerDay > 0) {
+  if (bpd > 0) {
     ctx.beginPath();
-    ctx.moveTo(xOf(1), yOf(budgetPerDay));
-    ctx.lineTo(xOf(maxDays), yOf(budgetPerDay * maxDays));
+    ctx.moveTo(xOf(1), yOf(bpd));
+    ctx.lineTo(xOf(maxDays), yOf(bpd * maxDays));
     ctx.strokeStyle = budgetColor;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 4]);
@@ -1344,15 +1312,13 @@ function drawPaceChart(insights) {
     ctx.setLineDash([]);
   }
 
-  // Previous month lines (thin, semi-transparent)
+  // Previous months (thin, ghosted)
   history.forEach(function(m, mi) {
     var pd = m.pace_data || [];
     if (pd.length < 2) return;
     ctx.beginPath();
     ctx.moveTo(xOf(1), yOf(pd[0].actual));
-    for (var i = 1; i < pd.length; i++) {
-      ctx.lineTo(xOf(i + 1), yOf(pd[i].actual));
-    }
+    for (var i = 1; i < pd.length; i++) ctx.lineTo(xOf(i + 1), yOf(pd[i].actual));
     ctx.strokeStyle = histColors[mi % histColors.length];
     ctx.lineWidth = 1.5;
     ctx.lineJoin = 'round';
@@ -1360,13 +1326,11 @@ function drawPaceChart(insights) {
     ctx.stroke();
   });
 
-  // Current month — area fill
+  // Current month — area
   if (currentPace.length >= 1) {
     ctx.beginPath();
     ctx.moveTo(xOf(1), yOf(currentPace[0].actual));
-    for (var ci = 1; ci < currentPace.length; ci++) {
-      ctx.lineTo(xOf(ci + 1), yOf(currentPace[ci].actual));
-    }
+    for (var ci = 1; ci < currentPace.length; ci++) ctx.lineTo(xOf(ci + 1), yOf(currentPace[ci].actual));
     ctx.lineTo(xOf(currentPace.length), yOf(0));
     ctx.lineTo(xOf(1), yOf(0));
     ctx.closePath();
@@ -1376,181 +1340,36 @@ function drawPaceChart(insights) {
     // Current month — line
     ctx.beginPath();
     ctx.moveTo(xOf(1), yOf(currentPace[0].actual));
-    for (var cl = 1; cl < currentPace.length; cl++) {
-      ctx.lineTo(xOf(cl + 1), yOf(currentPace[cl].actual));
-    }
+    for (var cl = 1; cl < currentPace.length; cl++) ctx.lineTo(xOf(cl + 1), yOf(currentPace[cl].actual));
     ctx.strokeStyle = currentColor;
     ctx.lineWidth = 2.5;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Dots on current month
-    for (var cd = 0; cd < currentPace.length; cd++) {
-      ctx.beginPath();
-      ctx.arc(xOf(cd + 1), yOf(currentPace[cd].actual), 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = surfaceFill; ctx.fill();
-      ctx.beginPath();
-      ctx.arc(xOf(cd + 1), yOf(currentPace[cd].actual), 3.5, 0, Math.PI * 2);
-      ctx.strokeStyle = currentColor; ctx.lineWidth = 2; ctx.stroke();
-    }
+    // End dot
+    var lastIdx = currentPace.length - 1;
+    ctx.beginPath();
+    ctx.arc(xOf(lastIdx + 1), yOf(currentPace[lastIdx].actual), 4, 0, Math.PI * 2);
+    ctx.fillStyle = currentColor; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(xOf(lastIdx + 1), yOf(currentPace[lastIdx].actual), 2, 0, Math.PI * 2);
+    ctx.fillStyle = surfaceFill; ctx.fill();
   }
 
   // Legend
   var legendEl = document.getElementById('pace-legend');
   if (legendEl) {
-    var items = [];
-    items.push('<span class="pace-legend-item"><span class="pace-legend-line" style="background:' + budgetColor + ';background:repeating-linear-gradient(90deg,' + budgetColor + ' 0 5px,transparent 5px 9px);height:2px"></span>Budget</span>');
+    var monthAbbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var items = '<span class="pace-legend-item"><span class="pace-legend-line" style="height:1.5px;background:repeating-linear-gradient(90deg,' + budgetColor + ' 0 5px,transparent 5px 9px)"></span>Budget</span>';
     history.forEach(function(m, mi) {
       var c = histColors[mi % histColors.length];
       var label = m.label ? m.label.split(' ')[0].substring(0, 3) : m.month;
-      items.push('<span class="pace-legend-item"><span class="pace-legend-line" style="background:' + c + '"></span>' + label + '</span>');
+      items += '<span class="pace-legend-item"><span class="pace-legend-line" style="background:' + c + '"></span>' + label + '</span>';
     });
-    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var curLabel = monthNames[new Date().getMonth()];
-    items.push('<span class="pace-legend-item"><span class="pace-legend-line" style="background:' + currentColor + ';height:3px"></span>' + curLabel + ' (current)</span>');
-    legendEl.innerHTML = items.join('');
+    items += '<span class="pace-legend-item"><span class="pace-legend-line" style="background:' + currentColor + ';height:3px"></span>' + monthAbbr[new Date().getMonth()] + '</span>';
+    legendEl.innerHTML = items;
   }
-}
-
-function drawNetWorthChart(history) {
-  _nwChartData = history;
-  var canvas = document.getElementById('finance-nw-canvas');
-  if (!canvas) return;
-
-  var dpr = window.devicePixelRatio || 1;
-  var w   = canvas.offsetWidth || 800;
-  var h   = 200;
-  canvas.width        = w * dpr;
-  canvas.height       = h * dpr;
-  canvas.style.width  = w + 'px';
-  canvas.style.height = h + 'px';
-
-  var ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
-  var isDark     = document.documentElement.getAttribute('data-theme') !== 'light';
-  var lineColor  = isDark ? '#22c55e' : '#16a34a';
-  var gridColor  = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
-  var labelColor = isDark ? '#52525b' : '#a1a1aa';
-
-  if (!history || history.length < 2) {
-    ctx.fillStyle = labelColor;
-    ctx.font = '13px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Building history…', w / 2, h / 2);
-    return;
-  }
-
-  var vals  = history.map(function(d) { return d.net_worth || 0; });
-  var dates = history.map(function(d) { return d.date; });
-  var n     = history.length;
-
-  var minV   = Math.min.apply(null, vals);
-  var maxV   = Math.max.apply(null, vals);
-  var yRange = maxV - minV || 1;
-  minV -= yRange * 0.08;
-  maxV += yRange * 0.08;
-  var range  = maxV - minV;
-
-  var pad = { t: 16, r: 16, b: 40, l: 80 };
-  var cw  = w - pad.l - pad.r;
-  var ch  = h - pad.t - pad.b;
-
-  function xOf(i) { return pad.l + (n === 1 ? cw / 2 : (i / (n - 1)) * cw); }
-  function yOf(v) { return pad.t + ch - ((v - minV) / range) * ch; }
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Grid + Y labels
-  ctx.font = '11px JetBrains Mono, monospace';
-  ctx.textAlign = 'right';
-  for (var yi = 0; yi <= 4; yi++) {
-    var yv = minV + (yi / 4) * range;
-    var yp = yOf(yv);
-    ctx.strokeStyle = gridColor;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 4]);
-    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = labelColor;
-    var kLabel = yv >= 1000 ? 'A$' + Math.round(yv / 1000) + 'k' : 'A$' + Math.round(yv);
-    ctx.fillText(kLabel, pad.l - 8, yp + 4);
-  }
-
-  // X labels
-  ctx.textAlign = 'center';
-  var xLabelCount = Math.min(6, n);
-  var xStep = Math.max(1, Math.floor((n - 1) / Math.max(xLabelCount - 1, 1)));
-  for (var xi = 0; xi < n; xi += xStep) {
-    ctx.fillStyle = labelColor;
-    ctx.fillText(fmtDateShort(dates[xi]), xOf(xi), h - 10);
-  }
-
-  // Area fill
-  ctx.beginPath();
-  ctx.moveTo(xOf(0), yOf(vals[0]));
-  for (var fi = 1; fi < n; fi++) ctx.lineTo(xOf(fi), yOf(vals[fi]));
-  ctx.lineTo(xOf(n - 1), pad.t + ch);
-  ctx.lineTo(xOf(0), pad.t + ch);
-  ctx.closePath();
-  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
-  grad.addColorStop(0,   isDark ? 'rgba(34,197,94,0.14)' : 'rgba(22,163,74,0.10)');
-  grad.addColorStop(0.65, isDark ? 'rgba(34,197,94,0.03)' : 'rgba(22,163,74,0.02)');
-  grad.addColorStop(1,   'transparent');
-  ctx.fillStyle = grad;
-  ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  ctx.moveTo(xOf(0), yOf(vals[0]));
-  for (var li = 1; li < n; li++) ctx.lineTo(xOf(li), yOf(vals[li]));
-  ctx.strokeStyle = lineColor;
-  ctx.lineWidth   = 2;
-  ctx.lineJoin    = 'round';
-  ctx.lineCap     = 'round';
-  ctx.stroke();
-
-  // Dots
-  var innerFill = isDark ? '#131316' : '#ffffff';
-  for (var di = 0; di < n; di++) {
-    ctx.beginPath();
-    ctx.arc(xOf(di), yOf(vals[di]), 3, 0, Math.PI * 2);
-    ctx.fillStyle = innerFill; ctx.fill();
-    ctx.beginPath();
-    ctx.arc(xOf(di), yOf(vals[di]), 3, 0, Math.PI * 2);
-    ctx.strokeStyle = lineColor; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-
-  canvas._nwChart = { pad: pad, cw: cw, ch: ch, vals: vals, dates: dates, minV: minV, range: range, history: history };
-}
-
-function renderFinanceAccounts(accounts) {
-  var el = document.getElementById('fin-accounts-grid');
-  if (!el) return;
-  if (!accounts.length) {
-    el.innerHTML = '<div class="empty-state">No accounts</div>';
-    return;
-  }
-  el.innerHTML = accounts.map(function(a) {
-    var pct      = (a.limit && a.limit > 0) ? Math.min(100, (a.balance / a.limit) * 100) : -1;
-    var barColor = pct > 80 ? 'var(--red)' : pct > 50 ? 'var(--amber)' : 'var(--green)';
-    var typeLabel = (a.type || '').replace(/_/g, ' ').toLowerCase();
-    return '<div class="account-card">' +
-      '<div class="account-top">' +
-        '<span class="account-name">' + a.name + '</span>' +
-        '<span class="account-type">' + typeLabel + '</span>' +
-      '</div>' +
-      '<div class="account-balance">' + fmtCcy(a.balance, 2) + '</div>' +
-      (pct >= 0 ?
-        '<div class="account-limit-row">' +
-          '<div class="account-progress-bar">' +
-            '<div class="account-progress-fill" style="width:' + pct.toFixed(1) + '%;background:' + barColor + '"></div>' +
-          '</div>' +
-          '<span class="account-limit-label">' + pct.toFixed(0) + '% of ' + fmtCcy(a.limit, 0) + '</span>' +
-        '</div>' : '') +
-    '</div>';
-  }).join('');
 }
 
 function renderFinanceSpending(spending) {
@@ -1558,61 +1377,33 @@ function renderFinanceSpending(spending) {
   if (!el) return;
   var cats  = spending.by_parent_category || [];
   var total = spending.total || 0;
-  var period = spending.period || '';
   if (!cats.length) {
-    el.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:8px 0">No spending data</div>';
+    el.innerHTML = '<div style="color:var(--text-3);font-size:12px">No spending data</div>';
     return;
   }
   var maxAmt = Math.max.apply(null, cats.map(function(c) { return c.amount || 0; })) || 1;
-  el.innerHTML =
-    (period ? '<div class="fin-period-tag">' + period + '</div>' : '') +
-    cats.map(function(c) {
-      var pct = (c.amount / maxAmt * 100);
-      return '<div class="spending-bar-row">' +
-        '<div class="spending-bar-label">' + (c.label || c.category) + '</div>' +
-        '<div class="spending-bar-track">' +
-          '<div class="spending-bar-fill" style="width:' + pct.toFixed(1) + '%"></div>' +
-        '</div>' +
-        '<div class="spending-bar-amount">' + fmtCcy(c.amount, 0) + '</div>' +
-      '</div>';
-    }).join('') +
-    '<div class="spending-total-row">' +
-      '<span>Total</span>' +
-      '<span class="spending-total">' + fmtCcy(total, 0) + '</span>' +
+  el.innerHTML = cats.map(function(c) {
+    var pct = (c.amount / maxAmt * 100);
+    return '<div class="spending-bar-row">' +
+      '<div class="spending-bar-label">' + (c.label || c.category) + '</div>' +
+      '<div class="spending-bar-track">' +
+        '<div class="spending-bar-fill" style="width:' + pct.toFixed(1) + '%"></div>' +
+      '</div>' +
+      '<div class="spending-bar-amount">' + fmtCcy(c.amount, 0) + '</div>' +
     '</div>';
-}
-
-function renderFinanceInsights(insights, perf) {
-  var el = document.getElementById('fin-insights-strip');
-  if (!el) return;
-  var paceStatus = (insights.pace_status || 'on_track').replace(/_/g, ' ');
-  var paceColor  = insights.pace_status === 'over' ? 'var(--red)' : 'var(--green)';
-  var topCats    = (insights.top_categories || []).slice(0, 3);
-
-  var html =
-    '<div class="stat"><div class="stat-label">Daily Avg</div>' +
-      '<div class="stat-value">' + fmtCcy(insights.daily_avg, 0) + '</div></div>' +
-    '<div class="stat"><div class="stat-label">Projected</div>' +
-      '<div class="stat-value">' + fmtCcy(insights.projected_total, 0) + '</div></div>' +
-    '<div class="stat"><div class="stat-label">Days</div>' +
-      '<div class="stat-value">' + (insights.days_elapsed || 0) + '<span style="color:var(--text-3);font-size:13px"> / ' + ((insights.days_elapsed || 0) + (insights.days_left || 0)) + '</span></div></div>' +
-    '<div class="stat"><div class="stat-label">Pace</div>' +
-      '<div class="stat-value" style="color:' + paceColor + '">' + paceStatus + '</div></div>';
-
-  topCats.forEach(function(c) {
-    html += '<div class="stat"><div class="stat-label">' + (c.label || c.category) + '</div>' +
-      '<div class="stat-value">' + fmtCcy(c.amount, 0) + '</div></div>';
-  });
-
-  el.innerHTML = html;
+  }).join('') +
+  '<div class="spending-total-row">' +
+    '<span>Total</span>' +
+    '<span class="spending-total">' + fmtCcy(total, 0) + '</span>' +
+  '</div>';
 }
 
 function renderFinanceTransactions(txns) {
   var tbody = document.getElementById('fin-txns-tbody');
   if (!tbody) return;
-  var rows = (txns || []).slice(0, 10);
+  var rows = (txns || []).slice(0, 8);
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="orders-empty">No transactions</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="orders-empty">No transactions</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(function(t) {
@@ -1620,16 +1411,13 @@ function renderFinanceTransactions(txns) {
     var amtClass = amt > 0 ? 'green' : amt < 0 ? 'red' : '';
     var sign     = amt >= 0 ? '+$' : '-$';
     var amtStr   = sign + Math.abs(amt).toFixed(2);
-    var catLabel = (t.category || '').replace(/-/g, ' ');
     return '<tr>' +
-      '<td>' + fmtDateShort(t.date) + '</td>' +
+      '<td style="color:var(--text-3)">' + fmtDateShort(t.date) + '</td>' +
       '<td class="sym-cell">' + (t.description || '—') + '</td>' +
-      '<td class="' + amtClass + '" style="font-family:var(--mono)">' + amtStr + '</td>' +
-      '<td>' + catLabel + '</td>' +
+      '<td class="' + amtClass + '" style="font-family:var(--mono);text-align:right">' + amtStr + '</td>' +
     '</tr>';
   }).join('');
 }
-
 
 
 window.addEventListener('resize', function() {
