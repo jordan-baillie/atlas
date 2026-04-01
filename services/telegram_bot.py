@@ -43,7 +43,88 @@ from utils.config import get_active_config
 from brokers.plan import TradePlanGenerator
 from utils.telegram import _load_credentials, _esc, _build_portfolio_snapshot
 
+# ── Regime state emoji mapping ────────────────────────────────
+REGIME_EMOJI: dict[str, str] = {
+    "bull_risk_on": "🟢",
+    "bull_risk_off": "🟡",
+    "transition_uncertain": "🟠",
+    "bear_risk_off": "🔴",
+    "bear_capitulation": "⛔",
+    "recovery_early": "🔵",
+}
+
 logger = logging.getLogger("atlas.telegram_bot")
+
+
+def _load_prev_regime_state(trade_date: str, market_id: str) -> Optional[str]:
+    """Return the regime_state from the most recent prior plan for this market.
+
+    Used for transition detection — returns None if no prior plan is found or
+    if it has no regime data.
+    """
+    plans_dir = PROJECT_ROOT / "plans"
+    if not plans_dir.exists() or not market_id or not trade_date:
+        return None
+
+    try:
+        # Find all plan files for this market that pre-date trade_date.
+        plan_files = sorted(
+            [
+                f
+                for f in plans_dir.glob(f"plan_{market_id}_*.json")
+                if f.stem[len(f"plan_{market_id}_"):] < trade_date
+            ],
+            reverse=True,
+        )
+        if not plan_files:
+            return None
+        with open(plan_files[0]) as fh:
+            prev = json.load(fh)
+        return prev.get("regime_state") or None
+    except Exception:
+        return None
+
+
+def _format_regime_section(plan: dict, market_id: str = "") -> str:
+    """Build an HTML regime context block for a plan notification.
+
+    Returns an empty string when regime data is absent from the plan
+    (e.g. regime_enabled=False or SP500-only fallback) so callers can
+    append it safely without adding blank lines.
+    """
+    regime_state: Optional[str] = plan.get("regime_state")
+    if not regime_state:
+        return ""
+
+    emoji = REGIME_EMOJI.get(regime_state, "⚪")
+    universes: list = plan.get("active_universes") or []
+    universes_str = ", ".join(universes) if universes else "sp500"
+    sizing: float = plan.get("sizing_multiplier", 1.0)
+
+    lines = [
+        "",
+        f"<b>📊 Regime:</b> {emoji} <b>{_esc(regime_state)}</b>",
+        f"   Universes: {_esc(universes_str)}",
+        f"   Sizing: {sizing:.1f}x",
+    ]
+
+    # Transition detection — compare with previous day's plan.
+    trade_date: str = plan.get("trade_date", "")
+    prev_state = _load_prev_regime_state(trade_date, market_id)
+    if prev_state and prev_state != regime_state:
+        prev_emoji = REGIME_EMOJI.get(prev_state, "⚪")
+        lines.append(
+            f"   ⚡ Changed from {prev_emoji} {_esc(prev_state)} (prev day)"
+        )
+
+    # Optional brief reasoning (truncated for Telegram readability).
+    reasoning: str = plan.get("regime_reasoning", "") or ""
+    if reasoning:
+        if len(reasoning) > 120:
+            reasoning = reasoning[:117] + "..."
+        lines.append(f"   <i>{_esc(reasoning)}</i>")
+
+    return "\n".join(lines)
 
 
 def _md_to_telegram_html(text: str) -> str:
@@ -178,6 +259,12 @@ def format_plan_message(plan: dict, market_id: str = "sp500") -> str:
             f"Risk ${risk_amt:,.0f} | "
             f"Exposure {exposure:.0f}%"
         )
+        lines.append("")
+
+    # Regime context (only present when regime_enabled=True in config)
+    regime_section = _format_regime_section(plan, market_id)
+    if regime_section:
+        lines.append(regime_section)
         lines.append("")
 
     # Mode indicator
