@@ -226,11 +226,16 @@ class RegimeModel:
         credit    = scores["credit"]
 
         # Rule 1 — bear_capitulation: extreme stress in VIX + credit.
-        if composite < -0.6 and (risk < -0.7 or credit < -0.7):
+        # Threshold relaxed from < -0.6 to <= -0.5: trend_score is bounded by
+        # the above/below-200DMA weight, so -0.6 was unreachable in practice.
+        if composite <= -0.5 and (risk < -0.7 or credit < -0.7):
             return RegimeState.BEAR_CAPITULATION
 
         # Rule 2 — bear_risk_off: trend broken, risk elevated.
-        if composite < -0.3 and trend < -0.3:
+        # Thresholds relaxed from < -0.3 to <= -0.25: the asymmetric below-200DMA
+        # weight caps trend at -0.42 (slope=0), and the composite is bounded
+        # similarly, so -0.3 was borderline unreachable on mild bear days.
+        if composite <= -0.25 and trend <= -0.25:
             return RegimeState.BEAR_RISK_OFF
 
         # Rule 3 — recovery_early: trend turning positive after a bear period.

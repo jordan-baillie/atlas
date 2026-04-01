@@ -433,6 +433,109 @@ class TestClassifyAndRecord:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Threshold boundary tests (verify relaxed thresholds work as intended)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestThresholds:
+    """
+    Directly exercise _apply_rules() with synthetic score dicts to verify that
+    the relaxed classification thresholds behave correctly.
+    """
+
+    def test_bear_risk_off_boundary_now_classifies(self, model):
+        """
+        Old threshold: composite < -0.3 AND trend < -0.3 (strictly).
+        New threshold: composite <= -0.25 AND trend <= -0.25 (inclusive).
+
+        composite=-0.27 / trend=-0.27 would fall through under the old rules
+        and land at transition_uncertain.  With the relaxed threshold it must
+        be classified as bear_risk_off.
+        """
+        scores = {
+            "composite": -0.27,
+            "trend": -0.27,
+            "risk": -0.3,
+            "credit": -0.2,
+            "yield_curve": 0.0,
+            "dollar": 0.0,
+            "commodity": 0.0,
+        }
+        state = model._apply_rules(scores, recent_was_bear=False)
+        assert state == RegimeState.BEAR_RISK_OFF, (
+            f"Expected bear_risk_off at boundary, got {state.value}"
+        )
+
+    def test_bear_capitulation_boundary_now_classifies(self, model):
+        """
+        Old threshold: composite < -0.6 (strictly).
+        New threshold: composite <= -0.5 (inclusive).
+
+        composite=-0.55 with high-risk scores would be missed by the old rule.
+        """
+        scores = {
+            "composite": -0.55,
+            "trend": -0.50,
+            "risk": -0.80,   # satisfies risk < -0.7
+            "credit": -0.40,
+            "yield_curve": -0.30,
+            "dollar": -0.20,
+            "commodity": 0.0,
+        }
+        state = model._apply_rules(scores, recent_was_bear=None)
+        assert state == RegimeState.BEAR_CAPITULATION, (
+            f"Expected bear_capitulation at boundary, got {state.value}"
+        )
+
+    def test_bear_capitulation_requires_risk_or_credit_extreme(self, model):
+        """
+        bear_capitulation needs composite <= -0.5 AND (risk < -0.7 OR credit < -0.7).
+        Without the extreme risk/credit signal it should fall through to bear_risk_off.
+        """
+        scores = {
+            "composite": -0.55,
+            "trend": -0.50,
+            "risk": -0.50,   # NOT below -0.7
+            "credit": -0.40,  # NOT below -0.7
+            "yield_curve": -0.30,
+            "dollar": 0.0,
+            "commodity": 0.0,
+        }
+        state = model._apply_rules(scores, recent_was_bear=False)
+        assert state == RegimeState.BEAR_RISK_OFF, (
+            f"Expected bear_risk_off without extreme risk/credit, got {state.value}"
+        )
+
+    def test_boundary_exactly_at_025_classifies_bear_risk_off(self, model):
+        """composite == trend == -0.25 is exactly at the inclusive boundary."""
+        scores = {
+            "composite": -0.25,
+            "trend": -0.25,
+            "risk": -0.20,
+            "credit": -0.10,
+            "yield_curve": 0.0,
+            "dollar": 0.0,
+            "commodity": 0.0,
+        }
+        state = model._apply_rules(scores, recent_was_bear=False)
+        assert state == RegimeState.BEAR_RISK_OFF
+
+    def test_boundary_exactly_at_050_classifies_capitulation(self, model):
+        """composite == -0.50 with extreme risk is exactly at the inclusive boundary."""
+        scores = {
+            "composite": -0.50,
+            "trend": -0.45,
+            "risk": -0.75,   # < -0.7
+            "credit": -0.30,
+            "yield_curve": 0.0,
+            "dollar": 0.0,
+            "commodity": 0.0,
+        }
+        state = model._apply_rules(scores, recent_was_bear=None)
+        assert state == RegimeState.BEAR_CAPITULATION
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Recovery detection with history
 # ──────────────────────────────────────────────────────────────────────────────
 

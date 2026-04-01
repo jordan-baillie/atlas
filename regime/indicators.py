@@ -76,6 +76,23 @@ def _linear_map(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Required-field registry (used by weight re-normalisation in compute_all_scores)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Maps each composite dimension to the list of raw indicator fields it reads.
+# A dimension is considered "data-missing" when *all* of its listed fields are
+# None.  If *any* field is present the dimension receives its normal weight.
+_REQUIRED_FIELDS: dict[str, list[str]] = {
+    "trend":       ["spy_above_200dma", "spy_200dma_slope"],
+    "risk":        ["vix"],                               # vix3m / vix_term_ratio are optional
+    "credit":      ["credit_oas"],
+    "yield_curve": ["yield_curve_10y2y", "yield_curve_10y3m"],  # either suffices
+    "dollar":      ["dxy"],
+    "commodity":   ["gold_copper_ratio"],
+}
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Individual indicator scoring functions
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -115,7 +132,10 @@ def trend_score(indicators: dict, config: dict) -> float:
     if above_raw is None:
         above_score = 0.0
     else:
-        above_score = 0.5 if above_raw >= 0.5 else -0.5
+        # Being *below* the 200-DMA is the textbook definition of a broken trend
+        # and deserves a stronger negative signal than simply being above deserves
+        # a positive one.  Asymmetric weights: +0.5 (above) vs -0.7 (below).
+        above_score = 0.5 if above_raw >= 0.5 else -0.7
 
     # --- Sub-score 2: slope magnitude and direction ------------------------
     slope = _safe_float(indicators.get("spy_200dma_slope"))
@@ -346,8 +366,10 @@ def compute_all_scores(indicators: dict, config: dict) -> dict:
     -------
     dict
         Keys: ``"trend"``, ``"risk"``, ``"credit"``, ``"yield_curve"``,
-        ``"dollar"``, ``"commodity"``, ``"composite"``.  All values are
-        floats in [-1.0, +1.0].
+        ``"dollar"``, ``"commodity"``, ``"composite"``, ``"available_weight"``.
+        Score values are floats in [-1.0, +1.0].  ``available_weight`` is the
+        fraction of the total weight (0–1) for which input data was present;
+        a value below 1.0 means some dimensions were excluded from the composite.
 
     Examples
     --------
@@ -359,7 +381,7 @@ def compute_all_scores(indicators: dict, config: dict) -> dict:
     ...     "vix": 15, "vix_term_ratio": 0.88,
     ...     "credit_oas": 0.8,
     ...     "yield_curve_10y2y": 1.5, "yield_curve_10y3m": 2.0,
-    ...     "dxy": 100, "gold_copper_ratio": 16,
+    ...     "dxy": 100, "gold_copper_ratio": 350,
     ... }
     >>> scores = compute_all_scores(bull, config)
     >>> scores["composite"] > 0.3
@@ -375,13 +397,38 @@ def compute_all_scores(indicators: dict, config: dict) -> dict:
     }
 
     weights = config["weights"]
-    composite = (
-        float(weights["trend"])       * scores["trend"]
-        + float(weights["risk"])        * scores["risk"]
-        + float(weights["credit"])      * scores["credit"]
-        + float(weights["yield_curve"]) * scores["yield_curve"]
-        + float(weights["dollar"])      * scores["dollar"]
-        + float(weights["commodity"])   * scores["commodity"]
-    )
+    dim_weights: dict[str, float] = {
+        "trend":       float(weights["trend"]),
+        "risk":        float(weights["risk"]),
+        "credit":      float(weights["credit"]),
+        "yield_curve": float(weights["yield_curve"]),
+        "dollar":      float(weights["dollar"]),
+        "commodity":   float(weights["commodity"]),
+    }
+
+    # Re-normalise weights to exclude dimensions that have no input data.
+    # A dimension is "data-missing" when every required field is None.
+    # Remaining weights are scaled up so they still sum to 1.0, preventing
+    # missing indicators from silently pulling the composite toward zero.
+    def _dim_has_data(dim: str) -> bool:
+        return any(
+            _safe_float(indicators.get(f)) is not None
+            for f in _REQUIRED_FIELDS[dim]
+        )
+
+    available_weight = float(sum(
+        w for dim, w in dim_weights.items() if _dim_has_data(dim)
+    ))
+
+    if available_weight > 0.0:
+        composite = sum(
+            dim_weights[dim] * scores[dim]
+            for dim in dim_weights
+            if _dim_has_data(dim)
+        ) / available_weight
+    else:
+        composite = 0.0
+
     scores["composite"] = _clamp(composite, -1.0, 1.0)
+    scores["available_weight"] = available_weight
     return scores

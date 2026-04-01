@@ -40,8 +40,8 @@
 
   "commodity_thresholds": {
     "_comment": "Gold/Copper ratio: high ratio = risk-off (gold outperforming copper); low = risk-on.",
-    "gold_copper_ratio_risk_on_below": 18,
-    "gold_copper_ratio_risk_off_above": 22
+    "gold_copper_ratio_risk_on_below": 400,
+    "gold_copper_ratio_risk_off_above": 650
   },
 
   "weights": {

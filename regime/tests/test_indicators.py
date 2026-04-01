@@ -88,7 +88,9 @@ def bear_indicators() -> dict:
         "yield_curve_10y2y": -0.8,
         "yield_curve_10y3m": -1.2,
         "dxy": 108,
-        "gold_copper_ratio": 25,
+        # Updated to 700 (> risk_off threshold of 650) to reflect real-world
+        # bear values; old value of 25 was below the corrected 400/650 scale.
+        "gold_copper_ratio": 700,
     }
 
 
@@ -219,9 +221,9 @@ class TestTrendScore:
 
     def test_known_calculation(self, cfg):
         """
-        Hand-calculated expected value.
+        Hand-calculated expected value (SPY *above* 200 DMA).
 
-        above_score = 0.5 (spy_above_200dma = 1)
+        above_score = +0.5 (spy_above_200dma = 1)
         slope_score = tanh(0.05 - 0.0) ≈ 0.04996
         w_above = 0.6, w_slope = 0.4
         combined = 0.6*0.5 + 0.4*0.04996 ≈ 0.3 + 0.01998 ≈ 0.31998
@@ -230,6 +232,27 @@ class TestTrendScore:
         expected = 0.6 * 0.5 + 0.4 * math.tanh(0.05)
         score = trend_score(ind, cfg)
         assert score == pytest.approx(expected, abs=1e-6)
+
+    def test_known_calculation_below_200dma(self, cfg):
+        """
+        Hand-calculated expected value (SPY *below* 200 DMA, zero slope).
+
+        Asymmetric: below-200DMA scores -0.7 (stronger than above +0.5).
+        above_score = -0.7, slope_score = tanh(0.0) = 0.0
+        combined = 0.6*(-0.7) + 0.4*0.0 = -0.42
+        """
+        ind = {"spy_above_200dma": 0, "spy_200dma_slope": 0.0}
+        expected = 0.6 * (-0.7) + 0.4 * 0.0  # = -0.42
+        score = trend_score(ind, cfg)
+        assert score == pytest.approx(expected, abs=1e-6)
+
+    def test_asymmetric_below_stronger_than_above(self, cfg):
+        """Downside signal (below 200 DMA) is stronger than upside (above 200 DMA)."""
+        above = trend_score({"spy_above_200dma": 1, "spy_200dma_slope": 0.0}, cfg)
+        below = trend_score({"spy_above_200dma": 0, "spy_200dma_slope": 0.0}, cfg)
+        assert abs(below) > abs(above), (
+            f"Expected |below| > |above|, got below={below:.4f}, above={above:.4f}"
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -493,7 +516,7 @@ class TestCommodityScore:
 
     def test_very_high_ratio_clamped(self, cfg):
         """Ratio far above threshold → clamped at -1.0."""
-        assert commodity_score({"gold_copper_ratio": 100.0}, cfg) == pytest.approx(-1.0)
+        assert commodity_score({"gold_copper_ratio": 800.0}, cfg) == pytest.approx(-1.0)
 
     def test_missing_ratio_returns_zero(self, cfg):
         assert commodity_score({}, cfg) == pytest.approx(0.0)
@@ -503,7 +526,8 @@ class TestCommodityScore:
 
     def test_score_monotone_decreasing(self, cfg):
         """Higher gold/copper ratio → lower score (more risk-off)."""
-        scores = [commodity_score({"gold_copper_ratio": v}, cfg) for v in [10, 16, 18, 20, 22, 28]]
+        # Values span the corrected scale: risk_on_below=400, risk_off_above=650
+        scores = [commodity_score({"gold_copper_ratio": v}, cfg) for v in [300, 400, 500, 600, 700, 800]]
         for a, b in zip(scores, scores[1:]):
             assert a >= b
 
@@ -526,9 +550,12 @@ class TestComputeAllScores:
         scores = compute_all_scores(bull_indicators, cfg)
         assert isinstance(scores, dict)
 
-    def test_has_all_seven_keys(self, cfg, bull_indicators):
+    def test_has_all_keys(self, cfg, bull_indicators):
         scores = compute_all_scores(bull_indicators, cfg)
-        expected_keys = {"trend", "risk", "credit", "yield_curve", "dollar", "commodity", "composite"}
+        expected_keys = {
+            "trend", "risk", "credit", "yield_curve",
+            "dollar", "commodity", "composite", "available_weight",
+        }
         assert set(scores.keys()) == expected_keys
 
     def test_all_values_are_floats(self, cfg, bull_indicators):
@@ -591,6 +618,68 @@ class TestComputeAllScores:
         assert scores["dollar"]      == pytest.approx(dollar_score(bull_indicators, cfg))
         assert scores["commodity"]   == pytest.approx(commodity_score(bull_indicators, cfg))
 
+    # --- available_weight ---------------------------------------------------
+
+    def test_available_weight_is_one_with_full_data(self, cfg, bull_indicators):
+        """All indicators present → available_weight = 1.0 (all weights active)."""
+        scores = compute_all_scores(bull_indicators, cfg)
+        assert scores["available_weight"] == pytest.approx(1.0, abs=1e-9)
+
+    def test_available_weight_partial_missing(self, cfg):
+        """
+        With credit_oas=None and dxy=None the credit (0.20) and dollar (0.05)
+        dimensions are excluded.  available_weight should equal 0.75.
+        """
+        partial = {
+            "spy_above_200dma": 1,
+            "spy_200dma_slope": 0.05,
+            "vix": 15,
+            "yield_curve_10y2y": 1.5,
+            "gold_copper_ratio": 350,
+            # credit_oas and dxy intentionally absent
+        }
+        scores = compute_all_scores(partial, cfg)
+        expected_weight = (
+            float(cfg["weights"]["trend"])
+            + float(cfg["weights"]["risk"])
+            + float(cfg["weights"]["yield_curve"])
+            + float(cfg["weights"]["commodity"])
+        )
+        assert scores["available_weight"] == pytest.approx(expected_weight, abs=1e-9)
+
+    def test_renormalization_excludes_missing_dimensions(self, cfg):
+        """
+        When credit and dollar data are missing, their weights (0.20 + 0.05 = 0.25)
+        are excluded and the composite is re-normalised over the remaining 0.75.
+        The renormalised composite must differ from a naive weighted sum that
+        would include the 0.25 dead weight.
+        """
+        partial = {
+            "spy_above_200dma": 1,
+            "spy_200dma_slope": 0.05,
+            "vix": 15,
+            "yield_curve_10y2y": 1.5,
+            "gold_copper_ratio": 350,
+        }
+        scores = compute_all_scores(partial, cfg)
+        w = cfg["weights"]
+
+        # Naive sum (old behaviour: missing → 0.0 contributes dead weight)
+        naive = (
+            float(w["trend"])       * scores["trend"]
+            + float(w["risk"])        * scores["risk"]
+            + float(w["credit"])      * 0.0   # missing → neutral
+            + float(w["yield_curve"]) * scores["yield_curve"]
+            + float(w["dollar"])      * 0.0   # missing → neutral
+            + float(w["commodity"])   * scores["commodity"]
+        )
+        # Renormalised composite must be strictly larger (more bullish)
+        # because the 0.25 dead weight pulled naive toward 0.
+        assert scores["composite"] > naive, (
+            f"Expected renormalised composite {scores['composite']:.4f} "
+            f"> naive {naive:.4f}"
+        )
+
     # --- Missing data handling ----------------------------------------------
 
     def test_empty_indicators_returns_all_zeros(self, cfg):
@@ -636,12 +725,39 @@ class TestComputeAllScores:
     # --- Monotonicity -------------------------------------------------------
 
     def test_more_bullish_indicators_give_higher_composite(self, cfg):
-        """Adding more bullish indicators should raise the composite."""
-        base = {"vix": 15, "vix_term_ratio": 0.90, "credit_oas": 0.9}
-        enhanced = {**base, "spy_above_200dma": 1, "gold_copper_ratio": 15}
-        s_base = compute_all_scores(base, cfg)
-        s_enhanced = compute_all_scores(enhanced, cfg)
-        assert s_enhanced["composite"] >= s_base["composite"]
+        """
+        With the same set of available indicators, a more-bullish input set must
+        produce a higher composite than a neutral one.
+
+        NOTE: The renormalization logic means that *adding new indicator
+        dimensions* (changing which fields are present) can change the
+        available_weight and therefore the composite in unexpected directions.
+        This test keeps available dimensions constant; only the values change.
+        """
+        # Both dicts have the same four available dimensions so renormalization
+        # is identical; only the values differ.
+        neutral = {
+            "spy_above_200dma": 1,
+            "spy_200dma_slope": 0.0,
+            "vix": 25,               # moderate — near neutral risk score
+            "vix_term_ratio": 1.0,
+            "credit_oas": 1.75,      # midpoint between oas_normal/crisis → ~0.0
+            "gold_copper_ratio": 525,  # midpoint 400-650 → ~0.0
+        }
+        bullish = {
+            "spy_above_200dma": 1,
+            "spy_200dma_slope": 0.05,
+            "vix": 15,               # low VIX → strongly bullish
+            "vix_term_ratio": 0.88,
+            "credit_oas": 0.9,       # tight spreads → bullish
+            "gold_copper_ratio": 350,  # below risk-on threshold → bullish
+        }
+        s_neutral = compute_all_scores(neutral, cfg)
+        s_bullish = compute_all_scores(bullish, cfg)
+        assert s_bullish["composite"] > s_neutral["composite"], (
+            f"bullish composite {s_bullish['composite']:.4f} should exceed "
+            f"neutral {s_neutral['composite']:.4f}"
+        )
 
     # --- Extreme-value saturation -------------------------------------------
 
