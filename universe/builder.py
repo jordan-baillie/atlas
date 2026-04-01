@@ -28,6 +28,7 @@ import pandas as pd
 import yfinance as yf
 
 from data.ingest import download_ticker, get_market_tickers
+from universe.definitions import UNIVERSES, get_universe, list_universes
 
 logger = logging.getLogger(__name__)
 
@@ -394,6 +395,129 @@ def get_universe_tickers(market_id: Optional[str] = None) -> List[str]:
         List of ticker strings.
     """
     return load_universe(market_id)["tickers"]
+
+
+# ── SQLite-backed universe data builders ────────────────────────────────────
+
+
+def build_from_definition(
+    universe_name: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    min_history_days: int = 200,
+) -> Dict[str, pd.DataFrame]:
+    """Build universe data from SQLite for any of the 6 defined universes.
+
+    For the ``sp500`` universe the data is queried directly from SQLite
+    (using the universe column, which is populated by the ingest pipeline).
+    For static ETF universes the ticker list comes from
+    ``universe.definitions`` so cross-universe tickers are always returned
+    for each universe regardless of which universe last wrote the SQLite row.
+
+    DataFrames are returned with the same lowercase column names used
+    throughout the backtest engine: ``open``, ``high``, ``low``, ``close``,
+    ``volume`` (plus ``adj_close``, ``ticker``, ``universe``, ``source``
+    which the engine tolerates as extra columns).
+
+    Args:
+        universe_name: One of the 6 universe names defined in
+            ``universe.definitions.UNIVERSES``.
+        start_date: ISO date string, e.g. ``"2020-01-01"``.
+            Defaults to 7 years before today.
+        end_date: ISO date string, e.g. ``"2024-12-31"``.
+            Defaults to today.
+        min_history_days: Minimum number of trading rows required for a
+            ticker to be included in the result.  Tickers with fewer rows
+            are silently dropped.  Default 200 (enough for a 200-DMA).
+
+    Returns:
+        ``dict[str, pd.DataFrame]`` mapping ticker → OHLCV DataFrame with
+        a DatetimeIndex named ``date``.
+
+    Raises:
+        ValueError: If *universe_name* is not recognised.
+    """
+    import db.atlas_db as atlas_db  # late import — avoids circular deps
+
+    known = list_universes()
+    if universe_name not in known:
+        raise ValueError(
+            f"Unknown universe {universe_name!r}. "
+            f"Known universes: {', '.join(known)}"
+        )
+
+    # Default date range: 7 years ago → today
+    if start_date is None:
+        start_date = (datetime.now() - timedelta(days=7 * 365)).strftime("%Y-%m-%d")
+    if end_date is None:
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Fetch raw data from SQLite
+    # get_universe_data already handles the static vs dynamic split:
+    #   - static: queries by ticker list from definitions
+    #   - sp500 / dynamic: queries WHERE universe=?
+    raw: Dict[str, pd.DataFrame] = atlas_db.get_universe_data(
+        universe_name, start_date=start_date
+    )
+
+    # Apply end_date filter and min_history_days filter
+    result: Dict[str, pd.DataFrame] = {}
+    for ticker, df in raw.items():
+        if df.empty:
+            continue
+
+        # Filter to end_date
+        df = df[df.index <= end_date]
+
+        # Drop tickers below minimum history threshold
+        if len(df) < min_history_days:
+            logger.debug(
+                f"{universe_name}/{ticker}: only {len(df)} rows "
+                f"< min_history_days={min_history_days}, dropping"
+            )
+            continue
+
+        result[ticker] = df
+
+    logger.info(
+        f"build_from_definition({universe_name!r}): "
+        f"{len(result)} tickers returned "
+        f"(start={start_date}, end={end_date}, min_history={min_history_days})"
+    )
+    return result
+
+
+def build_multi_universe(
+    universe_names: List[str],
+    start_date: Optional[str] = None,
+    **kwargs,
+) -> Dict[str, Dict[str, pd.DataFrame]]:
+    """Build data for multiple universes at once.
+
+    Calls :func:`build_from_definition` for each requested universe and
+    returns the results as a nested mapping.  Useful for the plan generator
+    and regime-aware backtest which need to scan multiple active universes
+    simultaneously.
+
+    Args:
+        universe_names: List of universe names to build.
+        start_date: ISO date string passed to each
+            :func:`build_from_definition` call.
+        **kwargs: Additional keyword arguments forwarded to
+            :func:`build_from_definition` (e.g. ``end_date``,
+            ``min_history_days``).
+
+    Returns:
+        ``dict[str, dict[str, pd.DataFrame]]`` —
+        ``{universe_name: {ticker: DataFrame}}``.
+
+    Raises:
+        ValueError: If any name in *universe_names* is not recognised.
+    """
+    return {
+        name: build_from_definition(name, start_date=start_date, **kwargs)
+        for name in universe_names
+    }
 
 
 if __name__ == "__main__":
