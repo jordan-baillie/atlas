@@ -1,0 +1,87 @@
+{
+  "strategy": "connors_rsi2",
+  "market": "gold_etfs",
+  "params": {
+    "rsi_period": 3,
+    "rsi_entry": 40,
+    "sma_trend_period": 150,
+    "sma200_filter": false,
+    "min_consecutive_down": 1,
+    "ibs_max": 0.5,
+    "ibs_filter_enabled": false,
+    "volume": {
+      "lookback": 20,
+      "min_ratio": 0.5
+    },
+    "sma_exit_period": 5,
+    "rsi_exit": 65,
+    "exit_mode": "sma",
+    "max_hold_days": 5,
+    "atr_period": 14,
+    "atr_stop_mult": 1.0
+  },
+  "metrics": {
+    "total_trades": 528,
+    "cagr_pct": 10.1829,
+    "cagr_full_period_pct": 8.5798,
+    "sharpe": 0.5735,
+    "sortino": 0.7974,
+    "max_drawdown_pct": 10.8862,
+    "win_rate_pct": 62.5,
+    "profit_factor": 1.4784,
+    "total_pnl": 3900.07,
+    "avg_trade": 7.39,
+    "final_equity": 8911.86,
+    "expectancy_r": 0.1985,
+    "avg_r": 0.1985,
+    "r_count": 528,
+    "edge_p_value": 0.000216,
+    "edge_significant": true,
+    "var_95_pct": 0.896,
+    "cvar_95_pct": 1.398,
+    "calmar": 0.9354,
+    "mc_p95_drawdown_pct": 13.26,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "connors_rsi2": {
+        "trades": 528,
+        "total_pnl": 3900.07,
+        "win_rate_pct": 62.5
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 10,
+        "win_rate_pct": 40.0,
+        "avg_trade": -2.44,
+        "total_pnl": -24.43,
+        "profit_factor": 0.8157,
+        "sharpe_approx": -0.0863,
+        "avg_r": -0.0931
+      },
+      "bull": {
+        "trades": 166,
+        "win_rate_pct": 64.5,
+        "avg_trade": 12.02,
+        "total_pnl": 1995.05,
+        "profit_factor": 1.844,
+        "sharpe_approx": 0.2345,
+        "avg_r": 0.2698
+      },
+      "neutral": {
+        "trades": 352,
+        "win_rate_pct": 62.2,
+        "avg_trade": 5.48,
+        "total_pnl": 1929.45,
+        "profit_factor": 1.3412,
+        "sharpe_approx": 0.1164,
+        "avg_r": 0.1732
+      }
+    },
+    "runtime_s": 37.6
+  },
+  "description": "max_hold_days=5",
+  "experiments_run": 0,
+  "experiments_kept": 9,
+  "updated_at": "2026-04-02T05:49:42.400387+00:00"
+}
