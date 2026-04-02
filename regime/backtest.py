@@ -547,6 +547,246 @@ class RegimeAwareBacktest:
             comparison_vs_sp500={},
         )
 
+    @staticmethod
+    def _smooth_regime_map(
+        raw_map: Dict[str, str],
+        min_persistence_days: int = 3,
+    ) -> Dict[str, str]:
+        """Apply persistence smoothing to raw regime classifications.
+
+        A regime change is only recognised after the new state has persisted
+        for ``min_persistence_days`` consecutive days.  Until then the
+        previous (confirmed) state is kept.  This eliminates single-day
+        whipsaws that inflate transition rate without reflecting real
+        macro shifts.
+
+        Parameters
+        ----------
+        raw_map : dict
+            ``{date_str: regime_state}`` in date order.
+        min_persistence_days : int
+            Minimum consecutive days a new state must appear before the
+            switch is recognised.  Default 3.
+
+        Returns
+        -------
+        dict
+            Smoothed ``{date_str: regime_state}`` map.
+        """
+        if not raw_map or min_persistence_days <= 1:
+            return dict(raw_map)
+
+        dates = sorted(raw_map.keys())
+        smoothed: Dict[str, str] = {}
+        confirmed_state = raw_map[dates[0]]
+        pending_state: Optional[str] = None
+        pending_count = 0
+
+        for d in dates:
+            raw_state = raw_map[d]
+
+            if raw_state == confirmed_state:
+                # Still in confirmed state — reset any pending change
+                pending_state = None
+                pending_count = 0
+            elif raw_state == pending_state:
+                # Continuing a candidate transition
+                pending_count += 1
+                if pending_count >= min_persistence_days:
+                    confirmed_state = pending_state
+                    pending_state = None
+                    pending_count = 0
+            else:
+                # New candidate state — start counting
+                pending_state = raw_state
+                pending_count = 1
+                if min_persistence_days <= 1:
+                    confirmed_state = pending_state
+                    pending_state = None
+                    pending_count = 0
+
+            smoothed[d] = confirmed_state
+
+        return smoothed
+
+    def run_trade_filter(self) -> RegimeBacktestResult:
+        """Regime-aware backtest using trade-filtering approach.
+
+        Instead of running separate sub-backtests per regime window (which
+        fails when windows are shorter than train+test), this runs a SINGLE
+        full backtest on SP500 data and then:
+
+        1. Looks up the regime state on each trade's entry date
+        2. Removes trades whose strategy was not allowed by that regime
+        3. Scales surviving trade P&L by the regime's sizing_multiplier
+        4. Recomputes aggregate metrics on the filtered trade set
+
+        This is more accurate than approach (a) because it uses the engine's
+        own walk-forward windowing on the full dataset.
+        """
+        import numpy as np
+
+        # 1. Run full SP500 backtest
+        logger.info("run_trade_filter: running full SP500 backtest...")
+        sp500_data = self._load_universe_data(["sp500"])
+        strategies = self._build_strategies(["all"])
+        engine = BacktestEngine(self.config, market_id=self.market_id)
+        baseline = engine.run_walkforward(sp500_data, strategies)
+
+        if not baseline or not baseline.trades:
+            logger.warning("Baseline backtest produced no trades")
+            return RegimeBacktestResult(
+                result=baseline or BacktestResult(),
+                regime_windows=[],
+                regime_distribution={},
+            )
+
+        # 2. Load regime history (with persistence smoothing)
+        from db.atlas_db import get_db
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT date, regime_state FROM regime_history "
+                "WHERE date BETWEEN ? AND ? ORDER BY date",
+                (self.start_date, self.end_date),
+            ).fetchall()
+        raw_regime_map = {r["date"]: r["regime_state"] for r in rows}
+        regime_map = self._smooth_regime_map(raw_regime_map, min_persistence_days=3)
+
+        # 3. Filter and scale trades
+        filtered_trades = []
+        removed_trades = []
+        regime_dist: Dict[str, int] = {}
+
+        for trade in baseline.trades:
+            entry_date = str(trade.get("entry_date", ""))[:10]
+            # Find closest regime date on or before entry
+            regime_state = regime_map.get(entry_date)
+            if not regime_state:
+                # Find closest prior date
+                prior = [d for d in regime_map if d <= entry_date]
+                regime_state = regime_map[max(prior)] if prior else "bull_risk_on"
+
+            regime_dist[regime_state] = regime_dist.get(regime_state, 0) + 1
+            rc = REGIME_CONFIGS.get(regime_state, REGIME_CONFIGS["bull_risk_on"])
+
+            # Check if strategy was allowed
+            strat_name = trade.get("strategy", "")
+            allowed = rc["strategy_types"]
+            if "all" not in allowed and not any(a in strat_name for a in allowed):
+                removed_trades.append({**trade, "_removal_reason": f"strategy {strat_name} not in {allowed}"})
+                continue
+
+            # Scale P&L by sizing_multiplier
+            mult = rc["sizing_multiplier"]
+            scaled = dict(trade)
+            if scaled.get("pnl") is not None:
+                scaled["pnl"] = scaled["pnl"] * mult
+            if scaled.get("return_pct") is not None:
+                scaled["return_pct"] = scaled["return_pct"] * mult
+            scaled["_regime"] = regime_state
+            scaled["_sizing_mult"] = mult
+            filtered_trades.append(scaled)
+
+        # 4. Recompute metrics on filtered trades
+        total_trades = len(filtered_trades)
+        wins = [t for t in filtered_trades if (t.get("pnl") or 0) > 0]
+        losses = [t for t in filtered_trades if (t.get("pnl") or 0) <= 0]
+        total_pnl = sum(t.get("pnl", 0) or 0 for t in filtered_trades)
+        gross_profit = sum(t.get("pnl", 0) or 0 for t in wins)
+        gross_loss = abs(sum(t.get("pnl", 0) or 0 for t in losses))
+
+        # Build equity curve from filtered trades
+        starting_eq = self.config.get("risk", {}).get("starting_equity", 5000)
+        eq = starting_eq
+        eq_points = [eq]
+        for t in sorted(filtered_trades, key=lambda x: x.get("entry_date", "")):
+            eq += (t.get("pnl") or 0)
+            eq_points.append(eq)
+        eq_series = pd.Series(eq_points)
+
+        # Max drawdown
+        peak = eq_series.cummax()
+        dd = (eq_series - peak) / peak
+        max_dd = float(dd.min()) if len(dd) > 0 else 0
+
+        # Sharpe (simplified — annualized from trade returns)
+        if total_trades > 1:
+            # return_pct is in percentage form (e.g. 8.94 = 8.94%), convert to decimal
+            returns = [(t.get("return_pct", 0) or 0) / 100.0 for t in filtered_trades]
+            avg_ret = np.mean(returns)
+            std_ret = np.std(returns, ddof=1)
+            # Approx trades per year
+            if filtered_trades:
+                dates = sorted(set(str(t.get("entry_date", ""))[:10] for t in filtered_trades))
+                if len(dates) >= 2:
+                    from datetime import datetime
+                    d0 = datetime.fromisoformat(dates[0])
+                    d1 = datetime.fromisoformat(dates[-1])
+                    years = max((d1 - d0).days / 365.25, 0.5)
+                    trades_per_year = total_trades / years
+                else:
+                    trades_per_year = 252
+            else:
+                trades_per_year = 252
+            sharpe = (avg_ret / std_ret) * np.sqrt(trades_per_year) if std_ret > 0 else 0
+        else:
+            sharpe = 0
+
+        # CAGR
+        final_eq = eq_points[-1] if eq_points else starting_eq
+        if filtered_trades:
+            dates = sorted(set(str(t.get("entry_date", ""))[:10] for t in filtered_trades))
+            if len(dates) >= 2:
+                from datetime import datetime
+                d0 = datetime.fromisoformat(dates[0])
+                d1 = datetime.fromisoformat(dates[-1])
+                years = max((d1 - d0).days / 365.25, 0.5)
+            else:
+                years = 1
+        else:
+            years = 1
+        cagr = (final_eq / starting_eq) ** (1 / years) - 1 if starting_eq > 0 else 0
+
+        metrics = {
+            "sharpe": round(sharpe, 4),
+            "total_trades": total_trades,
+            "total_pnl": round(total_pnl, 2),
+            "max_drawdown": round(max_dd, 4),
+            "win_rate": round(len(wins) / total_trades, 4) if total_trades else 0,
+            "profit_factor": round(gross_profit / gross_loss, 4) if gross_loss > 0 else float("inf"),
+            "cagr": round(cagr, 4),
+            "avg_trade": round(total_pnl / total_trades, 2) if total_trades else 0,
+            "final_equity": round(final_eq, 2),
+            "trades_removed_by_regime": len(removed_trades),
+            "baseline_trades": len(baseline.trades),
+        }
+
+        result = BacktestResult(
+            trades=filtered_trades,
+            equity_curve=eq_series,
+            metrics=metrics,
+        )
+
+        logger.info(
+            "Trade filter: %d/%d trades kept, %d removed by regime. "
+            "Sharpe=%.3f, MaxDD=%.1f%%, CAGR=%.1f%%",
+            total_trades, len(baseline.trades), len(removed_trades),
+            sharpe, max_dd * 100, cagr * 100,
+        )
+
+        return RegimeBacktestResult(
+            result=result,
+            regime_windows=[],  # Not applicable for trade-filter approach
+            regime_distribution=regime_dist,
+            comparison_vs_sp500={
+                "baseline_metrics": baseline.metrics,
+                "delta": {
+                    k: round(metrics.get(k, 0) - float(baseline.metrics.get(k, 0) or 0), 4)
+                    for k in ["sharpe", "cagr", "max_drawdown", "win_rate", "profit_factor"]
+                },
+            },
+        )
+
     def compare_with_sp500_only(self) -> Dict[str, Any]:
         """Run both regime-aware and SP500-only backtests and return comparison.
 
