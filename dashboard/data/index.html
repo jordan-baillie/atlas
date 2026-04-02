@@ -12,6 +12,36 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atlas.css?v=6">
+<style>
+/* ── Regime Tab ── */
+.regime-badge {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 1.5rem 0 0.5rem;
+  text-transform: uppercase;
+  background: var(--surface);
+  color: var(--text);
+}
+.regime-bull-risk-on        { background: rgba(34,197,94,0.15);   color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+.regime-bull-risk-off       { background: rgba(234,179,8,0.15);   color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+.regime-transition-uncertain{ background: rgba(113,113,122,0.15); color: #a1a1aa; border: 1px solid rgba(113,113,122,0.3); }
+.regime-bear-risk-off       { background: rgba(244,63,94,0.15);   color: #f43f5e; border: 1px solid rgba(244,63,94,0.3); }
+.regime-bear-capitulation   { background: rgba(153,27,27,0.20);   color: #fca5a5; border: 1px solid rgba(153,27,27,0.4); }
+.regime-recovery-early      { background: rgba(6,182,212,0.15);   color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); }
+.regime-details { color: var(--text-muted, #71717a); font-size: 0.85rem; margin-bottom: 1.5rem; }
+#regime-timeline { display: block; width: 100%; border-radius: 6px; margin-bottom: 0.5rem; }
+.regime-legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 2rem; font-size: 0.8rem; }
+.overlay-decision { padding: 0.75rem 0; border-bottom: 1px solid var(--border, rgba(255,255,255,0.06)); }
+.overlay-meta { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+.overlay-action { font-weight: 600; font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
+.overlay-action-modified { color: #f97316; }
+.overlay-ts, .overlay-conf { font-size: 0.78rem; color: var(--text-muted, #71717a); }
+.overlay-reason { font-size: 0.83rem; color: var(--text-muted, #71717a); line-height: 1.4; }
+</style>
 </head>
 <body>
 <div id="app">
@@ -29,6 +59,7 @@
   <nav class="tab-nav">
     <button class="tab-btn active" id="tab-btn-trading" onclick="switchTab('trading')">Trading</button>
     <button class="tab-btn" id="tab-btn-finance" onclick="switchTab('finance')">Finance</button>
+    <button class="tab-btn" id="tab-btn-regime" onclick="switchTab('regime')">Regime</button>
   </nav>
 
   <div id="tab-trading" class="tab-content active">
@@ -167,6 +198,16 @@
 
   </div><!-- /tab-finance -->
 
+  <!-- ── Regime Tab ── -->
+  <div id="tab-regime" class="tab-content">
+    <div class="regime-badge" id="regime-badge">—</div>
+    <div class="regime-details" id="regime-details"></div>
+    <canvas id="regime-timeline"></canvas>
+    <div class="regime-legend" id="regime-legend"></div>
+    <div class="section-header">AI Overlay Decisions</div>
+    <div id="overlay-decisions-list"></div>
+  </div><!-- /tab-regime -->
+
 </div><!-- /app -->
 <script>
 'use strict';
@@ -210,6 +251,7 @@ document.addEventListener('keydown', function(e) {
   }
   if (e.key === 't' || e.key === 'T') switchTab('trading');
   if (e.key === 'f' || e.key === 'F') switchTab('finance');
+  if (e.key === 'r' || e.key === 'R') switchTab('regime');
 });
 
 applyTheme(currentTheme);
@@ -925,6 +967,7 @@ function switchTab(tab) {
   document.getElementById('tab-btn-' + tab).classList.add('active');
   if (tab === 'finance' && !window._financeLoaded) loadFinance();
   if (tab === 'trading') redrawCharts();
+  if (tab === 'regime') loadRegimeTab();
 }
 
 // ── Chart Redraw (on theme change / resize) ───────────────────────────────
@@ -1087,13 +1130,111 @@ function applyLiveSnapshot(snap) {
   }
 }
 
+// ── Regime Tab ───────────────────────────────────────────────────────────
+var _regimeLoaded = false;
+
+function loadRegimeTab() {
+  if (_regimeLoaded) return;
+  _regimeLoaded = true;
+
+  Promise.all([
+    fetch('/api/regime/current').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetch('/api/regime/history?days=90').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+    fetch('/api/overlay/decisions?days=30').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+  ]).then(function(results) {
+    var current   = results[0];
+    var history   = results[1];
+    var decisions = results[2];
+    if (current)   renderRegimeBadge(current);
+    if (history)   drawRegimeTimeline(Array.isArray(history) ? history : (history.history || []));
+    if (decisions) renderOverlayDecisions(decisions);
+  }).catch(function(e) {
+    console.error('Regime tab load failed:', e);
+    document.getElementById('regime-badge').textContent = 'Failed to load';
+  });
+}
+
+function renderRegimeBadge(r) {
+  var el = document.getElementById('regime-badge');
+  if (!el) return;
+  var state = (r.state || r.regime || '').toLowerCase().replace(/[\s_]+/g, '-');
+  el.className = 'regime-badge regime-' + state;
+  el.textContent = r.label || r.state || r.regime || '—';
+  var det = document.getElementById('regime-details');
+  if (det) {
+    var parts = [];
+    if (r.confidence != null) parts.push('Confidence: ' + (r.confidence * 100).toFixed(0) + '%');
+    if (r.since)               parts.push('Since: ' + fmtDateShort(r.since));
+    if (r.description)         parts.push(r.description);
+    det.textContent = parts.join(' · ');
+  }
+}
+
+function drawRegimeTimeline(history) {
+  var canvas = document.getElementById('regime-timeline');
+  if (!canvas || !history || !history.length) return;
+  var REGIME_COLORS = {
+    'bull-risk-on':          '#22c55e',
+    'bull-risk-off':         '#eab308',
+    'transition-uncertain':  '#71717a',
+    'bear-risk-off':         '#f43f5e',
+    'bear-capitulation':     '#991b1b',
+    'recovery-early':        '#06b6d4'
+  };
+  var dpr = window.devicePixelRatio || 1;
+  var w   = canvas.offsetWidth || 800;
+  var h   = 48;
+  canvas.width  = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+  var n = history.length;
+  var bw = w / n;
+  history.forEach(function(entry, i) {
+    var state = (entry.state || entry.regime || '').toLowerCase().replace(/[\s_]+/g, '-');
+    ctx.fillStyle = REGIME_COLORS[state] || '#71717a';
+    ctx.fillRect(i * bw, 0, bw + 0.5, h);
+  });
+  var legendEl = document.getElementById('regime-legend');
+  if (legendEl) {
+    legendEl.innerHTML = Object.keys(REGIME_COLORS).map(function(k) {
+      return '<span class="fl-i"><i class="fl-l" style="background:' + REGIME_COLORS[k] + '"></i>' +
+        k.replace(/-/g, ' ') + '</span>';
+    }).join('');
+  }
+}
+
+function renderOverlayDecisions(decisions) {
+  var el = document.getElementById('overlay-decisions-list');
+  if (!el) return;
+  var list = Array.isArray(decisions) ? decisions : (decisions.decisions || decisions.items || []);
+  if (!list.length) {
+    el.innerHTML = '<div class="f-empty">No overlay decisions in the last 30 days</div>';
+    return;
+  }
+  el.innerHTML = list.slice(0, 20).map(function(d) {
+    var actionClass = (d.action || '').toLowerCase() === 'pass' ? '' : 'overlay-action-modified';
+    return '<div class="overlay-decision">' +
+      '<div class="overlay-meta">' +
+        '<span class="overlay-action ' + actionClass + '">' + (d.action || '—').toUpperCase() + '</span>' +
+        '<span class="overlay-ts">' + fmtRelativeTime(d.timestamp || d.created_at) + '</span>' +
+        (d.confidence != null ? '<span class="overlay-conf">' + (d.confidence * 100).toFixed(0) + '% conf</span>' : '') +
+      '</div>' +
+      (d.reasoning || d.reason ? '<div class="overlay-reason">' + (d.reasoning || d.reason) + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
 // ── Main Init ─────────────────────────────────────────────────────────────
 var _staticData = null;
 
 async function init() {
   try {
     // Load static JSON for portfolio history, benchmark, strategy perf
-    var resp = await fetch('/simple-dashboard-data.json');
+    var resp = await fetch('/api/dashboard-data');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     _staticData = await resp.json();
 
@@ -1126,7 +1267,8 @@ var _paceChartData = null;
 
 function loadFinance() {
   window._financeLoaded = true;
-  fetch('/finance-data.json')
+  fetch('/api/trades?days=90')
+    .catch(function() { return fetch('/finance-data.json'); })
     .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(d) {
       _finHero(d);

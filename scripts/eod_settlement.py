@@ -304,17 +304,13 @@ def record_daily_snapshot(portfolio, prices: dict, eq: float, daily_pnl: float, 
 
 
 def update_dashboard():
-    """Regenerate dashboard data."""
-    log.info("Updating dashboard...")
-    result = subprocess.run(
-        [sys.executable, "dashboard/generate_data.py"],
-        capture_output=True, text=True, cwd=str(PROJECT), timeout=120
-    )
-    if result.returncode == 0:
-        log.info("Dashboard updated successfully")
-    else:
-        log.warning(f"Dashboard update issue: {result.stderr[-300:] if result.stderr else 'unknown'}")
-    return result.returncode == 0
+    """Dashboard data is now served via SQLite API endpoints.
+
+    generate_data.py was retired in Phase 5 — this function is a no-op.
+    The dashboard server reads directly from the SQLite database.
+    """
+    log.info("Dashboard update skipped — SQLite API endpoints serve live data (generate_data.py retired)")
+    return True
 
 
 def save_eod_report(report, trade_date):

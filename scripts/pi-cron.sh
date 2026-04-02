@@ -196,7 +196,7 @@ NOTE: A Telegram summary is sent automatically after this workflow completes —
 - atlas-incident: if any service is down or settlement fails, diagnose using this
 - atlas-lessons: critical pitfalls to avoid
 
-Run the atlas-daily post-close workflow for the ${MARKET} market: run cli_eod_settlement (pass -m ${MARKET}), then dashboard_generate_data. Summarize any exits triggered and the final equity snapshot. Write results to logs/pi-cron-postclose-${TIMESTAMP}.md
+Run the atlas-daily post-close workflow for the ${MARKET} market: run cli_eod_settlement (pass -m ${MARKET}). Summarize any exits triggered and the final equity snapshot. Write results to logs/pi-cron-postclose-${TIMESTAMP}.md
 
 NOTE: A Telegram summary is sent automatically after this workflow completes — you do NOT need to send one. Focus on the workflow only."
         LOGFILE="$LOG_DIR/pi-cron-postclose-${TIMESTAMP}.log"
@@ -434,8 +434,9 @@ if [ $EXIT_CODE -eq 0 ] && [ "$MODE" = "research" ]; then
     python3 scripts/build_obsidian_vault.py --force >> "$LOG_DIR/pi-cron.log" 2>&1 || true
 fi
 
-# --- Dashboard refresh (always, regardless of pi exit) ---
-python3 dashboard/generate_data.py >> "$LOG_DIR/dashboard-refresh.log" 2>&1 || true
+# --- Dashboard refresh ---
+# generate_data.py retired in Phase 5 — dashboard now served via SQLite API endpoints
+# python3 dashboard/generate_data.py >> "$LOG_DIR/dashboard-refresh.log" 2>&1 || true
 
 # --- Guaranteed Telegram notifications ---
 # The pi agent is unreliable at sending its own messages, so the script

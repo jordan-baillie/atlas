@@ -203,7 +203,7 @@ INSTRUCTIONS:
 3. Fix the bug with a minimal, targeted edit. Do NOT refactor or change unrelated code.
 4. After fixing, verify the fix by running the relevant command:
    - premarket: python3 scripts/cli.py ingest --market $MARKET && python3 scripts/cli.py plan --market $MARKET
-   - postclose: python3 scripts/eod_settlement.py --market $MARKET && python3 dashboard/generate_data.py
+   - postclose: python3 scripts/eod_settlement.py --market $MARKET
    - research: python3 scripts/research_runner.py --run-all --max-experiments 1 --market $MARKET
 5. If the operation succeeds, output EXACTLY: FIX_SUCCESS
 6. If you cannot fix it, output EXACTLY: FIX_FAILED followed by a brief explanation.
@@ -263,17 +263,13 @@ if ! $RERUN_OK; then
             ;;
 
         postclose)
-            log "Re-running postclose: eod_settlement + dashboard"
+            log "Re-running postclose: eod_settlement"
             python3 scripts/eod_settlement.py --market "$MARKET" >> "$RECOVER_LOG" 2>&1
             EOD_RC=$?
             log "EOD settlement exit: $EOD_RC"
 
-            python3 dashboard/generate_data.py >> "$RECOVER_LOG" 2>&1
-            DASH_RC=$?
-            log "Dashboard exit: $DASH_RC"
-
-            cp -f dashboard/templates/index.html dashboard/data/index.html
-            cp -f dashboard/templates/atlas.css dashboard/data/atlas.css 2>/dev/null
+            # generate_data.py retired in Phase 5 — dashboard served via SQLite API
+            # python3 dashboard/generate_data.py >> "$RECOVER_LOG" 2>&1
 
             [ $EOD_RC -eq 0 ] && RERUN_OK=true
             ;;

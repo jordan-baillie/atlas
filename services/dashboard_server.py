@@ -89,8 +89,7 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
     # Always execute live — live broker is sole source of truth
     result = _execute_live(plan, trade_date, config, market_id)
 
-    # API endpoints serve live data — no static file regeneration needed
-    # (generate_data.py is scheduled for retirement in Phase 5)
+    # API endpoints serve live data — generate_data.py retired in Phase 5
 
     return result
 
@@ -262,16 +261,16 @@ class AuthHandler(SimpleHTTPRequestHandler):
     def _handle_sse_stream(self):
         """GET /api/stream — Server-Sent Events stream of live Alpaca data.
 
-        Pushes events whenever the poller state changes:
-          event: snapshot
-          data: {account, positions, orders, market_clock, summary, timestamp}
-
-        The client connects once and receives updates every 10s (market open)
-        or 60s (market closed).
+        alpaca_stream module retired in Phase 5.  Returns 503 until a
+        replacement real-time feed is wired in.
         """
         try:
             from dashboard.alpaca_stream import get_state, get_seq
+        except ImportError:
+            self._send_json(503, {"error": "live stream unavailable (alpaca_stream retired)"})
+            return
 
+        try:
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -298,9 +297,16 @@ class AuthHandler(SimpleHTTPRequestHandler):
             logger.warning("SSE stream error: %s", e)
 
     def _handle_snapshot(self):
-        """GET /api/snapshot — One-shot JSON of current Alpaca state."""
+        """GET /api/snapshot — One-shot JSON of current Alpaca state.
+
+        alpaca_stream module retired in Phase 5.  Returns 503 until replaced.
+        """
         try:
             from dashboard.alpaca_stream import get_state
+        except ImportError:
+            self._send_json(503, {"error": "snapshot unavailable (alpaca_stream retired)"})
+            return
+        try:
             state = get_state()
             self._send_json(200, state)
         except Exception as e:
@@ -309,8 +315,8 @@ class AuthHandler(SimpleHTTPRequestHandler):
     def _handle_prices(self):
         """GET /api/prices — pre-computed P&L for open positions.
 
-        Returns the new simple format with server-computed P&L per
-        position.  The frontend does NO math — it just swaps values.
+        live_prices module retired in Phase 5.  Returns 503 until a
+        replacement price feed is wired in.
 
         Query params:
           ?tickers=AAPL,REH.AX   — legacy: fall back to raw quotes
@@ -324,7 +330,11 @@ class AuthHandler(SimpleHTTPRequestHandler):
 
             if tickers_param:
                 # Legacy mode: specific tickers requested → return raw quotes
-                from dashboard.live_prices import fetch_prices, get_cache_stats
+                try:
+                    from dashboard.live_prices import fetch_prices, get_cache_stats
+                except ImportError:
+                    self._send_json(503, {"error": "live prices unavailable (live_prices retired)"})
+                    return
                 tickers = [t.strip() for t in tickers_param.split(",") if t.strip()]
                 quotes = fetch_prices(tickers)
                 response = {
@@ -336,7 +346,11 @@ class AuthHandler(SimpleHTTPRequestHandler):
                 }
             else:
                 # New mode: pre-computed P&L for all positions
-                from dashboard.live_prices import get_live_prices_with_pnl
+                try:
+                    from dashboard.live_prices import get_live_prices_with_pnl
+                except ImportError:
+                    self._send_json(503, {"error": "live prices unavailable (live_prices retired)"})
+                    return
                 simple_path = str(SERVE_DIR / "simple-dashboard-data.json")
                 response = get_live_prices_with_pnl(simple_path)
 
@@ -790,10 +804,13 @@ def main():
     os.chdir(PROJECT_ROOT)
 
     # Start Alpaca background poller for SSE streaming
+    # alpaca_stream retired in Phase 5 — skipped gracefully if module missing
     try:
         from dashboard.alpaca_stream import start as start_stream
         start_stream(interval_open=10, interval_closed=60)
         print("Alpaca live poller started", flush=True)
+    except ImportError:
+        print("ℹ️  alpaca_stream retired — SSE stream and snapshot endpoints will return 503", flush=True)
     except Exception as e:
         print(f"⚠️ Alpaca poller failed to start: {e}", flush=True)
         print("  Dashboard will serve static JSON only", flush=True)
