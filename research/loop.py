@@ -107,13 +107,15 @@ def read_results(strategy: str, n: int = 50) -> str:
 # ─── Best Params ─────────────────────────────────────────────────────────────
 
 
-def _best_path(strategy: str) -> Path:
+def _best_path(strategy: str, universe: str = "sp500") -> Path:
+    if universe and universe != "sp500":
+        return BEST_DIR / f"{strategy}_{universe}.json"
     return BEST_DIR / f"{strategy}.json"
 
 
-def load_best(strategy: str) -> Optional[dict]:
-    """Load the current best-known params for a strategy."""
-    path = _best_path(strategy)
+def load_best(strategy: str, universe: str = "sp500") -> Optional[dict]:
+    """Load the current best-known params for a strategy (optionally per-universe)."""
+    path = _best_path(strategy, universe)
     if not path.exists():
         return None
     try:
@@ -130,9 +132,14 @@ def save_best(
     metrics: dict,
     description: str = "",
 ) -> None:
-    """Save new best-known params for a strategy."""
+    """Save new best-known params for a strategy.
+
+    Writes to both JSON file (keyed by strategy+universe) and SQLite
+    research_best table.
+    """
+    universe = market or "sp500"
     BEST_DIR.mkdir(parents=True, exist_ok=True)
-    existing = load_best(strategy) or {}
+    existing = load_best(strategy, universe) or {}
     existing.update({
         "strategy": strategy,
         "market": market,
@@ -143,16 +150,33 @@ def save_best(
         "experiments_kept": existing.get("experiments_kept", 0) + 1,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     })
-    path = _best_path(strategy)
+    path = _best_path(strategy, universe)
     with open(path, "w") as f:
         json.dump(existing, f, indent=2, default=str)
 
+    # Also write to SQLite research_best table
+    try:
+        from db.atlas_db import upsert_research_best
+        upsert_research_best(
+            strategy=strategy,
+            universe=universe,
+            params=params,
+            sharpe=float(metrics.get("sharpe", 0) or 0),
+            trades=int(metrics.get("total_trades", 0) or 0),
+            max_dd_pct=float(metrics.get("max_dd_pct", 0) or 0),
+        )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Failed to write research_best to SQLite: %s", exc
+        )
 
-def _increment_run_count(strategy: str) -> None:
-    existing = load_best(strategy) or {}
+
+def _increment_run_count(strategy: str, universe: str = "sp500") -> None:
+    existing = load_best(strategy, universe) or {}
     existing["experiments_run"] = existing.get("experiments_run", 0) + 1
     BEST_DIR.mkdir(parents=True, exist_ok=True)
-    path = _best_path(strategy)
+    path = _best_path(strategy, universe)
     with open(path, "w") as f:
         json.dump(existing, f, indent=2, default=str)
 
