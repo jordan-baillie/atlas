@@ -89,12 +89,8 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
     # Always execute live — live broker is sole source of truth
     result = _execute_live(plan, trade_date, config, market_id)
 
-    # Regenerate dashboard data
-    try:
-        from dashboard.generate_data import generate
-        generate()
-    except Exception as e:
-        print(f"Dashboard regen failed: {e}")
+    # API endpoints serve live data — no static file regeneration needed
+    # (generate_data.py is scheduled for retirement in Phase 5)
 
     return result
 
@@ -162,12 +158,7 @@ def _reject_plan(trade_date: str, market_id: str) -> dict:
     plan["rejected_at"] = __import__("datetime").datetime.now().isoformat()
     plan_gen._save_plan(plan, trade_date)
 
-    # Regenerate dashboard data
-    try:
-        from dashboard.generate_data import generate
-        generate()
-    except Exception:
-        pass
+    # API endpoints serve live data — no static file regeneration needed
 
     return {"ok": True, "status": "REJECTED"}
 
@@ -202,6 +193,26 @@ class AuthHandler(SimpleHTTPRequestHandler):
             return self._handle_snapshot()
         if self.path.startswith("/api/monitor"):
             return self._send_json(410, {"error": "Monitor tab removed"})
+        # New clean API routes — query SQLite directly, no static JSON needed
+        if self.path.startswith("/api/portfolio"):
+            return self._handle_db_portfolio()
+        if self.path.startswith("/api/trades"):
+            return self._handle_db_trades()
+        if self.path.startswith("/api/performance"):
+            return self._handle_db_performance()
+        if self.path.startswith("/api/equity-curve"):
+            return self._handle_equity_curve()
+        if self.path.startswith("/api/regime/history"):
+            return self._handle_regime_history()
+        if self.path.startswith("/api/regime/current"):
+            return self._handle_regime_current()
+        if self.path.startswith("/api/overlay/decisions"):
+            return self._handle_overlay_decisions()
+        if self.path.startswith("/api/system/health"):
+            return self._handle_system_health()
+        if self.path.startswith("/api/dashboard-data"):
+            return self._handle_dashboard_data()
+        # Legacy /api/db/* routes — kept for backward compat
         if self.path.startswith("/api/db/portfolio"):
             return self._handle_db_portfolio()
         if self.path.startswith("/api/db/trades"):
@@ -431,6 +442,159 @@ class AuthHandler(SimpleHTTPRequestHandler):
             self._send_json(200, summary)
         except Exception as e:
             self._send_json(500, {"error": str(e)})
+
+    # ── New SQLite API endpoints (task #216) ──────────────────
+
+    def _handle_equity_curve(self):
+        """GET /api/equity-curve?market=sp500&days=90 — equity history from SQLite."""
+        try:
+            sys.path.insert(0, str(PROJECT_ROOT))
+            from db.atlas_db import get_equity_curve
+            params = parse_qs(urlparse(self.path).query)
+            market = params.get("market", ["sp500"])[0]
+            days = int(params.get("days", ["90"])[0])
+            rows = get_equity_curve(market_id=market, days=days)
+            # get_equity_curve returns oldest-first; reverse so most recent is first
+            rows.reverse()
+            self._send_json(200, rows)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_regime_history(self):
+        """GET /api/regime/history?days=90 — regime classification history."""
+        try:
+            sys.path.insert(0, str(PROJECT_ROOT))
+            from db.atlas_db import get_regime_history
+            params = parse_qs(urlparse(self.path).query)
+            days = int(params.get("days", ["90"])[0])
+            rows = get_regime_history(days=days)
+            # get_regime_history already returns most-recent-first with JSON decoded
+            self._send_json(200, rows)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_regime_current(self):
+        """GET /api/regime/current — most recent regime state."""
+        try:
+            sys.path.insert(0, str(PROJECT_ROOT))
+            from db.atlas_db import get_current_regime
+            regime = get_current_regime()
+            if regime:
+                self._send_json(200, regime)
+            else:
+                self._send_json(200, {"regime_state": "unknown"})
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_overlay_decisions(self):
+        """GET /api/overlay/decisions?days=30 — overlay AI decisions."""
+        try:
+            sys.path.insert(0, str(PROJECT_ROOT))
+            from db.atlas_db import get_overlay_decisions
+            params = parse_qs(urlparse(self.path).query)
+            days = int(params.get("days", ["30"])[0])
+            decisions = get_overlay_decisions(days=days)
+            self._send_json(200, decisions)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_system_health(self):
+        """GET /api/system/health — heartbeat status for all services."""
+        try:
+            sys.path.insert(0, str(PROJECT_ROOT))
+            from db.atlas_db import get_heartbeats
+            heartbeats = get_heartbeats()
+            self._send_json(200, {
+                "heartbeats": heartbeats,
+                "timestamp": datetime.now().isoformat(),
+            })
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _handle_dashboard_data(self):
+        """GET /api/dashboard-data — replaces static simple-dashboard-data.json."""
+        try:
+            data = self._build_dashboard_data()
+            # Use default=str to handle enum values from broker dataclasses
+            body = json.dumps(data, default=str).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception as e:
+            self._send_json(500, {"error": str(e)})
+
+    def _build_dashboard_data(self) -> dict:
+        """Build the complete dashboard data payload from SQLite + broker."""
+        import dataclasses
+        from pathlib import Path
+        from db.atlas_db import get_db
+
+        config_path = Path("config/active/sp500.json")
+        with open(config_path) as f:
+            config = json.load(f)
+        # Support both 'market_id' and 'market' config keys
+        market_id = config.get("market_id") or config.get("market", "sp500")
+
+        result: dict = {}
+
+        # Portfolio summary from live broker
+        try:
+            from brokers.registry import get_live_broker
+            broker = get_live_broker(config)
+            if broker and broker.connect():
+                account_info = broker.get_account_info()
+                positions_info = broker.get_positions()
+                orders_info = broker.get_history_orders(days=7)
+
+                account = dataclasses.asdict(account_info)
+                positions = [dataclasses.asdict(p) for p in positions_info]
+                orders = [dataclasses.asdict(o) for o in orders_info]
+
+                result["account"] = account
+                result["positions"] = positions
+                result["recent_orders"] = orders
+                result["summary"] = {
+                    "equity": account.get("equity", 0),
+                    "total_pnl": account.get("total_pnl", 0),
+                    "total_pnl_pct": account.get("total_pnl_pct", 0),
+                    "open_positions": len(positions),
+                }
+        except Exception:
+            result["account"] = {}
+            result["positions"] = []
+            result["recent_orders"] = []
+            result["summary"] = {}
+
+        # Equity curve from SQLite
+        with get_db() as db:
+            equity_rows = db.execute(
+                "SELECT date, equity, day_pnl FROM equity_curve "
+                "WHERE market_id = ? ORDER BY date", (market_id,)
+            ).fetchall()
+            result["portfolio_history"] = [dict(r) for r in equity_rows]
+
+            # Strategy performance aggregated from closed trades
+            trades = db.execute(
+                "SELECT strategy, pnl, pnl_pct FROM trades "
+                "WHERE exit_date IS NOT NULL"
+            ).fetchall()
+
+            by_strategy: dict = {}
+            for t in trades:
+                s = t["strategy"] or "unknown"
+                if s not in by_strategy:
+                    by_strategy[s] = {"trades": 0, "pnl": 0.0, "wins": 0}
+                by_strategy[s]["trades"] += 1
+                by_strategy[s]["pnl"] += t["pnl"] or 0
+                if (t["pnl"] or 0) > 0:
+                    by_strategy[s]["wins"] += 1
+
+            result["strategy_performance"] = {"by_strategy": by_strategy}
+
+        result["timestamp"] = datetime.now().isoformat()
+        return result
 
     # ── Monitor API handlers ─────────────────────────────────
 
