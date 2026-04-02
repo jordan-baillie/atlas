@@ -454,14 +454,16 @@ class TestEvaluator:
 class TestCron:
     """Tests for overlay.cron.run_daily_overlay()."""
 
-    def _mock_engine_decision(self, action: str = "no_change") -> dict:
-        return {
-            "action": action,
-            "sizing_override": 0.7 if action == "tighten" else None,
-            "reasoning": "Cron test decision",
-            "confidence": 0.8,
-            "regime_state": "bull_risk_on",
-        }
+    def _mock_engine_decision(self, action: str = "no_change"):
+        from overlay.engine import OverlayDecision
+        return OverlayDecision(
+            adjust=(action == "tighten"),
+            sizing_multiplier_override=0.7 if action == "tighten" else None,
+            universes_to_deactivate=[],
+            tickers_to_avoid=[],
+            reasoning="Cron test decision",
+            confidence=0.8,
+        )
 
     def test_log_only_returns_none(self):
         """run_daily_overlay(mode='log_only') returns None."""
@@ -487,7 +489,7 @@ class TestCron:
             result = run_daily_overlay(mode="active")
 
         assert result is not None
-        assert result["action"] == "tighten"
+        assert result.adjust is True
 
     def test_engine_import_error_returns_none(self):
         """If overlay.engine is not installed, cron fails gracefully."""

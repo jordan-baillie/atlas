@@ -268,7 +268,6 @@ def _call_pi(user_prompt: str) -> Optional[dict]:
     cmd = [
         "pi",
         "-p",
-        "--mode", "json",
         "--system-prompt", SYSTEM_PROMPT,
         user_prompt,
     ]

@@ -73,8 +73,8 @@ def run_daily_overlay(mode: str = "log_only") -> Optional[dict]:
         return None
 
     # Always log the result
-    action = decision.get("action", "unknown") if decision else "error"
-    sizing = decision.get("sizing_override") if decision else None
+    action = ("tighten" if decision.adjust else "no_change") if decision else "error"
+    sizing = decision.sizing_multiplier_override if decision else None
     logger.info(
         "overlay cron: decision action=%s sizing_override=%s (elapsed %s)",
         action,
