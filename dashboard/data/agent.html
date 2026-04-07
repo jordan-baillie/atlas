@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas Agent</title>
+  <link rel="stylesheet" href="/atlas.css">
+  <style>
+    /* ── Reset for full-page layout ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       HEADER
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+      z-index: 10;
+      gap: 12px;
+    }
+
+    .agent-logo {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.3px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .agent-logo span {
+      color: var(--accent);
+    }
+
+    .agent-header-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
+      max-width: 480px;
+    }
+
+    #agent-session-select {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      min-width: 120px;
+      max-width: 240px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #agent-session-select:focus { border-color: var(--accent); }
+
+    #agent-new-session {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s var(--ease);
+    }
+
+    #agent-new-session:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    .agent-header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .agent-back-link {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-2);
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.15s;
+    }
+
+    .agent-back-link:hover { color: var(--text); }
+
+    /* Connection dot */
+    .conn-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-3);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .conn-dot.connected  { background: var(--green); }
+    .conn-dot.connecting { background: var(--amber); animation: conn-pulse 1.5s ease-in-out infinite; }
+    .conn-dot.error      { background: var(--red); }
+
+    @keyframes conn-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       MAIN CONTENT AREA (two-pane)
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       MESSAGES PANE (left, ~65%)
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-messages-pane {
+      flex: 1 1 65%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+      border-right: 1px solid var(--border);
+    }
+
+    #agent-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    #agent-messages::-webkit-scrollbar { width: 5px; }
+    #agent-messages::-webkit-scrollbar-track { background: transparent; }
+    #agent-messages::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
+
+    /* Empty state */
+    .agent-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 14px;
+      padding: 48px 32px;
+      text-align: center;
+    }
+
+    .agent-empty-icon {
+      font-size: 44px;
+      opacity: 0.45;
+    }
+
+    .agent-empty-title {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
+    .agent-empty-sub {
+      font-size: 13px;
+      color: var(--text-3);
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       MESSAGE BUBBLES
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-msg {
+      display: flex;
+      flex-direction: column;
+      max-width: 100%;
+      animation: msg-in 0.2s var(--ease);
+    }
+
+    @keyframes msg-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* User message — right-aligned */
+    .agent-msg-user { align-items: flex-end; }
+
+    .agent-msg-user .msg-bubble {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 18px 18px 4px 18px;
+      padding: 10px 16px;
+      max-width: 72%;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Assistant message — left-aligned */
+    .agent-msg-assistant { align-items: flex-start; }
+
+    .agent-msg-assistant .msg-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px 18px 18px 18px;
+      padding: 14px 18px;
+      max-width: 100%;
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    /* System / error message */
+    .agent-msg-system .msg-bubble {
+      background: var(--amber-soft);
+      border: 1px solid var(--amber);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--amber);
+      align-self: center;
+      max-width: 90%;
+    }
+
+    .agent-msg-error .msg-bubble {
+      background: var(--red-soft);
+      border: 1px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--red);
+      align-self: center;
+      max-width: 90%;
+    }
+
+    /* ── Markdown inside messages ── */
+    .msg-bubble h1 { font-size: 18px; font-weight: 700; margin: 14px 0 8px; }
+    .msg-bubble h2 { font-size: 16px; font-weight: 600; margin: 12px 0 6px; }
+    .msg-bubble h3 { font-size: 15px; font-weight: 600; margin: 10px 0 5px; }
+    .msg-bubble h4 { font-size: 14px; font-weight: 600; margin: 8px 0 4px; color: var(--text-2); }
+    .msg-bubble p  { margin: 0 0 9px; }
+    .msg-bubble p:last-child { margin-bottom: 0; }
+    .msg-bubble ul, .msg-bubble ol { margin: 6px 0; padding-left: 22px; }
+    .msg-bubble li { margin: 3px 0; }
+    .msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+    .msg-bubble a  { color: var(--accent); text-decoration: none; }
+    .msg-bubble a:hover { text-decoration: underline; }
+    .msg-bubble strong { font-weight: 600; }
+    .msg-bubble em { font-style: italic; }
+
+    /* Inline code */
+    .msg-bubble code {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      background: var(--surface-2);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--accent);
+    }
+
+    /* Block code */
+    .msg-bubble pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      overflow-x: auto;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .msg-bubble pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+      font-size: 12.5px;
+      border-radius: 0;
+    }
+
+    .code-lang-label {
+      position: absolute;
+      top: 6px;
+      left: 10px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .code-copy-btn {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .code-copy-btn:hover { color: var(--text); border-color: var(--border-hover); }
+    .code-copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+    /* Tables */
+    .msg-bubble table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin: 10px 0;
+      overflow-x: auto;
+      display: block;
+    }
+
+    .msg-bubble th, .msg-bubble td {
+      text-align: left;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+    }
+
+    .msg-bubble th {
+      background: var(--surface-2);
+      font-weight: 600;
+      color: var(--text-2);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .msg-bubble tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+    /* ── Thinking indicator (in message during streaming) ── */
+    .thinking-indicator {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      padding: 6px 2px;
+    }
+
+    .thinking-indicator .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      opacity: 0.6;
+      animation: think-bounce 1.3s ease-in-out infinite;
+    }
+
+    .thinking-indicator .dot:nth-child(2) { animation-delay: 0.18s; }
+    .thinking-indicator .dot:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes think-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30%            { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ── Delegation result block (inline in messages) ── */
+    .delegation-block {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    .delegation-block-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--surface-2);
+      cursor: pointer;
+      color: var(--text-2);
+      font-family: var(--mono);
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .delegation-block-summary:hover { color: var(--text); }
+
+    .delegation-block-body {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      color: var(--text-2);
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-size: 12.5px;
+    }
+
+    .delegation-block-body.hidden { display: none; }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       ACTIVITY FEED (right, ~35%)
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-activity-pane {
+      flex: 0 0 35%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-subtle);
+    }
+
+    .activity-pane-header {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .activity-clear-btn {
+      font-size: 10px;
+      color: var(--text-3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.15s;
+    }
+
+    .activity-clear-btn:hover { color: var(--text-2); }
+
+    #activity-feed {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    #activity-feed::-webkit-scrollbar { width: 4px; }
+    #activity-feed::-webkit-scrollbar-track { background: transparent; }
+    #activity-feed::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 2px; }
+
+    #activity-feed:empty::after {
+      content: 'Activity will appear here\2026';
+      display: block;
+      text-align: center;
+      color: var(--text-3);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 20px 10px;
+    }
+
+    /* ── Activity cards ── */
+    .act-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 9px;
+      font-size: 11.5px;
+      font-family: var(--mono);
+      color: var(--text-2);
+      animation: act-in 0.18s var(--ease);
+      transition: opacity 0.4s, border-color 0.3s;
+      cursor: default;
+    }
+
+    @keyframes act-in {
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .act-card.is-done { opacity: 0.5; }
+    .act-card:hover   { border-color: var(--border-hover); opacity: 1 !important; }
+
+    .act-card .act-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 1.4;
+    }
+
+    .act-card .act-icon  { flex-shrink: 0; }
+
+    .act-card .act-label {
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .act-card .act-detail {
+      display: block;
+      margin-top: 3px;
+      color: var(--text-3);
+      font-size: 10.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    /* Thinking card */
+    .act-card.thinking-card          { border-color: rgba(99,102,241,0.3); }
+    .act-card.thinking-card .act-label { color: var(--accent); }
+
+    /* Delegation card */
+    .act-card.delegation-card             { border-color: rgba(99,102,241,0.4); background: var(--accent-soft); }
+    .act-card.delegation-card .act-label  { color: var(--accent); }
+
+    /* Done card */
+    .act-card.done-card             { border-color: rgba(34,197,94,0.3); }
+    .act-card.done-card .act-label  { color: var(--green); }
+
+    /* Error card */
+    .act-card.error-card             { border-color: rgba(239,68,68,0.4); background: var(--red-soft); }
+    .act-card.error-card .act-label  { color: var(--red); }
+
+    /* Cost bar */
+    .activity-cost-bar {
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--text-3);
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #activity-cost { color: var(--text-2); font-weight: 600; }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       INPUT BAR (sticky at bottom)
+    ───────────────────────────────────────────────────────────────────── */
+    .agent-input-bar {
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      padding: 12px 20px 14px;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    #agent-input {
+      flex: 1;
+      min-height: 44px;
+      max-height: 180px;
+      padding: 11px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      transition: border-color 0.15s;
+      overflow-y: auto;
+    }
+
+    #agent-input:focus { border-color: var(--accent); }
+    #agent-input::placeholder { color: var(--text-3); }
+    #agent-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #agent-send {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, transform 0.1s;
+      line-height: 1;
+    }
+
+    #agent-send:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
+    #agent-send:active:not(:disabled) { transform: translateY(0); }
+    #agent-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    #agent-cancel {
+      width: 44px;
+      height: 44px;
+      background: var(--red-soft);
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: var(--radius);
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    #agent-cancel:hover { background: var(--red); color: white; }
+
+    /* Status bar */
+    #agent-status {
+      margin-top: 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #agent-status .sep    { opacity: 0.4; }
+    #agent-status .s-model { color: var(--accent); }
+    #agent-status .s-cost  { color: var(--text-2); }
+    #agent-status .s-conn  { color: var(--text-3); }
+    #agent-status .s-conn.connected   { color: var(--green); }
+    #agent-status .s-conn.error       { color: var(--red); }
+    #agent-status .s-conn.thinking    { color: var(--amber); }
+    #agent-status .s-conn.writing     { color: var(--accent); }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       RESPONSIVE — hide activity pane on mobile
+    ───────────────────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      #activity-feed,
+      .agent-activity-pane { display: none !important; }
+      .agent-messages-pane  { border-right: none; }
+      #agent-messages       { padding: 16px; }
+      .agent-msg-user .msg-bubble { max-width: 88%; }
+    }
+
+    @media (max-width: 480px) {
+      .agent-header-center { display: none; }
+      .agent-header        { padding: 0 14px; }
+      .agent-input-bar     { padding: 10px 14px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="agent-header">
+  <div class="agent-logo"><span>&#9650;</span> Atlas Agent</div>
+
+  <div class="agent-header-center">
+    <select id="agent-session-select" title="Switch session">
+      <option value="">Loading&#8230;</option>
+    </select>
+    <button id="agent-new-session" type="button">+ New</button>
+  </div>
+
+  <div class="agent-header-right">
+    <a href="/" class="agent-back-link">&#8592; Dashboard</a>
+    <div id="agent-conn-dot" class="conn-dot connecting" title="Connecting&#8230;"></div>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<div class="agent-main">
+
+  <!-- Messages pane -->
+  <div class="agent-messages-pane">
+    <div id="agent-messages">
+      <!-- Empty state — removed once first message arrives -->
+      <div class="agent-empty" id="agent-empty-state">
+        <div class="agent-empty-icon">&#9672;</div>
+        <div class="agent-empty-title">Atlas Agent</div>
+        <div class="agent-empty-sub">
+          Full-power AI with access to Atlas tools, strategies, backtest engine,
+          and live trading data. Ask anything.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity feed pane -->
+  <div class="agent-activity-pane">
+    <div class="activity-pane-header">
+      <span>Activity</span>
+      <button class="activity-clear-btn" id="activity-clear" type="button" title="Clear feed">&#10005;</button>
+    </div>
+    <div id="activity-feed"></div>
+    <div class="activity-cost-bar">
+      <span>Session cost</span>
+      <span id="activity-cost">$0.0000</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Input bar ── -->
+<div class="agent-input-bar">
+  <div class="input-row">
+    <textarea
+      id="agent-input"
+      placeholder="Message Atlas Agent&#8230; (Enter to send, Shift+Enter for newline)"
+      rows="1"
+    ></textarea>
+    <button id="agent-send" type="button" title="Send (Enter)">&#8593;</button>
+    <button id="agent-cancel" type="button" title="Cancel generation">&#9632;</button>
+  </div>
+  <div id="agent-status">
+    <span class="s-model" id="agent-model-label">opus</span>
+    <span class="sep">&middot;</span>
+    <span class="s-cost" id="agent-cost">$0.0000</span>
+    <span>this session</span>
+    <span class="sep">&middot;</span>
+    <span class="s-conn" id="agent-conn-text">connecting</span>
+  </div>
+</div>
+
+<script>
+/* jshint esversion: 5 */
+'use strict';
+
+/*
+ * Atlas Agent — full-page chat client
+ *
+ * Connects to the same /ws/chat WebSocket endpoint as the embedded dashboard
+ * chat, but renders a richer UI with:
+ *   - Full-width message area (left pane, ~65%)
+ *   - Real-time activity feed (right pane, ~35%)
+ *   - Markdown + table rendering
+ *   - Code block copy buttons
+ *   - Delegation result collapsible blocks
+ *   - Thinking-indicator during Claude's thinking phase
+ */
+(function () {
+
+  /* ── State ────────────────────────────────────────────────────────────── */
+  var ws               = null;
+  var currentSessionId = null;
+  var isGenerating     = false;
+  var sessionCost      = 0;
+  var reconnectAttempts = 0;
+  var MAX_RECONNECT    = 12;
+  var reconnectTimer   = null;
+  var currentMsgEl     = null;   // .agent-msg div being built for assistant
+  var currentModel     = 'claude-opus-4-6';
+  var thinkingCard     = null;   // activity card for current thinking block
+
+  // Map toolCallId -> activity card element so tool_end can mark it done
+  var toolCards = {};
+
+  /* ── DOM refs ─────────────────────────────────────────────────────────── */
+  var messagesEl   = document.getElementById('agent-messages');
+  var activityEl   = document.getElementById('activity-feed');
+  var inputEl      = document.getElementById('agent-input');
+  var sendBtn      = document.getElementById('agent-send');
+  var cancelBtn    = document.getElementById('agent-cancel');
+  var sessionSel   = document.getElementById('agent-session-select');
+  var newSessBtn   = document.getElementById('agent-new-session');
+  var connDot      = document.getElementById('agent-conn-dot');
+  var connText     = document.getElementById('agent-conn-text');
+  var costEl       = document.getElementById('agent-cost');
+  var actCostEl    = document.getElementById('activity-cost');
+  var modelLabel   = document.getElementById('agent-model-label');
+  var clearFeedBtn = document.getElementById('activity-clear');
+  var emptyState   = document.getElementById('agent-empty-state');
+
+  /* ── Auth token (Basic Auth -> short-lived WS token) ─────────────────── */
+  function getAuthToken() {
+    var cached = sessionStorage.getItem('atlas-ws-token');
+    if (cached) return cached;
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/chat/token', false); // synchronous
+      xhr.send();
+      if (xhr.status === 200) {
+        var resp = JSON.parse(xhr.responseText);
+        var tok = resp.token || '';
+        if (tok) {
+          sessionStorage.setItem('atlas-ws-token', tok);
+          return tok;
+        }
+      }
+    } catch (e) {
+      console.warn('[agent] token fetch failed:', e);
+    }
+    return '';
+  }
+
+  /* ── WebSocket lifecycle ─────────────────────────────────────────────── */
+  function connect(sessionId) {
+    if (ws && ws.readyState <= 1) return; // already open or connecting
+
+    var token = getAuthToken();
+    var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var url   = proto + '//' + location.host + '/ws/chat?token=' + encodeURIComponent(token);
+
+    try { ws = new WebSocket(url); }
+    catch (e) {
+      console.error('[agent] WebSocket constructor failed:', e);
+      setConnStatus('error');
+      return;
+    }
+
+    ws.onopen = function () {
+      reconnectAttempts = 0;
+      setConnStatus('connected');
+      if (currentSessionId) {
+        ws.send(JSON.stringify({ type: 'history', session_id: currentSessionId, limit: 60 }));
+      }
+    };
+
+    ws.onmessage = function (e) {
+      try { handleMessage(JSON.parse(e.data)); }
+      catch (err) { console.warn('[agent] parse error:', err); }
+    };
+
+    ws.onclose = function () {
+      ws = null;
+      if (isGenerating) { isGenerating = false; currentMsgEl = null; }
+      setConnStatus('disconnected');
+      if (reconnectAttempts < MAX_RECONNECT) {
+        reconnectAttempts++;
+        var delay = Math.min(1000 * Math.pow(1.8, reconnectAttempts), 30000);
+        reconnectTimer = setTimeout(function () { connect(currentSessionId); }, delay);
+      }
+    };
+
+    ws.onerror = function () { setConnStatus('error'); };
+  }
+
+  /* ── Send ─────────────────────────────────────────────────────────────── */
+  function send(content) {
+    if (!content || !content.trim()) return;
+    if (isGenerating) return;
+
+    if (!ws || ws.readyState !== 1) {
+      // Queue the message and retry after connection established
+      connect(currentSessionId);
+      setConnStatus('connecting');
+      setTimeout(function () { send(content); }, 900);
+      return;
+    }
+
+    content = content.trim();
+    clearEmpty();
+    appendUserMessage(content);
+
+    ws.send(JSON.stringify({ type: 'send', content: content, session_id: currentSessionId }));
+
+    isGenerating = true;
+    setConnStatus('thinking');
+    setGeneratingUI(true);
+    startAssistantMessage();
+  }
+
+  /* ── Cancel ───────────────────────────────────────────────────────────── */
+  function cancel() {
+    if (!ws || ws.readyState !== 1 || !currentSessionId) return;
+    ws.send(JSON.stringify({ type: 'cancel', session_id: currentSessionId }));
+  }
+
+  /* ── Event router ─────────────────────────────────────────────────────── */
+  function handleMessage(msg) {
+    switch (msg.type) {
+
+      /* User message persisted — captures new session id if auto-created */
+      case 'user_message_saved':
+        if (msg.session_id) currentSessionId = msg.session_id;
+        break;
+
+      /* ── Text streaming ── */
+      case 'text_start':
+        break; // assistant placeholder already created in send()
+
+      case 'text_delta':
+        appendDelta(msg.delta || '');
+        setConnStatus('writing');
+        break;
+
+      case 'text_end':
+        break; // full render happens on 'done'
+
+      /* ── Thinking phase ── */
+      case 'thinking_start':
+        showThinkingDots(true);
+        addThinkingActivity();
+        setConnStatus('thinking');
+        break;
+
+      case 'thinking_delta':
+        if (thinkingCard) {
+          var det = thinkingCard.querySelector('.act-detail');
+          if (det) { det.textContent = (msg.delta || '').slice(0, 80); }
+        }
+        break;
+
+      case 'thinking_end':
+        showThinkingDots(false);
+        if (thinkingCard) {
+          thinkingCard.classList.add('is-done');
+          thinkingCard = null;
+        }
+        break;
+
+      /* ── Tool events ── */
+      case 'tool_start':
+        addToolActivity(msg.tool || '', msg.args || {}, msg.tool_call_id || '');
+        setConnStatus('using ' + (msg.tool || 'tool'));
+        break;
+
+      case 'tool_end':
+        markToolDone(msg.tool_call_id || '', msg.result_preview || '');
+        break;
+
+      /* ── Delegation ── */
+      case 'delegation_start':
+        addDelegationActivity(msg);
+        break;
+
+      case 'delegation_end':
+        finishDelegationActivity(msg);
+        break;
+
+      /* ── Turn complete ── */
+      case 'turn_end':
+        var cost = msg.cost || 0;
+        sessionCost += cost;
+        updateCostDisplay();
+        addTurnEndActivity(cost, msg.tokens || 0);
+        break;
+
+      /* ── Generation done ── */
+      case 'done':
+        finishAssistantMessage(msg.full_text || '');
+        isGenerating = false;
+        setGeneratingUI(false);
+        setConnStatus('connected');
+        thinkingCard = null;
+        break;
+
+      /* ── History load ── */
+      case 'history':
+        renderHistory(msg.messages || []);
+        if (msg.session_id) currentSessionId = msg.session_id;
+        break;
+
+      /* ── Session created ── */
+      case 'session_created':
+        if (msg.session) {
+          currentSessionId = msg.session.id;
+          currentModel = msg.session.model || currentModel;
+          clearMessages();
+          clearEmpty();
+          toolCards = {};
+          loadSessions(msg.session.id);
+          updateModelLabel();
+        }
+        break;
+
+      /* ── Cancelled ── */
+      case 'cancelled':
+        if (currentMsgEl) {
+          var rawText = getRawText(currentMsgEl);
+          finishAssistantMessage(rawText);
+        }
+        isGenerating = false;
+        setGeneratingUI(false);
+        setConnStatus('connected');
+        break;
+
+      /* ── Error ── */
+      case 'error':
+        addErrorMessage(msg.message || 'Unknown error');
+        addErrorActivity(msg.message || 'Error');
+        isGenerating = false;
+        setGeneratingUI(false);
+        setConnStatus('error');
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  /* ── DOM: Messages ────────────────────────────────────────────────────── */
+
+  function clearEmpty() {
+    if (emptyState && emptyState.parentNode) {
+      emptyState.parentNode.removeChild(emptyState);
+      emptyState = null;
+    }
+  }
+
+  function appendUserMessage(content) {
+    var div = document.createElement('div');
+    div.className = 'agent-msg agent-msg-user';
+    var bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = content;
+    div.appendChild(bubble);
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function startAssistantMessage() {
+    var div = document.createElement('div');
+    div.className = 'agent-msg agent-msg-assistant';
+    var bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    div.appendChild(bubble);
+    messagesEl.appendChild(div);
+    currentMsgEl = div;
+    scrollToBottom();
+  }
+
+  function appendDelta(delta) {
+    if (!currentMsgEl) startAssistantMessage();
+    var bubble = currentMsgEl.querySelector('.msg-bubble');
+    if (!bubble) return;
+    var raw = (bubble.getAttribute('data-raw') || '') + delta;
+    bubble.setAttribute('data-raw', raw);
+    bubble.textContent = raw;
+    scrollToBottom();
+  }
+
+  function getRawText(msgEl) {
+    var bubble = msgEl ? msgEl.querySelector('.msg-bubble') : null;
+    if (!bubble) return '';
+    return bubble.getAttribute('data-raw') || bubble.textContent || '';
+  }
+
+  function finishAssistantMessage(fullText) {
+    if (!currentMsgEl) return;
+    var bubble = currentMsgEl.querySelector('.msg-bubble');
+    if (bubble) {
+      var text = fullText || bubble.getAttribute('data-raw') || bubble.textContent || '';
+      bubble.removeAttribute('data-raw');
+      bubble.innerHTML = renderMarkdown(text);
+      addCopyButtons(bubble);
+    }
+    currentMsgEl = null;
+    scrollToBottom();
+  }
+
+  function showThinkingDots(active) {
+    if (!currentMsgEl) startAssistantMessage();
+    var bubble = currentMsgEl.querySelector('.msg-bubble');
+    if (!bubble) return;
+    var existing = bubble.querySelector('.thinking-indicator');
+    if (active && !existing) {
+      var ind = document.createElement('div');
+      ind.className = 'thinking-indicator';
+      ind.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      bubble.appendChild(ind);
+      scrollToBottom();
+    } else if (!active && existing) {
+      existing.parentNode.removeChild(existing);
+    }
+  }
+
+  function addErrorMessage(text) {
+    var div = document.createElement('div');
+    div.className = 'agent-msg agent-msg-error';
+    var bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = '\u26A0 ' + text;
+    div.appendChild(bubble);
+    messagesEl.appendChild(div);
+    scrollToBottom();
+  }
+
+  function clearMessages() {
+    messagesEl.innerHTML = '';
+    currentMsgEl = null;
+  }
+
+  function scrollToBottom() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function renderHistory(messages) {
+    clearMessages();
+    // Messages come newest-first from API; reverse to chronological order
+    var ordered = messages.slice().reverse();
+    ordered.forEach(function (m) {
+      if (m.role === 'user') {
+        appendUserMessage(m.content);
+      } else if (m.role === 'assistant') {
+        var div = document.createElement('div');
+        div.className = 'agent-msg agent-msg-assistant';
+        var bubble = document.createElement('div');
+        bubble.className = 'msg-bubble';
+        bubble.innerHTML = renderMarkdown(m.content || '');
+        addCopyButtons(bubble);
+        div.appendChild(bubble);
+        messagesEl.appendChild(div);
+      }
+    });
+    if (messages.length > 0) clearEmpty();
+    scrollToBottom();
+  }
+
+  /* ── DOM: Activity feed ───────────────────────────────────────────────── */
+
+  function addThinkingActivity() {
+    var card = makeCard('thinking-card');
+    card.innerHTML =
+      '<div class="act-row"><span class="act-icon">\uD83E\uDD14</span>' +
+      '<span class="act-label">Thinking\u2026</span></div>' +
+      '<span class="act-detail"></span>';
+    appendActivity(card);
+    thinkingCard = card;
+  }
+
+  function addToolActivity(tool, args, toolCallId) {
+    var info = getToolInfo(tool, args);
+    var card = makeCard('');
+    card.title = tool + (args ? '\n' + safeJSON(args, 300) : '');
+    card.innerHTML =
+      '<div class="act-row">' +
+      '<span class="act-icon">' + info.icon + '</span>' +
+      '<span class="act-label">' + escHtml(info.label) + '</span>' +
+      '</div>' +
+      (info.detail ? '<span class="act-detail">' + escHtml(info.detail) + '</span>' : '');
+    appendActivity(card);
+    if (toolCallId) toolCards[toolCallId] = card;
+  }
+
+  function markToolDone(toolCallId, resultPreview) {
+    var card = toolCallId ? toolCards[toolCallId] : null;
+    if (!card) return;
+    card.classList.add('is-done');
+    if (resultPreview) {
+      var det = card.querySelector('.act-detail');
+      if (!det) { det = document.createElement('span'); det.className = 'act-detail'; card.appendChild(det); }
+      det.textContent = '\u2192 ' + resultPreview.slice(0, 80);
+      det.title = resultPreview;
+    }
+    delete toolCards[toolCallId];
+  }
+
+  function addDelegationActivity(msg) {
+    var target = msg.target || '';
+    var preview = msg.task_preview || '';
+    var toolCallId = msg.tool_call_id || '';
+
+    var card = makeCard('delegation-card');
+    card.title = 'Task: ' + preview;
+    card.innerHTML =
+      '<div class="act-row">' +
+      '<span class="act-icon">\uD83D\uDC65</span>' +
+      '<span class="act-label">\u2192 ' + escHtml(target || 'agent') + '</span>' +
+      '</div>' +
+      (preview ? '<span class="act-detail">' + escHtml(preview.slice(0, 100)) + '</span>' : '');
+    appendActivity(card);
+    if (toolCallId) toolCards[toolCallId] = card;
+  }
+
+  function finishDelegationActivity(msg) {
+    var toolCallId = msg.tool_call_id || '';
+    var card = toolCallId ? toolCards[toolCallId] : null;
+
+    if (card) {
+      card.classList.add('is-done');
+      var agents = msg.agents || [];
+      if (agents.length > 0) {
+        var totalCost = agents.reduce(function (s, a) { return s + (a.cost || 0); }, 0);
+        var det = card.querySelector('.act-detail');
+        if (!det) { det = document.createElement('span'); det.className = 'act-detail'; card.appendChild(det); }
+        det.textContent = agents.length + ' agent(s) \u00B7 $' + totalCost.toFixed(4);
+      }
+      delete toolCards[toolCallId];
+    }
+
+    // Show inline delegation result in the current assistant message
+    if (currentMsgEl && msg.response_preview) {
+      var bubble = currentMsgEl.querySelector('.msg-bubble');
+      if (bubble) addDelegationBlock(bubble, msg);
+    }
+  }
+
+  function addDelegationBlock(bubble, msg) {
+    var agents = msg.agents || [];
+    var agentSummary = agents.map(function (a) {
+      return (a.name || 'agent') + (a.cost ? ' ($' + a.cost.toFixed(4) + ')' : '');
+    }).join(', ');
+
+    var block = document.createElement('div');
+    block.className = 'delegation-block';
+
+    var summary = document.createElement('div');
+    summary.className = 'delegation-block-summary';
+    summary.innerHTML =
+      '<span>\uD83D\uDC65</span>' +
+      '<span>Delegation result' + (agentSummary ? ' \u2014 ' + escHtml(agentSummary) : '') + '</span>' +
+      '<span style="margin-left:auto">\u25BE</span>';
+
+    var body = document.createElement('div');
+    body.className = 'delegation-block-body';
+    body.textContent = msg.response_preview || '';
+
+    summary.addEventListener('click', function () {
+      body.classList.toggle('hidden');
+      var arrow = summary.querySelector('span:last-child');
+      if (arrow) arrow.textContent = body.classList.contains('hidden') ? '\u25B8' : '\u25BE';
+    });
+
+    block.appendChild(summary);
+    block.appendChild(body);
+    bubble.appendChild(block);
+    scrollToBottom();
+  }
+
+  function addTurnEndActivity(cost, tokens) {
+    var card = makeCard('done-card');
+    var parts = [];
+    if (cost > 0)    parts.push('$' + cost.toFixed(4));
+    if (tokens > 0)  parts.push(tokens.toLocaleString() + ' tok');
+    card.innerHTML =
+      '<div class="act-row">' +
+      '<span class="act-icon">\u2705</span>' +
+      '<span class="act-label">Turn complete</span>' +
+      '</div>' +
+      (parts.length ? '<span class="act-detail">' + escHtml(parts.join(' \u00B7 ')) + '</span>' : '');
+    appendActivity(card);
+  }
+
+  function addErrorActivity(text) {
+    var card = makeCard('error-card');
+    card.innerHTML =
+      '<div class="act-row">' +
+      '<span class="act-icon">\u26A0\uFE0F</span>' +
+      '<span class="act-label">Error</span>' +
+      '</div>' +
+      '<span class="act-detail">' + escHtml((text || '').slice(0, 100)) + '</span>';
+    appendActivity(card);
+  }
+
+  function makeCard(extraClass) {
+    var card = document.createElement('div');
+    card.className = 'act-card' + (extraClass ? ' ' + extraClass : '');
+    return card;
+  }
+
+  function appendActivity(card) {
+    activityEl.appendChild(card);
+    activityEl.scrollTop = activityEl.scrollHeight;
+  }
+
+  /* ── Tool info lookup ─────────────────────────────────────────────────── */
+  function getToolInfo(tool, args) {
+    var t = (tool || '').toLowerCase();
+    var a = args || {};
+
+    if (t === 'read') {
+      return { icon: '\uD83D\uDCC4', label: 'Read', detail: basename(a.path || '') };
+    }
+    if (t === 'bash') {
+      var cmd = (a.command || '').split('\n')[0].slice(0, 60);
+      return { icon: '\uD83D\uDCBB', label: 'Bash', detail: '$ ' + cmd };
+    }
+    if (t === 'edit') {
+      return { icon: '\u270F\uFE0F', label: 'Edit', detail: basename(a.path || '') };
+    }
+    if (t === 'write') {
+      return { icon: '\uD83D\uDCDD', label: 'Write', detail: basename(a.path || '') };
+    }
+    if (t === 'grep') {
+      return { icon: '\uD83D\uDD0D', label: 'Grep', detail: (a.pattern || '').slice(0, 40) };
+    }
+    if (t === 'find') {
+      return { icon: '\uD83D\uDCC2', label: 'Find', detail: (a.pattern || '').slice(0, 40) };
+    }
+    if (t === 'delegate' || t === 'subagent') {
+      var tgt = a.agent || a.target || 'agent';
+      return { icon: '\uD83D\uDC65', label: 'Delegate \u2192 ' + tgt, detail: (a.task || a.prompt || '').slice(0, 60) };
+    }
+    if (t === 'spawn_worker') {
+      return { icon: '\u26A1', label: 'Spawn: ' + (a.name || 'worker'), detail: '' };
+    }
+    if (t === 'swarm') {
+      return { icon: '\uD83D\uDD04', label: 'Swarm', detail: (a.objective || '').slice(0, 60) };
+    }
+    if (t === 'atlas_jobs_run') {
+      return { icon: '\uD83D\uDE80', label: 'Job: ' + (a.job || ''), detail: '' };
+    }
+    if (t === 'atlas_artifacts_load' || t === 'atlas_artifacts_summarize' || t === 'atlas_artifacts_compare') {
+      return { icon: '\uD83D\uDCCA', label: t.replace('atlas_', ''), detail: basename(a.path || a.leftPath || '') };
+    }
+    if (t === 'task') {
+      return { icon: '\u2611\uFE0F', label: 'Task', detail: ((a.action || '') + ' ' + (a.title || '')).trim() };
+    }
+    if (t === 'project' || t === 'milestone' || t === 'project_notes') {
+      return { icon: '\uD83D\uDCCB', label: t, detail: a.action || '' };
+    }
+    if (t === 'ceo_deliberate') {
+      return { icon: '\uD83C\uDFDB\uFE0F', label: 'Board deliberation', detail: (a.title || '').slice(0, 60) };
+    }
+    if (t === 'swarm_plan') {
+      return { icon: '\uD83E\uDDE0', label: 'Swarm plan', detail: (a.objective || '').slice(0, 60) };
+    }
+    // Generic fallback
+    var firstVal = '';
+    var keys = Object.keys(a);
+    if (keys.length > 0) {
+      var v = a[keys[0]];
+      if (typeof v === 'string') firstVal = v.slice(0, 50);
+    }
+    return { icon: '\uD83D\uDD27', label: tool || 'tool', detail: firstVal };
+  }
+
+  /* ── Session management ───────────────────────────────────────────────── */
+  function loadSessions(selectId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/chat/sessions?limit=30');
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var sessions = JSON.parse(xhr.responseText);
+          populateSessionSelect(sessions, selectId || currentSessionId);
+          // Auto-load latest session on first connect
+          if (!currentSessionId && sessions.length > 0) {
+            switchSession(sessions[0].id);
+          }
+        } catch (e) { /* ignore */ }
+      }
+    };
+    xhr.send();
+  }
+
+  function populateSessionSelect(sessions, selectedId) {
+    if (!sessions || !sessions.length) {
+      sessionSel.innerHTML = '<option value="">No sessions</option>';
+      return;
+    }
+    sessionSel.innerHTML = sessions.map(function (s) {
+      var name = s.name || ('Session ' + (s.id || '').slice(0, 6));
+      var sel  = s.id === selectedId ? ' selected' : '';
+      return '<option value="' + escHtml(s.id) + '"' + sel + '>' + escHtml(name) + '</option>';
+    }).join('');
+  }
+
+  function switchSession(sessionId) {
+    if (!sessionId || sessionId === currentSessionId) return;
+    currentSessionId = sessionId;
+    clearMessages();
+    toolCards = {};
+    thinkingCard = null;
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'history', session_id: sessionId, limit: 60 }));
+    }
+  }
+
+  function createNewSession() {
+    if (!ws || ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: 'new_session', model: currentModel }));
+  }
+
+  /* ── UI helpers ───────────────────────────────────────────────────────── */
+  function setConnStatus(status) {
+    connDot.className  = 'conn-dot';
+    connText.className = 's-conn';
+
+    if (status === 'connected') {
+      connDot.classList.add('connected');
+      connText.classList.add('connected');
+      connDot.title = 'Connected';
+    } else if (status === 'error' || status === 'disconnected') {
+      connDot.classList.add('error');
+      connText.classList.add('error');
+      connDot.title = 'Disconnected';
+    } else {
+      connDot.classList.add('connecting');
+      connDot.title = status;
+    }
+
+    if (status === 'thinking') { connText.classList.add('thinking'); }
+    else if (status === 'writing') { connText.classList.add('writing'); }
+
+    connText.textContent = status;
+  }
+
+  function setGeneratingUI(generating) {
+    inputEl.disabled = generating;
+    sendBtn.disabled = generating;
+    sendBtn.style.display = generating ? 'none' : 'flex';
+    cancelBtn.style.display = generating ? 'flex' : 'none';
+  }
+
+  function updateCostDisplay() {
+    var str = '$' + sessionCost.toFixed(4);
+    if (costEl) costEl.textContent = str;
+    if (actCostEl) actCostEl.textContent = str;
+  }
+
+  function updateModelLabel() {
+    if (!modelLabel) return;
+    var short = currentModel
+      .replace('claude-', '')
+      .replace(/-\d+(-\d+)?$/, '');
+    modelLabel.textContent = short;
+  }
+
+  /* ── Textarea auto-resize ─────────────────────────────────────────────── */
+  function autoResize() {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+  }
+
+  /* ── Markdown renderer ────────────────────────────────────────────────── */
+  function renderMarkdown(text) {
+    if (!text) return '';
+
+    // 1. Escape HTML
+    var html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // 2. Fenced code blocks — protect from further processing
+    var codeBlocks = [];
+    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, function (_, lang, code) {
+      var langAttr  = lang ? ' data-lang="' + escAttr(lang) + '"' : '';
+      var langLabel = lang ? '<span class="code-lang-label">' + lang + '</span>' : '';
+      var block = '<pre' + langAttr + '>' + langLabel +
+        '<button class="code-copy-btn" type="button">copy</button>' +
+        '<code>' + code + '</code></pre>';
+      codeBlocks.push(block);
+      return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
+    });
+
+    // 3. Inline code
+    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+    // 4. Bold / italic / strikethrough
+    html = html.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+    html = html.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+
+    // 5. Headers
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.+)$/gm,  '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm,   '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm,    '<h1>$1</h1>');
+
+    // 6. Horizontal rule
+    html = html.replace(/^---+$/gm, '<hr>');
+
+    // 7. Tables: | col | col | rows
+    html = html.replace(/((?:\|[^\n]+\|\n?)+)/g, function (block) {
+      var rows = block.trim().split('\n');
+      if (rows.length < 2) return block;
+      var isSep = /^\|[\s\-:]+\|/.test(rows[1]);
+      if (!isSep) return block;
+      var result = '<table>';
+      rows.forEach(function (row, idx) {
+        if (idx === 1) return; // skip separator row
+        var cells = row.replace(/^\||\|$/g, '').split('|');
+        var tag = idx === 0 ? 'th' : 'td';
+        result += '<tr>' + cells.map(function (c) {
+          return '<' + tag + '>' + c.trim() + '</' + tag + '>';
+        }).join('') + '</tr>';
+      });
+      result += '</table>';
+      return result;
+    });
+
+    // 8. Unordered lists
+    html = html.replace(/^(?:[-*+] )(.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*?<\/li>\n?)+/g, '<ul>$&</ul>');
+
+    // 9. Ordered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+    // 10. Links
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // 11. Paragraph breaks
+    html = html.replace(/\n{2,}/g, '</p><p>');
+
+    // 12. Wrap in paragraph if needed
+    if (!/^<(h[1-6]|ul|ol|pre|table|hr|p|\x00)/.test(html.trimLeft())) {
+      html = '<p>' + html + '</p>';
+    }
+
+    // 13. Single newline -> <br> (within para text only)
+    html = html.replace(/([^>])\n([^<])/g, '$1<br>$2');
+
+    // 14. Clean empty paragraphs
+    html = html.replace(/<p>\s*<\/p>/g, '');
+
+    // 15. Restore code blocks
+    html = html.replace(/\x00CODE(\d+)\x00/g, function (_, i) {
+      return codeBlocks[parseInt(i, 10)] || '';
+    });
+
+    return html;
+  }
+
+  /* ── Copy buttons for rendered code blocks ────────────────────────────── */
+  function addCopyButtons(container) {
+    var btns = container.querySelectorAll('.code-copy-btn');
+    for (var i = 0; i < btns.length; i++) {
+      (function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var pre  = btn.closest ? btn.closest('pre') : btn.parentNode;
+          var code = pre && pre.querySelector('code') ? pre.querySelector('code') : pre;
+          var txt  = code ? code.textContent : '';
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(txt).then(function () {
+              btn.textContent = '\u2713 copied';
+              btn.classList.add('copied');
+              setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+            }).catch(function () { fallbackCopy(txt, btn); });
+          } else {
+            fallbackCopy(txt, btn);
+          }
+        });
+      })(btns[i]);
+    }
+  }
+
+  function fallbackCopy(text, btn) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      btn.textContent = '\u2713 copied';
+      btn.classList.add('copied');
+      setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+    } catch (e) { /* silent */ }
+    document.body.removeChild(ta);
+  }
+
+  /* ── Utility ──────────────────────────────────────────────────────────── */
+  function escHtml(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function escAttr(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  }
+
+  function basename(path) {
+    return (path || '').split('/').pop() || path || '';
+  }
+
+  function safeJSON(obj, maxLen) {
+    try { return JSON.stringify(obj, null, 2).slice(0, maxLen || 200); }
+    catch (e) { return String(obj); }
+  }
+
+  /* ── Event listeners ──────────────────────────────────────────────────── */
+
+  // Keyboard: Enter = send, Shift+Enter = newline
+  inputEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      var content = inputEl.value;
+      inputEl.value = '';
+      autoResize();
+      send(content);
+    }
+  });
+
+  inputEl.addEventListener('input', autoResize);
+
+  sendBtn.addEventListener('click', function () {
+    var content = inputEl.value;
+    inputEl.value = '';
+    autoResize();
+    inputEl.focus();
+    send(content);
+  });
+
+  cancelBtn.addEventListener('click', function () { cancel(); });
+
+  sessionSel.addEventListener('change', function () {
+    if (sessionSel.value) switchSession(sessionSel.value);
+  });
+
+  newSessBtn.addEventListener('click', function () { createNewSession(); });
+
+  clearFeedBtn.addEventListener('click', function () {
+    activityEl.innerHTML = '';
+    toolCards = {};
+    thinkingCard = null;
+  });
+
+  /* ── Theme sync (mirrors dashboard) ──────────────────────────────────── */
+  var savedTheme = localStorage.getItem('atlas-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  /* ── Boot ─────────────────────────────────────────────────────────────── */
+  loadSessions();
+  connect(null);
+  inputEl.focus();
+
+})();
+</script>
+</body>
+</html>
