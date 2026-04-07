@@ -1291,6 +1291,7 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 # ═══════════════════════════════════════════════════════════════════════════════
 # ── /chat route — full-page agent interface ──────────────────────────────────
 
+@app.get("/homerbot")
 @app.get("/chat")
 def serve_agent_page(
     _auth: HTTPBasicCredentials = Depends(check_auth),
