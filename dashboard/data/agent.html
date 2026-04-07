@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atlas Agent</title>
   <link rel="stylesheet" href="/atlas.css">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <style>
     /* ── Reset for full-page layout ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -20,6 +21,8 @@
       color: var(--text);
       display: flex;
       flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     /* ─────────────────────────────────────────────────────────────────────
@@ -114,7 +117,7 @@
 
     .agent-back-link:hover { color: var(--text); }
 
-    /* Connection dot */
+    /* ── Connection dot ── */
     .conn-dot {
       width: 8px;
       height: 8px;
@@ -124,13 +127,22 @@
       transition: background 0.3s;
     }
 
-    .conn-dot.connected  { background: var(--green); }
+    .conn-dot.connected {
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(34,197,94,0.3);
+      animation: conn-breathe 3s ease-in-out infinite;
+    }
     .conn-dot.connecting { background: var(--amber); animation: conn-pulse 1.5s ease-in-out infinite; }
     .conn-dot.error      { background: var(--red); }
 
     @keyframes conn-pulse {
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.35; }
+    }
+
+    @keyframes conn-breathe {
+      0%, 100% { box-shadow: 0 0 6px rgba(34,197,94,0.3); }
+      50%       { box-shadow: 0 0 12px rgba(34,197,94,0.6); }
     }
 
     /* ─────────────────────────────────────────────────────────────────────
@@ -153,6 +165,7 @@
       min-height: 0;
       min-width: 0;
       border-right: 1px solid var(--border);
+      position: relative;
     }
 
     #agent-messages {
@@ -163,13 +176,51 @@
       flex-direction: column;
       gap: 20px;
       scroll-behavior: smooth;
+      transform: translate3d(0,0,0);
     }
 
-    #agent-messages::-webkit-scrollbar { width: 5px; }
+    #agent-messages::-webkit-scrollbar { width: 4px; }
     #agent-messages::-webkit-scrollbar-track { background: transparent; }
-    #agent-messages::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
+    #agent-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    #agent-messages::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
-    /* Empty state */
+    /* ── Scroll-to-bottom floating button ── */
+    .scroll-bottom-btn {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s, background 0.15s, color 0.15s, border-color 0.15s;
+      pointer-events: none;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .scroll-bottom-btn.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .scroll-bottom-btn:hover {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* ── Empty state ── */
     .agent-empty {
       display: flex;
       flex-direction: column;
@@ -182,8 +233,14 @@
     }
 
     .agent-empty-icon {
-      font-size: 44px;
-      opacity: 0.45;
+      font-size: 52px;
+      opacity: 0.3;
+      animation: empty-float 4s ease-in-out infinite;
+    }
+
+    @keyframes empty-float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
     }
 
     .agent-empty-title {
@@ -207,19 +264,21 @@
       display: flex;
       flex-direction: column;
       max-width: 100%;
-      animation: msg-in 0.2s var(--ease);
+      animation: msg-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+      will-change: transform;
+      contain: content;
     }
 
     @keyframes msg-in {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     /* User message — right-aligned */
     .agent-msg-user { align-items: flex-end; }
 
     .agent-msg-user .msg-bubble {
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--accent), #4338ca);
       color: #fff;
       border-radius: 18px 18px 4px 18px;
       padding: 10px 16px;
@@ -228,6 +287,7 @@
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
+      position: relative;
     }
 
     /* Assistant message — left-aligned */
@@ -236,12 +296,14 @@
     .agent-msg-assistant .msg-bubble {
       background: var(--surface);
       border: 1px solid var(--border);
+      border-left: 2px solid rgba(99,102,241,0.2);
       border-radius: 4px 18px 18px 18px;
       padding: 14px 18px;
       max-width: 100%;
       font-size: 14px;
       line-height: 1.65;
       word-break: break-word;
+      position: relative;
     }
 
     /* System / error message */
@@ -266,6 +328,45 @@
       align-self: center;
       max-width: 90%;
     }
+
+    /* ── Message timestamp (shown on hover) ── */
+    .msg-time {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-3);
+      margin-top: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .agent-msg:hover .msg-time { opacity: 1; }
+    .agent-msg-user .msg-time  { align-self: flex-end; }
+    .agent-msg-assistant .msg-time { align-self: flex-start; }
+
+    /* ── Copy-message button (assistant only, top-right corner) ── */
+    .msg-copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-3);
+      font-size: 11px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .agent-msg-assistant:hover .msg-copy-btn { opacity: 1; }
+    .msg-copy-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-hover); }
+    .msg-copy-btn.copied { color: var(--green); border-color: var(--green); opacity: 1; }
 
     /* ── Markdown inside messages ── */
     .msg-bubble h1 { font-size: 18px; font-weight: 700; margin: 14px 0 8px; }
@@ -382,15 +483,15 @@
       border-radius: 50%;
       background: var(--accent);
       opacity: 0.6;
-      animation: think-bounce 1.3s ease-in-out infinite;
+      animation: think-bounce 1.4s ease-in-out infinite;
     }
 
-    .thinking-indicator .dot:nth-child(2) { animation-delay: 0.18s; }
-    .thinking-indicator .dot:nth-child(3) { animation-delay: 0.36s; }
+    .thinking-indicator .dot:nth-child(2) { animation-delay: 0.15s; }
+    .thinking-indicator .dot:nth-child(3) { animation-delay: 0.3s; }
 
     @keyframes think-bounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30%            { transform: translateY(-6px); opacity: 1; }
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+      40%            { transform: translateY(-8px); opacity: 1; }
     }
 
     /* ── Delegation result block (inline in messages) ── */
@@ -437,6 +538,7 @@
       flex-direction: column;
       min-height: 0;
       background: var(--bg-subtle);
+      backdrop-filter: blur(8px);
     }
 
     .activity-pane-header {
@@ -473,11 +575,12 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
+      transform: translate3d(0,0,0);
     }
 
-    #activity-feed::-webkit-scrollbar { width: 4px; }
+    #activity-feed::-webkit-scrollbar { width: 3px; }
     #activity-feed::-webkit-scrollbar-track { background: transparent; }
-    #activity-feed::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 2px; }
+    #activity-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     #activity-feed:empty::after {
       content: 'Activity will appear here\2026';
@@ -498,14 +601,16 @@
       font-size: 11.5px;
       font-family: var(--mono);
       color: var(--text-2);
-      animation: act-in 0.18s var(--ease);
+      animation: act-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
       transition: opacity 0.4s, border-color 0.3s;
       cursor: default;
+      will-change: transform;
+      contain: content;
     }
 
     @keyframes act-in {
-      from { opacity: 0; transform: translateX(10px); }
-      to   { opacity: 1; transform: translateX(0); }
+      from { opacity: 0; transform: translateX(16px) scale(0.96); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
     }
 
     .act-card.is-done { opacity: 0.5; }
@@ -537,6 +642,14 @@
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 100%;
+    }
+
+    .act-card .act-ts {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-3);
+      font-size: 10px;
+      opacity: 0.7;
     }
 
     /* Thinking card */
@@ -578,6 +691,7 @@
       background: var(--bg);
       padding: 12px 20px 14px;
       flex-shrink: 0;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
     }
 
     .input-row {
@@ -600,11 +714,14 @@
       line-height: 1.5;
       resize: none;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
       overflow-y: auto;
     }
 
-    #agent-input:focus { border-color: var(--accent); }
+    #agent-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
     #agent-input::placeholder { color: var(--text-3); }
     #agent-input:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -621,12 +738,16 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: background 0.15s, transform 0.1s;
+      transition: background 0.15s, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s, opacity 0.15s;
       line-height: 1;
     }
 
-    #agent-send:hover:not(:disabled) { background: #4f46e5; transform: translateY(-1px); }
-    #agent-send:active:not(:disabled) { transform: translateY(0); }
+    #agent-send:hover:not(:disabled) {
+      background: #4f46e5;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+    }
+    #agent-send:active:not(:disabled) { transform: translateY(0) scale(0.95); box-shadow: none; }
     #agent-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
     #agent-cancel {
@@ -642,7 +763,7 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: all 0.15s;
+      transition: all 0.15s, opacity 0.15s;
     }
 
     #agent-cancel:hover { background: var(--red); color: white; }
@@ -709,6 +830,8 @@
 
   <!-- Messages pane -->
   <div class="agent-messages-pane">
+    <!-- Scroll-to-bottom floating button -->
+    <button id="scroll-bottom-btn" class="scroll-bottom-btn" title="Scroll to bottom">&#8595;</button>
     <div id="agent-messages">
       <!-- Empty state — removed once first message arrives -->
       <div class="agent-empty" id="agent-empty-state">
@@ -744,9 +867,11 @@
       id="agent-input"
       placeholder="Message Atlas Agent&#8230; (Enter to send, Shift+Enter for newline)"
       rows="1"
+      autocomplete="off"
+      spellcheck="true"
     ></textarea>
     <button id="agent-send" type="button" title="Send (Enter)">&#8593;</button>
-    <button id="agent-cancel" type="button" title="Cancel generation">&#9632;</button>
+    <button id="agent-cancel" type="button" title="Cancel generation (Esc)">&#9632;</button>
   </div>
   <div id="agent-status">
     <span class="s-model" id="agent-model-label">opus</span>
@@ -755,6 +880,8 @@
     <span>this session</span>
     <span class="sep">&middot;</span>
     <span class="s-conn" id="agent-conn-text">connecting</span>
+    <span id="agent-elapsed-sep" class="sep" style="display:none">&middot;</span>
+    <span id="agent-elapsed-val" style="display:none; color:var(--amber); font-family:var(--mono); font-size:11px;"></span>
   </div>
 </div>
 
@@ -773,6 +900,7 @@
  *   - Code block copy buttons
  *   - Delegation result collapsible blocks
  *   - Thinking-indicator during Claude's thinking phase
+ *   - Scroll-to-bottom button, elapsed timer, message timestamps
  */
 (function () {
 
@@ -782,30 +910,35 @@
   var isGenerating     = false;
   var sessionCost      = 0;
   var reconnectAttempts = 0;
-  var MAX_RECONNECT    = 12;
+  var MAX_RECONNECT    = 20;
   var reconnectTimer   = null;
   var currentMsgEl     = null;   // .agent-msg div being built for assistant
   var currentModel     = 'claude-opus-4-6';
   var thinkingCard     = null;   // activity card for current thinking block
+  var elapsedTimer     = null;   // interval for generation elapsed time
+  var elapsedStart     = 0;      // timestamp when generation started
 
   // Map toolCallId -> activity card element so tool_end can mark it done
   var toolCards = {};
 
   /* ── DOM refs ─────────────────────────────────────────────────────────── */
-  var messagesEl   = document.getElementById('agent-messages');
-  var activityEl   = document.getElementById('activity-feed');
-  var inputEl      = document.getElementById('agent-input');
-  var sendBtn      = document.getElementById('agent-send');
-  var cancelBtn    = document.getElementById('agent-cancel');
-  var sessionSel   = document.getElementById('agent-session-select');
-  var newSessBtn   = document.getElementById('agent-new-session');
-  var connDot      = document.getElementById('agent-conn-dot');
-  var connText     = document.getElementById('agent-conn-text');
-  var costEl       = document.getElementById('agent-cost');
-  var actCostEl    = document.getElementById('activity-cost');
-  var modelLabel   = document.getElementById('agent-model-label');
-  var clearFeedBtn = document.getElementById('activity-clear');
-  var emptyState   = document.getElementById('agent-empty-state');
+  var messagesEl      = document.getElementById('agent-messages');
+  var activityEl      = document.getElementById('activity-feed');
+  var inputEl         = document.getElementById('agent-input');
+  var sendBtn         = document.getElementById('agent-send');
+  var cancelBtn       = document.getElementById('agent-cancel');
+  var sessionSel      = document.getElementById('agent-session-select');
+  var newSessBtn      = document.getElementById('agent-new-session');
+  var connDot         = document.getElementById('agent-conn-dot');
+  var connText        = document.getElementById('agent-conn-text');
+  var costEl          = document.getElementById('agent-cost');
+  var actCostEl       = document.getElementById('activity-cost');
+  var modelLabel      = document.getElementById('agent-model-label');
+  var clearFeedBtn    = document.getElementById('activity-clear');
+  var emptyState      = document.getElementById('agent-empty-state');
+  var scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+  var elapsedSepEl    = document.getElementById('agent-elapsed-sep');
+  var elapsedValEl    = document.getElementById('agent-elapsed-val');
 
   /* ── Auth token (Basic Auth -> short-lived WS token) ─────────────────── */
   function getAuthToken() {
@@ -1029,9 +1162,26 @@
 
   function clearEmpty() {
     if (emptyState && emptyState.parentNode) {
-      emptyState.parentNode.removeChild(emptyState);
+      emptyState.style.transition = 'opacity 0.3s ease-out';
+      emptyState.style.opacity = '0';
+      var _el = emptyState;
+      setTimeout(function () {
+        if (_el && _el.parentNode) { _el.parentNode.removeChild(_el); }
+      }, 300);
       emptyState = null;
     }
+  }
+
+  function makeTimestamp() {
+    var ts = document.createElement('span');
+    ts.className = 'msg-time';
+    var now = new Date();
+    var h = now.getHours();
+    var m = now.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    ts.textContent = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+    return ts;
   }
 
   function appendUserMessage(content) {
@@ -1041,6 +1191,7 @@
     bubble.className = 'msg-bubble';
     bubble.textContent = content;
     div.appendChild(bubble);
+    div.appendChild(makeTimestamp());
     messagesEl.appendChild(div);
     scrollToBottom();
   }
@@ -1074,15 +1225,59 @@
 
   function finishAssistantMessage(fullText) {
     if (!currentMsgEl) return;
-    var bubble = currentMsgEl.querySelector('.msg-bubble');
+    var msgEl = currentMsgEl;
+    var bubble = msgEl.querySelector('.msg-bubble');
     if (bubble) {
       var text = fullText || bubble.getAttribute('data-raw') || bubble.textContent || '';
       bubble.removeAttribute('data-raw');
-      bubble.innerHTML = renderMarkdown(text);
-      addCopyButtons(bubble);
+
+      // Crossfade: briefly fade out raw text, swap to rendered HTML, fade back in
+      bubble.style.transition = 'opacity 0.08s ease-out';
+      bubble.style.opacity = '0';
+      var capturedText = text;
+      setTimeout(function () {
+        bubble.innerHTML = renderMarkdown(capturedText);
+        addCopyButtons(bubble);
+        addMsgCopyButton(msgEl, capturedText);
+        bubble.style.transition = 'opacity 0.15s ease-in';
+        bubble.style.opacity = '1';
+        // Clean up inline transition after it settles
+        setTimeout(function () { bubble.style.transition = ''; }, 200);
+      }, 80);
+
+      // Timestamp
+      if (!msgEl.querySelector('.msg-time')) {
+        msgEl.appendChild(makeTimestamp());
+      }
     }
     currentMsgEl = null;
     scrollToBottom();
+  }
+
+  function addMsgCopyButton(msgEl, text) {
+    if (msgEl.querySelector('.msg-copy-btn')) return;
+    var bubble = msgEl.querySelector('.msg-bubble');
+    if (!bubble) return;
+    var btn = document.createElement('button');
+    btn.className = 'msg-copy-btn';
+    btn.title = 'Copy message';
+    btn.textContent = '\u29C9'; // ⧉ copy symbol
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function () {
+          btn.textContent = '\u2713';
+          btn.classList.add('copied');
+          setTimeout(function () {
+            btn.textContent = '\u29C9';
+            btn.classList.remove('copied');
+          }, 1500);
+        }).catch(function () { fallbackCopyText(text, btn); });
+      } else {
+        fallbackCopyText(text, btn);
+      }
+    });
+    bubble.appendChild(btn);
   }
 
   function showThinkingDots(active) {
@@ -1118,7 +1313,9 @@
   }
 
   function scrollToBottom() {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    requestAnimationFrame(function () {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    });
   }
 
   function renderHistory(messages) {
@@ -1135,6 +1332,7 @@
         bubble.className = 'msg-bubble';
         bubble.innerHTML = renderMarkdown(m.content || '');
         addCopyButtons(bubble);
+        addMsgCopyButton(div, m.content || '');
         div.appendChild(bubble);
         messagesEl.appendChild(div);
       }
@@ -1256,6 +1454,8 @@
 
   function addTurnEndActivity(cost, tokens) {
     var card = makeCard('done-card');
+    var now = Date.now();
+    card.setAttribute('data-ts', String(now));
     var parts = [];
     if (cost > 0)    parts.push('$' + cost.toFixed(4));
     if (tokens > 0)  parts.push(tokens.toLocaleString() + ' tok');
@@ -1264,7 +1464,8 @@
       '<span class="act-icon">\u2705</span>' +
       '<span class="act-label">Turn complete</span>' +
       '</div>' +
-      (parts.length ? '<span class="act-detail">' + escHtml(parts.join(' \u00B7 ')) + '</span>' : '');
+      (parts.length ? '<span class="act-detail">' + escHtml(parts.join(' \u00B7 ')) + '</span>' : '') +
+      '<span class="act-ts">just now</span>';
     appendActivity(card);
   }
 
@@ -1423,11 +1624,45 @@
     connText.textContent = status;
   }
 
+  function updateElapsed() {
+    var secs = Math.floor((Date.now() - elapsedStart) / 1000);
+    var label = secs < 60
+      ? '\u23F1 ' + secs + 's'
+      : '\u23F1 ' + Math.floor(secs / 60) + ':' + (secs % 60 < 10 ? '0' : '') + (secs % 60);
+    if (elapsedValEl) elapsedValEl.textContent = label;
+  }
+
   function setGeneratingUI(generating) {
     inputEl.disabled = generating;
-    sendBtn.disabled = generating;
-    sendBtn.style.display = generating ? 'none' : 'flex';
-    cancelBtn.style.display = generating ? 'flex' : 'none';
+    // Page title
+    document.title = generating ? 'Atlas Agent (generating\u2026)' : 'Atlas Agent';
+    // Elapsed timer
+    if (generating) {
+      elapsedStart = Date.now();
+      elapsedTimer = setInterval(updateElapsed, 1000);
+      if (elapsedSepEl) elapsedSepEl.style.display = '';
+      if (elapsedValEl) { elapsedValEl.style.display = ''; elapsedValEl.textContent = '\u23F1 0s'; }
+    } else {
+      clearInterval(elapsedTimer);
+      elapsedTimer = null;
+      if (elapsedSepEl) elapsedSepEl.style.display = 'none';
+      if (elapsedValEl) elapsedValEl.style.display = 'none';
+    }
+    // Crossfade send/cancel with opacity transitions
+    if (generating) {
+      cancelBtn.style.display = 'flex';
+      cancelBtn.style.opacity = '0';
+      sendBtn.style.opacity = '0';
+      sendBtn.style.pointerEvents = 'none';
+      requestAnimationFrame(function () { cancelBtn.style.opacity = '1'; });
+      setTimeout(function () { sendBtn.style.display = 'none'; }, 150);
+    } else {
+      sendBtn.style.display = 'flex';
+      sendBtn.style.pointerEvents = 'auto';
+      requestAnimationFrame(function () { sendBtn.style.opacity = '1'; });
+      cancelBtn.style.opacity = '0';
+      setTimeout(function () { cancelBtn.style.display = 'none'; }, 150);
+    }
   }
 
   function updateCostDisplay() {
@@ -1581,6 +1816,21 @@
     document.body.removeChild(ta);
   }
 
+  function fallbackCopyText(text, btn) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      btn.textContent = '\u2713';
+      btn.classList.add('copied');
+      setTimeout(function () { btn.textContent = '\u29C9'; btn.classList.remove('copied'); }, 1500);
+    } catch (e) { /* silent */ }
+    document.body.removeChild(ta);
+  }
+
   /* ── Utility ──────────────────────────────────────────────────────────── */
   function escHtml(s) {
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1624,6 +1874,11 @@
 
   cancelBtn.addEventListener('click', function () { cancel(); });
 
+  // Escape key cancels generation
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isGenerating) { cancel(); }
+  });
+
   sessionSel.addEventListener('change', function () {
     if (sessionSel.value) switchSession(sessionSel.value);
   });
@@ -1636,6 +1891,21 @@
     thinkingCard = null;
   });
 
+  // Scroll-to-bottom button
+  if (scrollBottomBtn) {
+    messagesEl.addEventListener('scroll', function () {
+      var distFromBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+      if (distFromBottom > 120) {
+        scrollBottomBtn.classList.add('visible');
+      } else {
+        scrollBottomBtn.classList.remove('visible');
+      }
+    });
+    scrollBottomBtn.addEventListener('click', function () {
+      messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+    });
+  }
+
   /* ── Theme sync (mirrors dashboard) ──────────────────────────────────── */
   var savedTheme = localStorage.getItem('atlas-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1644,6 +1914,20 @@
   loadSessions();
   connect(null);
   inputEl.focus();
+
+  // Update relative timestamps on done cards every 5s
+  setInterval(function () {
+    var cards = activityEl.querySelectorAll('[data-ts]');
+    for (var i = 0; i < cards.length; i++) {
+      var ts = parseInt(cards[i].getAttribute('data-ts'), 10);
+      var secs = Math.floor((Date.now() - ts) / 1000);
+      var label = secs < 5  ? 'just now'
+                : secs < 60 ? secs + 's ago'
+                : Math.floor(secs / 60) + 'm ago';
+      var tsEl = cards[i].querySelector('.act-ts');
+      if (tsEl) tsEl.textContent = label;
+    }
+  }, 5000);
 
 })();
 </script>
