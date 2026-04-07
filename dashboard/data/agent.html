@@ -1870,9 +1870,11 @@
     '<circle cx="54" cy="9" r="2.5" fill="#f59e0b"/>' +     // antenna tip
     '</svg>';
 
-  // Debounced live markdown rendering during streaming
-  var _renderTimer = null;
-  var _lastRenderLen = 0;
+  // Fast streaming: append raw text immediately, render markdown periodically
+  var _rafId = null;
+  var _mdTimer = null;
+  var _lastMdLen = 0;
+  var _needsScroll = false;
 
   function startAssistantMessage() {
     var div = document.createElement('div');
@@ -1888,7 +1890,8 @@
     div.appendChild(bubble);
     messagesEl.appendChild(div);
     currentMsgEl = div;
-    _lastRenderLen = 0;
+    _lastMdLen = 0;
+    _needsScroll = false;
     scrollToBottom();
   }
 
@@ -1898,21 +1901,43 @@
     if (!bubble) return;
     var raw = (bubble.getAttribute('data-raw') || '') + delta;
     bubble.setAttribute('data-raw', raw);
-    // Live markdown: re-render on a debounce (every 150ms)
-    // Only re-render if enough new content arrived (> 20 chars since last render)
-    if (!_renderTimer) {
-      _renderTimer = setTimeout(function () {
-        _renderTimer = null;
-        var currentRaw = bubble.getAttribute('data-raw') || '';
-        if (currentRaw.length - _lastRenderLen > 15) {
-          bubble.innerHTML = renderMarkdown(currentRaw);
-          addCopyButtons(bubble);
-          _lastRenderLen = currentRaw.length;
+
+    // Fast path: update textContent on every rAF (no markdown, instant)
+    _needsScroll = true;
+    if (!_rafId) {
+      _rafId = requestAnimationFrame(function () {
+        _rafId = null;
+        var b = currentMsgEl ? currentMsgEl.querySelector('.msg-bubble') : null;
+        if (b) {
+          var r = b.getAttribute('data-raw') || '';
+          // If no markdown timer pending, show raw text instantly
+          if (!b.getAttribute('data-md')) {
+            b.textContent = r;
+          }
         }
-        scrollToBottom();
-      }, 150);
+        if (_needsScroll) {
+          _needsScroll = false;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+      });
     }
-    scrollToBottom();
+
+    // Markdown render every 300ms (heavier, but gives formatted output)
+    if (!_mdTimer) {
+      _mdTimer = setTimeout(function () {
+        _mdTimer = null;
+        var b = currentMsgEl ? currentMsgEl.querySelector('.msg-bubble') : null;
+        if (!b) return;
+        var r = b.getAttribute('data-raw') || '';
+        if (r.length - _lastMdLen > 10) {
+          b.setAttribute('data-md', '1');
+          b.innerHTML = renderMarkdown(r);
+          addCopyButtons(b);
+          _lastMdLen = r.length;
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }, 300);
+    }
   }
 
   function getRawText(msgEl) {
@@ -1922,9 +1947,10 @@
   }
 
   function finishAssistantMessage(fullText) {
-    // Cancel any pending live-render timer
-    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
-    _lastRenderLen = 0;
+    // Cancel any pending render timers
+    if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+    if (_mdTimer) { clearTimeout(_mdTimer); _mdTimer = null; }
+    _lastMdLen = 0;
 
     if (!currentMsgEl) return;
     var msgEl = currentMsgEl;
