@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Atlas Dashboard Server — FastAPI port of dashboard_server.py.
 
-Phase 1: 1:1 port of the existing HTTP/http.server implementation to
-FastAPI/uvicorn.  No chat features — identical API surface, same HTTP
-Basic Auth, same port 8899.
+Phase 2: adds headless Pi chat (WebSocket + REST) on top of the Phase 1
+foundation.  All Phase 1 routes remain unchanged.
+
+New endpoints
+-------------
+  GET  /api/chat/sessions          — list chat sessions
+  POST /api/chat/sessions          — create a new session
+  GET  /api/chat/sessions/{id}/messages — paginated history
+  GET  /api/chat/token             — short-lived WS auth token
+  WS   /ws/chat?token=<tok>        — streaming chat WebSocket
 
 Credentials from ~/.atlas-secrets.json:
     dashboard_user, dashboard_pass
@@ -19,6 +26,7 @@ Run (systemd):
 """
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -48,7 +56,7 @@ os.chdir(PROJECT_ROOT)
 
 # ── FastAPI imports (after path setup) ───────────────────────────────────────
 
-from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect  # noqa: E402
 from fastapi.responses import (  # noqa: E402
     FileResponse,
     JSONResponse,
@@ -57,6 +65,24 @@ from fastapi.responses import (  # noqa: E402
 )
 from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
+
+# ── Chat imports ──────────────────────────────────────────────────────────────
+try:
+    from services.chat_db import (  # noqa: E402
+        init_db as init_chat_db,
+        create_session as _chat_create_session,
+        get_session as _chat_get_session,
+        list_sessions as _chat_list_sessions,
+        add_message as _chat_add_message,
+        get_messages as _chat_get_messages,
+        get_latest_session as _chat_get_latest_session,
+    )
+    from services.pi_session import PiSessionManager  # noqa: E402
+    _CHAT_AVAILABLE = True
+except ImportError as _chat_import_err:
+    logger_pre = logging.getLogger("chat_server")
+    logger_pre.warning("Chat modules not available: %s", _chat_import_err)
+    _CHAT_AVAILABLE = False
 
 logger = logging.getLogger("chat_server")
 
@@ -464,7 +490,15 @@ class PlanRequest(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: attempt to start Alpaca background poller (graceful fallback)."""
+    """Startup: initialise chat DB and attempt to start Alpaca background poller."""
+    # ── Phase 2: initialise chat persistence ────────────────────────────
+    if _CHAT_AVAILABLE:
+        try:
+            init_chat_db()
+            print("Chat DB initialised", flush=True)
+        except Exception as e:
+            print(f"⚠️  Chat DB init failed: {e}", flush=True)
+
     # alpaca_stream retired in Phase 5 — skipped gracefully if module missing
     try:
         from dashboard.alpaca_stream import start as start_stream
@@ -907,6 +941,271 @@ def delete_template(
     store = PositionStore()
     ok = store.delete_template(tmpl_id)
     return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 2: Chat REST + WebSocket endpoints
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# In-process cache of PiSessionManager instances (one per chat session).
+# These survive for the lifetime of the server process; each manager
+# maintains the pi_session_path on disk so the conversation can be resumed
+# after a server restart.
+_pi_sessions: dict[str, "PiSessionManager"] = {}
+
+# Short-lived WebSocket auth tokens: token_str -> (expires_epoch, username)
+_ws_tokens: dict[str, tuple[float, str]] = {}
+_WS_TOKEN_TTL = 300  # seconds (5 minutes)
+
+
+def _require_chat() -> None:
+    """Raise 503 if chat modules failed to import."""
+    if not _CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat modules unavailable")
+
+
+# ── Token endpoint (HTTP Basic → short-lived WS token) ────────────────────
+
+@app.get("/api/chat/token")
+def chat_get_token(
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """GET /api/chat/token — exchange HTTP Basic Auth for a short-lived WS token.
+
+    The browser calls this once (via XMLHttpRequest with cached Basic Auth
+    credentials) and stores the returned token in sessionStorage.  The
+    WebSocket upgrade then passes it as ``?token=<value>``.
+    """
+    _require_chat()
+    token = secrets.token_urlsafe(32)
+    expires = time.time() + _WS_TOKEN_TTL
+    _ws_tokens[token] = (expires, _auth.username)
+    # Purge old tokens
+    stale = [k for k, (exp, _) in _ws_tokens.items() if exp < time.time()]
+    for k in stale:
+        _ws_tokens.pop(k, None)
+    return JSONResponse({"token": token, "expires_in": _WS_TOKEN_TTL})
+
+
+# ── Chat session REST endpoints ────────────────────────────────────────────
+
+@app.get("/api/chat/sessions")
+def chat_list_sessions(
+    limit: int = 20,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """GET /api/chat/sessions — list active sessions, newest first."""
+    _require_chat()
+    return JSONResponse(_chat_list_sessions(limit))
+
+
+@app.post("/api/chat/sessions")
+async def chat_create_session_endpoint(
+    request: Request,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """POST /api/chat/sessions — create a new chat session.
+
+    Body (JSON): {"name": "optional name", "model": "claude-sonnet-4-6"}
+    """
+    _require_chat()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = body.get("name")
+    model = body.get("model", "claude-sonnet-4-6")
+    session = _chat_create_session(name=name, model=model)
+    return JSONResponse(session)
+
+
+@app.get("/api/chat/sessions/{session_id}/messages")
+def chat_get_messages_endpoint(
+    session_id: str,
+    limit: int = 50,
+    before_id: int = None,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """GET /api/chat/sessions/{id}/messages — paginated message history."""
+    _require_chat()
+    msgs = _chat_get_messages(session_id, limit=limit, before_id=before_id)
+    return JSONResponse(msgs)
+
+
+# ── WebSocket chat endpoint ──────────────────────────────────────────────────
+
+@app.websocket("/ws/chat")
+async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
+    """WS /ws/chat?token=<tok> — bidirectional streaming chat.
+
+    Auth
+    ----
+    Pass the token from ``GET /api/chat/token`` as a query parameter::
+
+        ws://host/ws/chat?token=<value>
+
+    Alternatively pass ``Authorization: Basic <b64>`` as a WS header
+    (supported by some clients; browsers cannot set custom WS headers).
+
+    Protocol (client → server)
+    --------------------------
+    {"type": "send",        "content": "...", "session_id": "uuid|null"}
+    {"type": "history",    "session_id": "uuid", "limit": 50, "before_id": null}
+    {"type": "cancel",     "session_id": "uuid"}
+    {"type": "new_session", "name": "optional", "model": "claude-sonnet-4-6"}
+    {"type": "status",     "session_id": "uuid"}
+
+    Protocol (server → client) — see PiEvent.to_dict() for streaming events.
+    """
+    # ── Auth: token query param takes priority, then Basic Auth header ──
+    token_param = ws.query_params.get("token", "")
+    authed = False
+
+    if token_param:
+        entry = _ws_tokens.get(token_param)
+        if entry:
+            expires, _username = entry
+            if time.time() < expires:
+                authed = True
+
+    if not authed:
+        # Fall back: check Authorization header
+        auth_header = ws.headers.get("authorization", "")
+        if auth_header.lower().startswith("basic "):
+            try:
+                decoded = base64.b64decode(auth_header[6:]).decode()
+                uname, pw = decoded.split(":", 1)
+                exp_user, exp_pass = _get_credentials()
+                user_ok = secrets.compare_digest(uname.encode(), exp_user.encode())
+                pass_ok = secrets.compare_digest(pw.encode(), exp_pass.encode())
+                authed = user_ok and pass_ok
+            except Exception:
+                pass
+
+    if not authed:
+        await ws.close(code=1008, reason="Unauthorized")
+        return
+
+    if not _CHAT_AVAILABLE:
+        await ws.accept()
+        await ws.send_json({"type": "error", "message": "Chat modules unavailable"})
+        await ws.close()
+        return
+
+    await ws.accept()
+
+    try:
+        while True:
+            try:
+                data = await ws.receive_json()
+            except WebSocketDisconnect:
+                break
+
+            msg_type = data.get("type", "")
+
+            # ---- send: user sends a chat message --------------------------
+            if msg_type == "send":
+                content = data.get("content", "").strip()
+                if not content:
+                    continue
+
+                session_id = data.get("session_id")
+
+                # Resolve or create session
+                if not session_id:
+                    latest = _chat_get_latest_session()
+                    if latest:
+                        session_id = latest["id"]
+                    else:
+                        new_sess = _chat_create_session()
+                        session_id = new_sess["id"]
+
+                # Persist user message
+                msg_id = _chat_add_message(session_id, "user", content)
+                await ws.send_json({
+                    "type": "user_message_saved",
+                    "id": msg_id,
+                    "session_id": session_id,
+                })
+
+                # Get or create PiSessionManager for this session
+                if session_id not in _pi_sessions:
+                    sess_rec = _chat_get_session(session_id)
+                    model = (
+                        sess_rec.get("model", "claude-sonnet-4-6")
+                        if sess_rec
+                        else "claude-sonnet-4-6"
+                    )
+                    _pi_sessions[session_id] = PiSessionManager(
+                        session_id, model=model
+                    )
+
+                mgr = _pi_sessions[session_id]
+
+                # Stream response events back to client
+                full_text = ""
+                try:
+                    async for event in mgr.send_message(content):
+                        await ws.send_json(event.to_dict())
+                        if event.type == "text_delta":
+                            full_text += event.data.get("delta", "")
+                        elif event.type == "done":
+                            full_text = event.data.get("full_text") or full_text
+                except WebSocketDisconnect:
+                    # Client left mid-stream; Pi keeps running, we save what we have
+                    break
+
+                # Persist assistant reply
+                if full_text:
+                    _chat_add_message(session_id, "assistant", full_text)
+
+            # ---- history: load stored messages ----------------------------
+            elif msg_type == "history":
+                session_id = data.get("session_id")
+                limit = int(data.get("limit", 50))
+                before_id = data.get("before_id")
+                if session_id:
+                    msgs = _chat_get_messages(
+                        session_id, limit=limit, before_id=before_id
+                    )
+                    await ws.send_json({
+                        "type": "history",
+                        "messages": msgs,
+                        "session_id": session_id,
+                    })
+
+            # ---- cancel: kill running Pi subprocess -----------------------
+            elif msg_type == "cancel":
+                session_id = data.get("session_id")
+                if session_id and session_id in _pi_sessions:
+                    await _pi_sessions[session_id].cancel()
+                await ws.send_json({"type": "cancelled"})
+
+            # ---- new_session: create a fresh conversation -----------------
+            elif msg_type == "new_session":
+                name = data.get("name")
+                model = data.get("model", "claude-sonnet-4-6")
+                sess = _chat_create_session(name=name, model=model)
+                await ws.send_json({"type": "session_created", "session": sess})
+
+            # ---- status: is Pi running? -----------------------------------
+            elif msg_type == "status":
+                session_id = data.get("session_id")
+                mgr = _pi_sessions.get(session_id) if session_id else None
+                await ws.send_json({
+                    "type": "status",
+                    "pi_running": mgr.is_running if mgr else False,
+                    "session_id": session_id,
+                })
+
+    except WebSocketDisconnect:
+        pass  # Normal: client closed tab / navigated away
+    except Exception as exc:
+        logger.exception("WebSocket chat error: %s", exc)
+        try:
+            await ws.send_json({"type": "error", "message": str(exc)})
+        except Exception:
+            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
