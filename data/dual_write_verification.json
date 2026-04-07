@@ -9,8 +9,23 @@
       "date": "2026-04-01",
       "passed": true,
       "details": "5/5 pass"
+    },
+    {
+      "date": "2026-04-03",
+      "passed": false,
+      "details": "1/5 pass"
+    },
+    {
+      "date": "2026-04-04",
+      "passed": false,
+      "details": "1/5 pass"
+    },
+    {
+      "date": "2026-04-07",
+      "passed": false,
+      "details": "4/5 pass"
     }
   ],
-  "consecutive_passes": 2,
+  "consecutive_passes": 0,
   "gate_target": 5
 }

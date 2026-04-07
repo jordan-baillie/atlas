@@ -587,13 +587,14 @@ def main():
         report_path.write_text(json.dumps(report.to_dict(), indent=2, default=str))
         logger.info(f"Report saved to {report_path}")
 
-        # Send Telegram
-        try:
-            from utils.telegram import send_message
+        # Send Telegram only when there are discrepancies
+        if not report.clean:
+            try:
+                from utils.telegram import send_message
 
-            send_message(reconciler.format_telegram_message())
-        except Exception as e:
-            logger.warning(f"Failed to send Telegram: {e}")
+                send_message(reconciler.format_telegram_message())
+            except Exception as e:
+                logger.warning(f"Failed to send Telegram: {e}")
     else:
         # Print Telegram message to stdout for dry run
         print(reconciler.format_telegram_message())

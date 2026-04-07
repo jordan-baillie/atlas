@@ -564,8 +564,33 @@ class AuthHandler(SimpleHTTPRequestHandler):
                 orders_info = broker.get_history_orders(days=7)
 
                 account = dataclasses.asdict(account_info)
+                # ── 1a. Margin usage from raw Alpaca account ───────────────────
+                try:
+                    raw_acct = broker._broker_call(broker._trade_client.get_account)
+                    initial_margin = float(getattr(raw_acct, 'initial_margin', 0) or 0)
+                    equity_val = float(getattr(raw_acct, 'equity', 0) or 0)
+                    account['margin_usage_pct'] = round(initial_margin / equity_val * 100, 2) if equity_val > 0 else 0
+                except Exception:
+                    account['margin_usage_pct'] = 0
+
                 positions = [dataclasses.asdict(p) for p in positions_info]
-                orders = [dataclasses.asdict(o) for o in orders_info]
+
+                # ── 1c. Flatten orders from raw dict for dashboard compatibility ──
+                orders = []
+                for o in orders_info:
+                    od = dataclasses.asdict(o)
+                    raw = od.pop('raw', {})
+                    od['symbol'] = raw.get('symbol', od.get('ticker', ''))
+                    od['type'] = raw.get('order_type', 'limit')
+                    od['qty'] = od.get('requested_qty', raw.get('qty', 0))
+                    od['submitted_at'] = raw.get('submitted_at', '')
+                    od['limit_price'] = float(raw.get('limit_price', 0) or 0)
+                    od['stop_price'] = float(raw.get('stop_price', 0) or 0)
+                    od['trail_price'] = float(raw.get('trail_price', 0) or 0)
+                    od['filled_price'] = od.get('fill_price', 0)
+                    od['side'] = raw.get('side', str(od.get('side', '')))
+                    od['status'] = raw.get('status', str(od.get('status', '')))
+                    orders.append(od)
 
                 # ── 1. Enrich positions with Atlas trade metadata ──────────
                 with get_db() as db:
@@ -583,6 +608,26 @@ class AuthHandler(SimpleHTTPRequestHandler):
                             p["entry_date"] = meta.get("entry_date", "")
                         if not p.get("stop_price") and meta.get("stop_price"):
                             p["stop_price"] = meta["stop_price"]
+
+                # ── 1b. Enrich with Alpaca intraday fields ─────────────────────
+                try:
+                    raw_positions = broker._broker_call(broker._trade_client.get_all_positions)
+                    alpaca_by_symbol: dict = {}
+                    for rp in (raw_positions or []):
+                        sym = str(getattr(rp, 'symbol', ''))
+                        alpaca_by_symbol[sym] = rp
+
+                    from brokers.alpaca import mapper
+                    for p in positions:
+                        atlas_ticker = p.get('ticker', '')
+                        alpaca_sym = mapper.to_alpaca(atlas_ticker)
+                        rp = alpaca_by_symbol.get(alpaca_sym)
+                        if rp:
+                            p['intraday_pnl'] = round(float(getattr(rp, 'unrealized_intraday_pl', 0) or 0), 2)
+                            p['intraday_pnl_pct'] = round(float(getattr(rp, 'unrealized_intraday_plpc', 0) or 0) * 100, 4)
+                            p['lastday_price'] = round(float(getattr(rp, 'lastday_price', 0) or 0), 4)
+                except Exception as e:
+                    logger.warning("Intraday enrichment failed: %s", e)
 
                 result["account"] = account
                 result["positions"] = positions
@@ -649,19 +694,21 @@ class AuthHandler(SimpleHTTPRequestHandler):
                 wins = [p for p in pnls if p > 0]
                 losses = [p for p in pnls if p <= 0]
                 loss_sum = sum(losses)
+                pf = abs(sum(wins) / loss_sum) if loss_sum != 0 else 0
                 result["strategy_performance"]["overall"] = {
                     "trades": len(pnls),
                     "win_rate": len(wins) / len(pnls) if pnls else 0,
                     "avg_win": sum(wins) / len(wins) if wins else 0,
                     "avg_loss": sum(losses) / len(losses) if losses else 0,
-                    "profit_factor": abs(sum(wins) / loss_sum) if loss_sum != 0 else float("inf"),
+                    "profit_factor": min(pf, 99.99),  # cap to avoid "Infinityx" display
                     "expectancy": sum(pnls) / len(pnls) if pnls else 0,
                 }
 
             # ── 3. Benchmark (SPY) curve ───────────────────────────────────
             spy_rows = db.execute(
                 "SELECT date, close FROM ohlcv WHERE ticker = 'SPY' "
-                "ORDER BY date DESC LIMIT 30"
+                "ORDER BY date DESC LIMIT ?",
+                (max(len(equity_rows), 90),)
             ).fetchall()
             if spy_rows:
                 spy_data = list(reversed(spy_rows))
@@ -704,7 +751,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
         if "summary" not in result:
             result["summary"] = {}
         result["summary"]["today_pnl"] = round(
-            sum(p.get("today_pnl", 0) or 0 for p in positions), 2
+            sum(p.get("intraday_pnl", 0) or p.get("today_pnl", 0) or 0 for p in positions), 2
         )
         result["summary"]["max_positions"] = (
             config.get("risk", {}).get("max_open_positions", 10)

@@ -1,9 +1,12 @@
 # Sweep Sessions Index
 
-> Last 9 sessions (newest first).
+> Last 12 sessions (newest first).
 
 | Session | Results (kept/total) | Runtime |
 |---------|----------------------|---------|
+| 20260402_054959 | 9/9 kept | 1006s |
+| 20260402_050901 | 9/9 kept | 2457s |
+| 20260401_060435 | 0/0 kept | 5153s |
 | 20260316_100002 | 0/0 kept | 7335s |
 | 20260312_031041 | 0/0 kept | 55s |
 | 20260312_030629 | 0/0 kept | 51s |

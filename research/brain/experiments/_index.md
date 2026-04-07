@@ -28,6 +28,29 @@
 | wave2_exit_og | ? | Shorter hold periods better match gap-fill resolution timeline | discarded | n/a (migrated) |
 | wave2_exit_mr | ? | Shorter hold periods improve MR risk-adjusted returns | discarded | n/a (migrated) |
 | wave2_chandelier_tf | ? | Wider trailing stop ATR multiplier captures more trend profit | discarded | n/a (migrated) |
+| ar-20260402_160629 | ? | max_hold_days | kept | +0.0147 |
+| ar-20260402_160610 | ? | atr_stop_mult | kept | +0.0429 |
+| ar-20260402_160232 | ? | rsi_period | kept | +0.1216 |
+| ar-20260402_160036 | ? | max_hold_days | kept | +0.0147 |
+| ar-20260402_160016 | ? | atr_stop_mult | kept | +0.0429 |
+| ar-20260402_155642 | ? | rsi_period | kept | +0.1216 |
+| ar-20260402_155524 | ? | max_hold_days | kept | +0.0147 |
+| ar-20260402_155443 | ? | atr_stop_mult | kept | +0.0429 |
+| ar-20260402_155118 | ? | rsi_period | kept | +0.1216 |
+| ar-20260402_154942 | ? | max_hold_days | kept | +0.0557 |
+| ar-20260402_154849 | ? | atr_stop_mult | kept | +0.1034 |
+| ar-20260402_154613 | ? | rsi_period | kept | +0.3000 |
+| ar-20260402_154524 | ? | max_hold_days | kept | +0.0557 |
+| ar-20260402_154429 | ? | atr_stop_mult | kept | +0.1034 |
+| ar-20260402_154149 | ? | rsi_period | kept | +0.3000 |
+| ar-20260402_151351 | ? | max_hold_days | kept | +0.0557 |
+| ar-20260402_151257 | ? | atr_stop_mult | kept | +0.1034 |
+| ar-20260402_151019 | ? | rsi_period | kept | +0.3000 |
+| ar-20260402_150624 | ? | atr_stop_mult | kept | +0.4826 |
+| ar-20260402_143337 | ? | signal_mode | kept | +0.1234 |
+| ar-20260402_143037 | ? | atr_stop_mult | kept | +0.3953 |
+| ar-20260402_140940 | ? | atr_stop_mult | kept | +0.1542 |
+| ar-20260402_140803 | ? | breakout_period | kept | +0.0115 |
 | ar-20260316_173747 | ? | max_hold_days | kept | +0.0326 |
 | ar-20260316_165857 | ? | rsi_period | kept | +0.0431 |
 | ar-20260316_161158 | ? | sma200_filter | kept | +0.0321 |
@@ -36,6 +59,7 @@
 | ar-20260316_133154 | ? | nr_lookback | kept | +0.0744 |
 | ar-20260316_105145 | ? | max_hold_days | kept | +0.0313 |
 | ar-20260316_101102 | ? | adx_period | kept | +1.9172 |
+| ar-20260316T230337 | ? | ? | ? | ? |
 | ar-20260315_214936 | ? | atr_mult | kept | +0.0986 |
 | ar-20260315_211051 | ? | band_mult | kept | +0.6508 |
 | ar-20260315_204050 | ? | wr_period | kept | +0.1568 |
@@ -80,27 +104,3 @@
 | ar-20260312_110553 | ? | sma200_filter: None→False | kept | n/a (migrated) |
 | ar-20260312_104004 | ? | atr_stop_mult: None→1.5 | kept | n/a (migrated) |
 | ar-20260312_101555 | ? | adx_period: None→7 | kept | n/a (migrated) |
-| ar-20260312_094057 | ? | rsi_period: 7→10 | kept | n/a (migrated) |
-| ar-20260312_091855 | ? | rsi_period: 14→7 | kept | n/a (migrated) |
-| ar-20260312_005338 | ? | atr_stop_mult: 1.2→2.0 | kept | n/a (migrated) |
-| ar-20260312_003716 | ? | bb_std: 2.5→1.5 | kept | n/a (migrated) |
-| ar-20260312_001727 | ? | max_hold_days: 15→10 | kept | n/a (migrated) |
-| ar-20260312_000417 | ? | atr_stop_mult: 2.0→1.5 | kept | n/a (migrated) |
-| ar-20260311_234534 | ? | ibs_max: 1.0→0.7 | kept | n/a (migrated) |
-| ar-20260311_233403 | ? | profit_target_atr_mult: 1.5→2.5 | kept | n/a (migrated) |
-| ar-20260311_233005 | ? | ibs_threshold: None→1.0 | kept | n/a (migrated) |
-| ar-20260311_232235 | ? | zscore_lookback: 20→30 | kept | n/a (migrated) |
-| ar-20260311_231130 | ? | min_down_days: None→2 | kept | n/a (migrated) |
-| ar-20260311_231123 | ? | rsi_period: 10→14 | kept | n/a (migrated) |
-| ar-20260311_213036 | ? | zscore_lookback: 30→20 | kept | n/a (migrated) |
-| ar-20260311_212959 | ? | rsi_period: 14→10 | kept | n/a (migrated) |
-| ar-20260311_183152 | ? | max_hold_days: 10→20 | kept | n/a (migrated) |
-| ar-20260311_182518 | ? | profit_target_atr_mult: 3.0→1.5 | kept | n/a (migrated) |
-| ar-20260311_181209 | ? | atr_period: 14→20 | kept | n/a (migrated) |
-| ar-20260311_180204 | ? | zscore_lookback: 20→30 | kept | n/a (migrated) |
-| ar-20260311_175423 | ? | rsi_period: 8→14 | kept | n/a (migrated) |
-| ar-20260311_174215 | ? | atr_stop_mult: 1.9→1.5 | kept | n/a (migrated) |
-| ar-20260311_174025 | ? | atr_period: 14→10 | kept | n/a (migrated) |
-| ar-20260311_173914 | ? | pullback_pct: 0.05→0.06 | kept | n/a (migrated) |
-| ar-20260311_173736 | ? | slow_ma: 175→20 | kept | n/a (migrated) |
-| ar-20260311_173539 | ? | fast_ma: 25→50 | kept | n/a (migrated) |

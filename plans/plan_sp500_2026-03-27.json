@@ -3,7 +3,7 @@
   "generated_at": "2026-03-27T19:04:34.244081",
   "market_id": "sp500",
   "config_version": "v3.0",
-  "status": "APPROVED",
+  "status": "EXPIRED",
   "portfolio_snapshot": {
     "equity": 5085.41,
     "cash": 1878.75,
@@ -5553,5 +5553,6 @@
       "cap": 1
     }
   },
-  "approved_at": "2026-03-27T19:08:50.761841"
+  "approved_at": "2026-03-27T19:08:50.761841",
+  "expired_reason": "Auto-expired by reconciliation \u2014 stale APPROVED plan older than 7 days"
 }

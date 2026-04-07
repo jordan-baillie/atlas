@@ -7449,5 +7449,534 @@
     "promoted": false,
     "runtime_s": 48.1,
     "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_140803",
+    "timestamp": "2026-04-02T04:08:03.345725+00:00",
+    "market": "commodity_etfs",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "breakout_period: None\u219210",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4766,
+      "cagr_pct": 8.7871,
+      "max_drawdown_pct": 12.1629,
+      "total_trades": 139,
+      "profit_factor": 1.6445
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 breakout_period: None\u219210"
+    ],
+    "promoted": false,
+    "runtime_s": 64.4,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_140940",
+    "timestamp": "2026-04-02T04:09:40.233447+00:00",
+    "market": "commodity_etfs",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "atr_stop_mult: 1.5\u21921.4",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.6308,
+      "cagr_pct": 10.6639,
+      "max_drawdown_pct": 10.9341,
+      "total_trades": 137,
+      "profit_factor": 1.7329
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.5\u21921.4"
+    ],
+    "promoted": false,
+    "runtime_s": 67.1,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_143037",
+    "timestamp": "2026-04-02T04:30:37.603296+00:00",
+    "market": "commodity_etfs",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "atr_stop_mult: 1.4\u21921.19",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.7402,
+      "cagr_pct": 12.3924,
+      "max_drawdown_pct": 16.2463,
+      "total_trades": 152,
+      "profit_factor": 1.7369
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.4\u21921.19"
+    ],
+    "promoted": false,
+    "runtime_s": 49.8,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_143337",
+    "timestamp": "2026-04-02T04:33:37.912903+00:00",
+    "market": "commodity_etfs",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "signal_mode: None\u2192risk_adjusted",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.8636,
+      "cagr_pct": 13.9464,
+      "max_drawdown_pct": 16.5982,
+      "total_trades": 149,
+      "profit_factor": 1.882
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 signal_mode: None\u2192risk_adjusted"
+    ],
+    "promoted": false,
+    "runtime_s": 50.8,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_150624",
+    "timestamp": "2026-04-02T05:06:24.631951+00:00",
+    "market": "commodity_etfs",
+    "category": "autoresearch",
+    "strategy": "momentum_breakout",
+    "hypothesis": "atr_stop_mult: 1.4\u21921.26",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.8275,
+      "cagr_pct": 13.1244,
+      "max_drawdown_pct": 12.8026,
+      "total_trades": 148,
+      "profit_factor": 1.7926
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.4\u21921.26"
+    ],
+    "promoted": false,
+    "runtime_s": 48.5,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_151019",
+    "timestamp": "2026-04-02T05:10:19.741937+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4144,
+      "cagr_pct": 8.0865,
+      "max_drawdown_pct": 10.1662,
+      "total_trades": 472,
+      "profit_factor": 1.4455
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 29.9,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_151257",
+    "timestamp": "2026-04-02T05:12:57.705405+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5178,
+      "cagr_pct": 9.5816,
+      "max_drawdown_pct": 12.0016,
+      "total_trades": 496,
+      "profit_factor": 1.4378
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 26.5,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_151351",
+    "timestamp": "2026-04-02T05:13:51.054514+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5735,
+      "cagr_pct": 10.1829,
+      "max_drawdown_pct": 10.8862,
+      "total_trades": 528,
+      "profit_factor": 1.4784
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 37.9,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154149",
+    "timestamp": "2026-04-02T05:41:49.633845+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4144,
+      "cagr_pct": 8.0865,
+      "max_drawdown_pct": 10.1662,
+      "total_trades": 472,
+      "profit_factor": 1.4455
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 27.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154429",
+    "timestamp": "2026-04-02T05:44:29.432505+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5178,
+      "cagr_pct": 9.5816,
+      "max_drawdown_pct": 12.0016,
+      "total_trades": 496,
+      "profit_factor": 1.4378
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 26.8,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154524",
+    "timestamp": "2026-04-02T05:45:24.406311+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5735,
+      "cagr_pct": 10.1829,
+      "max_drawdown_pct": 10.8862,
+      "total_trades": 528,
+      "profit_factor": 1.4784
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 36.9,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154613",
+    "timestamp": "2026-04-02T05:46:13.336039+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.4144,
+      "cagr_pct": 8.0865,
+      "max_drawdown_pct": 10.1662,
+      "total_trades": 472,
+      "profit_factor": 1.4455
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 7.9,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154849",
+    "timestamp": "2026-04-02T05:48:49.237800+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5178,
+      "cagr_pct": 9.5816,
+      "max_drawdown_pct": 12.0016,
+      "total_trades": 496,
+      "profit_factor": 1.4378
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 26.8,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_154942",
+    "timestamp": "2026-04-02T05:49:42.408158+00:00",
+    "market": "gold_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.5735,
+      "cagr_pct": 10.1829,
+      "max_drawdown_pct": 10.8862,
+      "total_trades": 528,
+      "profit_factor": 1.4784
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 37.6,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_155118",
+    "timestamp": "2026-04-02T05:51:18.049079+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2411,
+      "cagr_pct": 7.7296,
+      "max_drawdown_pct": 12.0714,
+      "total_trades": 765,
+      "profit_factor": 1.3096
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 19.1,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_155443",
+    "timestamp": "2026-04-02T05:54:43.819164+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.284,
+      "cagr_pct": 8.9273,
+      "max_drawdown_pct": 12.8499,
+      "total_trades": 820,
+      "profit_factor": 1.2753
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 62.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_155524",
+    "timestamp": "2026-04-02T05:55:24.938846+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2987,
+      "cagr_pct": 9.2202,
+      "max_drawdown_pct": 13.5671,
+      "total_trades": 859,
+      "profit_factor": 1.2909
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 41.1,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_155642",
+    "timestamp": "2026-04-02T05:56:42.246123+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2411,
+      "cagr_pct": 7.7296,
+      "max_drawdown_pct": 12.0714,
+      "total_trades": 765,
+      "profit_factor": 1.3096
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 18.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_160016",
+    "timestamp": "2026-04-02T06:00:16.207455+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.284,
+      "cagr_pct": 8.9273,
+      "max_drawdown_pct": 12.8499,
+      "total_trades": 820,
+      "profit_factor": 1.2753
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 70.5,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_160036",
+    "timestamp": "2026-04-02T06:00:36.399618+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2987,
+      "cagr_pct": 9.2202,
+      "max_drawdown_pct": 13.5671,
+      "total_trades": 859,
+      "profit_factor": 1.2909
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 20.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_160232",
+    "timestamp": "2026-04-02T06:02:32.344901+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "rsi_period: 4\u21923",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2411,
+      "cagr_pct": 7.7296,
+      "max_drawdown_pct": 12.0714,
+      "total_trades": 765,
+      "profit_factor": 1.3096
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 rsi_period: 4\u21923"
+    ],
+    "promoted": false,
+    "runtime_s": 41.0,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_160610",
+    "timestamp": "2026-04-02T06:06:10.311423+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "atr_stop_mult: 1.2\u21921.0",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.284,
+      "cagr_pct": 8.9273,
+      "max_drawdown_pct": 12.8499,
+      "total_trades": 820,
+      "profit_factor": 1.2753
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 atr_stop_mult: 1.2\u21921.0"
+    ],
+    "promoted": false,
+    "runtime_s": 67.2,
+    "agent_id": "autoresearch"
+  },
+  {
+    "experiment_id": "ar-20260402_160629",
+    "timestamp": "2026-04-02T06:06:29.039719+00:00",
+    "market": "sector_etfs",
+    "category": "autoresearch",
+    "strategy": "connors_rsi2",
+    "hypothesis": "max_hold_days: 10\u21925",
+    "verdict": "pass",
+    "key_metrics": {
+      "sharpe": 0.2987,
+      "cagr_pct": 9.2202,
+      "max_drawdown_pct": 13.5671,
+      "total_trades": 859,
+      "profit_factor": 1.2909
+    },
+    "delta_vs_baseline": {},
+    "learnings": [
+      "autoresearch: keep \u2014 max_hold_days: 10\u21925"
+    ],
+    "promoted": false,
+    "runtime_s": 18.7,
+    "agent_id": "autoresearch"
   }
 ]

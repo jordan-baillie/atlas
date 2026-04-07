@@ -1,14 +1,14 @@
 # Portfolio Allocation Analysis
 
-> Generated: 2026-03-16 20:38
+> Generated: 2026-04-05 08:39
 
 ## Portfolio Metrics
 
-- **Analytic Sharpe**: -2.3033
-- **Simulated Sharpe**: 0.5284
+- **Analytic Sharpe**: -1.9308
+- **Simulated Sharpe**: 0.8180
 - **Strategies active**: 31
-- **Average correlation**: 0.2061
-- **Annual return**: 1.1%
+- **Average correlation**: 0.2126
+- **Annual return**: 1.7%
 - **Annual volatility**: 2.1%
 - **Max drawdown**: -2.8%
 
@@ -16,37 +16,37 @@
 
 | Strategy | Weight | Sharpe | Trades | CAGR% | Group |
 |----------|--------|--------|--------|-------|-------|
-| connors_rsi2 | 3.2% | -0.380 | 729 | 2.0% | mean_reversion |
-| demark_sequential | 3.2% | -0.685 | 188 | 1.8% | mean_reversion |
-| bb_squeeze | 3.2% | -0.662 | 179 | 1.9% | mean_reversion |
-| donchian_breakout | 3.2% | -0.812 | 112 | 1.1% | momentum |
-| gap_and_go | 3.2% | -1.732 | 204 | -0.0% | momentum |
-| consecutive_down_days | 3.2% | -1.387 | 629 | -0.5% | mean_reversion |
-| adx_trend_pullback | 3.2% | -0.242 | 233 | 3.6% | momentum |
-| inside_bar_nr7 | 3.2% | -1.232 | 248 | 0.5% | other |
-| mean_reversion | 3.2% | -0.399 | 237 | 2.2% | mean_reversion |
-| lower_band_reversion | 3.2% | -1.578 | 369 | -0.1% | mean_reversion |
-| macd_divergence | 3.2% | -0.632 | 171 | 2.6% | momentum |
-| keltner_reversion | 3.2% | -0.769 | 199 | 1.5% | mean_reversion |
-| monthly_rotation | 3.2% | -1.902 | 51 | 0.3% | other |
-| momentum_breakout | 3.2% | -0.565 | 294 | 0.9% | momentum |
-| opening_gap | 3.2% | -0.475 | 466 | 1.4% | other |
-| pead_earnings_drift | 3.2% | -0.561 | 87 | 2.8% | other |
-| dividend_capture | 3.2% | -1.229 | 110 | 1.3% | other |
-| put_call_vix_proxy | 3.2% | -4.129 | 19 | 0.5% | other |
-| overnight_return | 3.2% | -1.483 | 436 | -0.1% | other |
-| relative_strength_pullback | 3.2% | -0.976 | 219 | 0.1% | momentum |
-| sector_rotation | 3.2% | -0.914 | 284 | -0.5% | other |
-| trend_following | 3.2% | -0.217 | 231 | 3.5% | momentum |
-| short_term_mr | 3.2% | -1.227 | 783 | -2.0% | mean_reversion |
-| rsi_divergence | 3.2% | -2.571 | 125 | -2.3% | mean_reversion |
-| stochastic_oversold | 3.2% | -0.794 | 292 | 2.2% | mean_reversion |
-| volume_climax | 3.2% | -1.062 | 483 | 0.2% | mean_reversion |
-| williams_percent_r | 3.2% | -0.505 | 233 | 2.4% | mean_reversion |
-| triple_rsi | 3.2% | -1.409 | 197 | 0.1% | other |
-| vwap_reversion | 3.2% | -1.573 | 208 | -0.3% | other |
-| mtf_momentum | 3.2% | -2.179 | 46 | -0.5% | other |
-| heikin_ashi_reversal | 3.2% | -0.092 | 225 | 4.5% | momentum |
+| connors_rsi2 | 3.2% | -0.094 | 916 | 4.0% | mean_reversion |
+| demark_sequential | 3.2% | -0.521 | 223 | 2.6% | mean_reversion |
+| bb_squeeze | 3.2% | -0.410 | 191 | 3.2% | mean_reversion |
+| donchian_breakout | 3.2% | -0.482 | 98 | 2.4% | momentum |
+| gap_and_go | 3.2% | -0.995 | 254 | 1.8% | momentum |
+| consecutive_down_days | 3.2% | -1.574 | 793 | -0.9% | mean_reversion |
+| adx_trend_pullback | 3.2% | -0.721 | 285 | 1.4% | momentum |
+| inside_bar_nr7 | 3.2% | -0.935 | 312 | 1.4% | other |
+| lower_band_reversion | 3.2% | -1.433 | 462 | 0.6% | mean_reversion |
+| macd_divergence | 3.2% | -0.753 | 188 | 2.2% | momentum |
+| keltner_reversion | 3.2% | -1.378 | 233 | 0.0% | mean_reversion |
+| mean_reversion | 3.2% | -0.056 | 250 | 4.4% | mean_reversion |
+| monthly_rotation | 3.2% | -0.852 | 43 | 2.5% | other |
+| momentum_breakout | 3.2% | -0.787 | 129 | 0.1% | momentum |
+| opening_gap | 3.2% | -0.456 | 501 | 1.9% | other |
+| dividend_capture | 3.2% | -0.905 | 113 | 2.6% | other |
+| pead_earnings_drift | 3.2% | -0.749 | 82 | 2.1% | other |
+| put_call_vix_proxy | 3.2% | -3.878 | 25 | 0.2% | other |
+| relative_strength_pullback | 3.2% | -1.223 | 255 | -1.2% | momentum |
+| overnight_return | 3.2% | -0.618 | 544 | 2.4% | other |
+| sector_rotation | 3.2% | -0.178 | 288 | 3.7% | other |
+| short_term_mr | 3.2% | -0.525 | 988 | 1.4% | mean_reversion |
+| stochastic_oversold | 3.2% | -0.791 | 355 | 2.3% | mean_reversion |
+| trend_following | 3.2% | -0.339 | 125 | 3.1% | momentum |
+| rsi_divergence | 3.2% | -2.081 | 134 | -0.9% | mean_reversion |
+| volume_climax | 3.2% | -1.332 | 582 | -0.5% | mean_reversion |
+| williams_percent_r | 3.2% | -0.582 | 282 | 2.3% | mean_reversion |
+| triple_rsi | 3.2% | -1.348 | 239 | 0.4% | other |
+| vwap_reversion | 3.2% | -1.139 | 244 | 1.1% | other |
+| mtf_momentum | 3.2% | -1.538 | 35 | 0.5% | other |
+| heikin_ashi_reversal | 3.2% | -0.529 | 266 | 2.9% | momentum |
 
 ## Excluded Strategies (weight = 0)
 

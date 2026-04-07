@@ -6,7 +6,7 @@
 |----------|--------|-------------|--------|--------------|
 | adx_trend_pullback | active | 0.4423 | 274 | 2026-03-16 00:51 |
 | bb_squeeze | promising | 0.4859 | 331 | 2026-03-12 02:55 |
-| connors_rsi2 | promising | 0.4148 | 942 | 2026-03-12 02:55 |
+| connors_rsi2 | active | 0.2987 | 859 | 2026-04-02 06:06 |
 | consecutive_down_days | promising | 0.5775 | 1388 | 2026-03-12 02:55 |
 | demark_sequential | active | 0.1246 | 145 | 2026-03-15 06:24 |
 | dividend_capture | failed | -3.9152 | 23 | 2026-03-12 02:55 |
@@ -18,7 +18,7 @@
 | lower_band_reversion | active | 0.3934 | 393 | 2026-03-15 11:10 |
 | macd_divergence | untested | 0.0000 | 0 | 2026-03-12 02:55 |
 | mean_reversion | active | 0.4097 | 142 | 2026-03-12 02:55 |
-| momentum_breakout | active | 0.7217 | 293 | 2026-03-12 10:31 |
+| momentum_breakout | active | 0.8275 | 148 | 2026-04-02 05:06 |
 | monthly_rotation | untested | 0.0000 | 0 | 2026-03-12 02:55 |
 | opening_gap | active | 0.3396 | 257 | 2026-03-12 02:55 |
 | overnight_return | untested | 0.0000 | 0 | 2026-03-12 02:55 |

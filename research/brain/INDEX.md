@@ -1,17 +1,17 @@
 # Atlas Research Brain
 
-> **Updated:** 2026-03-16 12:02 UTC | **Last sweep:** 20260316_100002
+> **Updated:** 2026-04-02 06:06 UTC | **Last sweep:** 20260402_054959
 
 ## Navigation
 
 | Directory | Contents | Count |
 |-----------|----------|-------|
 | [strategies/](_index.md) | Per-strategy params, metrics, history | 29 |
-| [params/](_index.md) | Parameter test results across strategies | 48 |
+| [params/](_index.md) | Parameter test results across strategies | 51 |
 | [experiments/](_index.md) | Individual experiment records (rolling 100) | 100 |
-| [sweeps/](_index.md) | Sweep session summaries | 9 |
+| [sweeps/](_index.md) | Sweep session summaries | 12 |
 | [patterns/](_index.md) | Confirmed rules — never violate | 5 |
-| [decisions/](_index.md) | Closed decisions — don't revisit | 11 |
+| [decisions/](_index.md) | Closed decisions — don't revisit | 14 |
 | [hypotheses/](_index.md) | Open questions to test | 4 |
 | [regime/](_index.md) | Market regime analysis | 2 |
 

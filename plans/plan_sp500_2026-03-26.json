@@ -3,7 +3,7 @@
   "generated_at": "2026-03-26T22:04:35.267033",
   "market_id": "sp500",
   "config_version": "v3.0",
-  "status": "APPROVED",
+  "status": "EXPIRED",
   "portfolio_snapshot": {
     "equity": 5132.87,
     "cash": 552.81,
@@ -3964,5 +3964,6 @@
   },
   "approved_by": "ceo",
   "approved_at": "2026-03-26T23:45:00",
-  "approval_note": "Approve exits for ORLY (past TP, RSI overbought) and ECL (MR complete). AMT entry: deep oversold mean reversion."
+  "approval_note": "Approve exits for ORLY (past TP, RSI overbought) and ECL (MR complete). AMT entry: deep oversold mean reversion.",
+  "expired_reason": "Auto-expired by reconciliation \u2014 stale APPROVED plan older than 7 days"
 }

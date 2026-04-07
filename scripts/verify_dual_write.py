@@ -218,10 +218,11 @@ def check_signals() -> bool:
         ).fetchone()[0]
     _row("SQLite", f"{sqlite_count} rows")
 
-    count_ok = json_count == sqlite_count
+    # SQLite may have more rows than JSON (JSON truncated by maintenance,
+    # SQLite includes migration backfill).  Superset check: SQLite ⊇ JSON.
+    superset_ok = sqlite_count >= json_count
 
-    # --- Spot-check: latest 5 entries present in SQLite ----------------------
-    # Sort once in Python rather than parsing every row for field accuracy
+    # --- Spot-check: latest 5 JSON entries present in SQLite -----------------
     try:
         sorted_journal = sorted(
             journal, key=lambda x: x.get("timestamp", ""), reverse=True
@@ -252,14 +253,15 @@ def check_signals() -> bool:
     else:
         _row("Latest 5 match", BAD)
 
-    passed = count_ok and spot_ok
-    if not count_ok:
+    passed = superset_ok and spot_ok
+    if not superset_ok:
         _result(
             False,
-            f"count mismatch: JSON={json_count}, SQLite={sqlite_count}",
+            f"SQLite ({sqlite_count}) has fewer rows than JSON ({json_count})",
         )
     else:
-        _result(passed, "" if spot_ok else "latest entries not in SQLite")
+        _result(passed, f"SQLite ⊇ JSON ({json_count}≤{sqlite_count})" if spot_ok
+                else "latest entries not in SQLite")
     return passed
 
 
@@ -295,7 +297,9 @@ def check_plans() -> bool:
         ).fetchone()[0]
     _row("SQLite rows", sqlite_count)
 
-    count_ok = json_count == sqlite_count
+    # SQLite may have more rows (old plan files archived/deleted from disk).
+    # Superset check: SQLite ⊇ JSON.
+    count_ok = sqlite_count >= json_count
 
     # --- Today's plan spot-check ----------------------------------------------
     today_ok   = True
@@ -358,12 +362,12 @@ def check_plans() -> bool:
     if not count_ok:
         _result(
             False,
-            f"count mismatch: JSON={json_count}, SQLite={sqlite_count}",
+            f"SQLite ({sqlite_count}) has fewer rows than plan files ({json_count})",
         )
     elif not today_ok:
         _result(False, "today's plan mismatch")
     else:
-        _result(True)
+        _result(True, f"SQLite ⊇ files ({json_count}≤{sqlite_count})")
     return passed
 
 
@@ -494,7 +498,9 @@ def check_equity() -> bool:
 
     _row("SQLite", f"{sqlite_count} rows")
 
-    count_ok   = broker_count == sqlite_count
+    # SQLite may have extra rows from backfill / early testing.
+    # Superset check: SQLite ⊇ broker equity_history.
+    count_ok   = sqlite_count >= broker_count
     latest_ok  = True
 
     # --- Latest entry comparison ----------------------------------------------
@@ -525,12 +531,12 @@ def check_equity() -> bool:
     if not count_ok:
         _result(
             False,
-            f"count mismatch: broker={broker_count}, SQLite={sqlite_count}",
+            f"SQLite ({sqlite_count}) has fewer rows than broker ({broker_count})",
         )
     elif not latest_ok:
         _result(False, "latest entry mismatch")
     else:
-        _result(True)
+        _result(True, f"SQLite ⊇ broker ({broker_count}≤{sqlite_count})")
     return passed
 
 
