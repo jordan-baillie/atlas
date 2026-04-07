@@ -294,6 +294,7 @@
     .agent-msg-assistant { align-items: flex-start; }
 
     .agent-msg-assistant .msg-bubble {
+      position: relative;
       background: var(--surface);
       border: 1px solid var(--border);
       border-left: 2px solid rgba(99,102,241,0.2);
@@ -364,7 +365,8 @@
       line-height: 1;
     }
 
-    .agent-msg-assistant:hover .msg-copy-btn { opacity: 1; }
+    .agent-msg-assistant:hover .msg-copy-btn,
+    .msg-bubble:hover .msg-copy-btn { opacity: 1; }
     .msg-copy-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-hover); }
     .msg-copy-btn.copied { color: var(--green); border-color: var(--green); opacity: 1; }
 
