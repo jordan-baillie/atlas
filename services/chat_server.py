@@ -1158,7 +1158,8 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
             # ---- send: user sends a chat message --------------------------
             if msg_type == "send":
                 content = data.get("content", "").strip()
-                if not content:
+                images = data.get("images")  # [{data, mime}, ...]
+                if not content and not images:
                     continue
 
                 session_id = data.get("session_id")
@@ -1197,7 +1198,7 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 # Stream response events back to client
                 full_text = ""
                 try:
-                    async for event in mgr.send_message(content):
+                    async for event in mgr.send_message(content, images=images):
                         await ws.send_json(event.to_dict())
                         if event.type == "text_delta":
                             full_text += event.data.get("delta", "")

@@ -73,16 +73,52 @@ class PiSessionManager:
 
     # ── Public interface ─────────────────────────────────────────────────────
 
-    async def send_message(self, content: str) -> AsyncGenerator[PiEvent, None]:
+    async def send_message(
+        self, content: str, images: list[dict] | None = None,
+    ) -> AsyncGenerator[PiEvent, None]:
         """Spawn Pi with *content* as the prompt and yield streaming events.
 
         The generator yields every :class:`PiEvent` as it arrives from
         stdout.  A terminal ``PiEvent("done", {"full_text": ...})`` is always
         yielded last, even if Pi exits with an error.
+
+        Parameters
+        ----------
+        content : str
+            The user's text message.
+        images : list[dict] | None
+            Optional list of ``{"data": "<base64>", "mime": "image/png"}``
+            dicts.  Each image is saved to a temp file and passed to Pi as
+            an ``@/path/to/file`` argument.
         """
         SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
 
+        # Write any attached images to temp files
+        temp_image_paths: list[Path] = []
+        if images:
+            import base64 as b64mod
+            import tempfile
+            for idx, img in enumerate(images):
+                raw = img.get("data", "")
+                mime = img.get("mime", "image/png")
+                ext = {
+                    "image/png": ".png",
+                    "image/jpeg": ".jpg",
+                    "image/gif": ".gif",
+                    "image/webp": ".webp",
+                }.get(mime, ".png")
+                try:
+                    img_bytes = b64mod.b64decode(raw)
+                    tmp = Path(tempfile.mktemp(suffix=ext, prefix=f"atlas_chat_img{idx}_"))
+                    tmp.write_bytes(img_bytes)
+                    temp_image_paths.append(tmp)
+                except Exception as exc:
+                    logger.warning("Failed to decode attached image %d: %s", idx, exc)
+
         cmd = self._build_cmd()
+        # Attach images as @file references (Pi reads them as message attachments)
+        for p in temp_image_paths:
+            cmd.append(f"@{p}")
         # Append the user message as the final positional argument
         cmd.append(content)
 
@@ -127,6 +163,13 @@ class PiSessionManager:
                 except Exception:
                     pass
             self._running = False
+
+            # Clean up temp image files
+            for p in temp_image_paths:
+                try:
+                    p.unlink(missing_ok=True)
+                except Exception:
+                    pass
 
             done = PiEvent("done", {"full_text": self._current_response})
             await self._broadcast(done)
@@ -186,6 +229,14 @@ class PiSessionManager:
             "--model", self.model,
             # Do NOT pass --no-extensions — let pi discover all extensions
             # This enables swarm, subagent, atlas tools, etc.
+        ]
+
+        # Tell Pi this user is on the dashboard web chat
+        cmd += [
+            "--append-system-prompt",
+            "The user is communicating via the Atlas Dashboard web chat interface "
+            "(agent.html). They may attach images. Address them knowing they are "
+            "on the dashboard, not the terminal.",
         ]
 
         # Resume existing session so the conversation history is preserved

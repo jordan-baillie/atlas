@@ -750,6 +750,152 @@
     #agent-send:active:not(:disabled) { transform: translateY(0) scale(0.95); box-shadow: none; }
     #agent-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+    /* ── Image attach button ── */
+    #agent-attach {
+      width: 44px;
+      height: 44px;
+      background: var(--surface);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+
+    #agent-attach:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* ── Image preview strip ── */
+    .image-preview-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s ease, padding 0.2s ease;
+    }
+
+    .image-preview-strip.has-images {
+      padding: 8px 0 4px;
+      max-height: 200px;
+    }
+
+    .image-thumb {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      flex-shrink: 0;
+      animation: msg-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .image-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-thumb .thumb-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .image-thumb:hover .thumb-remove { opacity: 1; }
+
+    /* ── Drop zone overlay ── */
+    .drop-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(99,102,241,0.12);
+      border: 2px dashed var(--accent);
+      border-radius: var(--radius);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .drop-overlay.visible {
+      display: flex;
+    }
+
+    .drop-overlay-text {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--surface);
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      border: 1px solid var(--accent);
+    }
+
+    /* ── Images in user messages ── */
+    .msg-images {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .msg-images img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.15);
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .msg-images img:hover { transform: scale(1.03); }
+
+    /* ── Image lightbox ── */
+    .image-lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .image-lightbox img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
     #agent-cancel {
       width: 44px;
       height: 44px;
@@ -1042,6 +1188,10 @@
       &#9888;&#65039; Disconnected
       <button id="conn-reconnect-btn" type="button">Reconnect</button>
     </div>
+    <!-- Drop zone overlay -->
+    <div class="drop-overlay" id="drop-overlay">
+      <div class="drop-overlay-text">📎 Drop image here</div>
+    </div>
     <!-- Scroll-to-bottom floating button -->
     <button id="scroll-bottom-btn" class="scroll-bottom-btn" title="Scroll to bottom">&#8595;</button>
     <div id="agent-messages">
@@ -1083,9 +1233,11 @@
 <!-- ── Input bar ── -->
 <div class="agent-input-bar">
   <div class="input-row">
+    <input type="file" id="agent-file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple style="display:none">
+    <button id="agent-attach" type="button" title="Attach image (paste or drag &amp; drop also works)">&#128206;</button>
     <textarea
       id="agent-input"
-      placeholder="Message Atlas Agent&#8230; (Enter to send, Shift+Enter for newline)"
+      placeholder="Message Atlas Agent&#8230; (Enter to send, Shift+Enter for newline, paste/drop images)"
       rows="1"
       autocomplete="off"
       spellcheck="true"
@@ -1093,6 +1245,7 @@
     <button id="agent-send" type="button" title="Send (Enter)">&#8593;</button>
     <button id="agent-cancel" type="button" title="Cancel generation (Esc)">&#9632;</button>
   </div>
+  <div class="image-preview-strip" id="image-preview-strip"></div>
   <div id="agent-status">
     <span class="s-model" id="agent-model-label">opus</span>
     <span class="sep">&middot;</span>
@@ -1158,6 +1311,11 @@
   // Map toolCallId -> activity card element so tool_end can mark it done
   var toolCards = {};
 
+  // Pending images: [{data: base64, mime: string, url: objectURL}, ...]
+  var pendingImages = [];
+  var MAX_IMAGES = 5;
+  var MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
   /* ── DOM refs ─────────────────────────────────────────────────────────── */
   var messagesEl      = document.getElementById('agent-messages');
   var activityEl      = document.getElementById('activity-feed');
@@ -1182,6 +1340,11 @@
   var connReconnectBtn = document.getElementById('conn-reconnect-btn');
   var shortcutsModalEl = document.getElementById('shortcuts-modal');
   var shortcutsCloseBtn = document.getElementById('shortcuts-close-btn');
+  var attachBtn       = document.getElementById('agent-attach');
+  var fileInput        = document.getElementById('agent-file-input');
+  var previewStrip     = document.getElementById('image-preview-strip');
+  var dropOverlay      = document.getElementById('drop-overlay');
+  var messagesPaneEl   = document.querySelector('.agent-messages-pane');
 
   /* ── Auth token (Basic Auth -> short-lived WS token) ─────────────────── */
   function getAuthToken() {
@@ -1250,24 +1413,99 @@
   }
 
   /* ── Send ─────────────────────────────────────────────────────────────── */
+  /* ── Image handling ───────────────────────────────────────────────────── */
+
+  function addImageFromFile(file) {
+    if (pendingImages.length >= MAX_IMAGES) return;
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert('Image too large (max 10MB)');
+      return;
+    }
+    if (!file.type.startsWith('image/')) return;
+
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      var base64 = dataUrl.split(',')[1] || '';
+      var mime = file.type || 'image/png';
+      var objUrl = URL.createObjectURL(file);
+      pendingImages.push({ data: base64, mime: mime, url: objUrl, name: file.name });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage(idx) {
+    if (pendingImages[idx] && pendingImages[idx].url) {
+      URL.revokeObjectURL(pendingImages[idx].url);
+    }
+    pendingImages.splice(idx, 1);
+    renderImagePreviews();
+  }
+
+  function clearPendingImages() {
+    pendingImages.forEach(function (img) {
+      if (img.url) URL.revokeObjectURL(img.url);
+    });
+    pendingImages = [];
+    renderImagePreviews();
+  }
+
+  function renderImagePreviews() {
+    if (!previewStrip) return;
+    previewStrip.innerHTML = '';
+    if (pendingImages.length === 0) {
+      previewStrip.classList.remove('has-images');
+      return;
+    }
+    previewStrip.classList.add('has-images');
+    pendingImages.forEach(function (img, idx) {
+      var thumb = document.createElement('div');
+      thumb.className = 'image-thumb';
+      var imgEl = document.createElement('img');
+      imgEl.src = img.url;
+      imgEl.alt = img.name || 'attached image';
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'thumb-remove';
+      removeBtn.textContent = '\u00D7';
+      removeBtn.title = 'Remove';
+      var capturedIdx = idx;
+      removeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        removeImage(capturedIdx);
+      });
+      thumb.appendChild(imgEl);
+      thumb.appendChild(removeBtn);
+      previewStrip.appendChild(thumb);
+    });
+  }
+
   function send(content) {
-    if (!content || !content.trim()) return;
+    content = (content || '').trim();
+    if (!content && pendingImages.length === 0) return;
     if (isGenerating) return;
 
     if (!ws || ws.readyState !== 1) {
-      // Queue the message and retry after connection established
       connect(currentSessionId);
       setConnStatus('connecting');
-      setTimeout(function () { send(content); }, 900);
+      var _c = content;
+      setTimeout(function () { send(_c); }, 900);
       return;
     }
 
-    content = content.trim();
     lastUserMessage = content;
     clearEmpty();
-    appendUserMessage(content);
+    appendUserMessage(content, pendingImages.slice());
 
-    ws.send(JSON.stringify({ type: 'send', content: content, session_id: currentSessionId }));
+    // Build WebSocket payload with images
+    var payload = { type: 'send', content: content, session_id: currentSessionId };
+    if (pendingImages.length > 0) {
+      payload.images = pendingImages.map(function (img) {
+        return { data: img.data, mime: img.mime };
+      });
+    }
+    ws.send(JSON.stringify(payload));
+    clearPendingImages();
 
     isGenerating = true;
     setConnStatus('thinking');
@@ -1436,12 +1674,25 @@
     return ts;
   }
 
-  function appendUserMessage(content) {
+  function appendUserMessage(content, images) {
     var div = document.createElement('div');
     div.className = 'agent-msg agent-msg-user';
     var bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
-    bubble.textContent = content;
+    if (content) bubble.textContent = content;
+    // Show attached images in the message
+    if (images && images.length > 0) {
+      var imgsDiv = document.createElement('div');
+      imgsDiv.className = 'msg-images';
+      images.forEach(function (img) {
+        var imgEl = document.createElement('img');
+        imgEl.src = img.url || ('data:' + img.mime + ';base64,' + img.data);
+        imgEl.alt = img.name || 'attached image';
+        imgEl.addEventListener('click', function () { showLightbox(imgEl.src); });
+        imgsDiv.appendChild(imgEl);
+      });
+      bubble.appendChild(imgsDiv);
+    }
     // Edit button — puts text back in input for editing
     var editBtn = document.createElement('button');
     editBtn.className = 'msg-action-btn msg-edit-btn';
@@ -1459,6 +1710,18 @@
     div.appendChild(makeTimestamp());
     messagesEl.appendChild(div);
     scrollToBottom();
+  }
+
+  function showLightbox(src) {
+    var overlay = document.createElement('div');
+    overlay.className = 'image-lightbox';
+    var img = document.createElement('img');
+    img.src = src;
+    overlay.appendChild(img);
+    overlay.addEventListener('click', function () {
+      document.body.removeChild(overlay);
+    });
+    document.body.appendChild(overlay);
   }
 
   function startAssistantMessage() {
@@ -2198,6 +2461,62 @@
   });
 
   cancelBtn.addEventListener('click', function () { cancel(); });
+
+  // ── Image attach: button click ──
+  if (attachBtn && fileInput) {
+    attachBtn.addEventListener('click', function () { fileInput.click(); });
+    fileInput.addEventListener('change', function () {
+      var files = fileInput.files;
+      for (var i = 0; i < files.length; i++) { addImageFromFile(files[i]); }
+      fileInput.value = ''; // reset so same file can be re-selected
+      inputEl.focus();
+    });
+  }
+
+  // ── Image attach: paste (Ctrl+V) ──
+  inputEl.addEventListener('paste', function (e) {
+    var items = (e.clipboardData || {}).items || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        var file = items[i].getAsFile();
+        if (file) addImageFromFile(file);
+      }
+    }
+  });
+
+  // ── Image attach: drag & drop ──
+  var dragCounter = 0;
+
+  if (messagesPaneEl && dropOverlay) {
+    messagesPaneEl.addEventListener('dragenter', function (e) {
+      e.preventDefault();
+      dragCounter++;
+      if (dragCounter === 1) dropOverlay.classList.add('visible');
+    });
+
+    messagesPaneEl.addEventListener('dragleave', function (e) {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) { dragCounter = 0; dropOverlay.classList.remove('visible'); }
+    });
+
+    messagesPaneEl.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+
+    messagesPaneEl.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dragCounter = 0;
+      dropOverlay.classList.remove('visible');
+      var files = e.dataTransfer.files || [];
+      for (var i = 0; i < files.length; i++) {
+        if (files[i].type.startsWith('image/')) addImageFromFile(files[i]);
+      }
+      inputEl.focus();
+    });
+  }
 
   // Escape key cancels generation / closes shortcuts modal
   document.addEventListener('keydown', function (e) {
