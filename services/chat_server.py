@@ -1190,6 +1190,9 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 })
 
                 # Get or create PiSessionManager for this session
+                # Allow per-message team mode toggle
+                use_teams = bool(data.get("use_teams", False))
+
                 if session_id not in _pi_sessions:
                     sess_rec = _chat_get_session(session_id)
                     model = (
@@ -1198,8 +1201,11 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                         else "claude-sonnet-4-6"
                     )
                     _pi_sessions[session_id] = PiSessionManager(
-                        session_id, model=model
+                        session_id, model=model, use_teams=use_teams
                     )
+                else:
+                    # Update teams mode if changed
+                    _pi_sessions[session_id].use_teams = use_teams
 
                 mgr = _pi_sessions[session_id]
 

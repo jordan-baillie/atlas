@@ -54,6 +54,12 @@ class PiEvent:
 class PiSessionManager:
     """Manages one headless Pi subprocess per chat session.
 
+    Parameters
+    ----------
+    use_teams : bool
+        If True, load the multi-team orchestrator extension.
+        If False (default), run plain Claude for fast direct responses.
+
     Usage::
 
         mgr = PiSessionManager(session_id="abc123")
@@ -61,9 +67,10 @@ class PiSessionManager:
             await websocket.send_json(event.to_dict())
     """
 
-    def __init__(self, session_id: str, model: str = "claude-opus-4-6") -> None:
+    def __init__(self, session_id: str, model: str = "claude-opus-4-6", use_teams: bool = False) -> None:
         self.session_id = session_id
         self.model = model
+        self.use_teams = use_teams
         self.process: Optional[asyncio.subprocess.Process] = None
         self.pi_session_path: Path = SESSIONS_DIR / f"{session_id}.jsonl"
         self._running: bool = False
@@ -289,11 +296,12 @@ class PiSessionManager:
             "--no-themes",
         ]
 
-        # Explicitly load multi-team extension only.
-        # Use --no-extensions to prevent auto-discovering other heavy extensions
-        # (swarm, subagent etc. are available through the multi-team orchestrator).
         cmd.append("--no-extensions")
-        if MULTI_TEAM_EXT.exists():
+
+        # Only load multi-team orchestrator when explicitly requested.
+        # Without it: plain Claude with tools (fast, ~16K token system prompt).
+        # With it: full 10-agent orchestrator (~96K+ tokens, much slower).
+        if self.use_teams and MULTI_TEAM_EXT.exists():
             cmd += ["-e", str(MULTI_TEAM_EXT)]
 
         # Resume existing session so the conversation history is preserved
