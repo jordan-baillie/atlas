@@ -694,7 +694,7 @@ class AuthHandler(SimpleHTTPRequestHandler):
                 wins = [p for p in pnls if p > 0]
                 losses = [p for p in pnls if p <= 0]
                 loss_sum = sum(losses)
-                pf = abs(sum(wins) / loss_sum) if loss_sum != 0 else 0
+                pf = abs(sum(wins) / loss_sum) if loss_sum != 0 else 99.99
                 result["strategy_performance"]["overall"] = {
                     "trades": len(pnls),
                     "win_rate": len(wins) / len(pnls) if pnls else 0,

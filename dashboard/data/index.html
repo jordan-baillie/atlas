@@ -229,7 +229,7 @@
 
   <!-- ── Main Grid: Content + Sidebar ── -->
   <div class="main-grid" id="main-grid">
-    <div class="main-content">
+    <div class="main-content" id="positions-content">
       <!-- Position cards -->
       <div class="section-header" id="positions-label">Open Positions</div>
       <div class="positions-grid" id="positions-grid"></div>
@@ -244,7 +244,7 @@
       </div>
     </div>
 
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar-content">
       <!-- Regime Status Card -->
       <div class="sidebar-card" id="regime-card">
         <div class="sidebar-card-header">Regime Status</div>
@@ -719,7 +719,7 @@ function drawEquityChart(portfolioHistory, benchmarkCurve, animate) {
 
     var pt     = c.curve[idx];
     var portEq = pt.equity || 0;
-    var pnl    = pt.pnl || 0;
+    var pnl    = pt.day_pnl || 0;
     var bv     = c.benchVals[idx];
 
     var dp = (pt.date || '').split('-');
@@ -1047,14 +1047,14 @@ function renderPerformance(data) {
 
 // ── Tab Switching ──────────────────────────────────────────────────────────
 var TAB_VISIBILITY = {
-  overview:    ['summary-strip', 'chart-section', 'main-grid', 'orders-section', 'timeline-section', 'performance-section', 'performance-empty'],
-  positions:   ['summary-strip', 'main-grid'],
+  overview:    ['summary-strip', 'chart-section', 'main-grid', 'positions-content', 'sidebar-content', 'orders-section', 'timeline-section', 'performance-section', 'performance-empty'],
+  positions:   ['summary-strip', 'main-grid', 'positions-content'],
   performance: ['summary-strip', 'performance-section', 'performance-empty'],
   orders:      ['summary-strip', 'orders-section'],
-  regime:      ['summary-strip', 'main-grid']
+  regime:      ['summary-strip', 'main-grid', 'sidebar-content']
 };
 
-var ALL_SECTIONS = ['summary-strip', 'chart-section', 'main-grid', 'orders-section', 'timeline-section', 'performance-section', 'performance-empty'];
+var ALL_SECTIONS = ['summary-strip', 'chart-section', 'main-grid', 'orders-section', 'timeline-section', 'performance-section', 'performance-empty', 'positions-content', 'sidebar-content'];
 
 function switchTab(tabName) {
   // Update buttons
