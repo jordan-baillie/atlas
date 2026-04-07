@@ -12,7 +12,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="atlas.css?v=7">
-<link rel="stylesheet" href="chat.css?v=1">
 <style>
 /* ── Header regime indicator ── */
 .header-left { display: flex; align-items: center; gap: 16px; }
@@ -121,11 +120,8 @@
     </div>
   </div>
 
-  <!-- ── Two-Panel Main Area ── -->
-  <div class="two-panel">
-
-    <!-- Left: Portfolio view -->
-    <div class="panel-portfolio">
+  <!-- ── Portfolio (full-width) ── -->
+  <div class="panel-portfolio">
 
       <!-- Equity Chart -->
       <div class="chart-section" id="chart-section">
@@ -171,29 +167,6 @@
       </details>
 
     </div><!-- /panel-portfolio -->
-
-    <!-- Right: AI Chat -->
-    <div class="panel-chat" id="chat-panel">
-      <div class="chat-header">
-        <span class="chat-title">Atlas AI</span>
-        <select id="chat-session-select" title="Switch session"></select>
-        <button id="chat-new-session" title="New chat">+</button>
-      </div>
-      <div class="chat-messages" id="chat-messages">
-        <!-- Chat messages render here -->
-      </div>
-      <div class="chat-input-area">
-        <textarea id="chat-input" placeholder="Ask Atlas AI…" rows="1"></textarea>
-        <button id="chat-send" title="Send (Enter)">↑</button>
-      </div>
-      <div class="chat-status" id="chat-status">
-        <span id="chat-connection-status">connecting…</span>
-        <span id="chat-model">sonnet</span>
-        <span id="chat-cost">$0.0000</span>
-      </div>
-    </div><!-- /panel-chat -->
-
-  </div><!-- /two-panel -->
 
   <!-- ── 90-Day Regime Timeline ── -->
   <div class="timeline-section" id="timeline-section">
@@ -1040,12 +1013,6 @@ window.addEventListener('resize', function () { redrawCharts(); });
 
 init();
 </script>
-<script src="chat.js?v=1"></script>
-<script>
-// chat.js loaded synchronously above — Chat is available immediately.
-if (typeof Chat !== 'undefined' && Chat.init) {
-  Chat.init(null);
-}
-</script>
+
 </body>
 </html>
