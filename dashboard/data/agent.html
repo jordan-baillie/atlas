@@ -804,6 +804,207 @@
       .agent-header        { padding: 0 14px; }
       .agent-input-bar     { padding: 10px 14px 12px; }
     }
+
+    /* ─────────────────────────────────────────────────────────────────────
+       SUGGESTED PROMPTS (empty state chips)
+    ───────────────────────────────────────────────────────────────────── */
+    .suggested-prompts {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+      max-width: 520px; margin-top: 16px;
+    }
+
+    .prompt-chip {
+      font-family: var(--sans); font-size: 13px;
+      color: var(--text-2); background: var(--surface);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 8px 16px; cursor: pointer;
+      transition: all 0.15s var(--ease); white-space: nowrap;
+    }
+
+    .prompt-chip:hover {
+      color: var(--text); border-color: var(--accent);
+      background: var(--accent-soft); transform: translateY(-1px);
+    }
+
+    /* ── Model switcher ── */
+    #agent-model-select {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #agent-model-select:focus { border-color: var(--accent); }
+
+    /* ── Theme toggle button ── */
+    .theme-btn {
+      font-size: 16px;
+      color: var(--text-2);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+      transition: color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+
+    .theme-btn:hover { color: var(--text); background: var(--surface); }
+
+    /* ── Connection status banner ── */
+    .conn-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 7px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .conn-banner.disconnected {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .conn-banner button {
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: var(--radius-sm);
+      color: inherit;
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .conn-banner button:hover { background: rgba(245, 158, 11, 0.2); }
+
+    /* ── Keyboard shortcuts modal ── */
+    .shortcuts-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .shortcuts-content {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      min-width: 320px;
+      max-width: 420px;
+    }
+
+    .shortcuts-content h3 {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .shortcut-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 7px 0;
+      font-size: 13px;
+      color: var(--text-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .shortcut-row:last-of-type { border-bottom: none; }
+
+    kbd {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: var(--text);
+      white-space: nowrap;
+      min-width: 80px;
+      text-align: center;
+      display: inline-block;
+    }
+
+    .shortcuts-close {
+      margin-top: 16px;
+      width: 100%;
+      padding: 8px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .shortcuts-close:hover { background: #4f46e5; }
+
+    /* ── Message action buttons (edit / retry) ── */
+    .msg-action-btn {
+      position: absolute; top: 4px;
+      font-size: 12px; padding: 2px 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; cursor: pointer; color: var(--text-3);
+      opacity: 0; transition: opacity 0.15s;
+    }
+
+    .agent-msg:hover .msg-action-btn { opacity: 1; }
+    .msg-edit-btn  { right: 32px; }
+    .msg-retry-btn { right: 4px; }
+
+    /* ── Expandable activity card output ── */
+    .act-card-expanded {
+      max-height: 200px; overflow-y: auto;
+      padding: 6px 9px; margin-top: 4px;
+      font-size: 11px; font-family: var(--mono);
+      background: var(--bg); border-radius: 3px;
+      border: 1px solid var(--border);
+      white-space: pre-wrap; word-break: break-all;
+      color: var(--text-3);
+    }
+
+    .act-card.expandable { cursor: pointer; }
+    .act-card.expandable:hover { border-color: var(--accent); }
+
+    /* ── Thinking block (collapsible in assistant message) ── */
+    details.thinking-block { margin: 8px 0; }
+
+    details.thinking-block > summary {
+      cursor: pointer; color: var(--text-3); font-family: var(--mono);
+      font-size: 11px; padding: 4px 0;
+    }
+
+    details.thinking-block > summary:hover { color: var(--text-2); }
+
+    .thinking-content {
+      color: var(--text-3); font-family: var(--mono); font-size: 11.5px;
+      line-height: 1.5; white-space: pre-wrap; padding: 8px 0;
+      max-height: 300px; overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -817,10 +1018,16 @@
       <option value="">Loading&#8230;</option>
     </select>
     <button id="agent-new-session" type="button">+ New</button>
+    <select id="agent-model-select" title="Switch model">
+      <option value="claude-opus-4-6">opus</option>
+      <option value="claude-sonnet-4-6">sonnet</option>
+      <option value="claude-haiku-4-5">haiku</option>
+    </select>
   </div>
 
   <div class="agent-header-right">
     <a href="/" class="agent-back-link">&#8592; Dashboard</a>
+    <button class="theme-btn" id="agent-theme-btn" title="Toggle theme">&#9680;</button>
     <div id="agent-conn-dot" class="conn-dot connecting" title="Connecting&#8230;"></div>
   </div>
 </header>
@@ -830,6 +1037,11 @@
 
   <!-- Messages pane -->
   <div class="agent-messages-pane">
+    <!-- Disconnection banner -->
+    <div class="conn-banner disconnected" id="conn-banner" style="display:none">
+      &#9888;&#65039; Disconnected
+      <button id="conn-reconnect-btn" type="button">Reconnect</button>
+    </div>
     <!-- Scroll-to-bottom floating button -->
     <button id="scroll-bottom-btn" class="scroll-bottom-btn" title="Scroll to bottom">&#8595;</button>
     <div id="agent-messages">
@@ -840,6 +1052,14 @@
         <div class="agent-empty-sub">
           Full-power AI with access to Atlas tools, strategies, backtest engine,
           and live trading data. Ask anything.
+        </div>
+        <div class="suggested-prompts" id="suggested-prompts-empty">
+          <button class="prompt-chip" data-prompt="What's the current portfolio status?">&#128202; Portfolio status</button>
+          <button class="prompt-chip" data-prompt="Analyze my open positions and suggest improvements">&#128200; Analyze positions</button>
+          <button class="prompt-chip" data-prompt="What regime are we in and what does it mean for sizing?">&#127777;&#65039; Regime analysis</button>
+          <button class="prompt-chip" data-prompt="Run a health check on the trading system">&#128295; System health check</button>
+          <button class="prompt-chip" data-prompt="Show me recent trade performance metrics">&#128203; Trade performance</button>
+          <button class="prompt-chip" data-prompt="What's the plan for today's trading session?">&#128197; Today's plan</button>
         </div>
       </div>
     </div>
@@ -885,6 +1105,21 @@
   </div>
 </div>
 
+<!-- Keyboard Shortcuts Modal -->
+<div class="shortcuts-modal" id="shortcuts-modal" style="display:none">
+  <div class="shortcuts-content">
+    <h3>Keyboard Shortcuts</h3>
+    <div class="shortcut-row"><kbd>Enter</kbd> Send message</div>
+    <div class="shortcut-row"><kbd>Shift+Enter</kbd> New line</div>
+    <div class="shortcut-row"><kbd>Esc</kbd> Cancel generation</div>
+    <div class="shortcut-row"><kbd>Ctrl+K</kbd> Focus input</div>
+    <div class="shortcut-row"><kbd>Ctrl+Shift+N</kbd> New session</div>
+    <div class="shortcut-row"><kbd>&#8593;</kbd> Recall last message</div>
+    <div class="shortcut-row"><kbd>?</kbd> Show shortcuts</div>
+    <button class="shortcuts-close" id="shortcuts-close-btn">Close</button>
+  </div>
+</div>
+
 <script>
 /* jshint esversion: 5 */
 'use strict';
@@ -914,9 +1149,11 @@
   var reconnectTimer   = null;
   var currentMsgEl     = null;   // .agent-msg div being built for assistant
   var currentModel     = 'claude-opus-4-6';
-  var thinkingCard     = null;   // activity card for current thinking block
-  var elapsedTimer     = null;   // interval for generation elapsed time
-  var elapsedStart     = 0;      // timestamp when generation started
+  var thinkingCard      = null;   // activity card for current thinking block
+  var elapsedTimer      = null;   // interval for generation elapsed time
+  var elapsedStart      = 0;      // timestamp when generation started
+  var lastUserMessage   = '';     // last sent message (for retry / Up-arrow recall)
+  var thinkingTextBuffer = '';    // accumulates thinking text for collapsible block
 
   // Map toolCallId -> activity card element so tool_end can mark it done
   var toolCards = {};
@@ -939,6 +1176,12 @@
   var scrollBottomBtn = document.getElementById('scroll-bottom-btn');
   var elapsedSepEl    = document.getElementById('agent-elapsed-sep');
   var elapsedValEl    = document.getElementById('agent-elapsed-val');
+  var modelSelectEl   = document.getElementById('agent-model-select');
+  var themeBtn        = document.getElementById('agent-theme-btn');
+  var connBannerEl    = document.getElementById('conn-banner');
+  var connReconnectBtn = document.getElementById('conn-reconnect-btn');
+  var shortcutsModalEl = document.getElementById('shortcuts-modal');
+  var shortcutsCloseBtn = document.getElementById('shortcuts-close-btn');
 
   /* ── Auth token (Basic Auth -> short-lived WS token) ─────────────────── */
   function getAuthToken() {
@@ -980,6 +1223,7 @@
     ws.onopen = function () {
       reconnectAttempts = 0;
       setConnStatus('connected');
+      showConnBanner(false);
       if (currentSessionId) {
         ws.send(JSON.stringify({ type: 'history', session_id: currentSessionId, limit: 60 }));
       }
@@ -994,6 +1238,7 @@
       ws = null;
       if (isGenerating) { isGenerating = false; currentMsgEl = null; }
       setConnStatus('disconnected');
+      showConnBanner(true);
       if (reconnectAttempts < MAX_RECONNECT) {
         reconnectAttempts++;
         var delay = Math.min(1000 * Math.pow(1.8, reconnectAttempts), 30000);
@@ -1018,6 +1263,7 @@
     }
 
     content = content.trim();
+    lastUserMessage = content;
     clearEmpty();
     appendUserMessage(content);
 
@@ -1061,9 +1307,11 @@
         showThinkingDots(true);
         addThinkingActivity();
         setConnStatus('thinking');
+        thinkingTextBuffer = '';
         break;
 
       case 'thinking_delta':
+        thinkingTextBuffer += (msg.delta || '');
         if (thinkingCard) {
           var det = thinkingCard.querySelector('.act-detail');
           if (det) { det.textContent = (msg.delta || '').slice(0, 80); }
@@ -1075,6 +1323,10 @@
         if (thinkingCard) {
           thinkingCard.classList.add('is-done');
           thinkingCard = null;
+        }
+        if (currentMsgEl && thinkingTextBuffer) {
+          insertThinkingBlock(currentMsgEl, thinkingTextBuffer);
+          thinkingTextBuffer = '';
         }
         break;
 
@@ -1190,6 +1442,19 @@
     var bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     bubble.textContent = content;
+    // Edit button — puts text back in input for editing
+    var editBtn = document.createElement('button');
+    editBtn.className = 'msg-action-btn msg-edit-btn';
+    editBtn.title = 'Edit & resend';
+    editBtn.textContent = '\u270F';
+    var capturedMsg = content;
+    editBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      inputEl.value = capturedMsg;
+      inputEl.focus();
+      autoResize();
+    });
+    bubble.appendChild(editBtn);
     div.appendChild(bubble);
     div.appendChild(makeTimestamp());
     messagesEl.appendChild(div);
@@ -1239,6 +1504,7 @@
         bubble.innerHTML = renderMarkdown(capturedText);
         addCopyButtons(bubble);
         addMsgCopyButton(msgEl, capturedText);
+        addMsgRetryButton(msgEl);
         bubble.style.transition = 'opacity 0.15s ease-in';
         bubble.style.opacity = '1';
         // Clean up inline transition after it settles
@@ -1278,6 +1544,48 @@
       }
     });
     bubble.appendChild(btn);
+  }
+
+  function addMsgRetryButton(msgEl) {
+    if (msgEl.querySelector('.msg-retry-btn')) return;
+    var bubble = msgEl.querySelector('.msg-bubble');
+    if (!bubble) return;
+    var btn = document.createElement('button');
+    btn.className = 'msg-action-btn msg-retry-btn';
+    btn.title = 'Retry';
+    btn.textContent = '\uD83D\uDD04';
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (lastUserMessage) { send(lastUserMessage); }
+    });
+    bubble.appendChild(btn);
+  }
+
+  function insertThinkingBlock(msgEl, text) {
+    var bubble = msgEl.querySelector('.msg-bubble');
+    if (!bubble || !text) return;
+    var details = document.createElement('details');
+    details.className = 'thinking-block';
+    var summary = document.createElement('summary');
+    summary.textContent = '\uD83D\uDCAD Thinking';
+    var content = document.createElement('div');
+    content.className = 'thinking-content';
+    content.textContent = text;
+    details.appendChild(summary);
+    details.appendChild(content);
+    // Insert before any existing content in bubble
+    bubble.insertBefore(details, bubble.firstChild);
+  }
+
+  function showConnBanner(visible) {
+    if (!connBannerEl) return;
+    connBannerEl.style.display = visible ? 'flex' : 'none';
+  }
+
+  function toggleShortcutsModal() {
+    if (!shortcutsModalEl) return;
+    var isVisible = shortcutsModalEl.style.display !== 'none';
+    shortcutsModalEl.style.display = isVisible ? 'none' : 'flex';
   }
 
   function showThinkingDots(active) {
@@ -1376,6 +1684,23 @@
       if (!det) { det = document.createElement('span'); det.className = 'act-detail'; card.appendChild(det); }
       det.textContent = '\u2192 ' + resultPreview.slice(0, 80);
       det.title = resultPreview;
+      // Enable click-to-expand if preview was truncated
+      if (resultPreview.length > 80) {
+        card.classList.add('expandable');
+        card.setAttribute('data-full-preview', resultPreview);
+        card.addEventListener('click', function () {
+          var existing = card.querySelector('.act-card-expanded');
+          if (existing) {
+            card.removeChild(existing);
+          } else {
+            var exp = document.createElement('pre');
+            exp.className = 'act-card-expanded';
+            exp.textContent = card.getAttribute('data-full-preview') || '';
+            card.appendChild(exp);
+            exp.scrollTop = 0;
+          }
+        });
+      }
     }
     delete toolCards[toolCallId];
   }
@@ -1874,9 +2199,56 @@
 
   cancelBtn.addEventListener('click', function () { cancel(); });
 
-  // Escape key cancels generation
+  // Escape key cancels generation / closes shortcuts modal
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && isGenerating) { cancel(); }
+    if (e.key === 'Escape') {
+      if (shortcutsModalEl && shortcutsModalEl.style.display !== 'none') {
+        shortcutsModalEl.style.display = 'none';
+      } else if (isGenerating) {
+        cancel();
+      }
+    }
+  });
+
+  // Additional keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    var isMod = e.ctrlKey || e.metaKey;
+
+    // Ctrl/Cmd+K — focus input
+    if (isMod && !e.shiftKey && e.key === 'k') {
+      e.preventDefault();
+      inputEl.focus();
+      return;
+    }
+
+    // Ctrl/Cmd+Shift+N — new session
+    if (isMod && e.shiftKey && (e.key === 'N' || e.key === 'n')) {
+      e.preventDefault();
+      createNewSession();
+      return;
+    }
+
+    // Up arrow when input focused and empty — recall last message
+    if (e.key === 'ArrowUp' && !isGenerating &&
+        document.activeElement === inputEl && inputEl.value === '') {
+      e.preventDefault();
+      if (lastUserMessage) {
+        inputEl.value = lastUserMessage;
+        autoResize();
+        var len = inputEl.value.length;
+        inputEl.setSelectionRange(len, len);
+      }
+      return;
+    }
+
+    // ? key (when input NOT focused) or Ctrl/Cmd+/ — show shortcuts
+    if (document.activeElement !== inputEl) {
+      if (e.key === '?' || (isMod && e.key === '/')) {
+        e.preventDefault();
+        toggleShortcutsModal();
+        return;
+      }
+    }
   });
 
   sessionSel.addEventListener('change', function () {
@@ -1910,10 +2282,61 @@
   var savedTheme = localStorage.getItem('atlas-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
+  // Theme toggle button
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      var current = document.documentElement.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('atlas-theme', next);
+    });
+  }
+
+  // Model select handler
+  if (modelSelectEl) {
+    modelSelectEl.addEventListener('change', function () {
+      currentModel = modelSelectEl.value || currentModel;
+      updateModelLabel();
+    });
+  }
+
   /* ── Boot ─────────────────────────────────────────────────────────────── */
   loadSessions();
   connect(null);
   inputEl.focus();
+
+  // Suggested prompt chips
+  var promptChips = document.querySelectorAll('.prompt-chip');
+  for (var _pi = 0; _pi < promptChips.length; _pi++) {
+    (function (chip) {
+      chip.addEventListener('click', function () {
+        var prompt = chip.getAttribute('data-prompt');
+        if (prompt) { send(prompt); }
+      });
+    })(promptChips[_pi]);
+  }
+
+  // Shortcuts modal close button
+  if (shortcutsCloseBtn) {
+    shortcutsCloseBtn.addEventListener('click', function () {
+      if (shortcutsModalEl) { shortcutsModalEl.style.display = 'none'; }
+    });
+  }
+  if (shortcutsModalEl) {
+    shortcutsModalEl.addEventListener('click', function (e) {
+      if (e.target === shortcutsModalEl) { shortcutsModalEl.style.display = 'none'; }
+    });
+  }
+
+  // Reconnect button in connection banner
+  if (connReconnectBtn) {
+    connReconnectBtn.addEventListener('click', function () {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      reconnectAttempts = 0;
+      showConnBanner(false);
+      connect(currentSessionId);
+    });
+  }
 
   // Update relative timestamps on done cards every 5s
   setInterval(function () {

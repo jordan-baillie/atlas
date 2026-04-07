@@ -76,6 +76,8 @@ try:
         add_message as _chat_add_message,
         get_messages as _chat_get_messages,
         get_latest_session as _chat_get_latest_session,
+        rename_session as _chat_rename_session,
+        delete_session as _chat_delete_session,
     )
     from services.pi_session import PiSessionManager  # noqa: E402
     _CHAT_AVAILABLE = True
@@ -1030,6 +1032,43 @@ def chat_get_session_endpoint(
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return JSONResponse(session)
+
+
+@app.put("/api/chat/sessions/{session_id}")
+async def chat_rename_session_endpoint(
+    session_id: str,
+    request: Request,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """PUT /api/chat/sessions/{id} — rename a chat session.
+
+    Body: {"name": "new session name"}
+    """
+    _require_chat()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name is required")
+    ok = _chat_rename_session(session_id, name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return JSONResponse({"ok": True, "id": session_id, "name": name})
+
+
+@app.delete("/api/chat/sessions/{session_id}")
+def chat_delete_session_endpoint(
+    session_id: str,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """DELETE /api/chat/sessions/{id} — soft-delete a chat session."""
+    _require_chat()
+    ok = _chat_delete_session(session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return JSONResponse({"ok": True, "id": session_id})
 
 
 @app.get("/api/chat/sessions/{session_id}/messages")
