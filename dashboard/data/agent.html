@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Atlas Agent</title>
+  <title>Homerbot — Atlas Agent</title>
   <link rel="stylesheet" href="/atlas.css">
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
   <style>
@@ -233,10 +233,11 @@
     }
 
     .agent-empty-icon {
-      font-size: 52px;
-      opacity: 0.3;
+      width: 72px; height: 72px;
+      opacity: 0.7;
       animation: empty-float 4s ease-in-out infinite;
     }
+    .agent-empty-icon svg { width: 72px; height: 72px; }
 
     @keyframes empty-float {
       0%, 100% { transform: translateY(0); }
@@ -290,8 +291,17 @@
       position: relative;
     }
 
-    /* Assistant message — left-aligned */
-    .agent-msg-assistant { align-items: flex-start; }
+    /* Assistant message — left-aligned with avatar */
+    .agent-msg-assistant { align-items: flex-start; flex-direction: row; gap: 10px; }
+
+    .msg-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 2px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .msg-avatar svg { width: 32px; height: 32px; }
 
     .agent-msg-assistant .msg-bubble {
       position: relative;
@@ -300,11 +310,11 @@
       border-left: 2px solid rgba(99,102,241,0.2);
       border-radius: 4px 18px 18px 18px;
       padding: 14px 18px;
-      max-width: 100%;
+      max-width: calc(100% - 46px);
       font-size: 14px;
       line-height: 1.65;
       word-break: break-word;
-      position: relative;
+      min-width: 0;
     }
 
     /* System / error message */
@@ -1237,7 +1247,7 @@
 
 <!-- ── Header ── -->
 <header class="agent-header">
-  <div class="agent-logo"><span>&#9650;</span> Atlas Agent</div>
+  <div class="agent-logo"><span>&#9650;</span> Homerbot</div>
 
   <div class="agent-header-center">
     <select id="agent-session-select" title="Switch session">
@@ -1277,11 +1287,11 @@
     <div id="agent-messages">
       <!-- Empty state — removed once first message arrives -->
       <div class="agent-empty" id="agent-empty-state" style="display:none">
-        <div class="agent-empty-icon">&#9672;</div>
-        <div class="agent-empty-title">Atlas Agent</div>
+        <div class="agent-empty-icon" id="empty-icon"></div>
+        <div class="agent-empty-title">Homerbot</div>
         <div class="agent-empty-sub">
-          Full-power AI with access to Atlas tools, strategies, backtest engine,
-          and live trading data. Ask anything.
+          D'oh-powered AI with access to Atlas tools, strategies, backtest engine,
+          and live trading data. Mmm… ask anything. 🍩
         </div>
         <div class="suggested-prompts" id="suggested-prompts-empty">
           <button class="prompt-chip" data-prompt="What's the current portfolio status?">&#128202; Portfolio status</button>
@@ -1331,7 +1341,7 @@
     <button id="agent-attach" type="button" title="Attach image (paste or drag &amp; drop also works)">&#128206;</button>
     <textarea
       id="agent-input"
-      placeholder="Message Atlas Agent&#8230; (Enter to send, Shift+Enter for newline, paste/drop images)"
+      placeholder="Message Homerbot&#8230; (Enter to send, Shift+Enter for newline, paste/drop images)"
       rows="1"
       autocomplete="off"
       spellcheck="true"
@@ -1839,14 +1849,46 @@
     document.body.appendChild(overlay);
   }
 
+  // Homerbot avatar SVG (Homer Simpson robot)
+  var HOMERBOT_SVG = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">' +
+    '<circle cx="32" cy="32" r="30" fill="#FFD93D"/>' +       // yellow head
+    '<circle cx="32" cy="32" r="30" fill="none" stroke="#E6A800" stroke-width="1.5"/>' +
+    '<ellipse cx="24" cy="28" rx="8" ry="9" fill="white" stroke="#333" stroke-width="1.2"/>' + // left eye
+    '<ellipse cx="40" cy="28" rx="8" ry="9" fill="white" stroke="#333" stroke-width="1.2"/>' + // right eye
+    '<circle cx="24" cy="29" r="3" fill="#333"/>' +           // left pupil
+    '<circle cx="40" cy="29" r="3" fill="#333"/>' +           // right pupil
+    '<ellipse cx="33" cy="36" rx="4" ry="3" fill="#E6A800"/>' + // nose
+    '<path d="M20 44 Q32 52 44 44" stroke="#333" stroke-width="1.5" fill="none" stroke-linecap="round"/>' + // smile
+    '<path d="M14 14 Q20 4 32 8" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>' + // hair strand 1
+    '<path d="M16 12 Q22 2 34 6" stroke="#666" stroke-width="2" fill="none" stroke-linecap="round"/>' + // hair strand 2
+    '<rect x="10" y="54" width="44" height="8" rx="3" fill="#6366f1" opacity="0.8"/>' + // robot collar
+    '<circle cx="22" cy="58" r="2" fill="#a5b4fc"/>' +       // collar rivet
+    '<circle cx="32" cy="58" r="2" fill="#a5b4fc"/>' +       // collar rivet
+    '<circle cx="42" cy="58" r="2" fill="#a5b4fc"/>' +       // collar rivet
+    '<rect x="48" y="18" width="6" height="4" rx="2" fill="#6366f1"/>' + // antenna base
+    '<line x1="51" y1="18" x2="54" y2="10" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>' + // antenna
+    '<circle cx="54" cy="9" r="2.5" fill="#f59e0b"/>' +     // antenna tip
+    '</svg>';
+
+  // Debounced live markdown rendering during streaming
+  var _renderTimer = null;
+  var _lastRenderLen = 0;
+
   function startAssistantMessage() {
     var div = document.createElement('div');
     div.className = 'agent-msg agent-msg-assistant';
+    // Avatar
+    var avatar = document.createElement('div');
+    avatar.className = 'msg-avatar';
+    avatar.innerHTML = HOMERBOT_SVG;
+    div.appendChild(avatar);
+    // Bubble
     var bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
     div.appendChild(bubble);
     messagesEl.appendChild(div);
     currentMsgEl = div;
+    _lastRenderLen = 0;
     scrollToBottom();
   }
 
@@ -1856,7 +1898,20 @@
     if (!bubble) return;
     var raw = (bubble.getAttribute('data-raw') || '') + delta;
     bubble.setAttribute('data-raw', raw);
-    bubble.textContent = raw;
+    // Live markdown: re-render on a debounce (every 150ms)
+    // Only re-render if enough new content arrived (> 20 chars since last render)
+    if (!_renderTimer) {
+      _renderTimer = setTimeout(function () {
+        _renderTimer = null;
+        var currentRaw = bubble.getAttribute('data-raw') || '';
+        if (currentRaw.length - _lastRenderLen > 15) {
+          bubble.innerHTML = renderMarkdown(currentRaw);
+          addCopyButtons(bubble);
+          _lastRenderLen = currentRaw.length;
+        }
+        scrollToBottom();
+      }, 150);
+    }
     scrollToBottom();
   }
 
@@ -1867,6 +1922,10 @@
   }
 
   function finishAssistantMessage(fullText) {
+    // Cancel any pending live-render timer
+    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
+    _lastRenderLen = 0;
+
     if (!currentMsgEl) return;
     var msgEl = currentMsgEl;
     var bubble = msgEl.querySelector('.msg-bubble');
@@ -1874,20 +1933,11 @@
       var text = fullText || bubble.getAttribute('data-raw') || bubble.textContent || '';
       bubble.removeAttribute('data-raw');
 
-      // Crossfade: briefly fade out raw text, swap to rendered HTML, fade back in
-      bubble.style.transition = 'opacity 0.08s ease-out';
-      bubble.style.opacity = '0';
-      var capturedText = text;
-      setTimeout(function () {
-        bubble.innerHTML = renderMarkdown(capturedText);
-        addCopyButtons(bubble);
-        addMsgCopyButton(msgEl, capturedText);
-        addMsgRetryButton(msgEl);
-        bubble.style.transition = 'opacity 0.15s ease-in';
-        bubble.style.opacity = '1';
-        // Clean up inline transition after it settles
-        setTimeout(function () { bubble.style.transition = ''; }, 200);
-      }, 80);
+      // Final render — already live-rendered, just do a clean final pass
+      bubble.innerHTML = renderMarkdown(text);
+      addCopyButtons(bubble);
+      addMsgCopyButton(msgEl, text);
+      addMsgRetryButton(msgEl);
 
       // Timestamp
       if (!msgEl.querySelector('.msg-time')) {
@@ -2031,6 +2081,12 @@
       } else if (m.role === 'assistant') {
         var div = document.createElement('div');
         div.className = 'agent-msg agent-msg-assistant';
+        // Avatar
+        var avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.innerHTML = HOMERBOT_SVG;
+        div.appendChild(avatar);
+        // Bubble
         var bubble = document.createElement('div');
         bubble.className = 'msg-bubble';
         bubble.innerHTML = renderMarkdown(m.content || '');
@@ -2904,6 +2960,10 @@
   }
 
   /* ── Boot ─────────────────────────────────────────────────────────────── */
+  // Set Homerbot avatar in empty state
+  var emptyIcon = document.getElementById('empty-icon');
+  if (emptyIcon) { emptyIcon.innerHTML = HOMERBOT_SVG; emptyIcon.style.fontSize = '1px'; }
+
   loadSessions();
   connect(null);
   inputEl.focus();
