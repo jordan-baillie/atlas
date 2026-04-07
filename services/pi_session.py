@@ -270,7 +270,7 @@ class PiSessionManager:
             else:
                 events.append(PiEvent("tool_end", {
                     "tool_call_id": tool_call_id,
-                    "result_preview": text[:200] if text else "",
+                    "result_preview": text[:1000] if text else "",
                 }))
 
         elif evt_type == "turn_end":

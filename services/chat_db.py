@@ -233,3 +233,23 @@ def get_latest_session() -> Optional[dict]:
             "SELECT * FROM chat_sessions WHERE status = 'active' ORDER BY updated_at DESC LIMIT 1"
         ).fetchone()
     return dict(row) if row else None
+
+
+def rename_session(session_id: str, name: str) -> bool:
+    """Rename a chat session. Returns True if found and updated."""
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE chat_sessions SET name = ?, updated_at = ? WHERE id = ?",
+            (name, datetime.utcnow().isoformat(), session_id),
+        )
+        return cursor.rowcount > 0
+
+
+def delete_session(session_id: str) -> bool:
+    """Soft-delete a session by setting status='deleted'. Returns True if found."""
+    with get_db() as conn:
+        cursor = conn.execute(
+            "UPDATE chat_sessions SET status = 'deleted', updated_at = ? WHERE id = ?",
+            (datetime.utcnow().isoformat(), session_id),
+        )
+        return cursor.rowcount > 0
