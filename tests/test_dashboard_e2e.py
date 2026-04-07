@@ -539,6 +539,76 @@ class TestSmoke:
         assert has_send, "Chat.send should be a function"
 
 
+# ── Agent Page Tests ──────────────────────────────────────────────────────────
+
+class TestAgentPage:
+    """Verify the full-page agent chat interface at /chat."""
+
+    def test_agent_page_loads(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert "Atlas" in page.title()
+
+    def test_agent_page_no_js_errors(self, page: "Page") -> None:
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        page.wait_for_timeout(1500)
+        critical = [e for e in errors if "SyntaxError" in e or "ReferenceError" in e]
+        assert critical == [], f"Critical JS errors: {critical}"
+
+    def test_agent_message_area(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#agent-messages").is_visible()
+
+    def test_agent_activity_feed(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#activity-feed").is_visible()
+
+    def test_agent_input(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        input_el = page.locator("#agent-input")
+        assert input_el.is_visible()
+        input_el.fill("test message")
+        assert input_el.input_value() == "test message"
+
+    def test_agent_send_button(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#agent-send").is_visible()
+
+    def test_agent_session_selector(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#agent-session-select").count() == 1
+
+    def test_agent_new_session_button(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#agent-new-session").is_visible()
+
+    def test_agent_dashboard_link(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        link = page.locator('a[href="/"]')
+        assert link.count() >= 1
+
+    def test_agent_status_bar(self, page: "Page") -> None:
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        assert page.locator("#agent-status").count() == 1
+
+    def test_dashboard_has_agent_link(self, page: "Page") -> None:
+        page.goto(SERVER_URL, wait_until="domcontentloaded")
+        link = page.locator('a[href="/chat"]')
+        assert link.count() >= 1
+
+
+class TestAgentResponsive:
+    def test_agent_mobile_hides_activity(self, mobile_page: "Page") -> None:
+        mobile_page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        mobile_page.wait_for_timeout(300)
+        visible = mobile_page.evaluate(
+            "() => { const el = document.querySelector('#activity-feed'); "
+            "return el ? window.getComputedStyle(el).display !== 'none' : false; }"
+        )
+        assert not visible, "Activity feed should be hidden on mobile"
+
+
 # ── Entry point for direct execution ─────────────────────────────────────────
 
 if __name__ == "__main__":

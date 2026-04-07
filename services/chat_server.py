@@ -1014,8 +1014,21 @@ async def chat_create_session_endpoint(
     except Exception:
         body = {}
     name = body.get("name")
-    model = body.get("model", "claude-sonnet-4-6")
+    model = body.get("model", "claude-opus-4-6")
     session = _chat_create_session(name=name, model=model)
+    return JSONResponse(session)
+
+
+@app.get("/api/chat/sessions/{session_id}")
+def chat_get_session_endpoint(
+    session_id: str,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+) -> JSONResponse:
+    """GET /api/chat/sessions/{id} — get single session details."""
+    _require_chat()
+    session = _chat_get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
     return JSONResponse(session)
 
 
@@ -1209,6 +1222,19 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ── /chat route — full-page agent interface ──────────────────────────────────
+
+@app.get("/chat")
+def serve_agent_page(
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """Serve the full-page AI agent chat interface."""
+    file_path = SERVE_DIR / "agent.html"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Agent page not found")
+    return FileResponse(str(file_path), headers={"Cache-Control": "no-cache"})
+
+
 # Static file catch-all  (MUST be last — fallback after all API routes)
 # ═══════════════════════════════════════════════════════════════════════════════
 

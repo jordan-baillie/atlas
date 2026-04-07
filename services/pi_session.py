@@ -61,7 +61,7 @@ class PiSessionManager:
             await websocket.send_json(event.to_dict())
     """
 
-    def __init__(self, session_id: str, model: str = "claude-sonnet-4-6") -> None:
+    def __init__(self, session_id: str, model: str = "claude-opus-4-6") -> None:
         self.session_id = session_id
         self.model = model
         self.process: Optional[asyncio.subprocess.Process] = None
@@ -184,7 +184,8 @@ class PiSessionManager:
         cmd += [
             "--session", str(self.pi_session_path),
             "--model", self.model,
-            "--no-extensions",  # don't auto-discover other extensions
+            # Do NOT pass --no-extensions — let pi discover all extensions
+            # This enables swarm, subagent, atlas tools, etc.
         ]
 
         # Resume existing session so the conversation history is preserved
@@ -233,10 +234,44 @@ class PiSessionManager:
         elif evt_type == "tool_call":
             tool = raw.get("toolName") or raw.get("tool", "")
             args = raw.get("input", {})
-            events.append(PiEvent("tool_start", {"tool": tool, "args": _summarize_args(args)}))
+            tool_call_id = raw.get("toolCallId", "")
+            # Rich handling for delegation/agent tools
+            if tool in ("delegate", "spawn_worker", "swarm", "subagent"):
+                events.append(PiEvent("delegation_start", {
+                    "tool": tool,
+                    "target": args.get("target", args.get("name", "")),
+                    "task_preview": str(args.get("prompt", args.get("task", args.get("objective", ""))))[:300],
+                    "tool_call_id": tool_call_id,
+                }))
+            else:
+                events.append(PiEvent("tool_start", {
+                    "tool": tool,
+                    "args": _summarize_args(args),
+                    "tool_call_id": tool_call_id,
+                }))
 
         elif evt_type == "tool_result":
-            events.append(PiEvent("tool_end", {}))
+            tool_call_id = raw.get("toolCallId", "")
+            content = raw.get("content", [])
+            text = ""
+            for block in (content if isinstance(content, list) else []):
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text += block.get("text", "")
+            details = raw.get("details", {})
+            if isinstance(details, dict) and details.get("mode") == "delegation":
+                results = details.get("results", [])
+                events.append(PiEvent("delegation_end", {
+                    "tool_call_id": tool_call_id,
+                    "agents": [{"name": r.get("agent", ""), "team": r.get("team", ""),
+                                "cost": r.get("cost", 0), "tokens": r.get("tokens", 0)}
+                               for r in results],
+                    "response_preview": text[:500] if text else "",
+                }))
+            else:
+                events.append(PiEvent("tool_end", {
+                    "tool_call_id": tool_call_id,
+                    "result_preview": text[:200] if text else "",
+                }))
 
         elif evt_type == "turn_end":
             msg = raw.get("message", {})

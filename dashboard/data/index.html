@@ -65,6 +65,17 @@
 .stat-primary .stat-value { font-size: 1.85rem; }
 .stat-primary .stat-label { font-size: 11px; }
 
+.agent-link {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 12px; font-weight: 600;
+  color: var(--accent); text-decoration: none;
+  padding: 6px 14px; border-radius: 20px;
+  border: 1px solid var(--accent);
+  transition: all 0.2s var(--ease);
+}
+.agent-link:hover { background: var(--accent); color: white; }
+.agent-link-icon { font-size: 14px; }
+
 @media (max-width: 900px) {
   .regime-indicator { display: none; }
 }
@@ -85,6 +96,7 @@
     </div>
     <div class="header-right">
       <div class="market-clock-strip" id="market-clock-strip"></div>
+      <a href="/chat" class="agent-link" title="Open AI Agent (full page)"><span class="agent-link-icon">◈</span> Agent</a>
       <button class="theme-btn" id="theme-btn" title="Toggle theme (L)">◑</button>
     </div>
   </header>
