@@ -243,101 +243,35 @@
       align-items: center;
       justify-content: center;
       flex: 1;
-      gap: 6px;
+      gap: 14px;
       padding: 48px 32px;
       text-align: center;
-      position: relative;
     }
-
-    .agent-empty::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 500px;
-      height: 500px;
-      transform: translate(-50%, -55%);
-      background: radial-gradient(circle, rgba(99,102,241,0.05) 0%, rgba(245,158,11,0.04) 35%, transparent 65%);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 0;
-      animation: ambient-breathe 6s ease-in-out infinite;
-    }
-
-    @keyframes ambient-breathe {
-      0%, 100% { opacity: 0.7; transform: translate(-50%, -55%) scale(1); }
-      50%      { opacity: 1; transform: translate(-50%, -55%) scale(1.06); }
-    }
-
-    .agent-empty > * { position: relative; z-index: 1; }
 
     .agent-empty-icon {
-      width: 100px; height: 100px;
+      width: 72px; height: 72px;
+      opacity: 0.7;
       animation: empty-float 4s ease-in-out infinite;
-      position: relative;
-      margin-bottom: 8px;
     }
-
-    .agent-empty-icon svg {
-      width: 100px; height: 100px;
-      filter: drop-shadow(0 4px 24px rgba(245,158,11,0.25));
-    }
-
-    .agent-empty-icon::after {
-      content: '';
-      position: absolute;
-      inset: -14px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(245,158,11,0.15);
-      animation: ring-pulse 3s ease-in-out infinite;
-    }
-
-    @keyframes ring-pulse {
-      0%, 100% { opacity: 0.4; transform: scale(1); }
-      50%      { opacity: 0.8; transform: scale(1.06); }
-    }
+    .agent-empty-icon svg { width: 72px; height: 72px; }
 
     @keyframes empty-float {
       0%, 100% { transform: translateY(0); }
       50%       { transform: translateY(-8px); }
     }
 
-    .agent-empty-greeting {
-      font-family: var(--sans);
-      font-size: 13px;
-      color: var(--text-3);
-      letter-spacing: 0.3px;
-      margin-bottom: 2px;
-    }
-
     .agent-empty-title {
-      font-family: var(--sans);
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-2);
     }
 
     .agent-empty-sub {
-      font-size: 14px;
-      color: var(--text-2);
-      max-width: 420px;
-      line-height: 1.7;
-      margin-bottom: 8px;
-    }
-
-    .agent-empty-hint {
-      font-family: var(--mono);
-      font-size: 11px;
+      font-size: 13px;
       color: var(--text-3);
-      opacity: 0.5;
-      margin-top: 12px;
-    }
-
-    .agent-empty-hint kbd {
-      font-size: 10px;
-      padding: 1px 5px;
-      min-width: auto;
+      max-width: 320px;
+      line-height: 1.6;
     }
 
     /* ─────────────────────────────────────────────────────────────────────
@@ -697,15 +631,6 @@
     #activity-feed::-webkit-scrollbar-track { background: transparent; }
     #activity-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    #activity-feed:empty::before {
-      content: '\23F3';
-      display: block;
-      text-align: center;
-      font-size: 28px;
-      padding: 32px 10px 8px;
-      opacity: 0.3;
-    }
-
     #activity-feed:empty::after {
       content: 'Activity will appear here\2026';
       display: block;
@@ -713,8 +638,7 @@
       color: var(--text-3);
       font-family: var(--mono);
       font-size: 11px;
-      padding: 0 10px 20px;
-      opacity: 0.5;
+      padding: 20px 10px;
     }
 
     /* ── Activity cards ── */
@@ -814,9 +738,9 @@
     .agent-input-bar {
       border-top: 1px solid var(--border);
       background: var(--bg);
-      padding: 14px 20px 16px;
+      padding: 12px 20px 14px;
       flex-shrink: 0;
-      box-shadow: 0 -6px 24px rgba(0,0,0,0.12);
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
     }
 
     .input-row {
@@ -845,7 +769,7 @@
 
     #agent-input:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 0 24px rgba(99,102,241,0.06);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
     }
     #agent-input::placeholder { color: var(--text-3); }
     #agent-input:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1080,41 +1004,21 @@
        SUGGESTED PROMPTS (empty state chips)
     ───────────────────────────────────────────────────────────────────── */
     .suggested-prompts {
-      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-      max-width: 560px; margin-top: 20px;
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+      max-width: 520px; margin-top: 16px;
     }
 
     .prompt-chip {
-      font-family: var(--sans); font-size: 13px; font-weight: 500;
+      font-family: var(--sans); font-size: 13px;
       color: var(--text-2); background: var(--surface);
-      border: 1px solid var(--border); border-radius: 12px;
-      padding: 10px 18px; cursor: pointer;
-      transition: all 0.2s var(--ease); white-space: nowrap;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .prompt-chip::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(245,158,11,0.04) 100%);
-      opacity: 0;
-      transition: opacity 0.2s;
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 8px 16px; cursor: pointer;
+      transition: all 0.15s var(--ease); white-space: nowrap;
     }
 
     .prompt-chip:hover {
-      color: var(--text); border-color: rgba(99,102,241,0.4);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(99,102,241,0.12);
-    }
-
-    .prompt-chip:hover::before { opacity: 1; }
-
-    .prompt-chip:active {
-      transform: translateY(0) scale(0.97);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      color: var(--text); border-color: var(--accent);
+      background: var(--accent-soft); transform: translateY(-1px);
     }
 
     /* ── Model switcher ── */
@@ -1422,7 +1326,6 @@
       <!-- Empty state — removed once first message arrives -->
       <div class="agent-empty" id="agent-empty-state" style="display:none">
         <div class="agent-empty-icon" id="empty-icon"></div>
-        <div class="agent-empty-greeting" id="empty-greeting"></div>
         <div class="agent-empty-title">Homerbot</div>
         <div class="agent-empty-sub">
           D'oh-powered AI with access to Atlas tools, strategies, backtest engine,
@@ -1436,7 +1339,6 @@
           <button class="prompt-chip" data-prompt="Show me recent trade performance metrics">&#128203; Trade performance</button>
           <button class="prompt-chip" data-prompt="What's the plan for today's trading session?">&#128197; Today's plan</button>
         </div>
-        <div class="agent-empty-hint">Press <kbd>?</kbd> for shortcuts &middot; <kbd>Ctrl+K</kbd> to focus</div>
       </div>
     </div>
   </div>
@@ -3165,16 +3067,6 @@
   // Set Homerbot avatar in empty state
   var emptyIcon = document.getElementById('empty-icon');
   if (emptyIcon) { emptyIcon.innerHTML = HOMERBOT_SVG; emptyIcon.style.fontSize = '1px'; }
-
-  // Time-based greeting
-  var greetingEl = document.getElementById('empty-greeting');
-  if (greetingEl) {
-    var h = new Date().getHours();
-    var greeting = h < 12 ? 'Good morning \u2600\uFE0F'
-                 : h < 18 ? 'Good afternoon \uD83C\uDF24'
-                          : 'Good evening \uD83C\uDF19';
-    greetingEl.textContent = greeting;
-  }
 
   loadSessions();
   connect(null);
