@@ -21,9 +21,8 @@
   --text-2:       #a1a1aa;
   --text-3:       #52525b;
   --accent:       #6366f1;
-  --accent-soft:  rgba(99,102,241,0.12);
   --mono:         'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
-  --sans:         'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sans:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --radius:       10px;
   --radius-sm:    6px;
   --radius-xs:    4px;
@@ -176,6 +175,10 @@ body {
   grid-template-columns: repeat(6, 1fr);
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.summary-strip.compact {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .stat {
@@ -849,28 +852,4 @@ body {
   #donut-canvas { width: 140px; height: 140px; }
   .performance-grid { grid-template-columns: 1fr 1fr; }
   .chart-legend { display: none; }
-}
-
-/* ── Portfolio full-width layout ── */
-.panel-portfolio {
-  min-width: 0;
-  margin-bottom: 14px;
-}
-
-/* ── Compact summary strip (4 stats instead of 6) ── */
-.summary-strip.compact {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-@media (max-width: 900px) {
-  .summary-strip.compact {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .summary-strip.compact {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
 }

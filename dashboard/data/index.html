@@ -78,6 +78,169 @@
 @media (max-width: 900px) {
   .regime-indicator { display: none; }
 }
+
+/* ── Performance Section (inline overrides) ── */
+.perf-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.perf-overview-grid .perf-stat {
+  padding: 12px 14px;
+  min-height: 0;
+}
+
+.perf-overview-grid .perf-value {
+  font-size: 18px;
+}
+
+.perf-sub {
+  font-size: 12px;
+  opacity: 0.55;
+  font-weight: 400;
+}
+
+/* Strategy breakdown table */
+.strat-breakdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.strat-breakdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.strat-breakdown thead th {
+  text-align: left;
+  padding: 10px 14px 8px;
+  color: var(--text-3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.strat-breakdown thead th:not(:first-child) {
+  text-align: right;
+}
+
+.strat-breakdown tbody td {
+  padding: 9px 14px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.strat-breakdown tbody td:not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.strat-breakdown tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.strat-breakdown tbody tr:hover td {
+  background: var(--surface-2);
+}
+
+.strat-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text) !important;
+  font-weight: 500;
+}
+
+.strat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Strategy allocation row */
+.alloc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.alloc-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+  transition: border-color 0.2s var(--ease);
+}
+
+.alloc-chip:hover { border-color: var(--border-hover); }
+
+.alloc-chip .alloc-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.alloc-chip .alloc-val {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.alloc-chip .alloc-pct {
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.alloc-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.alloc-bar-seg {
+  height: 100%;
+  transition: width 0.4s var(--ease);
+}
+
+.perf-subsection-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .perf-overview-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .perf-overview-grid { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
@@ -139,6 +302,14 @@
         </div>
         <canvas id="equity-canvas"></canvas>
         <div class="chart-tooltip" id="chart-tooltip"></div>
+      </div>
+
+      <!-- Performance Section -->
+      <div class="performance-section" id="performance-section">
+        <div class="section-header">Performance</div>
+        <div id="perf-overview"></div>
+        <div id="perf-strategies"></div>
+        <div id="perf-allocation"></div>
       </div>
 
       <!-- Open Positions -->
@@ -790,10 +961,120 @@ function renderPositions(data) {
   }).join('');
 }
 
-// ── Performance Metrics (JS kept, HTML section removed — accessible via chat) ──
+// ── Performance Metrics ───────────────────────────────────────────────────
 function renderPerformance(data) {
-  // HTML section no longer exists; this is a no-op
-  // Left for future use / chat tool compatibility
+  var container = document.getElementById('performance-section');
+  if (!container) return;
+
+  var sp = (data.strategy_performance || {});
+  var overall = sp.overall || {};
+  var byStrategy = sp.by_strategy || {};
+  var allocation = data.strategy_allocation || [];
+  var summary = data.summary || {};
+
+  // ── Overall Stats Grid (6 metrics) ──
+  var totalPnl = summary.total_pnl || 0;
+  var totalPnlPct = summary.total_pnl_pct || 0;
+  var trades = overall.trades || 0;
+  var winRate = overall.win_rate || 0;
+  var pf = overall.profit_factor || 0;
+  var avgWin = overall.avg_win || 0;
+  var avgLoss = overall.avg_loss || 0;
+  var expectancy = overall.expectancy || 0;
+
+  var overviewEl = document.getElementById('perf-overview');
+  if (overviewEl) {
+    overviewEl.innerHTML =
+      '<div class="perf-overview-grid">' +
+        perfStat('Total P&L', fmtSignedCcy(totalPnl) + ' <span class="perf-sub">' + fmtPct(totalPnlPct) + '</span>', pnlClass(totalPnl)) +
+        perfStat('Win Rate', (winRate * 100).toFixed(1) + '%', winRate >= 0.5 ? 'green' : (trades > 0 ? 'red' : '')) +
+        perfStat('Profit Factor', pf > 0 ? pf.toFixed(2) : '—', pf >= 1 ? 'green' : (trades > 0 ? 'red' : '')) +
+        perfStat('Avg Win / Loss', (avgWin > 0 ? fmtCcy(avgWin) : '—') + ' / ' + (avgLoss !== 0 ? fmtCcy(Math.abs(avgLoss)) : '—'), '') +
+        perfStat('Total Trades', trades.toString(), '') +
+        perfStat('Expectancy', trades > 0 ? fmtSignedCcy(expectancy) : '—', pnlClass(expectancy)) +
+      '</div>';
+  }
+
+  // ── Strategy Breakdown Table ──
+  var stratEl = document.getElementById('perf-strategies');
+  if (stratEl) {
+    var stratKeys = Object.keys(byStrategy);
+    stratKeys.sort(function (a, b) {
+      return Math.abs(byStrategy[b].pnl || 0) - Math.abs(byStrategy[a].pnl || 0);
+    });
+
+    if (stratKeys.length === 0) {
+      stratEl.innerHTML = '';
+    } else {
+      var trows = stratKeys.map(function (key) {
+        var s = byStrategy[key];
+        var color = STRATEGY_COLORS[key] || '#71717a';
+        var label = key.replace(/_/g, ' ');
+        var wr = s.trades > 0 ? (s.wins / s.trades * 100).toFixed(0) + '%' : '—';
+        var pnlVal = s.pnl || 0;
+        return '<tr>' +
+          '<td><span class="strat-name-cell">' +
+            '<span class="strat-dot" style="background:' + color + '"></span>' +
+            label +
+          '</span></td>' +
+          '<td>' + s.trades + '</td>' +
+          '<td class="' + pnlClass(pnlVal) + '">' + fmtSignedCcy(pnlVal) + '</td>' +
+          '<td>' + wr + ' <span style="color:var(--text-3);font-size:10px">(' + s.wins + '/' + s.trades + ')</span></td>' +
+        '</tr>';
+      }).join('');
+
+      stratEl.innerHTML =
+        '<div class="perf-subsection-label">Strategy Breakdown</div>' +
+        '<div class="strat-breakdown"><table>' +
+          '<thead><tr>' +
+            '<th>Strategy</th><th>Trades</th><th>P&L</th><th>Win Rate</th>' +
+          '</tr></thead>' +
+          '<tbody>' + trows + '</tbody>' +
+        '</table></div>';
+    }
+  }
+
+  // ── Strategy Allocation ──
+  var allocEl = document.getElementById('perf-allocation');
+  if (allocEl) {
+    if (allocation.length === 0) {
+      allocEl.innerHTML = '';
+    } else {
+      // Stacked bar
+      var barHtml = '<div class="alloc-bar-track">';
+      allocation.forEach(function (a) {
+        var color = STRATEGY_COLORS[a.strategy] || '#71717a';
+        barHtml += '<div class="alloc-bar-seg" style="width:' + Math.max(a.pct, 1) + '%;background:' + color + '"></div>';
+      });
+      barHtml += '</div>';
+
+      // Chips
+      var chipsHtml = '<div class="alloc-row">';
+      allocation.forEach(function (a) {
+        var color = STRATEGY_COLORS[a.strategy] || '#71717a';
+        var label = a.strategy.replace(/_/g, ' ');
+        chipsHtml += '<div class="alloc-chip">' +
+          '<span class="alloc-dot" style="background:' + color + '"></span>' +
+          '<span>' + label + '</span>' +
+          '<span class="alloc-val">' + fmtCcy(a.value, 0) + '</span>' +
+          '<span class="alloc-pct">' + a.pct.toFixed(1) + '%</span>' +
+          (a.positions > 0 ? '<span class="alloc-pct">' + a.positions + 'pos</span>' : '') +
+        '</div>';
+      });
+      chipsHtml += '</div>';
+
+      allocEl.innerHTML =
+        '<div class="perf-subsection-label">Capital Allocation</div>' +
+        barHtml + chipsHtml;
+    }
+  }
+}
+
+function perfStat(label, valueHtml, colorClass) {
+  return '<div class="perf-stat">' +
+    '<div class="perf-label">' + label + '</div>' +
+    '<div class="perf-value ' + (colorClass || '') + '">' + valueHtml + '</div>' +
+  '</div>';
 }
 
 // ── Chart Redraw (on theme change / resize) ───────────────────────────────
@@ -988,6 +1269,7 @@ async function init() {
 
     renderOrders(_staticData.recent_orders || []);
     renderPositions(_staticData);
+    renderPerformance(_staticData);
 
     connectStream();
 
