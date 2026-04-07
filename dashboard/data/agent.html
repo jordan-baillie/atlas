@@ -1870,11 +1870,13 @@
     '<circle cx="54" cy="9" r="2.5" fill="#f59e0b"/>' +     // antenna tip
     '</svg>';
 
-  // Fast streaming: append raw text immediately, render markdown periodically
-  var _rafId = null;
-  var _mdTimer = null;
-  var _lastMdLen = 0;
-  var _needsScroll = false;
+  // Typewriter streaming: characters animate in smoothly between API chunks
+  var _typeQueue = '';        // pending characters to animate
+  var _typeRafId = null;      // rAF for character animation
+  var _mdTimer = null;        // markdown render timer
+  var _lastMdLen = 0;         // last markdown render position
+  var _typeRate = 2;          // chars per frame (~120 chars/sec at 60fps)
+  var _rawText = '';           // full accumulated raw text
 
   function startAssistantMessage() {
     var div = document.createElement('div');
@@ -1891,53 +1893,67 @@
     messagesEl.appendChild(div);
     currentMsgEl = div;
     _lastMdLen = 0;
-    _needsScroll = false;
+    _typeQueue = '';
+    _rawText = '';
     scrollToBottom();
   }
 
   function appendDelta(delta) {
     if (!currentMsgEl) startAssistantMessage();
+    // Queue characters for typewriter animation
+    _typeQueue += delta;
+    _rawText += delta;
+    // Store full raw text for markdown rendering
     var bubble = currentMsgEl.querySelector('.msg-bubble');
-    if (!bubble) return;
-    var raw = (bubble.getAttribute('data-raw') || '') + delta;
-    bubble.setAttribute('data-raw', raw);
-
-    // Fast path: update textContent on every rAF (no markdown, instant)
-    _needsScroll = true;
-    if (!_rafId) {
-      _rafId = requestAnimationFrame(function () {
-        _rafId = null;
-        var b = currentMsgEl ? currentMsgEl.querySelector('.msg-bubble') : null;
-        if (b) {
-          var r = b.getAttribute('data-raw') || '';
-          // If no markdown timer pending, show raw text instantly
-          if (!b.getAttribute('data-md')) {
-            b.textContent = r;
-          }
-        }
-        if (_needsScroll) {
-          _needsScroll = false;
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        }
-      });
+    if (bubble) bubble.setAttribute('data-raw', _rawText);
+    // Dynamically adjust typing speed to drain queue before next chunk (~400ms)
+    // Target: drain queue in ~250ms to leave headroom
+    var qLen = _typeQueue.length;
+    if (qLen > 20) {
+      _typeRate = Math.max(2, Math.ceil(qLen / 15)); // drain in ~15 frames (~250ms)
     }
-
-    // Markdown render every 300ms (heavier, but gives formatted output)
+    // Start typewriter loop if not running
+    if (!_typeRafId) _typewriterTick();
+    // Schedule markdown render (less frequent, for formatting)
     if (!_mdTimer) {
       _mdTimer = setTimeout(function () {
         _mdTimer = null;
         var b = currentMsgEl ? currentMsgEl.querySelector('.msg-bubble') : null;
         if (!b) return;
         var r = b.getAttribute('data-raw') || '';
-        if (r.length - _lastMdLen > 10) {
-          b.setAttribute('data-md', '1');
+        if (r.length - _lastMdLen > 30) {
           b.innerHTML = renderMarkdown(r);
           addCopyButtons(b);
           _lastMdLen = r.length;
+          messagesEl.scrollTop = messagesEl.scrollHeight;
         }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }, 300);
+      }, 500);
     }
+  }
+
+  function _typewriterTick() {
+    _typeRafId = requestAnimationFrame(function () {
+      _typeRafId = null;
+      if (!_typeQueue || !currentMsgEl) return;
+      var bubble = currentMsgEl.querySelector('.msg-bubble');
+      if (!bubble) return;
+      // Take N chars from queue
+      var n = Math.min(_typeRate, _typeQueue.length);
+      var chars = _typeQueue.slice(0, n);
+      _typeQueue = _typeQueue.slice(n);
+      // Append to visible text
+      var node = bubble.lastChild;
+      if (node && node.nodeType === 3) {
+        node.textContent += chars;
+      } else {
+        bubble.appendChild(document.createTextNode(chars));
+      }
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      // Keep ticking if queue has more
+      if (_typeQueue.length > 0) {
+        _typewriterTick();
+      }
+    });
   }
 
   function getRawText(msgEl) {
@@ -1948,8 +1964,10 @@
 
   function finishAssistantMessage(fullText) {
     // Cancel any pending render timers
-    if (_rafId) { cancelAnimationFrame(_rafId); _rafId = null; }
+    if (_typeRafId) { cancelAnimationFrame(_typeRafId); _typeRafId = null; }
     if (_mdTimer) { clearTimeout(_mdTimer); _mdTimer = null; }
+    _typeQueue = '';
+    _rawText = '';
     _lastMdLen = 0;
 
     if (!currentMsgEl) return;
