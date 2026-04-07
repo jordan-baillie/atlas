@@ -45,7 +45,7 @@ from pathlib import Path
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 PROJECT_ROOT = Path("/root/atlas")
-SECRETS_PATH = Path.home() / ".atlas-secrets.json"
+SECRETS_PATH = Path(os.environ.get("ATLAS_SECRETS_PATH", str(Path.home() / ".atlas-secrets.json")))
 SERVE_DIR = PROJECT_ROOT / "dashboard" / "data"
 BIND = "127.0.0.1"
 PORT = 8899

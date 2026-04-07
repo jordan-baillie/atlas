@@ -88,7 +88,7 @@ def server() -> Generator[subprocess.Popen, None, None]:
     ready = False
     while time.time() < deadline:
         try:
-            req = urllib.request.Request(SERVER_URL + "/api/dashboard-data")
+            req = urllib.request.Request(SERVER_URL + "/api/chat/sessions")
             # Add Basic Auth
             import base64
             creds = base64.b64encode(f"{AUTH_USER}:{AUTH_PASS}".encode()).decode()

@@ -90,3 +90,5 @@ dashboard/data/
 data/atlas.db
 data/atlas.db-wal
 data/atlas.db-shm
+data/chat.db
+data/chat/
