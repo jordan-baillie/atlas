@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Atlas Dashboard Server (FastAPI) — HTTP Basic Auth protected.
+"""Atlas Dashboard Server — FastAPI port of dashboard_server.py.
 
-1:1 port of dashboard_server.py using FastAPI + Uvicorn.
-Phase 1 of dashboard migration — NO chat features, drop-in replacement.
+Phase 1: 1:1 port of the existing HTTP/http.server implementation to
+FastAPI/uvicorn.  No chat features — identical API surface, same HTTP
+Basic Auth, same port 8899.
 
 Credentials from ~/.atlas-secrets.json:
     dashboard_user, dashboard_pass
 
-Run:
-    python3 services/chat_server.py                    # foreground (uvicorn)
-    uvicorn services.chat_server:app --host 127.0.0.1 --port 8899
-    systemctl start atlas-dashboard                    # systemd (after updating unit file)
+Run (direct):
+    python3 services/chat_server.py
+
+Run (uvicorn module):
+    python3 -m uvicorn services.chat_server:app --host 127.0.0.1 --port 8899
+
+Run (systemd):
+    systemctl start atlas-dashboard
 """
 
 import asyncio
@@ -20,12 +25,14 @@ import os
 import secrets
 import signal
 import sys
+import threading
+import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+
+# ── Housekeeping (mirror dashboard_server.py top-level setup) ────────────────
 
 signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
@@ -35,27 +42,32 @@ SERVE_DIR = PROJECT_ROOT / "dashboard" / "data"
 BIND = "127.0.0.1"
 PORT = 8899
 
-# Must happen before any Atlas module imports
+# Must be set before importing Atlas modules (same as dashboard_server.py)
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.staticfiles import StaticFiles
+# ── FastAPI imports (after path setup) ───────────────────────────────────────
+
+from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
+from fastapi.responses import (  # noqa: E402
+    FileResponse,
+    JSONResponse,
+    Response,
+    StreamingResponse,
+)
+from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
 logger = logging.getLogger("chat_server")
 
-# Rate limiting for expensive endpoints
+# ── Rate limiting (mirrors dashboard_server.py global) ───────────────────────
 _last_evaluate_time = 0.0
 
-# Thread pool for blocking broker / DB I/O
-_thread_pool = ThreadPoolExecutor(max_workers=4)
 
-# ── Credentials ───────────────────────────────────────────────────────────────
-
+# ── Credential management ─────────────────────────────────────────────────────
 
 def _load_credentials() -> tuple[str, str]:
+    """Load dashboard credentials from ~/.atlas-secrets.json."""
     if not SECRETS_PATH.exists():
         raise ValueError(f"Secrets file not found: {SECRETS_PATH}")
     with open(SECRETS_PATH) as f:
@@ -69,49 +81,57 @@ def _load_credentials() -> tuple[str, str]:
     return user, pw
 
 
-try:
-    EXPECTED_USER, EXPECTED_PASS = _load_credentials()
-except ValueError as e:
-    print(f"❌ {e}", file=sys.stderr)
-    EXPECTED_USER = ""
-    EXPECTED_PASS = ""
-
-security = HTTPBasic()
+# Module-level credential cache (loaded once on first request)
+_CREDENTIALS: tuple[str, str] | None = None
 
 
-def verify_credentials(
+def _get_credentials() -> tuple[str, str]:
+    global _CREDENTIALS
+    if _CREDENTIALS is None:
+        _CREDENTIALS = _load_credentials()
+    return _CREDENTIALS
+
+
+# ── HTTP Basic Auth dependency ────────────────────────────────────────────────
+
+security = HTTPBasic(realm="Atlas Dashboard")
+
+
+def check_auth(
     credentials: HTTPBasicCredentials = Depends(security),
 ) -> HTTPBasicCredentials:
-    """Timing-safe HTTP Basic Auth check."""
+    """FastAPI dependency: HTTP Basic Auth via ~/.atlas-secrets.json.
+
+    Uses secrets.compare_digest for timing-safe comparison.
+    Raises 401 with WWW-Authenticate: Basic realm="Atlas Dashboard" on failure.
+    """
+    expected_user, expected_pass = _get_credentials()
     user_ok = secrets.compare_digest(
-        credentials.username.encode(), EXPECTED_USER.encode()
+        credentials.username.encode("utf-8"),
+        expected_user.encode("utf-8"),
     )
-    pw_ok = secrets.compare_digest(
-        credentials.password.encode(), EXPECTED_PASS.encode()
+    pass_ok = secrets.compare_digest(
+        credentials.password.encode("utf-8"),
+        expected_pass.encode("utf-8"),
     )
-    if not (user_ok and pw_ok):
+    if not (user_ok and pass_ok):
         raise HTTPException(
             status_code=401,
-            detail="Unauthorized",
+            detail="Invalid credentials",
             headers={"WWW-Authenticate": 'Basic realm="Atlas Dashboard"'},
         )
     return credentials
 
 
-# ── Plan helpers (ported verbatim from dashboard_server.py) ──────────────────
-
+# ── Plan approval / execution business logic (ported verbatim) ───────────────
 
 def _approve_and_execute(trade_date: str, market_id: str) -> dict:
-    """Approve a plan and execute it. Returns result dict."""
-    sys.path.insert(0, str(PROJECT_ROOT))
-    os.chdir(PROJECT_ROOT)
-
+    """Approve a plan and execute it via live broker. Returns result dict."""
     from utils.config import get_active_config
     from brokers.live_portfolio import LivePortfolio
     from brokers.plan import TradePlanGenerator
 
     config = get_active_config(market_id)
-
     portfolio = LivePortfolio(config, market_id=market_id)
     plan_gen = TradePlanGenerator(portfolio, config)
     plan = plan_gen.load_plan(trade_date)
@@ -133,7 +153,7 @@ def _approve_and_execute(trade_date: str, market_id: str) -> dict:
 
 
 def _execute_live(plan, trade_date, config, market_id) -> dict:
-    """Execute via live broker."""
+    """Execute plan via live broker."""
     from brokers.live_executor import LiveExecutor
     from brokers.live_portfolio import LivePortfolio
 
@@ -171,10 +191,7 @@ def _execute_live(plan, trade_date, config, market_id) -> dict:
 
 
 def _reject_plan(trade_date: str, market_id: str) -> dict:
-    """Reject a plan (mark as REJECTED, don't execute)."""
-    sys.path.insert(0, str(PROJECT_ROOT))
-    os.chdir(PROJECT_ROOT)
-
+    """Reject a plan (mark REJECTED, do not execute)."""
     from utils.config import get_active_config
     from brokers.live_portfolio import LivePortfolio
     from brokers.plan import TradePlanGenerator
@@ -194,10 +211,14 @@ def _reject_plan(trade_date: str, market_id: str) -> dict:
     return {"ok": True, "status": "REJECTED"}
 
 
-def _build_dashboard_data() -> dict:
-    """Build the complete dashboard data payload from SQLite + broker.
+# ── Dashboard data builder (ported verbatim from dashboard_server.py) ─────────
 
-    Copied verbatim from dashboard_server.py _build_dashboard_data().
+def _build_dashboard_data() -> dict:
+    """Build the complete dashboard data payload from SQLite + live broker.
+
+    Exact port of AuthHandler._build_dashboard_data() (lines 543-744 of
+    dashboard_server.py).  Returns a dict that is serialised with
+    json.dumps(..., default=str) to handle enum/datetime values.
     """
     import dataclasses
     from db.atlas_db import get_db
@@ -252,7 +273,7 @@ def _build_dashboard_data() -> dict:
                 od["status"] = raw.get("status", str(od.get("status", "")))
                 orders.append(od)
 
-            # 1. Enrich positions with Atlas trade metadata
+            # 1. Enrich positions with Atlas trade metadata from SQLite
             with get_db() as db:
                 open_trades = db.execute(
                     "SELECT ticker, strategy, entry_date, stop_price, entry_price "
@@ -341,7 +362,6 @@ def _build_dashboard_data() -> dict:
         trades_rows = db.execute(
             "SELECT strategy, pnl, pnl_pct FROM trades WHERE exit_date IS NOT NULL"
         ).fetchall()
-
         by_strategy: dict = {}
         for t in trades_rows:
             s = t["strategy"] or "unknown"
@@ -351,7 +371,6 @@ def _build_dashboard_data() -> dict:
             by_strategy[s]["pnl"] += t["pnl"] or 0
             if (t["pnl"] or 0) > 0:
                 by_strategy[s]["wins"] += 1
-
         result["strategy_performance"] = {"by_strategy": by_strategy}
 
         # ── 6. Overall performance metrics ────────────────────────────────────
@@ -388,9 +407,7 @@ def _build_dashboard_data() -> dict:
                 {"date": r["date"], "equity": round(r["close"] * scale, 2)}
                 for r in spy_data
             ]
-            spy_return = (
-                (spy_data[-1]["close"] / spy_data[0]["close"]) - 1
-            ) * 100
+            spy_return = ((spy_data[-1]["close"] / spy_data[0]["close"]) - 1) * 100
             result["benchmark"] = {
                 "ticker": "SPY",
                 "curve": bench_curve,
@@ -418,7 +435,7 @@ def _build_dashboard_data() -> dict:
         for s, v in sorted(alloc_map.items(), key=lambda x: -x[1]["value"])
     ]
 
-    # ── 5. Enrich summary with today_pnl + max_positions ──────────────────────
+    # ── 5. Enrich summary with today_pnl + max_positions ─────────────────────
     if "summary" not in result:
         result["summary"] = {}
     result["summary"]["today_pnl"] = round(
@@ -436,12 +453,18 @@ def _build_dashboard_data() -> dict:
     return result
 
 
-# ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
+# ── Pydantic request models ───────────────────────────────────────────────────
 
+class PlanRequest(BaseModel):
+    trade_date: str
+    market_id: str
+
+
+# ── FastAPI app + lifespan ────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: attempt to start Alpaca background poller for SSE streaming
+    """Startup: attempt to start Alpaca background poller (graceful fallback)."""
     # alpaca_stream retired in Phase 5 — skipped gracefully if module missing
     try:
         from dashboard.alpaca_stream import start as start_stream
@@ -453,77 +476,60 @@ async def lifespan(app: FastAPI):
             flush=True,
         )
     except Exception as e:
-        print(f"⚠️ Alpaca poller failed to start: {e}", flush=True)
-        print("  Dashboard will serve static JSON only", flush=True)
-    yield
-    # Shutdown: nothing special needed
+        print(f"⚠️  Alpaca poller failed to start: {e}", flush=True)
+        print("   Dashboard will serve static JSON only", flush=True)
+    yield  # app runs here
 
-
-# ── FastAPI app ───────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="Atlas Dashboard",
-    description="Atlas trading system dashboard API",
+    description="Atlas trading system dashboard — FastAPI port of dashboard_server.py",
+    version="2.0.0",
     lifespan=lifespan,
+    # Disable interactive docs to match original server (no Swagger/ReDoc UI)
+    docs_url=None,
+    redoc_url=None,
 )
 
 
-# ── Cache-control middleware for static files ─────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# GET routes  (defined in the same priority order as dashboard_server.py do_GET)
+# ═══════════════════════════════════════════════════════════════════════════════
 
-
-@app.middleware("http")
-async def cache_control_middleware(request: Request, call_next):
-    """Add appropriate Cache-Control headers based on file extension."""
-    response = await call_next(request)
-    path = request.url.path.split("?")[0]
-    # Only modify static-file paths (not API routes)
-    if not path.startswith("/api/"):
-        if path.endswith(".json"):
-            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            response.headers["Pragma"] = "no-cache"
-        elif path.endswith(".html") or path in ("/", ""):
-            response.headers["Cache-Control"] = "no-cache"
-        else:
-            response.headers["Cache-Control"] = "public, max-age=3600"
-    return response
-
-
-# ── GET routes ────────────────────────────────────────────────────────────────
-
+# ── GET /api/stream — Server-Sent Events ─────────────────────────────────────
 
 @app.get("/api/stream")
-async def sse_stream(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/stream — Server-Sent Events stream of live Alpaca data.
+async def sse_stream(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/stream — SSE stream of live Alpaca data.
 
-    alpaca_stream module retired in Phase 5. Returns 503 until a
-    replacement real-time feed is wired in.
+    alpaca_stream retired in Phase 5.  Returns 503 until a replacement
+    real-time feed is wired in.
     """
     try:
         from dashboard.alpaca_stream import get_state, get_seq
     except ImportError:
-        return JSONResponse(
+        raise HTTPException(
             status_code=503,
-            content={"error": "live stream unavailable (alpaca_stream retired)"},
+            detail="live stream unavailable (alpaca_stream retired)",
         )
 
-    async def event_generator():
+    async def _generate():
         last_seq = -1
-        try:
-            while True:
+        while True:
+            try:
                 current_seq = get_seq()
                 if current_seq != last_seq:
                     state = get_state()
                     last_seq = current_seq
                     payload = json.dumps(state, default=str)
                     yield f"event: snapshot\ndata: {payload}\n\n"
-                await asyncio.sleep(2)
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.warning("SSE stream error: %s", e)
+            except Exception as exc:
+                logger.warning("SSE stream error: %s", exc)
+                break
+            await asyncio.sleep(2)
 
     return StreamingResponse(
-        event_generator(),
+        _generate(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -533,40 +539,19 @@ async def sse_stream(_: HTTPBasicCredentials = Depends(verify_credentials)):
     )
 
 
-@app.get("/api/snapshot")
-async def snapshot(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/snapshot — One-shot JSON of current Alpaca state.
-
-    alpaca_stream module retired in Phase 5. Returns 503 until replaced.
-    """
-    try:
-        from dashboard.alpaca_stream import get_state
-    except ImportError:
-        return JSONResponse(
-            status_code=503,
-            content={"error": "snapshot unavailable (alpaca_stream retired)"},
-        )
-    try:
-        state = get_state()
-        return Response(
-            content=json.dumps(state, default=str),
-            media_type="application/json",
-        )
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
-
+# ── GET /api/prices ───────────────────────────────────────────────────────────
 
 @app.get("/api/prices")
-async def prices(
-    tickers: str = Query(default=""),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def prices(
+    tickers: str = "",
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
     """GET /api/prices — pre-computed P&L for open positions.
 
-    live_prices module retired in Phase 5. Returns 503 until replaced.
+    ?tickers=AAPL,REH.AX — legacy: return raw quotes for specific tickers.
+    No ?tickers param  — new mode: return pre-computed P&L for all positions.
 
-    Query params:
-      ?tickers=AAPL,REH.AX  — legacy: fall back to raw quotes
+    live_prices module retired in Phase 5.  Returns 503 until replaced.
     """
     try:
         if tickers:
@@ -574,59 +559,77 @@ async def prices(
             try:
                 from dashboard.live_prices import fetch_prices, get_cache_stats
             except ImportError:
-                return JSONResponse(
+                raise HTTPException(
                     status_code=503,
-                    content={"error": "live prices unavailable (live_prices retired)"},
+                    detail="live prices unavailable (live_prices retired)",
                 )
             ticker_list = [t.strip() for t in tickers.split(",") if t.strip()]
             quotes = fetch_prices(ticker_list)
-            response_data = {
+            return JSONResponse({
                 "ok": True,
                 "timestamp": datetime.now().isoformat(),
                 "quotes": quotes,
                 "cache": get_cache_stats(),
                 "ticker_count": len(quotes),
-            }
+            })
         else:
             # New mode: pre-computed P&L for all positions
             try:
                 from dashboard.live_prices import get_live_prices_with_pnl
             except ImportError:
-                return JSONResponse(
+                raise HTTPException(
                     status_code=503,
-                    content={"error": "live prices unavailable (live_prices retired)"},
+                    detail="live prices unavailable (live_prices retired)",
                 )
             simple_path = str(SERVE_DIR / "simple-dashboard-data.json")
-            response_data = get_live_prices_with_pnl(simple_path)
-
-        return Response(
-            content=json.dumps(response_data, default=str),
-            media_type="application/json",
-        )
+            return JSONResponse(get_live_prices_with_pnl(simple_path))
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/snapshot ─────────────────────────────────────────────────────────
+
+@app.get("/api/snapshot")
+def snapshot(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/snapshot — one-shot JSON of current Alpaca state.
+
+    alpaca_stream retired in Phase 5.  Returns 503 until replaced.
+    """
+    try:
+        from dashboard.alpaca_stream import get_state
+    except ImportError:
+        raise HTTPException(
+            status_code=503,
+            detail="snapshot unavailable (alpaca_stream retired)",
+        )
+    try:
+        state = get_state()
+        return JSONResponse(state)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/monitor* — 410 Gone (monitor tab removed) ───────────────────────
 
 @app.get("/api/monitor")
-async def monitor_get(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/monitor — returns 410 (Monitor tab removed)."""
-    return JSONResponse(status_code=410, content={"error": "Monitor tab removed"})
-
-
-@app.get("/api/monitor/{path:path}")
-async def monitor_get_sub(
-    path: str,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+@app.get("/api/monitor/{monitor_path:path}")
+def monitor_get_gone(
+    monitor_path: str = "",
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/monitor/* — returns 410 (Monitor tab removed)."""
-    return JSONResponse(status_code=410, content={"error": "Monitor tab removed"})
+    """GET /api/monitor — monitor tab removed, returns 410."""
+    return JSONResponse({"error": "Monitor tab removed"}, status_code=410)
 
+
+# ── GET /api/portfolio  +  /api/db/portfolio ──────────────────────────────────
 
 @app.get("/api/portfolio")
 @app.get("/api/db/portfolio")
-async def db_portfolio(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/portfolio or /api/db/portfolio — positions + equity from SQLite."""
+def db_portfolio(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/portfolio — open positions + latest equity from SQLite."""
     try:
         from db import atlas_db
         positions = atlas_db.get_open_positions()
@@ -636,293 +639,316 @@ async def db_portfolio(_: HTTPBasicCredentials = Depends(verify_credentials)):
                 "SELECT * FROM equity_curve ORDER BY date DESC LIMIT 1"
             ).fetchone()
             equity = dict(row) if row else None
-        return JSONResponse(
-            content={
-                "positions": positions,
-                "regime": regime,
-                "equity": equity,
-            }
-        )
+        return JSONResponse({"positions": positions, "regime": regime, "equity": equity})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/trades  +  /api/db/trades ───────────────────────────────────────
 
 @app.get("/api/trades")
 @app.get("/api/db/trades")
-async def db_trades(
-    days: int = Query(default=0),
-    strategy: Optional[str] = Query(default=None),
-    universe: Optional[str] = Query(default=None),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def db_trades(
+    days: int = 0,
+    strategy: str | None = None,
+    universe: str | None = None,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/trades or /api/db/trades — closed trades from SQLite.
-
-    Query params:
-      ?days=30&strategy=mean_reversion&universe=sp500
-    """
+    """GET /api/trades?days=30&strategy=mean_reversion&universe=sp500"""
     try:
         from db import atlas_db
-        days_val = days or None
+        days_or_none = days if days > 0 else None
         trades = atlas_db.get_closed_trades(
-            days=days_val, strategy=strategy, universe=universe
+            days=days_or_none, strategy=strategy, universe=universe
         )
-        return JSONResponse(content={"trades": trades, "count": len(trades)})
+        return JSONResponse({"trades": trades, "count": len(trades)})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/performance  +  /api/db/performance ─────────────────────────────
 
 @app.get("/api/performance")
 @app.get("/api/db/performance")
-async def db_performance(
-    days: int = Query(default=0),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def db_performance(
+    days: int = 0,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/performance or /api/db/performance — performance summary."""
+    """GET /api/performance?days=30 — performance summary from SQLite."""
     try:
         from db import atlas_db
-        days_val = days or None
-        summary = atlas_db.performance_summary(days=days_val)
-        return JSONResponse(content=summary)
+        days_or_none = days if days > 0 else None
+        summary = atlas_db.performance_summary(days=days_or_none)
+        return JSONResponse(summary)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/equity-curve ─────────────────────────────────────────────────────
 
 @app.get("/api/equity-curve")
-async def equity_curve(
-    market: str = Query(default="sp500"),
-    days: int = Query(default=90),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def equity_curve(
+    market: str = "sp500",
+    days: int = 90,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/equity-curve?market=sp500&days=90 — equity history from SQLite."""
+    """GET /api/equity-curve?market=sp500&days=90 — equity history from SQLite.
+
+    Returns oldest-first list (same as original handler which reversed the rows).
+    """
     try:
         from db.atlas_db import get_equity_curve
         rows = get_equity_curve(market_id=market, days=days)
         # get_equity_curve returns oldest-first; reverse so most recent is first
         rows.reverse()
-        return JSONResponse(content=rows)
+        return JSONResponse(rows)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/regime/history ───────────────────────────────────────────────────
 
 @app.get("/api/regime/history")
-async def regime_history(
-    days: int = Query(default=90),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def regime_history(
+    days: int = 90,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
     """GET /api/regime/history?days=90 — regime classification history."""
     try:
         from db.atlas_db import get_regime_history
         rows = get_regime_history(days=days)
-        # get_regime_history returns most-recent-first with JSON decoded
-        return JSONResponse(content=rows)
+        # get_regime_history already returns most-recent-first
+        return JSONResponse(rows)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/regime/current ───────────────────────────────────────────────────
 
 @app.get("/api/regime/current")
-async def regime_current(_: HTTPBasicCredentials = Depends(verify_credentials)):
+def regime_current(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """GET /api/regime/current — most recent regime state."""
     try:
         from db.atlas_db import get_current_regime
         regime = get_current_regime()
-        if regime:
-            return JSONResponse(content=regime)
-        return JSONResponse(content={"regime_state": "unknown"})
+        return JSONResponse(regime if regime else {"regime_state": "unknown"})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/overlay/decisions ────────────────────────────────────────────────
 
 @app.get("/api/overlay/decisions")
-async def overlay_decisions(
-    days: int = Query(default=30),
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def overlay_decisions(
+    days: int = 30,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/overlay/decisions?days=30 — AI overlay decisions."""
+    """GET /api/overlay/decisions?days=30 — AI overlay decisions from SQLite."""
     try:
         from db.atlas_db import get_overlay_decisions
         decisions = get_overlay_decisions(days=days)
-        return JSONResponse(content=decisions)
+        return JSONResponse(decisions)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/system/health ────────────────────────────────────────────────────
 
 @app.get("/api/system/health")
-async def system_health(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/system/health — heartbeat status for all services."""
+def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/system/health — service heartbeat status."""
     try:
         from db.atlas_db import get_heartbeats
         heartbeats = get_heartbeats()
-        return JSONResponse(
-            content={
-                "heartbeats": heartbeats,
-                "timestamp": datetime.now().isoformat(),
-            }
-        )
+        return JSONResponse({
+            "heartbeats": heartbeats,
+            "timestamp": datetime.now().isoformat(),
+        })
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
+
+# ── GET /api/dashboard-data ───────────────────────────────────────────────────
 
 @app.get("/api/dashboard-data")
-async def dashboard_data(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """GET /api/dashboard-data — complete dashboard payload.
+def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/dashboard-data — main dashboard payload (replaces static JSON).
 
-    Replaces static simple-dashboard-data.json.
-    Uses default=str to handle enum values from broker dataclasses.
-    Runs in thread pool to avoid blocking the event loop during broker I/O.
+    Uses json.dumps(..., default=str) to handle enum/datetime values from
+    broker dataclasses, exactly as the original handler does.
     """
     try:
-        loop = asyncio.get_running_loop()
-        data = await loop.run_in_executor(_thread_pool, _build_dashboard_data)
-        return Response(
-            content=json.dumps(data, default=str),
-            media_type="application/json",
-        )
+        data = _build_dashboard_data()
+        body = json.dumps(data, default=str)
+        return Response(content=body, media_type="application/json")
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── POST routes ───────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# POST routes
+# ═══════════════════════════════════════════════════════════════════════════════
 
+# ── POST /api/approve ─────────────────────────────────────────────────────────
 
 @app.post("/api/approve")
-async def approve(
-    request: Request,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def approve_plan(
+    body: PlanRequest,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """POST /api/approve — approve + execute trade plan.
+    """POST /api/approve — approve + execute a trade plan.
 
-    Body: {"trade_date": "YYYY-MM-DD", "market_id": "sp500"}
-    Runs in thread pool with 60-second timeout for broker I/O.
+    Runs in a thread to avoid blocking (broker I/O can be slow).
+    60-second timeout; returns 504 if execution is still pending.
     """
     try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+        trade_date = body.trade_date
+        market_id = body.market_id
+        if not trade_date or not market_id:
+            raise HTTPException(
+                status_code=400, detail="trade_date and market_id required"
+            )
 
-    trade_date = body.get("trade_date", "")
-    market_id = body.get("market_id", "")
-    if not trade_date or not market_id:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "trade_date and market_id required"},
-        )
+        result: dict = {"pending": True}
 
-    loop = asyncio.get_running_loop()
-    try:
-        result = await asyncio.wait_for(
-            loop.run_in_executor(
-                _thread_pool,
-                lambda: _approve_and_execute(trade_date, market_id),
-            ),
-            timeout=60.0,
-        )
-    except asyncio.TimeoutError:
-        return JSONResponse(
-            status_code=504,
-            content={"error": "Execution timed out (still running in background)"},
-        )
+        def _run():
+            nonlocal result
+            try:
+                result = _approve_and_execute(trade_date, market_id)
+            except Exception as exc:
+                traceback.print_exc()
+                result = {"ok": False, "error": str(exc)}
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        t.join(timeout=60)  # 60s max for broker execution (same as original)
+
+        if result.get("pending"):
+            return JSONResponse(
+                {"error": "Execution timed out (still running in background)"},
+                status_code=504,
+            )
+
+        return JSONResponse(result, status_code=200 if result.get("ok") else 400)
+
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return Response(
-        content=json.dumps(result, default=str),
-        media_type="application/json",
-        status_code=200 if result.get("ok") else 400,
-    )
 
+# ── POST /api/reject ──────────────────────────────────────────────────────────
 
 @app.post("/api/reject")
-async def reject(
-    request: Request,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+def reject_plan(
+    body: PlanRequest,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """POST /api/reject — reject trade plan.
-
-    Body: {"trade_date": "YYYY-MM-DD", "market_id": "sp500"}
-    """
+    """POST /api/reject — reject a trade plan (mark REJECTED, no execution)."""
     try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"error": "Invalid JSON body"})
+        trade_date = body.trade_date
+        market_id = body.market_id
+        if not trade_date or not market_id:
+            raise HTTPException(
+                status_code=400, detail="trade_date and market_id required"
+            )
 
-    trade_date = body.get("trade_date", "")
-    market_id = body.get("market_id", "")
-    if not trade_date or not market_id:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "trade_date and market_id required"},
-        )
+        result = _reject_plan(trade_date, market_id)
+        return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
-    try:
-        loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(
-            _thread_pool,
-            lambda: _reject_plan(trade_date, market_id),
-        )
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return JSONResponse(
-        status_code=200 if result.get("ok") else 400,
-        content=result,
-    )
 
+# ── POST /api/monitor* — 410 Gone ────────────────────────────────────────────
 
 @app.post("/api/monitor")
-async def monitor_post_root(_: HTTPBasicCredentials = Depends(verify_credentials)):
-    """POST /api/monitor — returns 410 (Monitor tab removed)."""
-    return JSONResponse(status_code=410, content={"error": "Monitor tab removed"})
-
-
-@app.post("/api/monitor/{path:path}")
-async def monitor_post_sub(
-    path: str,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+@app.post("/api/monitor/{monitor_path:path}")
+def monitor_post_gone(
+    monitor_path: str = "",
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """POST /api/monitor/* — returns 410 (Monitor tab removed)."""
-    return JSONResponse(status_code=410, content={"error": "Monitor tab removed"})
+    """POST /api/monitor* — monitor tab removed, returns 410."""
+    return JSONResponse({"error": "Monitor tab removed"}, status_code=410)
 
 
-# ── DELETE routes ─────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# DELETE routes
+# ═══════════════════════════════════════════════════════════════════════════════
 
+# ── DELETE /api/monitor/positions/{id} ───────────────────────────────────────
 
 @app.delete("/api/monitor/positions/{pos_id}")
-async def delete_monitor_position(
+def delete_position(
     pos_id: str,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
     """DELETE /api/monitor/positions/{id} — delete a monitor position."""
     from monitor.models import PositionStore
     store = PositionStore()
     ok = store.delete_position(pos_id)
-    return JSONResponse(status_code=200 if ok else 404, content={"ok": ok})
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
 
+
+# ── DELETE /api/monitor/templates/{id} ───────────────────────────────────────
 
 @app.delete("/api/monitor/templates/{tmpl_id}")
-async def delete_monitor_template(
+def delete_template(
     tmpl_id: str,
-    _: HTTPBasicCredentials = Depends(verify_credentials),
+    _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
     """DELETE /api/monitor/templates/{id} — delete a monitor template."""
     from monitor.models import PositionStore
     store = PositionStore()
     ok = store.delete_template(tmpl_id)
-    return JSONResponse(status_code=200 if ok else 404, content={"ok": ok})
+    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
 
 
-# ── Static file serving — MUST be mounted last so API routes take priority ────
+# ═══════════════════════════════════════════════════════════════════════════════
+# Static file catch-all  (MUST be last — fallback after all API routes)
+# ═══════════════════════════════════════════════════════════════════════════════
 
-if SERVE_DIR.exists():
-    app.mount(
-        "/",
-        StaticFiles(directory=str(SERVE_DIR), html=True),
-        name="static",
-    )
-else:
-    logger.warning("Static files directory not found: %s", SERVE_DIR)
+@app.get("/{path:path}")
+def serve_static(
+    path: str = "",
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """Serve static files from dashboard/data/ with appropriate cache headers.
+
+    Mirrors SimpleHTTPRequestHandler behaviour from the original server:
+      - .json  → no-cache, no-store, must-revalidate
+      - .html  → no-cache
+      - other  → public, max-age=3600
+    """
+    if not path:
+        path = "index.html"
+
+    # Prevent path traversal
+    try:
+        serve_root = SERVE_DIR.resolve()
+        file_path = (SERVE_DIR / path).resolve()
+        if not str(file_path).startswith(str(serve_root)):
+            raise HTTPException(status_code=403, detail="Forbidden")
+    except (ValueError, OSError):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+
+    # Cache-control matching original end_headers() logic
+    if path.endswith(".json"):
+        cache = "no-cache, no-store, must-revalidate"
+    elif path.endswith(".html") or path in ("", "/"):
+        cache = "no-cache"
+    else:
+        cache = "public, max-age=3600"
+
+    return FileResponse(str(file_path), headers={"Cache-Control": cache})
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
