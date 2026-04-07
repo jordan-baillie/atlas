@@ -1734,6 +1734,11 @@
         setConnStatus('connected');
         break;
 
+      /* ── Warning (non-fatal) ── */
+      case 'warning':
+        addWarningMessage(msg.message || 'Warning');
+        break;
+
       /* ── Error ── */
       case 'error':
         addErrorMessage(msg.message || 'Unknown error');
@@ -1965,6 +1970,17 @@
     } else if (!active && existing) {
       existing.parentNode.removeChild(existing);
     }
+  }
+
+  function addWarningMessage(text) {
+    var div = document.createElement('div');
+    div.className = 'agent-msg agent-msg-system';
+    var bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = '⚠️ ' + text;
+    div.appendChild(bubble);
+    messagesEl.appendChild(div);
+    scrollToBottom();
   }
 
   function addErrorMessage(text) {

@@ -1146,6 +1146,11 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
     await ws.accept()
 
+    # Guard: prevent overlapping send_message calls on the same session.
+    # If user sends a second message while the first is still streaming,
+    # we reject it rather than corrupt the Pi session file.
+    _generating = False
+
     try:
         while True:
             try:
@@ -1157,6 +1162,9 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
             # ---- send: user sends a chat message --------------------------
             if msg_type == "send":
+                if _generating:
+                    await ws.send_json({"type": "error", "message": "Already generating a response. Wait for it to finish or cancel first."})
+                    continue
                 content = data.get("content", "").strip()
                 images = data.get("images")  # [{data, mime}, ...]
                 if not content and not images:
@@ -1195,7 +1203,17 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
                 mgr = _pi_sessions[session_id]
 
+                # Warn if session is getting heavy (>60K tokens estimated)
+                if mgr.pi_session_path.exists():
+                    session_size = mgr.pi_session_path.stat().st_size
+                    if session_size > 200_000:  # ~60K tokens
+                        await ws.send_json({
+                            "type": "warning",
+                            "message": f"Session history is large ({session_size // 1024}KB). Consider starting a new session for faster responses.",
+                        })
+
                 # Stream response events back to client
+                _generating = True
                 full_text = ""
                 try:
                     async for event in mgr.send_message(content, images=images):
@@ -1207,6 +1225,8 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 except WebSocketDisconnect:
                     # Client left mid-stream; Pi keeps running, we save what we have
                     break
+                finally:
+                    _generating = False
 
                 # Persist assistant reply
                 if full_text:
@@ -1232,6 +1252,7 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 session_id = data.get("session_id")
                 if session_id and session_id in _pi_sessions:
                     await _pi_sessions[session_id].cancel()
+                _generating = False
                 await ws.send_json({"type": "cancelled"})
 
             # ---- new_session: create a fresh conversation -----------------

@@ -145,8 +145,10 @@ class PiSessionManager:
             # stops producing data — making the WebSocket appear "stuck".
             async def _drain_stderr() -> None:
                 try:
-                    async for _line in self.process.stderr:  # type: ignore[union-attr]
-                        pass  # discard — prevent buffer fill
+                    while True:
+                        chunk = await self.process.stderr.read(65536)  # type: ignore[union-attr]
+                        if not chunk:
+                            break
                 except Exception:
                     pass
 
@@ -154,17 +156,39 @@ class PiSessionManager:
 
             try:
                 async with asyncio.timeout(300):  # 5-minute hard cap per message (Opus + big sessions need time)
-                    async for line in self.process.stdout:  # type: ignore[union-attr]
-                        decoded = line.decode("utf-8", errors="replace").strip()
-                        if not decoded:
-                            continue
-                        try:
-                            raw = json.loads(decoded)
-                        except json.JSONDecodeError:
-                            continue
-                        for evt in self._parse_jsonl_event(raw):
-                            await self._broadcast(evt)
-                            yield evt
+                    # Read stdout in chunks instead of using readline().
+                    # asyncio.StreamReader.readline() has a 64 KB default
+                    # limit; Pi JSONL lines with thinking signatures +
+                    # full message content easily exceed that, causing
+                    # "Separator is not found, and chunk exceed the limit".
+                    stdout_buf = ""
+                    while True:
+                        chunk = await self.process.stdout.read(262144)  # type: ignore[union-attr]
+                        if not chunk:
+                            # Process closed stdout — parse any remaining buffer
+                            if stdout_buf.strip():
+                                try:
+                                    raw = json.loads(stdout_buf.strip())
+                                    for evt in self._parse_jsonl_event(raw):
+                                        await self._broadcast(evt)
+                                        yield evt
+                                except json.JSONDecodeError:
+                                    pass
+                            break
+                        stdout_buf += chunk.decode("utf-8", errors="replace")
+                        # Split on newlines — each complete line is one JSONL event
+                        while "\n" in stdout_buf:
+                            line, stdout_buf = stdout_buf.split("\n", 1)
+                            line = line.strip()
+                            if not line:
+                                continue
+                            try:
+                                raw = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            for evt in self._parse_jsonl_event(raw):
+                                await self._broadcast(evt)
+                                yield evt
             except asyncio.TimeoutError:
                 logger.warning("Pi subprocess timed out after 300 s")
                 timeout_err = PiEvent("error", {"message": "Response timed out after 5 minutes. Try starting a new session — long history slows Opus down."})
