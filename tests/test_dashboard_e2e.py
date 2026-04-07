@@ -179,22 +179,32 @@ class TestDashboardLayout:
         assert page.locator(".tab-nav").count() == 0, ".tab-nav should not exist"
         assert page.locator(".tab-btn").count() == 0, ".tab-btn should not exist"
 
-    def test_two_panel_layout_present(self, page: "Page") -> None:
-        """Two-panel grid must be present with both portfolio and chat panels."""
+    def test_single_column_layout(self, page: "Page") -> None:
+        """Phase 3: Two-panel grid is removed; portfolio is single-column full-width."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
-        page.wait_for_selector(".two-panel", timeout=5000)
+        assert page.locator(".two-panel").count() == 0, ".two-panel should be removed"
         assert page.locator(".panel-portfolio").count() == 1
-        assert page.locator(".panel-chat").count() == 1
 
     def test_portfolio_panel_visible(self, page: "Page") -> None:
         """.panel-portfolio is visible."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
         assert page.locator(".panel-portfolio").is_visible()
 
-    def test_chat_panel_visible(self, page: "Page") -> None:
-        """.panel-chat (#chat-panel) is visible."""
+    def test_no_chat_panel(self, page: "Page") -> None:
+        """Chat panel is removed from dashboard (moved to /chat page)."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-panel").is_visible()
+        assert page.locator("#chat-panel").count() == 0, "#chat-panel should not exist on dashboard"
+        assert page.locator(".panel-chat").count() == 0, ".panel-chat should not exist on dashboard"
+
+    def test_portfolio_full_width(self, page: "Page") -> None:
+        """Portfolio panel takes full width (no chat panel next to it)."""
+        page.goto(SERVER_URL, wait_until="domcontentloaded")
+        portfolio = page.locator(".panel-portfolio")
+        assert portfolio.is_visible()
+        bbox = portfolio.bounding_box()
+        assert bbox is not None
+        # On 1280px viewport, full-width portfolio should exceed 900px
+        assert bbox["width"] > 900, f"Portfolio panel should be full-width, got {bbox['width']}px"
 
     def test_compact_summary_strip(self, page: "Page") -> None:
         """Summary strip present and has exactly 4 stat blocks."""
@@ -265,77 +275,34 @@ class TestDashboardLayout:
         assert page.locator("#performance-section").count() == 0
 
 
-# ── Chat UI Tests ─────────────────────────────────────────────────────────────
+# ── No-Chat-on-Dashboard Tests ────────────────────────────────────────────────
 
-class TestChatUI:
-    """Verify the Phase 4 chat panel UI elements are present and functional."""
+class TestNoChatOnDashboard:
+    """Verify chat panel has been removed from the dashboard (moved to /chat page)."""
 
-    def test_chat_input_present(self, page: "Page") -> None:
-        """Chat textarea input is visible."""
+    def test_no_chat_input_on_dashboard(self, page: "Page") -> None:
+        """#chat-input should not exist on the dashboard."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-input").is_visible()
+        assert page.locator("#chat-input").count() == 0, "#chat-input should not be on dashboard"
 
-    def test_send_button_present(self, page: "Page") -> None:
-        """Send button (↑) is visible."""
+    def test_no_chat_panel_on_dashboard(self, page: "Page") -> None:
+        """#chat-panel and .panel-chat should not exist on the dashboard."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-send").is_visible()
+        assert page.locator("#chat-panel").count() == 0, "#chat-panel should not be on dashboard"
+        assert page.locator(".panel-chat").count() == 0, ".panel-chat should not be on dashboard"
 
-    def test_new_session_button_present(self, page: "Page") -> None:
-        """New session button (+) is visible."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-new-session").is_visible()
-
-    def test_session_select_present(self, page: "Page") -> None:
-        """Session select dropdown is present."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-session-select").count() == 1
-
-    def test_chat_messages_container(self, page: "Page") -> None:
-        """Chat messages container is present and scrollable."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-messages").is_visible()
-
-    def test_chat_status_bar(self, page: "Page") -> None:
-        """Chat status bar (model, cost) is present."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        assert page.locator("#chat-status").count() == 1
-        assert page.locator("#chat-cost").count() == 1
-
-    def test_chat_input_typing(self, page: "Page") -> None:
-        """User can type into the chat input."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        page.wait_for_timeout(500)
-        input_el = page.locator("#chat-input")
-        input_el.fill("Hello Atlas, what is the current regime?")
-        assert input_el.input_value() == "Hello Atlas, what is the current regime?"
-
-    def test_chat_input_clears_on_send_click(self, page: "Page") -> None:
-        """Clicking send clears the input field (message is dispatched)."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        page.wait_for_timeout(1000)
-        input_el = page.locator("#chat-input")
-        input_el.fill("test message")
-        page.locator("#chat-send").click()
-        page.wait_for_timeout(500)
-        # Input should be cleared (or have value from reconnect logic)
-        val = input_el.input_value()
-        assert val == "", f"Input should be cleared after send, got: '{val}'"
-
-    def test_chat_css_loaded(self, page: "Page") -> None:
-        """chat.css is loaded and applies panel-chat styling."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        # Check that chat.css flex direction is applied to panel-chat
-        display = page.evaluate(
-            "() => window.getComputedStyle(document.querySelector('.panel-chat')).display"
-        )
-        assert display == "flex", f"panel-chat should be flex, got: {display}"
-
-    def test_chat_js_loaded(self, page: "Page") -> None:
-        """chat.js is loaded and Chat module is defined."""
+    def test_no_chat_js_on_dashboard(self, page: "Page") -> None:
+        """Chat JS module should not be initialized on the dashboard."""
         page.goto(SERVER_URL, wait_until="domcontentloaded")
         page.wait_for_timeout(500)
         chat_defined = page.evaluate("() => typeof Chat !== 'undefined'")
-        assert chat_defined, "Chat module should be defined by chat.js"
+        assert not chat_defined, "Chat module should NOT be initialized on dashboard page"
+
+    def test_agent_link_in_header(self, page: "Page") -> None:
+        """Agent link (◈) must be present in dashboard header as entry point to /chat."""
+        page.goto(SERVER_URL, wait_until="domcontentloaded")
+        link = page.locator('a[href="/chat"]')
+        assert link.count() >= 1, "Agent link to /chat must be present in dashboard header"
 
 
 # ── API Endpoint Tests ─────────────────────────────────────────────────────────
@@ -434,27 +401,12 @@ class TestChatAPI:
 class TestResponsive:
     """Verify the layout adapts correctly to different screen sizes."""
 
-    def test_mobile_panels_stack(self, mobile_page: "Page") -> None:
-        """On mobile (390px), panels should stack vertically."""
+    def test_mobile_portfolio_visible(self, mobile_page: "Page") -> None:
+        """On mobile (390px), portfolio is visible and no two-panel grid exists."""
         mobile_page.goto(SERVER_URL, wait_until="domcontentloaded")
         mobile_page.wait_for_timeout(500)
-        two_panel = mobile_page.locator(".two-panel")
-        assert two_panel.is_visible()
-        # Both panels visible (stacked)
+        assert mobile_page.locator(".two-panel").count() == 0, ".two-panel should not exist"
         assert mobile_page.locator(".panel-portfolio").is_visible()
-        assert mobile_page.locator("#chat-panel").is_visible()
-
-    def test_mobile_chat_panel_height_bounded(self, mobile_page: "Page") -> None:
-        """On mobile, chat panel max-height is limited (not full viewport)."""
-        mobile_page.goto(SERVER_URL, wait_until="domcontentloaded")
-        mobile_page.wait_for_timeout(300)
-        chat_height = mobile_page.evaluate(
-            "() => document.querySelector('.panel-chat').getBoundingClientRect().height"
-        )
-        viewport_height = 844
-        assert chat_height < viewport_height, (
-            f"Chat panel height ({chat_height}px) should be less than viewport ({viewport_height}px)"
-        )
 
     def test_tablet_layout(self, browser_instance: "Browser", server: subprocess.Popen) -> None:
         """On tablet (900px), layout adapts."""
@@ -512,10 +464,9 @@ class TestSmoke:
     """Quick smoke tests that run fast and catch obvious regressions."""
 
     def test_static_files_served(self, page: "Page") -> None:
-        """atlas.css and chat.css are served with 200."""
-        for path in ["/atlas.css", "/chat.css", "/chat.js"]:
-            response = page.request.get(f"{SERVER_URL}{path}")
-            assert response.status == 200, f"{path} returned {response.status}"
+        """atlas.css is served with 200. (chat.css/chat.js still exist as files but are not loaded by dashboard.)"""
+        response = page.request.get(f"{SERVER_URL}/atlas.css")
+        assert response.status == 200, f"/atlas.css returned {response.status}"
 
     def test_favicon_served(self, page: "Page") -> None:
         """Favicon request doesn't 500."""
@@ -531,12 +482,7 @@ class TestSmoke:
         critical = [e for e in errors if any(t in e for t in ("SyntaxError", "ReferenceError"))]
         assert critical == [], f"Console errors: {critical}"
 
-    def test_chat_module_exposes_send(self, page: "Page") -> None:
-        """Chat.send function is exposed on the Chat module."""
-        page.goto(SERVER_URL, wait_until="domcontentloaded")
-        page.wait_for_timeout(500)
-        has_send = page.evaluate("() => typeof Chat !== 'undefined' && typeof Chat.send === 'function'")
-        assert has_send, "Chat.send should be a function"
+
 
 
 # ── Agent Page Tests ──────────────────────────────────────────────────────────
@@ -596,6 +542,75 @@ class TestAgentPage:
         page.goto(SERVER_URL, wait_until="domcontentloaded")
         link = page.locator('a[href="/chat"]')
         assert link.count() >= 1
+
+    def test_suggested_prompts_on_empty(self, page: "Page") -> None:
+        """Prompt chips are visible on the empty state (no messages yet)."""
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        page.wait_for_timeout(500)
+        container = page.locator("#suggested-prompts-empty")
+        assert container.count() == 1, "#suggested-prompts-empty container should exist"
+        chips = page.locator(".prompt-chip")
+        assert chips.count() >= 1, "At least one .prompt-chip should be visible on empty state"
+
+    def test_model_selector(self, page: "Page") -> None:
+        """Model dropdown exists with 3 options (haiku, sonnet, opus)."""
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        select = page.locator("#agent-model-select")
+        assert select.count() == 1, "#agent-model-select should exist"
+        options = select.locator("option")
+        assert options.count() >= 3, f"Model selector should have at least 3 options, got {options.count()}"
+        # Verify expected model values are present
+        values = [options.nth(i).get_attribute("value") for i in range(options.count())]
+        model_families = [v for v in values if v and ("haiku" in v or "sonnet" in v or "opus" in v)]
+        assert len(model_families) >= 3, f"Expected haiku/sonnet/opus options, got: {values}"
+
+    def test_keyboard_shortcut_focus(self, page: "Page") -> None:
+        """Ctrl+K focuses the agent input from anywhere on the page."""
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        page.wait_for_timeout(500)
+        # Click body to defocus input
+        page.locator("body").click()
+        page.keyboard.press("Control+k")
+        page.wait_for_timeout(200)
+        focused_id = page.evaluate("() => document.activeElement.id")
+        assert focused_id == "agent-input", f"Ctrl+K should focus #agent-input, got: #{focused_id}"
+
+    def test_theme_toggle_on_agent_page(self, page: "Page") -> None:
+        """Theme toggle button exists and is clickable on the agent page."""
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        btn = page.locator("#agent-theme-btn")
+        assert btn.count() == 1, "#agent-theme-btn should exist on agent page"
+        assert btn.is_visible()
+        btn.click()
+        page.wait_for_timeout(200)
+        theme = page.locator("html").get_attribute("data-theme")
+        assert theme in ("dark", "light", "auto"), f"Unexpected theme after toggle: {theme}"
+
+    def test_shortcuts_modal(self, page: "Page") -> None:
+        """? key opens the keyboard shortcuts overlay; close button hides it."""
+        page.goto(SERVER_URL + "/chat", wait_until="domcontentloaded")
+        page.wait_for_timeout(500)
+        modal = page.locator("#shortcuts-modal")
+        assert modal.count() == 1, "#shortcuts-modal should exist in DOM"
+        # Press ? to open (body must be focused, not input)
+        page.locator("body").click()
+        page.keyboard.press("?")
+        page.wait_for_timeout(200)
+        visible = page.evaluate(
+            "() => { const m = document.querySelector('#shortcuts-modal'); "
+            "return m && m.style.display !== 'none'; }"
+        )
+        assert visible, "Shortcuts modal should be visible after pressing ?"
+        # Close button hides it
+        close_btn = page.locator(".shortcuts-close")
+        if close_btn.count() > 0:
+            close_btn.click()
+            page.wait_for_timeout(200)
+            hidden = page.evaluate(
+                "() => { const m = document.querySelector('#shortcuts-modal'); "
+                "return !m || m.style.display === 'none'; }"
+            )
+            assert hidden, "Shortcuts modal should be hidden after clicking close"
 
 
 class TestAgentResponsive:
