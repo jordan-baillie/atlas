@@ -60,8 +60,8 @@ def _health_log(level: str, message: str, detail: dict = None) -> None:
         from monitor.health_writer import log_error, log_warning, log_critical, log_info
         fn = {"error": log_error, "warning": log_warning, "critical": log_critical}.get(level, log_info)
         fn("live_executor", message, detail)
-    except (RuntimeError, ValueError, OSError, KeyError, AttributeError):
-        pass
+    except (RuntimeError, ValueError, OSError, KeyError, AttributeError) as e:
+        logger.debug("health_log write failed: %s", e)
 HALT_FILE = PROJECT_ROOT / ".live_halt"
 
 

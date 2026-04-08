@@ -80,7 +80,8 @@ def _load_prev_regime_state(trade_date: str, market_id: str) -> Optional[str]:
         with open(plan_files[0]) as fh:
             prev = json.load(fh)
         return prev.get("regime_state") or None
-    except Exception:
+    except Exception as e:
+        logger.debug("Could not read previous regime state: %s", e)
         return None
 
 
@@ -1340,7 +1341,8 @@ def _fmt_time(iso_str: Optional[str]) -> str:
     try:
         dt = datetime.fromisoformat(iso_str)
         return dt.strftime("%H:%M:%S")
-    except Exception:
+    except Exception as e:
+        logger.debug("Time format parse failed: %s", e)
         return iso_str[:19]
 
 
@@ -1363,7 +1365,8 @@ def _job_elapsed(job: dict) -> str:
         if secs < 3600:
             return f"{secs // 60}m {secs % 60}s"
         return f"{secs // 3600}h {(secs % 3600) // 60}m"
-    except Exception:
+    except Exception as e:
+        logger.debug("Job elapsed time calculation failed: %s", e)
         return "?"
 
 

@@ -247,7 +247,8 @@ class JobManager:
                 if job["status"] == "running":
                     job = self._refresh_running_job(job)
                 jobs.append(job)
-            except Exception:
+            except Exception as e:
+                logger.debug("Skipping unreadable job file: %s", e)
                 continue
         return jobs
 
@@ -297,8 +298,8 @@ class JobManager:
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     return result.stdout.strip()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("tmux log read failed: %s", e)
             return "No logs available yet."
 
         try:
@@ -317,7 +318,8 @@ class JobManager:
             # Read first line for title
             try:
                 first_line = p.read_text().split("\n")[0].strip().lstrip("#").strip()
-            except Exception:
+            except Exception as e:
+                logger.debug("Could not read spec title from %s: %s", p, e)
                 first_line = p.stem
             specs.append({
                 "name": p.stem,
@@ -390,8 +392,8 @@ class JobManager:
                     if "__JOB_EXIT_CODE__=" in line:
                         exit_code = int(line.split("=")[1].strip())
                         break
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Exit code extraction failed for job %s: %s", job.get("id", "?"), e)
 
         # Check timeout
         started = job.get("started_at")
@@ -404,8 +406,8 @@ class JobManager:
                 elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
                 if elapsed > job.get("timeout", JOB_TIMEOUT_S):
                     timed_out = True
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Timeout calculation failed for job %s: %s", job.get("id", "?"), e)
 
         # Determine new status
         if timed_out and session_alive:
@@ -415,8 +417,8 @@ class JobManager:
                     [str(DRIVE_SH), "kill", session_name],
                     capture_output=True, timeout=10,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to kill timed-out tmux session: %s", e)
             job["status"] = "timeout"
             job["completed_at"] = datetime.now(timezone.utc).isoformat()
             job["exit_code"] = -1
@@ -445,7 +447,8 @@ class JobManager:
                 capture_output=True, timeout=5,
             )
             return result.returncode == 0
-        except Exception:
+        except Exception as e:
+            logger.debug("tmux session check failed: %s", e)
             return False
 
     def _extract_summary(self, job: dict) -> str:
@@ -461,8 +464,8 @@ class JobManager:
         if log_path.exists():
             try:
                 text = log_path.read_text(errors="replace")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Could not read log file for summary: %s", e)
 
         # Fallback: capture from tmux pane (if session still exists briefly)
         if not text.strip():
@@ -474,8 +477,8 @@ class JobManager:
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     text = result.stdout
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("tmux capture for summary failed: %s", e)
 
         if not text.strip():
             return "No output captured."

@@ -279,7 +279,8 @@ def _build_dashboard_data() -> dict:
                 account["margin_usage_pct"] = (
                     round(initial_margin / equity_val * 100, 2) if equity_val > 0 else 0
                 )
-            except Exception:
+            except Exception as e:
+                logger.debug("Margin usage calculation failed: %s", e)
                 account["margin_usage_pct"] = 0
 
             positions = [dataclasses.asdict(p) for p in positions_info]
@@ -356,7 +357,8 @@ def _build_dashboard_data() -> dict:
                 "total_pnl_pct": account.get("total_pnl_pct", 0),
                 "open_positions": len(positions),
             }
-    except Exception:
+    except Exception as e:
+        logger.warning("Alpaca account data fetch failed: %s", e)
         result["account"] = {}
         result["positions"] = []
         result["recent_orders"] = []
@@ -374,7 +376,8 @@ def _build_dashboard_data() -> dict:
                 "next_close": str(clock.next_close),
                 "timestamp": str(clock.timestamp),
             }
-    except Exception:
+    except Exception as e:
+        logger.warning("Market clock fetch failed: %s", e)
         result["market_clock"] = {"is_open": False}
 
     # ── Equity curve + strategy performance from SQLite ───────────────────────
@@ -1018,7 +1021,8 @@ async def chat_create_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception:
+    except Exception as e:
+        logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name")
     model = body.get("model", "claude-opus-4-6")
@@ -1052,7 +1056,8 @@ async def chat_rename_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception:
+    except Exception as e:
+        logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name", "").strip()
     if not name:
@@ -1136,8 +1141,8 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 user_ok = secrets.compare_digest(uname.encode(), exp_user.encode())
                 pass_ok = secrets.compare_digest(pw.encode(), exp_pass.encode())
                 authed = user_ok and pass_ok
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("WebSocket auth decode failed: %s", e)
 
     if not authed:
         await ws.close(code=1008, reason="Unauthorized")
@@ -1289,8 +1294,8 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
         logger.exception("WebSocket chat error: %s", exc)
         try:
             await ws.send_json({"type": "error", "message": str(exc)})
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Could not send error to WebSocket client: %s", e)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
