@@ -32,7 +32,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# Ensure project root is on sys.path
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 

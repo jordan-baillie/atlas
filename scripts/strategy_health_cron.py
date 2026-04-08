@@ -20,10 +20,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Ensure project root is on sys.path so imports work regardless of cwd
 PROJECT = Path(__file__).resolve().parent.parent
-if str(PROJECT) not in sys.path:
-    sys.path.insert(0, str(PROJECT))
+sys.path.insert(0, str(PROJECT))
 
 from utils.config import get_active_config
 from monitor.strategy_health import (

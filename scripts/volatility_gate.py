@@ -45,6 +45,7 @@ from typing import Optional
 logger = logging.getLogger("atlas.volatility_gate")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
 
 # ── Alpaca client (lazy singleton) ────────────────────────────────────────────
 
@@ -412,7 +413,6 @@ def send_volatility_alert(gate_result: dict) -> bool:
     Only called when action == "block". Returns True if sent.
     """
     try:
-        sys.path.insert(0, str(PROJECT_ROOT))
         from utils.telegram import send_message
 
         flags_str = ", ".join(gate_result.get("flags", []))

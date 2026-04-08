@@ -10,7 +10,7 @@
 #
 # Flow:
 #   1. Run healthz.py (full system audit)
-#   2. Run reconcile.py (broker ↔ local state)
+#   2. Run reconcile_positions.py (broker ↔ local state)
 #   3. If issues found → spawn pi agent to fix
 #   4. Cooldown: same issue won't re-alert within 4 hours
 #

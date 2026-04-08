@@ -20,10 +20,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Ensure project root is on sys.path so imports work regardless of cwd
 PROJECT = Path(__file__).resolve().parent.parent
-if str(PROJECT) not in sys.path:
-    sys.path.insert(0, str(PROJECT))
+sys.path.insert(0, str(PROJECT))
 
 from utils.config import get_active_config
 
@@ -105,8 +103,7 @@ def run_calibration(market_id: str, dry_run: bool = False):
         sys.exit(1)
 
     # Load data using the same pattern as cli.py cmd_calibrate
-    sys.path.insert(0, str(PROJECT / "scripts"))
-    from cli import load_data, get_tickers
+    from scripts.cli import load_data, get_tickers
     tickers = get_tickers(market_id)
     data = load_data(tickers, config)
     if not data:

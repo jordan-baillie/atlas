@@ -170,7 +170,6 @@ def _md_to_telegram_html(text: str) -> str:
 
 DEFAULT_MARKET = os.environ.get("ATLAS_MARKET", "sp500")
 ALL_MARKETS = ["asx", "sp500"]  # Scanned by /plan and /status when no market specified
-SECRETS_PATH = Path.home() / ".atlas-secrets.json"
 
 
 def _authorized(chat_id: int | str) -> bool:
