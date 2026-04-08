@@ -38,8 +38,8 @@ from pathlib import Path
 from typing import Optional
 
 # ── Project root on path ─────────────────────────────────────
-PROJECT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from atlas_bootstrap import PROJECT_ROOT as PROJECT
 
 from utils.logging_config import setup_logging  # noqa: E402
 

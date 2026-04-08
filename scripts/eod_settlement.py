@@ -25,9 +25,9 @@ from pathlib import Path
 BRISBANE = ZoneInfo("Australia/Brisbane")
 
 # Setup
-PROJECT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from atlas_bootstrap import PROJECT_ROOT as PROJECT
 SNAPSHOT_LOG = PROJECT / "logs" / "portfolio_snapshots.jsonl"
-sys.path.insert(0, str(PROJECT))
 os.chdir(PROJECT)
 
 from utils.logging_config import setup_logging

@@ -16,7 +16,8 @@ Usage
     import json
     from regime.indicators import compute_all_scores
 
-    config = json.load(open("config/active/regime.json"))
+    with open("config/active/regime.json") as f:
+        config = json.load(f)
     scores = compute_all_scores(macro_row, config)
     # → {"trend": 0.32, "risk": 0.84, ..., "composite": 0.61}
 """
@@ -375,7 +376,8 @@ def compute_all_scores(indicators: dict, config: dict) -> dict:
     --------
     >>> import json
     >>> from regime.indicators import compute_all_scores
-    >>> config = json.load(open("config/active/regime.json"))
+    >>> with open("config/active/regime.json") as f:
+    ...     config = json.load(f)
     >>> bull = {
     ...     "spy_above_200dma": 1, "spy_200dma_slope": 0.05,
     ...     "vix": 15, "vix_term_ratio": 0.88,

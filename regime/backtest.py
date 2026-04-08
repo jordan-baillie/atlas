@@ -25,7 +25,8 @@ Usage
     import json
     from regime.backtest import RegimeAwareBacktest
 
-    config = json.load(open("config/active/sp500.json"))
+    with open("config/active/sp500.json") as f:
+        config = json.load(f)
     bt = RegimeAwareBacktest(config, start_date="2019-01-01")
     result = bt.run()
     print(result.regime_distribution)

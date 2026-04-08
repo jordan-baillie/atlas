@@ -28,8 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-PROJECT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from atlas_bootstrap import PROJECT_ROOT as PROJECT
 os.chdir(PROJECT)
 
 BRISBANE = ZoneInfo("Australia/Brisbane")
@@ -370,7 +370,8 @@ def main():
         plan_path = PROJECT / "plans" / f"plan_{market_id}_{now.strftime('%Y-%m-%d')}.json"
         if plan_path.exists():
             import json as _json
-            plan = _json.load(open(plan_path))
+            with open(plan_path) as _f:
+                plan = _json.load(_f)
             for e in plan.get("proposed_entries", []):
                 t = e.get("ticker", "")
                 sp = e.get("stop_price", 0)
@@ -379,7 +380,8 @@ def main():
         state_path = PROJECT / "brokers" / "state" / f"live_{market_id}.json"
         if state_path.exists():
             import json as _json
-            state = _json.load(open(state_path))
+            with open(state_path) as _f:
+                state = _json.load(_f)
             for p in state.get("positions", []):
                 t = p.get("ticker", "")
                 sp = p.get("stop_price", 0)

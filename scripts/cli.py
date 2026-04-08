@@ -1054,7 +1054,7 @@ def cmd_reconcile(args):
 
     cmd = [
         sys.executable,
-        str(PROJECT_ROOT / "scripts" / "reconcile.py"),
+        str(PROJECT_ROOT / "scripts" / "reconcile_positions.py"),
         "--market",
         args.market,
     ]

@@ -20,7 +20,7 @@ set -uo pipefail
 
 PROJECT="/root/atlas"
 HEALTHZ="$PROJECT/pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py"
-RECONCILE="$PROJECT/scripts/reconcile.py"
+RECONCILE="$PROJECT/scripts/reconcile_positions.py"
 LOG_DIR="$PROJECT/logs"
 COOLDOWN_DIR="$LOG_DIR/healthz-cooldowns"
 COOLDOWN_HOURS=4
@@ -52,7 +52,7 @@ DOW=$(date +%u)  # 1=Mon, 7=Sun
 HOUR=$(date +%H)
 if [ "$DOW" -le 5 ] || [ "$DOW" -eq 6 ]; then
     # Tue-Sat AEST covers Mon-Fri US sessions
-    RECONCILE_OUT=$(python3 "$RECONCILE" --market sp500 --auto-fix 2>&1) || RECONCILE_EXIT=$?
+    RECONCILE_OUT=$(python3 "$RECONCILE" --market sp500 --fix 2>&1) || RECONCILE_EXIT=$?
     log "Reconcile exit code: $RECONCILE_EXIT"
     if [ -n "$RECONCILE_OUT" ]; then
         log "Reconcile output:"

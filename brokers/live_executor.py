@@ -1763,9 +1763,8 @@ class LiveExecutor:
             return []
 
         # Determine current ET time without requiring pytz
-        from datetime import timezone, timedelta
-        _et_offset = timedelta(hours=-4)   # approximate EDT (UTC-4); -5 in EST
-        _now_et = datetime.now(tz=timezone(_et_offset))
+        from zoneinfo import ZoneInfo
+        _now_et = datetime.now(tz=ZoneInfo("America/New_York"))
         current_et_hour = _now_et.hour
 
         if current_et_hour < cutoff_hour:

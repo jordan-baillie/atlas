@@ -16,8 +16,8 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from atlas_bootstrap import PROJECT_ROOT
 
 from utils.telegram import (
     send_premarket_summary,
@@ -130,7 +130,8 @@ def main():
         msg = "🔬 <b>New Research Wave Planned</b>\n\n"
         if brief_files:
             import json as _json
-            brief = _json.load(open(brief_files[0]))
+            with open(brief_files[0]) as _f:
+                brief = _json.load(_f)
             wave_num = brief.get("wave_number", "?")
             theme = brief.get("theme", "not set")
             n_exp = len(brief.get("experiments", []))

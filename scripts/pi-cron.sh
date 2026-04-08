@@ -413,7 +413,7 @@ LOCKEOF
         echo "$(date -Iseconds) Running reconciliation for $MARKET" >> "$LOG_DIR/pi-cron.log"
         _IN_SET_PLUS_E=1
         set +e
-        python3 "$PROJECT/scripts/reconcile.py" --market "$MARKET" --auto-fix \
+        python3 "$PROJECT/scripts/reconcile_positions.py" --market "$MARKET" --auto-fix \
             >> "$LOG_DIR/pi-cron.log" 2>&1
         RECONCILE_EXIT=$?
         set -e

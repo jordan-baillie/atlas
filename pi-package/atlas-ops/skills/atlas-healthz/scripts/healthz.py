@@ -82,7 +82,8 @@ def check_infra(project: Path) -> list:
     if cfg_path.exists():
         try:
             import json as _json
-            broker_name = _json.load(open(cfg_path)).get("trading", {}).get("broker", "")
+            with open(cfg_path) as _f:
+                broker_name = _json.load(_f).get("trading", {}).get("broker", "")
         except Exception:
             pass
     if broker_name == "alpaca":
