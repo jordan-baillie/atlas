@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+import db.atlas_db as _adb
+
 # Ensure project root is on path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -35,6 +37,16 @@ from monitor.strategy_health import (
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def _isolate_db(tmp_path):
+    """Point atlas_db at a temp database so tests don't touch production."""
+    db_path = str(tmp_path / "test_health.db")
+    _adb._db_path_override = db_path
+    _adb.init_db()
+    yield
+    _adb._db_path_override = None
+
 
 def _make_config(strategies=None, **kwargs):
     """Build a minimal config dict for testing."""
@@ -149,6 +161,32 @@ def _write_best(tmp_path: Path, strategy: str, sharpe: float, win_rate_pct: floa
     return best_file
 
 
+def _insert_trade(
+    ticker: str,
+    strategy: str,
+    entry_price: float,
+    exit_price: float,
+    shares: int,
+    stop_price: float,
+    days_ago: int = 5,
+    holding_days: int = 3,
+) -> None:
+    """Insert a completed (closed) trade directly into the temp SQLite DB."""
+    from db.atlas_db import get_db
+    entry_dt = datetime.now() - timedelta(days=days_ago + holding_days)
+    exit_dt = datetime.now() - timedelta(days=days_ago)
+    pnl = (exit_price - entry_price) * shares
+    pnl_pct = ((exit_price - entry_price) / entry_price) * 100 if entry_price else 0
+    with get_db() as db:
+        db.execute("""
+            INSERT INTO trades (ticker, strategy, universe, direction, entry_date, entry_price,
+                shares, stop_price, exit_date, exit_price, exit_reason, pnl, pnl_pct,
+                hold_days, status, confidence, regime_at_entry)
+            VALUES (?, ?, 'sp500', 'long', ?, ?, ?, ?, ?, ?, 'test', ?, ?, ?, 'closed', 0.8, 'test')
+        """, (ticker, strategy, entry_dt.isoformat(), entry_price, shares, stop_price,
+              exit_dt.isoformat(), exit_price, round(pnl, 4), round(pnl_pct, 4), holding_days))
+
+
 # ── Monitor factory that injects a custom PROJECT path ────────────────────────
 
 class _MonkeyMonitor(StrategyHealthMonitor):
@@ -248,7 +286,6 @@ class TestComputeLiveMetrics:
     """Tests for StrategyHealthMonitor.compute_live_metrics."""
 
     def test_insufficient_data_when_no_trades(self, tmp_path):
-        _write_ledger(tmp_path, [])
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion")
         assert metrics.status == INSUFFICIENT_DATA
@@ -273,16 +310,8 @@ class TestComputeLiveMetrics:
 
     def test_metrics_computed_with_enough_trades(self, tmp_path):
         """10+ completed winning trades → metrics are computed."""
-        events = []
         for i in range(12):
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion",
-                entry_price=100.0, exit_price=105.0,  # winning trade
-                shares=10, stop_price=95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, 105.0, 10, 95.0, days_ago=i + 2)
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion")
         assert metrics.trade_count == 12
@@ -293,17 +322,9 @@ class TestComputeLiveMetrics:
 
     def test_win_rate_mixed_trades(self, tmp_path):
         """50% win rate with equal wins/losses."""
-        events = []
         for i in range(10):
             exit_price = 105.0 if i % 2 == 0 else 95.0  # alternating win/loss
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion",
-                entry_price=100.0, exit_price=exit_price,
-                shares=10, stop_price=90.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, exit_price, 10, 90.0, days_ago=i + 2)
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion")
         assert metrics.trade_count == 10
@@ -311,16 +332,8 @@ class TestComputeLiveMetrics:
 
     def test_sharpe_not_computed_below_5_trades(self, tmp_path):
         """Sharpe requires at least MIN_TRADES_FOR_SHARPE (5) completed trades."""
-        events = []
-        # We need at least 10 trades for metrics, but test that sharpe needs 5
-        # Create 10 trades but only 4 with exit (by using pre-existing pnl field)
         for i in range(10):
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion", 100.0, 105.0, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, 105.0, 10, 95.0, days_ago=i + 2)
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion")
         # With 10 trades (5+ returns), Sharpe should be computed
@@ -329,19 +342,10 @@ class TestComputeLiveMetrics:
     def test_max_drawdown_computed(self, tmp_path):
         """Max drawdown is computed from equity curve."""
         # Create 10 trades: 5 wins then 5 losses to generate drawdown
-        events = []
         for i in range(5):
-            entry, exit_ = _make_completed_trade(
-                f"WIN{i}", "mean_reversion", 100.0, 110.0, 10, 95.0, days_ago=20 - i
-            )
-            events.extend([entry, exit_])
+            _insert_trade(f"WIN{i}", "mean_reversion", 100.0, 110.0, 10, 95.0, days_ago=20 - i)
         for i in range(5):
-            entry, exit_ = _make_completed_trade(
-                f"LOSE{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=14 - i
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"LOSE{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=14 - i)
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion")
         assert metrics.max_drawdown is not None
@@ -349,38 +353,12 @@ class TestComputeLiveMetrics:
 
     def test_window_filters_old_trades(self, tmp_path):
         """Trades older than window_days are excluded."""
-        events = []
         # 10 recent trades (within 60 days)
         for i in range(10):
-            entry, exit_ = _make_completed_trade(
-                f"RECENT{i}", "mean_reversion", 100.0, 105.0, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
+            _insert_trade(f"RECENT{i}", "mean_reversion", 100.0, 105.0, 10, 95.0, days_ago=i + 2)
         # 5 old trades (outside 60-day window)
         for i in range(5):
-            entry_dt = datetime.now() - timedelta(days=90 + i)
-            exit_dt = datetime.now() - timedelta(days=85 + i)
-            events.append({
-                "type": "entry",
-                "ticker": f"OLD{i}",
-                "strategy": "mean_reversion",
-                "fill_price": 100.0,
-                "stop_price": 95.0,
-                "shares": 10,
-                "timestamp": entry_dt.isoformat(),
-                "order_id": f"old-entry-{i}",
-            })
-            events.append({
-                "type": "exit",
-                "ticker": f"OLD{i}",
-                "strategy": "mean_reversion",
-                "fill_price": 108.0,
-                "shares": 10,
-                "timestamp": exit_dt.isoformat(),
-                "order_id": f"old-exit-{i}",
-            })
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"OLD{i}", "mean_reversion", 100.0, 108.0, 10, 95.0, days_ago=90 + i, holding_days=5)
         monitor = _make_monitor(tmp_path)
         metrics = monitor.compute_live_metrics("mean_reversion", window_days=60)
         # Only recent 10 trades should be counted
@@ -395,17 +373,11 @@ class TestCompareToBacktest:
     def _setup_10_trades(
         self, tmp_path: Path, strategy: str, exit_price: float = 105.0
     ) -> None:
-        """Write 10 completed trades to ledger."""
-        events = []
+        """Insert 10 completed trades into the temp SQLite DB."""
         for i in range(10):
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", strategy, 100.0, exit_price, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
+            _insert_trade(f"TICK{i}", strategy, 100.0, exit_price, 10, 95.0, days_ago=i + 2)
 
     def test_insufficient_data_no_trades(self, tmp_path):
-        _write_ledger(tmp_path, [])
         _write_best(tmp_path, "mean_reversion", sharpe=1.0)
         monitor = _make_monitor(tmp_path)
         assessment = monitor.compare_to_backtest("mean_reversion")
@@ -429,19 +401,9 @@ class TestCompareToBacktest:
 
     def test_warning_when_live_sharpe_below_threshold(self, tmp_path):
         """WARNING when live Sharpe < 50% of backtest Sharpe but ≥ 0."""
-        events = []
-        # Mix of wins (small) and losses (small) to get low positive Sharpe
         for i in range(10):
-            # Alternate between tiny win and near-breakeven
-            if i % 2 == 0:
-                exit_price = 100.5  # tiny win
-            else:
-                exit_price = 99.5   # small loss
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion", 100.0, exit_price, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
+            exit_price = 100.5 if i % 2 == 0 else 99.5
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, exit_price, 10, 95.0, days_ago=i + 2)
 
         # High backtest Sharpe to trigger WARNING
         _write_best(tmp_path, "mean_reversion", sharpe=2.0)
@@ -453,15 +415,8 @@ class TestCompareToBacktest:
 
     def test_degraded_when_live_sharpe_negative(self, tmp_path):
         """DEGRADED when live Sharpe < 0."""
-        events = []
-        # All losing trades → negative Sharpe
         for i in range(10):
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
-
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=i + 2)
         _write_best(tmp_path, "mean_reversion", sharpe=1.0)
         monitor = _make_monitor(tmp_path)
         assessment = monitor.compare_to_backtest("mean_reversion")
@@ -622,13 +577,8 @@ class TestFullHealthReport:
             )
 
         # Current run: also DEGRADED (10 losing trades)
-        events = []
         for i in range(10):
-            entry, exit_ = _make_completed_trade(
-                f"TICK{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=i + 2
-            )
-            events.extend([entry, exit_])
-        _write_ledger(tmp_path, events)
+            _insert_trade(f"TICK{i}", "mean_reversion", 100.0, 90.0, 10, 95.0, days_ago=i + 2)
         _write_best(tmp_path, "mean_reversion", sharpe=1.0)
 
         config = _make_config(strategies={"mean_reversion": {"enabled": True}})

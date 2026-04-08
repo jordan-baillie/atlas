@@ -22,6 +22,8 @@ Usage:
     result = executor.execute_plan(plan, trade_date)
     executor.disconnect()
 """
+# TODO: Refactor — 2190 lines. Split into: PlanLoader, OrderRouter, ExecutionReporter modules.
+# TODO: Split into preflight.py, protective_orders.py, execution_journal.py
 
 from __future__ import annotations
 

@@ -24,6 +24,8 @@ Run (uvicorn module):
 Run (systemd):
     systemctl start atlas-dashboard
 """
+# TODO: Refactor — 1369 lines. Split into: routes/, websocket/, chat/ sub-packages.
+# TODO: Split into api_routes.py, auth.py, static.py using FastAPI APIRouter
 
 import asyncio
 import base64

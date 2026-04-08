@@ -20,6 +20,7 @@ Config keys (under 'alpaca' section):
 All tickers at the Atlas boundary use plain US symbols (AAPL, MSFT).
 Alpaca uses the same format — conversion is a no-op for SP500.
 """
+# TODO: Refactor — 1855 lines. Split into: AlpacaOrders, AlpacaPositions, AlpacaAccount modules.
 
 from __future__ import annotations
 
@@ -714,6 +715,7 @@ class AlpacaBroker(BrokerAdapter):
         logger.debug("get_open_orders: %d open orders (incl. OCO legs)", len(results))
         return results
 
+    # TODO: Extract to protective_orders.py (~400 lines)
     def sync_all_protective_orders(
         self,
         positions: list,

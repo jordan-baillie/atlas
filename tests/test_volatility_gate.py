@@ -303,7 +303,9 @@ class TestCheckVolatilityGate:
 
         result = check_volatility_gate(_config())
         assert "checked_at" in result
-        assert result["checked_at"].endswith("Z")
+        # Accept both "Z" suffix and "+00:00" UTC offset formats
+        ts = result["checked_at"]
+        assert ts.endswith("Z") or ts.endswith("+00:00"), f"Expected UTC timestamp, got: {ts}"
 
     @patch("scripts.volatility_gate._fetch_overnight_data")
     def test_result_has_details_per_indicator(self, mock_fetch):

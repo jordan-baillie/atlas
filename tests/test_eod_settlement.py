@@ -116,42 +116,43 @@ class TestLoadConfig:
 
 
 # ---------------------------------------------------------------------------
-# fetch_closing_prices helper (mocked download_universe)
+# fetch_closing_prices helper (mocked Tiingo client)
 # ---------------------------------------------------------------------------
 
 class TestFetchClosingPrices:
-    """fetch_closing_prices imports download_universe inside the function body,
-    so we patch data.ingest.download_universe (the source module)."""
+    """fetch_closing_prices imports get_tiingo_client inside the function body,
+    so we patch data.tiingo.get_tiingo_client (the source module)."""
 
-    def _make_mock_df(
+    def _make_mock_quote(
         self,
         close: float = 102.0,
         high: float = 105.0,
         low: float = 98.0,
-        n_days: int = 5,
-    ) -> pd.DataFrame:
-        dates = pd.date_range("2024-12-01", periods=n_days, freq="B")
-        return pd.DataFrame(
-            {
-                "open":   [100.0] * n_days,
-                "high":   [high]  * n_days,
-                "low":    [low]   * n_days,
-                "close":  [close] * n_days,
-                "volume": [1_000_000.0] * n_days,
-            },
-            index=dates,
-        )
+    ) -> dict:
+        """Build a mock Tiingo quote dict."""
+        return {
+            "price": close,
+            "open": 100.0,
+            "high": high,
+            "low": low,
+            "prev_close": 100.0,
+            "volume": 1_000_000,
+            "timestamp": "2024-12-05T20:00:00+00:00",
+        }
 
     def test_returns_empty_when_no_tickers(self):
-        with patch("data.ingest.download_universe", return_value={}):
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices([], market_id="sp500")
         assert prices == {}
         assert lows == {}
         assert highs == {}
 
     def test_returns_prices_for_valid_ticker(self):
-        mock_df = self._make_mock_df(close=102.0, high=105.0, low=98.0)
-        with patch("data.ingest.download_universe", return_value={"AAPL": mock_df}):
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {"AAPL": self._make_mock_quote(close=102.0, high=105.0, low=98.0)}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices(["AAPL"], market_id="sp500")
 
         assert "AAPL" in prices
@@ -160,15 +161,20 @@ class TestFetchClosingPrices:
         assert highs["AAPL"] == pytest.approx(105.0)
 
     def test_missing_ticker_absent_from_output(self):
-        """Tickers not returned by download_universe are absent from output dicts."""
-        with patch("data.ingest.download_universe", return_value={}):
+        """Tickers not returned by get_quotes are absent from output dicts."""
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices(["MISSING"], market_id="sp500")
         assert "MISSING" not in prices
 
     def test_handles_multiple_tickers(self):
         tickers = ["AAPL", "MSFT", "GOOG"]
-        mock_data = {t: self._make_mock_df(close=105.0, high=110.0, low=90.0) for t in tickers}
-        with patch("data.ingest.download_universe", return_value=mock_data):
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {
+            t: self._make_mock_quote(close=105.0, high=110.0, low=90.0) for t in tickers
+        }
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices(tickers, market_id="sp500")
 
         assert set(prices.keys()) == set(tickers)
@@ -178,42 +184,31 @@ class TestFetchClosingPrices:
             assert lows[t] == pytest.approx(90.0)
 
     def test_stale_data_still_returns_price(self):
-        """Stale data (old dates) triggers a warning but price is still returned."""
-        dates = pd.date_range("2020-01-01", periods=5, freq="B")
-        stale_df = pd.DataFrame(
-            {
-                "open":  [100.0] * 5,
-                "high":  [105.0] * 5,
-                "low":   [98.0]  * 5,
-                "close": [102.0] * 5,
-                "volume": [500_000.0] * 5,
-            },
-            index=dates,
-        )
-        with patch("data.ingest.download_universe", return_value={"STALE": stale_df}):
+        """Tiingo returns valid data — price is extracted correctly."""
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {"STALE": self._make_mock_quote(close=102.0, high=105.0, low=98.0)}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices(["STALE"], market_id="sp500")
 
         assert "STALE" in prices
         assert prices["STALE"] == pytest.approx(102.0)
 
     def test_returns_three_dicts(self):
-        mock_df = self._make_mock_df()
-        with patch("data.ingest.download_universe", return_value={"T": mock_df}):
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {"T": self._make_mock_quote()}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             result = eod.fetch_closing_prices(["T"], market_id="sp500")
         assert len(result) == 3  # (prices, lows, highs)
 
-    def test_without_low_high_columns_falls_back_to_close(self):
-        """If high/low are missing, fallback to close price."""
-        dates = pd.date_range("2024-12-01", periods=3, freq="B")
-        df_no_hl = pd.DataFrame(
-            {"close": [103.0, 104.0, 105.0]},
-            index=dates,
-        )
-        with patch("data.ingest.download_universe", return_value={"NOHL": df_no_hl}):
+    def test_without_low_high_falls_back_to_close(self):
+        """If Tiingo quote has no low/high, fallback to price."""
+        mock_tiingo = MagicMock()
+        mock_tiingo.get_quotes.return_value = {"NOHL": {"price": 105.0, "volume": 1_000_000}}
+        with patch("data.tiingo.get_tiingo_client", return_value=mock_tiingo):
             prices, lows, highs = eod.fetch_closing_prices(["NOHL"], market_id="sp500")
 
         assert "NOHL" in prices
-        # Low and high should fall back to close when columns missing
+        # Low and high should fall back to price when keys are absent
         assert lows["NOHL"] == prices["NOHL"]
         assert highs["NOHL"] == prices["NOHL"]
 
