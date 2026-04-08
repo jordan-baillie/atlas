@@ -152,6 +152,52 @@ def record_trade_entry(
         )
 
 
+def _compute_and_fill_mae_mfe(ticker: str, strategy: str) -> None:
+    """Compute and fill MAE/MFE for the most recently closed trade of (ticker, strategy).
+
+    Uses OHLCV data between entry_date and exit_date. Non-fatal — logs errors
+    but never raises.
+    """
+    import logging
+    _log = logging.getLogger(__name__)
+    try:
+        with get_db() as db:
+            trade = db.execute(
+                "SELECT id, entry_date, exit_date, entry_price FROM trades "
+                "WHERE ticker=? AND strategy=? AND status='closed' "
+                "ORDER BY id DESC LIMIT 1",
+                (ticker, strategy),
+            ).fetchone()
+            if not trade:
+                return
+
+            ed = trade['entry_date'][:10]
+            xd = trade['exit_date'][:10]
+            entry_price = trade['entry_price']
+            trade_id = trade['id']
+
+            rows = db.execute(
+                "SELECT low, high FROM ohlcv WHERE ticker=? AND date BETWEEN ? AND ?",
+                (ticker, ed, xd),
+            ).fetchall()
+
+            if not rows:
+                _log.debug("No OHLCV data for %s between %s and %s — skipping MAE/MFE", ticker, ed, xd)
+                return
+
+            min_low = min(r['low'] for r in rows)
+            max_high = max(r['high'] for r in rows)
+            mae = round((min_low - entry_price) / entry_price * 100, 4)
+            mfe = round((max_high - entry_price) / entry_price * 100, 4)
+
+            db.execute(
+                "UPDATE trades SET mae=?, mfe=?, updated_at=datetime('now') WHERE id=?",
+                (mae, mfe, trade_id),
+            )
+            _log.info("MAE/MFE filled for trade #%d %s: mae=%.4f%%, mfe=%.4f%%", trade_id, ticker, mae, mfe)
+    except Exception as exc:
+        _log.warning("_compute_and_fill_mae_mfe failed for %s/%s: %s", ticker, strategy, exc)
+
 def record_trade_exit(
     ticker: str,
     strategy: str,
@@ -181,6 +227,8 @@ def record_trade_exit(
                 ticker, strategy,
             ),
         )
+    # Compute and fill MAE/MFE from OHLCV data (non-fatal)
+    _compute_and_fill_mae_mfe(ticker, strategy)
 
 
 def get_open_positions() -> List[Dict]:

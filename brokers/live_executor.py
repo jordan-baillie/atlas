@@ -593,6 +593,13 @@ class LiveExecutor:
         confidence = entry.get("confidence", 0)
         stop_price = entry.get("stop_price", 0)
 
+        # Get current regime for trade record enrichment
+        try:
+            from regime.model import RegimeModel
+            _regime_state = RegimeModel().classify_current().state.value
+        except Exception:
+            _regime_state = None
+
         direction = "long"
         order_side = OrderSide.BUY
         side_label = order_side.value
@@ -756,6 +763,10 @@ class LiveExecutor:
                         "order_id": order_result.order_id,
                         "timestamp": datetime.now().isoformat(),
                         "direction": direction,
+                        "confidence": confidence,
+                        "market_id": self.config.get("market_id", "sp500"),
+                        "config_version": self.config.get("version"),
+                        "regime_state": _regime_state,
                     })
                 except Exception as _ledger_exc:
                     logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
@@ -778,6 +789,13 @@ class LiveExecutor:
         """Execute a single exit order."""
         ticker = exit_rec.get("ticker", "")
         reason = exit_rec.get("reason", "signal_exit")
+
+        # Get current regime for exit record
+        try:
+            from regime.model import RegimeModel
+            _regime_state = RegimeModel().classify_current().state.value
+        except Exception:
+            _regime_state = None
 
         # Direction: long = SELL to close, short = BUY to cover
         direction = exit_rec.get("direction", "long")
@@ -1016,6 +1034,7 @@ class LiveExecutor:
                 "slippage_bps": result.get("slippage_bps"),
                 "order_id": order_result.order_id,
                 "direction": direction,
+                "regime_at_exit": _regime_state,
             }
             try:
                 from journal.logger import TradeLedger
@@ -1832,6 +1851,13 @@ class LiveExecutor:
                 if t:
                     plan_by_ticker[t] = entry
 
+        # Get current regime for enrichment
+        try:
+            from regime.model import RegimeModel
+            _recon_regime = RegimeModel().classify_current().state.value
+        except Exception:
+            _recon_regime = None
+
         # Load existing ledger order IDs to skip duplicates
         try:
             from journal.logger import TradeLedger
@@ -1909,6 +1935,10 @@ class LiveExecutor:
                 "timestamp": str(getattr(order, "filled_at", ""))[:19],
                 "direction": "long",
                 "reconciled": True,  # flag to distinguish from inline records
+                "confidence": plan_entry.get("confidence", 0),
+                "market_id": self.config.get("market_id", "sp500"),
+                "config_version": self.config.get("version"),
+                "regime_state": _recon_regime,
             }
             try:
                 _ledger.record_entry(ledger_record)
@@ -1984,6 +2014,13 @@ class LiveExecutor:
             logger.error("reconcile_exit_fills: cannot fetch orders: %s", e)
             return []
 
+        # Get current regime for exit record enrichment
+        try:
+            from regime.model import RegimeModel
+            _recon_exit_regime = RegimeModel().classify_current().state.value
+        except Exception:
+            _recon_exit_regime = None
+
         reconciled = []
         for order in orders:
             order_id = str(order.id)
@@ -2049,6 +2086,7 @@ class LiveExecutor:
                 "order_id": order_id,
                 "timestamp": str(getattr(order, "filled_at", ""))[:26],
                 "reconciled": True,
+                "regime_at_exit": _recon_exit_regime,
             }
             try:
                 _ledger.record_exit(exit_record)

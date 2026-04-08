@@ -126,11 +126,17 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                     # SQLite dual-write (non-fatal — ledger is source of truth)
                     try:
                         from db import atlas_db
+                        try:
+                            from regime.model import RegimeModel
+                            _eod_regime = RegimeModel().classify_current().state.value
+                        except Exception:
+                            _eod_regime = None
                         atlas_db.record_trade_exit(
                             ticker=pos.ticker,
                             strategy=getattr(pos, "strategy", ""),
                             exit_price=exit_price,
                             exit_reason="stop_loss",
+                            regime_at_exit=_eod_regime,
                         )
                     except Exception as _e:
                         log.warning(f"SQLite trade exit dual-write failed: {_e}")
@@ -168,11 +174,17 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                     # SQLite dual-write (non-fatal — ledger is source of truth)
                     try:
                         from db import atlas_db
+                        try:
+                            from regime.model import RegimeModel
+                            _eod_regime = RegimeModel().classify_current().state.value
+                        except Exception:
+                            _eod_regime = None
                         atlas_db.record_trade_exit(
                             ticker=pos.ticker,
                             strategy=getattr(pos, "strategy", ""),
                             exit_price=exit_price,
                             exit_reason="take_profit",
+                            regime_at_exit=_eod_regime,
                         )
                     except Exception as _e:
                         log.warning(f"SQLite trade exit dual-write failed: {_e}")

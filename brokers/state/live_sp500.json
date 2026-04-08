@@ -5,7 +5,7 @@
     {
       "ticker": "AMT",
       "strategy": "mean_reversion",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 167.53,
       "shares": 4,
       "stop_price": 168.85,
@@ -14,16 +14,16 @@
     {
       "ticker": "COP",
       "strategy": "sector_rotation",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 130.51,
       "shares": 2,
-      "stop_price": 126.44,
+      "stop_price": 127.155,
       "order_id": ""
     },
     {
       "ticker": "DVN",
       "strategy": "sector_rotation",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 50.3,
       "shares": 5,
       "stop_price": 45.74,
@@ -32,7 +32,7 @@
     {
       "ticker": "MRVL",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 108.63,
       "shares": 4,
       "stop_price": 101.6,
@@ -41,7 +41,7 @@
     {
       "ticker": "NFLX",
       "strategy": "trend_following",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 94.38,
       "shares": 3,
       "stop_price": 97.205,
@@ -50,10 +50,10 @@
     {
       "ticker": "OXY",
       "strategy": "sector_rotation",
-      "entry_date": "2026-04-07",
+      "entry_date": "2026-04-08",
       "entry_price": 62.96,
       "shares": 3,
-      "stop_price": 60.795,
+      "stop_price": 61.13,
       "order_id": ""
     }
   ],
@@ -1135,10 +1135,87 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-07",
+      "equity": 5055.02,
+      "cash": 3153.29,
+      "positions_value": 1901.73,
+      "num_positions": 6,
+      "total_realized_pnl": 190.39,
+      "total_closed_trades": 21,
+      "positions": [
+        {
+          "ticker": "AMT",
+          "strategy": "mean_reversion",
+          "shares": 4,
+          "entry_price": 167.53,
+          "current_price": 174.08,
+          "unrealized_pnl": 26.2,
+          "mae": 0.0,
+          "mfe": 3.91,
+          "holding_days": -1
+        },
+        {
+          "ticker": "COP",
+          "strategy": "sector_rotation",
+          "shares": 2,
+          "entry_price": 130.51,
+          "current_price": 131.77,
+          "unrealized_pnl": 2.52,
+          "mae": 0.0,
+          "mfe": 0.97,
+          "holding_days": -1
+        },
+        {
+          "ticker": "DVN",
+          "strategy": "sector_rotation",
+          "shares": 5,
+          "entry_price": 50.3,
+          "current_price": 49.95,
+          "unrealized_pnl": -1.75,
+          "mae": -0.7,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "MRVL",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 108.63,
+          "current_price": 109.38,
+          "unrealized_pnl": 3.0,
+          "mae": 0.0,
+          "mfe": 0.69,
+          "holding_days": -1
+        },
+        {
+          "ticker": "NFLX",
+          "strategy": "trend_following",
+          "shares": 3,
+          "entry_price": 94.38,
+          "current_price": 98.82,
+          "unrealized_pnl": 13.32,
+          "mae": 0.0,
+          "mfe": 4.7,
+          "holding_days": -1
+        },
+        {
+          "ticker": "OXY",
+          "strategy": "sector_rotation",
+          "shares": 3,
+          "entry_price": 62.96,
+          "current_price": 62.94,
+          "unrealized_pnl": -0.06,
+          "mae": -0.03,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5120.55,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-07T08:00:39.612767"
+  "last_saved": "2026-04-08T08:00:51.429101"
 }

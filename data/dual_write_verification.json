@@ -24,6 +24,11 @@
       "date": "2026-04-07",
       "passed": false,
       "details": "4/5 pass"
+    },
+    {
+      "date": "2026-04-08",
+      "passed": false,
+      "details": "3/5 pass"
     }
   ],
   "consecutive_passes": 0,

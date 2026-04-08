@@ -206,6 +206,7 @@ class TradeLedger:
                 strategy=trade_record.get('strategy', ''),
                 exit_price=float(trade_record.get('fill_price', trade_record.get('exit_price', 0)) or 0),
                 exit_reason=trade_record.get('exit_reason', ''),
+                regime_at_exit=trade_record.get('regime_at_exit'),
             )
             logger.info(f"SQLite dual-write: exit for {_dw_ticker} succeeded")
         except Exception as _db_exc:
