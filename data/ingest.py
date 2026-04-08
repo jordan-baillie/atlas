@@ -155,17 +155,17 @@ def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) 
         try:
             from db.atlas_db import get_db as _get_db
             _rows = []
-            for _idx, _row in df.iterrows():
-                _date_str = _idx.strftime('%Y-%m-%d') if hasattr(_idx, 'strftime') else str(_idx)[:10]
+            for _t in df.itertuples():
+                _date_str = _t.Index.strftime('%Y-%m-%d') if hasattr(_t.Index, 'strftime') else str(_t.Index)[:10]
                 _rows.append((
                     ticker,
                     _date_str,
-                    float(_row.get('open', 0) or 0),
-                    float(_row.get('high', 0) or 0),
-                    float(_row.get('low', 0) or 0),
-                    float(_row.get('close', 0) or 0),
+                    float(getattr(_t, 'open', 0) or 0),
+                    float(getattr(_t, 'high', 0) or 0),
+                    float(getattr(_t, 'low', 0) or 0),
+                    float(getattr(_t, 'close', 0) or 0),
                     None,  # adj_close — not stored in canonical format
-                    int(_row.get('volume', 0) or 0),
+                    int(getattr(_t, 'volume', 0) or 0),
                     (market_id or 'sp500').lower(),
                     'yfinance',
                 ))
@@ -657,21 +657,21 @@ def _sqlite_batch_write(
     try:
         from db.atlas_db import get_db as _get_db
         rows = []
-        for idx, row in df.iterrows():
+        for t_row in df.itertuples():
             date_str = (
-                idx.strftime("%Y-%m-%d")
-                if hasattr(idx, "strftime")
-                else str(idx)[:10]
+                t_row.Index.strftime("%Y-%m-%d")
+                if hasattr(t_row.Index, "strftime")
+                else str(t_row.Index)[:10]
             )
             rows.append((
                 ticker,
                 date_str,
-                float(row.get("open", 0) or 0),
-                float(row.get("high", 0) or 0),
-                float(row.get("low", 0) or 0),
-                float(row.get("close", 0) or 0),
+                float(getattr(t_row, "open", 0) or 0),
+                float(getattr(t_row, "high", 0) or 0),
+                float(getattr(t_row, "low", 0) or 0),
+                float(getattr(t_row, "close", 0) or 0),
                 None,  # adj_close — not stored in canonical format
-                int(row.get("volume", 0) or 0),
+                int(getattr(t_row, "volume", 0) or 0),
                 universe_name,
                 source,
             ))

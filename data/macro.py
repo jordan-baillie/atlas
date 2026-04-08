@@ -617,7 +617,8 @@ def write_macro_indicators_to_db(df: pd.DataFrame) -> int:
     Returns:
         Number of rows written.
     """
-    from db.atlas_db import upsert_macro_indicators
+    from db.atlas_db import batch_upsert_macro_indicators
+    import math
 
     if df.empty:
         return 0
@@ -625,10 +626,10 @@ def write_macro_indicators_to_db(df: pd.DataFrame) -> int:
     # Integer columns that must be cast before writing
     int_cols = {"spy_above_200dma", "unemployment_claims"}
 
-    n = 0
+    batch = []
     for ts, row in df.iterrows():
         date_str = ts.strftime("%Y-%m-%d") if hasattr(ts, "strftime") else str(ts)
-        fields: Dict = {}
+        fields: Dict = {"date": date_str}
         for col, val in row.items():
             if col in ("date", "updated_at"):
                 continue
@@ -638,7 +639,6 @@ def write_macro_indicators_to_db(df: pd.DataFrame) -> int:
             if col in int_cols and val is not None:
                 try:
                     # NaN -> None, otherwise round to int
-                    import math
                     if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
                         val = None
                     else:
@@ -646,11 +646,9 @@ def write_macro_indicators_to_db(df: pd.DataFrame) -> int:
                 except (TypeError, ValueError):
                     val = None
             fields[col] = val
+        batch.append(fields)
 
-        upsert_macro_indicators(date_str, **fields)
-        n += 1
-
-    return n
+    return batch_upsert_macro_indicators(batch)
 
 
 def backfill_macro_indicators(

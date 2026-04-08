@@ -441,6 +441,8 @@ def get_universe_data(
     For dynamic universes (sp500) or when definitions is unavailable, falls
     back to querying ``WHERE universe=?`` as before.
     """
+    import pandas as pd
+
     # Prefer definitions-based ticker list for static universes
     try:
         from universe.definitions import get_universe  # type: ignore
@@ -448,19 +450,44 @@ def get_universe_data(
         if defn.get("method") == "static":
             from universe.definitions import get_universe_tickers
             tickers = get_universe_tickers(universe_name)
-            return {t: get_ohlcv(t, start_date=start_date) for t in tickers}
+            if not tickers:
+                return {}
+            placeholders = ", ".join(["?"] * len(tickers))
+            query = f"SELECT * FROM ohlcv WHERE ticker IN ({placeholders})"
+            params: List[Any] = list(tickers)
+            if start_date:
+                query += " AND date >= ?"
+                params.append(start_date)
+            query += " ORDER BY ticker, date"
+            with get_db() as db:
+                df = pd.read_sql_query(query, db, params=params, parse_dates=["date"])
+            result: Dict[str, Any] = {}
+            if not df.empty:
+                for ticker, group in df.groupby("ticker"):
+                    result[ticker] = group.set_index("date")
+            # Include empty DataFrames for tickers with no data
+            for t in tickers:
+                if t not in result:
+                    result[t] = pd.DataFrame()
+            return result
     except (KeyError, ImportError):
         pass
 
     # Fallback: query by universe column (sp500 and unknown universes)
+    query = "SELECT * FROM ohlcv WHERE universe = ?"
+    params_fb: List[Any] = [universe_name]
+    if start_date:
+        query += " AND date >= ?"
+        params_fb.append(start_date)
+    query += " ORDER BY ticker, date"
     with get_db() as db:
-        tickers = [
-            r[0]
-            for r in db.execute(
-                "SELECT DISTINCT ticker FROM ohlcv WHERE universe=?", (universe_name,)
-            ).fetchall()
-        ]
-    return {t: get_ohlcv(t, start_date=start_date) for t in tickers}
+        df = pd.read_sql_query(query, db, params=params_fb, parse_dates=["date"])
+    if df.empty:
+        return {}
+    result_fb: Dict[str, Any] = {}
+    for ticker, group in df.groupby("ticker"):
+        result_fb[ticker] = group.set_index("date")
+    return result_fb
 
 
 # ── Signals ──────────────────────────────────────────────────────────────────
@@ -1287,6 +1314,49 @@ def upsert_macro_indicators(date: str, **fields) -> None:
             f"INSERT OR REPLACE INTO macro_indicators ({cols_str}) VALUES ({placeholders})",
             values,
         )
+
+
+def batch_upsert_macro_indicators(rows: List[Dict]) -> int:
+    """Batch-insert macro indicator rows in a single transaction.
+
+    Each dict must contain a 'date' key. Other keys matching
+    _MACRO_INDICATOR_COLS are upserted; unknown keys are ignored.
+    Returns the number of rows written.
+    """
+    import math
+
+    def _clean(v: Any) -> Any:
+        """Convert NaN/inf to None so SQLite stores NULL."""
+        if v is None:
+            return None
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return v
+
+    count = 0
+    with get_db() as db:
+        for row in rows:
+            date = row.get("date")
+            if not date:
+                continue
+            safe = {k: _clean(v) for k, v in row.items() if k in _MACRO_INDICATOR_COLS}
+            if not safe:
+                db.execute(
+                    "INSERT OR IGNORE INTO macro_indicators (date) VALUES (?)",
+                    (date,),
+                )
+            else:
+                sorted_keys = sorted(safe.keys())
+                cols = ["date"] + sorted_keys
+                placeholders = ", ".join(["?"] * len(cols))
+                cols_str = ", ".join(cols)
+                values = [date] + [safe[k] for k in sorted_keys]
+                db.execute(
+                    f"INSERT OR REPLACE INTO macro_indicators ({cols_str}) VALUES ({placeholders})",
+                    values,
+                )
+            count += 1
+    return count
 
 
 def get_macro_indicators(
