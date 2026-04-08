@@ -241,6 +241,125 @@
 @media (max-width: 480px) {
   .perf-overview-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Tab Navigation ── */
+.tab-nav {
+  display: flex; gap: 0; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  background: none; border: none; color: var(--text-3);
+  padding: 10px 20px; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s var(--ease);
+}
+.tab-btn:hover { color: var(--text-2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Finance Tab ── */
+.fin-summary-strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;
+}
+.fin-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.fin-stat-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+.fin-stat-value { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+.fin-stat-sub { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+
+/* Invest/Cash bar */
+.invest-bar-track {
+  width: 100%; height: 8px; background: var(--surface-2);
+  border-radius: 4px; overflow: hidden; display: flex; margin-top: 6px;
+}
+.invest-bar-seg { height: 100%; transition: width 0.4s var(--ease); }
+
+/* Accounts grid */
+.fin-accounts-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;
+}
+.fin-account-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.fin-account-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.fin-account-balance { font-family: var(--mono); font-size: 18px; font-weight: 700; }
+.fin-account-limit { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+.fin-limit-bar {
+  width: 100%; height: 4px; background: var(--surface-2);
+  border-radius: 2px; overflow: hidden; margin-top: 8px;
+}
+.fin-limit-fill { height: 100%; border-radius: 2px; transition: width 0.4s var(--ease); }
+
+/* Spending section */
+.fin-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 20px; margin-bottom: 14px;
+}
+.fin-section-title {
+  font-size: 11px; font-weight: 500; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+}
+
+/* Spending bar rows */
+.spend-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.spend-label { width: 160px; font-size: 12px; color: var(--text-2); flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spend-bar-track { flex: 1; height: 20px; background: var(--surface-2); border-radius: 4px; overflow: hidden; position: relative; }
+.spend-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s var(--ease); min-width: 2px; }
+.spend-bar-fill.accent { background: var(--accent); }
+.spend-amount { width: 80px; text-align: right; font-family: var(--mono); font-size: 12px; color: var(--text); font-weight: 600; }
+
+/* Budget cards */
+.fin-budget-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+.fin-budget-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px;
+}
+.budget-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; font-family: var(--mono); }
+.budget-value { font-size: 1.3rem; font-weight: 700; font-family: var(--mono); margin-top: 4px; }
+.budget-sub { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 2px; }
+.budget-bar { width: 100%; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.budget-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s var(--ease); }
+
+/* Monthly comparison table */
+.fin-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 12px; }
+.fin-table thead th {
+  text-align: left; padding: 8px 14px; color: var(--text-3);
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.fin-table thead th:not(:first-child) { text-align: right; }
+.fin-table tbody td { padding: 8px 14px; color: var(--text-2); border-bottom: 1px solid var(--border); }
+.fin-table tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+.fin-table tbody tr:last-child td { border-bottom: none; }
+.fin-table tbody tr:hover td { background: var(--surface-2); }
+
+/* Transactions */
+.txn-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.txn-row:last-child { border-bottom: none; }
+.txn-left { display: flex; flex-direction: column; gap: 2px; }
+.txn-desc { font-size: 13px; color: var(--text); }
+.txn-meta { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
+.txn-amount { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+
+/* Pace chart canvas */
+#pace-canvas { width: 100%; height: 160px; display: block; border-radius: 4px; }
+
+@media (max-width: 900px) {
+  .fin-summary-strip { grid-template-columns: repeat(2, 1fr); }
+  .fin-accounts-grid { grid-template-columns: repeat(2, 1fr); }
+  .fin-budget-grid { grid-template-columns: 1fr; }
+  .spend-label { width: 120px; }
+}
+@media (max-width: 480px) {
+  .fin-summary-strip { grid-template-columns: 1fr; }
+  .fin-accounts-grid { grid-template-columns: 1fr; }
+  .spend-label { width: 90px; }
+}
 </style>
 </head>
 <body>
@@ -263,6 +382,14 @@
     </div>
   </header>
 
+  <!-- ── Tab Navigation ── -->
+  <nav class="tab-nav" id="tab-nav">
+    <button class="tab-btn active" data-tab="portfolio">Portfolio</button>
+    <button class="tab-btn" data-tab="finance">Finance</button>
+  </nav>
+
+  <!-- ── Portfolio Tab ── -->
+  <div class="tab-content active" id="tab-portfolio">
   <!-- ── Compact Summary Strip (4 stats) ── -->
   <div class="summary-strip compact" id="summary-strip">
     <div class="stat stat-primary">
@@ -345,6 +472,52 @@
     <canvas id="regime-timeline-canvas"></canvas>
     <div class="timeline-legend" id="timeline-legend"></div>
   </div>
+
+  </div><!-- /tab-portfolio -->
+
+  <!-- ── Finance Tab ── -->
+  <div class="tab-content" id="tab-finance">
+    <!-- Net Worth Summary Strip -->
+    <div class="fin-summary-strip" id="fin-summary-strip"></div>
+
+    <!-- Spending Pace Chart -->
+    <div class="fin-section" id="fin-pace-section">
+      <div class="fin-section-title">Spending Pace — April 2026</div>
+      <canvas id="pace-canvas"></canvas>
+    </div>
+
+    <!-- Accounts Grid -->
+    <div class="section-header">Bank Accounts</div>
+    <div class="fin-accounts-grid" id="fin-accounts-grid"></div>
+
+    <!-- Spending This Month -->
+    <div class="fin-section" id="fin-spending-section">
+      <div class="fin-section-title">Spending This Month</div>
+      <div id="fin-spending-bars"></div>
+    </div>
+
+    <!-- Budget & Savings -->
+    <div class="section-header">Budget &amp; Savings</div>
+    <div class="fin-budget-grid" id="fin-budget-grid"></div>
+
+    <!-- Monthly Comparison -->
+    <div class="fin-section" id="fin-monthly-section">
+      <div class="fin-section-title">Monthly Comparison</div>
+      <div id="fin-monthly-table"></div>
+    </div>
+
+    <!-- Recurring Subscriptions -->
+    <div class="fin-section" id="fin-recurring-section">
+      <div class="fin-section-title">Recurring Expenses (90-day)</div>
+      <div id="fin-recurring-table"></div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <details class="orders-collapse" id="fin-transactions-section">
+      <summary>Recent Transactions</summary>
+      <div id="fin-transactions-list" style="padding: 12px 0;"></div>
+    </details>
+  </div><!-- /tab-finance -->
 
   <!-- Hidden elements kept for renderRegimeInline compatibility (not displayed) -->
   <span id="regime-state-badge"  style="display:none"></span>
@@ -1294,6 +1467,375 @@ async function init() {
 window.addEventListener('resize', function () { redrawCharts(); });
 
 init();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Tab Navigation ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    // Load finance data on first click
+    if (btn.dataset.tab === 'finance' && !_financeLoaded) loadFinanceData();
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── Finance Tab ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+var _financeLoaded = false;
+var _financeData = null;
+
+async function loadFinanceData() {
+  try {
+    var resp = await fetch('/api/finance');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    _financeData = await resp.json();
+    _financeLoaded = true;
+    renderFinance(_financeData);
+  } catch (e) {
+    console.error('Finance load failed:', e);
+    document.getElementById('fin-summary-strip').innerHTML =
+      '<div class="empty-state" style="grid-column:1/-1">Failed to load finance data \u2014 ' + e.message + '</div>';
+  }
+}
+
+function fmtAud(v) {
+  if (v == null || isNaN(v)) return '\u2014';
+  return '$' + Math.abs(v).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtAudSigned(v) {
+  if (v == null || isNaN(v)) return '\u2014';
+  var sign = v >= 0 ? '+$' : '-$';
+  return sign + Math.abs(v).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderFinance(d) {
+  renderFinSummary(d);
+  renderFinAccounts(d);
+  renderFinSpending(d);
+  renderFinBudget(d);
+  renderFinMonthly(d);
+  renderFinRecurring(d);
+  renderFinTransactions(d);
+  drawPaceChart(d);
+}
+
+// ── Net Worth Summary Strip ──
+function renderFinSummary(d) {
+  var nw = d.net_worth || {};
+  var perf = d.performance || {};
+  var sr = d.savings_rate || {};
+  var el = document.getElementById('fin-summary-strip');
+  if (!el) return;
+
+  var investPct = nw.pct_invested || 0;
+  var cashPct = nw.pct_cash || 0;
+
+  el.innerHTML =
+    '<div class="fin-stat">' +
+      '<div class="fin-stat-label">Net Worth</div>' +
+      '<div class="fin-stat-value">' + fmtAud(nw.total_aud) + '</div>' +
+      '<div class="fin-stat-sub">AUD</div>' +
+    '</div>' +
+    '<div class="fin-stat">' +
+      '<div class="fin-stat-label">Bank Cash</div>' +
+      '<div class="fin-stat-value">' + fmtAud(nw.up_bank_aud) + '</div>' +
+      '<div class="fin-stat-sub">' + cashPct.toFixed(1) + '% of net worth</div>' +
+    '</div>' +
+    '<div class="fin-stat">' +
+      '<div class="fin-stat-label">Atlas Equity</div>' +
+      '<div class="fin-stat-value">' + fmtAud(nw.atlas_equity_aud) + '</div>' +
+      '<div class="fin-stat-sub">US$' + fmtNum(nw.atlas_equity_usd) + ' @ ' + (nw.aud_usd_rate || 0).toFixed(2) + '</div>' +
+    '</div>' +
+    '<div class="fin-stat">' +
+      '<div class="fin-stat-label">Savings Rate</div>' +
+      '<div class="fin-stat-value ' + (sr.rate_pct >= 20 ? 'green' : 'red') + '">' + (sr.rate_pct || 0).toFixed(1) + '%</div>' +
+      '<div class="fin-stat-sub">' + fmtAud(perf.savings_aud) + ' saved</div>' +
+      '<div class="invest-bar-track">' +
+        '<div class="invest-bar-seg" style="width:' + investPct + '%;background:var(--accent)"></div>' +
+        '<div class="invest-bar-seg" style="width:' + cashPct + '%;background:var(--green)"></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── Accounts Grid ──
+function renderFinAccounts(d) {
+  var accounts = (d.accounts || []).slice();
+  // Sort: savers first, then transactional
+  accounts.sort(function(a, b) {
+    if (a.type !== b.type) return a.type === 'SAVER' ? -1 : 1;
+    return (b.balance || 0) - (a.balance || 0);
+  });
+
+  var el = document.getElementById('fin-accounts-grid');
+  if (!el) return;
+
+  el.innerHTML = accounts.map(function(acc) {
+    var bal = acc.balance || 0;
+    var lim = acc.limit;
+    var pct = (lim && lim > 0) ? Math.min((bal / lim) * 100, 100) : 0;
+    var barColor = 'var(--green)';
+    if (lim && lim > 0) {
+      if (bal > lim) barColor = 'var(--red)';
+      else if (bal > lim * 0.8) barColor = 'var(--amber)';
+    }
+
+    return '<div class="fin-account-card">' +
+      '<div class="fin-account-name">' + (acc.name || 'Account') + '</div>' +
+      '<div class="fin-account-balance">' + fmtAud(bal) + '</div>' +
+      (lim ? '<div class="fin-account-limit">Limit: ' + fmtAud(lim) + '</div>' : '') +
+      (lim ? '<div class="fin-limit-bar"><div class="fin-limit-fill" style="width:' + Math.min(pct, 100) + '%;background:' + barColor + '"></div></div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+// ── Spending This Month ──
+function renderFinSpending(d) {
+  var ms = d.monthly_spending || {};
+  var cats = ms.by_category || [];
+  var el = document.getElementById('fin-spending-bars');
+  if (!el || !cats.length) return;
+
+  var maxAmount = cats[0].amount || 1;
+  var total = ms.total || 0;
+
+  // Update section title with total
+  var titleEl = el.parentElement.querySelector('.fin-section-title');
+  if (titleEl) titleEl.textContent = 'Spending This Month \u2014 ' + fmtAud(total);
+
+  el.innerHTML = cats.map(function(cat) {
+    var pct = Math.max((cat.amount / maxAmount) * 100, 2);
+    return '<div class="spend-row">' +
+      '<div class="spend-label">' + cat.label + '</div>' +
+      '<div class="spend-bar-track"><div class="spend-bar-fill accent" style="width:' + pct + '%"></div></div>' +
+      '<div class="spend-amount">' + fmtAud(cat.amount) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Budget & Savings ──
+function renderFinBudget(d) {
+  var perf = d.performance || {};
+  var sr = d.savings_rate || {};
+  var ins = d.insights || {};
+  var el = document.getElementById('fin-budget-grid');
+  if (!el) return;
+
+  var income = sr.income_this_month || 0;
+  var spending = sr.spending_this_month || 0;
+  var spendPct = income > 0 ? Math.min((spending / income) * 100, 100) : 0;
+  var spendBarColor = spendPct > 80 ? 'var(--red)' : spendPct > 60 ? 'var(--amber)' : 'var(--green)';
+
+  var dailyAvg = ins.daily_avg || 0;
+  var projected = ins.projected_total || 0;
+  var daysLeft = ins.days_left || 0;
+  var runway = perf.runway_months || 0;
+
+  var paceStatus = ins.pace_status || 'unknown';
+  var paceDiff = ins.pace_diff || 0;
+  var paceColor = paceStatus === 'under' ? 'var(--green)' : 'var(--red)';
+  var paceLabel = paceStatus === 'under'
+    ? fmtAud(paceDiff) + ' under budget'
+    : fmtAud(paceDiff) + ' over budget';
+
+  el.innerHTML =
+    '<div class="fin-budget-card">' +
+      '<div class="budget-label">Income vs Spending</div>' +
+      '<div class="budget-value">' + fmtAud(income) + ' <span style="font-size:14px;color:var(--text-3)">earned</span></div>' +
+      '<div class="budget-sub">' + fmtAud(spending) + ' spent (' + spendPct.toFixed(0) + '%)</div>' +
+      '<div class="budget-bar"><div class="budget-bar-fill" style="width:' + spendPct + '%;background:' + spendBarColor + '"></div></div>' +
+    '</div>' +
+    '<div class="fin-budget-card">' +
+      '<div class="budget-label">Spending Pace</div>' +
+      '<div class="budget-value" style="color:' + paceColor + '">' + paceLabel + '</div>' +
+      '<div class="budget-sub">Avg ' + fmtAud(dailyAvg) + '/day \xb7 Projected ' + fmtAud(projected) + '</div>' +
+    '</div>' +
+    '<div class="fin-budget-card">' +
+      '<div class="budget-label">Runway</div>' +
+      '<div class="budget-value">' + runway.toFixed(1) + ' <span style="font-size:14px;color:var(--text-3)">months</span></div>' +
+      '<div class="budget-sub">' + daysLeft + ' days left this month</div>' +
+    '</div>' +
+    '<div class="fin-budget-card">' +
+      '<div class="budget-label">Investment Return</div>' +
+      '<div class="budget-value ' + pnlClass(perf.combined_return_aud) + '">' + fmtAudSigned(perf.combined_return_aud) + '</div>' +
+      '<div class="budget-sub">This month \xb7 Atlas portfolio</div>' +
+    '</div>';
+}
+
+// ── Monthly Comparison ──
+function renderFinMonthly(d) {
+  var ins = d.insights || {};
+  var months = ins.monthly_comparison || [];
+  var el = document.getElementById('fin-monthly-table');
+  if (!el || !months.length) return;
+
+  var rows = months.map(function(m) {
+    var net = m.net || 0;
+    return '<tr>' +
+      '<td style="color:var(--text)">' + m.month + '</td>' +
+      '<td>' + fmtAud(m.income) + '</td>' +
+      '<td>' + fmtAud(m.spending) + '</td>' +
+      '<td class="' + pnlClass(net) + '">' + fmtAudSigned(net) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  el.innerHTML =
+    '<table class="fin-table">' +
+      '<thead><tr><th>Month</th><th>Income</th><th>Spending</th><th>Net</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+// ── Recurring Expenses ──
+function renderFinRecurring(d) {
+  var ins = d.insights || {};
+  var recs = ins.recurring || [];
+  var el = document.getElementById('fin-recurring-table');
+  if (!el || !recs.length) return;
+
+  var rows = recs.map(function(r) {
+    return '<tr>' +
+      '<td style="color:var(--text)">' + r.merchant + '</td>' +
+      '<td>' + r.frequency + 'x</td>' +
+      '<td>' + fmtAud(r.avg_amount) + '</td>' +
+      '<td>' + fmtAud(r.est_monthly) + '</td>' +
+    '</tr>';
+  }).join('');
+
+  el.innerHTML =
+    '<table class="fin-table">' +
+      '<thead><tr><th>Merchant</th><th>Freq (90d)</th><th>Avg</th><th>Est/Month</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+// ── Recent Transactions ──
+function renderFinTransactions(d) {
+  var txns = (d.recent_transactions || []).slice(0, 15);
+  var el = document.getElementById('fin-transactions-list');
+  if (!el || !txns.length) return;
+
+  el.innerHTML = txns.map(function(t) {
+    var amt = t.amount || 0;
+    var isExpense = amt < 0;
+    var color = isExpense ? 'var(--red)' : 'var(--green)';
+    return '<div class="txn-row">' +
+      '<div class="txn-left">' +
+        '<span class="txn-desc">' + (t.description || '\u2014') + '</span>' +
+        '<span class="txn-meta">' + (t.date || '') + ' \xb7 ' + ((t.category || '').replace(/-/g, ' ')) + '</span>' +
+      '</div>' +
+      '<span class="txn-amount" style="color:' + color + '">' + (isExpense ? '-' : '+') + fmtAud(Math.abs(amt)) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Spending Pace Chart ──
+function drawPaceChart(d) {
+  var ins = d.insights || {};
+  var paceData = ins.pace_data || [];
+  var canvas = document.getElementById('pace-canvas');
+  if (!canvas || paceData.length < 2) return;
+
+  var dpr = window.devicePixelRatio || 1;
+  var w = canvas.offsetWidth || 800;
+  var h = 160;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  var actualColor = isDark ? '#6366f1' : '#4f46e5';
+  var budgetColor = isDark ? '#71717a' : '#a1a1aa';
+  var gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  var labelColor = isDark ? '#52525b' : '#a1a1aa';
+
+  var actuals = paceData.map(function(p) { return p.actual; });
+  var budgets = paceData.map(function(p) { return p.budget; });
+  var dates = paceData.map(function(p) { return p.date; });
+  var n = paceData.length;
+
+  var allVals = actuals.concat(budgets);
+  var maxV = Math.max.apply(null, allVals) * 1.1;
+  var minV = 0;
+  var range = maxV - minV || 1;
+
+  var pad = { t: 12, r: 12, b: 32, l: 60 };
+  var cw = w - pad.l - pad.r;
+  var ch = h - pad.t - pad.b;
+
+  function xOf(i) { return pad.l + (n === 1 ? cw / 2 : (i / (n - 1)) * cw); }
+  function yOf(v) { return pad.t + ch - ((v - minV) / range) * ch; }
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  for (var yi = 0; yi <= 3; yi++) {
+    var yv = minV + (yi / 3) * range;
+    var yp = yOf(yv);
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(pad.l, yp); ctx.lineTo(pad.l + cw, yp); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = labelColor;
+    ctx.fillText('$' + Math.round(yv).toLocaleString(), pad.l - 6, yp + 3);
+  }
+
+  // X labels
+  ctx.textAlign = 'center';
+  var xStep = Math.max(1, Math.floor(n / 5));
+  for (var xi = 0; xi < n; xi += xStep) {
+    ctx.fillStyle = labelColor;
+    ctx.fillText(fmtDateShort(dates[xi]), xOf(xi), h - 6);
+  }
+
+  // Budget line (dashed gray)
+  ctx.beginPath();
+  for (var bi = 0; bi < n; bi++) {
+    if (bi === 0) ctx.moveTo(xOf(bi), yOf(budgets[bi]));
+    else ctx.lineTo(xOf(bi), yOf(budgets[bi]));
+  }
+  ctx.strokeStyle = budgetColor; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+  // Actual area fill
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(actuals[0]));
+  for (var ai = 1; ai < n; ai++) ctx.lineTo(xOf(ai), yOf(actuals[ai]));
+  ctx.lineTo(xOf(n - 1), pad.t + ch);
+  ctx.lineTo(xOf(0), pad.t + ch);
+  ctx.closePath();
+  var grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, isDark ? 'rgba(99,102,241,0.18)' : 'rgba(79,70,229,0.12)');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Actual line
+  ctx.beginPath();
+  ctx.moveTo(xOf(0), yOf(actuals[0]));
+  for (var li = 1; li < n; li++) ctx.lineTo(xOf(li), yOf(actuals[li]));
+  ctx.strokeStyle = actualColor; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+
+  // Dots on actual
+  var dotFill = isDark ? '#131316' : '#ffffff';
+  for (var di = 0; di < n; di++) {
+    ctx.beginPath(); ctx.arc(xOf(di), yOf(actuals[di]), 3, 0, Math.PI * 2);
+    ctx.fillStyle = dotFill; ctx.fill();
+    ctx.beginPath(); ctx.arc(xOf(di), yOf(actuals[di]), 3, 0, Math.PI * 2);
+    ctx.strokeStyle = actualColor; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
 </script>
 
 </body>

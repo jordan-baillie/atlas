@@ -824,6 +824,26 @@ def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@app.get("/api/finance")
+def finance_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/finance — personal finance data from Up bank integration.
+
+    Serves the pre-generated finance-data.json which contains:
+    net_worth, accounts, spending, budget, projections, and balance history.
+    """
+    finance_path = SERVE_DIR / "finance-data.json"
+    if not finance_path.exists():
+        raise HTTPException(status_code=404, detail="Finance data not found")
+    try:
+        with open(finance_path) as f:
+            data = json.load(f)
+        return JSONResponse(content=data)
+    except Exception as e:
+        logger.exception("Failed to load finance data")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # POST routes
 # ═══════════════════════════════════════════════════════════════════════════════
