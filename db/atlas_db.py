@@ -26,6 +26,10 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "atlas.db"
 # All CRUD functions call get_db() with no args; they use whatever is current.
 _db_path_override: Optional[str] = None
 
+# WAL mode persists at the DB file level; only needs to be set once per path
+# per process. Avoids redundant PRAGMA on every connection.
+_wal_initialized_paths: set = set()
+
 
 # ── Connection ──────────────────────────────────────────────────────────────
 
@@ -39,9 +43,12 @@ def get_db(db_path: Optional[str] = None):
     """
     path = db_path if db_path is not None else (_db_path_override or str(DB_PATH))
     conn = sqlite3.connect(path, timeout=30)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
     conn.row_factory = sqlite3.Row
+    if path not in _wal_initialized_paths:
+        conn.execute("PRAGMA journal_mode=WAL")
+        _wal_initialized_paths.add(path)
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=30000")
     try:
         yield conn
         conn.commit()
@@ -152,49 +159,58 @@ def record_trade_entry(
         )
 
 
-def _compute_and_fill_mae_mfe(ticker: str, strategy: str) -> None:
+def _compute_and_fill_mae_mfe(ticker: str, strategy: str, *, db=None) -> None:
     """Compute and fill MAE/MFE for the most recently closed trade of (ticker, strategy).
 
     Uses OHLCV data between entry_date and exit_date. Non-fatal — logs errors
     but never raises.
+
+    When *db* is provided, reuses that connection instead of opening a new one.
     """
     import logging
     _log = logging.getLogger(__name__)
+
+    def _run(conn):
+        trade = conn.execute(
+            "SELECT id, entry_date, exit_date, entry_price FROM trades "
+            "WHERE ticker=? AND strategy=? AND status='closed' "
+            "ORDER BY id DESC LIMIT 1",
+            (ticker, strategy),
+        ).fetchone()
+        if not trade:
+            return
+
+        ed = trade['entry_date'][:10]
+        xd = trade['exit_date'][:10]
+        entry_price = trade['entry_price']
+        trade_id = trade['id']
+
+        rows = conn.execute(
+            "SELECT low, high FROM ohlcv WHERE ticker=? AND date BETWEEN ? AND ?",
+            (ticker, ed, xd),
+        ).fetchall()
+
+        if not rows:
+            _log.debug("No OHLCV data for %s between %s and %s — skipping MAE/MFE", ticker, ed, xd)
+            return
+
+        min_low = min(r['low'] for r in rows)
+        max_high = max(r['high'] for r in rows)
+        mae = round((min_low - entry_price) / entry_price * 100, 4)
+        mfe = round((max_high - entry_price) / entry_price * 100, 4)
+
+        conn.execute(
+            "UPDATE trades SET mae=?, mfe=?, updated_at=datetime('now') WHERE id=?",
+            (mae, mfe, trade_id),
+        )
+        _log.info("MAE/MFE filled for trade #%d %s: mae=%.4f%%, mfe=%.4f%%", trade_id, ticker, mae, mfe)
+
     try:
-        with get_db() as db:
-            trade = db.execute(
-                "SELECT id, entry_date, exit_date, entry_price FROM trades "
-                "WHERE ticker=? AND strategy=? AND status='closed' "
-                "ORDER BY id DESC LIMIT 1",
-                (ticker, strategy),
-            ).fetchone()
-            if not trade:
-                return
-
-            ed = trade['entry_date'][:10]
-            xd = trade['exit_date'][:10]
-            entry_price = trade['entry_price']
-            trade_id = trade['id']
-
-            rows = db.execute(
-                "SELECT low, high FROM ohlcv WHERE ticker=? AND date BETWEEN ? AND ?",
-                (ticker, ed, xd),
-            ).fetchall()
-
-            if not rows:
-                _log.debug("No OHLCV data for %s between %s and %s — skipping MAE/MFE", ticker, ed, xd)
-                return
-
-            min_low = min(r['low'] for r in rows)
-            max_high = max(r['high'] for r in rows)
-            mae = round((min_low - entry_price) / entry_price * 100, 4)
-            mfe = round((max_high - entry_price) / entry_price * 100, 4)
-
-            db.execute(
-                "UPDATE trades SET mae=?, mfe=?, updated_at=datetime('now') WHERE id=?",
-                (mae, mfe, trade_id),
-            )
-            _log.info("MAE/MFE filled for trade #%d %s: mae=%.4f%%, mfe=%.4f%%", trade_id, ticker, mae, mfe)
+        if db is not None:
+            _run(db)
+        else:
+            with get_db() as conn:
+                _run(conn)
     except Exception as exc:
         _log.warning("_compute_and_fill_mae_mfe failed for %s/%s: %s", ticker, strategy, exc)
 
@@ -227,8 +243,8 @@ def record_trade_exit(
                 ticker, strategy,
             ),
         )
-    # Compute and fill MAE/MFE from OHLCV data (non-fatal)
-    _compute_and_fill_mae_mfe(ticker, strategy)
+        # Compute and fill MAE/MFE in same transaction (non-fatal)
+        _compute_and_fill_mae_mfe(ticker, strategy, db=db)
 
 
 def get_open_positions() -> List[Dict]:
@@ -246,6 +262,7 @@ def get_closed_trades(
     days: Optional[int] = None,
     strategy: Optional[str] = None,
     universe: Optional[str] = None,
+    limit: int = 10000,
 ) -> List[Dict]:
     """Return closed trades with optional filters."""
     with get_db() as db:
@@ -260,7 +277,7 @@ def get_closed_trades(
         if universe:
             query += " AND universe=?"
             params.append(universe)
-        query += " ORDER BY exit_date DESC"
+        query += f" ORDER BY exit_date DESC LIMIT {int(limit)}"
         return [dict(r) for r in db.execute(query, params).fetchall()]
 
 
@@ -335,7 +352,7 @@ def get_current_regime() -> Optional[Dict]:
         return None
 
 
-def get_regime_history(days: Optional[int] = None) -> List[Dict]:
+def get_regime_history(days: Optional[int] = None, limit: int = 10000) -> List[Dict]:
     """Return regime history, optionally limited to recent *days*."""
     with get_db() as db:
         query = "SELECT * FROM regime_history"
@@ -343,7 +360,7 @@ def get_regime_history(days: Optional[int] = None) -> List[Dict]:
         if days:
             query += " WHERE date >= date('now', ?)"
             params.append(f"-{days} days")
-        query += " ORDER BY date DESC"
+        query += f" ORDER BY date DESC LIMIT {int(limit)}"
         rows = db.execute(query, params).fetchall()
         result = []
         for row in rows:
@@ -496,6 +513,7 @@ def get_signals(
     strategy: Optional[str] = None,
     ticker: Optional[str] = None,
     action: Optional[str] = None,
+    limit: int = 10000,
 ) -> List[Dict]:
     """Return signals with optional filters. Most recent first."""
     with get_db() as db:
@@ -513,7 +531,7 @@ def get_signals(
         if action:
             query += " AND action=?"
             params.append(action)
-        query += " ORDER BY timestamp DESC"
+        query += f" ORDER BY timestamp DESC LIMIT {int(limit)}"
         rows = db.execute(query, params).fetchall()
         result = []
         for row in rows:
@@ -725,7 +743,7 @@ def get_latest_snapshot() -> Optional[Dict]:
         return None
 
 
-def get_snapshots(days: Optional[int] = None) -> List[Dict]:
+def get_snapshots(days: Optional[int] = None, limit: int = 10000) -> List[Dict]:
     """Return portfolio snapshots, most recent first."""
     with get_db() as db:
         query = "SELECT * FROM portfolio_snapshots"
@@ -733,7 +751,7 @@ def get_snapshots(days: Optional[int] = None) -> List[Dict]:
         if days:
             query += " WHERE timestamp >= datetime('now', ?)"
             params.append(f"-{days} days")
-        query += " ORDER BY timestamp DESC"
+        query += f" ORDER BY timestamp DESC LIMIT {int(limit)}"
         return [
             _decode_snapshot(dict(r)) for r in db.execute(query, params).fetchall()
         ]
