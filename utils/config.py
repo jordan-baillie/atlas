@@ -30,7 +30,7 @@ ACTIVE_DIR = CONFIG_DIR / "active"
 VERSIONS_DIR = CONFIG_DIR / "versions"
 
 # Default market when none specified
-DEFAULT_MARKET = "asx"
+DEFAULT_MARKET = "sp500"
 
 
 def _active_config_path(market_id: Optional[str] = None) -> Path:

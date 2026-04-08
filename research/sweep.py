@@ -438,13 +438,6 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "max_hold_days": [3, 5, 7, 10],
         "sma200_filter": [True, False],
     },
-    "dividend_capture": {
-        "days_before_ex": [3, 5, 7, 10],
-        "days_after_ex": [3, 5, 7, 10],
-        "atr_stop_mult": [2.0, 2.5, 3.0, 3.5],
-        "max_hold_days": [10, 15, 20, 30],
-        "require_uptrend": [True, False],
-    },
 }
 
 # Strategy priority order (highest value first)
@@ -481,7 +474,6 @@ STRATEGY_ORDER = [
     "vwap_reversion",
     "monthly_rotation",
     "put_call_vix_proxy",
-    "dividend_capture",
 ]
 
 # ─── Heartbeat / Signals ─────────────────────────────────────────────────────

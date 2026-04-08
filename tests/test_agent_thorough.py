@@ -10,6 +10,13 @@ Run:
         -- python3 /root/atlas/tests/test_agent_thorough.py
 """
 
+# This is a standalone integration test — skip when collected by pytest
+import sys as _sys
+if "pytest" in _sys.modules or any("pytest" in arg for arg in _sys.argv):
+    import pytest
+    pytest.skip("Standalone integration test — run via with_server.py", allow_module_level=True)
+
+
 import json
 import os
 import sys

@@ -8,7 +8,7 @@ Maintains its own closed-trade history and equity curve in
 Usage:
     from brokers.live_portfolio import LivePortfolio
 
-    lp = LivePortfolio(config, market_id="asx")
+    lp = LivePortfolio(config, market_id="sp500")
     lp.connect()   # connects to broker
     # ... use: lp.positions, lp.cash, lp.equity(), etc.
     lp.disconnect()
@@ -42,7 +42,7 @@ class LivePortfolio:
     against real broker state — positions from broker directly.
     """
 
-    def __init__(self, config: dict, market_id: str = "asx"):
+    def __init__(self, config: dict, market_id: str = "sp500"):
         self.config = config
         self.market_id = market_id
 

@@ -93,3 +93,4 @@ data/atlas.db-shm
 data/chat.db
 data/chat/
 tests/screenshots/
+.gitnexus

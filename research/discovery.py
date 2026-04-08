@@ -47,7 +47,7 @@ STRATEGY_UNIVERSE = {
     "short_term_mr": {"type": "mean_reversion", "tier": 0, "status": "dormant", "reference": "Atlas original"},
     "sector_rotation": {"type": "rotation", "tier": 0, "status": "broken", "reference": "0 trades in backtest"},
     "mtf_momentum": {"type": "momentum", "tier": 0, "status": "dormant", "reference": "Multi-timeframe"},
-    "dividend_capture": {"type": "event", "tier": 0, "status": "untested", "reference": "Dividend event"},
+    "dividend_capture": {"type": "event", "tier": 0, "status": "disabled", "reference": "Dividend event — stub removed, see research/strategies/"},
     "connors_rsi2": {"type": "mean_reversion", "tier": 0, "status": "dormant", "reference": "Connors 2008"},
     "consecutive_down_days": {"type": "mean_reversion", "tier": 0, "status": "screening", "reference": "Quantified Strategies"},
     "lower_band_reversion": {"type": "mean_reversion", "tier": 0, "status": "dormant", "reference": "Bollinger lower band"},

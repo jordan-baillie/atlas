@@ -41,7 +41,6 @@ from strategies.short_term_mr import ShortTermMR
 from strategies.bb_squeeze import BBSqueeze
 from strategies.opening_gap import OpeningGap
 from strategies.mtf_momentum import MTFMomentum
-from strategies.dividend_capture import DividendCapture
 from strategies.connors_rsi2 import ConnorsRSI2
 from backtest.engine import BacktestEngine
 from brokers.plan import TradePlanGenerator
@@ -97,8 +96,6 @@ def get_strategies(config):
         strats.append(OpeningGap(config))
     if sc.get("mtf_momentum", {}).get("enabled", False):
         strats.append(MTFMomentum(config))
-    if config["strategies"].get("dividend_capture", {}).get("enabled"):
-        strats.append(DividendCapture(config))
     if sc.get("connors_rsi2", {}).get("enabled", False):
         strats.append(ConnorsRSI2(config))
     return strats

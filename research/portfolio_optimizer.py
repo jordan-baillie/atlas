@@ -54,7 +54,7 @@ STRATEGY_GROUPS = {
         "opening_gap", "sector_rotation", "mtf_momentum",
         "overnight_return", "monthly_rotation", "triple_rsi",
         "inside_bar_nr7", "vwap_reversion", "pead_earnings_drift",
-        "put_call_vix_proxy", "dividend_capture",
+        "put_call_vix_proxy",
     ],
 }
 

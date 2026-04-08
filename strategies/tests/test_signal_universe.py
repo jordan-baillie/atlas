@@ -117,9 +117,6 @@ class TestStrategyImports:
     def test_import_bb_squeeze(self):
         self._import("strategies.bb_squeeze")
 
-    def test_import_dividend_capture(self):
-        self._import("strategies.dividend_capture")
-
     def test_import_mtf_momentum(self):
         self._import("strategies.mtf_momentum")
 

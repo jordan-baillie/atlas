@@ -22,7 +22,6 @@ from strategies.mean_reversion import MeanReversion
 from strategies.trend_following import TrendFollowing
 from strategies.bb_squeeze import BBSqueeze
 from strategies.opening_gap import OpeningGap
-from strategies.dividend_capture import DividendCapture
 from backtest.engine import BacktestEngine
 
 STRAT_MAP = {
@@ -30,9 +29,8 @@ STRAT_MAP = {
     'trend_following': TrendFollowing,
     'bb_squeeze': BBSqueeze,
     'opening_gap': OpeningGap,
-    'dividend_capture': DividendCapture,
 }
-ACTIVE = ['mean_reversion','bb_squeeze','trend_following','opening_gap','dividend_capture']
+ACTIVE = ['mean_reversion','bb_squeeze','trend_following','opening_gap']
 
 RESULTS_FILE = PROJECT / 'backtest' / 'results' / 'reoptimization_full_universe.json'
 
@@ -177,13 +175,6 @@ PARAM_GRIDS = {
         'rsi14_max': [30, 40, 50, 60, 70],
         'atr_stop_mult': [1.5, 2.0, 2.5, 3.0, 3.5, 4.0],
         'max_hold_days': [3, 5, 7, 10, 15],
-    },
-    'dividend_capture': {
-        'days_before_ex': [3, 5, 7, 10],
-        'days_after_ex': [3, 5, 8, 12],
-        'min_franking_pct': [0, 50, 75, 100],
-        'min_grossed_up_yield': [0.5, 0.8, 1.0, 1.2, 1.5],
-        'atr_stop_mult': [2.5, 3.0, 3.5, 4.0, 5.0],
     },
 }
 
