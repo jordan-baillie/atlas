@@ -360,6 +360,42 @@
   .fin-accounts-grid { grid-template-columns: 1fr; }
   .spend-label { width: 90px; }
 }
+
+/* ── Overlay Decisions ── */
+.overlay-section { margin-top: 24px; }
+.overlay-list { display: flex; flex-direction: column; gap: 8px; }
+.overlay-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+}
+.overlay-card .ov-left { display: flex; flex-direction: column; gap: 2px; }
+.overlay-card .ov-ticker { font-family: var(--mono); font-weight: 600; font-size: 14px; }
+.overlay-card .ov-action { font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+.overlay-card .ov-action.approve { color: var(--green); }
+.overlay-card .ov-action.reject  { color: var(--red); }
+.overlay-card .ov-action.resize  { color: var(--yellow, #eab308); }
+.overlay-card .ov-date { font-size: 11px; color: var(--text-3); }
+.overlay-card .ov-right { text-align: right; }
+.overlay-card .ov-confidence { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.overlay-card .ov-reason { font-size: 11px; color: var(--text-3); max-width: 240px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge-muted { font-size: 11px; color: var(--text-3); font-weight: 400; }
+
+/* ── System Health ── */
+.health-section { margin-top: 24px; }
+.health-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+}
+.health-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 16px;
+}
+.health-card .hc-title { font-size: 11px; text-transform: uppercase; color: var(--text-3); letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
+.health-card .hc-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 13px; }
+.health-card .hc-label { color: var(--text-2); }
+.health-card .hc-value { font-family: var(--mono); font-weight: 500; }
+.hc-status-active { color: var(--green); }
+.hc-status-inactive { color: var(--red); }
+.hc-status-unknown { color: var(--text-3); }
 </style>
 </head>
 <body>
@@ -471,6 +507,22 @@
     <div class="section-header">90-Day Regime History</div>
     <canvas id="regime-timeline-canvas"></canvas>
     <div class="timeline-legend" id="timeline-legend"></div>
+  </div>
+
+  <!-- ── AI Overlay Decisions ── -->
+  <div class="overlay-section" id="overlay-section">
+    <div class="section-header">AI Overlay Decisions <span class="badge badge-muted" id="overlay-count"></span></div>
+    <div id="overlay-decisions-list" class="overlay-list">
+      <div class="empty-state">Loading overlay decisions…</div>
+    </div>
+  </div>
+
+  <!-- ── System Health ── -->
+  <div class="health-section" id="health-section">
+    <div class="section-header">System Health</div>
+    <div class="health-grid" id="health-grid">
+      <div class="empty-state">Loading health status…</div>
+    </div>
   </div>
 
   </div><!-- /tab-portfolio -->
@@ -1302,66 +1354,88 @@ function applyPrices(resp) {
   });
 }
 
-// ── SSE Live Stream ───────────────────────────────────────────────────────
-var _evtSource   = null;
-var _streamRetries = 0;
 var _staticData  = null;
 
-function connectStream() {
-  if (_evtSource) return;
+// ── Overlay Decisions Rendering ───────────────────────────────────────────
+function renderOverlayDecisions(decisions) {
+  var container = document.getElementById('overlay-decisions-list');
+  var countBadge = document.getElementById('overlay-count');
+  if (!container) return;
 
-  _evtSource = new EventSource('/api/stream');
+  if (!decisions || !decisions.length) {
+    container.innerHTML = '<div class="empty-state">No overlay decisions recorded yet</div>';
+    if (countBadge) countBadge.textContent = '';
+    return;
+  }
 
-  _evtSource.addEventListener('snapshot', function (e) {
-    try {
-      var snap = JSON.parse(e.data);
-      if (snap.error) { console.warn('Stream error:', snap.error); return; }
-      _streamRetries = 0;
-      applyLiveSnapshot(snap);
-    } catch (err) {
-      console.error('Stream parse error:', err);
-    }
-  });
+  if (countBadge) countBadge.textContent = '(' + decisions.length + ')';
 
-  _evtSource.onerror = function () {
-    _evtSource.close();
-    _evtSource = null;
-    _streamRetries++;
-    var delay = Math.min(5000 * _streamRetries, 30000);
-    setTimeout(connectStream, delay);
-  };
+  container.innerHTML = decisions.slice(0, 20).map(function(d) {
+    var action = (d.action || d.decision || 'unknown').toLowerCase();
+    var actionClass = action === 'approve' ? 'approve' : action === 'reject' ? 'reject' : 'resize';
+    var ticker = d.ticker || d.symbol || '—';
+    var confidence = d.confidence != null ? (d.confidence * 100).toFixed(0) + '%' : '—';
+    var reason = d.reasoning || d.reason || '';
+    var date = d.date || d.created_at || '';
+    if (date && date.length > 10) date = date.substring(0, 10);
+
+    return '<div class="overlay-card">' +
+      '<div class="ov-left">' +
+        '<span class="ov-ticker">' + ticker + '</span>' +
+        '<span class="ov-action ' + actionClass + '">' + action + '</span>' +
+        '<span class="ov-date">' + date + '</span>' +
+      '</div>' +
+      '<div class="ov-right">' +
+        '<div class="ov-confidence">' + confidence + '</div>' +
+        '<div class="ov-reason" title="' + reason.replace(/"/g, '&quot;') + '">' + reason + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
-function applyLiveSnapshot(snap) {
-  if (snap.market_clock) renderMarketClock(snap.market_clock);
+// ── System Health Rendering ───────────────────────────────────────────────
+function renderSystemHealth(health) {
+  var grid = document.getElementById('health-grid');
+  if (!grid) return;
 
-  if (snap.account && snap.summary) {
-    var liveData = { account: snap.account, summary: snap.summary };
-    renderSummary(liveData);
-    liveData.benchmark = _staticData ? _staticData.benchmark : null;
-    renderReturnBadge(liveData);
-  }
+  var html = '';
 
-  if (snap.positions) {
-    var staticPositions = _staticData ? (_staticData.positions || []) : [];
-    var metaMap = {};
-    staticPositions.forEach(function (p) { if (p.ticker) metaMap[p.ticker] = p; });
-
-    snap.positions.forEach(function (p) {
-      var meta = metaMap[p.ticker];
-      if (!meta) return;
-      if (!p.sparkline || !p.sparkline.length) p.sparkline = meta.sparkline;
-      if (!p.strategy || p.strategy === 'unknown') p.strategy = meta.strategy;
-      if (!p.sector || p.sector === 'Unknown') p.sector = meta.sector;
-      if (!p.stop_price && meta.stop_price) p.stop_price = meta.stop_price;
-      if (!p.entry_date && meta.entry_date) p.entry_date = meta.entry_date;
+  // Services card
+  if (health.services) {
+    html += '<div class="health-card"><div class="hc-title">Services</div>';
+    Object.keys(health.services).forEach(function(svc) {
+      var status = health.services[svc];
+      var cls = status === 'active' ? 'hc-status-active' : status === 'inactive' ? 'hc-status-inactive' : 'hc-status-unknown';
+      var label = svc.replace('atlas-', '');
+      html += '<div class="hc-row"><span class="hc-label">' + label + '</span><span class="hc-value ' + cls + '">' + status + '</span></div>';
     });
-
-    renderPositions({ positions: snap.positions });
-    // Note: donut chart removed in Phase 3 — strategy allocation accessible via chat
+    html += '</div>';
   }
 
-  if (snap.orders) renderOrders(snap.orders);
+  // Cron card
+  if (health.cron && Object.keys(health.cron).length) {
+    html += '<div class="health-card"><div class="hc-title">Cron Jobs</div>';
+    Object.keys(health.cron).forEach(function(job) {
+      var info = health.cron[job];
+      var lastRun = info.last_run || '—';
+      if (lastRun.length > 16) lastRun = lastRun.substring(5, 16);
+      var statusCls = info.status === 'ok' ? 'hc-status-active' : 'hc-status-unknown';
+      html += '<div class="hc-row"><span class="hc-label">' + job + '</span><span class="hc-value ' + statusCls + '">' + lastRun + '</span></div>';
+    });
+    html += '</div>';
+  }
+
+  // Data freshness card
+  if (health.data_freshness) {
+    html += '<div class="health-card"><div class="hc-title">Data Freshness</div>';
+    var df = health.data_freshness;
+    if (df.ohlcv_last_date) html += '<div class="hc-row"><span class="hc-label">OHLCV</span><span class="hc-value">' + df.ohlcv_last_date + '</span></div>';
+    if (df.equity_last_date) html += '<div class="hc-row"><span class="hc-label">Equity</span><span class="hc-value">' + df.equity_last_date + '</span></div>';
+    if (df.overlay_decisions_count != null) html += '<div class="hc-row"><span class="hc-label">Overlay</span><span class="hc-value">' + df.overlay_decisions_count + ' decisions</span></div>';
+    html += '</div>';
+  }
+
+  grid.innerHTML = html || '<div class="empty-state">No health data available</div>';
 }
 
 // ── Regime Rendering ──────────────────────────────────────────────────────
@@ -1444,8 +1518,6 @@ async function init() {
     renderPositions(_staticData);
     renderPerformance(_staticData);
 
-    connectStream();
-
     Promise.all([
       fetch('/api/regime/current').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
       fetch('/api/regime/history?days=90').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
@@ -1455,6 +1527,14 @@ async function init() {
       if (regime)  renderRegimeInline(regime);
       if (history) { _regimeHistory = history; drawRegimeTimelineBottom(history); }
     });
+
+    // Load overlay decisions
+    fetch('/api/overlay/decisions').then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+      .then(function(decisions) { renderOverlayDecisions(decisions); });
+
+    // Load system health
+    fetch('/api/system/health').then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+      .then(function(health) { if (health) renderSystemHealth(health); });
 
   } catch (e) {
     console.error('Atlas dashboard load failed:', e);

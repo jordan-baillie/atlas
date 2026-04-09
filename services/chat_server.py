@@ -506,19 +506,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"⚠️  Chat DB init failed: {e}", flush=True)
 
-    # alpaca_stream retired in Phase 5 — skipped gracefully if module missing
-    try:
-        from dashboard.alpaca_stream import start as start_stream
-        start_stream(interval_open=10, interval_closed=60)
-        print("Alpaca live poller started", flush=True)
-    except ImportError:
-        print(
-            "ℹ️  alpaca_stream retired — SSE stream and snapshot endpoints will return 503",
-            flush=True,
-        )
-    except Exception as e:
-        print(f"⚠️  Alpaca poller failed to start: {e}", flush=True)
-        print("   Dashboard will serve static JSON only", flush=True)
+    # alpaca_stream removed — SSE streaming retired in Phase 5
     yield  # app runs here
 
 
@@ -566,89 +554,6 @@ async def add_security_headers(request: Request, call_next):
 # ═══════════════════════════════════════════════════════════════════════════════
 # GET routes  (defined in the same priority order as dashboard_server.py do_GET)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-# ── GET /api/stream — Server-Sent Events ─────────────────────────────────────
-
-@app.get("/api/stream")
-async def sse_stream(_auth: HTTPBasicCredentials = Depends(check_auth)):
-    """GET /api/stream — SSE stream of live Alpaca data.
-
-    alpaca_stream retired in Phase 5.  Returns 503 until a replacement
-    real-time feed is wired in.
-    """
-    try:
-        from dashboard.alpaca_stream import get_state, get_seq
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="live stream unavailable (alpaca_stream retired)",
-        )
-
-    async def _generate():
-        last_seq = -1
-        while True:
-            try:
-                current_seq = get_seq()
-                if current_seq != last_seq:
-                    state = get_state()
-                    last_seq = current_seq
-                    payload = json.dumps(state, default=str)
-                    yield f"event: snapshot\ndata: {payload}\n\n"
-            except Exception as exc:
-                logger.warning("SSE stream error: %s", exc)
-                break
-            await asyncio.sleep(2)
-
-    return StreamingResponse(
-        _generate(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-# ── GET /api/prices ───────────────────────────────────────────────────────────
-
-@app.get("/api/prices")
-def prices(
-    tickers: str = "",
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-):
-    """GET /api/prices — live price data.
-
-    live_prices module retired in Phase 5. Returns 503.
-    Use /api/dashboard-data for position P&L instead.
-    """
-    raise HTTPException(
-        status_code=503,
-        detail="live prices unavailable (live_prices retired) — use /api/dashboard-data",
-    )
-
-
-# ── GET /api/snapshot ─────────────────────────────────────────────────────────
-
-@app.get("/api/snapshot")
-def snapshot(_auth: HTTPBasicCredentials = Depends(check_auth)):
-    """GET /api/snapshot — one-shot JSON of current Alpaca state.
-
-    alpaca_stream retired in Phase 5.  Returns 503 until replaced.
-    """
-    try:
-        from dashboard.alpaca_stream import get_state
-    except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail="snapshot unavailable (alpaca_stream retired)",
-        )
-    try:
-        state = get_state()
-        return JSONResponse(state)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 # ── GET /api/monitor* — 410 Gone (monitor tab removed) ───────────────────────
 
@@ -794,15 +699,57 @@ def overlay_decisions(
 
 @app.get("/api/system/health")
 def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
-    """GET /api/system/health — service heartbeat status."""
+    """GET /api/system/health — comprehensive system health."""
+    import subprocess
     try:
-        from db.atlas_db import get_heartbeats
+        from db.atlas_db import get_heartbeats, get_db
+
         heartbeats = get_heartbeats()
+
+        # Service status via systemd
+        services = {}
+        for svc in ("atlas-dashboard", "atlas-telegram-bot"):
+            try:
+                result = subprocess.run(
+                    ["systemctl", "is-active", svc],
+                    capture_output=True, text=True, timeout=5,
+                )
+                services[svc] = result.stdout.strip()
+            except Exception:
+                services[svc] = "unknown"
+
+        # Data freshness from SQLite
+        data_freshness = {}
+        try:
+            with get_db() as db:
+                row = db.execute("SELECT MAX(date) as last_date FROM ohlcv").fetchone()
+                data_freshness["ohlcv_last_date"] = row["last_date"] if row else None
+                row = db.execute("SELECT MAX(date) as last_date FROM equity_curve").fetchone()
+                data_freshness["equity_last_date"] = row["last_date"] if row else None
+                row = db.execute("SELECT COUNT(*) as cnt FROM overlay_decisions").fetchone()
+                data_freshness["overlay_decisions_count"] = row["cnt"] if row else 0
+        except Exception as exc:
+            data_freshness["error"] = str(exc)
+
+        # Cron heartbeats — extract key services
+        cron_services = {}
+        for hb in heartbeats:
+            name = hb.get("service", "")
+            if name in ("premarket", "postclose", "sync_protective"):
+                cron_services[name] = {
+                    "last_run": hb.get("timestamp"),
+                    "status": hb.get("status"),
+                }
+
         return JSONResponse({
+            "services": services,
+            "cron": cron_services,
+            "data_freshness": data_freshness,
             "heartbeats": heartbeats,
             "timestamp": datetime.now().isoformat(),
         })
     except Exception as e:
+        logger.exception("system_health failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
