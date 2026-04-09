@@ -8,7 +8,7 @@ export function AllocationBar({ allocation, equity }: Props) {
   const items = allocation.filter((a) => (a.pct ?? 0) > 0)
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">CAPITAL ALLOCATION</div>
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">CAPITAL ALLOCATION</div>
       <div className="flex h-8 rounded-lg overflow-hidden border border-[var(--color-border)]">
         {items.map((a) => (
           <div

@@ -9,7 +9,7 @@ export function RegimeTimeline({ history }: Props) {
 
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">90-DAY REGIME HISTORY</div>
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">90-DAY REGIME HISTORY</div>
       <div className="flex h-8 rounded-lg overflow-hidden">
         {last90.map((d, i) => (
           <div

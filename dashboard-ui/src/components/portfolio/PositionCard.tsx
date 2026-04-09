@@ -9,11 +9,11 @@ export function PositionCard({ position }: Props) {
   const held = daysHeld(position.entry_date)
   return (
     <div
-      className="bg-[var(--color-surface)] rounded-xl p-4 relative border border-[var(--color-border)]"
+      className="bg-[var(--color-surface)] rounded-xl p-3 md:p-4 relative border border-[var(--color-border)] dash-card"
       style={{ borderLeftColor: color, borderLeftWidth: 3 }}
     >
       <div className="flex items-center justify-between mb-3">
-        <div className="font-mono font-semibold text-base">{position.ticker ?? '\u2014'}</div>
+        <div className="font-mono font-semibold text-sm md:text-base">{position.ticker ?? '\u2014'}</div>
         <div
           className="rounded-full px-2 py-0.5 text-[10px] font-mono"
           style={{ backgroundColor: `${color}33`, color }}

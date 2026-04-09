@@ -1,3 +1,4 @@
+// Rule: rendering-content-visibility — long lists defer offscreen layout/paint
 import type { OverlayDecision } from '../../api/types'
 import { EmptyState } from '../shared/EmptyState'
 import { fmtRelativeTime } from '../../lib/format'
@@ -39,7 +40,7 @@ export function OverlayDecisions({ decisions }: Props) {
       ) : (
         <div className="space-y-2">
           {items.map((d, i) => (
-            <div key={d.id ?? i} className="rounded-md bg-[var(--color-surface)] p-3">
+            <div key={d.id ?? i} className="rounded-md bg-[var(--color-surface)] p-3 cv-auto">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <span className="text-xs font-mono text-[var(--color-text-muted)] whitespace-nowrap pt-0.5">

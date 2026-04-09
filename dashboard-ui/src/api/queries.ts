@@ -56,9 +56,11 @@ function normalizeSystemHealth(raw: Record<string, unknown>): SystemHealth {
 }
 
 // ---------------------------------------------------------------------------
-// ChartPoint + mergeEquitySeries
+// ChartPoint + mergeEquitySeries + EquityChartData + buildEquityChartData
 // Rule: async-parallel — pre-merge both series in a single pass so EquityChart
 // receives a ready-to-render array via `select` without recomputing on every render.
+// Rule: js-combine-iterations — buildEquityChartData merges series AND computes
+// return stats in one select call so EquityChart needs no further derivation.
 // ---------------------------------------------------------------------------
 export interface ChartPoint {
   date: string
@@ -85,6 +87,29 @@ export function mergeEquitySeries(data: DashboardData): ChartPoint[] {
     }))
 }
 
+export interface EquityChartData {
+  chartData: ChartPoint[]
+  summary: DashboardData['summary']
+  portfolioReturnPct: number
+  spyReturnPct: number
+  alphaVsSpy: number
+}
+
+/** Pure selector: called once by react-query select, result is cached until
+ *  the underlying DashboardData changes. Combines chart-series merge and
+ *  return-stat computation in a single pass (js-combine-iterations rule). */
+export function buildEquityChartData(data: DashboardData): EquityChartData {
+  const portfolioReturnPct = data.summary?.total_pnl_pct ?? 0
+  const spyReturnPct = data.benchmark?.return_pct ?? 0
+  return {
+    chartData: mergeEquitySeries(data),
+    summary: data.summary,
+    portfolioReturnPct,
+    spyReturnPct,
+    alphaVsSpy: portfolioReturnPct - spyReturnPct,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Hooks
 // All polling hooks use:
@@ -103,9 +128,9 @@ export function usePortfolioData() {
   })
 }
 
-// useEquityChartData — pre-transforms DashboardData → ChartPoint[] via select
-// so EquityChart never recomputes the merge on re-renders (async-parallel rule:
-// do the work once, share the result across consumers).
+// useEquityChartData — pre-transforms DashboardData → EquityChartData via select
+// so EquityChart receives chart series + return stats in one shot and never
+// recomputes on re-renders (async-parallel rule; js-combine-iterations rule).
 export function useEquityChartData() {
   return useQuery({
     queryKey: qk.dashboardData(),
@@ -113,7 +138,7 @@ export function useEquityChartData() {
     refetchInterval: REFETCH_60S,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
-    select: mergeEquitySeries,
+    select: buildEquityChartData,
   })
 }
 

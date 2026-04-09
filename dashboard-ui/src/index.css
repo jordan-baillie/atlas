@@ -11,6 +11,9 @@
   --color-green: #22c55e;
   --color-red: #ef4444;
   --color-amber: #f59e0b;
+  --color-series-portfolio: #22c55e;
+  --color-series-benchmark: #a1a1aa;
+  --color-series-grid: #3f3f46;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
@@ -23,6 +26,9 @@ html.light {
   --color-border: #e4e4e7;
   --color-text: #09090b;
   --color-text-muted: #52525b;
+  --color-series-portfolio: #16a34a;
+  --color-series-benchmark: #71717a;
+  --color-series-grid: #e4e4e7;
 }
 
 html, body, #root {
@@ -36,4 +42,40 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   margin: 0;
+}
+
+/* Rule: rendering-content-visibility — defer offscreen layout/paint for long lists */
+@layer utilities {
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100px;
+  }
+  .cv-auto-sm {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 60px;
+  }
+  .cv-auto-lg {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  button:focus-visible,
+  a:focus-visible {
+    outline-offset: 2px;
+  }
 }

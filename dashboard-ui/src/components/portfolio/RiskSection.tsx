@@ -9,9 +9,9 @@ export function RiskSection({ data }: Props) {
   const s = data.summary
   const unprotected = s?.positions_without_stops ?? 0
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-6">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-6 dash-card">
       <div>
-        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">POSITION RISK</div>
+        <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">POSITION RISK</div>
         <div className="grid grid-cols-4 md:grid-cols-2 sm:grid-cols-1 gap-4">
           <StatCard label="CAPITAL AT RISK" value={fmtCcy(s?.total_risk_dollars)} sub={fmtPct(s?.total_risk_pct)} />
           <StatCard label="EQUITY" value={fmtCcy(s?.equity)} sub={`${s?.num_positions ?? 0} positions`} />

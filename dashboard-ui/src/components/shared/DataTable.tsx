@@ -1,3 +1,4 @@
+// Rule: rendering-content-visibility — long lists defer offscreen layout/paint
 import type { ReactNode } from 'react'
 
 export interface Column<T> {
@@ -42,7 +43,7 @@ export function DataTable<T>({ columns, data, emptyMessage = 'No data available'
           {data.map((row, i) => (
             <tr
               key={i}
-              className="border-b border-[var(--color-border)]/50 hover:bg-[var(--color-surface-alt)]/50 transition-colors"
+              className="border-b border-[var(--color-border)]/50 hover:bg-[var(--color-surface-alt)]/50 transition-colors cv-auto-sm"
             >
               {columns.map((col) => {
                 const content = col.render

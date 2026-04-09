@@ -3,7 +3,7 @@
   "generated_at": "2026-04-09T19:11:01.467530",
   "market_id": "sp500",
   "config_version": "v3.2",
-  "status": "APPROVED",
+  "status": "EXECUTED",
   "portfolio_snapshot": {
     "equity": 5085.06,
     "cash": 3794.92,
@@ -334,5 +334,12 @@
   ],
   "sizing_multiplier": 0.5,
   "regime_reasoning": "transition_uncertain: SPY below 200 DMA (trend -0.42), VIX moderate (risk +0.20), credit moderate (credit +0.00), yield curve normal (+0.47). Composite: -0.07",
-  "approved_at": "2026-04-09T19:44:23.325303"
+  "approved_at": "2026-04-09T19:44:23.325303",
+  "executed_at": "2026-04-09T23:15:55.024559",
+  "execution_report": {
+    "successful_entries": 3,
+    "successful_exits": 0,
+    "total_entries": 3,
+    "total_exits": 0
+  }
 }

@@ -1,3 +1,4 @@
+// Rule: rendering-content-visibility — long lists defer offscreen layout/paint
 import type { RegimeTransitions } from '../../api/types'
 
 interface Props { transitions: RegimeTransitions }
@@ -10,9 +11,9 @@ export function RegimeMatrix({ transitions }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">REGIME TRANSITION MATRIX</div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs font-mono">
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">REGIME TRANSITION MATRIX</div>
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <table className="min-w-[600px] md:min-w-0 w-full text-xs font-mono">
           <thead>
             <tr>
               <th className="p-2 text-left text-[var(--color-text-muted)]">From \ To</th>
@@ -26,14 +27,14 @@ export function RegimeMatrix({ transitions }: Props) {
               const isCurrent = from === current
               return (
                 <tr key={from} className={isCurrent ? 'ring-2 ring-[var(--color-accent,#6366f1)]' : ''}>
-                  <td className="p-2 text-[var(--color-text-muted)]">{from}</td>
+                  <td className="p-2 text-[var(--color-text-muted)] cv-auto-sm">{from}</td>
                   {states.map((to) => {
                     // API returns values as percentages (0-100), not decimals.
                     const p = matrix[from]?.[to] ?? 0
                     return (
                       <td
                         key={to}
-                        className="p-2 text-center"
+                        className="p-2 text-center cv-auto-sm"
                         style={{ backgroundColor: `rgba(99,102,241, ${Math.min(p / 100, 1)})` }}
                       >
                         {p.toFixed(1)}%

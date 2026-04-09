@@ -2,21 +2,33 @@ import { lazy, Suspense, useState } from 'react'
 import { useTheme } from './hooks/useTheme'
 import { Header } from './components/layout/Header'
 import { TabBar } from './components/layout/TabBar'
-import { PortfolioTab } from './components/portfolio/PortfolioTab'
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
 
-// Rule: bundle-dynamic-imports — lazy-load FinanceTab so the recharts chunk is
-// NOT bundled into the main chunk. The Suspense fallback shows an animated
-// skeleton that matches the tab content height to prevent layout shift
-// (async-suspense-boundaries rule: show wrapper UI faster while data/code loads).
+// Rule: bundle-dynamic-imports — lazy-load BOTH tabs so the initial bundle
+// only includes the shell (Header + TabBar + App). Each tab's recharts and
+// heavy deps load on demand via its dedicated chunk.
+const PortfolioTab = lazy(() =>
+  import('./components/portfolio/PortfolioTab').then((m) => ({ default: m.PortfolioTab })),
+)
 const FinanceTab = lazy(() =>
-  import('./components/finance/FinanceTab').then((m) => ({ default: m.FinanceTab }))
+  import('./components/finance/FinanceTab').then((m) => ({ default: m.FinanceTab })),
 )
 
-// TODO: preload on TabBar hover — import { preloadFinanceTab } from '../../App'
-// and call it in TabBar's onMouseEnter for the Finance button so the network
-// request starts before the user clicks (bundle-conditional rule).
+// Preload helpers for TabBar hover (bundle-conditional rule: start the network
+// request before the user clicks so the chunk is already warm).
+export const preloadPortfolioTab = () => import('./components/portfolio/PortfolioTab')
 export const preloadFinanceTab = () => import('./components/finance/FinanceTab')
+
+// Skeleton matching the tab content shape — prevents layout shift during
+// code-split load (async-suspense-boundaries rule).
+function TabFallback() {
+  return (
+    <div className="space-y-4">
+      <div className="h-24 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl animate-pulse" />
+      <div className="h-80 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl animate-pulse" />
+    </div>
+  )
+}
 
 export default function App() {
   useTheme()
@@ -25,21 +37,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       <Header />
-      <div className="max-w-[1440px] mx-auto px-6">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-6">
         <TabBar activeTab={activeTab} onChange={setActiveTab} />
-        <main className="py-6">
+        <main className="py-4 md:py-6">
           <ErrorBoundary>
-            {activeTab === 'portfolio' ? (
-              <PortfolioTab />
-            ) : (
-              <Suspense
-                fallback={
-                  <div className="h-96 animate-pulse bg-[var(--color-surface)] rounded-xl" />
-                }
-              >
-                <FinanceTab />
-              </Suspense>
-            )}
+            <Suspense fallback={<TabFallback />}>
+              {activeTab === 'portfolio' ? <PortfolioTab /> : <FinanceTab />}
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>
