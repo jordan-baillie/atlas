@@ -48,6 +48,8 @@ fi
 # ── Clean /tmp atlas files (except research lock) ──
 find /tmp -name "atlas-*.log" -mtime +1 -delete 2>/dev/null
 find /tmp -name "atlas-*.txt" -mtime +1 -delete 2>/dev/null
+# Clean stale lock files older than 1 day (but preserve atlas-research.lock if fresh)
+find /tmp -name "*.lock" -not -name "atlas-research.lock" -mtime +1 -delete 2>/dev/null
 
 # ── Trim decision_journal.json to last 500 entries ──
 JOURNAL="$PROJECT/journal/decision_journal.json"

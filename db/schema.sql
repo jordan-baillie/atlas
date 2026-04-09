@@ -229,6 +229,8 @@ CREATE TABLE IF NOT EXISTS ceasefire_history (
     change_log      TEXT               -- What changed
 );
 
+-- NOTE: news_intel is a FUTURE FEATURE — no pipeline currently populates this table.
+-- Empty state is expected and not a bug. Pipeline planned for Phase 6+.
 CREATE TABLE IF NOT EXISTS news_intel (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp       TEXT    NOT NULL,

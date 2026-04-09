@@ -207,6 +207,48 @@ def sync_market(
         except Exception as _recon_exc:
             logger.warning("Fill reconciliation failed (non-fatal): %s", _recon_exc)
 
+        # ── Cancel orphaned orders (no matching position) ─────
+        # When a trailing stop fills, the position exits but other
+        # open orders for that ticker may remain.  Clean them up
+        # on every sync cycle to prevent orphan accumulation.
+        try:
+            open_orders = broker.get_open_orders()
+            all_positions = broker.get_positions()
+            position_tickers = {p.ticker for p in all_positions}
+            orphaned_count = 0
+
+            for order in open_orders:
+                order_ticker = getattr(order, 'ticker', None)
+                if order_ticker and order_ticker not in position_tickers:
+                    order_id = getattr(order, 'order_id', None)
+                    order_type = getattr(order, 'order_type', '?')
+                    side = getattr(order, 'side', '?')
+                    if dry_run:
+                        logger.info(
+                            "[DRY RUN] Would cancel orphaned %s %s order for %s (id=%s)",
+                            side, order_type, order_ticker, order_id,
+                        )
+                    else:
+                        logger.warning(
+                            "Cancelling orphaned %s %s order for %s (id=%s) — no matching position",
+                            side, order_type, order_ticker, order_id,
+                        )
+                        cancel_result = broker.cancel_order(order_id)
+                        if not cancel_result.success:
+                            logger.error(
+                                "Failed to cancel orphaned order %s for %s: %s",
+                                order_id, order_ticker, cancel_result.message,
+                            )
+                    orphaned_count += 1
+
+            if orphaned_count:
+                logger.info("Orphan cleanup: %s%d orphaned orders",
+                            "[DRY RUN] " if dry_run else "", orphaned_count)
+            _orphans_cancelled = orphaned_count
+        except Exception as e:
+            logger.warning("Orphan order cleanup failed (non-fatal): %s", e)
+            _orphans_cancelled = 0
+
         # ── Sync protective orders ────────────────────────────
 
         if broker_name == "alpaca":
@@ -216,7 +258,7 @@ def sync_market(
             positions = broker.get_positions()
             if not positions:
                 logger.info("No live positions in %s — nothing to protect", market_id)
-                result["counts"] = {"positions_checked": 0}
+                result["counts"] = {"positions_checked": 0, "orphans_cancelled": _orphans_cancelled}
                 return result
 
             logger.info("%d live positions in %s", len(positions), market_id)
@@ -239,6 +281,7 @@ def sync_market(
                 "tp_skipped": 0,
                 "errors": sync_result.get("errors", 0),
                 "pdt_deferred": sync_result.get("pdt_deferred", 0),
+                "orphans_cancelled": _orphans_cancelled,
             }
             # Convert per_ticker → results with summary strings
             per_ticker = sync_result.get("per_ticker", {})
@@ -366,6 +409,7 @@ def format_telegram_message(
         pdt_deferred = counts.get("pdt_deferred", 0)
         sl_skip = counts.get("sl_skipped", 0)
         tp_skip = counts.get("tp_skipped", 0)
+        orphans_cancelled = counts.get("orphans_cancelled", 0)
 
         icon = "❌" if errors else ("✅" if (sl_placed + tp_placed) > 0 else "ℹ️")
         if pdt_deferred and not errors and not (sl_placed + tp_placed):
@@ -377,6 +421,7 @@ def format_telegram_message(
             + (f"\n  ⚠️ {errors} errors" if errors else "")
             + (f"\n  ⏳ {pdt_deferred} PDT-deferred (same-day entries, account < $25k — "
                f"stops placed pre-market tomorrow)" if pdt_deferred else "")
+            + (f"\n  🚫 {orphans_cancelled} orphaned orders cancelled" if orphans_cancelled else "")
         )
 
         # Per-ticker detail

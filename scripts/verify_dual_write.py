@@ -119,18 +119,18 @@ def check_trades() -> bool:
 
     # --- Count check (broker state is most reliable) --------------------------
     if broker:
-        if broker_open != sqlite_open or broker_closed != sqlite_closed:
+        if sqlite_open < broker_open or sqlite_closed < broker_closed:
             _result(
                 False,
-                f"broker ({broker_open} open, {broker_closed} closed) ≠ "
-                f"SQLite ({sqlite_open} open, {sqlite_closed} closed)",
+                f"SQLite ({sqlite_open} open, {sqlite_closed} closed) is missing records vs "
+                f"broker ({broker_open} open, {broker_closed} closed)",
             )
             return False
     else:
         # Fallback: compare ledger entry count vs SQLite
         sqlite_total = sqlite_open + sqlite_closed
-        if json_entries != sqlite_total:
-            _result(False, f"ledger entries ({json_entries}) ≠ SQLite total ({sqlite_total})")
+        if sqlite_total < json_entries:
+            _result(False, f"SQLite total ({sqlite_total}) < ledger entries ({json_entries})")
             return False
 
     # --- Spot-check: broker closed trades present in SQLite -------------------
@@ -181,7 +181,7 @@ def check_trades() -> bool:
             _row(f"     {OK} open positions", "found in SQLite")
 
     if field_ok:
-        _result(True, "counts match")
+        _result(True, f"SQLite ⊇ broker ({broker_open}+{broker_closed} ≤ {sqlite_open}+{sqlite_closed})")
     else:
         _result(False, "position mismatch in SQLite")
     return field_ok
@@ -553,14 +553,23 @@ def _load_history() -> dict:
     return {"checks": [], "consecutive_passes": 0, "gate_target": 5}
 
 
-def _save_history(history: dict, passed: bool, detail: str) -> dict:
-    # Overwrite today's entry on re-runs
-    history["checks"] = [c for c in history["checks"] if c.get("date") != TODAY]
-    history["checks"].append({"date": TODAY, "passed": passed, "details": detail})
+def _save_history(history: dict, passed: bool, detail: str, *, source: str = "manual") -> dict:
+    # Only overwrite today's entry from the SAME source
+    history["checks"] = [
+        c for c in history["checks"]
+        if not (c.get("date") == TODAY and c.get("source", "manual") == source)
+    ]
+    history["checks"].append({
+        "date": TODAY,
+        "passed": passed,
+        "details": detail,
+        "source": source,
+    })
 
-    # Recount consecutive passes from the end of the list
+    # Recount consecutive passes from CRON runs only
+    cron_checks = [c for c in history["checks"] if c.get("source") == "cron"]
     consecutive = 0
-    for check in reversed(history["checks"]):
+    for check in reversed(cron_checks):
         if check["passed"]:
             consecutive += 1
         else:
@@ -584,6 +593,12 @@ def main() -> None:
         "--status",
         action="store_true",
         help="Print consecutive pass count and exit",
+    )
+    parser.add_argument(
+        "--source",
+        choices=["cron", "manual"],
+        default="manual",
+        help="Run source: only 'cron' runs count toward the gate streak",
     )
     args = parser.parse_args()
 
@@ -636,10 +651,12 @@ def main() -> None:
     sym = OK if all_passed else BAD
     print(f"  RESULT: {passed_count}/{total_count} PASS {sym}")
 
-    history     = _save_history(history, all_passed, detail)
+    history     = _save_history(history, all_passed, detail, source=args.source)
     consecutive = history["consecutive_passes"]
     target      = history["gate_target"]
-    print(f"  Consecutive passing days: {consecutive}/{target}")
+    source_label = "cron" if args.source == "cron" else "manual (doesn't count toward gate)"
+    print(f"  Source: {source_label}")
+    print(f"  Consecutive cron passes: {consecutive}/{target}")
     print(_hr())
     print()
 

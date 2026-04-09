@@ -1,0 +1,316 @@
+{
+  "trade_date": "2026-04-08",
+  "generated_at": "2026-04-08T19:12:44.623525",
+  "market_id": "sp500",
+  "config_version": "v3.2",
+  "status": "EXECUTED",
+  "portfolio_snapshot": {
+    "equity": 5055.06,
+    "cash": 3153.29,
+    "open_positions": 6,
+    "total_pnl": 43.27,
+    "total_pnl_pct": 0.86
+  },
+  "proposed_entries": [
+    {
+      "ticker": "TLT",
+      "strategy": "short_term_mr",
+      "entry_price": 86.1417007446289,
+      "stop_price": 85.0415,
+      "take_profit": 86.8751,
+      "position_size": 16,
+      "position_value": 1378.27,
+      "risk_amount": 17.6,
+      "confidence": 0.7471,
+      "rationale": "TLT short-term oversold: IBS=0.004 < 0.2. Price $86.14 below SMA(5)=$86.51. Volume low 0.0x avg (weak dip). Target $86.88 (+1.0x ATR), stop at $85.04 (-1.5x ATR).",
+      "features": {
+        "rsi_2": 20.87,
+        "ibs": 0.0039,
+        "sma_5": 86.5063,
+        "atr": 0.7334,
+        "close": 86.1417,
+        "volume_ratio": 0.04,
+        "breadth_pct_above_50ma": 31.2,
+        "breadth_pct_above_200ma": 57.0,
+        "breadth_ad_ratio": 0.71,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": -1.8,
+        "rs_percentile": 33.6,
+        "rs_score": -3.09,
+        "rs_momentum": 0.0,
+        "roc_20": -3.46,
+        "roc_60": -1.38,
+        "roc_120": -4.89
+      },
+      "sector": "Unknown",
+      "market_id": ""
+    },
+    {
+      "ticker": "XLY",
+      "strategy": "short_term_mr",
+      "entry_price": 107.58999633789062,
+      "stop_price": 104.2212,
+      "take_profit": 109.8359,
+      "position_size": 5,
+      "position_value": 537.95,
+      "risk_amount": 16.84,
+      "confidence": 0.7195,
+      "rationale": "XLY short-term oversold: IBS=0.041 < 0.2. Price $107.59 below SMA(5)=$108.71. Volume low 0.1x avg (weak dip). Target $109.84 (+1.0x ATR), stop at $104.22 (-1.5x ATR).",
+      "features": {
+        "rsi_2": 28.3,
+        "ibs": 0.0406,
+        "sma_5": 108.712,
+        "atr": 2.2459,
+        "close": 107.59,
+        "volume_ratio": 0.05,
+        "breadth_pct_above_50ma": 31.2,
+        "breadth_pct_above_200ma": 57.0,
+        "breadth_ad_ratio": 0.71,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": -1.8,
+        "rs_percentile": 85.0,
+        "rs_score": 14.2,
+        "rs_momentum": 0.0,
+        "roc_20": -6.11,
+        "roc_60": -12.47,
+        "roc_120": 84.02
+      },
+      "sector": "Unknown",
+      "market_id": ""
+    }
+  ],
+  "rejected_entries": [
+    {
+      "ticker": "XLB",
+      "strategy": "short_term_mr",
+      "entry_price": 50.0099983215332,
+      "stop_price": 48.6677,
+      "take_profit": 50.9049,
+      "position_size": 13,
+      "position_value": 650.13,
+      "risk_amount": 17.45,
+      "confidence": 0.7159,
+      "rationale": "XLB short-term oversold: IBS=0.045 < 0.2. Price $50.01 below SMA(5)=$50.21. Volume low 0.0x avg (weak dip). Target $50.90 (+1.0x ATR), stop at $48.67 (-1.5x ATR).",
+      "features": {
+        "rsi_2": 28.34,
+        "ibs": 0.0454,
+        "sma_5": 50.214,
+        "atr": 0.8949,
+        "close": 50.01,
+        "volume_ratio": 0.04,
+        "breadth_pct_above_50ma": 31.2,
+        "breadth_pct_above_200ma": 57.0,
+        "breadth_ad_ratio": 0.71,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": -1.8,
+        "rs_percentile": 98.6,
+        "rs_score": 33.55,
+        "rs_momentum": 0.0,
+        "roc_20": 0.04,
+        "roc_60": 5.28,
+        "roc_120": 126.73
+      },
+      "sector": "Unknown",
+      "market_id": "",
+      "rejection_reason": "Allocation pool 'short_term_mr' full (2/1) and overflow full (2/2)"
+    },
+    {
+      "ticker": "GLD",
+      "strategy": "short_term_mr",
+      "entry_price": 426.1199951171875,
+      "stop_price": 408.1016,
+      "take_profit": 438.1322,
+      "position_size": 1,
+      "position_value": 426.12,
+      "risk_amount": 18.02,
+      "confidence": 0.6466,
+      "rationale": "GLD short-term oversold: IBS=0.138 < 0.2. Price $426.12 below SMA(5)=$430.26. Volume low 0.1x avg (weak dip). Target $438.13 (+1.0x ATR), stop at $408.10 (-1.5x ATR).",
+      "features": {
+        "rsi_2": 31.97,
+        "ibs": 0.1379,
+        "sma_5": 430.258,
+        "atr": 12.0122,
+        "close": 426.12,
+        "volume_ratio": 0.05,
+        "breadth_pct_above_50ma": 31.2,
+        "breadth_pct_above_200ma": 57.0,
+        "breadth_ad_ratio": 0.71,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": -1.8,
+        "rs_percentile": 46.8,
+        "rs_score": 0.49,
+        "rs_momentum": 0.0,
+        "roc_20": -9.82,
+        "roc_60": 3.56,
+        "roc_120": 12.7
+      },
+      "sector": "Unknown",
+      "market_id": "",
+      "rejection_reason": "Confidence 0.647 below threshold 0.65"
+    }
+  ],
+  "proposed_exits": [],
+  "total_signals_generated": 4,
+  "risk_summary": {
+    "total_proposed_cost": 1916.22,
+    "total_proposed_risk": 34.44,
+    "risk_pct_of_equity": 0.68,
+    "positions_after": 8,
+    "cash_after_entries": 1237.07,
+    "portfolio_exposure_pct": 75.53
+  },
+  "open_positions": [
+    {
+      "ticker": "AMT",
+      "strategy": "mean_reversion",
+      "entry_date": "2026-04-08",
+      "entry_price": 167.53,
+      "current_price": 174.075,
+      "shares": 4,
+      "unrealized_pnl": 26.18,
+      "unrealized_pnl_pct": 3.91,
+      "stop_price": 168.85,
+      "take_profit": 179.8338,
+      "sector": "Real Estate",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "COP",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-04-08",
+      "entry_price": 130.51,
+      "current_price": 131.74,
+      "shares": 2,
+      "unrealized_pnl": 2.46,
+      "unrealized_pnl_pct": 0.94,
+      "stop_price": 127.155,
+      "take_profit": 143.5777,
+      "sector": "Energy",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "DVN",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-04-08",
+      "entry_price": 50.3,
+      "current_price": 49.95,
+      "shares": 5,
+      "unrealized_pnl": -1.75,
+      "unrealized_pnl_pct": -0.7,
+      "stop_price": 45.74,
+      "take_profit": 55.6663,
+      "sector": "Energy",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "MRVL",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-08",
+      "entry_price": 108.63,
+      "current_price": 109.39,
+      "shares": 4,
+      "unrealized_pnl": 3.04,
+      "unrealized_pnl_pct": 0.7,
+      "stop_price": 101.6,
+      "take_profit": 141.1342,
+      "sector": "Technology",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "NFLX",
+      "strategy": "trend_following",
+      "entry_date": "2026-04-08",
+      "entry_price": 94.38,
+      "current_price": 98.85,
+      "shares": 3,
+      "unrealized_pnl": 13.41,
+      "unrealized_pnl_pct": 4.74,
+      "stop_price": 97.205,
+      "take_profit": null,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "OXY",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-04-08",
+      "entry_price": 62.96,
+      "current_price": 62.935,
+      "shares": 3,
+      "unrealized_pnl": -0.07,
+      "unrealized_pnl_pct": -0.04,
+      "stop_price": 61.13,
+      "take_profit": 71.2377,
+      "sector": "Energy",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    }
+  ],
+  "allocation_summary": {
+    "sector_rotation": {
+      "used": 3,
+      "cap": 2
+    },
+    "opening_gap": {
+      "used": 0,
+      "cap": 2
+    },
+    "trend_following": {
+      "used": 1,
+      "cap": 2
+    },
+    "mean_reversion": {
+      "used": 1,
+      "cap": 2
+    },
+    "momentum_breakout": {
+      "used": 1,
+      "cap": 1
+    },
+    "connors_rsi2": {
+      "used": 0,
+      "cap": 1
+    },
+    "short_term_mr": {
+      "used": 0,
+      "cap": 1
+    },
+    "_other": {
+      "used": 1,
+      "cap": 2
+    }
+  },
+  "vol_scale_applied": 1.0,
+  "regime_state": "transition_uncertain",
+  "active_universes": [
+    "sp500",
+    "sector_etfs",
+    "treasury_etfs",
+    "gold_etfs"
+  ],
+  "sizing_multiplier": 0.5,
+  "regime_reasoning": "transition_uncertain: SPY below 200 DMA (trend -0.42), VIX moderate (risk +0.20), credit moderate (credit +0.00), yield curve normal (+0.47). Composite: -0.07",
+  "approved_at": "2026-04-08T21:03:13.299589",
+  "executed_at": "2026-04-08T23:15:41.092634",
+  "execution_report": {
+    "successful_entries": 2,
+    "successful_exits": 0,
+    "total_entries": 2,
+    "total_exits": 0
+  }
+}

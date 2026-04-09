@@ -177,10 +177,6 @@ body {
   margin-bottom: 16px;
 }
 
-.summary-strip.compact {
-  grid-template-columns: repeat(4, 1fr);
-}
-
 .stat {
   background: var(--surface);
   border: 1px solid var(--border);

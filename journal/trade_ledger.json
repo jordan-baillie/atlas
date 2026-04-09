@@ -698,5 +698,53 @@
     "timestamp": "2026-04-07 13:30:00.929000",
     "reconciled": true,
     "recorded_at": "2026-04-07T23:45:03.744252"
+  },
+  {
+    "type": "exit",
+    "ticker": "OXY",
+    "strategy": "trend_following",
+    "shares": 3,
+    "fill_price": 56.4,
+    "entry_price": 62.96,
+    "pnl": -19.68,
+    "pnl_pct": -10.42,
+    "exit_reason": "trailing_stop_fill",
+    "order_id": "7318fba7-4887-4bc8-817f-237c5484e64a",
+    "timestamp": "2026-04-08 13:34:42.146000",
+    "reconciled": true,
+    "regime_at_exit": "transition_uncertain",
+    "recorded_at": "2026-04-08T23:45:04.075855"
+  },
+  {
+    "type": "exit",
+    "ticker": "COP",
+    "strategy": "sector_rotation",
+    "shares": 2,
+    "fill_price": 121.48,
+    "entry_price": 130.51,
+    "pnl": -18.06,
+    "pnl_pct": -6.92,
+    "exit_reason": "trailing_stop_fill",
+    "order_id": "d8d13569-8edf-4b87-b8f9-81d603319b17",
+    "timestamp": "2026-04-08 13:32:10.430000",
+    "reconciled": true,
+    "regime_at_exit": "transition_uncertain",
+    "recorded_at": "2026-04-08T23:45:04.100341"
+  },
+  {
+    "type": "exit",
+    "ticker": "DVN",
+    "strategy": "sector_rotation",
+    "shares": 5,
+    "fill_price": 45.9008,
+    "entry_price": 50.3,
+    "pnl": -22.0,
+    "pnl_pct": -8.75,
+    "exit_reason": "trailing_stop_fill",
+    "order_id": "30b81171-9eac-4741-8e2a-cd1e2320b42e",
+    "timestamp": "2026-04-08 13:30:11.180000+00:00",
+    "reconciled": true,
+    "recorded_at": "2026-04-08T23:53:27.028Z",
+    "note": "Auto-backfilled by health check reconciliation"
   }
 ]

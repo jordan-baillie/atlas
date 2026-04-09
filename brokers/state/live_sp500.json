@@ -5,55 +5,28 @@
     {
       "ticker": "AMT",
       "strategy": "mean_reversion",
-      "entry_date": "2026-04-08",
+      "entry_date": "2026-04-09",
       "entry_price": 167.53,
       "shares": 4,
       "stop_price": 168.85,
       "order_id": ""
     },
     {
-      "ticker": "COP",
-      "strategy": "sector_rotation",
-      "entry_date": "2026-04-08",
-      "entry_price": 130.51,
-      "shares": 2,
-      "stop_price": 127.155,
-      "order_id": ""
-    },
-    {
-      "ticker": "DVN",
-      "strategy": "sector_rotation",
-      "entry_date": "2026-04-08",
-      "entry_price": 50.3,
-      "shares": 5,
-      "stop_price": 45.74,
-      "order_id": ""
-    },
-    {
       "ticker": "MRVL",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-08",
+      "entry_date": "2026-04-09",
       "entry_price": 108.63,
       "shares": 4,
-      "stop_price": 101.6,
+      "stop_price": 110.23,
       "order_id": ""
     },
     {
       "ticker": "NFLX",
       "strategy": "trend_following",
-      "entry_date": "2026-04-08",
+      "entry_date": "2026-04-09",
       "entry_price": 94.38,
       "shares": 3,
       "stop_price": 97.205,
-      "order_id": ""
-    },
-    {
-      "ticker": "OXY",
-      "strategy": "sector_rotation",
-      "entry_date": "2026-04-08",
-      "entry_price": 62.96,
-      "shares": 3,
-      "stop_price": 61.13,
       "order_id": ""
     }
   ],
@@ -341,6 +314,61 @@
       "pnl": 17.57,
       "shares": 3,
       "exit_reason": "trailing_stop"
+    },
+    {
+      "ticker": "MSI",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-04-01",
+      "entry_price": 426.78,
+      "exit_date": "2026-04-07",
+      "exit_price": 440.98,
+      "pnl": 14.2,
+      "shares": 1,
+      "exit_reason": "signal_exit"
+    },
+    {
+      "ticker": "DVN",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-04-02",
+      "entry_price": 50.3,
+      "exit_date": "2026-04-08",
+      "exit_price": 45.9008,
+      "pnl": -22.0,
+      "shares": 5,
+      "exit_reason": "trailing_stop_fill"
+    },
+    {
+      "ticker": "OXY",
+      "strategy": "trend_following",
+      "entry_date": "2026-04-06",
+      "entry_price": 62.96,
+      "exit_date": "2026-04-08",
+      "exit_price": 56.4,
+      "pnl": -19.68,
+      "shares": 3,
+      "exit_reason": "trailing_stop_fill"
+    },
+    {
+      "ticker": "D",
+      "strategy": "mean_reversion",
+      "entry_date": "2026-03-31",
+      "entry_price": 59.38,
+      "exit_date": "2026-04-07",
+      "exit_price": 62.17,
+      "pnl": 36.27,
+      "shares": 13,
+      "exit_reason": "signal_exit"
+    },
+    {
+      "ticker": "COP",
+      "strategy": "sector_rotation",
+      "entry_date": "2026-04-06",
+      "entry_price": 130.51,
+      "exit_date": "2026-04-08",
+      "exit_price": 121.48,
+      "pnl": -18.06,
+      "shares": 2,
+      "exit_reason": "trailing_stop_fill"
     }
   ],
   "equity_history": [
@@ -1212,10 +1240,54 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-08",
+      "equity": 5084.7,
+      "cash": 3794.92,
+      "positions_value": 1289.78,
+      "num_positions": 3,
+      "total_realized_pnl": 190.39,
+      "total_closed_trades": 21,
+      "positions": [
+        {
+          "ticker": "AMT",
+          "strategy": "mean_reversion",
+          "shares": 4,
+          "entry_price": 167.53,
+          "current_price": 176.18,
+          "unrealized_pnl": 34.6,
+          "mae": 0.0,
+          "mfe": 5.16,
+          "holding_days": -1
+        },
+        {
+          "ticker": "MRVL",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 108.63,
+          "current_price": 114.45,
+          "unrealized_pnl": 23.28,
+          "mae": 0.0,
+          "mfe": 5.36,
+          "holding_days": -1
+        },
+        {
+          "ticker": "NFLX",
+          "strategy": "trend_following",
+          "shares": 3,
+          "entry_price": 94.38,
+          "current_price": 99.39,
+          "unrealized_pnl": 15.03,
+          "mae": 0.0,
+          "mfe": 5.31,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5120.55,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-08T08:00:51.429101"
+  "last_saved": "2026-04-09T08:09:08.370512"
 }

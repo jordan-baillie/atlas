@@ -208,4 +208,7 @@ find "$LOG_DIR" -name "healthz-hourly_*.log" -mtime +3 -delete 2>/dev/null
 find "$LOG_DIR" -name "healthz-autofix_*.log" -mtime +14 -delete 2>/dev/null
 find "$COOLDOWN_DIR" -mtime +1 -delete 2>/dev/null
 
+# Echo summary to stdout for cron log capture
+cat "$LOG_FILE" 2>/dev/null
+
 exit 0

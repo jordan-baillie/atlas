@@ -1,58 +1,5 @@
 [
   {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-05T12:42:20"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 610.97,
-    "timestamp": "2026-03-05T16:06:01"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-05T20:07:44"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 610.97,
-    "timestamp": "2026-03-05T20:08:27"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-05T20:08:40"
-  },
-  {
     "position_id": "131755aa1899",
     "ticker": "NEM",
     "condition_id": "nem_fed",
@@ -1978,5 +1925,55 @@
     "new_status": "failing",
     "value": 112.82,
     "timestamp": "2026-04-07T08:00:51"
+  },
+  {
+    "position_id": "0053ac1a7b04",
+    "ticker": "RTX",
+    "condition_id": "rtx_ma50",
+    "condition_label": "RTX above 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": 203.44,
+    "timestamp": "2026-04-09T08:09:11"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_floor",
+    "condition_label": "NEM above $100 floor",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": 118.17,
+    "timestamp": "2026-04-09T08:09:12"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_ma50",
+    "condition_label": "NEM above 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": 118.17,
+    "timestamp": "2026-04-09T08:09:12"
+  },
+  {
+    "position_id": "7adf5478dec9",
+    "ticker": "CIBR",
+    "condition_id": "cibr_ma50",
+    "condition_label": "CIBR above 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": 65.68,
+    "timestamp": "2026-04-09T08:09:13"
+  },
+  {
+    "position_id": "d3759efc6f95",
+    "ticker": "PSQ",
+    "condition_id": "psq_qqq_ma",
+    "condition_label": "QQQ below 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": 604.98,
+    "timestamp": "2026-04-09T08:09:14"
   }
 ]
