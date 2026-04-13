@@ -56,9 +56,21 @@ def main():
         return
 
     status = plan.get("status", "")
+    auto_approve = config.get("trading", {}).get("auto_approve", False)
     if status != "APPROVED":
-        log.info("Plan status is '%s' (need APPROVED) — skipping", status)
-        return
+        if auto_approve and status in ("", "PENDING", "PENDING_APPROVAL", "GENERATED", "DRAFT"):
+            log.warning(
+                "Plan status is '%s' and auto_approve=True — auto-approving now",
+                status,
+            )
+            plan = plan_gen.approve_plan(trade_date, market_id=market_id)
+            if not plan:
+                log.error("auto_approve: approve_plan() returned None — aborting")
+                return
+            status = plan.get("status", "")
+        if status != "APPROVED":
+            log.info("Plan status is '%s' (need APPROVED) — skipping", status)
+            return
 
     entries = plan.get("proposed_entries", [])
     exits = plan.get("proposed_exits", [])

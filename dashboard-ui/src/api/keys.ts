@@ -10,6 +10,7 @@ export const qk = {
     current: () => [...qk.regime.all(), 'current'] as const,
     history: (days: number) => [...qk.regime.all(), 'history', days] as const,
     transitions: () => [...qk.regime.all(), 'transitions'] as const,
+    distributions: () => [...qk.regime.all(), 'distributions'] as const,
   },
   overlay: {
     all: () => [...qk.all, 'overlay'] as const,
@@ -25,4 +26,7 @@ export const qk = {
     risk: () => [...qk.all, 'positions', 'risk'] as const,
   },
   finance: () => [...qk.all, 'finance'] as const,
+  signals: {
+    vixTermStructure: () => [...qk.all, 'signals', 'vix-term-structure'] as const,
+  },
 } as const

@@ -150,7 +150,16 @@ RESPONSE FORMAT  (valid JSON only — no prose, no markdown)
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _build_user_prompt(regime, news: str, charts: str) -> str:
+def _build_user_prompt(
+    regime,
+    news: str,
+    charts: str,
+    *,
+    sector_rotation: str = "",
+    sentiment: str = "",
+    etf_flows: str = "",
+    macro_surprise: str = "",
+) -> str:
     """
     Build the user-facing portion of the prompt from live context.
 
@@ -203,6 +212,18 @@ NEWS SUMMARY:
 
 CHART / TECHNICAL ANALYSIS:
 {charts if charts else "No chart analysis available."}
+
+SECTOR ROTATION:
+{sector_rotation if sector_rotation else "No sector rotation data available."}
+
+SENTIMENT (AAII / CNN Fear & Greed — contrarian indicator):
+{sentiment if sentiment else "No sentiment data available."}
+
+ETF VOLUME FLOWS (institutional rotation proxy):
+{etf_flows if etf_flows else "No ETF flow data available."}
+
+MACRO SURPRISE INDEX (economic data vs expectations):
+{macro_surprise if macro_surprise else "No macro surprise data available."}
 
 === YOUR TASK ===
 Based on the regime context, news, and chart signals above, decide whether
@@ -527,6 +548,90 @@ def _load_charts() -> str:
         return ""
 
 
+def _load_sector_rotation() -> str:
+    """Load sector rotation signal from signals.sector_rotation."""
+    try:
+        from signals.sector_rotation import get_sector_rotation_signal
+        result = get_sector_rotation_signal()
+        if not result:
+            return ""
+        lines = [f"Rotation: {result.get('rotation_state', 'unknown')}"]
+        if result.get('defensive_alert'):
+            lines.append(f"⚠ DEFENSIVE ALERT: {result['defensive_alert']}")
+        rankings = result.get('rankings', [])
+        for r in rankings[:5]:
+            lines.append(f"  {r.get('ticker','?'):4s} ({r.get('name',''):20s}): ROC={r.get('roc_63d',0):+.1f}%  rank={r.get('rank',0)}")
+        return "\n".join(lines)
+    except Exception as exc:
+        log.warning("Sector rotation source error: %s", exc)
+        return ""
+
+
+def _load_aaii_sentiment() -> str:
+    """Load AAII/CNN Fear & Greed sentiment signal."""
+    try:
+        from data.aaii import get_sentiment_signal
+        sig = get_sentiment_signal()
+        if not sig or sig.get("confidence", 0) == 0 and sig.get("bullish_pct") is None:
+            return ""
+        lines = [
+            f"Sentiment: {sig['signal']} (confidence={sig['confidence']:.2f})",
+            f"  Bull: {sig['bullish_pct']}%  Bear: {sig['bearish_pct']}%  Neutral: {sig['neutral_pct']}%",
+            f"  Spread (bull-bear): {sig['spread']}",
+        ]
+        if sig.get("fear_greed_score") is not None:
+            lines.append(f"  CNN Fear & Greed Score: {sig['fear_greed_score']:.1f}/100")
+        if sig.get("details"):
+            lines.append(f"  {sig['details']}")
+        return "\n".join(lines)
+    except Exception as exc:
+        log.warning("AAII sentiment source error: %s", exc)
+        return ""
+
+
+def _load_etf_flows() -> str:
+    """Load ETF flow rotation signal from volume z-scores."""
+    try:
+        from signals.etf_flows import get_etf_flow_signal
+        sig = get_etf_flow_signal()
+        if not sig:
+            return ""
+        lines = [
+            f"ETF Volume Rotation: {sig['rotation_signal']} (confidence={sig['confidence']:.2f})",
+            f"  Cyclical avg z-score: {sig['cyclical_avg_zscore']:+.2f}",
+            f"  Defensive avg z-score: {sig['defensive_avg_zscore']:+.2f}",
+        ]
+        surges = [z for z in sig.get("zscores", []) if z["signal"] == "surge"]
+        droughts = [z for z in sig.get("zscores", []) if z["signal"] == "drought"]
+        if surges:
+            lines.append(f"  Surges: {', '.join(z['ticker'] for z in surges)}")
+        if droughts:
+            lines.append(f"  Droughts: {', '.join(z['ticker'] for z in droughts)}")
+        return "\n".join(lines)
+    except Exception as exc:
+        log.warning("ETF flow source error: %s", exc)
+        return ""
+
+
+def _load_macro_surprise() -> str:
+    """Load macro surprise index from signals.macro_surprise."""
+    try:
+        from signals.macro_surprise import get_macro_surprise_signal
+        sig = get_macro_surprise_signal()
+        if not sig:
+            return ""
+        lines = [
+            f"Macro Surprise: {sig['signal']} (composite z={sig['composite_surprise']:+.3f}, confidence={sig['confidence']:.2f})",
+            f"  Regime implication: {sig.get('regime_implication', 'neutral')}",
+        ]
+        for name, s in sig.get("surprises", {}).items():
+            lines.append(f"  {s['name']:25s}: z={s['z_score']:+.2f} ({s['direction']})")
+        return "\n".join(lines)
+    except Exception as exc:
+        log.warning("Macro surprise source error: %s", exc)
+        return ""
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Public entry point
 # ──────────────────────────────────────────────────────────────────────────────
@@ -582,16 +687,30 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
     # ── Step 2: Gather data sources ──────────────────────────────────────────
     news = _load_news()
     charts = _load_charts()
+    sector_rotation = _load_sector_rotation()
+    sentiment = _load_aaii_sentiment()
+    etf_flows = _load_etf_flows()
+    macro_surprise = _load_macro_surprise()
 
     data_sources: Dict = {
         "news_available": bool(news),
         "charts_available": bool(charts),
+        "sector_rotation_available": bool(sector_rotation),
+        "sentiment_available": bool(sentiment),
+        "etf_flows_available": bool(etf_flows),
+        "macro_surprise_available": bool(macro_surprise),
         "regime_date": regime.date,
         "regime_state": regime.state.value,
     }
 
     # ── Step 3: Build structured prompt ─────────────────────────────────────
-    user_prompt = _build_user_prompt(regime, news, charts)
+    user_prompt = _build_user_prompt(
+        regime, news, charts,
+        sector_rotation=sector_rotation,
+        sentiment=sentiment,
+        etf_flows=etf_flows,
+        macro_surprise=macro_surprise,
+    )
 
     # ── Step 4: Call pi CLI ──────────────────────────────────────────────────
     raw_response = _call_pi(user_prompt)

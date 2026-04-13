@@ -878,10 +878,31 @@ def send_plan_for_approval(
     entries = plan.get("proposed_entries", [])
     exits = plan.get("proposed_exits", [])
 
-    # If no trades, send without buttons
+    # Load config to check auto_approve
+    from utils.config import get_active_config
+    config = get_active_config(market_id)
+    auto_approve = config.get("trading", {}).get("auto_approve", False)
+
     if not entries and not exits:
         msg_text += "\n\n💤 No trades today — holding all positions."
         keyboard = None
+    elif auto_approve:
+        # Auto-approve: change plan status and send info-only (no buttons)
+        from brokers.plan import TradePlanGenerator
+        plan_gen = TradePlanGenerator(None, config)
+        approved = plan_gen.approve_plan(trade_date, market_id=market_id)
+        if approved:
+            logger.info("Auto-approved plan for %s (%s)", trade_date, market_id)
+            msg_text += "\n\n🤖 <b>Auto-approved</b> — execution at market open."
+        else:
+            logger.warning("Auto-approve failed for %s — sending with buttons", trade_date)
+            msg_text += "\n\n⚠️ Auto-approve failed — manual approval required."
+        keyboard = None if approved else {
+            "inline_keyboard": [[
+                {"text": "✅ Approve", "callback_data": f"plan:{trade_date}:approve:{market_id}"},
+                {"text": "❌ Reject", "callback_data": f"plan:{trade_date}:reject:{market_id}"},
+            ]]
+        }
     else:
         keyboard = {
             "inline_keyboard": [[

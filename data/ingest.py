@@ -52,7 +52,7 @@ DEFAULT_MARKET = "asx"
 # Tickers that MUST use yfinance — not available or unreliable on Alpaca.
 # Includes index tickers (^VIX, ^GSPC), futures (GC=F, HG=F), and broad ETFs
 # that Alpaca's IEX feed doesn't carry consistently.
-_YFINANCE_ONLY = {"^VIX", "^TNX", "^IRX", "^AXJO", "GC=F", "HG=F", "SPY", "^GSPC"}
+_YFINANCE_ONLY = {"^VIX", "^TNX", "^IRX", "^AXJO", "GC=F", "HG=F", "SPY", "^GSPC", "^SKEW", "RSP"}
 
 
 def _market_cache_dir(market_id: Optional[str] = None) -> Path:
@@ -985,10 +985,25 @@ def refresh_macro_data(cache_max_age_hours: int = 24) -> bool:
             f"columns={list(df.columns)}, "
             f"range=[{df.index.min().date()}, {df.index.max().date()}]"
         )
-        return True
     except Exception as e:
         logger.error(f"Macro data refresh failed: {e}", exc_info=True)
         return False
+
+    # Also persist to macro_indicators SQLite table (includes FRED data)
+    try:
+        from data.macro import fetch_macro_data
+        db_df = fetch_macro_data(write_to_db=True, use_cache=True)
+        if db_df is not None and not db_df.empty:
+            logger.info(
+                f"Macro indicators written to DB: {len(db_df)} rows "
+                f"[{db_df.index.min().date()}, {db_df.index.max().date()}]"
+            )
+        else:
+            logger.warning("fetch_macro_data(write_to_db=True) returned empty — FRED data may be missing")
+    except Exception as e:
+        logger.warning(f"Macro DB write failed (yfinance cache still updated): {e}")
+
+    return True
 
 
 def cache_stats(market_id: Optional[str] = None) -> Dict:

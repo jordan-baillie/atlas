@@ -90,6 +90,10 @@ except ImportError as _chat_import_err:
 
 logger = logging.getLogger("chat_server")
 
+# ── Risk / signals / regime imports (phases 7-9) ─────────────────────────────
+from risk.ruin_probability import get_latest_ruin_probability, compute_for_current_portfolio, persist_ruin_probability  # noqa: E402
+from signals.ev_scorer import get_latest_ev_stats, compute_all_strategies_ev, persist_strategy_ev  # noqa: E402
+
 # ── Rate limiting (mirrors dashboard_server.py global) ───────────────────────
 _last_evaluate_time = 0.0
 
@@ -286,6 +290,9 @@ def _build_dashboard_data() -> dict:
                 account["margin_usage_pct"] = 0
 
             positions = [dataclasses.asdict(p) for p in positions_info]
+            # Override stale dataclass default — AccountInfo.num_positions is
+            # never set by the Alpaca adapter, so use the actual position count.
+            account["num_positions"] = len(positions)
 
             # 1c. Flatten orders from raw dict for dashboard compatibility
             orders = []
@@ -305,12 +312,20 @@ def _build_dashboard_data() -> dict:
                 orders.append(od)
 
             # 1. Enrich positions with Atlas trade metadata from SQLite
+            #    Prefer open trades; fall back to most-recent closed trade
+            #    so broker-only / orphaned positions still get strategy info.
             with get_db() as db:
-                open_trades = db.execute(
-                    "SELECT ticker, strategy, entry_date, stop_price, entry_price "
-                    "FROM trades WHERE exit_date IS NULL"
+                all_trades = db.execute(
+                    "SELECT ticker, strategy, entry_date, stop_price, entry_price,"
+                    "       (CASE WHEN exit_date IS NULL THEN 0 ELSE 1 END) AS is_closed"
+                    " FROM trades"
+                    " ORDER BY is_closed, id DESC"
                 ).fetchall()
-            trade_meta = {t["ticker"]: dict(t) for t in open_trades}
+            trade_meta: dict = {}
+            for t in all_trades:
+                tk = t["ticker"]
+                if tk not in trade_meta:          # first match wins
+                    trade_meta[tk] = dict(t)
             for p in positions:
                 meta = trade_meta.get(p.get("ticker", ""))
                 if meta:
@@ -389,7 +404,28 @@ def _build_dashboard_data() -> dict:
             "WHERE market_id = ? ORDER BY date",
             (market_id,),
         ).fetchall()
-        result["portfolio_history"] = [dict(r) for r in equity_rows]
+        portfolio_history = [{**dict(r), "value": r["equity"]} for r in equity_rows]
+
+        # Fix 1: Update today's row with live equity if stale
+        live_equity = (result.get("summary") or {}).get("equity")
+        if portfolio_history and live_equity:
+            from datetime import datetime as _dt
+            today_str = _dt.now().strftime("%Y-%m-%d")
+            last_row = portfolio_history[-1]
+            if last_row.get("date") == today_str:
+                if abs((last_row.get("equity") or 0) - live_equity) > 0.01:
+                    last_row["equity"] = round(live_equity, 2)
+                    last_row["value"] = round(live_equity, 2)
+            else:
+                # Today's row doesn't exist yet — append a live point
+                _eq_val = round(live_equity, 2)
+                portfolio_history.append({
+                    "date": today_str,
+                    "equity": _eq_val,
+                    "value": _eq_val,
+                    "day_pnl": (result.get("summary") or {}).get("today_pnl", 0),
+                })
+        result["portfolio_history"] = portfolio_history
 
         # Strategy performance aggregated from closed trades
         trades_rows = db.execute(
@@ -425,27 +461,69 @@ def _build_dashboard_data() -> dict:
                 "expectancy": sum(pnls) / len(pnls) if pnls else 0,
             }
 
-        # ── 3. Benchmark (SPY) curve ──────────────────────────────────────────
-        spy_rows = db.execute(
-            "SELECT date, close FROM ohlcv WHERE ticker = 'SPY' "
-            "ORDER BY date DESC LIMIT ?",
-            (max(len(equity_rows), 90),),
-        ).fetchall()
-        if spy_rows:
-            spy_data = list(reversed(spy_rows))
-            port_start = config.get("risk", {}).get("starting_equity", 1)
-            spy_start = spy_data[0]["close"]
-            scale = port_start / spy_start if spy_start else 1
-            bench_curve = [
-                {"date": r["date"], "equity": round(r["close"] * scale, 2)}
-                for r in spy_data
-            ]
-            spy_return = ((spy_data[-1]["close"] / spy_data[0]["close"]) - 1) * 100
-            result["benchmark"] = {
-                "ticker": "SPY",
-                "curve": bench_curve,
-                "return_pct": round(spy_return, 2),
-            }
+        # ── 3. Benchmark (SPY) curve — aligned to portfolio window ────────────
+        if portfolio_history:
+            port_start_date = portfolio_history[0]["date"]
+            port_start_equity = portfolio_history[0]["equity"] or 0
+            port_end_date = portfolio_history[-1]["date"]
+            spy_rows = db.execute(
+                "SELECT date, close FROM ohlcv WHERE ticker = 'SPY' "
+                "AND date >= ? AND date <= ? ORDER BY date",
+                (port_start_date, port_end_date),
+            ).fetchall()
+            spy_by_date = {r["date"]: r["close"] for r in spy_rows}
+
+            # Build full trading-day calendar = union of portfolio + SPY dates,
+            # then forward-fill any gaps in portfolio equity.
+            all_trading_days = sorted(
+                set(p["date"] for p in portfolio_history) | set(spy_by_date.keys())
+            )
+            port_by_date = {p["date"]: p for p in portfolio_history}
+            _last_eq: float | None = None
+            filled_portfolio: list = []
+            for _d in all_trading_days:
+                if _d in port_by_date:
+                    _row = port_by_date[_d]
+                    _last_eq = _row["equity"]
+                    filled_portfolio.append({
+                        "date": _d,
+                        "equity": _last_eq,
+                        "value": _last_eq,
+                        "day_pnl": _row.get("day_pnl", 0) or 0,
+                    })
+                elif _last_eq is not None:
+                    # Forward-fill equity from previous trading day
+                    filled_portfolio.append({
+                        "date": _d,
+                        "equity": _last_eq,
+                        "value": _last_eq,
+                        "day_pnl": 0.0,
+                    })
+            # Overwrite portfolio_history with the date-complete version
+            portfolio_history = filled_portfolio
+            result["portfolio_history"] = portfolio_history
+
+            # Left-join SPY onto every portfolio date, forward-filling gaps
+            if spy_rows and port_start_equity > 0:
+                spy_start = spy_rows[0]["close"]
+                scale = port_start_equity / spy_start if spy_start else 1
+                _last_spy: float | None = None
+                bench_curve = []
+                for _row in portfolio_history:
+                    _d = _row["date"]
+                    if _d in spy_by_date:
+                        _last_spy = spy_by_date[_d]
+                    if _last_spy is not None:
+                        _eq = round(_last_spy * scale, 2)
+                        bench_curve.append({"date": _d, "equity": _eq, "value": _eq})
+                spy_return = (
+                    (spy_rows[-1]["close"] / spy_rows[0]["close"]) - 1
+                ) * 100
+                result["benchmark"] = {
+                    "ticker": "SPY",
+                    "curve": bench_curve,
+                    "return_pct": round(spy_return, 2),
+                }
 
     # ── 4. Strategy allocation breakdown ──────────────────────────────────────
     alloc_map: dict = {}
@@ -481,6 +559,16 @@ def _build_dashboard_data() -> dict:
     result["summary"]["max_positions"] = config.get("risk", {}).get(
         "max_open_positions", 10
     )
+
+    # ── Add portfolio return_pct to summary ─────────────────────────────────
+    _ph = result.get("portfolio_history", [])
+    if _ph and len(_ph) >= 2:
+        _first_eq = _ph[0].get("equity") or 0
+        _last_eq_s = _ph[-1].get("equity") or 0
+        if _first_eq > 0:
+            result.setdefault("summary", {})["return_pct"] = round(
+                (_last_eq_s / _first_eq - 1) * 100, 2
+            )
 
     result["timestamp"] = datetime.now().isoformat()
     return result
@@ -941,6 +1029,27 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
             else:
                 risk_status = "normal"
 
+            # Phase 3: volatility cone data
+            vol_cone_data = None
+            try:
+                from indicators.vol_cones import compute_vol_cone, REGIME_MULTIPLIERS, _percentile_position
+                vc = compute_vol_cone(ticker)
+                if not vc.get("error") and 20 in vc.get("cone", {}):
+                    c20 = vc["cone"][20]
+                    regime = vc["current_regime"]
+                    k = REGIME_MULTIPLIERS.get(regime, 2.0)
+                    import math as _math
+                    vol_daily = c20["current"] / _math.sqrt(252)
+                    vol_cone_data = {
+                        "vol_20d_annual": round(c20["current"], 4),
+                        "regime": regime,
+                        "percentile": _percentile_position(c20["current"], c20),
+                        "multiplier": k,
+                        "suggested_stop_distance_pct": round(k * vol_daily, 4),
+                    }
+            except Exception as vc_err:
+                logger.warning("vol_cone lookup failed for %s: %s", ticker, vc_err)
+
             position_risks.append({
                 "ticker": ticker,
                 "strategy": strategy,
@@ -955,6 +1064,7 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 "risk_pct_equity": risk_pct_equity,
                 "position_value": round(position_value, 2),
                 "risk_status": risk_status,
+                "vol_cone": vol_cone_data,
             })
 
         # Sort by risk (highest first)
@@ -967,6 +1077,93 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
         if distances:
             avg_distance = round(sum(distances) / len(distances), 2)
 
+        # Phase 4: portfolio-level VaR/CVaR via regime-conditional MC
+        portfolio_risk = None
+        try:
+            from risk.portfolio_var import compute_portfolio_var_regime_aware
+            from db.atlas_db import get_current_regime
+
+            # Get current regime state
+            current_regime_data = get_current_regime() or {}
+            current_regime = (
+                current_regime_data.get("regime_state")
+                or current_regime_data.get("state")
+                or "transition_uncertain"
+            )
+
+            # Build positions list in expected shape
+            var_positions = [
+                {
+                    "ticker": p["ticker"],
+                    "shares": p["shares"],
+                    "current_price": p["current_price"],
+                    "entry_price": p["entry_price"],
+                }
+                for p in position_risks
+            ]
+
+            if var_positions and equity > 0:
+                var_result = compute_portfolio_var_regime_aware(
+                    positions=var_positions,
+                    current_regime=current_regime,
+                    lookback_days=60,
+                    n_paths=10000,
+                    horizons=(1, 5),
+                    seed=42,
+                    equity=equity,
+                )
+                portfolio_risk = {
+                    "method": var_result.get("method"),
+                    "current_regime": var_result.get("regime_state"),
+                    "effective_bets": var_result.get("effective_bets"),
+                    "correlation_avg": var_result.get("correlation_avg"),
+                    "correlation_max": var_result.get("correlation_max"),
+                    "horizons": var_result.get("horizons", {}),
+                    "n_paths": var_result.get("n_paths"),
+                    "warnings": var_result.get("warnings", []),
+                }
+        except Exception as pr_err:
+            logger.warning("portfolio_risk computation failed: %s", pr_err)
+            portfolio_risk = None
+
+        # Build vol_cones map (ticker → vol cone data) from per-position data
+        vol_cones_map = {
+            p["ticker"]: p["vol_cone"]
+            for p in position_risks
+            if p.get("vol_cone")
+        }
+
+        # Stop probability analysis
+        try:
+            from risk.stop_probability import analyze_all_open_positions as _analyze_stops
+            stop_results = _analyze_stops(horizons=(1, 5, 10, 20))
+            stop_probability = {}
+            for r in stop_results:
+                stop_probability[r["ticker"]] = {
+                    "vol_annual": r["vol_annual"],
+                    "stop_distance_pct": r["stop_distance_pct"],
+                    "horizons": {k: v["prob_touch"] for k, v in r["horizons"].items()},
+                    "expected_loss_20d": r["loss"]["expected_loss"],
+                    "max_loss": r["loss"]["max_loss"],
+                }
+        except Exception as e:
+            logger.warning("stop_probability computation failed: %s", e)
+            stop_probability = {}
+
+        # Add ruin probability summary — uses get_latest_ruin_probability() helper (phase 9)
+        ruin_summary = None
+        try:
+            ruin_summary = get_latest_ruin_probability() or None
+            if not ruin_summary:
+                # Compute fresh if no cached data in DB
+                ruin_result = compute_for_current_portfolio(floor_pct=0.70)
+                if ruin_result.get('status') == 'ok':
+                    persist_ruin_probability(ruin_result)
+                    ruin_summary = get_latest_ruin_probability() or None
+        except Exception as e:
+            logger.warning(f"Ruin probability failed: {e}")
+            ruin_summary = None
+
         return JSONResponse({
             "positions": position_risks,
             "summary": {
@@ -978,9 +1175,230 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 "positions_without_stops": stops_missing,
                 "max_risk_per_trade_pct": max_risk_pct,
             },
+            "portfolio_risk": portfolio_risk,
+            "vol_cones": vol_cones_map,
+            "stop_probability": stop_probability,
+            "ruin_probability": ruin_summary,
         })
     except Exception as e:
         logger.exception("positions_risk failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/signals/ev ───────────────────────────────────────────────────────
+
+@app.get("/api/signals/ev")
+def signals_ev(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/signals/ev — strategy expected value scoring."""
+    try:
+        from db.atlas_db import get_db
+        # Try cached DB row first (today's compute)
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT * FROM signal_ev WHERE as_of = (SELECT MAX(as_of) FROM signal_ev) ORDER BY ev_per_trade DESC"
+            ).fetchall()
+        if rows:
+            return {"strategies": [dict(r) for r in rows], "source": "cached"}
+        
+        # Fallback: live compute
+        from signals.ev_scorer import compute_all_strategies_ev, persist_strategy_ev
+        results = compute_all_strategies_ev(min_trades=3)
+        try:
+            persist_strategy_ev(results)
+        except Exception:
+            pass
+        return {"strategies": results, "source": "live"}
+    except Exception as e:
+        logger.exception("signals_ev failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/regime/forecast ──────────────────────────────────────────────────
+
+@app.get("/api/regime/forecast")
+def regime_forecast(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/regime/forecast — regime forward Monte Carlo forecast."""
+    try:
+        import json as _json
+        from db.atlas_db import get_db
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT * FROM regime_forecast WHERE as_of = (SELECT MAX(as_of) FROM regime_forecast) ORDER BY horizon_days"
+            ).fetchall()
+        if rows:
+            horizons = {}
+            current = None
+            n_paths = None
+            as_of = None
+            for r in rows:
+                rd = dict(r)
+                current = rd["current_regime"]
+                n_paths = rd["n_paths"]
+                as_of = rd["as_of"]
+                state_probs = {}
+                try:
+                    state_probs = _json.loads(rd.get("state_probabilities") or "{}")
+                except Exception:
+                    pass
+                horizons[f"{rd['horizon_days']}d"] = {
+                    "days": rd["horizon_days"],
+                    "expected_return": rd["expected_return"],
+                    "median_return": rd["median_return"],
+                    "std": rd["std"],
+                    "var_5": rd["var_5"],
+                    "var_1": rd["var_1"],
+                    "cvar_5": rd["cvar_5"],
+                    "cvar_1": rd["cvar_1"],
+                    "p95": rd["p95"],
+                    "p75": rd["p75"],
+                    "p25": rd["p25"],
+                    "prob_positive": rd["prob_positive"],
+                    "state_probabilities": state_probs,
+                }
+            return {
+                "current_regime": current,
+                "n_paths": n_paths,
+                "as_of": as_of,
+                "horizons": horizons,
+                "source": "cached",
+            }
+        
+        # Fallback: live compute
+        from regime.forward_mc import simulate_return_paths_from_regime, persist_forecast, get_current_regime
+        cur = get_current_regime()
+        result = simulate_return_paths_from_regime(cur, n_paths=5000, n_days=90, seed=42)
+        try:
+            persist_forecast(result)
+        except Exception:
+            pass
+        result["source"] = "live"
+        return result
+    except Exception as e:
+        logger.exception("regime_forecast failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/risk/ruin ────────────────────────────────────────────────────────
+
+@app.get("/api/risk/ruin")
+def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/risk/ruin — portfolio probability of ruin."""
+    try:
+        import json as _json
+        from db.atlas_db import get_db
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT * FROM ruin_probability WHERE as_of = (SELECT MAX(as_of) FROM ruin_probability) ORDER BY horizon_days"
+            ).fetchall()
+        if rows:
+            horizons = {}
+            current_equity = 0.0
+            floor = 0.0
+            floor_pct = 0.0
+            n_paths = 0
+            as_of = None
+            tickers = []
+            for r in rows:
+                rd = dict(r)
+                current_equity = rd["current_equity"]
+                floor = rd["floor"]
+                floor_pct = rd["floor_pct"]
+                n_paths = rd["n_paths"]
+                as_of = rd["as_of"]
+                try:
+                    tickers = _json.loads(rd.get("tickers") or "[]")
+                except Exception:
+                    pass
+                horizons[f"{rd['horizon_days']}d"] = {
+                    "days": rd["horizon_days"],
+                    "prob_ruin": rd["prob_ruin"],
+                    "worst_case_equity": rd["worst_case_equity"],
+                    "worst_5pct_equity": rd["worst_5pct_equity"],
+                    "median_end_equity": rd["median_end_equity"],
+                }
+            return {
+                "current_equity": current_equity,
+                "floor": floor,
+                "floor_pct": floor_pct,
+                "n_paths": n_paths,
+                "as_of": as_of,
+                "tickers": tickers,
+                "horizons": horizons,
+                "status": "ok",
+                "source": "cached",
+            }
+        
+        # Fallback: live compute
+        from risk.ruin_probability import compute_for_current_portfolio, persist_ruin_probability
+        result = compute_for_current_portfolio(floor_pct=0.70)
+        try:
+            persist_ruin_probability(result)
+        except Exception:
+            pass
+        result["source"] = "live"
+        return result
+    except Exception as e:
+        logger.exception("risk_ruin failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/regime/distributions ─────────────────────────────────────────────
+
+_regime_dist_cache: dict = {"as_of": None, "data": None}
+
+
+@app.get("/api/regime/distributions")
+def regime_distributions(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/regime/distributions — return distribution stats for all 6 regime states. Cached daily."""
+    try:
+        from datetime import date
+        today = date.today().isoformat()
+        if _regime_dist_cache["as_of"] == today and _regime_dist_cache["data"] is not None:
+            return JSONResponse(_regime_dist_cache["data"])
+
+        from regime.distributions import RegimeDistributions
+        rd = RegimeDistributions()
+        rd.fit(lookback_years=10)
+        all_stats = rd.all_regime_stats()
+
+        # Reshape to spec — rename n_samples → n
+        distributions = {}
+        for state, stats in all_stats.items():
+            distributions[state] = {
+                "n": stats.get("n_samples", 0),
+                "mean": round(stats.get("mean", 0.0), 6),
+                "vol": round(stats.get("vol", 0.0), 6),
+                "skew": round(stats.get("skew", 0.0), 4),
+                "kurt": round(stats.get("kurt", 0.0), 4),
+                "var_5": round(stats.get("var_5", 0.0), 6),
+                "var_1": round(stats.get("var_1", 0.0), 6),
+                "cvar_5": round(stats.get("cvar_5", 0.0), 6),
+                "cvar_1": round(stats.get("cvar_1", 0.0), 6),
+                "fallback": bool(stats.get("fallback", False)),
+            }
+
+        result = {"as_of": today, "distributions": distributions}
+        _regime_dist_cache["as_of"] = today
+        _regime_dist_cache["data"] = result
+        return JSONResponse(result)
+    except Exception as e:
+        logger.exception("regime_distributions failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/signals/vix_term_structure ───────────────────────────────────────
+
+@app.get("/api/signals/vix_term_structure")
+def vix_term_structure_signal(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/signals/vix_term_structure — VIX/VIX3M ratio signal with persistence + action."""
+    try:
+        from signals.vix_term_structure import get_current_signal
+        signal = get_current_signal()
+        if "error" in signal:
+            return JSONResponse(signal, status_code=503)
+        return JSONResponse(signal)
+    except Exception as e:
+        logger.exception("vix_term_structure_signal failed")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1085,6 +1503,17 @@ def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """
     try:
         data = _build_dashboard_data()
+        # Phase 7: inject EV stats into dashboard payload
+        try:
+            ev_stats = get_latest_ev_stats()
+            if not ev_stats:
+                results = compute_all_strategies_ev(min_trades=3)
+                persist_strategy_ev(results)
+                ev_stats = get_latest_ev_stats()
+            data['ev_stats'] = ev_stats
+        except Exception as e:
+            logger.warning(f"EV stats failed: {e}")
+            data['ev_stats'] = {}
         body = json.dumps(data, default=str)
         return Response(content=body, media_type="application/json")
     except Exception as e:
@@ -1645,6 +2074,252 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
             await ws.send_json({"type": "error", "message": str(exc)})
         except Exception as e:
             logger.debug("Could not send error to WebSocket client: %s", e)
+
+
+
+# ── Research Dashboard API ────────────────────────────────────────────────────
+
+@app.get("/api/research/summary")
+def research_summary(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Research overview: total experiments, keep rate, by strategy, by source."""
+    try:
+        from db.atlas_db import get_db
+        with get_db() as db:
+            # Total experiments
+            total = db.execute("SELECT COUNT(*) as c FROM research_experiments").fetchone()["c"]
+            kept = db.execute("SELECT COUNT(*) as c FROM research_experiments WHERE status='kept'").fetchone()["c"]
+
+            # Last 7 days
+            recent = db.execute(
+                "SELECT COUNT(*) as c FROM research_experiments WHERE created_at >= datetime('now', '-7 days')"
+            ).fetchone()["c"]
+
+            # By strategy
+            by_strategy = [dict(r) for r in db.execute("""
+                SELECT strategy, COUNT(*) as total,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept,
+                       MAX(sharpe) as best_sharpe
+                FROM research_experiments
+                GROUP BY strategy ORDER BY total DESC
+            """).fetchall()]
+
+            # By source (experiment_type)
+            by_source = [dict(r) for r in db.execute("""
+                SELECT experiment_type as source, COUNT(*) as total
+                FROM research_experiments
+                GROUP BY experiment_type ORDER BY total DESC
+            """).fetchall()]
+
+            # Last research timestamp
+            last_ts = db.execute(
+                "SELECT MAX(created_at) as ts FROM research_experiments"
+            ).fetchone()["ts"]
+
+            # Distinct strategies
+            strat_count = db.execute(
+                "SELECT COUNT(DISTINCT strategy) as c FROM research_experiments"
+            ).fetchone()["c"]
+
+            return JSONResponse(content={
+                "total_experiments": total,
+                "kept_count": kept,
+                "keep_rate": round(kept / total * 100, 1) if total > 0 else 0,
+                "experiments_7d": recent,
+                "strategies_count": strat_count,
+                "last_research_ts": last_ts,
+                "by_strategy": by_strategy,
+                "by_source": by_source,
+            })
+    except Exception as e:
+        logger.exception("research_summary failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/experiments")
+def research_experiments(
+    strategy: str = None,
+    status: str = None,
+    source: str = None,
+    limit: int = 50,
+    offset: int = 0,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """Paginated experiment list with filters."""
+    try:
+        from db.atlas_db import get_db
+        import json as _json
+        with get_db() as db:
+            query = "SELECT * FROM research_experiments WHERE 1=1"
+            count_query = "SELECT COUNT(*) as c FROM research_experiments WHERE 1=1"
+            params = []
+
+            if strategy:
+                query += " AND strategy=?"
+                count_query += " AND strategy=?"
+                params.append(strategy)
+            if status:
+                query += " AND status=?"
+                count_query += " AND status=?"
+                params.append(status)
+            if source:
+                query += " AND experiment_type=?"
+                count_query += " AND experiment_type=?"
+                params.append(source)
+
+            total = db.execute(count_query, params).fetchone()["c"]
+
+            query += f" ORDER BY created_at DESC LIMIT {int(limit)} OFFSET {int(offset)}"
+            rows = []
+            for r in db.execute(query, params).fetchall():
+                d = dict(r)
+                if d.get("params_changed"):
+                    try:
+                        d["params_changed"] = _json.loads(d["params_changed"])
+                    except (ValueError, TypeError):
+                        pass
+                rows.append(d)
+
+            return JSONResponse(content={"experiments": rows, "total": total})
+    except Exception as e:
+        logger.exception("research_experiments failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/strategies")
+def research_strategies(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Per-strategy stats with best params from research_best."""
+    try:
+        from db.atlas_db import get_db
+        import json as _json
+        with get_db() as db:
+            strategies = [dict(r) for r in db.execute("""
+                SELECT
+                    e.strategy,
+                    COUNT(*) as total_experiments,
+                    SUM(CASE WHEN e.status='kept' THEN 1 ELSE 0 END) as kept_count,
+                    MAX(e.sharpe) as best_sharpe,
+                    MAX(e.cagr_pct) as best_cagr,
+                    MAX(CASE WHEN e.status='kept' THEN e.created_at END) as last_improvement
+                FROM research_experiments e
+                GROUP BY e.strategy
+                ORDER BY best_sharpe DESC
+            """).fetchall()]
+
+            # Enrich with best params
+            best_rows = {r["strategy"]: dict(r) for r in db.execute(
+                "SELECT * FROM research_best"
+            ).fetchall()}
+
+            for s in strategies:
+                best = best_rows.get(s["strategy"])
+                if best and best.get("params"):
+                    try:
+                        s["best_params"] = _json.loads(best["params"])
+                    except (ValueError, TypeError):
+                        s["best_params"] = best["params"]
+                else:
+                    s["best_params"] = None
+
+            return JSONResponse(content={"strategies": strategies})
+    except Exception as e:
+        logger.exception("research_strategies failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/timeline")
+def research_timeline(days: int = 30, _auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Daily experiment counts and running best Sharpe per strategy."""
+    try:
+        from db.atlas_db import get_db
+        with get_db() as db:
+            rows = [dict(r) for r in db.execute("""
+                SELECT
+                    DATE(created_at) as date,
+                    strategy,
+                    COUNT(*) as experiments,
+                    MAX(sharpe) as best_sharpe,
+                    SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept
+                FROM research_experiments
+                WHERE created_at >= datetime('now', ?)
+                GROUP BY DATE(created_at), strategy
+                ORDER BY date
+            """, (f"-{int(days)} days",)).fetchall()]
+
+            # Organize into series by strategy
+            series = {}
+            dates = sorted(set(r["date"] for r in rows if r["date"]))
+            for r in rows:
+                strat = r["strategy"]
+                if strat not in series:
+                    series[strat] = []
+                series[strat].append({
+                    "date": r["date"],
+                    "experiments": r["experiments"],
+                    "best_sharpe": r["best_sharpe"],
+                    "kept": r["kept"],
+                })
+
+            return JSONResponse(content={"dates": dates, "series": series})
+    except Exception as e:
+        logger.exception("research_timeline failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/discoveries")
+def research_discoveries(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Discovery pipeline runs."""
+    try:
+        from db.atlas_db import get_db
+        import json as _json
+        with get_db() as db:
+            rows = []
+            for r in db.execute("""
+                SELECT * FROM research_discoveries ORDER BY created_at DESC LIMIT 50
+            """).fetchall():
+                d = dict(r)
+                if d.get("paper_titles"):
+                    try:
+                        d["paper_titles"] = _json.loads(d["paper_titles"])
+                    except (ValueError, TypeError):
+                        pass
+                rows.append(d)
+            return JSONResponse(content={"discoveries": rows})
+    except Exception as e:
+        logger.exception("research_discoveries failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/brain")
+def research_brain(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Brain knowledge entries — params and patterns."""
+    try:
+        from db.atlas_db import get_db
+        with get_db() as db:
+            # Param summaries: aggregate by title (param name)
+            params = [dict(r) for r in db.execute("""
+                SELECT title as param_name,
+                       COUNT(*) as tests,
+                       COUNT(DISTINCT strategy) as strategies_tested,
+                       SUM(CASE WHEN sharpe_delta > 0 THEN 1 ELSE 0 END) as improved,
+                       AVG(sharpe_delta) as avg_sharpe_delta
+                FROM research_brain
+                WHERE entry_type='param'
+                GROUP BY title
+                ORDER BY tests DESC
+            """).fetchall()]
+
+            # Patterns
+            patterns = [dict(r) for r in db.execute("""
+                SELECT title as name, content as summary, source_file, updated_at
+                FROM research_brain
+                WHERE entry_type='pattern'
+                ORDER BY updated_at DESC
+            """).fetchall()]
+
+            return JSONResponse(content={"params": params, "patterns": patterns})
+    except Exception as e:
+        logger.exception("research_brain failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

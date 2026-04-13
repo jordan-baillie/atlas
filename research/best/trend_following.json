@@ -66,7 +66,7 @@
     "runtime_s": 110.0
   },
   "description": "atr_stop_mult=1.5",
-  "experiments_run": 58,
+  "experiments_run": 74,
   "experiments_kept": 21,
   "updated_at": "2026-03-11T07:42:15.500724+00:00",
   "_fix_note": "Reset to live v2.2 params (Sharpe ~0.50). Previous best had inverted fast/slow MA.",

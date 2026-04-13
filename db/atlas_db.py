@@ -222,7 +222,25 @@ def record_trade_exit(
     regime_at_exit: Optional[str] = None,
 ) -> None:
     """Close the most recent open trade for (ticker, strategy)."""
+    import logging
+    _exit_log = logging.getLogger(__name__)
+    now = datetime.now().isoformat()
     with get_db() as db:
+        # ── Validation: reject ghost trades (exit before entry) ──
+        row = db.execute(
+            "SELECT entry_date FROM trades WHERE ticker = ? AND strategy = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
+            (ticker, strategy),
+        ).fetchone()
+        if row:
+            entry_date_str = str(row[0])[:10]
+            exit_date_str = now[:10]
+            if exit_date_str < entry_date_str:
+                _exit_log.warning(
+                    "record_trade_exit: REJECTED ghost trade for %s/%s — "
+                    "exit_date %s is before entry_date %s",
+                    ticker, strategy, exit_date_str, entry_date_str,
+                )
+                return
         db.execute(
             """
             UPDATE trades
@@ -238,8 +256,8 @@ def record_trade_exit(
             WHERE ticker = ? AND strategy = ? AND status = 'open'
             """,
             (
-                datetime.now().isoformat(), exit_price, exit_reason, regime_at_exit,
-                exit_price, exit_price, datetime.now().isoformat(),
+                now, exit_price, exit_reason, regime_at_exit,
+                exit_price, exit_price, now,
                 ticker, strategy,
             ),
         )
@@ -1263,6 +1281,10 @@ _MACRO_INDICATOR_COLS: frozenset = frozenset({
     "gold", "copper", "gold_copper_ratio",
     "fed_funds", "unemployment_claims",
     "spy_close", "spy_200dma", "spy_above_200dma", "spy_200dma_slope",
+    "put_call_ratio",
+    "skew_index", "breadth_rsp_spy",
+    # Treasury curve derived metrics (Phase 3.1)
+    "treasury_slope", "treasury_curvature", "treasury_level",
 })
 
 
@@ -1373,6 +1395,88 @@ def get_macro_indicators(
     """
     with get_db() as db:
         query = "SELECT * FROM macro_indicators WHERE 1=1"
+        params: List[Any] = []
+        if days:
+            query += " AND date >= date('now', ?)"
+            params.append(f"-{days} days")
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date ASC"
+        return [dict(r) for r in db.execute(query, params).fetchall()]
+
+
+# ── Treasury Yield Curve ──────────────────────────────────────────────────────
+
+# All columns in treasury_curve table (excludes date and updated_at).
+_TREASURY_CURVE_COLS: frozenset = frozenset({
+    "yield_1m", "yield_3m", "yield_6m",
+    "yield_1y", "yield_2y", "yield_3y",
+    "yield_5y", "yield_7y", "yield_10y",
+    "yield_20y", "yield_30y",
+    "treasury_slope", "treasury_curvature", "treasury_level",
+})
+
+
+def batch_upsert_treasury_curve(rows: List[Dict]) -> int:
+    """Batch-insert Treasury yield curve rows in a single transaction.
+
+    Each dict must contain a 'date' key (``'YYYY-MM-DD'``).  Other keys
+    matching ``_TREASURY_CURVE_COLS`` are upserted; unknown keys are ignored.
+    NaN / inf values are stored as NULL.
+
+    Args:
+        rows: List of dicts, each with 'date' + yield/metric columns.
+
+    Returns:
+        Number of rows written.
+    """
+    import math
+
+    def _clean(v: Any) -> Any:
+        if v is None:
+            return None
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return v
+
+    count = 0
+    with get_db() as db:
+        for row in rows:
+            date = row.get("date")
+            if not date:
+                continue
+            safe = {k: _clean(v) for k, v in row.items() if k in _TREASURY_CURVE_COLS}
+            sorted_keys = sorted(safe.keys())
+            cols = ["date"] + sorted_keys
+            placeholders = ", ".join(["?"] * len(cols))
+            cols_str = ", ".join(cols)
+            values = [date] + [safe[k] for k in sorted_keys]
+            db.execute(
+                f"INSERT OR REPLACE INTO treasury_curve ({cols_str}) VALUES ({placeholders})",
+                values,
+            )
+            count += 1
+    return count
+
+
+def get_treasury_curve(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    days: Optional[int] = None,
+) -> List[Dict]:
+    """Return treasury_curve rows ordered by date ascending.
+
+    Args:
+        start_date: Only rows with date >= start_date.
+        end_date:   Only rows with date <= end_date.
+        days:       Shortcut: include last *days* calendar days.
+    """
+    with get_db() as db:
+        query = "SELECT * FROM treasury_curve WHERE 1=1"
         params: List[Any] = []
         if days:
             query += " AND date >= date('now', ?)"

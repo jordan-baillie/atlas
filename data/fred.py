@@ -88,6 +88,15 @@ SERIES_REGISTRY = {
             "tightening = headwind for risk assets and EM."
         ),
     },
+    "PCEC": {
+        "name": "Personal Consumption Expenditures",
+        "frequency": "monthly",
+        "description": (
+            "Personal consumption expenditures (billions of dollars, SAAR). "
+            "NOT a put/call ratio — this series was initially misidentified. "
+            "Retained in registry for PCE tracking if needed."
+        ),
+    },
 }
 
 # Default series for regime analysis
@@ -267,6 +276,20 @@ class FREDClient:
         """
         return self.fetch_series("DTWEXBGS", **kwargs)
 
+    def get_put_call_ratio(self, **kwargs) -> pd.Series:
+        """Get CBOE equity put/call ratio.
+
+        Fetches directly from CBOE (not available on FRED).
+        Values > 1.0 = bearish sentiment (more puts than calls).
+        Extreme values > 1.2 are often contrarian bullish signals.
+        """
+        try:
+            from data.cboe import fetch_put_call_ratio
+            return fetch_put_call_ratio(start_date=kwargs.get("observation_start"))
+        except Exception as exc:
+            logger.warning("put_call_ratio: CBOE fetch failed: %s", exc)
+            return pd.Series(dtype=float)
+
     def get_regime_snapshot(self) -> Dict[str, Any]:
         """Get a comprehensive macro regime snapshot.
 
@@ -411,6 +434,26 @@ def fetch_fred_data(
     )
 
 
+def _fetch_cboe_put_call_ratio(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+) -> pd.Series:
+    """Fetch CBOE P/C ratio, returning pd.Series compatible with regime pipeline.
+
+    Non-fatal: returns an empty Series on any failure so the rest of the
+    regime pipeline is not disrupted by CBOE availability issues.
+    """
+    try:
+        from data.cboe import fetch_put_call_ratio
+        series = fetch_put_call_ratio(start_date=start_date)
+        if end_date and not series.empty:
+            series = series.loc[series.index <= pd.Timestamp(end_date)]
+        return series
+    except Exception as exc:
+        logger.warning("CBOE put/call ratio fetch failed: %s", exc)
+        return pd.Series(dtype=float)
+
+
 def fetch_regime_macro_series(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -443,4 +486,6 @@ def fetch_regime_macro_series(
         "fed_funds": client.fetch_series("FEDFUNDS", **kwargs),
         "unemployment_claims": client.fetch_series("ICSA", **kwargs),
         "yield_curve_10y2y_fred": client.fetch_series("T10Y2Y", **kwargs),
+        # put_call_ratio from CBOE (not available on FRED)
+        "put_call_ratio": _fetch_cboe_put_call_ratio(start_date, end_date),
     }

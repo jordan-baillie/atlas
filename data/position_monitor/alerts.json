@@ -1,37 +1,5 @@
 [
   {
-    "position_id": "131755aa1899",
-    "ticker": "NEM",
-    "condition_id": "nem_fed",
-    "condition_label": "Fed rate cut expectations intact",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-06T00:05:21"
-  },
-  {
-    "position_id": "20a45fa0c57c",
-    "ticker": "WDS.AX",
-    "condition_id": "wds_audusd",
-    "condition_label": "AUD/USD rate direction",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-06T00:05:27"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 607.74,
-    "timestamp": "2026-03-06T00:06:07"
-  },
-  {
     "position_id": "0053ac1a7b04",
     "ticker": "RTX",
     "condition_id": "rtx_sector",
@@ -1975,5 +1943,35 @@
     "new_status": "passing",
     "value": 604.98,
     "timestamp": "2026-04-09T08:09:14"
+  },
+  {
+    "position_id": "7adf5478dec9",
+    "ticker": "CIBR",
+    "condition_id": "cibr_ma50",
+    "condition_label": "CIBR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 63.04,
+    "timestamp": "2026-04-10T08:02:53"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "warning",
+    "new_status": "passing",
+    "value": 223.29,
+    "timestamp": "2026-04-10T08:02:54"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 218.84,
+    "timestamp": "2026-04-11T08:04:37"
   }
 ]

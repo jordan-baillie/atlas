@@ -37,6 +37,7 @@
   <nav class="tab-nav" id="tab-nav">
     <button class="tab-btn active" data-tab="portfolio">Portfolio</button>
     <button class="tab-btn" data-tab="finance">Finance</button>
+    <button class="tab-btn" data-tab="research">Research</button>
   </nav>
 
   <!-- ── Portfolio Tab ── -->
@@ -210,6 +211,118 @@
       <div id="fin-transactions-list" style="padding: 12px 0;"></div>
     </details>
   </div><!-- /tab-finance -->
+  <!-- ── Research Tab ── -->
+  <div class="tab-content" id="tab-research">
+    
+    <!-- Summary Cards -->
+    <div class="summary-strip" id="research-summary">
+      <div class="stat">
+        <div class="stat-label">Total Experiments</div>
+        <div class="stat-value" id="res-total">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last 7 Days</div>
+        <div class="stat-value" id="res-recent">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Keep Rate</div>
+        <div class="stat-value" id="res-keep-rate">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Strategies</div>
+        <div class="stat-value" id="res-strategies">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Last Run</div>
+        <div class="stat-value" id="res-last-run">—</div>
+      </div>
+    </div>
+
+    <!-- Sharpe Trajectory Chart -->
+    <div class="card" id="research-chart-card">
+      <div class="card-header">
+        <h3>Sharpe Trajectory (30 days)</h3>
+      </div>
+      <div class="card-body">
+        <canvas id="sharpe-chart" width="900" height="280" style="width:100%;max-height:280px;"></canvas>
+      </div>
+    </div>
+
+    <!-- Strategy Breakdown -->
+    <div class="card" id="research-strategies-card">
+      <div class="card-header">
+        <h3>Strategy Breakdown</h3>
+      </div>
+      <div class="card-body">
+        <div class="research-grid" id="strategy-grid"></div>
+      </div>
+    </div>
+
+    <!-- Recent Experiments Table -->
+    <div class="card" id="research-experiments-card">
+      <div class="card-header">
+        <h3>Recent Experiments</h3>
+        <div class="research-filters">
+          <select id="res-filter-strategy" class="res-select">
+            <option value="">All Strategies</option>
+          </select>
+          <select id="res-filter-status" class="res-select">
+            <option value="">All Status</option>
+            <option value="kept">Kept</option>
+            <option value="discarded">Discarded</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table class="data-table" id="experiments-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Strategy</th>
+                <th>Source</th>
+                <th>Params Changed</th>
+                <th>Sharpe</th>
+                <th>CAGR %</th>
+                <th>Max DD %</th>
+                <th>Trades</th>
+                <th>PF</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="experiments-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="experiments-pagination"></div>
+      </div>
+    </div>
+
+    <!-- Brain Insights -->
+    <div class="card" id="research-brain-card">
+      <div class="card-header">
+        <h3>Brain Knowledge</h3>
+      </div>
+      <div class="card-body">
+        <div class="research-two-col">
+          <div>
+            <h4 class="research-subheader">Top Parameters Tested</h4>
+            <table class="data-table" id="brain-params-table">
+              <thead>
+                <tr><th>Parameter</th><th>Tests</th><th>Strategies</th><th>Improved</th><th>Avg &Delta; Sharpe</th></tr>
+              </thead>
+              <tbody id="brain-params-tbody"></tbody>
+            </table>
+          </div>
+          <div>
+            <h4 class="research-subheader">Discovered Patterns</h4>
+            <div id="brain-patterns-list" class="patterns-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-research -->
+
 
   <!-- Hidden elements kept for renderRegimeInline compatibility (not displayed) -->
   <span id="regime-state-badge"  style="display:none"></span>
@@ -1772,6 +1885,259 @@ function drawPaceChart(d) {
     ctx.strokeStyle = actualColor; ctx.lineWidth = 1.5; ctx.stroke();
   }
 }
+
+// ── Research Tab ─────────────────────────────────────────────────────
+
+var _researchLoaded = false;
+
+async function loadResearch() {
+  if (_researchLoaded) return;
+  try {
+    var [summary, strategies, timeline, experiments, brain] = await Promise.all([
+      fetch('/api/research/summary').then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/api/research/strategies').then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/api/research/timeline?days=30').then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/api/research/experiments?limit=50').then(function(r) { return r.ok ? r.json() : null; }),
+      fetch('/api/research/brain').then(function(r) { return r.ok ? r.json() : null; }),
+    ]);
+    
+    if (summary) renderResearchSummary(summary);
+    if (strategies) renderStrategyGrid(strategies.strategies || []);
+    if (timeline) renderSharpeChart(timeline);
+    if (experiments) renderExperiments(experiments);
+    if (brain) renderBrain(brain);
+    
+    // Populate strategy filter
+    if (summary && summary.by_strategy) {
+      var sel = document.getElementById('res-filter-strategy');
+      summary.by_strategy.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s.strategy;
+        opt.textContent = s.strategy.replace(/_/g, ' ');
+        sel.appendChild(opt);
+      });
+    }
+    
+    _researchLoaded = true;
+  } catch(e) { console.error('loadResearch failed:', e); }
+}
+
+function renderResearchSummary(s) {
+  document.getElementById('res-total').textContent = s.total_experiments.toLocaleString();
+  document.getElementById('res-recent').textContent = s.experiments_7d.toLocaleString();
+  document.getElementById('res-keep-rate').textContent = s.keep_rate + '%';
+  document.getElementById('res-strategies').textContent = s.strategies_count;
+  document.getElementById('res-last-run').textContent = s.last_research_ts ? _fmtTime(s.last_research_ts) : '\u2014';
+}
+
+function _fmtTime(ts) {
+  if (!ts) return '\u2014';
+  try {
+    var d = new Date(ts);
+    var now = new Date();
+    var diff = (now - d) / 1000 / 60;
+    if (diff < 60) return Math.round(diff) + 'm ago';
+    if (diff < 1440) return Math.round(diff / 60) + 'h ago';
+    return Math.round(diff / 1440) + 'd ago';
+  } catch(e) { return ts.substring(0, 16); }
+}
+
+function renderStrategyGrid(strategies) {
+  var grid = document.getElementById('strategy-grid');
+  if (!strategies.length) { grid.innerHTML = '<p class="text-muted">No strategy data yet</p>'; return; }
+  grid.innerHTML = strategies.map(function(s) {
+    var keepRate = s.total_experiments > 0 ? Math.round(s.kept_count / s.total_experiments * 100) : 0;
+    return '<div class="research-strategy-card">' +
+      '<div class="rsc-name">' + (s.strategy || '').replace(/_/g, ' ') + '</div>' +
+      '<div class="rsc-stats">' +
+        '<span class="rsc-stat"><span class="rsc-label">Experiments</span><span class="rsc-val">' + s.total_experiments + '</span></span>' +
+        '<span class="rsc-stat"><span class="rsc-label">Kept</span><span class="rsc-val rsc-green">' + s.kept_count + '</span></span>' +
+        '<span class="rsc-stat"><span class="rsc-label">Keep Rate</span><span class="rsc-val">' + keepRate + '%</span></span>' +
+        '<span class="rsc-stat"><span class="rsc-label">Best Sharpe</span><span class="rsc-val mono">' + (s.best_sharpe != null ? s.best_sharpe.toFixed(4) : '\u2014') + '</span></span>' +
+        '<span class="rsc-stat"><span class="rsc-label">Best CAGR</span><span class="rsc-val mono">' + (s.best_cagr != null ? s.best_cagr.toFixed(1) + '%' : '\u2014') + '</span></span>' +
+        '<span class="rsc-stat"><span class="rsc-label">Last Improved</span><span class="rsc-val">' + _fmtTime(s.last_improvement) + '</span></span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderSharpeChart(data) {
+  var canvas = document.getElementById('sharpe-chart');
+  if (!canvas || !data.dates || !data.dates.length) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+  var H = canvas.height = 280 * (window.devicePixelRatio || 1);
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  var w = canvas.offsetWidth, h = 280;
+  var pad = { top: 20, right: 20, bottom: 40, left: 55 };
+  
+  // Collect all sharpe values for scale
+  var allVals = [];
+  var stratNames = Object.keys(data.series);
+  stratNames.forEach(function(s) {
+    data.series[s].forEach(function(d) { if (d.best_sharpe != null) allVals.push(d.best_sharpe); });
+  });
+  if (!allVals.length) return;
+  
+  var minV = Math.min.apply(null, allVals);
+  var maxV = Math.max.apply(null, allVals);
+  var range = maxV - minV || 1;
+  minV -= range * 0.1;
+  maxV += range * 0.1;
+  
+  var dates = data.dates;
+  var xScale = function(i) { return pad.left + (i / Math.max(dates.length - 1, 1)) * (w - pad.left - pad.right); };
+  var yScale = function(v) { return pad.top + (1 - (v - minV) / (maxV - minV)) * (h - pad.top - pad.bottom); };
+  
+  // Background
+  ctx.fillStyle = 'transparent';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (var i = 0; i <= 4; i++) {
+    var y = pad.top + (i / 4) * (h - pad.top - pad.bottom);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    ctx.fillStyle = '#71717a'; ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'right';
+    var val = maxV - (i / 4) * (maxV - minV);
+    ctx.fillText(val.toFixed(2), pad.left - 8, y + 4);
+  }
+  
+  // X axis labels (every ~5 dates)
+  ctx.fillStyle = '#71717a'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'center';
+  var step = Math.max(1, Math.floor(dates.length / 6));
+  for (var i = 0; i < dates.length; i += step) {
+    ctx.fillText(dates[i].substring(5), xScale(i), h - pad.bottom + 18);
+  }
+  
+  // Color palette
+  var colors = ['#22c55e', '#6366f1', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6'];
+  
+  // Draw lines per strategy (top 8 by data points)
+  var sortedStrats = stratNames.sort(function(a, b) { return data.series[b].length - data.series[a].length; }).slice(0, 8);
+  
+  sortedStrats.forEach(function(strat, si) {
+    var points = data.series[strat];
+    var color = colors[si % colors.length];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    var started = false;
+    points.forEach(function(p) {
+      var di = dates.indexOf(p.date);
+      if (di < 0) return;
+      var x = xScale(di), y = yScale(p.best_sharpe);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+  
+  // Legend
+  var lx = pad.left + 10, ly = pad.top + 5;
+  sortedStrats.forEach(function(strat, si) {
+    var color = colors[si % colors.length];
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, ly + si * 16, 12, 3);
+    ctx.fillStyle = '#a1a1aa'; ctx.font = '10px DM Sans'; ctx.textAlign = 'left';
+    ctx.fillText(strat.replace(/_/g, ' '), lx + 18, ly + si * 16 + 5);
+  });
+}
+
+function renderExperiments(data) {
+  var tbody = document.getElementById('experiments-tbody');
+  if (!data || !data.experiments) { tbody.innerHTML = '<tr><td colspan="10" class="text-muted">No experiments yet</td></tr>'; return; }
+  tbody.innerHTML = data.experiments.map(function(e) {
+    var statusClass = e.status === 'kept' ? 'tag-green' : 'tag-gray';
+    var statusLabel = e.status === 'kept' ? '\u2713 Keep' : '\u2717 Discard';
+    var params = e.params_changed;
+    if (typeof params === 'object' && params) params = JSON.stringify(params);
+    if (params && params.length > 40) params = params.substring(0, 37) + '...';
+    return '<tr class="' + (e.status === 'kept' ? 'row-kept' : '') + '">' +
+      '<td class="mono">' + (e.created_at || '').substring(0, 16) + '</td>' +
+      '<td>' + (e.strategy || '').replace(/_/g, ' ') + '</td>' +
+      '<td><span class="tag tag-source">' + (e.experiment_type || 'sweeper') + '</span></td>' +
+      '<td class="mono" title="' + (params || '') + '">' + (params || '\u2014') + '</td>' +
+      '<td class="mono">' + (e.sharpe != null ? e.sharpe.toFixed(4) : '\u2014') + '</td>' +
+      '<td class="mono">' + (e.cagr_pct != null ? e.cagr_pct.toFixed(1) + '%' : '\u2014') + '</td>' +
+      '<td class="mono">' + (e.max_dd_pct != null ? e.max_dd_pct.toFixed(1) + '%' : '\u2014') + '</td>' +
+      '<td class="mono">' + (e.trades || '\u2014') + '</td>' +
+      '<td class="mono">' + (e.profit_factor != null ? e.profit_factor.toFixed(2) : '\u2014') + '</td>' +
+      '<td><span class="tag ' + statusClass + '">' + statusLabel + '</span></td>' +
+    '</tr>';
+  }).join('');
+  
+  // Pagination
+  var pag = document.getElementById('experiments-pagination');
+  pag.textContent = 'Showing ' + data.experiments.length + ' of ' + data.total;
+}
+
+function renderBrain(data) {
+  // Params table
+  var tbody = document.getElementById('brain-params-tbody');
+  if (data.params && data.params.length) {
+    tbody.innerHTML = data.params.slice(0, 20).map(function(p) {
+      return '<tr>' +
+        '<td>' + (p.param_name || '').replace(/_/g, ' ') + '</td>' +
+        '<td class="mono">' + (p.tests || 0) + '</td>' +
+        '<td class="mono">' + (p.strategies_tested || 0) + '</td>' +
+        '<td class="mono">' + (p.improved || 0) + '</td>' +
+        '<td class="mono ' + (p.avg_sharpe_delta > 0 ? 'text-green' : p.avg_sharpe_delta < 0 ? 'text-red' : '') + '">' + 
+          (p.avg_sharpe_delta != null ? (p.avg_sharpe_delta > 0 ? '+' : '') + p.avg_sharpe_delta.toFixed(4) : '\u2014') + '</td>' +
+      '</tr>';
+    }).join('');
+  } else {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No brain data yet</td></tr>';
+  }
+  
+  // Patterns
+  var list = document.getElementById('brain-patterns-list');
+  if (data.patterns && data.patterns.length) {
+    list.innerHTML = data.patterns.map(function(p) {
+      return '<div class="pattern-item">' +
+        '<div class="pattern-name">' + (p.name || '').replace(/_/g, ' ') + '</div>' +
+        '<div class="pattern-summary">' + (p.summary || '') + '</div>' +
+      '</div>';
+    }).join('');
+  } else {
+    list.innerHTML = '<p class="text-muted">No patterns discovered yet</p>';
+  }
+}
+
+// Hook into tab switching to lazy-load research
+(function() {
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if (btn.dataset.tab === 'research') loadResearch();
+    });
+  });
+  // Also load if URL hash points to research
+  if (window.location.hash === '#research') {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+    var rb = document.querySelector('[data-tab="research"]');
+    if (rb) { rb.classList.add('active'); document.getElementById('tab-research').classList.add('active'); loadResearch(); }
+  }
+})();
+
+// Filter handlers
+document.getElementById('res-filter-strategy').addEventListener('change', function() { reloadExperiments(); });
+document.getElementById('res-filter-status').addEventListener('change', function() { reloadExperiments(); });
+
+async function reloadExperiments() {
+  var strat = document.getElementById('res-filter-strategy').value;
+  var status = document.getElementById('res-filter-status').value;
+  var url = '/api/research/experiments?limit=50';
+  if (strat) url += '&strategy=' + encodeURIComponent(strat);
+  if (status) url += '&status=' + encodeURIComponent(status);
+  try {
+    var resp = await fetch(url);
+    if (resp.ok) { var data = await resp.json(); renderExperiments(data); }
+  } catch(e) { console.error('reloadExperiments:', e); }
+}
+
 
 </script>
 

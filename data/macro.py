@@ -58,11 +58,13 @@ MACRO_TICKERS = {
     "yield_10y": "^TNX",
     "yield_13w": "^IRX",
     "spy": "SPY",        # S&P 500 ETF — for 200 DMA calculation
+    "skew": "^SKEW",     # CBOE Skew Index — tail risk measure
+    "rsp": "RSP",        # Invesco Equal Weight S&P 500 ETF — breadth proxy
 }
 
 # Minimum expected columns in the cached parquet (invalidates stale cache
 # from before the vix3m / spy columns were added).
-_REQUIRED_CACHE_COLS = frozenset({"vix", "vix3m", "gold", "copper", "yield_10y", "yield_13w", "spy"})
+_REQUIRED_CACHE_COLS = frozenset({"vix", "vix3m", "gold", "copper", "yield_10y", "yield_13w", "spy", "skew", "rsp"})
 
 
 def _cache_is_fresh(path: Path, max_age_hours: int = 24) -> bool:
@@ -430,6 +432,36 @@ def compute_macro_signals(
 # ───────────────────────────────────────────────────────────────────────────────
 
 
+def _ensure_macro_treasury_columns() -> None:
+    """Add treasury_slope / curvature / level columns to macro_indicators if missing.
+
+    Uses ALTER TABLE ... ADD COLUMN which is a no-op in SQLite if the column
+    already exists — we catch OperationalError to handle that gracefully.
+    Called once per process from fetch_macro_data.
+    """
+    from db.atlas_db import get_db
+    new_cols = [
+        ("treasury_slope",      "REAL"),
+        ("treasury_curvature",  "REAL"),
+        ("treasury_level",      "REAL"),
+    ]
+    try:
+        with get_db() as db:
+            existing = {row[1] for row in db.execute("PRAGMA table_info(macro_indicators)").fetchall()}
+            for col_name, col_type in new_cols:
+                if col_name not in existing:
+                    db.execute(
+                        f"ALTER TABLE macro_indicators ADD COLUMN {col_name} {col_type}"
+                    )
+                    logger.info("macro_indicators: added column %s", col_name)
+    except Exception as exc:
+        logger.warning("_ensure_macro_treasury_columns: %s", exc)
+
+
+# Sentinel so ALTER TABLE only runs once per process.
+_macro_treasury_cols_ensured = False
+
+
 def fetch_macro_data(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
@@ -470,6 +502,11 @@ def fetch_macro_data(
 
         df = fetch_macro_data(start_date="2022-01-01", write_to_db=True)
     """
+    global _macro_treasury_cols_ensured
+    if not _macro_treasury_cols_ensured:
+        _ensure_macro_treasury_columns()
+        _macro_treasury_cols_ensured = True
+
     if not start_date:
         start_date = (datetime.now() - timedelta(days=5 * 365)).strftime("%Y-%m-%d")
     if not end_date:
@@ -533,6 +570,25 @@ def fetch_macro_data(
     # Yield curves (yfinance-based)
     df["yield_curve_10y3m"] = df["yield_10y"] - df["yield_3m"]
 
+    # SKEW Index
+    df["skew_index"] = raw.get("skew", pd.Series(dtype=float)).reindex(df.index).ffill()
+
+    # Breadth proxy: RSP/SPY ratio (equal-weight vs cap-weight)
+    rsp_close = raw.get("rsp", pd.Series(dtype=float)).reindex(df.index).ffill()
+    spy_safe = df["spy_close"].replace(0, np.nan)
+    df["breadth_rsp_spy"] = (rsp_close / spy_safe).round(6)
+
+    # Divergence detection: SKEW >140 with VIX <15 = hidden tail risk
+    if not df.empty and "skew_index" in df.columns and "vix" in df.columns:
+        latest = df.iloc[-1]
+        if (pd.notna(latest.get("skew_index")) and pd.notna(latest.get("vix"))
+                and latest["skew_index"] > 140 and latest["vix"] < 15):
+            logger.warning(
+                "⚠️ HIDDEN TAIL RISK: SKEW=%.1f >140 with VIX=%.1f <15 — "
+                "options market pricing tail risk despite low vol",
+                latest["skew_index"], latest["vix"],
+            )
+
     # FRED series — reindex to trading-day calendar and forward-fill
     if "yield_2y" in fred_series and not fred_series["yield_2y"].empty:
         df["yield_2y"] = (
@@ -585,6 +641,71 @@ def fetch_macro_data(
         )
     else:
         df["unemployment_claims"] = np.nan
+
+    if "put_call_ratio" in fred_series and not fred_series["put_call_ratio"].empty:
+        df["put_call_ratio"] = (
+            fred_series["put_call_ratio"]
+            .reindex(df.index.union(fred_series["put_call_ratio"].index))
+            .ffill()
+            # bfill handles the edge case where the SPY fallback date (today) is
+            # after the last date in the macro trading calendar — propagates the
+            # latest reading back to fill the most recent trading day.
+            .bfill(limit=3)
+            .reindex(df.index)
+        )
+    else:
+        df["put_call_ratio"] = np.nan
+
+    # --- Treasury.gov full yield curve ---
+    # Only fetch recent months from Treasury.gov to avoid slow HTTP calls
+    # (each month-file fetch takes ~10s).  Full history is handled by
+    # backfill_treasury() / backfill_treasury_to_macro().
+    try:
+        from data.treasury import get_treasury_data
+        treasury_web_start = max(
+            start_date,
+            (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
+        )
+        treasury_df = get_treasury_data(
+            start_date=treasury_web_start,
+            end_date=end_date,
+            use_cache=use_cache,
+        )
+        if not treasury_df.empty:
+            for col in ["treasury_slope", "treasury_curvature", "treasury_level"]:
+                if col in treasury_df.columns:
+                    df[col] = treasury_df[col].reindex(df.index).ffill()
+            logger.info(
+                "fetch_macro_data: treasury web data integrated (%d rows, from %s)",
+                len(treasury_df), treasury_web_start,
+            )
+    except Exception as exc:
+        logger.warning("fetch_macro_data: treasury web fetch failed — %s", exc)
+
+    # --- Backfill treasury columns from DB for dates not covered by web fetch ---
+    try:
+        from db.atlas_db import get_db
+        missing_mask = df["treasury_slope"].isna() if "treasury_slope" in df.columns else pd.Series(True, index=df.index)
+        if missing_mask.any():
+            with get_db() as _db:
+                tc_rows = _db.execute(
+                    "SELECT date, treasury_slope, treasury_curvature, treasury_level "
+                    "FROM treasury_curve WHERE treasury_slope IS NOT NULL"
+                ).fetchall()
+            if tc_rows:
+                tc_df = pd.DataFrame([dict(r) for r in tc_rows])
+                tc_df["date"] = pd.to_datetime(tc_df["date"])
+                tc_df = tc_df.set_index("date")
+                for col in ["treasury_slope", "treasury_curvature", "treasury_level"]:
+                    if col in tc_df.columns:
+                        if col not in df.columns:
+                            df[col] = np.nan
+                        db_vals = tc_df[col].reindex(df.index)
+                        df[col] = df[col].fillna(db_vals)
+                filled = int((~df["treasury_slope"].isna()).sum()) if "treasury_slope" in df.columns else 0
+                logger.info("fetch_macro_data: treasury DB fallback filled %d rows", filled)
+    except Exception as exc:
+        logger.warning("fetch_macro_data: treasury DB fallback failed — %s", exc)
 
     logger.info(
         "fetch_macro_data: %d rows [%s, %s]",
@@ -725,3 +846,71 @@ def backfill_macro_indicators(
         n, start_date, end_date,
     )
     return df
+
+
+def backfill_treasury_to_macro() -> int:
+    """Populate treasury_slope/curvature/level in macro_indicators from treasury_curve.
+
+    For rows where treasury_curve has data, copies the 3 derived metrics.
+    For ALL rows, also computes treasury_slope from yield_10y - yield_2y
+    as a fallback (these columns already exist in macro_indicators from
+    yfinance/FRED).
+
+    Returns the number of macro_indicators rows updated.
+    """
+    from db.atlas_db import get_db
+
+    updated = 0
+    with get_db() as db:
+        # Phase 1: Compute treasury_slope from existing yield data for ALL rows
+        r = db.execute(
+            "UPDATE macro_indicators "
+            "SET treasury_slope = yield_10y - yield_2y "
+            "WHERE yield_10y IS NOT NULL AND yield_2y IS NOT NULL "
+            "AND treasury_slope IS NULL"
+        )
+        phase1 = r.rowcount
+        logger.info("backfill_treasury_to_macro: phase 1 (slope from yields) updated %d rows", phase1)
+        updated += phase1
+
+        # Phase 2: Copy curvature + level from treasury_curve where available
+        r2 = db.execute(
+            "UPDATE macro_indicators "
+            "SET treasury_curvature = ("
+            "  SELECT tc.treasury_curvature FROM treasury_curve tc "
+            "  WHERE tc.date = macro_indicators.date"
+            "), "
+            "treasury_level = ("
+            "  SELECT tc.treasury_level FROM treasury_curve tc "
+            "  WHERE tc.date = macro_indicators.date"
+            ") "
+            "WHERE EXISTS ("
+            "  SELECT 1 FROM treasury_curve tc "
+            "  WHERE tc.date = macro_indicators.date "
+            "  AND tc.treasury_curvature IS NOT NULL"
+            ") "
+            "AND treasury_curvature IS NULL"
+        )
+        phase2 = r2.rowcount
+        logger.info("backfill_treasury_to_macro: phase 2 (curvature/level from treasury_curve) updated %d rows", phase2)
+        updated += phase2
+
+        # Phase 3: Also overwrite slope from treasury_curve where available
+        # (Treasury.gov data is more precise than yfinance yield differences)
+        r3 = db.execute(
+            "UPDATE macro_indicators "
+            "SET treasury_slope = ("
+            "  SELECT tc.treasury_slope FROM treasury_curve tc "
+            "  WHERE tc.date = macro_indicators.date"
+            ") "
+            "WHERE EXISTS ("
+            "  SELECT 1 FROM treasury_curve tc "
+            "  WHERE tc.date = macro_indicators.date "
+            "  AND tc.treasury_slope IS NOT NULL"
+            ")"
+        )
+        phase3 = r3.rowcount
+        logger.info("backfill_treasury_to_macro: phase 3 (slope override from treasury_curve) updated %d rows", phase3)
+
+    logger.info("backfill_treasury_to_macro: total updated %d rows", updated)
+    return updated

@@ -120,10 +120,16 @@ export function EquityChart() {
               tick={{ fontSize: isMobile ? 10 : 11, fill: textMuted || 'var(--color-text-muted)' }}
             />
             <YAxis
+              domain={[
+                (dataMin: number) => Math.floor(dataMin * 0.99),
+                (dataMax: number) => Math.ceil(dataMax * 1.01),
+              ]}
               tickFormatter={(v) => '$' + Math.round(v as number).toLocaleString('en-US')}
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: isMobile ? 10 : 11, fill: textMuted || 'var(--color-text-muted)' }}
+              width={70}
+              allowDataOverflow={false}
             />
             <Tooltip
               content={
@@ -138,6 +144,8 @@ export function EquityChart() {
               stroke={portfolioColor || '#22c55e'}
               strokeWidth={2}
               fill="url(#portfolioGrad)"
+              baseValue="dataMin"
+              connectNulls={true}
               isAnimationActive={false}
             />
             <Line
@@ -146,6 +154,7 @@ export function EquityChart() {
               strokeWidth={1.5}
               strokeDasharray="4 4"
               dot={false}
+              connectNulls={true}
               isAnimationActive={false}
             />
           </ComposedChart>

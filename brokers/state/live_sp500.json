@@ -3,31 +3,26 @@
   "mode": "live",
   "positions": [
     {
-      "ticker": "AMT",
-      "strategy": "mean_reversion",
-      "entry_date": "2026-04-09",
-      "entry_price": 167.53,
-      "shares": 4,
-      "stop_price": 168.85,
-      "order_id": ""
-    },
-    {
       "ticker": "MRVL",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-09",
+      "entry_date": "2026-04-11",
       "entry_price": 108.63,
       "shares": 4,
-      "stop_price": 110.23,
-      "order_id": ""
+      "stop_price": 101.5977,
+      "order_id": "",
+      "stop_order_id": "",
+      "tp_order_id": ""
     },
     {
       "ticker": "NFLX",
       "strategy": "trend_following",
-      "entry_date": "2026-04-09",
+      "entry_date": "2026-04-11",
       "entry_price": 94.38,
       "shares": 3,
-      "stop_price": 97.205,
-      "order_id": ""
+      "stop_price": 97.6,
+      "order_id": "",
+      "stop_order_id": "b930587d-805f-4ec6-88d8-1cfccfbf9a35",
+      "tp_order_id": ""
     }
   ],
   "closed_trades": [
@@ -369,6 +364,40 @@
       "pnl": -18.06,
       "shares": 2,
       "exit_reason": "trailing_stop_fill"
+    },
+    {
+      "ticker": "AMT",
+      "strategy": "mean_reversion",
+      "entry_date": "2026-04-10",
+      "entry_price": 167.53,
+      "exit_date": "2026-04-09",
+      "exit_price": 179.8338,
+      "shares": 4,
+      "pnl": 49.22,
+      "pnl_pct": 7.34,
+      "exit_type": "take_profit",
+      "exit_reason": "take_profit",
+      "mae": 0.0,
+      "mfe": 0.07401659404285803,
+      "sector": "Real Estate",
+      "holding_days": -1
+    },
+    {
+      "ticker": "MRVL",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-11",
+      "entry_price": 108.63,
+      "exit_date": "2026-04-10",
+      "exit_price": 124.41,
+      "shares": 4,
+      "pnl": 63.12,
+      "pnl_pct": 14.53,
+      "exit_type": "stop_loss",
+      "exit_reason": "stop_loss",
+      "mae": 0.0,
+      "mfe": 0.18282242474454583,
+      "sector": "Technology",
+      "holding_days": -1
     }
   ],
   "equity_history": [
@@ -1284,10 +1313,65 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-09",
+      "equity": 5080.0,
+      "cash": 3794.92,
+      "positions_value": 1285.08,
+      "num_positions": 2,
+      "total_realized_pnl": 230.34,
+      "total_closed_trades": 27,
+      "positions": [
+        {
+          "ticker": "MRVL",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 108.63,
+          "current_price": 119.93,
+          "unrealized_pnl": 45.2,
+          "mae": 0.0,
+          "mfe": 10.4,
+          "holding_days": -1
+        },
+        {
+          "ticker": "NFLX",
+          "strategy": "trend_following",
+          "shares": 3,
+          "entry_price": 94.38,
+          "current_price": 102.05,
+          "unrealized_pnl": 23.01,
+          "mae": 0.0,
+          "mfe": 8.13,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-10",
+      "equity": 5037.68,
+      "cash": 4517.09,
+      "positions_value": 520.59,
+      "num_positions": 1,
+      "total_realized_pnl": 293.46,
+      "total_closed_trades": 28,
+      "positions": [
+        {
+          "ticker": "NFLX",
+          "strategy": "trend_following",
+          "shares": 3,
+          "entry_price": 94.38,
+          "current_price": 103.01,
+          "unrealized_pnl": 25.89,
+          "mae": 0.0,
+          "mfe": 9.14,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5120.55,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-09T08:09:08.370512"
+  "last_saved": "2026-04-11T09:00:09.842894"
 }

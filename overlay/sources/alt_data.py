@@ -100,7 +100,7 @@ class OpenInsiderScraper:
     news_intel-compatible dicts ready for atlas_db.record_news().
     """
 
-    _BASE_URL = "http://openinsider.com/screener?s={ticker}&o=&pl=&ph=&st=0&lt=1&lk=&ft=&fn=&an=&td=0&tdr=&fdlyl=&fdlyh=&dtefrom=&dteto=&xp=1&vtefrom=&vteto=&nession=1&sc=1"
+    _BASE_URL = "http://openinsider.com/{ticker}"
 
     def scrape(self, ticker: str) -> List[Dict[str, Any]]:
         """
@@ -153,7 +153,7 @@ class OpenInsiderScraper:
 
     def _build_col_map(self, headers: List[str]) -> Dict[str, int]:
         """Map column name variants to zero-based column indices."""
-        lookup = {h.lower().replace(" ", "").replace("-", ""): i for i, h in enumerate(headers)}
+        lookup = {h.lower().replace("\xa0", "").replace(" ", "").replace("-", ""): i for i, h in enumerate(headers)}
         mapping = {}
         # Try various header name patterns seen on openinsider
         for alias, canonical in [

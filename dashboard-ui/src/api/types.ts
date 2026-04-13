@@ -82,6 +82,9 @@ export interface StrategyPerfEntry {
   trades?: number
   pnl?: number
   wins?: number
+  // Phase 7: EV scoring (optional, populated when joined with signal_ev table)
+  ev_per_trade?: number
+  ev_classification?: 'positive' | 'negative' | 'uncertain' | 'unknown'
 }
 
 export interface StrategyPerfOverall {
@@ -109,6 +112,7 @@ export interface DashboardSummary {
   equity?: number
   total_pnl?: number
   total_pnl_pct?: number
+  return_pct?: number          // window-aligned return (matches portfolio_history span)
   open_positions?: number
   today_pnl?: number
   max_positions?: number
@@ -287,6 +291,7 @@ export interface PositionRiskRow {
   risk_pct_equity?: number
   position_value?: number
   risk_status?: string
+  vol_cone?: VolConeInfo | null
 }
 
 export interface PositionRiskSummary {
@@ -299,9 +304,47 @@ export interface PositionRiskSummary {
   max_risk_per_trade_pct?: number
 }
 
+export interface VolConeInfo {
+  vol_20d_annual?: number
+  regime?: 'low' | 'normal' | 'high' | 'extreme' | string
+  percentile?: number
+  multiplier?: number
+  suggested_stop_distance_pct?: number
+}
+
+export interface VarHorizonMetrics {
+  var_95?: number
+  var_99?: number
+  cvar_95?: number
+  cvar_99?: number
+  var_95_pct?: number
+}
+
+export interface PortfolioRiskMetrics {
+  method?: string
+  current_regime?: string
+  effective_bets?: number
+  correlation_avg?: number
+  correlation_max?: number
+  horizons?: Record<string, VarHorizonMetrics>
+  n_paths?: number
+  warnings?: string[]
+}
+
+export interface StopProbabilityEntry {
+  vol_annual: number
+  stop_distance_pct: number
+  horizons: { '1d': number; '5d': number; '10d': number; '20d': number }
+  expected_loss_20d: number
+  max_loss: number
+}
+
 export interface PositionRisk {
   positions?: PositionRiskRow[]
   summary?: PositionRiskSummary
+  portfolio_risk?: PortfolioRiskMetrics | null
+  vol_cones?: Record<string, VolConeInfo>
+  stop_probability?: Record<string, StopProbabilityEntry>
 }
 
 // ============================================================================
@@ -515,4 +558,117 @@ export interface FinanceData {
   insights?: FinanceInsights
   targets_positions?: unknown[]
   watchlist?: unknown[]
+}
+
+// ============================================================================
+// /api/regime/distributions
+// ============================================================================
+
+export interface RegimeDistStats {
+  n?: number
+  mean?: number
+  vol?: number
+  skew?: number
+  kurt?: number
+  var_5?: number
+  var_1?: number
+  cvar_5?: number
+  cvar_1?: number
+  fallback?: boolean
+}
+
+export interface RegimeDistributions {
+  as_of?: string
+  distributions?: Record<string, RegimeDistStats>
+}
+
+// ============================================================================
+// /api/signals/vix_term_structure
+// ============================================================================
+
+export interface VixHistoryPoint {
+  date?: string
+  vix?: number
+  vix3m?: number
+  ratio?: number
+  regime?: string
+}
+
+export interface VixTermStructure {
+  as_of?: string
+  vix?: number
+  vix3m?: number
+  ratio?: number
+  regime?: string
+  persistence_days?: number
+  action?: string
+  severity?: string
+  ratio_30d_mean?: number
+  ratio_30d_max?: number
+  ratio_30d_min?: number
+  history?: VixHistoryPoint[]
+  error?: string
+}
+
+// ============================================================================
+// Phase 7-9: Quant features
+// ============================================================================
+
+export interface RuinHorizon {
+  days: number
+  prob_ruin: number
+  worst_5pct_equity: number
+  median_end_equity: number
+  worst_case_equity?: number
+}
+
+export interface RuinProbability {
+  current_equity: number
+  floor: number
+  floor_pct: number
+  n_paths: number
+  as_of: string
+  tickers?: string[]
+  horizons: Record<string, RuinHorizon>
+  status?: string
+  source?: string
+}
+
+export interface ForecastHorizon {
+  days: number
+  expected_return: number
+  median_return: number
+  std: number
+  var_5: number
+  cvar_5: number
+  prob_positive: number
+  state_probabilities: Record<string, number>
+}
+
+export interface RegimeForecast {
+  current_regime: string
+  n_paths: number
+  as_of: string
+  horizons: Record<string, ForecastHorizon>
+  source?: string
+}
+
+export interface StrategyEV {
+  strategy: string
+  n_trades: number
+  win_rate?: number
+  avg_win?: number
+  avg_loss?: number
+  ev_per_trade?: number
+  ev_per_trade_pct?: number
+  profit_factor?: number | null
+  ci_low?: number
+  ci_high?: number
+  classification?: 'positive' | 'negative' | 'uncertain' | 'unknown'
+  status?: string
+}
+
+export interface SignalEVResponse {
+  strategies: StrategyEV[]
+  source?: string
 }

@@ -27,6 +27,10 @@
   --radius-sm:    6px;
   --radius-xs:    4px;
   --ease:         cubic-bezier(0.16, 1, 0.3, 1);
+  --anim-duration: 0.5s;
+  --anim-stagger: 60ms;
+  --anim-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --surface-hover: #1e1e24;
 }
 
 [data-theme="light"] {
@@ -48,6 +52,108 @@
   --text-2:       #71717a;
   --text-3:       #a1a1aa;
   --accent:       #4f46e5;
+  --surface-hover: #e4e4e7;
+}
+
+/* ── Animations ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes valueFlashGreen {
+  0% { background-color: var(--green-soft); }
+  100% { background-color: transparent; }
+}
+@keyframes valueFlashRed {
+  0% { background-color: var(--red-soft); }
+  100% { background-color: transparent; }
+}
+
+/* ── Skeleton Loading ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-hover) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+}
+.skeleton-text { height: 14px; margin: 8px 0; width: 60%; }
+.skeleton-number { height: 28px; width: 80px; margin: 4px 0; }
+.skeleton-card { height: 80px; width: 100%; }
+.skeleton-chart { height: 200px; width: 100%; border-radius: var(--radius); }
+.skeleton-row { height: 36px; margin: 4px 0; width: 100%; }
+
+/* ── Stagger Animations ── */
+.animate-in {
+  animation: fadeSlideUp var(--anim-duration) var(--anim-ease) both;
+}
+.animate-in:nth-child(1)  { animation-delay: 0ms; }
+.animate-in:nth-child(2)  { animation-delay: calc(var(--anim-stagger) * 1); }
+.animate-in:nth-child(3)  { animation-delay: calc(var(--anim-stagger) * 2); }
+.animate-in:nth-child(4)  { animation-delay: calc(var(--anim-stagger) * 3); }
+.animate-in:nth-child(5)  { animation-delay: calc(var(--anim-stagger) * 4); }
+.animate-in:nth-child(6)  { animation-delay: calc(var(--anim-stagger) * 5); }
+.animate-in:nth-child(7)  { animation-delay: calc(var(--anim-stagger) * 6); }
+.animate-in:nth-child(8)  { animation-delay: calc(var(--anim-stagger) * 7); }
+.animate-in:nth-child(9)  { animation-delay: calc(var(--anim-stagger) * 8); }
+.animate-in:nth-child(10) { animation-delay: calc(var(--anim-stagger) * 9); }
+.animate-in:nth-child(11) { animation-delay: calc(var(--anim-stagger) * 10); }
+.animate-in:nth-child(12) { animation-delay: calc(var(--anim-stagger) * 11); }
+
+.animate-scale {
+  animation: scaleIn var(--anim-duration) var(--anim-ease) both;
+}
+.value-flash-green {
+  animation: valueFlashGreen 0.8s var(--anim-ease);
+}
+.value-flash-red {
+  animation: valueFlashRed 0.8s var(--anim-ease);
+}
+.pulse-live {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ── Micro-interactions ── */
+.card, .fin-section, .risk-section, .donut-section, .orders-section {
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), border-color 0.2s var(--ease);
+}
+.card:hover, .fin-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+.data-table tbody tr,
+.orders-table tbody tr {
+  transition: background-color 0.2s var(--ease);
+}
+.tab-btn:active, .theme-btn:active, .agent-link:active {
+  transform: scale(0.97);
+}
+.dash-collapse[open] > *:not(summary) {
+  animation: fadeSlideDown 0.3s var(--ease);
 }
 
 /* ── Reset ── */
@@ -191,6 +297,7 @@ body {
 
 .stat:hover {
   border-color: var(--border-hover);
+  transform: translateY(-1px);
 }
 
 .stat-label {
@@ -268,6 +375,8 @@ body {
 
 .chart-section:hover {
   border-color: var(--border-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .chart-header {
@@ -591,8 +700,8 @@ body {
 .pos-card:hover {
   border-color: var(--border-hover);
   border-left-color: var(--strat-color, var(--green));
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
 .pos-card.flash-pos { box-shadow: 0 0 0 1px var(--green-glow), 0 4px 16px rgba(0,0,0,0.12); }
@@ -863,6 +972,17 @@ details.dash-collapse > .table-scroll {
   margin-bottom: 16px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0;
+  position: relative;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: left 0.35s var(--anim-ease), width 0.35s var(--anim-ease);
+  z-index: 1;
 }
 
 .tab-btn {
@@ -886,16 +1006,29 @@ details.dash-collapse > .table-scroll {
 
 .tab-btn.active {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: transparent;
   font-weight: 600;
 }
 
 .tab-content {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.35s var(--anim-ease),
+              transform 0.35s var(--anim-ease),
+              visibility 0s linear 0.35s;
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
 }
 
 .tab-content.active {
-  display: block;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 0s;
+  position: relative;
+  pointer-events: auto;
 }
 
 /* ── Responsive ── */
@@ -1746,4 +1879,228 @@ details.dash-collapse > .table-scroll {
   .fin-summary-strip { grid-template-columns: 1fr; }
   .fin-accounts-grid { grid-template-columns: 1fr; }
   .spend-label { width: 90px; }
+}
+
+/* ── Research Tab ────────────────────────────────────────── */
+
+/* Generic card component used by Research tab */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 16px 16px;
+  overflow: hidden;
+  transition: border-color 0.2s var(--ease);
+}
+.card:hover { border-color: var(--border-hover); }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.card-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+/* Generic data table used by Research tab */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.data-table th {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table td {
+  padding: 7px 10px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface-2); }
+
+/* Monospace utility class */
+.mono {
+  font-family: var(--mono);
+}
+
+/* Table scroll wrapper */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Research-specific styles ── */
+
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.research-strategy-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color 0.2s var(--ease);
+}
+.research-strategy-card:hover { border-color: var(--border-hover); }
+
+.rsc-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 10px;
+  text-transform: capitalize;
+}
+
+.rsc-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.rsc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rsc-label {
+  font-size: 10px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rsc-val {
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.rsc-green { color: var(--green); }
+
+.research-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.res-select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 4px 8px;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+.res-select:focus { border-color: var(--accent); outline: none; }
+
+.research-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) { .research-two-col { grid-template-columns: 1fr; } }
+
+.research-subheader {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Experiment table row colors */
+.row-kept { background: var(--green-soft); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--mono);
+}
+.tag-green { background: var(--green-soft); color: var(--green); }
+.tag-gray { background: var(--surface-2); color: var(--text-3); }
+.tag-source { background: rgba(99,102,241,0.12); color: var(--accent); }
+
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-muted { color: var(--text-3); font-style: italic; padding: 12px 0; }
+
+.pagination {
+  padding: 10px 0;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: right;
+}
+
+/* Brain patterns */
+.patterns-list { display: flex; flex-direction: column; gap: 8px; }
+
+.pattern-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.pattern-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 4px;
+  text-transform: capitalize;
+}
+.pattern-summary {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* Chart card */
+#research-chart-card .card-body {
+  padding: 12px;
+  overflow: hidden;
+}
+
+#sharpe-chart {
+  display: block;
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton { animation: none; }
 }

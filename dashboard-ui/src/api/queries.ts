@@ -5,7 +5,6 @@ import type {
   DashboardData,
   RegimeCurrent,
   RegimeHistory,
-  OverlayDecisions,
   SystemHealth,
   HealthCronJob,
   HealthDataFreshness,
@@ -13,10 +12,17 @@ import type {
   PositionRisk,
   RegimeTransitions,
   FinanceData,
+  RegimeDistributions,
+  VixTermStructure,
+  RuinProbability,
+  RegimeForecast,
+  SignalEVResponse,
 } from './types'
 
 const REFETCH_60S = 60_000
 const STALE_5MIN = 5 * 60_000
+const REFETCH_DAILY = 24 * 60 * 60_000  // 1 day
+const STALE_1HR = 60 * 60_000
 
 // ---------------------------------------------------------------------------
 // normalizeSystemHealth
@@ -77,14 +83,18 @@ export function mergeEquitySeries(data: DashboardData): ChartPoint[] {
   for (const p of data.benchmark?.curve ?? []) {
     if (p.date && p.equity != null) benchMap.set(p.date, p.equity)
   }
-  const dates = new Set<string>([...portfolioMap.keys(), ...benchMap.keys()])
-  return Array.from(dates)
-    .sort()
-    .map((date) => ({
-      date,
-      portfolio: portfolioMap.get(date) ?? null,
-      spy: benchMap.get(date) ?? null,
-    }))
+  // Forward-fill: when a date is present in one series but not the other,
+  // carry the last known value forward so Recharts never sees a null gap.
+  const dates = Array.from(new Set<string>([...portfolioMap.keys(), ...benchMap.keys()])).sort()
+  let lastPort: number | null = null
+  let lastSpy: number | null = null
+  return dates.map((date) => {
+    const p = portfolioMap.get(date)
+    const s = benchMap.get(date)
+    if (p != null) lastPort = p
+    if (s != null) lastSpy = s
+    return { date, portfolio: lastPort, spy: lastSpy }
+  })
 }
 
 export interface EquityChartData {
@@ -99,7 +109,10 @@ export interface EquityChartData {
  *  the underlying DashboardData changes. Combines chart-series merge and
  *  return-stat computation in a single pass (js-combine-iterations rule). */
 export function buildEquityChartData(data: DashboardData): EquityChartData {
-  const portfolioReturnPct = data.summary?.total_pnl_pct ?? 0
+  // Use summary.return_pct (window-aligned to portfolio_history) so the badge
+  // matches the chart's visible curve. Fall back to total_pnl_pct (vs config
+  // starting equity) only if return_pct is missing.
+  const portfolioReturnPct = data.summary?.return_pct ?? data.summary?.total_pnl_pct ?? 0
   const spyReturnPct = data.benchmark?.return_pct ?? 0
   return {
     chartData: mergeEquitySeries(data),
@@ -162,15 +175,6 @@ export function useRegimeHistory() {
   })
 }
 
-export function useOverlayDecisions() {
-  return useQuery({
-    queryKey: qk.overlay.decisions(),
-    queryFn: () => get<OverlayDecisions>('/api/overlay/decisions'),
-    refetchInterval: REFETCH_60S,
-    placeholderData: keepPreviousData,
-    staleTime: 30_000,
-  })
-}
 
 export function useSystemHealth() {
   return useQuery({
@@ -220,5 +224,52 @@ export function useFinanceData(enabled: boolean) {
     enabled,
     placeholderData: keepPreviousData,
     staleTime: STALE_5MIN,
+  })
+}
+
+export function useRegimeDistributions() {
+  return useQuery({
+    queryKey: qk.regime.distributions(),
+    queryFn: () => get<RegimeDistributions>('/api/regime/distributions'),
+    refetchInterval: REFETCH_DAILY,
+    placeholderData: keepPreviousData,
+    staleTime: STALE_1HR,
+  })
+}
+
+export function useVixTermStructure() {
+  return useQuery({
+    queryKey: qk.signals.vixTermStructure(),
+    queryFn: () => get<VixTermStructure>('/api/signals/vix_term_structure'),
+    refetchInterval: REFETCH_60S,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
+}
+
+export function useRuinProbability() {
+  return useQuery<RuinProbability>({
+    queryKey: ['risk', 'ruin'],
+    queryFn: () => get<RuinProbability>('/api/risk/ruin'),
+    staleTime: 60 * 60 * 1000,  // 1 hour
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useRegimeForecast() {
+  return useQuery<RegimeForecast>({
+    queryKey: ['regime', 'forecast'],
+    queryFn: () => get<RegimeForecast>('/api/regime/forecast'),
+    staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+}
+
+export function useSignalEV() {
+  return useQuery<SignalEVResponse>({
+    queryKey: ['signals', 'ev'],
+    queryFn: () => get<SignalEVResponse>('/api/signals/ev'),
+    staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }

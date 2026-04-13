@@ -383,6 +383,63 @@ def send_digest(queue_stats: dict, journal_stats: dict, coverage: dict,
         logger.debug("Telegram digest failed (non-critical): %s", e)
 
 
+
+# ── Discovery pipeline ────────────────────────────────────────────────────────────────────────────
+
+def _run_discovery_pipeline(dry_run: bool = False) -> None:
+    """Run the LLM-powered discovery pipeline if not run in the last 7 days."""
+    stats_file = PROJECT_ROOT / "research" / "discovery" / "cumulative_stats.json"
+
+    # Check last run
+    if stats_file.exists():
+        try:
+            stats = json.loads(stats_file.read_text())
+            last_run = stats.get("last_run", "")
+            if last_run:
+                last_dt = datetime.strptime(last_run, "%Y-%m-%d")
+                days_since = (datetime.now() - last_dt).days
+                if days_since < 7:
+                    logger.info(
+                        "Discovery pipeline ran %d days ago \u2014 skipping (runs weekly)",
+                        days_since,
+                    )
+                    return
+        except Exception as e:
+            logger.warning("Could not read discovery stats: %s", e)
+
+    if dry_run:
+        logger.info("[DRY RUN] Would run discovery pipeline")
+        return
+
+    logger.info("Running discovery pipeline (weekly)")
+    _write_heartbeat(
+        phase="discovery",
+        activity="discovery_pipeline",
+        detail="Running paper\u2192strategy pipeline",
+    )
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(PROJECT_ROOT / "research" / "discovery" / "run.py")],
+            capture_output=True,
+            text=True,
+            timeout=3600,  # 60 minute timeout
+            cwd=str(PROJECT_ROOT),
+        )
+        if result.returncode == 0:
+            logger.info("Discovery pipeline completed successfully")
+        else:
+            logger.warning(
+                "Discovery pipeline exited with code %d: %s",
+                result.returncode,
+                result.stderr[:500] if result.stderr else "",
+            )
+    except subprocess.TimeoutExpired:
+        logger.error("Discovery pipeline timed out after 60 minutes")
+    except Exception as e:
+        logger.error("Discovery pipeline error: %s", e)
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def parse_args():
@@ -544,6 +601,9 @@ def main() -> int:
             "Portfolio optimizer: skipped (ran %.1f days ago, threshold=%d days)",
             days_since, PORTFOLIO_OPT_DAYS,
         )
+
+    # ── 3b. Discovery pipeline (weekly) ──────────────────────────────────────
+    _run_discovery_pipeline(dry_run=dry_run)
 
     # ── 4. Telegram digest ───────────────────────────────────────
     if not args.no_telegram:

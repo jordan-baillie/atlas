@@ -120,26 +120,76 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                 f"-> exit at ${exit_price:.4f}"
             )
             if not dry_run:
-                result = portfolio.execute_exit(pos.ticker, exit_price, trade_date, "stop_loss")
-                if result:
-                    exits.append(result)
-                    # SQLite dual-write (non-fatal — ledger is source of truth)
+                # ── Submit broker sell order ──────────────────────
+                # The broker is the source of truth for what we hold.
+                # We MUST close at broker BEFORE updating internal state,
+                # otherwise we get orphaned positions (broker still holds
+                # shares but Atlas thinks the trade is closed).
+                broker = getattr(portfolio, '_broker', None)
+                broker_sell_ok = False
+                actual_exit_price = exit_price  # default to stop price
+
+                if broker:
                     try:
-                        from db import atlas_db
+                        # Cancel existing protective orders first (SL/TP/trailing)
+                        # so they don't hold shares and cause "insufficient qty"
                         try:
-                            from regime.model import RegimeModel
-                            _eod_regime = RegimeModel().classify_current().state.value
-                        except Exception:
-                            _eod_regime = None
-                        atlas_db.record_trade_exit(
+                            from brokers.live_executor import LiveExecutor
+                            _temp_exec = LiveExecutor.__new__(LiveExecutor)
+                            _temp_exec._broker = broker
+                            _temp_exec._connected = True
+                            _temp_exec._cancel_open_orders_for_ticker(pos.ticker)
+                            import time
+                            time.sleep(1.0)  # let Alpaca settle after cancel
+                        except Exception as _cancel_err:
+                            log.warning(f"Failed to cancel protective orders for {pos.ticker}: {_cancel_err}")
+
+                        from brokers.base import OrderSide, OrderType
+                        log.info(f"STOP HIT for {pos.ticker} — submitting market sell to broker ({pos.shares} shares)")
+                        sell_result = broker.place_order(
                             ticker=pos.ticker,
-                            strategy=getattr(pos, "strategy", ""),
-                            exit_price=exit_price,
-                            exit_reason="stop_loss",
-                            regime_at_exit=_eod_regime,
+                            side=OrderSide.SELL,
+                            qty=pos.shares,
+                            price=0.0,
+                            order_type=OrderType.MARKET,
+                            remark="eod_stop_loss",
                         )
-                    except Exception as _e:
-                        log.warning(f"SQLite trade exit dual-write failed: {_e}")
+                        if sell_result.success:
+                            broker_sell_ok = True
+                            # Use fill price from broker if available
+                            if sell_result.fill_price and sell_result.fill_price > 0:
+                                actual_exit_price = sell_result.fill_price
+                            log.info(f"Broker sell confirmed for {pos.ticker}: order_id={sell_result.order_id}, price=${actual_exit_price:.4f}")
+                        else:
+                            log.error(f"Broker sell FAILED for {pos.ticker}: {sell_result.message} — NOT marking as closed internally")
+                    except Exception as _broker_err:
+                        log.error(f"Broker sell exception for {pos.ticker}: {_broker_err} — NOT marking as closed internally")
+                else:
+                    # No broker connected (backtest/offline mode) — proceed with internal-only exit
+                    broker_sell_ok = True
+                    log.info(f"No broker connected — recording internal exit only for {pos.ticker}")
+
+                if broker_sell_ok:
+                    result = portfolio.execute_exit(pos.ticker, actual_exit_price, trade_date, "stop_loss")
+                    if result:
+                        exits.append(result)
+                        # SQLite dual-write (non-fatal — ledger is source of truth)
+                        try:
+                            from db import atlas_db
+                            try:
+                                from regime.model import RegimeModel
+                                _eod_regime = RegimeModel().classify_current().state.value
+                            except Exception:
+                                _eod_regime = None
+                            atlas_db.record_trade_exit(
+                                ticker=pos.ticker,
+                                strategy=getattr(pos, "strategy", ""),
+                                exit_price=actual_exit_price,
+                                exit_reason="stop_loss",
+                                regime_at_exit=_eod_regime,
+                            )
+                        except Exception as _e:
+                            log.warning(f"SQLite trade exit dual-write failed: {_e}")
             else:
                 exits.append({"ticker": pos.ticker, "type": "stop_loss",
                               "intraday_low": intraday_low, "stop_price": pos.stop_price,
@@ -168,26 +218,76 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                 f"-> exit at ${exit_price:.4f}"
             )
             if not dry_run:
-                result = portfolio.execute_exit(pos.ticker, exit_price, trade_date, "take_profit")
-                if result:
-                    exits.append(result)
-                    # SQLite dual-write (non-fatal — ledger is source of truth)
+                # ── Submit broker sell order ──────────────────────
+                # The broker is the source of truth for what we hold.
+                # We MUST close at broker BEFORE updating internal state,
+                # otherwise we get orphaned positions (broker still holds
+                # shares but Atlas thinks the trade is closed).
+                broker = getattr(portfolio, '_broker', None)
+                broker_sell_ok = False
+                actual_exit_price = exit_price  # default to take-profit price
+
+                if broker:
                     try:
-                        from db import atlas_db
+                        # Cancel existing protective orders first (SL/TP/trailing)
+                        # so they don't hold shares and cause "insufficient qty"
                         try:
-                            from regime.model import RegimeModel
-                            _eod_regime = RegimeModel().classify_current().state.value
-                        except Exception:
-                            _eod_regime = None
-                        atlas_db.record_trade_exit(
+                            from brokers.live_executor import LiveExecutor
+                            _temp_exec = LiveExecutor.__new__(LiveExecutor)
+                            _temp_exec._broker = broker
+                            _temp_exec._connected = True
+                            _temp_exec._cancel_open_orders_for_ticker(pos.ticker)
+                            import time
+                            time.sleep(1.0)  # let Alpaca settle after cancel
+                        except Exception as _cancel_err:
+                            log.warning(f"Failed to cancel protective orders for {pos.ticker}: {_cancel_err}")
+
+                        from brokers.base import OrderSide, OrderType
+                        log.info(f"TP HIT for {pos.ticker} — submitting sell to broker ({pos.shares} shares)")
+                        sell_result = broker.place_order(
                             ticker=pos.ticker,
-                            strategy=getattr(pos, "strategy", ""),
-                            exit_price=exit_price,
-                            exit_reason="take_profit",
-                            regime_at_exit=_eod_regime,
+                            side=OrderSide.SELL,
+                            qty=pos.shares,
+                            price=0.0,
+                            order_type=OrderType.MARKET,
+                            remark="eod_take_profit",
                         )
-                    except Exception as _e:
-                        log.warning(f"SQLite trade exit dual-write failed: {_e}")
+                        if sell_result.success:
+                            broker_sell_ok = True
+                            # Use fill price from broker if available
+                            if sell_result.fill_price and sell_result.fill_price > 0:
+                                actual_exit_price = sell_result.fill_price
+                            log.info(f"Broker sell confirmed for {pos.ticker}: order_id={sell_result.order_id}, price=${actual_exit_price:.4f}")
+                        else:
+                            log.error(f"Broker sell FAILED for {pos.ticker}: {sell_result.message} — NOT marking as closed internally")
+                    except Exception as _broker_err:
+                        log.error(f"Broker sell exception for {pos.ticker}: {_broker_err} — NOT marking as closed internally")
+                else:
+                    # No broker connected (backtest/offline mode) — proceed with internal-only exit
+                    broker_sell_ok = True
+                    log.info(f"No broker connected — recording internal exit only for {pos.ticker}")
+
+                if broker_sell_ok:
+                    result = portfolio.execute_exit(pos.ticker, actual_exit_price, trade_date, "take_profit")
+                    if result:
+                        exits.append(result)
+                        # SQLite dual-write (non-fatal — ledger is source of truth)
+                        try:
+                            from db import atlas_db
+                            try:
+                                from regime.model import RegimeModel
+                                _eod_regime = RegimeModel().classify_current().state.value
+                            except Exception:
+                                _eod_regime = None
+                            atlas_db.record_trade_exit(
+                                ticker=pos.ticker,
+                                strategy=getattr(pos, "strategy", ""),
+                                exit_price=actual_exit_price,
+                                exit_reason="take_profit",
+                                regime_at_exit=_eod_regime,
+                            )
+                        except Exception as _e:
+                            log.warning(f"SQLite trade exit dual-write failed: {_e}")
             else:
                 exits.append({"ticker": pos.ticker, "type": "take_profit",
                               "intraday_high": intraday_high, "take_profit": pos.take_profit,

@@ -172,6 +172,57 @@ def check_data(project: Path, market_id: str) -> list:
     else:
         results.append({"check": "universe", "verdict": "warn", "message": f"No universe file for {market_id}"})
 
+    # Macro indicators staleness check
+    try:
+        import sqlite3
+        db_path = project / "data" / "atlas.db"
+        if db_path.exists():
+            conn = sqlite3.connect(str(db_path))
+            row = conn.execute("SELECT MAX(date) FROM macro_indicators").fetchone()
+            conn.close()
+            if row and row[0]:
+                from datetime import date
+                max_date = datetime.strptime(row[0], "%Y-%m-%d").date()
+                today = date.today()
+                # Count trading days gap (approximate: weekdays only)
+                trading_days_gap = sum(
+                    1 for d in range((today - max_date).days)
+                    if (max_date + timedelta(days=d + 1)).weekday() < 5
+                )
+                if trading_days_gap > 2:
+                    results.append({
+                        "check": "macro_staleness",
+                        "verdict": "fail",
+                        "message": (
+                            f"⚠️ STALE DATA: macro_indicators last updated {row[0]} "
+                            f"({trading_days_gap} trading days ago)"
+                        ),
+                    })
+                else:
+                    results.append({
+                        "check": "macro_staleness",
+                        "verdict": "ok",
+                        "message": f"macro_indicators up to date (last: {row[0]})",
+                    })
+            else:
+                results.append({
+                    "check": "macro_staleness",
+                    "verdict": "fail",
+                    "message": "macro_indicators table is empty",
+                })
+        else:
+            results.append({
+                "check": "macro_staleness",
+                "verdict": "warn",
+                "message": "atlas.db not found — cannot check macro_indicators",
+            })
+    except Exception as e:
+        results.append({
+            "check": "macro_staleness",
+            "verdict": "warn",
+            "message": f"macro_indicators check failed: {e}",
+        })
+
     return results
 
 

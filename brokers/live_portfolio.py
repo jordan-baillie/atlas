@@ -136,6 +136,8 @@ class LivePortfolio:
                 "shares": pos.shares,
                 "stop_price": pos.stop_price,
                 "order_id": getattr(pos, 'order_id', ''),
+                "stop_order_id": getattr(pos, 'stop_order_id', ''),
+                "tp_order_id": getattr(pos, 'tp_order_id', ''),
             })
 
         state = {
@@ -360,10 +362,12 @@ class LivePortfolio:
             trail_price = raw.get('trail_price')
             limit_price = raw.get('limit_price')
 
+            order_id = getattr(o, 'order_id', '') or str(raw.get('id', ''))
             if stop_price:
                 stop_map[ticker] = {
                     'stop_price': float(stop_price),
                     'type': 'trailing' if 'trail' in order_type else 'stop',
+                    'order_id': order_id,
                 }
             # NOTE: limit sell orders (take-profits) are intentionally ignored.
             # In OCO pairs, the limit leg is the take-profit target, not a stop.
@@ -375,6 +379,7 @@ class LivePortfolio:
             info = stop_map.get(pos.ticker)
             if info and info['stop_price'] > 0:
                 pos.stop_price = info['stop_price']
+                pos.stop_order_id = info.get('order_id', '')
                 enriched += 1
 
         if enriched:
@@ -415,6 +420,8 @@ class LivePortfolio:
                     # Always use live broker stop (more current than state)
                     "stop_price": pos.stop_price if pos.stop_price > 0 else prev.get("stop_price", 0),
                     "order_id": prev.get("order_id", getattr(pos, 'order_id', '')),
+                    "stop_order_id": getattr(pos, 'stop_order_id', '') or prev.get("stop_order_id", ""),
+                    "tp_order_id": getattr(pos, 'tp_order_id', '') or prev.get("tp_order_id", ""),
                 })
             state["positions"] = merged
             with open(path, "w") as f:
@@ -801,6 +808,34 @@ class LivePortfolio:
         Also triggers an asynchronous dashboard refresh so strategy
         performance metrics are always current after any position close.
         """
+        # ── Validation: reject ghost trades (exit before entry) ──
+        entry_date = str(trade_record.get("entry_date", ""))[:10]
+        exit_date = str(trade_record.get("exit_date", ""))[:10]
+        ticker = trade_record.get("ticker", "???")
+        if entry_date and exit_date and exit_date < entry_date:
+            logger.warning(
+                "record_closed_trade: REJECTED ghost trade for %s — "
+                "exit_date %s is before entry_date %s",
+                ticker, exit_date, entry_date,
+            )
+            return
+
+        # ── Validation: reject duplicate trades ──
+        entry_price = trade_record.get("entry_price", 0)
+        shares = trade_record.get("shares", 0)
+        for existing in self.closed_trades:
+            if (existing.get("ticker") == ticker
+                    and str(existing.get("entry_date", ""))[:10] == entry_date
+                    and existing.get("entry_price") == entry_price
+                    and existing.get("shares") == shares
+                    and str(existing.get("exit_date", ""))[:10] == exit_date):
+                logger.warning(
+                    "record_closed_trade: REJECTED duplicate trade for %s — "
+                    "same ticker/entry_price/shares/exit_date already recorded",
+                    ticker,
+                )
+                return
+
         self.closed_trades.append(trade_record)
         self.save_state()
         self._trigger_dashboard_refresh()

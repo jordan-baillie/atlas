@@ -35,7 +35,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'portfolio' | 'finance'>('portfolio')
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
       <Header />
       <div className="max-w-[1440px] mx-auto px-4 md:px-6">
         <TabBar activeTab={activeTab} onChange={setActiveTab} />

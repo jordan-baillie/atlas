@@ -746,5 +746,21 @@
     "reconciled": true,
     "recorded_at": "2026-04-08T23:53:27.028Z",
     "note": "Auto-backfilled by health check reconciliation"
+  },
+  {
+    "type": "exit",
+    "ticker": "AMT",
+    "strategy": "mean_reversion",
+    "shares": 4,
+    "fill_price": 180.55,
+    "entry_price": 167.53,
+    "pnl": 52.08,
+    "pnl_pct": 7.77,
+    "exit_reason": "signal_exit",
+    "order_id": "400a82e5-3867-475c-9d01-3fd05f0ed0d1",
+    "timestamp": "2026-04-10 13:30:01.950000",
+    "reconciled": true,
+    "regime_at_exit": "transition_uncertain",
+    "recorded_at": "2026-04-10T23:45:03.530498"
   }
 ]

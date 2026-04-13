@@ -88,6 +88,18 @@ def _append_result(
     ])
     with open(path, "a") as f:
         f.write(row + "\n")
+    # SQLite dual-write (non-fatal)
+    try:
+        from research.db import log_experiment
+        log_experiment(
+            strategy=strategy,
+            metrics=metrics,
+            params_changed=params_changed,
+            status=status,
+            description=description,
+        )
+    except Exception:
+        pass  # TSV is primary, SQLite is additive
 
 
 def read_results(strategy: str, n: int = 50) -> str:

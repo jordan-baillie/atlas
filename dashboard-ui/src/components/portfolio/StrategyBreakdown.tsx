@@ -1,3 +1,4 @@
+import { useSignalEV } from '../../api/queries'
 import type { StrategyPerformance, StrategyPerfEntry } from '../../api/types'
 import { DataTable } from '../shared/DataTable'
 import type { Column } from '../shared/DataTable'
@@ -41,10 +42,30 @@ const COLUMNS: Column<Row>[] = [
       )
     },
   },
+  {
+    key: 'ev_per_trade',
+    label: 'EV/Trade',
+    align: 'right',
+    render: (r) => {
+      const ev = r.ev_per_trade
+      if (ev == null) return <span className="text-zinc-500">—</span>
+      const cls = r.ev_classification === 'positive' ? 'text-green-400'
+                : r.ev_classification === 'negative' ? 'text-red-400'
+                : 'text-zinc-400'
+      return <span className={`font-mono ${cls}`}>{fmtSignedCcy(ev)}</span>
+    },
+  },
 ]
 
 export function StrategyBreakdown({ performance }: Props) {
-  const rows: Row[] = Object.entries(performance?.by_strategy ?? {}).map(([name, entry]) => ({ name, ...entry }))
+  const { data: evData } = useSignalEV()
+  const evMap = new Map((evData?.strategies ?? []).map(s => [s.strategy, s]))
+
+  const baseRows: Row[] = Object.entries(performance?.by_strategy ?? {}).map(([name, entry]) => ({ name, ...entry }))
+  const rows: Row[] = baseRows.map(r => {
+    const ev = evMap.get(r.name)
+    return ev ? { ...r, ev_per_trade: ev.ev_per_trade, ev_classification: ev.classification } : r
+  })
 
   return (
     <div>

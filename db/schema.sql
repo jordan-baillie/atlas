@@ -307,3 +307,61 @@ CREATE TABLE IF NOT EXISTS system_log (
 );
 CREATE INDEX IF NOT EXISTS idx_syslog_ts ON system_log(timestamp);
 CREATE INDEX IF NOT EXISTS idx_syslog_service ON system_log(service);
+
+-- ═══════════════════════════════════════════════════════════
+-- VOLATILITY CONES (Phase 3)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS vol_cones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    as_of TEXT NOT NULL,
+    horizon INTEGER NOT NULL,
+    current_vol REAL,
+    p5 REAL,
+    p25 REAL,
+    p50 REAL,
+    p75 REAL,
+    p95 REAL,
+    n_obs INTEGER,
+    lookback_years INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ticker, as_of, horizon)
+);
+CREATE INDEX IF NOT EXISTS idx_vol_cones_ticker_asof ON vol_cones(ticker, as_of);
+
+CREATE TABLE IF NOT EXISTS vol_regimes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker TEXT NOT NULL,
+    as_of TEXT NOT NULL,
+    regime TEXT NOT NULL,
+    multiplier REAL,
+    vol_20d REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ticker, as_of)
+);
+CREATE INDEX IF NOT EXISTS idx_vol_regimes_ticker_asof ON vol_regimes(ticker, as_of);
+
+-- ═══════════════════════════════════════════════════════════
+-- TREASURY YIELD CURVE (Phase 3.1)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS treasury_curve (
+    date                TEXT    PRIMARY KEY,  -- ISO date YYYY-MM-DD
+    yield_1m            REAL,                 -- 1-month T-bill yield (%)
+    yield_3m            REAL,                 -- 3-month T-bill yield (%)
+    yield_6m            REAL,                 -- 6-month T-bill yield (%)
+    yield_1y            REAL,                 -- 1-year Treasury yield (%)
+    yield_2y            REAL,                 -- 2-year Treasury yield (%)
+    yield_3y            REAL,                 -- 3-year Treasury yield (%)
+    yield_5y            REAL,                 -- 5-year Treasury yield (%)
+    yield_7y            REAL,                 -- 7-year Treasury yield (%)
+    yield_10y           REAL,                 -- 10-year Treasury yield (%)
+    yield_20y           REAL,                 -- 20-year Treasury yield (%)
+    yield_30y           REAL,                 -- 30-year Treasury yield (%)
+    treasury_slope      REAL,                 -- 10y - 2y spread
+    treasury_curvature  REAL,                 -- (2y + 10y)/2 - 5y (butterfly)
+    treasury_level      REAL,                 -- average across all 11 maturities
+    updated_at          TEXT    DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_treasury_curve_date ON treasury_curve(date);

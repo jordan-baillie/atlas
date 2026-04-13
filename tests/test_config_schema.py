@@ -178,7 +178,6 @@ class TestValidConfigPasses:
     def test_optional_bool_fields_accepted(self):
         cfg = _cfg(**{
             "trading.live_enabled": False,
-            "trading.approval_required": True,
             "allocation.enabled": True,
             "allocation.overflow_enabled": False,
             "dynamic_sizing.enabled": True,

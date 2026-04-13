@@ -401,6 +401,49 @@ class TradePlanGenerator:
                 existing_positions, exit_recommendations,
             )
         else:
+            # ── Regime gate: reject all signals if regime data unavailable/stale ──
+            regime_gate_cfg = self.config.get("regime_gate", {})
+            regime_gate_enabled = regime_gate_cfg.get("enabled", True)
+            max_stale_days = regime_gate_cfg.get("max_stale_days", 2)
+
+            if regime_gate_enabled:
+                gate_passed = False
+                gate_reason = ""
+                try:
+                    from regime.model import RegimeModel
+                    _gate_model = RegimeModel()
+                    _gate_regime = _gate_model.classify_current()
+                    regime_date_str = _gate_regime.date
+                    if not regime_date_str:
+                        gate_reason = "regime classification date is empty/NULL"
+                    else:
+                        from datetime import datetime as _dt, timedelta as _td
+                        regime_date = _dt.strptime(regime_date_str, "%Y-%m-%d").date()
+                        today = _dt.strptime(trade_date, "%Y-%m-%d").date()
+                        staleness = (today - regime_date).days
+                        if staleness > max_stale_days:
+                            gate_reason = (
+                                f"regime data is {staleness} days stale "
+                                f"(last: {regime_date_str}, max: {max_stale_days})"
+                            )
+                        else:
+                            gate_passed = True
+                except Exception as exc:
+                    gate_reason = f"regime classification failed: {exc}"
+
+                if not gate_passed:
+                    n_signals = len(strategies)  # count of strategies as proxy
+                    logger.warning(
+                        "REGIME GATE: Rejecting all signals — %s", gate_reason
+                    )
+                    plan = self.generate_plan(
+                        [], exit_recommendations, prices, trade_date
+                    )
+                    plan["regime_gate_blocked"] = True
+                    plan["regime_gate_reason"] = gate_reason
+                    self._save_plan(plan, trade_date)
+                    return plan
+
             # Regime-aware path — fall back to SP500-only on any error.
             try:
                 plan = self._run_regime_aware_plan(

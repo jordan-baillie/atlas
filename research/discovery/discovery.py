@@ -76,7 +76,21 @@ def _run_claude(
     Returns:
         dict — parsed JSON result, or {"error": "<msg>", "raw": "<stdout>"} on failure.
     """
-    cmd = ["claude", "-p", "--output-format", "json"]
+    # Quick auth check
+    try:
+        auth_result = subprocess.run(
+            ["claude", "auth", "status"],
+            capture_output=True, text=True, timeout=10
+        )
+        import json as _json
+        auth_data = _json.loads(auth_result.stdout.strip() or auth_result.stderr.strip())
+        if not auth_data.get("loggedIn", False):
+            logger.warning("Claude not authenticated — skipping LLM call. Run 'claude setup-token'.")
+            return {"error": "not_authenticated", "raw": "Run 'claude setup-token' to authenticate"}
+    except Exception:
+        pass  # If auth check fails, try the actual call anyway
+
+    cmd = ["claude", "-p", "--model", "claude-sonnet-4-6", "--output-format", "json"]
 
     if mcp:
         cmd += ["--mcp-config", str(MCP_CONFIG.resolve())]

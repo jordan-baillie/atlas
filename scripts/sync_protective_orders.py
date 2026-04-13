@@ -164,6 +164,57 @@ def sync_market(
     # ── Load plan ────────────────────────────────────────────
     plan = load_plan(market_id, trade_date)
 
+    # ── Merge stop prices from state file ────────────────
+    # The state file has CURRENT stop prices (updated by
+    # _enrich_from_broker_stops → _update_state_positions).
+    # Plan files only have the INITIAL stop from entry day.
+    # Merge state stops into the plan so sync_all_protective_orders
+    # uses current levels instead of falling back to 5% below entry.
+    state_path = PROJECT / "brokers" / "state" / f"live_{market_id}.json"
+    try:
+        if state_path.exists():
+            import json as _json
+            with open(state_path) as _sf:
+                _state = _json.load(_sf)
+            _state_stops = {}
+            for _sp in _state.get("positions", []):
+                _t = _sp.get("ticker", "")
+                _stop = _sp.get("stop_price", 0)
+                if _t and _stop:
+                    _state_stops[_t] = _stop
+
+            if _state_stops:
+                # Ensure plan has the right structure for merging
+                if plan is None:
+                    plan = {"proposed_entries": []}
+                entries = plan.get("proposed_entries", [])
+                plan_tickers = {e.get("ticker") for e in entries}
+
+                # Add state-file stops for tickers not in the plan
+                for _ticker, _stop_price in _state_stops.items():
+                    if _ticker not in plan_tickers:
+                        entries.append({
+                            "ticker": _ticker,
+                            "stop_price": _stop_price,
+                        })
+                        logger.info(
+                            "Merged state-file stop for %s: $%.2f (not in plan)",
+                            _ticker, _stop_price,
+                        )
+                    else:
+                        # Update existing plan entries that have a stale/missing stop
+                        for e in entries:
+                            if e.get("ticker") == _ticker and not e.get("stop_price"):
+                                e["stop_price"] = _stop_price
+                                logger.info(
+                                    "Updated plan stop for %s from state file: $%.2f",
+                                    _ticker, _stop_price,
+                                )
+
+                plan["proposed_entries"] = entries
+    except Exception as _state_err:
+        logger.warning("Failed to merge state-file stops: %s", _state_err)
+
     # ── Connect to broker ────────────────────────────────────
     broker = None
     try:
@@ -219,10 +270,28 @@ def sync_market(
 
             for order in open_orders:
                 order_ticker = getattr(order, 'ticker', None)
+                # ── Guard: only cancel PROTECTIVE orders as orphans ──
+                # Orphan cleanup targets protective-exit orders (stop-loss,
+                # take-profit) left behind after a position closes.
+                #
+                # Order intent is encoded in client_order_id:
+                #   atlas_entry_*  → entry order (BUY or SELL) — never cancel
+                #   atlas_exit_*   → manual exit — never cancel as orphan
+                #   atlas_stop_*   → protective stop-loss — cancel if no position
+                #   atlas_tp_*     → protective take-profit — cancel if no position
+                #
+                # This replaces the old BUY/SELL side guard, which would break
+                # when short strategies add legitimate SELL entry orders.
+                client_oid = str(getattr(order, 'client_order_id', ''))
+                is_protective = ('atlas_stop' in client_oid
+                                 or 'atlas_tp' in client_oid)
+                if not is_protective:
+                    continue
+                # Fetch side for logging only (guard logic uses client_oid above)
+                side = getattr(order, 'side', '?')
                 if order_ticker and order_ticker not in position_tickers:
                     order_id = getattr(order, 'order_id', None)
                     order_type = getattr(order, 'order_type', '?')
-                    side = getattr(order, 'side', '?')
                     if dry_run:
                         logger.info(
                             "[DRY RUN] Would cancel orphaned %s %s order for %s (id=%s)",

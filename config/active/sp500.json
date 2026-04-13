@@ -18,7 +18,7 @@
   "risk": {
     "starting_equity": 5011.79,
     "leverage": 2.0,
-    "max_risk_per_trade_pct": 0.0035,
+    "max_risk_per_trade_pct": 0.005,
     "max_open_positions": 10,
     "max_sector_concentration": 2,
     "max_daily_drawdown_pct": 0.02,
@@ -39,7 +39,7 @@
     "holding_period_max": 20,
     "data_frequency": "daily",
     "order_type": "market_on_open",
-    "approval_required": false,
+    "auto_approve": true,
     "live_safety": {
       "require_double_approval": false,
       "max_order_value": 5000,
@@ -63,7 +63,7 @@
   "strategies": {
     "momentum_breakout": {
       "enabled": true,
-      "weight": 0.094,
+      "weight": 0.25,
       "atr_stop_mult": 1.5,
       "max_hold_days": 15,
       "lookback_days": 15,
@@ -109,10 +109,10 @@
       "cointegration_filter": {
         "enabled": false
       },
-      "weight": 0.1727
+      "weight": 0.3
     },
     "trend_following": {
-      "enabled": true,
+      "enabled": false,
       "fast_ma": 15,
       "slow_ma": 20,
       "pullback_pct": 0.04,
@@ -144,7 +144,7 @@
         "high_boost": 0.0
       },
       "sma200_filter": true,
-      "weight": 0.2082,
+      "weight": 0,
       "profit_target_atr_mult": 3.5
     },
     "opening_gap": {
@@ -164,16 +164,18 @@
         "days_before": 5,
         "days_after": 1
       },
-      "weight": 0.2229
+      "weight": 0.05
     },
     "sector_rotation": {
       "enabled": true,
-      "weight": 0.2423,
+      "weight": 0.15,
+      "atr_stop_mult": 2.0,
+      "trailing_stop_atr_mult": 3.0,
       "profit_target_atr_mult": 3.5
     },
     "short_term_mr": {
-      "enabled": true,
-      "weight": 0.03,
+      "enabled": false,
+      "weight": 0,
       "rsi_oversold": 15
     },
     "bb_squeeze": {
@@ -208,7 +210,7 @@
       "max_hold_days": 5,
       "atr_period": 14,
       "atr_stop_mult": 1.0,
-      "weight": 0.03
+      "weight": 0.25
     }
   },
   "moomoo": {
@@ -258,33 +260,33 @@
     "mode": "soft_pool",
     "overflow_enabled": true,
     "pools": {
-      "sector_rotation": {
-        "max_positions": 2,
-        "weight": 0.2423
-      },
-      "opening_gap": {
-        "max_positions": 2,
-        "weight": 0.2229
-      },
-      "trend_following": {
-        "max_positions": 2,
-        "weight": 0.2082
-      },
       "mean_reversion": {
-        "max_positions": 2,
-        "weight": 0.1727
+        "max_positions": 3,
+        "weight": 0.3
       },
       "momentum_breakout": {
-        "max_positions": 1,
-        "weight": 0.094
+        "max_positions": 2,
+        "weight": 0.25
       },
       "connors_rsi2": {
+        "max_positions": 2,
+        "weight": 0.25
+      },
+      "sector_rotation": {
+        "max_positions": 2,
+        "weight": 0.15
+      },
+      "opening_gap": {
         "max_positions": 1,
-        "weight": 0.03
+        "weight": 0.05
+      },
+      "trend_following": {
+        "max_positions": 0,
+        "weight": 0
       },
       "short_term_mr": {
-        "max_positions": 1,
-        "weight": 0.03
+        "max_positions": 0,
+        "weight": 0
       },
       "_other": {
         "max_positions": 2
@@ -304,9 +306,9 @@
   },
   "dynamic_sizing": {
     "enabled": true,
-    "base_risk_pct": 0.0035,
-    "min_risk_pct": 0.002,
-    "max_risk_pct": 0.005,
+    "base_risk_pct": 0.005,
+    "min_risk_pct": 0.003,
+    "max_risk_pct": 0.0075,
     "confidence_scaling": {
       "enabled": false
     },
@@ -404,6 +406,11 @@
     "previous_sharpe": "~0.50 (3-strategy equal-weight)"
   },
   "regime_enabled": true,
+  "regime_gate": {
+    "enabled": true,
+    "max_stale_days": 2,
+    "_comment": "Reject all signals when regime data is unavailable or stale. 6 trades without regime data produced 3 of 4 worst losses."
+  },
   "overlay": {
     "enabled": false,
     "mode": "log_only",

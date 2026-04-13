@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi TUI — Design Concepts</title>
+<style>
+  /* ═══════════════════════════════════════════════════════════
+     BASE / RESET
+     ═══════════════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; scroll-behavior: smooth; }
+  body {
+    background: #0e0e12;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     LAYOUT SHELL
+     ═══════════════════════════════════════════════════════════ */
+  .page-header {
+    text-align: center;
+    padding: 3rem 1rem 1.5rem;
+    border-bottom: 1px solid #222;
+    background: linear-gradient(180deg, #151520 0%, #0e0e12 100%);
+  }
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #6ee7b7, #3b82f6, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+  .page-header p { color: #777; font-size: 0.9rem; max-width: 600px; margin: 0 auto; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #111118;
+    border-bottom: 1px solid #222;
+    padding: 0 1rem;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 0.9rem 1.3rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #aaa; background: rgba(255,255,255,0.03); }
+  .tab-btn.active { color: #fff; border-bottom-color: #6ee7b7; }
+
+  /* Concept panels */
+  .concepts-container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .concept-panel { display: none; animation: fadeIn 0.3s ease; }
+  .concept-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Concept header */
+  .concept-header { margin-bottom: 2rem; }
+  .concept-header h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .concept-header .philosophy { color: #888; font-size: 0.9rem; margin-bottom: 0.75rem; font-style: italic; }
+  .concept-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .concept-tags span {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.07);
+    color: #999;
+  }
+
+  /* Mockup grid */
+  .mockup-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* ═══════════════════════════════════════════════════════════
+     1. MINIMAL MONOCHROME
+     ═══════════════════════════════════════════════════════════ */
+  .minimal .concept-header h2 { color: #e0e0e0; }
+  .minimal .concept-tags span { background: #1a1a1f; border: 1px solid #2a2a30; }
+
+  .m-card {
+    background: #16161b;
+    border: 1px solid #232328;
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    font-size: 0.85rem;
+  }
+  .m-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #555;
+    margin-bottom: 0.5rem;
+  }
+  .m-card .tool-name { color: #6ea1f7; font-weight: 600; }
+  .m-card .tool-path { color: #888; }
+  .m-card .spinner { display: inline-block; color: #6ea1f7; margin-right: 0.4rem; }
+
+  .m-code {
+    background: #111116;
+    border: 1px solid #1e1e24;
+    border-radius: 4px;
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    color: #8b8b9a;
+    margin-top: 0.6rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  .m-code .key { color: #6ea1f7; }
+  .m-code .str { color: #7ec87e; }
+  .m-code .num { color: #d4a054; }
+
+  .m-error {
+    background: #1a1517;
+    border: 1px solid #2d1f22;
+    border-radius: 4px;
+    padding: 0.8rem;
+    color: #d47272;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+  }
+
+  .m-delegation {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #1e1e24;
+  }
+  .m-delegation .arrow { color: #444; }
+  .m-delegation .team { color: #a78bfa; font-weight: 600; }
+  .m-delegation .agent { color: #888; }
+  .m-delegation .status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(110,161,247,0.12);
+    color: #6ea1f7;
+  }
+  .m-delegation .status.done { background: rgba(110,200,126,0.12); color: #7ec87e; }
+
+  .m-clarify-q {
+    color: #ccc;
+    margin-bottom: 0.7rem;
+    font-size: 0.9rem;
+  }
+  .m-clarify-opts { display: flex; gap: 0.5rem; }
+  .m-clarify-opts button {
+    background: #1e1e26;
+    border: 1px solid #2a2a34;
+    border-radius: 4px;
+    color: #bbb;
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .m-clarify-opts button:hover { border-color: #6ea1f7; color: #fff; }
+  .m-clarify-opts button.selected { background: #6ea1f7; color: #fff; border-color: #6ea1f7; }
+
+  .m-badge {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.75rem; color: #666;
+  }
+  .m-badge span { padding: 0.2rem 0.6rem; background: #1a1a20; border-radius: 4px; }
+
+  .m-progress { margin-top: 0.5rem; }
+  .m-progress-label { font-size: 0.8rem; color: #888; margin-bottom: 0.35rem; }
+  .m-progress-bar { height: 4px; background: #1e1e26; border-radius: 2px; overflow: hidden; }
+  .m-progress-fill { height: 100%; width: 60%; background: #6ea1f7; border-radius: 2px; transition: width 0.5s; }
+
+  /* ═══════════════════════════════════════════════════════════
+     2. NEO-BRUTALIST
+     ═══════════════════════════════════════════════════════════ */
+  .brutal .concept-header h2 { color: #FFE600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .brutal .concept-tags span { background: #000; border: 2px solid #FFE600; color: #FFE600; border-radius: 0; font-weight: 700; text-transform: uppercase; }
+
+  .b-card {
+    background: #fff;
+    color: #000;
+    border: 3px solid #000;
+    padding: 1rem 1.2rem;
+    font-size: 0.85rem;
+    box-shadow: 5px 5px 0 #000;
+    position: relative;
+  }
+  .b-card .label {
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #000;
+    background: #FFE600;
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+  .b-card .tool-name { color: #000; font-weight: 900; }
+  .b-card .tool-path { color: #555; font-weight: 600; }
+
+  .b-code {
+    background: #000;
+    color: #FFE600;
+    border: 2px solid #000;
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+  .b-code .key { color: #FF6B6B; font-weight: 700; }
+  .b-code .str { color: #FFE600; }
+  .b-code .num { color: #fff; }
+
+  .b-error {
+    background: #FF3333;
+    color: #fff;
+    border: 3px solid #000;
+    padding: 0.8rem;
+    font-weight: 900;
+    font-size: 0.85rem;
+    margin-top: 0.6rem;
+    text-transform: uppercase;
+  }
+
+  .b-delegation {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.6rem 0;
+    border-bottom: 3px solid #000;
+    font-weight: 700;
+  }
+  .b-delegation .arrow { color: #FF3333; font-size: 1.2rem; }
+  .b-delegation .team { color: #000; text-transform: uppercase; }
+  .b-delegation .agent { color: #555; }
+  .b-delegation .status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 900;
+    padding: 0.2rem 0.6rem;
+    background: #FFE600;
+    color: #000;
+    border: 2px solid #000;
+    text-transform: uppercase;
+  }
+  .b-delegation .status.done { background: #00CC66; }
+
+  .b-clarify-q {
+    color: #000;
+    font-weight: 900;
+    font-size: 1rem;
+    margin-bottom: 0.7rem;
+    text-transform: uppercase;
+  }
+  .b-clarify-opts { display: flex; gap: 0.5rem; }
+  .b-clarify-opts button {
+    background: #FFE600;
+    border: 3px solid #000;
+    color: #000;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 900;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 3px 3px 0 #000;
+    transition: all 0.1s;
+  }
+  .b-clarify-opts button:hover { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
+  .b-clarify-opts button.selected { background: #000; color: #FFE600; }
+
+  .b-badge {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.8rem; color: #000; font-weight: 900;
+  }
+  .b-badge span { padding: 0.2rem 0.5rem; background: #FFE600; border: 2px solid #000; }
+
+  .b-progress-label { font-size: 0.85rem; font-weight: 900; color: #000; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .b-progress-bar { height: 20px; background: #eee; border: 3px solid #000; overflow: hidden; }
+  .b-progress-fill { height: 100%; width: 60%; background: repeating-linear-gradient(45deg, #FFE600, #FFE600 10px, #000 10px, #000 12px); }
+
+  /* ═══════════════════════════════════════════════════════════
+     3. NEON CYBERPUNK
+     ═══════════════════════════════════════════════════════════ */
+  .cyber .concept-header h2 { background: linear-gradient(90deg, #0ff, #f0f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .cyber .concept-tags span { background: rgba(0,255,255,0.06); border: 1px solid rgba(0,255,255,0.2); color: #0ff; }
+
+  .c-card {
+    background: #0a0a14;
+    border: 1px solid rgba(0,255,255,0.15);
+    border-radius: 2px;
+    padding: 1rem 1.2rem;
+    font-size: 0.85rem;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0,255,255,0.05), inset 0 0 30px rgba(0,255,255,0.02);
+  }
+  .c-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #0ff, #f0f, transparent);
+  }
+  .c-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #0ff;
+    text-shadow: 0 0 8px rgba(0,255,255,0.5);
+    margin-bottom: 0.5rem;
+  }
+  .c-card .tool-name { color: #0ff; text-shadow: 0 0 6px rgba(0,255,255,0.3); }
+  .c-card .tool-path { color: #7a7a9a; }
+
+  .c-scanlines {
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    z-index: 1;
+    border-radius: 2px;
+  }
+
+  .c-code {
+    background: #06060e;
+    border: 1px solid rgba(255,0,255,0.12);
+    border-radius: 2px;
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    color: #9a9acd;
+    margin-top: 0.6rem;
+    line-height: 1.5;
+    position: relative;
+    overflow-x: auto;
+  }
+  .c-code .key { color: #0ff; }
+  .c-code .str { color: #f0f; text-shadow: 0 0 4px rgba(255,0,255,0.3); }
+  .c-code .num { color: #FFE66D; }
+
+  .c-error {
+    background: rgba(255,0,80,0.08);
+    border: 1px solid rgba(255,0,80,0.3);
+    border-radius: 2px;
+    padding: 0.8rem;
+    color: #ff3366;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+    text-shadow: 0 0 8px rgba(255,0,80,0.3);
+    position: relative;
+  }
+
+  .c-delegation {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid rgba(0,255,255,0.08);
+  }
+  .c-delegation .arrow { color: #f0f; text-shadow: 0 0 6px rgba(255,0,255,0.5); }
+  .c-delegation .team { color: #0ff; text-shadow: 0 0 4px rgba(0,255,255,0.3); }
+  .c-delegation .agent { color: #7a7a9a; }
+  .c-delegation .status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid rgba(0,255,255,0.3);
+    color: #0ff;
+    text-shadow: 0 0 6px rgba(0,255,255,0.5);
+    border-radius: 2px;
+  }
+  .c-delegation .status.done { border-color: rgba(0,255,100,0.3); color: #0f6; text-shadow: 0 0 6px rgba(0,255,100,0.5); }
+
+  .c-clarify-q { color: #ddd; font-size: 0.9rem; margin-bottom: 0.7rem; }
+  .c-clarify-opts { display: flex; gap: 0.5rem; }
+  .c-clarify-opts button {
+    background: rgba(0,255,255,0.05);
+    border: 1px solid rgba(0,255,255,0.25);
+    color: #0ff;
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+    text-shadow: 0 0 4px rgba(0,255,255,0.3);
+  }
+  .c-clarify-opts button:hover { background: rgba(0,255,255,0.12); box-shadow: 0 0 12px rgba(0,255,255,0.2); }
+  .c-clarify-opts button.selected { background: rgba(255,0,255,0.15); border-color: #f0f; color: #f0f; text-shadow: 0 0 6px rgba(255,0,255,0.5); }
+
+  .c-badge {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.75rem; color: #7a7a9a;
+  }
+  .c-badge span { padding: 0.2rem 0.6rem; border: 1px solid rgba(0,255,255,0.15); border-radius: 2px; color: #0ff; text-shadow: 0 0 4px rgba(0,255,255,0.3); }
+
+  .c-progress-label { font-size: 0.8rem; color: #9a9acd; margin-bottom: 0.35rem; }
+  .c-progress-bar { height: 4px; background: rgba(0,255,255,0.08); border-radius: 2px; overflow: hidden; }
+  .c-progress-fill { height: 100%; width: 60%; background: linear-gradient(90deg, #0ff, #f0f); border-radius: 2px; box-shadow: 0 0 10px rgba(0,255,255,0.4); }
+
+  /* ═══════════════════════════════════════════════════════════
+     4. SOFT GARDEN
+     ═══════════════════════════════════════════════════════════ */
+  .garden .concept-header h2 { color: #5d7a50; font-family: Georgia, 'Times New Roman', serif; }
+  .garden .philosophy { color: #8a7a6a !important; }
+  .garden .concept-tags span { background: #f0ebe3; color: #7c6a56; border: 1px solid #ddd4c8; }
+
+  .g-card {
+    background: #faf7f2;
+    border: 1px solid #e8e0d4;
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    font-size: 0.85rem;
+    color: #4a4a4a;
+    box-shadow: 0 2px 8px rgba(120,100,70,0.06);
+  }
+  .g-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7C9A6E;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .g-card .tool-name { color: #5d7a50; font-weight: 600; }
+  .g-card .tool-path { color: #8a7a6a; }
+  .g-card .spinner { color: #7C9A6E; }
+
+  .g-code {
+    background: #f3efe8;
+    border: 1px solid #e0d8cc;
+    border-radius: 8px;
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    color: #5a5040;
+    margin-top: 0.6rem;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+  .g-code .key { color: #5d7a50; }
+  .g-code .str { color: #C4704A; }
+  .g-code .num { color: #8a6830; }
+
+  .g-error {
+    background: #fdf0ec;
+    border: 1px solid #e8c8bc;
+    border-radius: 8px;
+    padding: 0.8rem;
+    color: #C4704A;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+  }
+
+  .g-delegation {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid #e8e0d4;
+  }
+  .g-delegation .arrow { color: #bbb09a; }
+  .g-delegation .team { color: #5d7a50; font-weight: 600; }
+  .g-delegation .agent { color: #8a7a6a; }
+  .g-delegation .status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    background: rgba(124,154,110,0.12);
+    color: #5d7a50;
+  }
+  .g-delegation .status.done { background: rgba(124,154,110,0.2); color: #4a6a3e; }
+
+  .g-clarify-q { color: #4a4a4a; font-size: 0.9rem; margin-bottom: 0.7rem; font-family: Georgia, serif; }
+  .g-clarify-opts { display: flex; gap: 0.5rem; }
+  .g-clarify-opts button {
+    background: #fff;
+    border: 1px solid #d4ccbe;
+    border-radius: 8px;
+    color: #5a5040;
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .g-clarify-opts button:hover { border-color: #7C9A6E; background: #f5f9f3; }
+  .g-clarify-opts button.selected { background: #7C9A6E; color: #fff; border-color: #7C9A6E; }
+
+  .g-badge {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.75rem; color: #8a7a6a;
+  }
+  .g-badge span { padding: 0.2rem 0.6rem; background: #f0ebe3; border-radius: 8px; }
+
+  .g-progress-label { font-size: 0.8rem; color: #8a7a6a; margin-bottom: 0.35rem; }
+  .g-progress-bar { height: 6px; background: #e8e0d4; border-radius: 3px; overflow: hidden; }
+  .g-progress-fill { height: 100%; width: 60%; background: linear-gradient(90deg, #7C9A6E, #a3c296); border-radius: 3px; }
+
+  /* ═══════════════════════════════════════════════════════════
+     5. DASHBOARD PRO
+     ═══════════════════════════════════════════════════════════ */
+  .dashpro .concept-header h2 { color: #e0e0e0; font-size: 1.4rem; }
+  .dashpro .concept-tags span { background: #1a1a2e; border: 1px solid #2a2a44; color: #7a7aa0; font-size: 0.65rem; }
+
+  .d-card {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 4px;
+    padding: 0.7rem 0.9rem;
+    font-size: 0.8rem;
+    color: #b0b0cc;
+  }
+  .d-card .label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #5a5a80;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .d-card .label .timestamp { color: #444468; font-size: 0.6rem; }
+  .d-card .tool-name { color: #7aa2f7; font-weight: 600; font-size: 0.8rem; }
+  .d-card .tool-path { color: #6a6a8e; }
+
+  .d-code {
+    background: #0d0d20;
+    border: 1px solid #1a1a34;
+    border-radius: 3px;
+    padding: 0.6rem;
+    font-size: 0.75rem;
+    color: #8888aa;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+    overflow-x: auto;
+  }
+  .d-code .key { color: #7aa2f7; }
+  .d-code .str { color: #9ece6a; }
+  .d-code .num { color: #ff9e64; }
+  .d-code .ln { color: #333355; user-select: none; margin-right: 0.8rem; }
+
+  .d-error {
+    background: #1a0d14;
+    border: 1px solid #3a1a24;
+    border-radius: 3px;
+    padding: 0.6rem;
+    color: #f7768e;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .d-error .icon { font-size: 0.9rem; }
+
+  .d-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .d-metric {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 4px;
+    padding: 0.5rem 0.7rem;
+    text-align: center;
+  }
+  .d-metric .val { font-size: 1.1rem; font-weight: 700; color: #e0e0e0; }
+  .d-metric .lbl { font-size: 0.6rem; color: #5a5a80; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.15rem; }
+  .d-metric.green .val { color: #9ece6a; }
+  .d-metric.amber .val { color: #ff9e64; }
+
+  .d-delegation {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #1a1a34;
+    font-size: 0.78rem;
+  }
+  .d-delegation .arrow { color: #444468; font-size: 0.7rem; }
+  .d-delegation .team { color: #bb9af7; font-weight: 600; }
+  .d-delegation .agent { color: #6a6a8e; }
+  .d-delegation .status {
+    margin-left: auto;
+    font-size: 0.6rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 9999px;
+    font-weight: 600;
+  }
+  .d-delegation .status.running { background: rgba(122,162,247,0.15); color: #7aa2f7; }
+  .d-delegation .status.done { background: rgba(158,206,106,0.15); color: #9ece6a; }
+
+  .d-clarify-q { color: #b0b0cc; font-size: 0.82rem; margin-bottom: 0.5rem; }
+  .d-clarify-opts { display: flex; gap: 0.4rem; }
+  .d-clarify-opts button {
+    background: #1a1a34;
+    border: 1px solid #2a2a4a;
+    border-radius: 3px;
+    color: #8888aa;
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .d-clarify-opts button:hover { border-color: #7aa2f7; color: #ccc; }
+  .d-clarify-opts button.selected { background: #7aa2f7; color: #fff; border-color: #7aa2f7; }
+
+  .d-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-size: 0.7rem; color: #5a5a80;
+  }
+  .d-badge span { padding: 0.15rem 0.5rem; background: #1a1a34; border-radius: 3px; color: #8888aa; }
+
+  .d-progress-label { font-size: 0.75rem; color: #6a6a8e; margin-bottom: 0.25rem; display: flex; justify-content: space-between; }
+  .d-progress-bar { height: 3px; background: #1a1a34; border-radius: 2px; overflow: hidden; }
+  .d-progress-fill { height: 100%; width: 60%; background: #7aa2f7; border-radius: 2px; }
+
+  /* ═══════════════════════════════════════════════════════════
+     6. RETRO CRT
+     ═══════════════════════════════════════════════════════════ */
+  .retro .concept-header h2 { color: #00ff41; text-shadow: 0 0 10px rgba(0,255,65,0.4); font-family: 'Courier New', monospace; }
+  .retro .philosophy { color: #00aa2a !important; }
+  .retro .concept-tags span { background: transparent; border: 1px solid #00aa2a; color: #00ff41; border-radius: 0; }
+
+  .r-screen {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .r-screen::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(0,0,0,0.15) 1px, rgba(0,0,0,0.15) 3px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .r-card {
+    background: #0a0a0a;
+    border: 1px solid #00882a;
+    padding: 1rem 1.2rem;
+    font-size: 0.85rem;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 4px rgba(0,255,65,0.25);
+    position: relative;
+  }
+  .r-card .label {
+    font-size: 0.75rem;
+    color: #00aa2a;
+    margin-bottom: 0.5rem;
+  }
+  .r-card .tool-name { color: #00ff41; }
+  .r-card .tool-path { color: #00aa2a; }
+
+  .r-border-top { border-top: none; }
+  .r-border-top::before {
+    content: '┌──────────────────────────────────────────────────────────────────────────┐';
+    display: block;
+    color: #00882a;
+    margin-bottom: 0.3rem;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .r-border-bot::after {
+    content: '└──────────────────────────────────────────────────────────────────────────┘';
+    display: block;
+    color: #00882a;
+    margin-top: 0.3rem;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .r-code {
+    background: #050505;
+    padding: 0.8rem;
+    font-size: 0.8rem;
+    color: #00dd38;
+    margin-top: 0.6rem;
+    line-height: 1.5;
+    border: 1px dashed #00662a;
+    overflow-x: auto;
+  }
+  .r-code .key { color: #00ff41; }
+  .r-code .str { color: #44ff77; }
+  .r-code .num { color: #aaffaa; }
+  .r-code .prompt { color: #00882a; }
+
+  .r-error {
+    background: #0a0a0a;
+    border: 1px solid #aa0000;
+    padding: 0.8rem;
+    color: #ff3333;
+    font-size: 0.8rem;
+    margin-top: 0.6rem;
+    text-shadow: 0 0 6px rgba(255,50,50,0.3);
+    font-family: 'Courier New', monospace;
+  }
+
+  .r-delegation {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px dashed #00662a;
+    font-family: 'Courier New', monospace;
+  }
+  .r-delegation .arrow { color: #00ff41; }
+  .r-delegation .team { color: #00ff41; }
+  .r-delegation .agent { color: #00aa2a; }
+  .r-delegation .status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: #00ff41;
+  }
+  .r-delegation .status.done { color: #44ff77; }
+
+  .r-clarify-q { color: #00ff41; font-size: 0.9rem; margin-bottom: 0.7rem; font-family: 'Courier New', monospace; }
+  .r-clarify-opts { display: flex; gap: 0.5rem; }
+  .r-clarify-opts button {
+    background: #0a0a0a;
+    border: 1px solid #00882a;
+    color: #00ff41;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-shadow: 0 0 4px rgba(0,255,65,0.25);
+  }
+  .r-clarify-opts button:hover { background: #001a0a; border-color: #00ff41; }
+  .r-clarify-opts button.selected { background: #00ff41; color: #000; text-shadow: none; }
+
+  .r-badge {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 0.75rem; color: #00aa2a;
+    font-family: 'Courier New', monospace;
+  }
+  .r-badge span { padding: 0.2rem 0.5rem; border: 1px solid #00662a; }
+
+  .r-progress-label { font-size: 0.8rem; color: #00aa2a; margin-bottom: 0.35rem; font-family: 'Courier New', monospace; }
+  .r-progress-text { color: #00ff41; font-family: 'Courier New', monospace; font-size: 0.85rem; text-shadow: 0 0 4px rgba(0,255,65,0.25); }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  .cursor { animation: blink 1s step-end infinite; color: #00ff41; }
+
+  @keyframes flicker {
+    0% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.8; }
+    94% { opacity: 1; }
+    96% { opacity: 0.9; }
+    97% { opacity: 1; }
+  }
+  .r-flicker { animation: flicker 4s infinite; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PAGE HEADER
+     ═══════════════════════════════════════════════════════════ -->
+<div class="page-header">
+  <h1>Pi TUI — Design Concepts</h1>
+  <p>Six radically different visual directions for the Pi terminal interface. Each concept reimagines tool calls, results, delegation cards, dialogs, and metrics.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB BAR
+     ═══════════════════════════════════════════════════════════ -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="minimal">① Minimal Mono</button>
+  <button class="tab-btn" data-tab="brutal">② Neo-Brutalist</button>
+  <button class="tab-btn" data-tab="cyber">③ Neon Cyberpunk</button>
+  <button class="tab-btn" data-tab="garden">④ Soft Garden</button>
+  <button class="tab-btn" data-tab="dashpro">⑤ Dashboard Pro</button>
+  <button class="tab-btn" data-tab="retro">⑥ Retro CRT</button>
+</div>
+
+<div class="concepts-container">
+
+<!-- ═══════════════════════════════════════════════════════════
+     1. MINIMAL MONOCHROME
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel minimal active" data-panel="minimal">
+  <div class="concept-header">
+    <h2>Minimal Monochrome</h2>
+    <p class="philosophy">Restraint is the ultimate sophistication. One accent color, generous whitespace, invisible-until-needed UI.</p>
+    <div class="concept-tags"><span>clean</span><span>professional</span><span>focused</span><span>single-accent</span></div>
+  </div>
+  <div class="mockup-grid">
+    <!-- Tool Call -->
+    <div class="m-card">
+      <div class="label">TOOL CALL</div>
+      <div><span class="spinner">◌</span> <span class="tool-name">Read</span> <span class="tool-path">/root/atlas/config/active_config.json</span></div>
+    </div>
+    <!-- Tool Result (Success) -->
+    <div class="m-card">
+      <div class="label">RESULT</div>
+      <div class="m-code"><span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+    </div>
+    <!-- Tool Result (Error) -->
+    <div class="m-card">
+      <div class="label">RESULT</div>
+      <div class="m-error">✕ ENOENT: no such file or directory — /root/atlas/config/missing.json</div>
+    </div>
+    <!-- Delegation -->
+    <div class="m-card">
+      <div class="label">DELEGATION</div>
+      <div class="m-delegation">
+        <span class="arrow">→</span>
+        <span class="team">Engineering</span>
+        <span class="arrow">→</span>
+        <span class="agent">Backend Developer</span>
+        <span class="status">running</span>
+      </div>
+      <div class="m-delegation">
+        <span class="arrow">→</span>
+        <span class="team">Validation</span>
+        <span class="arrow">→</span>
+        <span class="agent">QA Engineer</span>
+        <span class="status done">✓ complete</span>
+      </div>
+    </div>
+    <!-- Clarify -->
+    <div class="m-card">
+      <div class="label">CLARIFICATION</div>
+      <div class="m-clarify-q">Which database backend should we use?</div>
+      <div class="m-clarify-opts">
+        <button>SQLite</button>
+        <button class="selected">PostgreSQL</button>
+        <button>Both</button>
+      </div>
+    </div>
+    <!-- Cost Badge -->
+    <div class="m-card">
+      <div class="label">SESSION</div>
+      <div class="m-badge">
+        <span>$0.42</span><span>12.3K tokens</span><span>2m 14s</span>
+      </div>
+    </div>
+    <!-- Progress -->
+    <div class="m-card">
+      <div class="m-progress">
+        <div class="m-progress-label">Building... 3/5 tasks complete</div>
+        <div class="m-progress-bar"><div class="m-progress-fill"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     2. NEO-BRUTALIST
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel brutal" data-panel="brutal">
+  <div class="concept-header">
+    <h2>NEO-BRUTALIST</h2>
+    <p class="philosophy">No rounded corners. No subtlety. This terminal DEMANDS your attention. Raw, honest, unapologetically loud.</p>
+    <div class="concept-tags"><span>BOLD</span><span>RAW</span><span>HIGH CONTRAST</span><span>PUNK</span></div>
+  </div>
+  <div class="mockup-grid">
+    <div class="b-card">
+      <div class="label">⚡ TOOL CALL</div>
+      <div><span class="tool-name">READ FILE</span> → <span class="tool-path">/root/atlas/config/active_config.json</span></div>
+    </div>
+    <div class="b-card">
+      <div class="label">✓ RESULT</div>
+      <div class="b-code"><span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+    </div>
+    <div class="b-card">
+      <div class="label">✗ ERROR</div>
+      <div class="b-error">!! ENOENT: FILE NOT FOUND — /root/atlas/config/missing.json</div>
+    </div>
+    <div class="b-card">
+      <div class="label">⚙ DELEGATION</div>
+      <div class="b-delegation">
+        <span class="arrow">▶</span>
+        <span class="team">ENGINEERING</span>
+        <span class="arrow">▶</span>
+        <span class="agent">Backend Developer</span>
+        <span class="status">RUNNING</span>
+      </div>
+      <div class="b-delegation">
+        <span class="arrow">▶</span>
+        <span class="team">VALIDATION</span>
+        <span class="arrow">▶</span>
+        <span class="agent">QA Engineer</span>
+        <span class="status done">DONE</span>
+      </div>
+    </div>
+    <div class="b-card">
+      <div class="label">? QUESTION</div>
+      <div class="b-clarify-q">WHICH DATABASE?</div>
+      <div class="b-clarify-opts">
+        <button>SQLITE</button>
+        <button class="selected">POSTGRESQL</button>
+        <button>BOTH</button>
+      </div>
+    </div>
+    <div class="b-card">
+      <div class="label">$ SESSION</div>
+      <div class="b-badge">
+        <span>$0.42</span><span>12.3K TOKENS</span><span>2M 14S</span>
+      </div>
+    </div>
+    <div class="b-card">
+      <div class="b-progress-label">BUILDING... 3/5 TASKS</div>
+      <div class="b-progress-bar"><div class="b-progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     3. NEON CYBERPUNK
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel cyber" data-panel="cyber">
+  <div class="concept-header">
+    <h2>Neon Cyberpunk</h2>
+    <p class="philosophy">The terminal bleeds light. Cyan and magenta cut through the void. Every element glows like a street sign in Neo-Tokyo.</p>
+    <div class="concept-tags"><span>neon</span><span>dark</span><span>glowing</span><span>cyberpunk</span><span>immersive</span></div>
+  </div>
+  <div class="mockup-grid">
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label">◈ TOOL CALL</div>
+      <div><span class="tool-name">Read</span> <span class="tool-path">/root/atlas/config/active_config.json</span></div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label">◈ RESULT</div>
+      <div class="c-code"><span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label" style="color: #ff3366;">◈ ERROR</div>
+      <div class="c-error">⚠ ENOENT: no such file or directory — /root/atlas/config/missing.json</div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label">◈ DELEGATION</div>
+      <div class="c-delegation">
+        <span class="arrow">⟫</span>
+        <span class="team">Engineering</span>
+        <span class="arrow">⟫</span>
+        <span class="agent">Backend Developer</span>
+        <span class="status">⟳ running</span>
+      </div>
+      <div class="c-delegation">
+        <span class="arrow">⟫</span>
+        <span class="team">Validation</span>
+        <span class="arrow">⟫</span>
+        <span class="agent">QA Engineer</span>
+        <span class="status done">✧ complete</span>
+      </div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label">◈ CLARIFICATION</div>
+      <div class="c-clarify-q">Which database backend should we use?</div>
+      <div class="c-clarify-opts">
+        <button>SQLite</button>
+        <button class="selected">PostgreSQL</button>
+        <button>Both</button>
+      </div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="label">◈ SESSION</div>
+      <div class="c-badge">
+        <span>$0.42</span><span>12.3K tokens</span><span>2m 14s</span>
+      </div>
+    </div>
+    <div class="c-card">
+      <div class="c-scanlines"></div>
+      <div class="c-progress-label">Building... 3/5 tasks complete</div>
+      <div class="c-progress-bar"><div class="c-progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     4. SOFT GARDEN
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel garden" data-panel="garden">
+  <div class="concept-header">
+    <h2>Soft Garden</h2>
+    <p class="philosophy">Warmth over coldness. A terminal that feels like afternoon light through a window. Organic tones, gentle curves, quiet confidence.</p>
+    <div class="concept-tags"><span>warm</span><span>inviting</span><span>organic</span><span>calm</span><span>earthy</span></div>
+  </div>
+  <div class="mockup-grid">
+    <div class="g-card">
+      <div class="label">🌱 Tool Call</div>
+      <div><span class="spinner">○</span> <span class="tool-name">Read</span> <span class="tool-path">/root/atlas/config/active_config.json</span></div>
+    </div>
+    <div class="g-card">
+      <div class="label">🌿 Result</div>
+      <div class="g-code"><span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+    </div>
+    <div class="g-card">
+      <div class="label">🍂 Error</div>
+      <div class="g-error">File not found — /root/atlas/config/missing.json</div>
+    </div>
+    <div class="g-card">
+      <div class="label">🌻 Delegation</div>
+      <div class="g-delegation">
+        <span class="arrow">→</span>
+        <span class="team">Engineering</span>
+        <span class="arrow">→</span>
+        <span class="agent">Backend Developer</span>
+        <span class="status">running</span>
+      </div>
+      <div class="g-delegation">
+        <span class="arrow">→</span>
+        <span class="team">Validation</span>
+        <span class="arrow">→</span>
+        <span class="agent">QA Engineer</span>
+        <span class="status done">✓ done</span>
+      </div>
+    </div>
+    <div class="g-card">
+      <div class="label">🌸 Question</div>
+      <div class="g-clarify-q">Which database backend should we use?</div>
+      <div class="g-clarify-opts">
+        <button>SQLite</button>
+        <button class="selected">PostgreSQL</button>
+        <button>Both</button>
+      </div>
+    </div>
+    <div class="g-card">
+      <div class="label">☀ Session</div>
+      <div class="g-badge">
+        <span>$0.42</span><span>12.3K tokens</span><span>2m 14s</span>
+      </div>
+    </div>
+    <div class="g-card">
+      <div class="g-progress-label">Planting... 3/5 tasks bloomed</div>
+      <div class="g-progress-bar"><div class="g-progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     5. DASHBOARD PRO
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel dashpro" data-panel="dashpro">
+  <div class="concept-header">
+    <h2>Dashboard Pro</h2>
+    <p class="philosophy">Every pixel earns its place. Maximum information density, zero decoration. Built for operators who live in the terminal.</p>
+    <div class="concept-tags"><span>dense</span><span>data-first</span><span>compact</span><span>operational</span><span>mission-control</span></div>
+  </div>
+  <div class="mockup-grid">
+    <!-- Metrics row -->
+    <div class="d-metrics">
+      <div class="d-metric green"><div class="val">$0.42</div><div class="lbl">Cost</div></div>
+      <div class="d-metric"><div class="val">12.3K</div><div class="lbl">Tokens</div></div>
+      <div class="d-metric"><div class="val">2:14</div><div class="lbl">Elapsed</div></div>
+      <div class="d-metric amber"><div class="val">3/5</div><div class="lbl">Tasks</div></div>
+    </div>
+    <div class="d-card">
+      <div class="label"><span>TOOL CALL</span><span class="timestamp">14:32:07.421</span></div>
+      <div><span class="tool-name">Read</span> <span class="tool-path">/root/atlas/config/active_config.json</span></div>
+    </div>
+    <div class="d-card">
+      <div class="label"><span>RESULT — 4 lines, 128B</span><span class="timestamp">14:32:07.834</span></div>
+      <div class="d-code"><span class="ln">1</span><span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="ln">2</span><span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="ln">3</span><span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="ln">4</span><span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+    </div>
+    <div class="d-card">
+      <div class="label"><span>ERROR</span><span class="timestamp">14:32:08.102</span></div>
+      <div class="d-error"><span class="icon">⊘</span> ENOENT: /root/atlas/config/missing.json</div>
+    </div>
+    <div class="d-card">
+      <div class="label"><span>AGENTS</span></div>
+      <div class="d-delegation">
+        <span class="arrow">▸</span>
+        <span class="team">Engineering</span>
+        <span class="arrow">▸</span>
+        <span class="agent">Backend Dev</span>
+        <span class="status running">● running</span>
+      </div>
+      <div class="d-delegation">
+        <span class="arrow">▸</span>
+        <span class="team">Validation</span>
+        <span class="arrow">▸</span>
+        <span class="agent">QA Engineer</span>
+        <span class="status done">● done</span>
+      </div>
+    </div>
+    <div class="d-card">
+      <div class="label"><span>INPUT REQUIRED</span></div>
+      <div class="d-clarify-q">Which database backend?</div>
+      <div class="d-clarify-opts">
+        <button>SQLite</button>
+        <button class="selected">PostgreSQL</button>
+        <button>Both</button>
+      </div>
+    </div>
+    <div class="d-card">
+      <div class="d-progress-label"><span>Build pipeline</span><span>60%</span></div>
+      <div class="d-progress-bar"><div class="d-progress-fill"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     6. RETRO CRT
+     ═══════════════════════════════════════════════════════════ -->
+<div class="concept-panel retro" data-panel="retro">
+  <div class="concept-header">
+    <h2>> RETRO CRT_</h2>
+    <p class="philosophy">Green phosphor. Scanlines. The warm hum of a cathode ray tube. Computing felt more real when the screen glowed.</p>
+    <div class="concept-tags"><span>1983</span><span>phosphor</span><span>scanlines</span><span>CRT</span><span>hacker</span></div>
+  </div>
+  <div class="mockup-grid">
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label">[SYSTEM] EXECUTING TOOL CALL...</div>
+        <div>&gt; READ <span class="tool-path">/root/atlas/config/active_config.json</span><span class="cursor">_</span></div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label">[OK] FILE CONTENTS (128 BYTES):</div>
+        <div class="r-code"><span class="prompt">│</span> <span class="key">"trading_mode"</span>: <span class="str">"paper"</span>,
+<span class="prompt">│</span> <span class="key">"risk_per_trade"</span>: <span class="num">0.02</span>,
+<span class="prompt">│</span> <span class="key">"max_positions"</span>: <span class="num">8</span>,
+<span class="prompt">│</span> <span class="key">"universe"</span>: <span class="str">"us_mega_cap"</span></div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label" style="color:#ff3333;">[ERR] FILE NOT FOUND</div>
+        <div class="r-error">*** ENOENT: /root/atlas/config/missing.json
+*** ABORT. CHECK PATH AND RETRY.</div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label">[AGENTS] STATUS REPORT:</div>
+        <div class="r-delegation">
+          <span class="arrow">&gt;&gt;</span>
+          <span class="team">ENGINEERING</span>
+          <span class="arrow">&gt;&gt;</span>
+          <span class="agent">BACKEND_DEV</span>
+          <span class="status">[RUNNING...]</span>
+        </div>
+        <div class="r-delegation">
+          <span class="arrow">&gt;&gt;</span>
+          <span class="team">VALIDATION</span>
+          <span class="arrow">&gt;&gt;</span>
+          <span class="agent">QA_ENGINEER</span>
+          <span class="status done">[COMPLETE]</span>
+        </div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label">[INPUT] AWAITING RESPONSE:</div>
+        <div class="r-clarify-q">&gt; SELECT DATABASE BACKEND:<span class="cursor">_</span></div>
+        <div class="r-clarify-opts">
+          <button>1) SQLITE</button>
+          <button class="selected">2) POSTGRESQL</button>
+          <button>3) BOTH</button>
+        </div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="label">[SESSION] METRICS:</div>
+        <div class="r-badge">
+          <span>COST: $0.42</span><span>TOKENS: 12.3K</span><span>TIME: 2M14S</span>
+        </div>
+      </div>
+    </div>
+    <div class="r-screen r-flicker">
+      <div class="r-card">
+        <div class="r-progress-label">[BUILD] PROGRESS:</div>
+        <div class="r-progress-text">[████████████░░░░░░░░] 3/5 TASKS — 60%<span class="cursor">_</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /concepts-container -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.concept-panel');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.querySelector(`.concept-panel[data-panel="${target}"]`).classList.add('active');
+    });
+  });
+
+  // Make mock buttons interactive
+  document.querySelectorAll('.m-clarify-opts button, .b-clarify-opts button, .c-clarify-opts button, .g-clarify-opts button, .d-clarify-opts button, .r-clarify-opts button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+  });
+</script>
+
+</body>
+</html>

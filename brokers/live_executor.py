@@ -598,6 +598,18 @@ class LiveExecutor:
 
         return report
 
+    # ── Order Intent Convention ──────────────────────────────────────────
+    # Orders carry intent via the `remark` prefix → client_order_id:
+    #   atlas_entry_*   → opening position (BUY for longs, SELL for shorts)
+    #   atlas_exit_*    → closing position (manual/forced exit)
+    #   atlas_stop_*    → protective stop-loss (GTC, auto-managed)
+    #   atlas_tp_*      → protective take-profit (GTC, auto-managed)
+    #
+    # sync_protective_orders uses this to distinguish orphaned protective
+    # orders (safe to cancel) from pending entry orders (must keep).
+    # When adding short strategies, tag SELL entries as atlas_entry_*
+    # so the orphan guard doesn't cancel them.
+    # ─────────────────────────────────────────────────────────────────────
     def _execute_entry(self, entry: dict, trade_date: str) -> dict:
         """Execute a single entry order."""
         ticker = entry.get("ticker", "")
@@ -686,7 +698,7 @@ class LiveExecutor:
             qty=qty,
             price=_order_price,
             order_type=OrderType.LIMIT,
-            remark=f"atlas_{strategy}_{trade_date}"[:64],
+            remark=f"atlas_entry_{strategy}_{trade_date}"[:64],
         )
 
         # Poll for fill — LIMIT orders submitted pre-market return
@@ -1756,6 +1768,9 @@ class LiveExecutor:
 
     # ── Limit order lifecycle ──────────────────────────────────
 
+    # WARNING: Do not add to cron without verifying noon-ET cutoff against
+    # local timezone (AEST).  See 2026-04-10 incident where timezone
+    # mismatch caused premature cancellation of valid entry orders.
     def cancel_unfilled_limits(self, cutoff_hour: int = 12) -> list:
         """Cancel unfilled limit BUY orders after cutoff hour (default noon ET).
 
@@ -1763,9 +1778,13 @@ class LiveExecutor:
         on the exchange through the close.  Only BUY limit orders are cancelled;
         protective STOP/TRAILING_STOP SELL orders are left untouched.
 
+        **Safety:** A hard floor of noon ET (hour 12) is enforced at runtime.
+        If cutoff_hour < 12, it is clamped to 12 and a warning is logged.
+
         Args:
             cutoff_hour: Hour in ET (0-23) after which unfilled limits are
-                         cancelled.  Default is 12 (noon ET).
+                         cancelled.  Default is 12 (noon ET).  Cannot be
+                         set below 12 (clamped with warning).
 
         Returns:
             List of cancellation result dicts, one per attempted cancel.
@@ -1774,17 +1793,32 @@ class LiveExecutor:
             logger.warning("cancel_unfilled_limits: not connected")
             return []
 
+        # Hard floor: never cancel before noon ET regardless of caller arg
+        if cutoff_hour < 12:
+            logger.warning(
+                "cancel_unfilled_limits: cutoff_hour=%d is below safety floor 12 "
+                "— clamping to 12.  See 2026-04-10 incident.",
+                cutoff_hour,
+            )
+            cutoff_hour = 12
+
         # Determine current ET time without requiring pytz
         from zoneinfo import ZoneInfo
         _now_et = datetime.now(tz=ZoneInfo("America/New_York"))
         current_et_hour = _now_et.hour
 
         if current_et_hour < cutoff_hour:
-            logger.info(
-                "cancel_unfilled_limits: ET hour %d < cutoff %d — skipping",
+            logger.warning(
+                "cancel_unfilled_limits: BLOCKED — ET hour %d < cutoff %d. "
+                "No orders will be cancelled.",
                 current_et_hour, cutoff_hour,
             )
             return []
+
+        logger.info(
+            "cancel_unfilled_limits: PROCEEDING — ET hour %d >= cutoff %d",
+            current_et_hour, cutoff_hour,
+        )
 
         open_orders = self._broker.get_open_orders()
         cancelled = []
@@ -1912,7 +1946,8 @@ class LiveExecutor:
             if status_val != "filled":
                 continue
 
-            # Skip protective orders (remark starts with atlas_stop_ or atlas_tp_)
+            # Skip protective orders — only reconcile entry fills.
+            # Intent convention: atlas_entry_* = entry, atlas_stop_*/atlas_tp_* = protective
             client_order_id = str(getattr(order, "client_order_id", ""))
             if "atlas_stop_" in client_order_id or "atlas_tp_" in client_order_id:
                 continue
