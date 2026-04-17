@@ -192,19 +192,37 @@ def render_hourly_1w(ticker: str, out_path: Path) -> Path:
     """
     Render a 1-week hourly chart for *ticker* to *out_path*.
 
-    Hourly intraday caches are not yet wired up; falls back to last 60 days
-    of daily data with a WARNING log.
+    Strategy:
+    1. Try load_hourly(ticker, days=7) for real 1-h bars (Alpaca).
+    2. On success → normalise + render candles directly.
+    3. On failure → fall back to last 60 days of daily data (logged at INFO).
     """
     if _cache_valid(out_path):
         log.info("chart_renders: cache hit for %s → %s", ticker, out_path)
         return out_path
 
-    log.warning(
-        "chart_renders: hourly data source not yet wired up, "
-        "using 60-day daily fallback for %s",
+    # ── Attempt 1: real hourly bars ───────────────────────────────────────
+    try:
+        from data.hourly_loader import load_hourly
+        df_hourly = load_hourly(ticker, days=7)
+        if df_hourly is not None and len(df_hourly) >= 2:
+            df = _normalise_df(df_hourly)
+            log.info(
+                "chart_renders: rendering %d hourly bars for %s",
+                len(df), ticker,
+            )
+            return _render(df, out_path)
+    except Exception as exc:
+        log.info(
+            "chart_renders: hourly unavailable for %s — %s",
+            ticker, exc,
+        )
+
+    # ── Attempt 2: 60-day daily fallback ─────────────────────────────────
+    log.info(
+        "chart_renders: hourly unavailable for %s — falling back to daily tail",
         ticker,
     )
-
     df_raw = _load_parquet(ticker)
     if df_raw is None:
         raise ValueError(f"No parquet data for {ticker}")
