@@ -477,18 +477,10 @@ class AlpacaBroker(BrokerAdapter):
             alpaca_price = float(getattr(pos, "current_price", 0) or 0)
             cost_basis = float(getattr(pos, "cost_basis", 0) or 0)
 
-            # Use Tiingo price if available; fall back to Alpaca
+            # Price arbiter: Alpaca is authority; halts ticker on >halt_pct spread
+            from brokers.price_arbiter import arbitrate
             tiingo_price = tiingo_prices.get(symbol.upper(), 0)
-            if tiingo_price > 0:
-                current_price = tiingo_price
-                if alpaca_price > 0 and abs(tiingo_price - alpaca_price) / alpaca_price > 0.02:
-                    logger.warning(
-                        "get_positions: %s price mismatch — Tiingo=$%.2f Alpaca=$%.2f "
-                        "(using Tiingo)",
-                        atlas_ticker, tiingo_price, alpaca_price,
-                    )
-            else:
-                current_price = alpaca_price
+            current_price = arbitrate(atlas_ticker, tiingo_price, alpaca_price)
 
             # Recalculate PnL from authoritative price
             market_value = round(current_price * qty, 2)

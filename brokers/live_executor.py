@@ -613,6 +613,14 @@ class LiveExecutor:
     def _execute_entry(self, entry: dict, trade_date: str) -> dict:
         """Execute a single entry order."""
         ticker = entry.get("ticker", "")
+        # Price arbiter halt check (B5)
+        from brokers.price_arbiter import is_ticker_halted
+        if is_ticker_halted(ticker):
+            logger.critical(
+                "execute_entry BLOCKED: %s is halted due to price arbiter disagreement",
+                ticker,
+            )
+            return {"status": "halted", "ticker": ticker, "reason": "price_arbiter_halt"}
         price = entry.get("entry_price", 0)
         qty = entry.get("position_size", 0)
         strategy = entry.get("strategy", "")

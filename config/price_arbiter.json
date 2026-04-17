@@ -1,0 +1,6 @@
+{
+  "warn_pct": 2.0,
+  "halt_pct": 5.0,
+  "authority_on_mismatch": "alpaca",
+  "_comment": "When Tiingo/Alpaca spread > warn_pct, log INFO and use 'authority_on_mismatch' source. When > halt_pct, alert CRITICAL via Telegram and block new entries for that ticker."
+}
