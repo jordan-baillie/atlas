@@ -210,6 +210,11 @@ print(f'macro_indicators refresh: {\"ok\" if ok else \"FAILED\"}')
             echo "$(date -Iseconds) Macro indicator refresh complete" >> "$LOG_DIR/pi-cron.log"
         fi
 
+        # ── VIX parquet refresh (incremental 7-day) ───────────────────────────
+        echo "$(date -Iseconds) Refreshing VIX parquet..." >> "$LOG_DIR/pi-cron.log"
+        python3 -m scripts.backfill_vix --days 7 >> "$LOG_DIR/pi-cron.log" 2>&1 || true
+        fi
+
         # ── AI overlay (log-only mode) ─────────────────────────────────────
         # Runs BEFORE the planning agent so the decision is in SQLite when
         # generate_regime_plan() annotates the plan with overlay_context.
@@ -283,6 +288,8 @@ NOTE: A Telegram summary is sent automatically after this workflow completes —
             else
                 echo "$(date -Iseconds) Overlay evaluation complete" >> "$LOG_DIR/pi-cron.log"
             fi
+            # ── Weekly A/B vision review (same Saturday slot) ─────────────
+            cd "$PROJECT" && python3 -m scripts.review_vision_ab --days 7 --telegram >> "$LOG_DIR/overlay_eval_$(date +%Y%m%d).log" 2>&1 || true
         fi
         ;;
     research)
