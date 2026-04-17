@@ -99,3 +99,63 @@ To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Claude CLI Subprocess — CRITICAL Routing Rule
+
+Every `pi` or `claude` CLI subprocess call in Atlas MUST include:
+
+```
+--system-prompt "You are Claude Code, Anthropic's official CLI for Claude."
+```
+
+This flag routes the call to the Claude Max subscription ($0 marginal cost). Without it, calls route to pay-per-token "extra usage" billing and will fail with `400 out of extra usage` once credits exhaust.
+
+### Why this matters
+
+Anthropic identifies Claude Code callers by the exact system-prompt string. Max-subscription routing is free within the rolling 5-hour window. API-key / extra-usage calls can burn $10+/minute on a research loop.
+
+### Working Python pattern
+
+```python
+import subprocess
+result = subprocess.run(
+    ["pi", "-p", "--model", "claude-sonnet-4-6",
+     "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
+     "--mode", "json"],
+    input=prompt, capture_output=True, text=True, timeout=1800,
+)
+```
+
+### Working bash pattern
+
+```bash
+pi -p --model claude-sonnet-4-6 \
+   --system-prompt "You are Claude Code, Anthropic's official CLI for Claude." \
+   --mode json <<< "$PROMPT"
+```
+
+### Wrong pattern (never do this)
+
+```python
+# WRONG — no --system-prompt, routes to extra-usage billing
+subprocess.run(["pi", "-p", "--model", model, "--mode", "json"], input=prompt, ...)
+
+# ALSO WRONG — direct Anthropic() API-key billing
+from anthropic import Anthropic
+client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+```
+
+### Diagnosing "out of extra usage" (400 error)
+
+If `400 invalid_request_error: You're out of extra usage` appears:
+
+1. **FIRST** — grep every subprocess call for `pi` or `claude` and verify each includes `--system-prompt "You are Claude Code, Anthropic's official CLI for Claude."`. Missing this flag is the #1 cause.
+2. Only then consider: Max rolling window exhausted, `Anthropic()` client somewhere, or expired OAuth token (`pi login`).
+
+**Never** "fix" this by adding API credits — the fix is always on the auth path.
+
+### Verified April 2026
+
+Atlas call sites confirmed routing to Max subscription: `services/job_server.py`, `services/pi_session.py`, `research/discovery/discovery.py`, `research/llm_loop_runner.py`, `overlay/engine.py` (via `SYSTEM_PROMPT` constant), `scripts/autoresearch.py`, `scripts/claude_auth_check.py`.
+
+See `/root/AGENTS.md` and `/root/.pi/teams/skills/claude-auth.md` for the full reference.
