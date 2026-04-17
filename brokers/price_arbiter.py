@@ -7,10 +7,13 @@ is_ticker_halted(ticker) and skip.
 import json
 import logging
 import threading
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 _CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "price_arbiter.json"
+_THROTTLE_PATH = Path(__file__).resolve().parent.parent / "data" / "price_arbiter_alert_throttle.json"
+_ALERT_THROTTLE_HOURS = 6
 _HALTED_TICKERS: set[str] = set()
 
 _DEFAULT_CFG = {"warn_pct": 2.0, "halt_pct": 5.0, "authority_on_mismatch": "alpaca"}
@@ -29,12 +32,55 @@ def _send_telegram_bg(msg: str) -> None:
     def _send():
         try:
             from utils.telegram import send_message
-            send_message(f"🚨 {msg}")
+            send_message(f"\U0001f6a8 {msg}")
         except Exception as e:
             logger.warning("telegram alert failed: %s", e)
 
     t = threading.Thread(target=_send, daemon=True, name="price_arbiter_alert")
     t.start()
+
+
+def _should_send_alert(ticker: str) -> bool:
+    """Return True if a Telegram alert should be sent for this ticker.
+
+    Uses a file-based throttle so repeated process invocations (cron) do not
+    spam.  Reads and writes the JSON atomically (tempfile + rename).  On any
+    IO error the function defaults to True (fail-open) so alerts are never
+    silently lost.
+    """
+    ticker_upper = ticker.upper()
+    try:
+        throttle: dict = {}
+        if _THROTTLE_PATH.exists():
+            try:
+                with open(_THROTTLE_PATH) as f:
+                    throttle = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                throttle = {}
+
+        last_ts_str = throttle.get(ticker_upper)
+        if last_ts_str:
+            try:
+                last_ts = datetime.fromisoformat(last_ts_str)
+                # Ensure both are timezone-aware for comparison
+                if last_ts.tzinfo is None:
+                    last_ts = last_ts.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) - last_ts < timedelta(hours=_ALERT_THROTTLE_HOURS):
+                    return False
+            except (ValueError, TypeError):
+                pass  # Malformed ts — treat as absent, allow send
+
+        # Update the throttle file atomically
+        throttle[ticker_upper] = datetime.now(timezone.utc).isoformat()
+        _THROTTLE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _THROTTLE_PATH.with_suffix(".tmp")
+        with open(tmp, "w") as f:
+            json.dump(throttle, f, indent=2)
+        tmp.replace(_THROTTLE_PATH)
+        return True
+    except Exception as e:
+        logger.warning("price_arbiter throttle IO error: %s — defaulting to send", e)
+        return True
 
 
 def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
@@ -57,7 +103,8 @@ def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
             f"Alpaca=${alpaca_price:.2f} spread={spread_pct:.2f}% \u2014 BLOCKING NEW ENTRIES"
         )
         logger.critical(msg)
-        _send_telegram_bg(msg)
+        if _should_send_alert(ticker):
+            _send_telegram_bg(msg)
     elif spread_pct >= cfg["warn_pct"]:
         logger.info(
             "price_arbiter %s: Tiingo=$%.2f Alpaca=$%.2f spread=%.2f%% (using %s)",
