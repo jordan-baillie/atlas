@@ -285,7 +285,8 @@ def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
                 "daily_pnl": daily_pnl,
             }
             result["total_pnl"] += daily_pnl
-        except Exception:
+        except Exception as e:
+            logger.debug("per-position PnL calc failed for %s: %s", ticker, e)
             continue
 
     result["total_pnl"] = round(result["total_pnl"], 2)
@@ -903,7 +904,8 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     capture_output=True, text=True, timeout=5,
                 )
                 services[svc] = result.stdout.strip()
-            except Exception:
+            except Exception as e:
+                logger.debug("systemctl is-active %s failed: %s", svc, e)
                 services[svc] = "unknown"
 
         # Data freshness from SQLite
@@ -1305,8 +1307,8 @@ def signals_ev(_auth: HTTPBasicCredentials = Depends(check_auth)):
         results = compute_all_strategies_ev(min_trades=3)
         try:
             persist_strategy_ev(results)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("persist_strategy_ev failed: %s", e)
         return {"strategies": results, "source": "live"}
     except Exception as e:
         logger.exception("signals_ev failed")
@@ -1338,8 +1340,8 @@ def regime_forecast(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 state_probs = {}
                 try:
                     state_probs = _json.loads(rd.get("state_probabilities") or "{}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("state_probs JSON parse failed: %s", e)
                 horizons[f"{rd['horizon_days']}d"] = {
                     "days": rd["horizon_days"],
                     "expected_return": rd["expected_return"],
@@ -1369,8 +1371,8 @@ def regime_forecast(_auth: HTTPBasicCredentials = Depends(check_auth)):
         result = simulate_return_paths_from_regime(cur, n_paths=5000, n_days=90, seed=42)
         try:
             persist_forecast(result)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("persist_forecast failed: %s", e)
         result["source"] = "live"
         return result
     except Exception as e:
@@ -1407,8 +1409,8 @@ def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 as_of = rd["as_of"]
                 try:
                     tickers = _json.loads(rd.get("tickers") or "[]")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("tickers JSON parse failed: %s", e)
                 horizons[f"{rd['horizon_days']}d"] = {
                     "days": rd["horizon_days"],
                     "prob_ruin": rd["prob_ruin"],
@@ -1433,8 +1435,8 @@ def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
         result = compute_for_current_portfolio(floor_pct=0.70)
         try:
             persist_ruin_probability(result)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("persist_ruin_probability failed: %s", e)
         result["source"] = "live"
         return result
     except Exception as e:
@@ -1675,8 +1677,8 @@ def finance_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
             try:
                 with open(moomoo_path) as f:
                     moomoo_data = json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Moomoo manual cache parse failed: %s", e)
 
         payload = build_finance_payload(
             up_conn, atlas_eq, atlas_pnl, portfolio_history, moomoo_data
@@ -1695,8 +1697,8 @@ def finance_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
             try:
                 with open(finance_path) as f:
                     return JSONResponse(content=json.load(f))
-            except Exception:
-                pass
+            except Exception as e2:
+                logger.warning("Finance cache fallback parse failed: %s", e2)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -2291,7 +2293,8 @@ def research_overview(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     engine_status = "idle"
                 else:
                     engine_status = "idle"
-            except Exception:
+            except Exception as e:
+                logger.debug("engine_status subprocess failed: %s", e)
                 engine_status = "unknown"
 
             # Total all-time and daily aggregates

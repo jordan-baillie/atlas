@@ -224,7 +224,8 @@ class LivePortfolio:
             from markets import get_market
             market_profile = get_market(self.market_id)
             universe_tickers = set(market_profile.get_formatted_tickers())
-        except Exception:
+        except Exception as e:
+            logger.warning("Universe ticker load failed for market %s: %s", self.market_id, e)
             universe_tickers = None
 
         self.positions = []
@@ -315,7 +316,8 @@ class LivePortfolio:
                 try:
                     with open(plan_file) as f:
                         plan = json.load(f)
-                except Exception:
+                except Exception as e:
+                    logger.warning("_enrich_from_plans: failed to load plan file %s: %s", plan_file, e)
                     continue
                 trade_date = plan.get("trade_date", "")
                 for entry in plan.get("proposed_entries", []):
@@ -345,7 +347,8 @@ class LivePortfolio:
                             meta.setdefault(ticker, {})["strategy"] = strategy
                         if sp.get("entry_date"):
                             meta[ticker].setdefault("entry_date", sp["entry_date"])
-            except Exception:
+            except Exception as e:
+                logger.warning("_enrich_from_plans: state file parse failed: %s", e)
                 pass
 
         enriched = 0
@@ -493,7 +496,8 @@ class LivePortfolio:
         try:
             with open(path) as f:
                 state = json.load(f)
-        except Exception:
+        except Exception as e:
+            logger.warning("reconcile state file load failed: %s", e)
             return []
 
         local_tickers = {p.get("ticker") for p in state.get("positions", []) if p.get("ticker")}

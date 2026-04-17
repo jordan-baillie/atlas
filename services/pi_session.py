@@ -156,8 +156,8 @@ class PiSessionManager:
                         chunk = await self.process.stderr.read(65536)  # type: ignore[union-attr]
                         if not chunk:
                             break
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("pi_session stderr drain: %s", e)
 
             stderr_task = asyncio.create_task(_drain_stderr())
 
@@ -229,16 +229,16 @@ class PiSessionManager:
                             pass
                 try:
                     await self.process.wait()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("pi_session process.wait() failed: %s", e)
             self._running = False
 
             # Clean up temp image files
             for p in temp_image_paths:
                 try:
                     p.unlink(missing_ok=True)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("pi_session temp file cleanup: %s", e)
 
             done = PiEvent("done", {"full_text": self._current_response})
             await self._broadcast(done)
