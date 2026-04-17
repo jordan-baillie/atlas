@@ -1576,6 +1576,17 @@ def main():
         pattern=r"^sweep_promote:.+:(approve|reject):\w+$",
     ))
 
+    async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Suppress transient NetworkError tracebacks; log all other errors normally."""
+        from telegram.error import NetworkError
+        err = context.error
+        if isinstance(err, NetworkError):
+            logger.warning("Transient Telegram network error (auto-recovering): %s", err)
+            return
+        logger.error("Unhandled telegram bot error", exc_info=err)
+
+    app.add_error_handler(_error_handler)
+
     logger.info("Bot polling started. Commands: /status /plan /halt /unhalt /task /jobs /job /kill /logs /specs")
     app.run_polling(drop_pending_updates=True)
 
