@@ -6,6 +6,7 @@ is_ticker_halted(ticker) and skip.
 """
 import json
 import logging
+import threading
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,19 @@ def _load_config() -> dict:
             return json.load(f)
     except Exception:
         return dict(_DEFAULT_CFG)
+
+
+def _send_telegram_bg(msg: str) -> None:
+    """Fire-and-forget Telegram alert in a daemon thread (never blocks arbitration)."""
+    def _send():
+        try:
+            from utils.telegram import send_message
+            send_message(f"🚨 {msg}")
+        except Exception as e:
+            logger.warning("telegram alert failed: %s", e)
+
+    t = threading.Thread(target=_send, daemon=True, name="price_arbiter_alert")
+    t.start()
 
 
 def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
@@ -40,14 +54,10 @@ def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
         _HALTED_TICKERS.add(ticker.upper())
         msg = (
             f"CRITICAL price halt: {ticker} Tiingo=${tiingo_price:.2f} "
-            f"Alpaca=${alpaca_price:.2f} spread={spread_pct:.2f}% — BLOCKING NEW ENTRIES"
+            f"Alpaca=${alpaca_price:.2f} spread={spread_pct:.2f}% \u2014 BLOCKING NEW ENTRIES"
         )
         logger.critical(msg)
-        try:
-            from utils.telegram import send_message
-            send_message(f"🚨 {msg}")
-        except Exception as e:
-            logger.warning("telegram alert failed: %s", e)
+        _send_telegram_bg(msg)
     elif spread_pct >= cfg["warn_pct"]:
         logger.info(
             "price_arbiter %s: Tiingo=$%.2f Alpaca=$%.2f spread=%.2f%% (using %s)",
