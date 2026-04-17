@@ -756,6 +756,96 @@ def _load_macro_surprise() -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Vision A/B helpers  (Wave 4 P1)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _compute_vision_divergence(text_decision: "OverlayDecision", vision_raw: dict) -> list:
+    """Return per-ticker divergence flags between text and vision decisions.
+
+    For each signal in vision_raw["chart_vision_signals"]:
+      - "vision_bear_text_bull"  : vision says tighten, text does not flag ticker
+      - "vision_bull_text_bear"  : text flags ticker to avoid, vision says OK
+    Returns a list of dicts: {ticker, flag, text_signal, vision_signal}.
+    """
+    results = []
+    for sig in vision_raw.get("chart_vision_signals", []):
+        ticker = sig.get("ticker", "")
+        if not ticker:
+            continue
+        tighten_rec = bool(sig.get("tighten_rec", False))
+        in_text_avoid = ticker in (text_decision.tickers_to_avoid or [])
+        text_tightening = in_text_avoid or text_decision.adjust
+
+        if tighten_rec and not in_text_avoid and not text_decision.adjust:
+            results.append({
+                "ticker": ticker,
+                "flag": "vision_bear_text_bull",
+                "text_signal": "bull",
+                "vision_signal": "bear",
+            })
+        elif not tighten_rec and in_text_avoid:
+            results.append({
+                "ticker": ticker,
+                "flag": "vision_bull_text_bear",
+                "text_signal": "bear",
+                "vision_signal": "bull",
+            })
+    return results
+
+
+def _write_vision_ab_log(
+    text_decision: "OverlayDecision",
+    vision_raw: "Optional[dict]",
+    universe: str,
+    tickers_analysed: list,
+) -> None:
+    """Append one JSONL line to the daily A/B log file.
+
+    Non-fatal — any exception is logged as a warning; never raises.
+    Log path: /root/atlas/logs/overlay_vision_ab/<YYYY-MM-DD>.jsonl
+    """
+    try:
+        import json as _json
+        import os as _os
+        from datetime import datetime as _dt, timezone as _tz
+        from pathlib import Path as _Path
+
+        log_dir = _Path("/root/atlas/logs/overlay_vision_ab")
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        today = _dt.now(_tz.utc).strftime("%Y-%m-%d")
+        log_path = log_dir / f"{today}.jsonl"
+
+        divergence_flags = _compute_vision_divergence(text_decision, vision_raw or {})
+
+        entry = {
+            "timestamp": _dt.now(_tz.utc).isoformat(),
+            "universe": universe,
+            "tickers_analysed": tickers_analysed,
+            "text_decision": {
+                "adjust": text_decision.adjust,
+                "sizing_multiplier_override": text_decision.sizing_multiplier_override,
+                "universes_to_deactivate": list(text_decision.universes_to_deactivate or []),
+                "tickers_to_avoid": list(text_decision.tickers_to_avoid or []),
+                "reasoning": text_decision.reasoning,
+                "confidence": text_decision.confidence,
+            },
+            "vision_decision": vision_raw,
+            "divergence_flags": divergence_flags,
+        }
+
+        line = _json.dumps(entry, default=str)
+        with open(log_path, "a") as fh:
+            fh.write(line + "\n")
+
+        log.debug("overlay_vision A/B log written → %s", log_path)
+    except Exception as exc:
+        log.warning("_write_vision_ab_log failed (non-fatal): %s", exc)
+
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Public entry point
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -856,8 +946,16 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
         cfg_vision = {"enabled": False}
 
     if cfg_vision.get("enabled", False):
+        # log_only=True (default for safety): vision is called + A/B-logged
+        # but NOT merged into decision.  Set False to activate full merge.
+        log_only = bool(cfg_vision.get("log_only", True))
         try:
             from overlay.sources.chart_renders import render_reference_set  # lazy
+            # Best-effort: read universe name for A/B log
+            try:
+                _vision_universe = load_config().get("market", "unknown")
+            except Exception:
+                _vision_universe = "unknown"
             # Best-effort: read held positions for personalised charts
             try:
                 from brokers.live_portfolio import live_portfolio
@@ -869,6 +967,7 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
                 positions = []
             max_imgs = int(cfg_vision.get("max_images", 10))
             images = render_reference_set(positions, max_images=max_imgs)
+            vision_raw = None
             if images:
                 labels_and_paths = list(images.items())
                 vision_raw = _call_pi_with_vision(
@@ -877,7 +976,20 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
                     model=cfg_vision.get("model", "claude-opus-4-7"),
                     timeout=int(cfg_vision.get("timeout_seconds", 300)),
                 )
-                if vision_raw and isinstance(vision_raw.get("chart_vision_signals"), list):
+            # Derive tickers_analysed from image labels (strip suffixes, dedupe)
+            _tickers_analysed = list(dict.fromkeys(
+                k.replace("_daily_1y", "").replace("_hourly_1w", "")
+                for k in images.keys()
+            )) if images else []
+            # Always write A/B log, regardless of log_only flag
+            _write_vision_ab_log(decision, vision_raw, _vision_universe, _tickers_analysed)
+            if vision_raw and isinstance(vision_raw.get("chart_vision_signals"), list):
+                if log_only:
+                    log.info(
+                        "overlay_vision: log_only=true — vision response recorded "
+                        "to A/B log, NOT merged into decision"
+                    )
+                else:
                     decision.chart_vision_signals = vision_raw["chart_vision_signals"]
                     log.info(
                         "A/B COMPARE — text-only adjust=%s; vision-augmented signals=%d",
