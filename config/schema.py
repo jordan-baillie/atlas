@@ -38,7 +38,7 @@ _MISSING = object()
 SCHEMA: List[Tuple] = [
     # ---- top-level ----------------------------------------------------------
     ("version",     str,             True,  None,                               None,        "Config version string (e.g. v3.0)"),
-    ("market",      str,             True,  ["sp500", "asx"],                   None,        "Target market identifier"),
+    ("market",      str,             True,  ["sp500", "asx", "sector_etfs", "commodity_etfs", "treasury_etfs", "gold_etfs", "defensive_etfs", "crypto"],  None,        "Target market identifier"),
     ("description", str,             False, None,                               None,        "Human-readable config description"),
 
     # ---- universe -----------------------------------------------------------
