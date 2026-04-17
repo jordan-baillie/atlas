@@ -269,7 +269,9 @@ if [ -f "$BREAKER_FILE" ]; then
     fi
 fi
 
-timeout 300 pi -p --no-session --model anthropic/claude-sonnet-4-6 \
+timeout 300 pi -p \
+    --system-prompt "You are Claude Code, Anthropic's official CLI for Claude." \
+    --no-session --model anthropic/claude-sonnet-4-6 \
     --skill "$SKILLS_ROOT/atlas-incident" \
     --skill "$SKILLS_ROOT/atlas-state-queries" \
     --skill "$SKILLS_ROOT/atlas-codebase" \

@@ -493,6 +493,7 @@ if [ "$MODE" = "research" ]; then
     # Research sessions get an 8-hour timeout
     # shellcheck disable=SC2086
     timeout 28800 pi --print \
+       --system-prompt "You are Claude Code, Anthropic's official CLI for Claude." \
        $SKILL_FLAGS \
        --no-session \
        "$PROMPT" \
@@ -500,6 +501,7 @@ if [ "$MODE" = "research" ]; then
 else
     # shellcheck disable=SC2086
     pi --print \
+       --system-prompt "You are Claude Code, Anthropic's official CLI for Claude." \
        $SKILL_FLAGS \
        --no-session \
        "$PROMPT" \

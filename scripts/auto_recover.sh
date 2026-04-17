@@ -220,6 +220,7 @@ SAFETY RULES:
     # Load incident + state-queries + lessons skills for diagnostic knowledge
     SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
     timeout 600 pi -p \
+        --system-prompt "You are Claude Code, Anthropic's official CLI for Claude." \
         --skill "$SKILLS_ROOT/atlas-incident" \
         --skill "$SKILLS_ROOT/atlas-state-queries" \
         --skill "$SKILLS_ROOT/atlas-lessons" \
