@@ -1,0 +1,50 @@
+#!/bin/bash
+# Atlas pre-commit hook: prevent committing secrets
+#
+# Checks staged files for patterns that look like credentials.
+# Also blocks known secret files from being committed.
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Block exact secret filenames (not partials like .env.example)
+BLOCKED_PATTERNS='^\.env$|\.secrets\.json$|atlas-secrets'
+MATCHES=$(git diff --cached --name-only | grep -E "$BLOCKED_PATTERNS" || true)
+
+if [ -n "$MATCHES" ]; then
+    echo -e "${RED}🚫 BLOCKED: Attempting to commit secret file(s):${NC}"
+    echo "$MATCHES"
+    echo "   Remove with: git reset HEAD <file>"
+    exit 1
+fi
+
+# Check staged content for credential patterns
+CRED_PATTERNS='password\s*=\s*["\x27][^"\x27]+|api_key\s*=\s*["\x27][^"\x27]+|secret\s*=\s*["\x27][^"\x27]+|MOOMOO_TRADE_PWD\s*=\s*[0-9]|TELEGRAM_BOT_TOKEN\s*=\s*["\x27][0-9]'
+
+CRED_MATCHES=$(git diff --cached --diff-filter=ACM -U0 -- '*.py' '*.json' '*.yml' '*.yaml' '*.env' '*.md' '*.cfg' '*.ini' | grep -iP "$CRED_PATTERNS" | grep -v "\.example" | grep -v "_env\b" | grep -v "unlock_password_env" || true)
+
+if [ -n "$CRED_MATCHES" ]; then
+    echo -e "${RED}🚫 BLOCKED: Possible credentials detected in staged files:${NC}"
+    echo "$CRED_MATCHES"
+    echo ""
+    echo "If these are false positives, commit with: git commit --no-verify"
+    exit 1
+fi
+
+# ── Bash syntax check on staged .sh files ─────────────────────
+staged_sh=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.sh$' || true)
+if [ -n "$staged_sh" ]; then
+    bash_failed=0
+    while IFS= read -r f; do
+        if [ -f "$f" ] && ! bash -n "$f" 2>&1; then
+            echo -e "${RED}🚫 BLOCKED: bash -n syntax error in $f${NC}" >&2
+            bash_failed=1
+        fi
+    done <<< "$staged_sh"
+    if [ "$bash_failed" -eq 1 ]; then
+        echo "Fix syntax errors before committing." >&2
+        exit 1
+    fi
+fi
+
+exit 0
