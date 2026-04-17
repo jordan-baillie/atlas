@@ -169,7 +169,7 @@ ${CONFIG_ERRORS}"
         echo "$(date -Iseconds) Refreshing ETF universe data..." >> "$LOG_DIR/pi-cron.log"
         _IN_SET_PLUS_E=1
         set +e
-        python3 -c "
+        python3 <<PY >> "$LOG_DIR/pi-cron.log" 2>&1
 import sys; sys.path.insert(0, '$PROJECT')
 from data.ingest import ingest_universe
 for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defensive_etfs', 'crypto']:
@@ -178,7 +178,7 @@ for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defens
         print(f'{u}: {len(r.get("tickers_fetched",[]))} tickers refreshed')
     except Exception as e:
         print(f'{u}: FAILED — {e}')
-" >> "$LOG_DIR/pi-cron.log" 2>&1
+PY
         ETF_EXIT=$?
         set -e
         _IN_SET_PLUS_E=0
@@ -195,12 +195,12 @@ for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defens
         echo "$(date -Iseconds) Refreshing macro indicators..." >> "$LOG_DIR/pi-cron.log"
         _IN_SET_PLUS_E=1
         set +e
-        python3 -c "
+        python3 <<PY >> "$LOG_DIR/pi-cron.log" 2>&1
 import sys; sys.path.insert(0, '$PROJECT')
 from data.ingest import refresh_macro_data
 ok = refresh_macro_data(cache_max_age_hours=0)
-print(f'macro_indicators refresh: {\"ok\" if ok else \"FAILED\"}')
-" >> "$LOG_DIR/pi-cron.log" 2>&1
+print(f'macro_indicators refresh: {"ok" if ok else "FAILED"}')
+PY
         MACRO_EXIT=$?
         set -e
         _IN_SET_PLUS_E=0
