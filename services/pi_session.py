@@ -282,7 +282,13 @@ class PiSessionManager:
     # ── Internal helpers ─────────────────────────────────────────────────────
 
     def _build_cmd(self) -> list[str]:
-        """Build the pi CLI command list."""
+        """Build the pi CLI command list.
+
+        Uses asyncio.create_subprocess_exec (async streaming) — a different
+        execution model from utils.pi_subprocess.call_pi (sync, captures
+        output).  The --system-prompt flag below ensures Claude Max OAuth
+        routing; this is the asyncio-equivalent of utils.pi_subprocess.call_pi.
+        """
         cmd = [
             PI_BIN,
             "--mode", "json",

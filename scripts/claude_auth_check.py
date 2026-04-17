@@ -22,64 +22,43 @@ def check_pi_auth() -> dict:
     Returns:
         dict with keys: logged_in (bool), method (str), error (str or None)
     """
+    from utils.pi_subprocess import call_pi, PiSubprocessError  # noqa: PLC0415
+
     try:
-        result = subprocess.run(
-            ["pi", "-p", "--no-tools",
-             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
-             "echo ok"],
-            capture_output=True, text=True, timeout=15
-        )
-        stdout = (result.stdout or "").strip()
-        stderr = (result.stderr or "").strip()
-        combined = stdout + " " + stderr
+        # call_pi raises PiSubprocessError for non-zero exit, timeout, missing
+        # binary, and known quota/auth error strings in stdout.
+        call_pi("echo ok", mode=None, timeout=15, extra_args=["--no-tools"])
+        return {"logged_in": True, "method": "oauth", "error": None}
 
-        # Check for API/usage errors even when exit code is 0
-        error_markers = [
-            "out of extra usage",
-            "invalid_request_error",
-            '"type":"error"',
-            "rate_limit_error",
-            "authentication_error",
-            "not logged in",
-            "Please run /login",
-        ]
-        for marker in error_markers:
-            if marker.lower() in combined.lower():
-                try:
-                    from utils.claude_circuit_breaker import scan_and_trip
-                    scan_and_trip(combined, reason_prefix="auth_check")
-                except Exception:
-                    pass
-                return {
-                    "logged_in": False,
-                    "method": "error",
-                    "error": f"Pi CLI auth issue: {marker} — output: {combined[:300]}"
-                }
-
-        if result.returncode == 0:
-            return {"logged_in": True, "method": "oauth", "error": None}
-        else:
+    except PiSubprocessError as e:
+        err_msg = str(e)
+        try:
+            from utils.claude_circuit_breaker import scan_and_trip
+            scan_and_trip(err_msg, reason_prefix="auth_check")
+        except Exception:
+            pass
+        if "not found on PATH" in err_msg:
             return {
-                "logged_in": False, "method": "none",
-                "error": f"Pi CLI returned exit code {result.returncode}: {stderr[:200] or stdout[:200]}"
+                "logged_in": False,
+                "method": "none",
+                "error": "Pi CLI not found. Ensure pi is installed and on PATH.",
             }
-    except FileNotFoundError:
+        if "timed out" in err_msg:
+            return {
+                "logged_in": False,
+                "method": "none",
+                "error": "Pi CLI timed out during auth check.",
+            }
         return {
             "logged_in": False,
-            "method": "none",
-            "error": "Pi CLI not found. Ensure pi is installed and on PATH."
-        }
-    except subprocess.TimeoutExpired:
-        return {
-            "logged_in": False,
-            "method": "none",
-            "error": "Pi CLI timed out during auth check."
+            "method": "error",
+            "error": f"Pi CLI auth/availability issue: {err_msg[:300]}",
         }
     except Exception as e:
         return {
             "logged_in": False,
             "method": "none",
-            "error": f"Pi auth check error: {e}"
+            "error": f"Pi auth check error: {e}",
         }
 
 

@@ -162,6 +162,10 @@ class JobManager:
         launcher = LOGS_DIR / f"{job_id}.sh"
         log_file = job["log_file"]
 
+        # Uses inline pi command because it's constructed as a shell script written
+        # to a launcher file; equivalent to utils.pi_subprocess.call_pi_exec.
+        # --system-prompt is already present inline, so Claude Max OAuth routing is
+        # correct.  Re-audit if this comment is stale.
         pi_cmd_parts = [
             "pi", "--print", "--no-session",
             "--model", "claude-opus-4-7",

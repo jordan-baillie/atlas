@@ -10,6 +10,7 @@ Entry point: discover_daily() -> DailyReport
 
 import json
 import logging
+import re
 import subprocess
 import sys
 import tempfile
@@ -76,56 +77,29 @@ def _run_pi(
     Returns:
         dict — parsed JSON result, or {"error": "<msg>", "raw": "<stdout>"} on failure.
     """
-    # Quick auth check
+    from utils.pi_subprocess import call_pi, PiSubprocessError  # noqa: PLC0415
+
+    # Quick auth check via helper — validates OAuth routing before a 30-min call
     try:
-        auth_result = subprocess.run(
-            ["pi", "-p", "--no-tools",
-             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
-             "echo ok"],
-            capture_output=True, text=True, timeout=15
-        )
-        if auth_result.returncode != 0:
-            logger.warning("Pi CLI not working — skipping LLM call. Ensure pi is installed and configured.")
-            return {"error": "not_authenticated", "raw": "Pi CLI returned non-zero exit code"}
+        call_pi("echo ok", mode=None, timeout=15, extra_args=["--no-tools"])
+    except PiSubprocessError:
+        logger.warning("Pi CLI not working — skipping LLM call. Ensure pi is installed and configured.")
+        return {"error": "not_authenticated", "raw": "Pi CLI not working"}
     except Exception:
         pass  # If auth check fails, try the actual call anyway
-
-    cmd = ["pi", "-p", "--model", "claude-sonnet-4-6", "--mode", "json",
-           "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude."]
 
     # Note: pi CLI does not support --mcp-config; MCP browsing tools not available
     # The LLM will use bash/read tools for web access instead
 
     # Note: pi CLI does not support --json-schema; relying on prompt instructions for structure
 
+    extra: list[str] = []
     if allowed_tools:
-        cmd += ["--tools", allowed_tools.lower()]
+        extra = ["--tools", allowed_tools.lower()]
 
-    # Write prompt to temp file and pass via stdin to avoid shell quoting issues
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8"
-        ) as tf:
-            tf.write(prompt)
-            tf_path = tf.name
-
-        with open(tf_path, "r", encoding="utf-8") as stdin_f:
-            result = subprocess.run(
-                cmd,
-                stdin=stdin_f,
-                capture_output=True,
-                text=True,
-                timeout=1800,  # 30 minutes
-            )
-
-        Path(tf_path).unlink(missing_ok=True)
-
-        if result.returncode != 0:
-            err = result.stderr.strip() or result.stdout.strip()
-            logger.warning("Pi CLI returned %d: %s", result.returncode, err[:200])
-            return {"error": f"exit {result.returncode}: {err[:200]}", "raw": result.stdout}
-
-        stdout = result.stdout.strip()
+        raw = call_pi(prompt, extra_args=extra or None, timeout=1800)
+        stdout = raw.strip()
         if not stdout:
             return {"error": "empty output from pi", "raw": ""}
 
@@ -134,7 +108,6 @@ def _run_pi(
             return json.loads(stdout)
         except json.JSONDecodeError:
             # Try to extract JSON block from output
-            import re
             m = re.search(r"```json\s*([\s\S]+?)\s*```", stdout)
             if m:
                 try:
@@ -143,12 +116,16 @@ def _run_pi(
                     pass
             return {"error": "json parse failed", "raw": stdout[:500]}
 
-    except FileNotFoundError:
-        logger.warning("pi CLI not found — skipping LLM step (graceful degradation)")
-        return {"error": "pi not found", "raw": ""}
-    except subprocess.TimeoutExpired:
-        logger.error("Pi CLI timed out after 1800s")
-        return {"error": "timeout", "raw": ""}
+    except PiSubprocessError as e:
+        err_msg = str(e)
+        if "timed out" in err_msg:
+            logger.error("Pi CLI timed out after 1800s")
+            return {"error": "timeout", "raw": ""}
+        if "not found on PATH" in err_msg:
+            logger.warning("pi CLI not found — skipping LLM step (graceful degradation)")
+            return {"error": "pi not found", "raw": ""}
+        logger.error("_run_pi error: %s", e)
+        return {"error": str(e), "raw": ""}
     except Exception as e:
         logger.error("_run_pi error: %s", e)
         return {"error": str(e), "raw": ""}

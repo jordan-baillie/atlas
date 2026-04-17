@@ -558,28 +558,29 @@ def run_agent(strategy: str, cycle: int, director_exps: list[dict] | None = None
     except ImportError:
         scan_and_trip = None  # degrade gracefully
 
+    from utils.pi_subprocess import call_pi_exec, PiSubprocessError  # noqa: PLC0415
+
     try:
-        result = subprocess.run(
-            ["pi", "--print", "--skill", SKILL_DIR, "--no-session",
-             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
-             prompt],
+        # call_pi_exec streams output to terminal and returns exit code.
+        # scan_and_trip is a no-op here (output not captured) — circuit
+        # breaker is checked at entry via is_tripped() above.
+        exit_code = call_pi_exec(
+            prompt,
             timeout=AGENT_TIMEOUT + 60,
-            capture_output=False,
+            extra_args=["--skill", SKILL_DIR, "--no-session"],
         )
         duration = time.time() - t0
         logger.info("AGENT done: %s (exit=%d, %.1f min)",
-                     strategy, result.returncode, duration / 60)
-        # Scan captured output for exhaustion markers (capture_output=False so stdout/stderr are None — safe no-op)
-        try:
-            if scan_and_trip is not None:
-                scan_and_trip((result.stdout or "") + "\n" + (result.stderr or ""), reason_prefix="autoresearch")
-        except Exception:
-            pass
-        return {"exit_code": result.returncode, "duration_s": duration}
-    except subprocess.TimeoutExpired:
+                     strategy, exit_code, duration / 60)
+        return {"exit_code": exit_code, "duration_s": duration}
+    except PiSubprocessError as e:
         duration = time.time() - t0
-        logger.warning("AGENT timeout: %s after %.1f min", strategy, duration / 60)
-        return {"exit_code": -1, "duration_s": duration}
+        err_msg = str(e)
+        if "timed out" in err_msg:
+            logger.warning("AGENT timeout: %s after %.1f min", strategy, duration / 60)
+            return {"exit_code": -1, "duration_s": duration}
+        logger.error("AGENT error: %s — %s", strategy, e)
+        return {"exit_code": -2, "duration_s": duration}
     except Exception as e:
         duration = time.time() - t0
         logger.error("AGENT error: %s — %s", strategy, e)

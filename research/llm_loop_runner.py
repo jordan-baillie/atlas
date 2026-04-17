@@ -203,68 +203,47 @@ def run_llm_loop(
     logger.info("Building LLM loop prompt (strategies=%s, minutes=%d)", strategies, minutes)
     prompt = _build_prompt(minutes, strategies, universe=universe)
 
-    # Write prompt to temp file
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as tf:
-        tf.write(prompt)
-        prompt_path = tf.name
-
-    # Invoke Pi CLI
-    cmd = [
-        "pi", "-p",
-        "--model", "claude-sonnet-4-6",
-        "--mode", "json",
-        "--tools", "bash,read",
-        "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
-    ]
+    from utils.pi_subprocess import call_pi, PiSubprocessError  # noqa: PLC0415
 
     timeout_s = (minutes + 5) * 60  # extra 5 min buffer for startup/cleanup
-    logger.info("Invoking Pi CLI (timeout=%ds, log=%s)", timeout_s, log_path)
+    logger.info("Invoking Pi CLI via utils.pi_subprocess (timeout=%ds, log=%s)", timeout_s, log_path)
     start = time.time()
 
     try:
-        with open(prompt_path, "r", encoding="utf-8") as stdin_f:
-            result = subprocess.run(
-                cmd,
-                stdin=stdin_f,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                cwd=str(ATLAS_ROOT),
-                env={**os.environ, "PYTHONUNBUFFERED": "1"},
-            )
-
+        output = call_pi(
+            prompt,
+            model="claude-sonnet-4-6",
+            timeout=timeout_s,
+            mode="json",
+            extra_args=["--tools", "bash,read"],
+            cwd=str(ATLAS_ROOT),
+            env={**os.environ, "PYTHONUNBUFFERED": "1"},
+        )
         runtime_s = time.time() - start
-        Path(prompt_path).unlink(missing_ok=True)
 
         # Write raw output to log
-        output = result.stdout or ""
-        stderr = result.stderr or ""
         with open(log_path, "w") as f:
-            f.write(f"=== LLM Loop Run {date_str} ===\n")
+            f.write(f"=== LLM Loop Run {date_str}\n")
             f.write(f"Strategies: {strategies}\n")
             f.write(f"Minutes: {minutes}\n")
-            f.write(f"Exit code: {result.returncode}\n")
+            f.write(f"Exit code: 0\n")
             f.write(f"Runtime: {runtime_s:.1f}s\n")
             f.write(f"\n=== STDOUT ===\n{output}\n")
-            if stderr:
-                f.write(f"\n=== STDERR ===\n{stderr}\n")
 
         # Scan for exhaustion markers and trip breaker if found
         try:
             from utils.claude_circuit_breaker import scan_and_trip
-            scan_and_trip((output or "") + "\n" + (stderr or ""), reason_prefix="llm_loop_runner")
+            scan_and_trip(output, reason_prefix="llm_loop_runner")
         except ImportError:
             pass
 
-        if result.returncode != 0:
-            logger.warning("Pi CLI exited with code %d", result.returncode)
-            logger.warning("stderr: %s", stderr[:500] if stderr else "(empty)")
-
         # Try to parse JSON output for structured result
-        summary = {"status": "complete" if result.returncode == 0 else "error",
-                    "exit_code": result.returncode,
-                    "runtime_s": round(runtime_s, 1),
-                    "log_path": str(log_path)}
+        summary: dict = {
+            "status": "complete",
+            "exit_code": 0,
+            "runtime_s": round(runtime_s, 1),
+            "log_path": str(log_path),
+        }
 
         try:
             parsed = json.loads(output)
@@ -278,21 +257,22 @@ def run_llm_loop(
         logger.info("LLM loop finished: status=%s runtime=%.1fs", summary["status"], runtime_s)
         return summary
 
-    except subprocess.TimeoutExpired:
+    except PiSubprocessError as e:
         runtime_s = time.time() - start
-        Path(prompt_path).unlink(missing_ok=True)
-        logger.error("Pi CLI timed out after %ds", timeout_s)
-        with open(log_path, "w") as f:
-            f.write(f"=== LLM Loop TIMEOUT {date_str} ===\nTimeout after {timeout_s}s\n")
-        return {"status": "timeout", "runtime_s": round(runtime_s, 1), "log_path": str(log_path)}
-
-    except FileNotFoundError:
-        Path(prompt_path).unlink(missing_ok=True)
-        logger.error("Pi CLI not found. Install pi and ensure it's on PATH.")
-        return {"status": "error", "error": "pi not found", "runtime_s": 0}
+        err_msg = str(e)
+        if "timed out" in err_msg:
+            logger.error("Pi CLI timed out after %ds", timeout_s)
+            with open(log_path, "w") as f:
+                f.write(f"=== LLM Loop TIMEOUT {date_str} ===\nTimeout after {timeout_s}s\n")
+            return {"status": "timeout", "runtime_s": round(runtime_s, 1), "log_path": str(log_path)}
+        if "not found on PATH" in err_msg:
+            logger.error("Pi CLI not found. Install pi and ensure it's on PATH.")
+            return {"status": "error", "error": "pi not found", "runtime_s": 0}
+        logger.error("LLM loop error: %s", e)
+        return {"status": "error", "error": str(e), "runtime_s": 0}
 
     except Exception as e:
-        Path(prompt_path).unlink(missing_ok=True)
+        runtime_s = time.time() - start
         logger.error("LLM loop error: %s", e)
         return {"status": "error", "error": str(e), "runtime_s": 0}
 

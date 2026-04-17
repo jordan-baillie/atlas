@@ -296,42 +296,34 @@ def _call_pi(user_prompt: str) -> Optional[dict]:
     except ImportError:
         scan_and_trip = None  # degrade gracefully
 
-    cmd = [
-        "pi",
-        "-p",
-        "--system-prompt", SYSTEM_PROMPT,
-        user_prompt,
-    ]
-    log.debug("Calling pi CLI.\nUser prompt:\n%s", user_prompt)
+    # Uses utils.pi_subprocess.call_pi for Claude Max OAuth routing.
+    # system_prompt=SYSTEM_PROMPT keeps the trading-context prompt (it already
+    # starts with the required Claude Code prefix).  mode=None omits --mode so
+    # the response is plain text that _try_parse_json can unwrap as before.
+    from utils.pi_subprocess import call_pi, PiSubprocessError  # noqa: PLC0415
+
+    log.debug("Calling pi CLI via utils.pi_subprocess.\nUser prompt:\n%s", user_prompt)
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
+        stdout_raw = call_pi(
+            user_prompt,
+            mode=None,
             timeout=120,
+            system_prompt=SYSTEM_PROMPT,
             cwd="/root/atlas",
         )
-    except subprocess.TimeoutExpired:
-        log.warning("pi CLI timed out after 120s — defaulting to no_change")
+    except PiSubprocessError as exc:
+        log.warning("pi CLI invocation failed — defaulting to no_change: %s", exc)
         return None
-    except Exception as exc:  # OSError, FileNotFoundError, etc.
+    except Exception as exc:
         log.warning("pi CLI invocation failed (%s: %s) — defaulting to no_change",
                     type(exc).__name__, exc)
         return None
 
     if scan_and_trip is not None:
-        scan_and_trip((result.stdout or "") + "\n" + (result.stderr or ""), reason_prefix="overlay_engine")
+        scan_and_trip(stdout_raw, reason_prefix="overlay_engine")
 
-    if result.returncode != 0:
-        log.warning(
-            "pi CLI exited with code %d. stderr: %s — defaulting to no_change",
-            result.returncode,
-            (result.stderr or "")[:500],
-        )
-        return None
-
-    stdout = (result.stdout or "").strip()
+    stdout = stdout_raw.strip()
     log.info("pi CLI raw response: %.800s%s", stdout, "…" if len(stdout) > 800 else "")
 
     # Try direct parse first (model returned raw JSON)
