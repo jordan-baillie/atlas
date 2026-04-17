@@ -704,16 +704,37 @@ def record_equity(
     positions_value: Optional[float] = None,
     day_pnl: Optional[float] = None,
     regime_state: Optional[str] = None,
+    broker_equity: Optional[float] = None,
+    daily_pnl_pct: Optional[float] = None,
+    total_pnl: Optional[float] = None,
+    total_pnl_pct: Optional[float] = None,
+    positions_count: Optional[int] = None,
+    realized_pnl: Optional[float] = None,
 ) -> None:
     """Upsert an equity curve data point."""
     with get_db() as db:
+        # Ensure new columns exist (idempotent migration)
+        for col, ctype in [
+            ("broker_equity", "REAL"),
+            ("daily_pnl_pct", "REAL"),
+            ("total_pnl", "REAL"),
+            ("total_pnl_pct", "REAL"),
+            ("positions_count", "INTEGER"),
+            ("realized_pnl", "REAL"),
+        ]:
+            try:
+                db.execute(f"ALTER TABLE equity_curve ADD COLUMN {col} {ctype}")
+            except Exception:
+                pass  # Column already exists
         db.execute(
             """
             INSERT OR REPLACE INTO equity_curve
-                (date, market_id, equity, cash, positions_value, day_pnl, regime_state)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                (date, market_id, equity, cash, positions_value, day_pnl, regime_state,
+                 broker_equity, daily_pnl_pct, total_pnl, total_pnl_pct, positions_count, realized_pnl)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (date, market_id, equity, cash, positions_value, day_pnl, regime_state),
+            (date, market_id, equity, cash, positions_value, day_pnl, regime_state,
+             broker_equity, daily_pnl_pct, total_pnl, total_pnl_pct, positions_count, realized_pnl),
         )
 
 
@@ -744,6 +765,74 @@ def get_latest_equity(market_id: Optional[str] = None) -> Optional[Dict]:
                 "SELECT * FROM equity_curve ORDER BY date DESC LIMIT 1"
             ).fetchone()
         return dict(row) if row else None
+
+
+# ── Position snapshots ───────────────────────────────────────────────────────
+
+def record_position_snapshots(
+    date: str,
+    market_id: str,
+    positions: List[Dict],
+) -> None:
+    """Write per-position snapshots for historical tracking.
+
+    Deletes existing snapshots for this date/market before inserting
+    (idempotent — safe to re-run).
+    """
+    with get_db() as db:
+        # Create table if not exists
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS position_snapshots (
+                date TEXT NOT NULL,
+                market_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                strategy TEXT,
+                entry_date TEXT,
+                entry_price REAL,
+                close_price REAL,
+                shares INTEGER,
+                unrealized_pnl REAL,
+                unrealized_pnl_pct REAL,
+                stop_price REAL,
+                take_profit REAL,
+                mae_pct REAL,
+                mfe_pct REAL,
+                holding_days INTEGER,
+                sector TEXT,
+                PRIMARY KEY (date, market_id, ticker)
+            )
+        """)
+        # Delete existing for idempotent re-runs
+        db.execute("DELETE FROM position_snapshots WHERE date=? AND market_id=?", (date, market_id))
+        for pos in positions:
+            db.execute(
+                """INSERT INTO position_snapshots
+                    (date, market_id, ticker, strategy, entry_date, entry_price, close_price,
+                     shares, unrealized_pnl, unrealized_pnl_pct, stop_price, take_profit,
+                     mae_pct, mfe_pct, holding_days, sector)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (date, market_id, pos.get("ticker"), pos.get("strategy"),
+                 pos.get("entry_date"), pos.get("entry_price"), pos.get("close_price"),
+                 pos.get("shares"), pos.get("unrealized_pnl"), pos.get("unrealized_pnl_pct"),
+                 pos.get("stop_price"), pos.get("take_profit"),
+                 pos.get("mae_pct"), pos.get("mfe_pct"), pos.get("holding_days"),
+                 pos.get("sector")),
+            )
+
+
+def get_position_snapshots(date: str, market_id: Optional[str] = None) -> List[Dict]:
+    """Return position snapshots for a given date."""
+    with get_db() as db:
+        if market_id:
+            rows = db.execute(
+                "SELECT * FROM position_snapshots WHERE date=? AND market_id=?",
+                (date, market_id),
+            ).fetchall()
+        else:
+            rows = db.execute(
+                "SELECT * FROM position_snapshots WHERE date=?", (date,)
+            ).fetchall()
+        return [dict(r) for r in rows]
 
 
 # ── Portfolio snapshots ───────────────────────────────────────────────────────

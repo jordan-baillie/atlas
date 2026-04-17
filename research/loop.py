@@ -36,6 +36,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from backtest.metrics import calc_deflated_sharpe
+
 
 ATLAS_ROOT = Path(__file__).resolve().parent.parent
 if str(ATLAS_ROOT) not in sys.path:
@@ -72,6 +74,7 @@ def _append_result(
     params_changed: str,
     status: str,
     description: str,
+    market: str = "sp500",
 ) -> None:
     path = _ensure_results_file(strategy)
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
@@ -97,6 +100,7 @@ def _append_result(
             params_changed=params_changed,
             status=status,
             description=description,
+            market=market,
         )
     except Exception:
         pass  # TSV is primary, SQLite is additive
@@ -236,6 +240,42 @@ def _append_journal(
 # ─── Keep/Discard Logic ─────────────────────────────────────────────────────
 
 
+def _get_dsr_stats(market: str = "sp500") -> dict:
+    """Pull experiment count and sharpe variance from SQLite for DSR calculation."""
+    try:
+        import sqlite3
+        db_path = Path(__file__).resolve().parent.parent / "research" / "research.db"
+        if not db_path.exists():
+            db_path = Path(__file__).resolve().parent.parent / "db" / "atlas.db"
+        if not db_path.exists():
+            return {"num_experiments": 0, "variance_of_sharpes": 0.0}
+
+        conn = sqlite3.connect(str(db_path))
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt, "
+            "COALESCE(AVG((sharpe - sub.avg_s) * (sharpe - sub.avg_s)), 0) as var_s "
+            "FROM research_experiments, "
+            "(SELECT AVG(sharpe) as avg_s FROM research_experiments) sub"
+        ).fetchone()
+        conn.close()
+
+        if row:
+            return {"num_experiments": row[0] or 0, "variance_of_sharpes": row[1] or 0.0}
+    except Exception:
+        pass
+
+    # Fallback: try brain experiment files
+    try:
+        brain_dir = Path(__file__).resolve().parent.parent / "research" / "brain" / "experiments"
+        if brain_dir.exists():
+            count = len(list(brain_dir.glob("*.md")))
+            return {"num_experiments": max(count, 1), "variance_of_sharpes": 0.05}
+    except Exception:
+        pass
+
+    return {"num_experiments": 0, "variance_of_sharpes": 0.0}
+
+
 def keep_or_discard(
     baseline: dict,
     experiment: dict,
@@ -298,6 +338,31 @@ def keep_or_discard(
         reasons.append(
             f"Drawdown exploded: {e_dd:.1f}% > {max_dd:.1f}% (150% of {b_dd:.1f}%)"
         )
+
+    # Gate 4: Deflated Sharpe Ratio (multiple testing correction)
+    if not reasons and e_sharpe > 0:
+        try:
+            dsr_stats = _get_dsr_stats()
+            if dsr_stats["num_experiments"] >= 5:
+                # We need returns to compute skewness/kurtosis but don't have them here.
+                # Use the experiment sharpe and stats to compute a lightweight DSR check.
+                import numpy as np
+                from scipy import stats as sp_stats
+                n_exp = dsr_stats["num_experiments"]
+                var_s = dsr_stats["variance_of_sharpes"]
+                if var_s > 0:
+                    e_max_s = np.sqrt(var_s) * (
+                        (1 - np.euler_gamma) * sp_stats.norm.ppf(1 - 1 / n_exp)
+                        + np.euler_gamma * sp_stats.norm.ppf(1 - 1 / (n_exp * np.e))
+                    )
+                    if e_sharpe < e_max_s * 0.8:
+                        reasons.append(
+                            f"DSR: Sharpe {e_sharpe:.4f} < 80% of expected max {e_max_s:.4f} "
+                            f"({n_exp} experiments, var={var_s:.4f})"
+                        )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).debug("DSR check skipped: %s", exc)
 
     if reasons:
         decision = "discard"
@@ -501,6 +566,7 @@ class ResearchSession:
         # Log to TSV
         _append_result(
             self.strategy, metrics, "", "keep", "baseline",
+            market=self.market,
         )
 
         # Print summary
@@ -593,6 +659,7 @@ class ResearchSession:
         _append_result(
             self.strategy, exp["metrics"],
             params_str, "keep", exp["description"],
+            market=self.market,
         )
         _append_journal(
             self.strategy, self.market, exp["metrics"],
@@ -624,6 +691,7 @@ class ResearchSession:
         _append_result(
             self.strategy, exp["metrics"],
             params_str, "discard", exp["description"],
+            market=self.market,
         )
 
         self._last_experiment = None

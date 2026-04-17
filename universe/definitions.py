@@ -134,6 +134,24 @@ UNIVERSES: dict[str, UniverseDefinition] = {
         ],
         "description": "Inverse, low-volatility, and dividend ETFs for capital preservation.",
     },
+    # ── Crypto major pairs ────────────────────────────────────────────────
+    "crypto": {
+        # Top 8 crypto pairs by liquidity, traded via Alpaca.
+        # Symbols use yfinance/Atlas format (BTC-USD); the mapper converts
+        # to Alpaca format (BTC/USD) at the broker boundary.
+        "method": "static",
+        "tickers": [
+            "BTC-USD",   # Bitcoin
+            "ETH-USD",   # Ethereum
+            "SOL-USD",   # Solana
+            "LINK-USD",  # Chainlink
+            "AVAX-USD",  # Avalanche
+            "DOGE-USD",  # Dogecoin
+            "XRP-USD",   # Ripple
+            "DOT-USD",   # Polkadot
+        ],
+        "description": "Top 8 crypto pairs by liquidity via Alpaca.",
+    },
 }
 
 # ──────────────────────────────────────────────────────────────────────────────

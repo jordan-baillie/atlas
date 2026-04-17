@@ -82,8 +82,16 @@ def _auto_register():
     """Register all built-in market profiles."""
     from markets.asx import ASXMarket
     from markets.sp500 import SP500Market
+    from markets.etf_markets import (
+        SectorETFsMarket, CommodityETFsMarket, TreasuryETFsMarket,
+        GoldETFsMarket, DefensiveETFsMarket,
+    )
 
-    for MarketClass in [ASXMarket, SP500Market]:
+    for MarketClass in [
+        ASXMarket, SP500Market,
+        SectorETFsMarket, CommodityETFsMarket, TreasuryETFsMarket,
+        GoldETFsMarket, DefensiveETFsMarket,
+    ]:
         instance = MarketClass()
         if instance.market_id not in _registry:
             MarketRegistry.register(instance)

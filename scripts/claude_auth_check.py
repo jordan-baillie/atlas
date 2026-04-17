@@ -6,6 +6,11 @@ Pi uses OAuth which is configured automatically — this just verifies the CLI i
 """
 import subprocess
 import sys
+import os as _os
+# Allow running from scripts/ dir — ensure atlas root is on path
+_ATLAS_ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _ATLAS_ROOT not in sys.path:
+    sys.path.insert(0, _ATLAS_ROOT)
 
 
 def check_pi_auth() -> dict:
@@ -19,7 +24,9 @@ def check_pi_auth() -> dict:
     """
     try:
         result = subprocess.run(
-            ["pi", "-p", "--no-tools", "echo ok"],
+            ["pi", "-p", "--no-tools",
+             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
+             "echo ok"],
             capture_output=True, text=True, timeout=15
         )
         stdout = (result.stdout or "").strip()
@@ -38,6 +45,11 @@ def check_pi_auth() -> dict:
         ]
         for marker in error_markers:
             if marker.lower() in combined.lower():
+                try:
+                    from utils.claude_circuit_breaker import scan_and_trip
+                    scan_and_trip(combined, reason_prefix="auth_check")
+                except Exception:
+                    pass
                 return {
                     "logged_in": False,
                     "method": "error",

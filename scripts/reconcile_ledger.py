@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+"""Ledger-Broker Reconciliation for Atlas.
+
+Compares broker positions against SQLite trade ledger and fixes discrepancies:
+- Broker has position not in ledger → backfill trade entry from broker fill data
+- Ledger has open trade not at broker → mark as closed (reconcile_phantom)
+
+Usage:
+    python scripts/reconcile_ledger.py [--market sp500] [--dry-run]
+"""
+
+import argparse
+import json
+import logging
+import sys
+from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from atlas_bootstrap import PROJECT_ROOT as PROJECT
+
+from utils.logging_config import setup_logging
+
+log = setup_logging("reconcile_ledger", extra_log_file="reconcile_ledger")
+
+
+def load_config(market_id: str) -> dict:
+    """Load active config for the given market."""
+    path = PROJECT / "config" / "active" / f"{market_id}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"Config not found: {path}")
+    with open(path) as f:
+        return json.load(f)
+
+
+def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict:
+    """Main reconciliation logic. Returns dict with stats.
+
+    Args:
+        market_id: Market identifier (e.g. 'sp500').
+        dry_run:   If True, log what would change without writing anything.
+        broker:    Optional pre-connected broker instance.  When provided the
+                   caller is responsible for its lifecycle (connect/disconnect).
+                   When None, this function creates and owns its own connection.
+    """
+    from db import atlas_db
+    from brokers.registry import get_live_broker
+
+    stats: dict = {
+        "backfilled": [],
+        "closed_phantom": [],
+        "matched": 0,
+        "errors": [],
+    }
+
+    # ── Broker connection ─────────────────────────────────────
+    own_broker = False
+    if broker is None:
+        config = load_config(market_id)
+        broker = get_live_broker(config)
+        if not broker or not broker.connect():
+            log.error("Cannot connect to broker")
+            return {"error": "broker_connect_failed"}
+        own_broker = True
+
+    try:
+        # 1. Get broker positions ──────────────────────────────
+        broker_positions = broker.get_positions()
+
+        # Filter to only positions in this market's universe
+        try:
+            from universe.builder import get_universe_tickers as _builder_tickers
+            universe_tickers = set(_builder_tickers(market_id))
+        except Exception:
+            try:
+                from universe.definitions import get_universe_tickers as _def_tickers
+                universe_tickers = set(_def_tickers(market_id))
+            except Exception:
+                universe_tickers = None
+
+        if universe_tickers:
+            broker_map = {p.ticker: p for p in broker_positions if p.ticker in universe_tickers}
+            skipped = len(broker_positions) - len(broker_map)
+            if skipped:
+                log.info("Filtered broker positions: %d in-universe, %d skipped (other markets)",
+                         len(broker_map), skipped)
+        else:
+            broker_map = {p.ticker: p for p in broker_positions}
+            log.warning("Could not load universe tickers for %s — using ALL broker positions", market_id)
+
+        log.info("Broker positions for %s: %d", market_id, len(broker_map))
+
+        # 2. Get ledger open trades for this market ────────────
+        open_trades = atlas_db.get_open_positions()
+        ledger_map = {t["ticker"]: t for t in open_trades
+                      if t.get("universe") == market_id}
+        log.info("Ledger open trades for %s: %d", market_id, len(ledger_map))
+
+        # 3. Fetch recent order history for fill data ─────────
+        try:
+            recent_orders = broker.get_history_orders(days=7)
+        except Exception as exc:
+            log.warning("Could not fetch order history (non-fatal): %s", exc)
+            recent_orders = []
+
+        buy_fills: dict = {}
+        sell_fills: dict = {}
+        for order in recent_orders:
+            side = (
+                order.side.value.upper()
+                if hasattr(order.side, "value")
+                else str(order.side).upper()
+            )
+            status = (
+                order.status.value.upper()
+                if hasattr(order.status, "value")
+                else str(order.status).upper()
+            )
+            if status != "FILLED":
+                continue
+            target = buy_fills if side == "BUY" else sell_fills if side == "SELL" else None
+            if target is None:
+                continue
+            prev = target.get(order.ticker)
+            filled_at = order.raw.get("filled_at", "") if hasattr(order, "raw") else ""
+            prev_filled_at = prev.raw.get("filled_at", "") if (prev and hasattr(prev, "raw")) else ""
+            if prev is None or filled_at > prev_filled_at:
+                target[order.ticker] = order
+
+        log.info(
+            "Order history: %d buy fills, %d sell fills across all tickers",
+            len(buy_fills),
+            len(sell_fills),
+        )
+
+        # 4. Broker has position NOT in ledger → backfill ─────
+        for ticker, bp in broker_map.items():
+            if ticker in ledger_map:
+                continue
+
+            log.warning(
+                "UNTRACKED in ledger: %s (%s shares @ $%.2f) — backfilling",
+                ticker,
+                bp.shares,
+                bp.entry_price,
+            )
+
+            if dry_run:
+                stats["backfilled"].append(f"{ticker} (dry-run)")
+                log.info("DRY RUN: would backfill %s", ticker)
+                continue
+
+            try:
+                fill = buy_fills.get(ticker)
+                entry_price = (
+                    fill.fill_price
+                    if fill and fill.fill_price and fill.fill_price > 0
+                    else bp.entry_price
+                )
+                shares = (
+                    int(fill.raw.get("filled_qty", bp.shares))
+                    if (fill and hasattr(fill, "raw") and fill.raw.get("filled_qty"))
+                    else int(bp.shares)
+                )
+
+                atlas_db.record_trade_entry(
+                    ticker=ticker,
+                    strategy="reconciled",
+                    universe=market_id,
+                    entry_price=entry_price,
+                    shares=shares,
+                    stop_price=round(entry_price * 0.95, 2),
+                    take_profit=None,
+                    confidence=0.0,
+                    regime_state=None,
+                    direction="long",
+                )
+                stats["backfilled"].append(ticker)
+                log.info(
+                    "Backfilled ledger entry for %s: %d shares @ $%.2f",
+                    ticker,
+                    shares,
+                    entry_price,
+                )
+            except Exception as exc:
+                log.error("Failed to backfill %s: %s", ticker, exc)
+                stats["errors"].append(f"{ticker}: {exc}")
+
+        # 5. Ledger has open trade NOT at broker → close as phantom ─
+        for ticker, trade in ledger_map.items():
+            if ticker in broker_map:
+                stats["matched"] += 1
+                continue
+
+            log.warning(
+                "PHANTOM in ledger: %s (open trade but no broker position) — closing",
+                ticker,
+            )
+
+            if dry_run:
+                stats["closed_phantom"].append(f"{ticker} (dry-run)")
+                log.info("DRY RUN: would close phantom %s", ticker)
+                continue
+
+            try:
+                fill = sell_fills.get(ticker)
+                exit_price = (
+                    fill.fill_price
+                    if fill and fill.fill_price and fill.fill_price > 0
+                    else float(trade.get("entry_price", 0) or 0)
+                )
+                exit_reason = "reconcile_fill" if fill else "reconcile_phantom"
+
+                atlas_db.record_trade_exit(
+                    ticker=ticker,
+                    strategy=trade.get("strategy", "unknown"),
+                    exit_price=exit_price,
+                    exit_reason=exit_reason,
+                    regime_at_exit=None,
+                )
+                stats["closed_phantom"].append(ticker)
+                log.info(
+                    "Closed phantom ledger entry for %s (exit_price=$%.2f, reason=%s)",
+                    ticker,
+                    exit_price,
+                    exit_reason,
+                )
+            except Exception as exc:
+                log.error("Failed to close phantom %s: %s", ticker, exc)
+                stats["errors"].append(f"{ticker}: {exc}")
+
+        # 6. Telegram summary ──────────────────────────────────
+        changes = stats["backfilled"] + stats["closed_phantom"]
+        if changes and not dry_run:
+            try:
+                from utils.telegram import send_message
+
+                parts = ["🔄 <b>Ledger Reconciliation</b>\n"]
+                if stats["backfilled"]:
+                    parts.append(f"📥 Backfilled: {', '.join(stats['backfilled'])}")
+                if stats["closed_phantom"]:
+                    parts.append(f"👻 Closed phantoms: {', '.join(stats['closed_phantom'])}")
+                if stats["errors"]:
+                    parts.append(f"❌ Errors: {len(stats['errors'])}")
+                parts.append(f"✅ Matched: {stats['matched']}")
+                send_message("\n".join(parts))
+            except Exception as exc:
+                log.warning("Telegram notification failed: %s", exc)
+
+        log.info(
+            "Reconciliation complete: backfilled=%d, closed=%d, matched=%d, errors=%d",
+            len(stats["backfilled"]),
+            len(stats["closed_phantom"]),
+            stats["matched"],
+            len(stats["errors"]),
+        )
+
+    finally:
+        if own_broker:
+            try:
+                broker.disconnect()
+            except Exception:
+                pass
+
+    return stats
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Ledger-Broker Reconciliation")
+    parser.add_argument("--market", "-m", default="sp500", help="Market ID (default: sp500)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what would change without writing to DB",
+    )
+    args = parser.parse_args()
+
+    log.info("=" * 50)
+    log.info("LEDGER-BROKER RECONCILIATION [%s]", args.market.upper())
+    log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE")
+    log.info("=" * 50)
+
+    result = reconcile_ledger(args.market, dry_run=args.dry_run)
+
+    if "error" in result:
+        log.error("Reconciliation failed: %s", result["error"])
+        return 1
+
+    print(json.dumps(result, indent=2, default=str))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

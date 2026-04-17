@@ -612,6 +612,17 @@ class LiveExecutor:
     # ─────────────────────────────────────────────────────────────────────
     def _execute_entry(self, entry: dict, trade_date: str) -> dict:
         """Execute a single entry order."""
+        # Kill switch check (B6) — blocks ALL new entries when HALT file exists
+        from brokers.kill_switch import is_halted, halt_reason
+        if is_halted():
+            msg = f"KILL SWITCH ACTIVE — entry blocked: {halt_reason()}"
+            logger.critical(msg)
+            try:
+                from utils.telegram import send_message
+                send_message(f"🛑 {msg}")
+            except Exception:
+                pass
+            return {"status": "halted", "reason": "kill_switch"}
         ticker = entry.get("ticker", "")
         # Price arbiter halt check (B5)
         from brokers.price_arbiter import is_ticker_halted
@@ -820,6 +831,10 @@ class LiveExecutor:
 
     def _execute_exit(self, exit_rec: dict, trade_date: str) -> dict:
         """Execute a single exit order."""
+        # Kill switch log (B6) — exits always proceed; this is informational only
+        from brokers.kill_switch import is_halted
+        if is_halted():
+            logger.info("Kill switch active but exit proceeding (exits always allowed)")
         ticker = exit_rec.get("ticker", "")
         reason = exit_rec.get("reason", "signal_exit")
 

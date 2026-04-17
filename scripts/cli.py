@@ -138,6 +138,15 @@ def cmd_ingest(args):
     market_id = getattr(args, "market", DEFAULT_MARKET)
     config = get_active_config(market_id)
     tickers = get_tickers(market_id)
+
+    # Ensure universe reflects current exclusions before ingest
+    try:
+        from universe.builder import ensure_universe_current
+        if ensure_universe_current(config):
+            print("  ♻ Universe rebuilt (exclusions changed)")
+            tickers = get_tickers(market_id)  # Reload after rebuild
+    except Exception as e:
+        logger.warning("Universe currency check failed (non-fatal): %s", e)
     years = config["data"]["history_years"]
     end = datetime.now()
     start = end - timedelta(days=years * 365)
@@ -159,6 +168,28 @@ def cmd_ingest(args):
             raise SystemExit(1)
         except Exception as e:
             logger.warning("Freshness check error (non-fatal): %s", e)
+
+    # Verify SQLite integrity — backfill from parquet if gaps found
+    try:
+        from data.ingest import verify_sqlite_integrity
+        from universe.definitions import get_universe_tickers, list_universes
+        # For static universes, verify all tickers have SQLite data
+        if market_id in list_universes():
+            try:
+                uni_tickers = get_universe_tickers(market_id)
+            except (KeyError, ValueError):
+                uni_tickers = list(results.keys())
+        else:
+            uni_tickers = list(results.keys())
+        integrity = verify_sqlite_integrity(market_id, uni_tickers, backfill=True)
+        if integrity["backfilled"]:
+            print("  ♻ Backfilled %d tickers from parquet → SQLite" % len(integrity["backfilled"]))
+        if integrity["still_missing"]:
+            print("  ⚠ WARNING: %d tickers still missing from SQLite: %s" % (
+                len(integrity["still_missing"]), integrity["still_missing"][:5]
+            ))
+    except Exception as e:
+        logger.warning("SQLite integrity check failed (non-fatal): %s", e)
 
 
 def cmd_universe(args):

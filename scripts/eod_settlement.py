@@ -484,12 +484,42 @@ def main():
 
     # Load config and portfolio from live broker
     config = load_config(market_id=market_id) if 'market_id' in load_config.__code__.co_varnames else load_config()
+
+    # Skip non-live markets — they don't have broker connections
+    live_enabled = config.get("trading", {}).get("live_enabled", False)
+    if not live_enabled:
+        log.info("Market %s is not live-enabled (live_enabled=False). Skipping EOD settlement.", market_id)
+        print(f"Market {market_id} is not live-enabled. Skipping settlement.")
+        return
+
     from brokers.live_portfolio import LivePortfolio
     portfolio = LivePortfolio(config, market_id=market_id)
-    if not portfolio.connect():
-        log.error("Could not connect to broker. Aborting EOD settlement.")
-        _health_log("error", "Broker connection failed", {"market": market_id})
-        print("ERROR: Broker connection failed. Settlement aborted.")
+
+    # Connect with retry (transient failures: DNS, rate-limit, maintenance windows)
+    import time as _time
+    _connect_delays = [5, 15, 45]  # exponential backoff
+    _connected = False
+    for _attempt, _delay in enumerate(_connect_delays, 1):
+        if portfolio.connect():
+            _connected = True
+            break
+        if _attempt < len(_connect_delays):
+            log.warning("Broker connect attempt %d/%d failed for %s, retrying in %ds...",
+                        _attempt, len(_connect_delays), market_id, _delay)
+            _time.sleep(_delay)
+        else:
+            log.error("Broker connect failed after %d attempts for %s", len(_connect_delays), market_id)
+
+    if not _connected:
+        log.error("Could not connect to broker after retries. Aborting EOD settlement.")
+        _health_log("error", "Broker connection failed after retries", {"market": market_id, "attempts": len(_connect_delays)})
+        # Send Telegram alert
+        try:
+            from utils.telegram import send_message
+            send_message(f"\U0001f534 <b>EOD Settlement Failed</b>\nMarket: {market_id}\nBroker connection failed after {len(_connect_delays)} attempts.\nCheck logs/eod_settlement.log")
+        except Exception:
+            pass
+        print("ERROR: Broker connection failed after retries. Settlement aborted.")
         return
 
     # Guard: LivePortfolio detects zeroed broker data (OpenD up but Futu
@@ -562,6 +592,20 @@ def main():
                          counts.get("already_protected", counts.get("sl_already_exists", 0)))
         except Exception as e:
             log.warning(f"Protective order sync failed (non-fatal): {e}")
+
+    # ── Ledger-broker reconciliation ─────────────────────────
+    # Catches LIMIT fills that happened after order submission but before
+    # ledger was updated (e.g. limit order placed at premarket, filled at open).
+    log.info("Reconciling trade ledger vs broker...")
+    try:
+        from scripts.reconcile_ledger import reconcile_ledger as _reconcile_ledger
+        _ledger_result = _reconcile_ledger(market_id, dry_run=args.dry_run, broker=portfolio._broker)
+        if _ledger_result.get("backfilled"):
+            log.info("Ledger backfilled: %s", _ledger_result["backfilled"])
+        if _ledger_result.get("closed_phantom"):
+            log.info("Ledger phantoms closed: %s", _ledger_result["closed_phantom"])
+    except Exception as _lr_err:
+        log.warning("Ledger reconciliation failed (non-fatal): %s", _lr_err)
 
     # Reconcile broker-side fills (trailing stops, etc.)
     log.info("Reconciling broker-side fills...")
@@ -649,7 +693,7 @@ def main():
         "trade_date": trade_date,
         "market_id": market_id,
         "equity": eq,
-        "broker_equity": portfolio.broker_equity,
+        "broker_equity": portfolio.broker_equity(),
         "cash": portfolio.cash,
         "daily_pnl": daily_pnl,
         "daily_pnl_pct": round(daily_pnl / prev_equity * 100, 2) if prev_equity > 0 else 0,
@@ -673,10 +717,12 @@ def main():
     # Record daily portfolio snapshot to logs/portfolio_snapshots.jsonl
     record_daily_snapshot(portfolio, prices, eq, daily_pnl, trade_date)
 
-    # SQLite dual-write: equity curve + portfolio snapshot (non-fatal)
+    # SQLite primary write: equity curve + portfolio/position snapshots
     try:
         from db import atlas_db
         positions_value = round(eq - portfolio.cash, 2)
+        daily_pnl_pct = round(daily_pnl / prev_equity * 100, 2) if prev_equity > 0 else 0
+        total_pnl_pct = round(total_pnl / portfolio.starting_equity * 100, 2) if portfolio.starting_equity > 0 else 0
         atlas_db.record_equity(
             date=trade_date,
             market_id=market_id,
@@ -685,6 +731,12 @@ def main():
             positions_value=positions_value,
             day_pnl=daily_pnl,
             regime_state=None,
+            broker_equity=portfolio.broker_equity(),
+            daily_pnl_pct=daily_pnl_pct,
+            total_pnl=total_pnl,
+            total_pnl_pct=total_pnl_pct,
+            positions_count=len(portfolio.positions),
+            realized_pnl=realized_today,
         )
         atlas_db.record_snapshot(
             timestamp=datetime.now().isoformat(),
@@ -693,8 +745,15 @@ def main():
             positions=position_snapshot,
             regime_state=None,
         )
+        # Per-position snapshots for historical tracking
+        atlas_db.record_position_snapshots(
+            date=trade_date,
+            market_id=market_id,
+            positions=position_snapshot,
+        )
+        log.info("SQLite EOD data written: equity_curve + portfolio_snapshots + position_snapshots")
     except Exception as _e:
-        log.warning(f"SQLite equity dual-write failed: {_e}")
+        log.warning(f"SQLite EOD write failed (non-fatal): {_e}")
 
     _health_log("info", "EOD settlement completed", {
         "market": market_id,

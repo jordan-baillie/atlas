@@ -836,6 +836,97 @@ async def handle_rollback_callback(update: Update, ctx: ContextTypes.DEFAULT_TYP
         parse_mode="HTML",
     )
 
+# ═══════════════════════════════════════════════════════════════
+# Sweep auto-promotion approval callback handler
+# ═══════════════════════════════════════════════════════════════
+
+def _do_sweep_promote_approve(pending_id: str, market_id: str) -> str:
+    """Execute pending sweep promotion in a thread (blocking I/O)."""
+    from research.promoter import complete_pending_promotion
+    result = complete_pending_promotion(pending_id)
+    if result.get("promoted"):
+        return (
+            f"✅ <b>Promoted!</b>\n\n"
+            f"Strategy: {_esc(result.get('strategy', '?'))}\n"
+            f"Market: {_esc(result.get('market', '?').upper())}\n"
+            f"Version: <code>{_esc(str(result.get('version', '?')))}</code>\n\n"
+            f"Active config updated."
+        )
+    else:
+        return f"❌ <b>Promotion failed</b>\n\n{_esc(result.get('reason', 'Unknown error'))}"
+
+
+def _do_sweep_promote_reject(pending_id: str, market_id: str) -> str:
+    """Reject pending sweep promotion in a thread (blocking I/O)."""
+    from research.promoter import reject_pending_promotion
+    result = reject_pending_promotion(pending_id, reason="User rejected via Telegram")
+    if result.get("rejected"):
+        return f"❌ <b>Rejected</b>: {_esc(result.get('strategy', '?'))}\nPromotion cancelled."
+    else:
+        return f"⚠️ <b>Rejection failed</b>: {_esc(result.get('reason', 'Unknown error'))}"
+
+
+async def handle_sweep_promotion_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle Approve / Reject for sweep auto-promotion requests.
+
+    Callback data format: sweep_promote:{pending_id}:{action}:{market}
+    """
+    query = update.callback_query
+    await query.answer()
+
+    if not _authorized(query.message.chat_id):
+        await query.edit_message_reply_markup(reply_markup=None)
+        return
+
+    data = query.data  # e.g. "sweep_promote:abc123def456:approve:sp500"
+    parts = data.split(":")
+    if len(parts) < 4 or parts[0] != "sweep_promote":
+        return
+
+    pending_id = parts[1]
+    action = parts[2]
+    market_id = parts[3]
+
+    if action == "reject":
+        await query.edit_message_text(
+            query.message.text_html + "\n\n⏳ <b>Rejecting…</b>",
+            parse_mode="HTML",
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            result_text = await loop.run_in_executor(
+                None,
+                partial(_do_sweep_promote_reject, pending_id, market_id),
+            )
+        except Exception as e:
+            logger.error("Sweep promotion rejection failed: %s", e, exc_info=True)
+            result_text = "❌ <b>Rejection failed</b> — check server logs."
+
+        await query.edit_message_text(
+            query.message.text_html.replace("⏳ <b>Rejecting…</b>", result_text),
+            parse_mode="HTML",
+        )
+        return
+
+    if action == "approve":
+        await query.edit_message_text(
+            query.message.text_html + "\n\n⏳ <b>Promoting…</b>",
+            parse_mode="HTML",
+        )
+        try:
+            loop = asyncio.get_event_loop()
+            result_text = await loop.run_in_executor(
+                None,
+                partial(_do_sweep_promote_approve, pending_id, market_id),
+            )
+        except Exception as e:
+            logger.error("Sweep promotion approval failed: %s", e, exc_info=True)
+            result_text = "❌ <b>Promotion failed</b> — check server logs."
+
+        await query.message.reply_text(result_text, parse_mode="HTML")
+
+
+
 
 # ═══════════════════════════════════════════════════════════════
 # External API — called by cron/scripts to send plan for approval
@@ -1477,6 +1568,12 @@ def main():
     app.add_handler(CallbackQueryHandler(
         handle_rollback_callback,
         pattern=r"^promote:.+:rollback:\w+$",
+    ))
+
+    # Callback handler for sweep auto-promotion approval buttons
+    app.add_handler(CallbackQueryHandler(
+        handle_sweep_promotion_callback,
+        pattern=r"^sweep_promote:.+:(approve|reject):\w+$",
     ))
 
     logger.info("Bot polling started. Commands: /status /plan /halt /unhalt /task /jobs /job /kill /logs /specs")

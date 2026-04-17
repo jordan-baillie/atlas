@@ -27,7 +27,11 @@ os.chdir(PROJECT)
 # ── Paths ─────────────────────────────────────────────────────────────────────
 TRADE_LEDGER     = PROJECT / "journal" / "trade_ledger.json"
 DECISION_JOURNAL = PROJECT / "journal" / "decision_journal.json"
+# BROKER_STATE kept for check_equity (equity_history lives only in live_sp500.json)
 BROKER_STATE     = PROJECT / "brokers" / "state" / "live_sp500.json"
+# Union of ALL live_*.json files — used by check_trades
+BROKER_STATE_DIR   = PROJECT / "brokers" / "state"
+BROKER_STATE_FILES = sorted(BROKER_STATE_DIR.glob("live_*.json"))
 PLANS_DIR        = PROJECT / "plans"
 OHLCV_CACHE_DIR  = PROJECT / "data" / "cache" / "sp500"
 VERIFY_HISTORY   = PROJECT / "data" / "dual_write_verification.json"
@@ -75,8 +79,11 @@ def check_trades() -> bool:
     """
     Compare trade_ledger.json + broker state vs SQLite trades table.
 
+    Broker state is the UNION of all live_*.json files, with positions
+    deduplicated by ticker (preferring non-'unknown' strategy entries).
+
     Pass criteria (all must hold):
-    - ledger entry count == sqlite open+closed
+    - ledger entry count ≤ sqlite open+closed
     - every broker closed trade has a matching row in SQLite
     - every broker open position has a matching row in SQLite
     """
@@ -94,17 +101,55 @@ def check_trades() -> bool:
     json_exits   = sum(1 for e in ledger if e.get("type") == "exit")
     _row("JSON entries", f"{json_entries} (entry) / {json_exits} (exit)")
 
-    # --- Broker state ---------------------------------------------------------
-    broker, berr = _load(BROKER_STATE)
-    broker_open   = len(broker.get("positions",    [])) if broker else None
-    # Exclude blank/test records (no ticker or exit_date) to match migration logic
-    broker_closed = len([t for t in broker.get("closed_trades", [])
-                         if t.get("ticker") and t.get("exit_date")]) if broker else None
+    # --- Broker state (union of all live_*.json files) -----------------------
+    all_positions: list = []
+    all_closed_raw: list = []
+    loaded_files: list = []
+    load_errors: list = []
 
-    if broker:
-        _row("Broker state", f"{broker_open} open, {broker_closed} closed")
-    else:
-        _row(f"{WARN}broker state", berr)
+    for sf in BROKER_STATE_FILES:
+        data, ferr = _load(sf)
+        if ferr:
+            load_errors.append(ferr)
+            continue
+        loaded_files.append(sf.name)
+        all_positions.extend(data.get("positions", []))
+        all_closed_raw.extend(data.get("closed_trades", []))
+
+    if not loaded_files:
+        for e in load_errors:
+            print(f"     {WARN}{e}")
+        return False
+
+    # Deduplicate positions by ticker — prefer non-'unknown' strategy
+    _seen_tickers: dict = {}
+    for _pos in all_positions:
+        _t = _pos["ticker"]
+        if _t not in _seen_tickers:
+            _seen_tickers[_t] = _pos
+        elif (_seen_tickers[_t].get("strategy", "unknown") == "unknown"
+              and _pos.get("strategy", "unknown") != "unknown"):
+            _seen_tickers[_t] = _pos
+    broker_positions = list(_seen_tickers.values())
+
+    # Deduplicate closed trades by (ticker, strategy, exit_date)
+    _seen_ct: set = set()
+    broker_closed_list: list = []
+    for _ct in all_closed_raw:
+        if not _ct.get("ticker") or not _ct.get("exit_date"):
+            continue  # skip blank/test records
+        _key = (_ct["ticker"], _ct.get("strategy", ""), _ct.get("exit_date", ""))
+        if _key not in _seen_ct:
+            _seen_ct.add(_key)
+            broker_closed_list.append(_ct)
+
+    broker_open   = len(broker_positions)
+    broker_closed = len(broker_closed_list)
+    _row(
+        "Broker state",
+        f"{broker_open} open, {broker_closed} closed "
+        f"(union: {', '.join(loaded_files)})",
+    )
 
     # --- SQLite ---------------------------------------------------------------
     with atlas_db.get_db() as db:
@@ -117,8 +162,8 @@ def check_trades() -> bool:
 
     _row("SQLite", f"{sqlite_open} open, {sqlite_closed} closed")
 
-    # --- Count check (broker state is most reliable) --------------------------
-    if broker:
+    # --- Count check (broker union is most reliable) --------------------------
+    if loaded_files:
         if sqlite_open < broker_open or sqlite_closed < broker_closed:
             _result(
                 False,
@@ -136,21 +181,26 @@ def check_trades() -> bool:
     # --- Spot-check: broker closed trades present in SQLite -------------------
     field_ok = True
 
-    if broker and broker.get("closed_trades"):
+    if broker_closed_list:
         missing_ct: list = []
         with atlas_db.get_db() as db:
-            for ct in broker["closed_trades"]:
-                # Skip blank/test records (same filter as migration)
-                if not ct.get("ticker") or not ct.get("exit_date"):
-                    continue
-                found = db.execute(
-                    """SELECT id FROM trades
-                       WHERE ticker=? AND strategy=? AND status='closed'
-                       LIMIT 1""",
-                    (ct["ticker"], ct.get("strategy", "")),
-                ).fetchone()
+            for ct in broker_closed_list:
+                strategy = ct.get("strategy", "")
+                if strategy == "unknown":
+                    # strategy-agnostic match for 'unknown' entries
+                    found = db.execute(
+                        "SELECT id FROM trades WHERE ticker=? AND status='closed' LIMIT 1",
+                        (ct["ticker"],),
+                    ).fetchone()
+                else:
+                    found = db.execute(
+                        """SELECT id FROM trades
+                           WHERE ticker=? AND strategy=? AND status='closed'
+                           LIMIT 1""",
+                        (ct["ticker"], strategy),
+                    ).fetchone()
                 if not found:
-                    missing_ct.append(f"{ct['ticker']}/{ct.get('strategy')}")
+                    missing_ct.append(f"{ct['ticker']}/{strategy}")
 
         if missing_ct:
             _row(f"     {BAD} closed trades missing in SQLite",
@@ -160,18 +210,27 @@ def check_trades() -> bool:
             _row(f"     {OK} broker closed trades", "found in SQLite")
 
     # --- Spot-check: open positions present in SQLite -------------------------
-    if broker and broker.get("positions"):
+    if broker_positions:
         missing_op: list = []
         with atlas_db.get_db() as db:
-            for pos in broker["positions"]:
-                found = db.execute(
-                    """SELECT id FROM trades
-                       WHERE ticker=? AND strategy=? AND status='open'
-                       LIMIT 1""",
-                    (pos["ticker"], pos.get("strategy", "")),
-                ).fetchone()
+            for pos in broker_positions:
+                strategy = pos.get("strategy", "")
+                if strategy == "unknown":
+                    # strategy-agnostic match — SQLite may store it under a
+                    # real strategy name (e.g. 'reconciled')
+                    found = db.execute(
+                        "SELECT id FROM trades WHERE ticker=? AND status='open' LIMIT 1",
+                        (pos["ticker"],),
+                    ).fetchone()
+                else:
+                    found = db.execute(
+                        """SELECT id FROM trades
+                           WHERE ticker=? AND strategy=? AND status='open'
+                           LIMIT 1""",
+                        (pos["ticker"], strategy),
+                    ).fetchone()
                 if not found:
-                    missing_op.append(f"{pos['ticker']}/{pos.get('strategy')}")
+                    missing_op.append(f"{pos['ticker']}/{strategy}")
 
         if missing_op:
             _row(f"     {BAD} open positions missing in SQLite",
@@ -181,7 +240,10 @@ def check_trades() -> bool:
             _row(f"     {OK} open positions", "found in SQLite")
 
     if field_ok:
-        _result(True, f"SQLite ⊇ broker ({broker_open}+{broker_closed} ≤ {sqlite_open}+{sqlite_closed})")
+        _result(
+            True,
+            f"SQLite ⊇ broker ({broker_open}+{broker_closed} ≤ {sqlite_open}+{sqlite_closed})",
+        )
     else:
         _result(False, "position mismatch in SQLite")
     return field_ok

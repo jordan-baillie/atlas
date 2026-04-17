@@ -164,7 +164,8 @@ class JobManager:
 
         pi_cmd_parts = [
             "pi", "--print", "--no-session",
-            "--model", "claude-opus-4-6",
+            "--model", "claude-opus-4-7",
+            "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
             "--append-system-prompt",
         ]
         # System prompt must be quoted as a single shell argument

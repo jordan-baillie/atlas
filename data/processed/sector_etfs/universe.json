@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "built_at": "2026-04-14T00:00:00",
+        "config_version": "v1.0",
+        "candidates_evaluated": 11,
+        "final_count": 11,
+        "filters": {
+            "min_price": 1.0,
+            "min_median_daily_value": 1000000,
+            "top_n": 11
+        }
+    },
+    "tickers": ["XLF", "XLE", "XLK", "XLV", "XLI", "XLC", "XLY", "XLP", "XLU", "XLB", "XLRE"]
+}

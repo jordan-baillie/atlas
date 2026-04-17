@@ -79,7 +79,7 @@
     "runtime_s": 13.9
   },
   "description": "vol_surge_threshold=1.5",
-  "experiments_run": 82,
+  "experiments_run": 285,
   "experiments_kept": 14,
   "updated_at": "2026-03-12T02:59:28.586262+00:00"
 }

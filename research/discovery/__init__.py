@@ -18,11 +18,20 @@ from pathlib import Path as _Path
 
 _standalone_path = _Path(__file__).resolve().parent.parent / "discovery.py"
 if _standalone_path.exists():
-    _spec = _iu.spec_from_file_location("research._discovery_legacy", str(_standalone_path))
-    _mod = _iu.module_from_spec(_spec)
-    _spec.loader.exec_module(_mod)
-    STRATEGY_UNIVERSE = _mod.STRATEGY_UNIVERSE
-    queue_discovery_batch = _mod.queue_discovery_batch
+    try:
+        _spec = _iu.spec_from_file_location("research._discovery_legacy", str(_standalone_path))
+        _mod = _iu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        STRATEGY_UNIVERSE = _mod.STRATEGY_UNIVERSE
+        queue_discovery_batch = _mod.queue_discovery_batch
+    except Exception as _exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Failed to load STRATEGY_UNIVERSE from standalone discovery.py: %s", _exc
+        )
+        STRATEGY_UNIVERSE = {}
+        def queue_discovery_batch(max_count: int = 5) -> int:
+            return 0
 else:
     # Fallback: empty dict if standalone module is missing
     STRATEGY_UNIVERSE = {}

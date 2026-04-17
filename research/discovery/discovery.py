@@ -79,7 +79,9 @@ def _run_pi(
     # Quick auth check
     try:
         auth_result = subprocess.run(
-            ["pi", "-p", "--no-tools", "echo ok"],
+            ["pi", "-p", "--no-tools",
+             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
+             "echo ok"],
             capture_output=True, text=True, timeout=15
         )
         if auth_result.returncode != 0:
@@ -88,7 +90,8 @@ def _run_pi(
     except Exception:
         pass  # If auth check fails, try the actual call anyway
 
-    cmd = ["pi", "-p", "--model", "claude-sonnet-4-6", "--mode", "json"]
+    cmd = ["pi", "-p", "--model", "claude-sonnet-4-6", "--mode", "json",
+           "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude."]
 
     # Note: pi CLI does not support --mcp-config; MCP browsing tools not available
     # The LLM will use bash/read tools for web access instead

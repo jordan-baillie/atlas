@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "built_at": "2026-02-26T13:22:28.698622",
+    "built_at": "2026-04-15T19:01:23.249695",
     "config_version": "v1.0_moomoo_fees",
     "candidates_evaluated": 285,
     "candidates_valid": 285,
@@ -10,14 +10,20 @@
       "min_median_daily_value": 5000000,
       "min_market_cap": 0,
       "top_n": 200,
-      "exclusions": []
+      "exclusions": [
+        "MMC"
+      ]
     },
     "filtered_out": {
       "by_price": 0,
       "by_daily_value": 0,
       "by_market_cap": 0
     },
-    "final_count": 200
+    "final_count": 199,
+    "exclusions": [
+      "MMC"
+    ],
+    "rebuild_reason": "exclusion_change: added {'MMC'}"
   },
   "tickers": [
     "SPY",
@@ -166,7 +172,6 @@
     "ORLY",
     "PNC",
     "TRV",
-    "MMC",
     "ROP",
     "FTNT",
     "ELV",
@@ -1242,13 +1247,6 @@
       "last_close": 304.760009765625,
       "median_daily_value": 504789242.17529297,
       "avg_volume": 1600430.0,
-      "trading_days": 60
-    },
-    {
-      "ticker": "MMC",
-      "last_close": 181.10000610351562,
-      "median_daily_value": 502141238.8233948,
-      "avg_volume": 2831632.533333333,
       "trading_days": 60
     },
     {

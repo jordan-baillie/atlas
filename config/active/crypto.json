@@ -1,0 +1,84 @@
+{
+    "version": "v1.0",
+    "project": "Atlas",
+    "market": "crypto",
+    "description": "Crypto v1.0 \u2014 initial backtest configuration for top 8 crypto pairs",
+    "universe": {
+        "method": "static",
+        "tickers": [
+            "BTC-USD",
+            "ETH-USD",
+            "SOL-USD",
+            "LINK-USD",
+            "AVAX-USD",
+            "DOGE-USD",
+            "XRP-USD",
+            "DOT-USD"
+        ],
+        "benchmark_ticker": "BTC-USD",
+        "point_in_time": false
+    },
+    "risk": {
+        "starting_equity": 5011.79,
+        "leverage": 1.0,
+        "max_risk_per_trade_pct": 0.01,
+        "max_open_positions": 5,
+        "max_sector_concentration": 99,
+        "max_daily_drawdown_pct": 0.05,
+        "require_stop_loss": true,
+        "require_planned_exit": true,
+        "min_confidence": 0.6,
+        "trailing_stop": {
+            "enabled": false,
+            "activation_pct": 0.03,
+            "atr_multiplier": 2.5
+        }
+    },
+    "trading": {
+        "mode": "paper",
+        "broker": "alpaca",
+        "live_enabled": false,
+        "holding_period_min": 1,
+        "holding_period_max": 30,
+        "data_frequency": "daily",
+        "order_type": "market_on_open",
+        "auto_approve": true,
+        "live_safety": {
+            "require_double_approval": false,
+            "max_order_value": 5000,
+            "max_daily_orders": 5,
+            "dry_run_first": true,
+            "max_daily_loss_pct": 0.05
+        }
+    },
+    "fees": {
+        "commission_per_trade": 0,
+        "commission_pct": 0,
+        "slippage_pct": 0.0025,
+        "flat_fee_threshold": 0,
+        "min_position_value": 50.0,
+        "slippage_model": "fixed"
+    },
+    "strategies": {
+        "momentum_breakout": {
+            "enabled": true
+        },
+        "connors_rsi2": {
+            "enabled": false
+        },
+        "mean_reversion": {
+            "enabled": false
+        },
+        "trend_following": {
+            "enabled": false
+        }
+    },
+    "filters": {
+        "earnings_blackout": {
+            "enabled": false
+        },
+        "sector_concentration": {
+            "enabled": false
+        }
+    }
+}

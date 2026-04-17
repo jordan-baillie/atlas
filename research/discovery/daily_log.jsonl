@@ -1,0 +1,6 @@
+{"date": "2026-04-14", "source": "arxiv", "method": "computer_use", "papers_found": 0, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 0.1}
+{"date": "2026-04-15", "source": "arxiv", "method": "computer_use", "papers_found": 0, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 0.0}
+{"date": "2026-04-15", "source": "arxiv", "method": "api", "papers_found": 0, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 0.3}
+{"date": "2026-04-16", "source": "arxiv", "method": "api", "papers_found": 0, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 0.1}
+{"date": "2026-04-16", "source": "arxiv", "method": "api", "papers_found": 90, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 55.4}
+{"date": "2026-04-16", "source": "arxiv", "method": "computer_use", "papers_found": 0, "papers_filtered": 0, "specs_extracted": 0, "strategies_generated": [], "strategies_passed_quickcheck": [], "errors": [], "runtime_s": 0.1}

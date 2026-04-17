@@ -106,6 +106,8 @@ class OverlayDecision:
 # ──────────────────────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """\
+You are Claude Code, Anthropic's official CLI for Claude.
+
 You are the Atlas AI Overlay — a conservative risk-tightening layer inside a \
 quantitative trading system.  You sit above the quantitative regime model \
 (Layer 1) and the portfolio constructor (Layer 2).  Your sole job is to assess \
@@ -286,6 +288,14 @@ def _call_pi(user_prompt: str) -> Optional[dict]:
         Parsed JSON dict from the model, or None on any failure.
         Never raises — all errors are caught and logged.
     """
+    try:
+        from utils.claude_circuit_breaker import is_tripped, scan_and_trip
+        if is_tripped():
+            log.warning("Claude circuit breaker tripped — overlay _call_pi skipping, returning None")
+            return None
+    except ImportError:
+        scan_and_trip = None  # degrade gracefully
+
     cmd = [
         "pi",
         "-p",
@@ -309,6 +319,9 @@ def _call_pi(user_prompt: str) -> Optional[dict]:
         log.warning("pi CLI invocation failed (%s: %s) — defaulting to no_change",
                     type(exc).__name__, exc)
         return None
+
+    if scan_and_trip is not None:
+        scan_and_trip((result.stdout or "") + "\n" + (result.stderr or ""), reason_prefix="overlay_engine")
 
     if result.returncode != 0:
         log.warning(

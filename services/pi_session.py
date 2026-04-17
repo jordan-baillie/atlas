@@ -67,7 +67,7 @@ class PiSessionManager:
             await websocket.send_json(event.to_dict())
     """
 
-    def __init__(self, session_id: str, model: str = "claude-opus-4-6", use_teams: bool = False) -> None:
+    def __init__(self, session_id: str, model: str = "claude-opus-4-7", use_teams: bool = False) -> None:
         self.session_id = session_id
         self.model = model
         self.use_teams = use_teams
@@ -162,7 +162,7 @@ class PiSessionManager:
             stderr_task = asyncio.create_task(_drain_stderr())
 
             try:
-                async with asyncio.timeout(300):  # 5-minute hard cap per message (Opus + big sessions need time)
+                async with asyncio.timeout(600):  # 10-minute hard cap per message (Opus + big sessions need time)
                     # Read stdout in chunks instead of using readline().
                     # asyncio.StreamReader.readline() has a 64 KB default
                     # limit; Pi JSONL lines with thinking signatures +
@@ -197,8 +197,8 @@ class PiSessionManager:
                                 await self._broadcast(evt)
                                 yield evt
             except asyncio.TimeoutError:
-                logger.warning("Pi subprocess timed out after 300 s")
-                timeout_err = PiEvent("error", {"message": "Response timed out after 5 minutes. Try starting a new session — long history slows Opus down."})
+                logger.warning("Pi subprocess timed out after 600 s")
+                timeout_err = PiEvent("error", {"message": "Response timed out after 10 minutes. Try starting a new session — long history slows Opus down."})
                 await self._broadcast(timeout_err)
                 yield timeout_err
                 if self.process:
@@ -294,6 +294,7 @@ class PiSessionManager:
             "--no-skills",
             "--no-prompt-templates",
             "--no-themes",
+            "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
         ]
 
         cmd.append("--no-extensions")

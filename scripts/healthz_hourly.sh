@@ -17,6 +17,7 @@
 # Cron: 0 * * * * /root/atlas/scripts/healthz_hourly.sh
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
+unset ANTHROPIC_API_KEY CLAUDE_API_KEY  # Atlas hardening: force pi to use OAuth (Claude Max)
 
 PROJECT="/root/atlas"
 HEALTHZ="$PROJECT/pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py"
@@ -141,17 +142,85 @@ fi
 log "Issues to fix:"
 echo "$NEW_ISSUES" >> "$LOG_FILE"
 
-# ── Step 5: Spawn pi agent to fix issues ─────────────────────
-log "Spawning pi agent for autofix..."
+# ── Step 4.5: Try fixing trivial issues in bash ──────────────
+try_bash_fixes() {
+    local issues="$1"
+    local fixed=""
+    local remaining=""
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        case "$line" in
+            *pycache*)
+                find "$PROJECT" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+                fixed="${fixed}Cleaned __pycache__ dirs\n"
+                log "Auto-fixed: cleaned __pycache__"
+                ;;
+            *large_logs*|*Large\ log*)
+                # Compress rotated logs over 1MB
+                find "$LOG_DIR" -name "*.log-*" -size +1M ! -name "*.gz" -exec gzip -f {} \; 2>/dev/null
+                # Truncate active logs over 50MB
+                find "$LOG_DIR" -name "*.log" -size +50M -exec truncate -s 0 {} \; 2>/dev/null
+                fixed="${fixed}Compressed/truncated large logs\n"
+                log "Auto-fixed: compressed large logs"
+                ;;
+            *broker_orders*)
+                # Open orders (stop/limit orders) are normal — skip
+                log "Skipped: open broker orders are expected (protective stops)"
+                ;;
+            *dashboard_data*)
+                # Try refreshing dashboard data
+                if systemctl is-active --quiet atlas-dashboard; then
+                    systemctl restart atlas-dashboard 2>/dev/null
+                    fixed="${fixed}Restarted dashboard refresh\n"
+                    log "Auto-fixed: restarted atlas-dashboard"
+                else
+                    remaining="${remaining}${line}\n"
+                fi
+                ;;
+            *)
+                remaining="${remaining}${line}\n"
+                ;;
+        esac
+    done <<< "$issues"
+
+    # Send Telegram if we fixed things
+    if [ -n "$fixed" ]; then
+        python3 -c "
+import sys; sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+send_message('🔧 <b>Watchdog auto-fixed:</b>\n$(echo -e "$fixed" | head -5)')
+" 2>/dev/null || true
+    fi
+
+    # Return remaining unfixed issues (or empty)
+    echo -e "$remaining"
+}
+
+REMAINING_ISSUES=$(try_bash_fixes "$NEW_ISSUES")
+REMAINING_COUNT=$(echo "$REMAINING_ISSUES" | grep -c '.' || true)
+
+if [ "$REMAINING_COUNT" -eq 0 ]; then
+    log "All issues fixed by bash handlers — no agent needed"
+    find "$LOG_DIR" -name "healthz-hourly_*.log" -mtime +3 -delete 2>/dev/null
+    find "$COOLDOWN_DIR" -mtime +1 -delete 2>/dev/null
+    exit 0
+fi
+
+log "$REMAINING_COUNT issue(s) need agent intervention:"
+echo "$REMAINING_ISSUES" >> "$LOG_FILE"
+
+# ── Step 5: Spawn pi agent to fix remaining issues ───────────
+log "Spawning pi agent for autofix..." 
 
 PROMPT="You are the Atlas infrastructure watchdog. The hourly health check found these issues:
 
-$NEW_ISSUES
+$REMAINING_ISSUES
 
 Fix every issue you can. Be fast and decisive.
 
 ALLOWED (do these automatically):
-- Restart services: systemctl restart atlas-telegram-bot, atlas-dashboard, atlas-dashboard-refresh
+- Restart services: systemctl restart atlas-telegram-bot, atlas-dashboard
 - Truncate large logs: truncate -s 0 /root/atlas/logs/atlas.log (or tail -2000 to preserve recent)
 - Clean __pycache__: find /root/atlas -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
 - Run weekly maintenance: bash /root/atlas/scripts/weekly_maintenance.sh
@@ -185,23 +254,92 @@ Rules:
 - Be concise — this runs every hour, nobody wants a novel"
 
 SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
-timeout 300 pi -p --no-session --model anthropic/claude-opus-4-6 \
+
+# ── Circuit breaker pre-check ────────────────────────────────
+BREAKER_FILE="${CLAUDE_BREAKER_FILE:-/tmp/claude_breaker.json}"
+if [ -f "$BREAKER_FILE" ]; then
+    BREAKER_AGE=$(( $(date +%s) - $(stat -c %Y "$BREAKER_FILE" 2>/dev/null || echo 0) ))
+    if [ "$BREAKER_AGE" -lt 18000 ]; then
+        REMAINING_MIN=$(( (18000 - BREAKER_AGE) / 60 ))
+        log "Claude circuit breaker tripped (${REMAINING_MIN}m remaining) — skipping pi watchdog agent"
+        exit 0
+    else
+        log "Claude circuit breaker expired — removing stale breaker file"
+        rm -f "$BREAKER_FILE"
+    fi
+fi
+
+timeout 300 pi -p --no-session --model anthropic/claude-sonnet-4-6 \
     --skill "$SKILLS_ROOT/atlas-incident" \
     --skill "$SKILLS_ROOT/atlas-state-queries" \
     --skill "$SKILLS_ROOT/atlas-codebase" \
     "$PROMPT" >> "$LOG_FILE" 2>&1
 PI_EXIT=$?
 
+# ── Trip breaker if exhaustion detected ──────────────────────
+if grep -qiE "out of extra usage|rate_limit_error|insufficient_quota|usage_limit" "$LOG_FILE" 2>/dev/null; then
+    log "Detected Claude usage exhaustion in pi output — tripping circuit breaker"
+    python3 -c "import sys; sys.path.insert(0,'$PROJECT'); from utils.claude_circuit_breaker import trip; trip('healthz_hourly')" 2>/dev/null || true
+fi
+
 log "Pi agent exit code: $PI_EXIT"
 
-# If agent itself crashed, send a direct alert
+# If agent itself failed
 if [ $PI_EXIT -ne 0 ]; then
-    python3 -c "
+    # Check if it was an API billing issue (don't spam alerts for this)
+    if grep -q "out of extra usage\|billing\|rate_limit\|overloaded" "$LOG_FILE" 2>/dev/null; then
+        log "Pi agent unavailable (API limit/billing) — skipping alert"
+    else
+        python3 -c "
 import sys; sys.path.insert(0, '$PROJECT')
 from utils.telegram import send_message
 send_message('🚨 <b>Hourly watchdog agent crashed</b> (exit $PI_EXIT).\nCheck: <code>$LOG_FILE</code>')
 " 2>/dev/null || true
+    fi
 fi
+
+# ── Stale lock cleanup ───────────────────────────────────────
+# Cron jobs use flock(1) advisory locks on /tmp/*.lock files.
+# If a job crashes or times out, the kernel releases the flock,
+# but the file persists. Clean locks >6h old with no holder.
+for lockfile in /tmp/compute_daily_risk.lock /tmp/reconcile.lock \
+                /tmp/sync_protective.lock /tmp/execute_approved.lock \
+                /tmp/intraday_sp500.lock; do
+    if [ -f "$lockfile" ]; then
+        # Only remove if file is >6 hours old AND no process holds it
+        file_age_hours=$(( ($(date +%s) - $(stat -c %Y "$lockfile")) / 3600 ))
+        if [ "$file_age_hours" -ge 6 ] && ! fuser "$lockfile" >/dev/null 2>&1; then
+            rm -f "$lockfile"
+            log "Cleaned stale lock: $lockfile (age: ${file_age_hours}h)"
+        fi
+    fi
+done
+
+# ── Restic backup verification ───────────────────────────────
+# Check that restic backups are completing. Alert if last snapshot >48h old.
+RESTIC_REPOSITORY="/root/backups/restic-repo"
+RESTIC_PASSWORD="atlas-backup-2026"
+export RESTIC_PASSWORD RESTIC_REPOSITORY
+
+if command -v restic &>/dev/null && [ -d "$RESTIC_REPOSITORY" ]; then
+    LAST_SNAPSHOT_TIME=$(restic -r "$RESTIC_REPOSITORY" snapshots --latest 1 --json 2>/dev/null \
+        | python3 -c "import sys,json; snaps=json.load(sys.stdin); snaps.sort(key=lambda x: x['time']); print(snaps[-1]['time'][:19] if snaps else '')" 2>/dev/null)
+    if [ -n "$LAST_SNAPSHOT_TIME" ]; then
+        SNAP_EPOCH=$(date -d "$LAST_SNAPSHOT_TIME" +%s 2>/dev/null || echo 0)
+        NOW_EPOCH=$(date +%s)
+        SNAP_AGE_HOURS=$(( (NOW_EPOCH - SNAP_EPOCH) / 3600 ))
+        if [ "$SNAP_AGE_HOURS" -gt 48 ]; then
+            log "WARNING: Last restic backup is ${SNAP_AGE_HOURS}h old (>48h threshold)"
+            ISSUES="${ISSUES:-}
+[WARN] backup/restic: Last snapshot is ${SNAP_AGE_HOURS}h old"
+        else
+            log "Restic backup OK: last snapshot ${SNAP_AGE_HOURS}h ago"
+        fi
+    else
+        log "WARNING: Could not read restic snapshots"
+    fi
+fi
+unset RESTIC_PASSWORD
 
 # ── Cleanup ──────────────────────────────────────────────────
 find "$LOG_DIR" -name "healthz-hourly_*.log" -mtime +3 -delete 2>/dev/null

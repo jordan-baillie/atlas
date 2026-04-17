@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "built_at": "2026-04-14T00:00:00",
+        "config_version": "v1.0",
+        "candidates_evaluated": 5,
+        "final_count": 5,
+        "filters": {
+            "min_price": 1.0,
+            "min_median_daily_value": 1000000,
+            "top_n": 5
+        }
+    },
+    "tickers": ["TLT", "IEF", "SHY", "TIP", "BND"]
+}

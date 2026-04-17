@@ -145,6 +145,9 @@ class DecisionJournal:
 class TradeLedger:
     """Records all executed trades with full details."""
 
+    # LEGACY APPEND-ONLY AUDIT TRAIL — SQLite `trades` table is the source of truth.
+    # This file is retained for backward compat and audit purposes only.
+    # Consumers should read from SQLite, not this file. (Issue 4 migration)
     FILE = JOURNAL_DIR / "trade_ledger.json"
 
     def __init__(self):
@@ -167,6 +170,9 @@ class TradeLedger:
     def record_entry(self, fill_record: dict):
         """Record an entry fill."""
         fill_record["recorded_at"] = datetime.now().isoformat()
+        # Ensure universe is present in the audit trail (parity with SQLite trades table)
+        if "universe" not in fill_record:
+            fill_record["universe"] = fill_record.get("market_id") or "sp500"
         self.trades.append({"type": "entry", **fill_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
@@ -194,6 +200,21 @@ class TradeLedger:
     def record_exit(self, trade_record: dict):
         """Record a completed trade (exit)."""
         trade_record["recorded_at"] = datetime.now().isoformat()
+        # Ensure universe is present in the audit trail (parity with SQLite trades table).
+        # Exit records often lack market_id; look it up from the matching entry in the
+        # in-memory ledger (self.trades is loaded fresh from JSON on each TradeLedger()).
+        if "universe" not in trade_record:
+            _uni = trade_record.get("market_id")
+            if not _uni:
+                _ticker = trade_record.get("ticker", "")
+                _strategy = trade_record.get("strategy", "")
+                for _t in reversed(self.trades):
+                    if (_t.get("type") == "entry"
+                            and _t.get("ticker") == _ticker
+                            and (not _strategy or _t.get("strategy") == _strategy)):
+                        _uni = _t.get("universe") or _t.get("market_id")
+                        break
+            trade_record["universe"] = _uni or "sp500"
         self.trades.append({"type": "exit", **trade_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal

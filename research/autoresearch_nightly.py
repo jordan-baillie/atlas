@@ -164,8 +164,9 @@ def _spawn_workers(
     strategies: List[str],
     market: str,
     hours: float,
-    snapshot_id: str,
+    snapshot_id: Optional[str],
     max_workers: int,
+    universe: str = "sp500",
 ) -> List[Dict]:
     """Spawn autoresearch_runner subprocesses, respecting *max_workers* limit.
 
@@ -188,8 +189,10 @@ def _spawn_workers(
             "--market", market,
             "--hours", str(hours),
             "--fast-screen",
-            "--snapshot", snapshot_id,
+            "--universe", universe,
         ]
+        if snapshot_id:
+            cmd.extend(["--snapshot", snapshot_id])
         proc = subprocess.Popen(
             cmd,
             stdout=log_fh,
@@ -314,6 +317,7 @@ def run_nightly(
     workers: int = 5,
     notify: bool = False,
     snapshot_id: Optional[str] = None,
+    universe: str = "sp500",
 ) -> Dict:
     """Run parallel autoresearch sessions for multiple strategies.
 
@@ -331,24 +335,29 @@ def run_nightly(
     session_start = time.time()
     strategies = strategies or list(DEFAULT_STRATEGIES)
 
-    # Resolve snapshot
-    if snapshot_id is None:
-        snapshot_id = _find_latest_snapshot(market)
+    # Resolve snapshot — only sp500 uses file-based snapshots;
+    # other universes load from build_from_definition() inside the runner
+    if universe == "sp500":
+        if snapshot_id is None:
+            snapshot_id = _find_latest_snapshot(market)
+    else:
+        snapshot_id = None  # non-sp500 universes don't use snapshots
     print(
         f"\n{'='*65}\n"
         f"  Atlas Nightly Autoresearch Orchestrator\n"
         f"{'='*65}\n"
         f"  Strategies : {', '.join(strategies)}\n"
         f"  Market     : {market}\n"
+        f"  Universe   : {universe}\n"
         f"  Budget     : {hours:.1f} h per worker\n"
         f"  Workers    : {workers}\n"
-        f"  Snapshot   : {snapshot_id}\n"
+        f"  Snapshot   : {snapshot_id or '(none — universe uses build_from_definition)'}\n"
         f"  Started    : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
         f"{'='*65}\n"
     )
 
     # Spawn and monitor workers
-    worker_list = _spawn_workers(strategies, market, hours, snapshot_id, workers)
+    worker_list = _spawn_workers(strategies, market, hours, snapshot_id, workers, universe=universe)
 
     # Collect results
     runtime_s = time.time() - session_start
@@ -463,12 +472,37 @@ def _parse_args(argv=None) -> argparse.Namespace:
         default=None,
         help="Snapshot ID (auto-discovered if omitted).",
     )
+    parser.add_argument(
+        "--universe",
+        default="sp500",
+        help="Universe ID (default: sp500). Non-sp500 universes use build_from_definition() instead of snapshots.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Print config and exit without spawning workers.",
+    )
     return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
     args = _parse_args()
     strats = args.strategies.split(",") if args.strategies else None
+    if args.dry_run:
+        print(
+            f"\n{'='*65}\n"
+            f"  Dry-run mode — no workers will be spawned\n"
+            f"{'='*65}\n"
+            f"  Strategies : {', '.join(strats or ['(defaults)'])}\n"
+            f"  Market     : {args.market}\n"
+            f"  Universe   : {args.universe}\n"
+            f"  Budget     : {args.hours:.1f} h per worker\n"
+            f"  Workers    : {args.workers}\n"
+            f"  Snapshot   : {args.snapshot or '(auto-discover or none for non-sp500)'}\n"
+            f"{'='*65}\n"
+        )
+        sys.exit(0)
     result = run_nightly(
         strategies=strats,
         market=args.market,
@@ -476,6 +510,7 @@ if __name__ == "__main__":
         workers=args.workers,
         notify=args.notify,
         snapshot_id=args.snapshot,
+        universe=args.universe,
     )
     failures = result.get("failures", 0)
     sys.exit(1 if failures == len(result.get("strategies", [])) else 0)

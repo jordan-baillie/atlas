@@ -496,11 +496,17 @@ def check_logging(project: Path) -> list:
     else:
         results.append({"check": "decision_journal", "verdict": "warn", "message": "No decision journal"})
 
-    # Trade ledger
-    tl_path = project / "journal" / "trade_ledger.json"
-    if tl_path.exists():
-        tl = _load_json(tl_path) or []
-        results.append({"check": "trade_ledger", "verdict": "ok", "message": f"{len(tl)} ledger entries"})
+    # Trades DB — SQLite is source of truth (Issue 4: trade_ledger.json deprecated as consumer)
+    try:
+        import sqlite3 as _sqlite3
+        _db_path = project / "data" / "atlas.db"
+        _conn = _sqlite3.connect(str(_db_path))
+        _trade_count = _conn.execute("SELECT COUNT(*) FROM trades").fetchone()[0]
+        _conn.close()
+        results.append({"check": "trades_db", "verdict": "ok",
+                        "message": f"{_trade_count} trades in SQLite"})
+    except Exception as _e:
+        results.append({"check": "trades_db", "verdict": "error", "message": str(_e)})
 
     # Live execution journal
     ej_path = project / "logs" / "live_executions.jsonl"

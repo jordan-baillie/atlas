@@ -1,11 +1,12 @@
 """Unified Auto-Promotion Pipeline for Atlas.
 
 Called by sweep.py after each sweep cycle when a strategy has improved params.
-Applies three validation gates before writing to active config:
+Applies four validation gates before writing to active config:
 
     Gate 1: Cooldown (24h per strategy)
     Gate 2: Regression check (candidate vs active portfolio backtest)
     Gate 3: Sanity bounds (Sharpe > 0, CAGR > 0, ≥ 20 trades)
+    Gate 4: OOS validation (time-split + perturbation robustness)
 
 On pass: versions current config, writes new active, logs, notifies Telegram.
 On fail: keeps candidate file, notifies why it was blocked.
@@ -18,6 +19,8 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+import hashlib
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +29,131 @@ ATLAS_ROOT = Path(__file__).resolve().parent.parent
 # Cooldown: 24h per strategy (one promotion per day max)
 COOLDOWN_PATH = Path("/tmp/promotion-cooldowns.json")
 PROMOTION_LOG_PATH = ATLAS_ROOT / "config" / "promotion_log.json"
+PENDING_PROMOTIONS_PATH = ATLAS_ROOT / "config" / "pending_promotions.json"
 COOLDOWN_SECONDS = 86_400  # 24 hours
 
+OOS_CACHE_DIR = ATLAS_ROOT / "config" / ".oos_cache"
+OOS_CACHE_TTL_DAYS = 7
+
+
+
+def _oos_cache_key(candidate_config: dict, market: str) -> str:
+    """Deterministic cache key from config content + market."""
+    # Hash the strategies section (the part that changes during sweeps)
+    strat_str = json.dumps(candidate_config.get("strategies", {}), sort_keys=True)
+    h = hashlib.sha256(f"{market}:{strat_str}".encode()).hexdigest()[:16]
+    return f"oos_{market}_{h}"
+
+
+def _get_cached_oos(cache_key: str) -> Optional[dict]:
+    """Return cached OOS result if fresh (< 7 days), else None."""
+    OOS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = OOS_CACHE_DIR / f"{cache_key}.json"
+    if not cache_file.exists():
+        return None
+    try:
+        data = json.loads(cache_file.read_text())
+        cached_at = datetime.fromisoformat(data["cached_at"])
+        age_days = (datetime.now(timezone.utc) - cached_at).total_seconds() / 86400
+        if age_days > OOS_CACHE_TTL_DAYS:
+            logger.info("OOS cache expired (%.1f days old)", age_days)
+            return None
+        logger.info("OOS cache hit: %s (%.1f days old)", cache_key, age_days)
+        return data
+    except Exception as exc:
+        logger.warning("OOS cache read failed: %s", exc)
+        return None
+
+
+def _save_oos_cache(cache_key: str, result: dict) -> None:
+    """Persist OOS result to cache."""
+    OOS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = OOS_CACHE_DIR / f"{cache_key}.json"
+    result["cached_at"] = datetime.now(timezone.utc).isoformat()
+    cache_file.write_text(json.dumps(result, indent=2, default=str))
+
+
+def _run_oos_validation(candidate_config: dict, market: str) -> dict:
+    """Run OOS validation via subprocess (calls scripts/validate_oos.py).
+
+    Returns dict with keys: pass (bool), sharpe_oos, profit_factor_oos,
+    cagr_degradation_pct, perturbation_pass_rate, reason (str).
+    """
+    import tempfile
+
+    # Write candidate config to temp file for validate_oos.py to use
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, dir="/tmp"
+    ) as f:
+        json.dump(candidate_config, f, indent=2, default=str)
+        tmp_config = f.name
+
+    try:
+        script = str(ATLAS_ROOT / "scripts" / "validate_oos.py")
+        cmd = [
+            "python3", script,
+            "--config", tmp_config,
+            "--market", market,
+            "--output", "/tmp/oos_result.json",
+        ]
+        logger.info("Running OOS validation: %s", " ".join(cmd))
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=7200,
+            cwd=str(ATLAS_ROOT),
+        )
+
+        if proc.returncode != 0:
+            logger.warning("OOS validation script failed (rc=%d): %s", proc.returncode, proc.stderr[-500:] if proc.stderr else "no stderr")
+            return {"pass": False, "reason": f"OOS script failed (rc={proc.returncode})"}
+
+        # Parse output
+        result_path = Path("/tmp/oos_result.json")
+        if not result_path.exists():
+            return {"pass": False, "reason": "OOS script produced no output file"}
+
+        oos_data = json.loads(result_path.read_text())
+
+        # Extract key metrics from validate_oos.py output
+        summary = oos_data.get("summary", oos_data)
+
+        oos_sharpe = float(summary.get("oos_sharpe", summary.get("sharpe_oos", 0)))
+        oos_pf = float(summary.get("oos_profit_factor", summary.get("profit_factor_oos", 0)))
+        is_cagr = float(summary.get("is_cagr", summary.get("cagr_is", 0)))
+        oos_cagr = float(summary.get("oos_cagr", summary.get("cagr_oos", 0)))
+        cagr_degradation = ((is_cagr - oos_cagr) / abs(is_cagr) * 100) if is_cagr != 0 else 0
+        perturbation_rate = float(summary.get("perturbation_pass_rate",
+                                              summary.get("robustness_pass_rate", 0)))
+
+        # Apply gates
+        failures = []
+        if oos_sharpe <= 0:
+            failures.append(f"OOS Sharpe {oos_sharpe:.4f} ≤ 0")
+        if oos_pf <= 1.0:
+            failures.append(f"OOS profit factor {oos_pf:.2f} ≤ 1.0")
+        if cagr_degradation > 50:
+            failures.append(f"CAGR degradation {cagr_degradation:.1f}% > 50%")
+        if perturbation_rate < 0.70:
+            failures.append(f"Perturbation pass rate {perturbation_rate:.0%} < 70%")
+
+        passed = len(failures) == 0
+        reason = "OOS validation passed" if passed else "; ".join(failures)
+
+        return {
+            "pass": passed,
+            "reason": reason,
+            "sharpe_oos": oos_sharpe,
+            "profit_factor_oos": oos_pf,
+            "cagr_degradation_pct": round(cagr_degradation, 1),
+            "perturbation_pass_rate": perturbation_rate,
+            "raw": summary,
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"pass": False, "reason": "OOS validation timed out (2h limit)"}
+    except Exception as exc:
+        return {"pass": False, "reason": f"OOS validation error: {exc}"}
+    finally:
+        Path(tmp_config).unlink(missing_ok=True)
 
 # ─── Public entry point ───────────────────────────────────────────────────────
 
@@ -134,7 +260,55 @@ def auto_promote(
                  "market": market, "delta": delta})
         return {"promoted": False, "reason": reason, "version": None}
 
-    # ── All gates passed — promote ────────────────────────────────────────────
+    # ── Gate 4: OOS validation ────────────────────────────────────────────────
+    oos_cache_key = _oos_cache_key(candidate_config, market)
+    oos_result = _get_cached_oos(oos_cache_key)
+
+    if oos_result is None:
+        logger.info("Running OOS validation (no cache hit)…")
+        oos_result = _run_oos_validation(candidate_config, market)
+        _save_oos_cache(oos_cache_key, oos_result)
+    else:
+        logger.info("Using cached OOS result: %s", oos_result.get("reason", ""))
+
+    if not oos_result.get("pass", False):
+        reason = f"OOS validation failed: {oos_result.get('reason', 'unknown')}"
+        logger.info("📉 Promotion blocked: %s", reason)
+        _notify({"promoted": False, "reason": reason, "strategy": strategy,
+                 "market": market, "delta": delta,
+                 "oos_result": oos_result})
+        return {"promoted": False, "reason": reason, "version": None}
+
+    logger.info(
+        "OOS validation passed: Sharpe=%.4f PF=%.2f CAGR_deg=%.1f%% Perturb=%.0f%%",
+        oos_result.get("sharpe_oos", 0), oos_result.get("profit_factor_oos", 0),
+        oos_result.get("cagr_degradation_pct", 0),
+        oos_result.get("perturbation_pass_rate", 0) * 100,
+    )
+
+    # Compute DSR for reporting
+    dsr_info = {}
+    try:
+        from research.loop import _get_dsr_stats
+        dsr_stats = _get_dsr_stats()
+        if dsr_stats["num_experiments"] >= 5 and dsr_stats["variance_of_sharpes"] > 0:
+            import numpy as np
+            from scipy import stats as sp_stats
+            n_exp = dsr_stats["num_experiments"]
+            var_s = dsr_stats["variance_of_sharpes"]
+            e_max_s = np.sqrt(var_s) * (
+                (1 - np.euler_gamma) * sp_stats.norm.ppf(1 - 1 / n_exp)
+                + np.euler_gamma * sp_stats.norm.ppf(1 - 1 / (n_exp * np.e))
+            )
+            dsr_info = {
+                "dsr_expected_max_sharpe": round(float(e_max_s), 4),
+                "dsr_num_experiments": n_exp,
+                "dsr_significant": final_sharpe > e_max_s,
+            }
+    except Exception:
+        pass
+
+    # ── All gates passed — queue for Telegram approval ────────────────────────────
     metadata = {
         "strategy": strategy,
         "initial_sharpe": initial_sharpe,
@@ -144,46 +318,44 @@ def auto_promote(
         "baseline_metrics": regression.get("baseline_metrics", {}),
         "candidate_metrics": candidate_metrics,
         "comparisons": regression.get("comparisons", {}),
+        "oos_result": {k: v for k, v in oos_result.items() if k != "raw"},
+        "dsr": dsr_info,
+    }
+
+    # Store pending promotion
+    pending_entry = {
+        "strategy": strategy,
+        "market": market,
+        "candidate_config": candidate_config,
+        "metadata": metadata,
+        "delta_sharpe": round(delta, 6),
+        "final_sharpe": final_sharpe,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     try:
-        version = _do_promote(candidate_config, market, metadata)
+        pending_id = _add_pending(pending_entry)
     except Exception as exc:
-        reason = f"Promotion write failed: {exc}"
-        logger.error("auto_promote: %s", reason, exc_info=True)
-        _notify({"promoted": False, "reason": reason, "strategy": strategy,
-                 "market": market, "delta": delta})
+        reason = f"Failed to store pending promotion: {exc}"
+        logger.error("auto_promote: %s", reason)
         return {"promoted": False, "reason": reason, "version": None}
 
-    # Update cooldown timestamp
-    _update_cooldown(strategy)
-
-    result = {
-        "promoted": True,
-        "reason": f"All gates passed — Sharpe +{delta:.4f}",
-        "version": version,
-        "strategy": strategy,
-        "market": market,
-        "delta": delta,
-        "final_sharpe": final_sharpe,
-        "comparisons": regression.get("comparisons", {}),
-    }
-    _notify(result)
+    # Send Telegram approval request with inline buttons
+    _notify_approval_request(pending_id, strategy, market, delta, final_sharpe,
+                              candidate_metrics, regression.get("comparisons", {}))
 
     # Record in brain (non-blocking)
     try:
         from research.brain.writer import record_promotion
-        prev_entry = _last_promotion_entry(market)
-        prev_version = prev_entry.get("new_version", "unknown") if prev_entry else "unknown"
         record_promotion(
             strategy=strategy,
             market=market,
-            prev_version=prev_version,
-            new_version=version,
+            prev_version="pending",
+            new_version=f"pending:{pending_id}",
             delta_sharpe=round(delta, 6),
             metrics_comparison={
                 "active": regression.get("baseline_metrics", {}),
-                "candidate": regression.get("candidate_metrics", {}),
+                "candidate": candidate_metrics,
             },
             auto=True,
         )
@@ -191,9 +363,15 @@ def auto_promote(
         logger.warning("Brain record_promotion failed (non-fatal): %s", exc)
 
     logger.info(
-        "✅ auto_promote: %s promoted to %s (Sharpe +%.4f)", strategy, version, delta,
+        "✅ auto_promote: %s passed all gates — pending approval (id=%s)", strategy, pending_id,
     )
-    return result
+    return {
+        "promoted": False,
+        "pending": True,
+        "pending_id": pending_id,
+        "reason": f"All gates passed — awaiting Telegram approval (Sharpe +{delta:.4f})",
+        "version": None,
+    }
 
 
 # ─── Gate 1: Cooldown ────────────────────────────────────────────────────────
@@ -398,6 +576,141 @@ def _last_promotion_entry(market: str) -> Optional[dict]:
         return None
 
 
+# ─── Pending promotions storage ───────────────────────────────────────────────────
+
+def _load_pending() -> list:
+    if PENDING_PROMOTIONS_PATH.exists():
+        try:
+            return json.loads(PENDING_PROMOTIONS_PATH.read_text())
+        except Exception:
+            return []
+    return []
+
+
+def _save_pending(entries: list) -> None:
+    PENDING_PROMOTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    PENDING_PROMOTIONS_PATH.write_text(json.dumps(entries, indent=2, default=str))
+
+
+def _add_pending(entry: dict) -> str:
+    """Add a pending promotion. Returns the pending ID."""
+    import hashlib
+    pending_id = hashlib.sha256(
+        f"{entry['strategy']}:{entry['market']}:{entry['timestamp']}".encode()
+    ).hexdigest()[:12]
+    entry["pending_id"] = pending_id
+    entry["status"] = "pending"
+    entries = _load_pending()
+    entries.append(entry)
+    _save_pending(entries)
+    return pending_id
+
+
+def complete_pending_promotion(pending_id: str) -> dict:
+    """Called when user taps APPROVE. Executes the stored promotion."""
+    entries = _load_pending()
+    target = None
+    for e in entries:
+        if e.get("pending_id") == pending_id:
+            target = e
+            break
+    if not target:
+        return {"promoted": False, "reason": f"Pending promotion {pending_id} not found"}
+    if target.get("status") != "pending":
+        return {"promoted": False, "reason": f"Already {target.get('status')}"}
+
+    # Execute the actual promotion
+    try:
+        version = _do_promote(target["candidate_config"], target["market"], target["metadata"])
+    except Exception as exc:
+        target["status"] = "error"
+        target["error"] = str(exc)
+        _save_pending(entries)
+        return {"promoted": False, "reason": f"Promotion write failed: {exc}"}
+
+    # Update cooldown
+    _update_cooldown(target["strategy"])
+
+    # Mark as approved
+    target["status"] = "approved"
+    target["approved_at"] = datetime.now(timezone.utc).isoformat()
+    target["version"] = str(version)
+    _save_pending(entries)
+
+    # Record in brain
+    try:
+        from research.brain.writer import record_promotion
+        record_promotion(
+            strategy=target["strategy"],
+            market=target["market"],
+            prev_version="unknown",
+            new_version=str(version),
+            delta_sharpe=target.get("delta_sharpe", 0),
+            metrics_comparison={
+                "active": target.get("metadata", {}).get("baseline_metrics", {}),
+                "candidate": target.get("metadata", {}).get("candidate_metrics", {}),
+            },
+            auto=True,
+        )
+    except Exception:
+        pass
+
+    return {
+        "promoted": True,
+        "version": str(version),
+        "strategy": target["strategy"],
+        "market": target["market"],
+    }
+
+
+def reject_pending_promotion(pending_id: str, reason: str = "User rejected") -> dict:
+    """Called when user taps REJECT."""
+    entries = _load_pending()
+    for e in entries:
+        if e.get("pending_id") == pending_id:
+            e["status"] = "rejected"
+            e["rejected_at"] = datetime.now(timezone.utc).isoformat()
+            e["reject_reason"] = reason
+            _save_pending(entries)
+            return {"rejected": True, "strategy": e.get("strategy")}
+    return {"rejected": False, "reason": "Not found"}
+
+
+def expire_pending_promotions() -> list:
+    """Expire any pending promotions older than 24h. Returns list of expired IDs."""
+    entries = _load_pending()
+    expired = []
+    now = datetime.now(timezone.utc)
+    for e in entries:
+        if e.get("status") != "pending":
+            continue
+        ts = e.get("timestamp", "")
+        try:
+            created = datetime.fromisoformat(ts)
+            if (now - created).total_seconds() > 86400:
+                e["status"] = "expired"
+                e["expired_at"] = now.isoformat()
+                expired.append(e.get("pending_id"))
+        except Exception:
+            continue
+    if expired:
+        _save_pending(entries)
+        # Notify via Telegram
+        try:
+            from utils.telegram import send_message
+            for pid in expired:
+                entry = next((e for e in entries if e.get("pending_id") == pid), None)
+                if entry:
+                    send_message(
+                        f"⏰ <b>Promotion expired</b>: {entry.get('strategy')}\n"
+                        f"Market: {entry.get('market', '').upper()}\n"
+                        f"No response within 24h — auto-expired."
+                    )
+        except Exception:
+            pass
+    return expired
+
+
 # ─── Telegram notification ────────────────────────────────────────────────────
 
 def _notify(result: dict) -> None:
@@ -454,6 +767,61 @@ def _notify(result: dict) -> None:
 
     except Exception as exc:
         logger.warning("_notify failed (non-fatal): %s", exc)
+
+
+# ─── Telegram approval request ───────────────────────────────────────────────────
+
+def _notify_approval_request(pending_id: str, strategy: str, market: str,
+                              delta: float, final_sharpe: float,
+                              metrics: dict, comparisons: dict) -> None:
+    """Send Telegram message with Approve/Reject inline buttons."""
+    try:
+        from utils.telegram import send_message
+
+        # Build metric summary
+        metric_lines = []
+        for m in ("sharpe", "cagr_pct", "sortino", "profit_factor", "win_rate_pct"):
+            cmp = comparisons.get(m)
+            if isinstance(cmp, dict):
+                sign = "+" if cmp.get("delta", 0) >= 0 else ""
+                metric_lines.append(
+                    f"  {m}: {cmp['baseline']:.3f} → {cmp['candidate']:.3f} "
+                    f"({sign}{cmp['delta']:.3f})"
+                )
+
+        # Trade count
+        tc = comparisons.get("total_trades", {})
+        if isinstance(tc, dict):
+            metric_lines.append(f"  trades: {tc.get('baseline', '?')} → {tc.get('candidate', '?')}")
+
+        # Max drawdown
+        dd = comparisons.get("max_drawdown_pct", {})
+        if isinstance(dd, dict):
+            metric_lines.append(f"  max_dd: {dd.get('baseline', 0):.1f}% → {dd.get('candidate', 0):.1f}%")
+
+        metrics_text = "\n".join(metric_lines)
+
+        text = (
+            f"🔔 <b>Promotion Approval Required</b>\n\n"
+            f"Strategy: <b>{strategy}</b>\n"
+            f"Market: {market.upper()}\n"
+            f"Sharpe Δ: <b>+{delta:.4f}</b> → {final_sharpe:.4f}\n\n"
+            f"<b>Portfolio metrics:</b>\n{metrics_text}\n\n"
+            f"<i>Auto-expires in 24h if no response.</i>"
+        )
+
+        reply_markup = {
+            "inline_keyboard": [[
+                {"text": "✅ APPROVE", "callback_data": f"sweep_promote:{pending_id}:approve:{market}"},
+                {"text": "❌ REJECT", "callback_data": f"sweep_promote:{pending_id}:reject:{market}"},
+            ]]
+        }
+
+        send_message(text, reply_markup=reply_markup)
+        logger.info("Telegram approval request sent for %s (pending_id=%s)", strategy, pending_id)
+
+    except Exception as exc:
+        logger.warning("_notify_approval_request failed (non-fatal): %s", exc)
 
 
 # ─── Rollback ─────────────────────────────────────────────────────────────────

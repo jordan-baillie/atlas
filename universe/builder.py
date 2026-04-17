@@ -204,6 +204,16 @@ def build_universe(
     min_market_cap = uni_cfg.get("min_market_cap", 300_000_000)
     exclusions = [e.upper() for e in uni_cfg.get("exclusions", [])]
 
+    # Merge auto-exclusions
+    try:
+        from data.auto_exclusions import get_excluded_tickers
+        auto_excl = get_excluded_tickers(market_id)
+        if auto_excl:
+            exclusions = list(set(exclusions) | auto_excl)
+            logger.info("Merged %d auto-exclusions into universe exclusions", len(auto_excl))
+    except ImportError:
+        pass
+
     if candidate_tickers is None:
         candidate_tickers = get_market_tickers(market_id)
 
@@ -479,6 +489,38 @@ def build_from_definition(
 
         result[ticker] = df
 
+    # Fallback: if SQLite returned no usable data, try loading from parquet cache
+    if not result:
+        cache_dir = Path(__file__).resolve().parent.parent / "data" / "cache" / universe_name
+        if cache_dir.exists():
+            logger.warning(
+                "build_from_definition(%r): SQLite returned 0 tickers, "
+                "falling back to parquet cache at %s",
+                universe_name, cache_dir,
+            )
+            for pf in sorted(cache_dir.glob("*.parquet")):
+                try:
+                    df = pd.read_parquet(pf)
+                    df.columns = [c.lower() for c in df.columns]
+                    if "date" in df.columns:
+                        df["date"] = pd.to_datetime(df["date"])
+                        df = df.set_index("date")
+                    df.index = pd.to_datetime(df.index)
+                    # Apply date range filters
+                    if start_date:
+                        df = df[df.index >= start_date]
+                    if end_date:
+                        df = df[df.index <= end_date]
+                    if len(df) >= min_history_days:
+                        result[pf.stem] = df
+                except Exception as exc:
+                    logger.debug("Failed to read %s: %s", pf, exc)
+            if result:
+                logger.info(
+                    "build_from_definition(%r): parquet fallback loaded %d tickers",
+                    universe_name, len(result),
+                )
+
     logger.info(
         f"build_from_definition({universe_name!r}): "
         f"{len(result)} tickers returned "
@@ -519,6 +561,93 @@ def build_multi_universe(
         for name in universe_names
     }
 
+
+
+def ensure_universe_current(config: Dict[str, Any]) -> bool:
+    """Check if the saved universe reflects current exclusions; rebuild if stale.
+
+    Compares the exclusions baked into the saved universe.json with the
+    current config exclusions + auto-exclusions. If they differ, triggers
+    a lightweight rebuild (using cached data, no API calls).
+
+    Args:
+        config: Active config dict.
+
+    Returns:
+        True if universe was rebuilt, False if already current.
+    """
+    market_id = config.get("market", DEFAULT_MARKET)
+    uni_cfg = config.get("universe", {})
+    config_exclusions = set(e.upper() for e in uni_cfg.get("exclusions", []))
+
+    # Add auto-exclusions
+    try:
+        from data.auto_exclusions import get_excluded_tickers
+        auto_excl = get_excluded_tickers(market_id)
+        current_exclusions = config_exclusions | auto_excl
+    except ImportError:
+        current_exclusions = config_exclusions
+
+    # Load saved universe and compare
+    try:
+        saved = load_universe(market_id)
+        saved_exclusions = set(
+            e.upper() for e in saved.get("metadata", {}).get("filters", {}).get("exclusions", [])
+        )
+    except FileNotFoundError:
+        logger.info("No saved universe for %s — will build fresh", market_id)
+        saved_exclusions = None
+
+    if saved_exclusions is not None and saved_exclusions == current_exclusions:
+        logger.debug("Universe exclusions are current for %s", market_id)
+        return False
+
+    # Exclusions have changed — need to rebuild
+    logger.info(
+        "Universe exclusions changed for %s: saved=%s, current=%s. Rebuilding.",
+        market_id, saved_exclusions, current_exclusions,
+    )
+
+    # Rebuild — filter saved tickers if possible (avoids full API crawl)
+    try:
+        if saved_exclusions is not None:
+            saved_tickers = saved.get("tickers", [])
+            new_exclusions = current_exclusions - (saved_exclusions or set())
+            if new_exclusions and not (saved_exclusions - current_exclusions):
+                # Only additions to exclusions — can filter without full rebuild
+                filtered = [t for t in saved_tickers
+                           if t.upper() not in new_exclusions
+                           and t.split(".")[0].upper() not in new_exclusions]
+                if filtered:
+                    result = {
+                        "metadata": {
+                            **saved.get("metadata", {}),
+                            "built_at": datetime.now().isoformat(),
+                            "filters": {
+                                **saved.get("metadata", {}).get("filters", {}),
+                                "exclusions": sorted(current_exclusions),
+                            },
+                            "final_count": len(filtered),
+                            "rebuild_reason": f"exclusion_change: added {new_exclusions}",
+                        },
+                        "tickers": filtered,
+                        "details": [d for d in saved.get("details", [])
+                                   if d.get("ticker", "").upper() not in new_exclusions],
+                    }
+                    output_path = _market_processed_dir(market_id) / "universe.json"
+                    with open(output_path, "w") as f:
+                        json.dump(result, f, indent=2, default=str)
+                    logger.info(
+                        "Universe rebuilt (lightweight): %d -> %d tickers, "
+                        "excluded %s", len(saved_tickers), len(filtered), new_exclusions,
+                    )
+                    return True
+    except Exception as e:
+        logger.warning("Lightweight rebuild failed, will do full rebuild: %s", e)
+
+    # Full rebuild needed
+    build_universe(config, save=True, verbose=False)
+    return True
 
 if __name__ == "__main__":
     import sys

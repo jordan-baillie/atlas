@@ -23,6 +23,7 @@
 #   3. Run: crontab -e  (see schedule above)
 
 set -euo pipefail
+unset ANTHROPIC_API_KEY CLAUDE_API_KEY  # Atlas hardening: force pi to use OAuth (Claude Max)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(dirname "$SCRIPT_DIR")"
@@ -171,7 +172,7 @@ ${CONFIG_ERRORS}"
         python3 -c "
 import sys; sys.path.insert(0, '$PROJECT')
 from data.ingest import ingest_universe
-for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defensive_etfs']:
+for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defensive_etfs', 'crypto']:
     try:
         r = ingest_universe(u)
         print(f'{u}: {len(r.get("tickers_fetched",[]))} tickers refreshed')
@@ -187,6 +188,27 @@ for u in ['sector_etfs', 'treasury_etfs', 'gold_etfs', 'commodity_etfs', 'defens
             echo "$(date -Iseconds) ETF data refresh complete" >> "$LOG_DIR/pi-cron.log"
         fi
         hb "premarket" "running" '{"stage":"etf_refresh","exit_code":'"$ETF_EXIT"'}'
+
+        # ── Macro indicator refresh ────────────────────────────────────────
+        # Refresh macro_indicators table (VIX, treasury yields, put/call, etc.)
+        # so regime detection and overlay have current macro context.
+        echo "$(date -Iseconds) Refreshing macro indicators..." >> "$LOG_DIR/pi-cron.log"
+        _IN_SET_PLUS_E=1
+        set +e
+        python3 -c "
+import sys; sys.path.insert(0, '$PROJECT')
+from data.ingest import refresh_macro_data
+ok = refresh_macro_data(cache_max_age_hours=0)
+print(f'macro_indicators refresh: {\"ok\" if ok else \"FAILED\"}')
+" >> "$LOG_DIR/pi-cron.log" 2>&1
+        MACRO_EXIT=$?
+        set -e
+        _IN_SET_PLUS_E=0
+        if [ "$MACRO_EXIT" -ne 0 ]; then
+            echo "$(date -Iseconds) WARNING: macro indicator refresh exited $MACRO_EXIT — continuing" >> "$LOG_DIR/pi-cron.log"
+        else
+            echo "$(date -Iseconds) Macro indicator refresh complete" >> "$LOG_DIR/pi-cron.log"
+        fi
 
         # ── AI overlay (log-only mode) ─────────────────────────────────────
         # Runs BEFORE the planning agent so the decision is in SQLite when
@@ -446,6 +468,21 @@ esac
 echo "$(date -Iseconds) Starting pi-cron $MODE" >> "$LOG_DIR/pi-cron.log"
 
 cd "$PROJECT"
+
+# ── Circuit breaker pre-check ────────────────────────────────
+BREAKER_FILE="${CLAUDE_BREAKER_FILE:-/tmp/claude_breaker.json}"
+if [ -f "$BREAKER_FILE" ]; then
+    BREAKER_AGE=$(( $(date +%s) - $(stat -c %Y "$BREAKER_FILE" 2>/dev/null || echo 0) ))
+    if [ "$BREAKER_AGE" -lt 18000 ]; then
+        REMAINING_MIN=$(( (18000 - BREAKER_AGE) / 60 ))
+        echo "$(date -Iseconds) Claude circuit breaker tripped (${REMAINING_MIN}m remaining) — skipping pi agent" >> "$LOG_DIR/pi-cron.log"
+        exit 0
+    else
+        echo "$(date -Iseconds) Claude circuit breaker expired — removing stale breaker file" >> "$LOG_DIR/pi-cron.log"
+        rm -f "$BREAKER_FILE"
+    fi
+fi
+
 if [ "$MODE" = "research" ]; then
     # Research sessions get an 8-hour timeout
     # shellcheck disable=SC2086
@@ -460,11 +497,30 @@ else
        $SKILL_FLAGS \
        --no-session \
        "$PROMPT" \
-       >> "$LOGFILE" 2>&1
+       >> "$LOGFILE" 2>&1 || {
+        PI_EXIT=$?
+        echo "$(date -Iseconds) WARNING: pi agent failed (exit=$PI_EXIT), falling back to direct CLI" >> "$LOG_DIR/pi-cron.log"
+        # Direct CLI fallback — runs the core pipeline without the AI agent
+        case "$MODE" in
+            premarket)
+                python3 scripts/cli.py -m "$MARKET" ingest >> "$LOGFILE" 2>&1 || true
+                python3 scripts/cli.py -m "$MARKET" plan >> "$LOGFILE" 2>&1
+                ;;
+            postclose)
+                python3 scripts/eod_settlement.py --market "$MARKET" >> "$LOGFILE" 2>&1
+                ;;
+        esac
+    }
 fi
 
 EXIT_CODE=$?
 echo "$(date -Iseconds) pi-cron $MODE finished (exit=$EXIT_CODE)" >> "$LOG_DIR/pi-cron.log"
+
+# ── Trip breaker if exhaustion detected ──────────────────────
+if grep -qiE "out of extra usage|rate_limit_error|insufficient_quota|usage_limit" "$LOGFILE" 2>/dev/null; then
+    echo "$(date -Iseconds) Detected Claude usage exhaustion in pi output — tripping circuit breaker" >> "$LOG_DIR/pi-cron.log"
+    python3 -c "import sys; sys.path.insert(0,'$PROJECT'); from utils.claude_circuit_breaker import trip; trip('pi_cron')" 2>/dev/null || true
+fi
 
 # --- Post-check: detect code errors in logs even if agent exited 0 ---
 # The pi agent may exit 0 even when research_runner had code errors,

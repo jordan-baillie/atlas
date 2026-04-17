@@ -29,6 +29,12 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
+def _is_crypto_ticker(symbol: str) -> bool:
+    """Return True if symbol looks like a crypto pair (e.g. BTC-USD, BTC/USD)."""
+    crypto_suffixes = ('/USD', '/USDT', '-USD', '-USDT')
+    return any(symbol.upper().endswith(s) for s in crypto_suffixes)
+
 try:
     import yfinance as yf
     YF_AVAILABLE = True
@@ -462,6 +468,21 @@ def _fetch_ohlcv(
         logger.debug(f"{ticker}: in _YFINANCE_ONLY — using yfinance directly")
         return _download_via_yfinance(ticker, start_str, end_str)
 
+    # Crypto: route to Alpaca CryptoHistoricalDataClient
+    if (market_id or "").lower() == "crypto" or _is_crypto_ticker(ticker):
+        try:
+            from brokers.alpaca.market_data import get_historical_bars as _alpaca_bars
+            result = _alpaca_bars(ticker, start=start_str, end=end_str)
+            df = result.get(ticker, pd.DataFrame())
+            if not df.empty:
+                logger.debug(f"{ticker}: Alpaca crypto bars ({len(df)} rows)")
+                if "adj_close" in df.columns:
+                    df = df.drop(columns=["adj_close"])
+                return df
+            logger.debug(f"{ticker}: Alpaca crypto returned empty — falling back to yfinance")
+        except Exception as e:
+            logger.debug(f"{ticker}: Alpaca crypto fetch failed ({e}) — falling back to yfinance")
+
     if (market_id or "").lower() == "sp500":
         # Alpaca-primary path for US equities
         try:
@@ -609,6 +630,23 @@ def download_universe(
 
     logger.info(f"Downloading universe: {total} tickers (market={market_id or DEFAULT_MARKET})")
 
+    # Filter out auto-excluded tickers
+    try:
+        from data.auto_exclusions import get_excluded_tickers
+        auto_excluded = get_excluded_tickers(market_id)
+        if auto_excluded:
+            before_count = len(tickers)
+            tickers = [t for t in tickers if t.upper() not in auto_excluded 
+                       and t.split('.')[0].upper() not in auto_excluded]
+            if before_count != len(tickers):
+                logger.info(
+                    "Filtered %d auto-excluded tickers: %s",
+                    before_count - len(tickers), auto_excluded,
+                )
+                total = len(tickers)
+    except ImportError:
+        pass
+
     for i, ticker in enumerate(tickers, 1):
         ticker = _normalize_ticker(ticker, market_id)
         try:
@@ -635,6 +673,19 @@ def download_universe(
     )
     if failed:
         logger.warning(f"Failed tickers: {failed}")
+
+    # Ensure all downloaded data is written to SQLite (covers cache-hit paths
+    # where _save_cache() was not called, and retries any failed dual-writes)
+    sqlite_total = 0
+    for ticker, df in results.items():
+        if not df.empty:
+            n = _sqlite_batch_write(ticker, df, (market_id or DEFAULT_MARKET).lower())
+            sqlite_total += n
+    if sqlite_total:
+        logger.info(
+            "download_universe SQLite sync: %d rows written for %d tickers (market=%s)",
+            sqlite_total, len(results), market_id or DEFAULT_MARKET,
+        )
 
     return results
 
@@ -697,6 +748,96 @@ def _sqlite_batch_write(
             ticker, universe_name, exc,
         )
         return 0
+
+
+def verify_sqlite_integrity(
+    market_id: str,
+    tickers: List[str],
+    backfill: bool = True,
+) -> dict:
+    """Verify SQLite ohlcv has data for all tickers and optionally backfill gaps.
+
+    Args:
+        market_id: Universe/market name (used as the 'universe' column value).
+        tickers: List of tickers that should have data.
+        backfill: If True, backfill missing/stale data from parquet cache.
+
+    Returns:
+        dict with keys: market, total, present, missing, backfilled, still_missing.
+    """
+    from db.atlas_db import get_db as _get_db
+
+    present = []
+    missing = []
+
+    with _get_db() as db:
+        for ticker in tickers:
+            count = db.execute(
+                "SELECT COUNT(*) FROM ohlcv WHERE ticker = ? AND universe = ?",
+                (ticker, market_id.lower()),
+            ).fetchone()[0]
+            if count > 0:
+                present.append(ticker)
+            else:
+                missing.append(ticker)
+
+    backfilled = []
+    still_missing = []
+
+    if backfill and missing:
+        logger.warning(
+            "verify_sqlite_integrity(%s): %d tickers missing from SQLite, attempting backfill",
+            market_id, len(missing),
+        )
+        for ticker in missing:
+            cached = _load_cache(ticker, market_id)
+            if cached is not None and not cached.empty:
+                n = _sqlite_batch_write(ticker, cached, market_id.lower())
+                if n > 0:
+                    backfilled.append(ticker)
+                    logger.info(
+                        "Backfilled %s from parquet -> SQLite (%d rows, universe=%s)",
+                        ticker, n, market_id,
+                    )
+                else:
+                    still_missing.append(ticker)
+            else:
+                still_missing.append(ticker)
+
+        if still_missing:
+            logger.error(
+                "verify_sqlite_integrity(%s): %d tickers still missing after backfill: %s",
+                market_id, len(still_missing), still_missing,
+            )
+            try:
+                from utils.telegram import send_message
+                alert = (
+                    f"🚨 <b>DATA INTEGRITY FAILURE [{market_id.upper()}]</b>\n\n"
+                    f"{len(still_missing)} tickers have NO data in SQLite "
+                    f"even after backfill attempt:\n"
+                    + "\n".join(f"  • {t}" for t in still_missing)
+                    + "\n\nParquet cache also missing. Manual investigation required."
+                )
+                send_message(alert)
+            except Exception:
+                pass
+    else:
+        still_missing = list(missing)
+
+    result = {
+        "market": market_id,
+        "total": len(tickers),
+        "present": present,
+        "missing": missing,
+        "backfilled": backfilled,
+        "still_missing": still_missing,
+    }
+
+    logger.info(
+        "verify_sqlite_integrity(%s): %d/%d present, %d backfilled, %d still missing",
+        market_id, len(present), len(tickers), len(backfilled), len(still_missing),
+    )
+    return result
 
 
 def ingest_universe(
@@ -779,9 +920,12 @@ def ingest_universe(
                         df = filtered
                         logger.debug("%s: served from cache (%d rows)", ticker, len(df))
 
-            # Step 2: download from yfinance if cache missed
+            # Step 2: download if cache missed (Alpaca for crypto, yfinance for ETFs)
             if df.empty:
-                df = _download_via_yfinance(ticker, start_date, end_date)
+                if _is_crypto_ticker(ticker):
+                    df = _fetch_ohlcv(ticker, start_date, end_date, universe_name)
+                else:
+                    df = _download_via_yfinance(ticker, start_date, end_date)
                 if not df.empty:
                     # Save parquet cache under the universe-namespaced directory
                     _save_cache(ticker, df, universe_name)
@@ -1203,23 +1347,31 @@ def verify_ingest_freshness(
     config: Optional[dict] = None,
     market_id: Optional[str] = None,
 ) -> bool:
-    """Verify data freshness and optionally halt the pipeline on stale data.
+    """Verify data freshness with smart auto-exclusion for stale tickers.
 
-    Sends a Telegram alert when stale data is detected.  If the config
-    option ``trading.live_safety.halt_on_stale_data`` is True (default),
-    raises ``RuntimeError`` to abort the pipeline.
+    Instead of binary halt/continue, applies graduated response:
+    - ALL tickers stale → halt (real data provider issue)
+    - >5% of tickers stale → halt (systemic problem)
+    - 1-3 individual tickers stale → auto-exclude them, alert, continue
+    - 0 stale → pass
+
+    Auto-excluded tickers are:
+    - Added to config/auto_excluded_tickers.json
+    - Cache files quarantined
+    - Telegram alert sent
+    - Pipeline continues with remaining tickers
 
     Args:
         data:      Dict of ticker -> DataFrame (output of download_universe).
-        config:    Active Atlas config dict (read for halt_on_stale_data).
+        config:    Active Atlas config dict.
         market_id: Market identifier for log/alert messages.
 
     Returns:
-        True if data is fresh.
-        False if data is stale and halt_on_stale_data is False.
+        True if data is fresh (possibly after auto-excluding stale tickers).
+        False if stale data remains and halt_on_stale_data is False.
 
     Raises:
-        RuntimeError: If data is stale and halt_on_stale_data is True.
+        RuntimeError: If stale data is systemic and halt_on_stale_data is True.
     """
     freshness = check_data_freshness(data, market_id=market_id)
 
@@ -1232,36 +1384,106 @@ def verify_ingest_freshness(
         )
         return True
 
-    # Stale data detected
+    # Stale data detected — apply graduated response
     market_label = market_id or "?"
+    stale_tickers = freshness["stale_tickers"]
     stale_count = freshness["stale_count"]
+    total_checked = freshness["fresh_count"] + stale_count
     expected = freshness["expected_date"]
     oldest = freshness["oldest_date"]
-    stale_sample = freshness["stale_tickers"][:5]
+    stale_pct = (stale_count / total_checked * 100) if total_checked > 0 else 100
+
+    # Determine if this is systemic or individual
+    all_stale = stale_count == total_checked
+    systemic = all_stale or (total_checked > 20 and stale_pct > 5)
+    auto_excludable = not systemic and stale_count <= 10
 
     logger.warning(
-        "STALE DATA DETECTED [%s]: %d tickers older than %s (oldest latest: %s). "
-        "Sample stale: %s",
-        market_label, stale_count, expected, oldest, stale_sample,
+        "STALE DATA [%s]: %d/%d stale (%.1f%%). systemic=%s, auto_excludable=%s",
+        market_label, stale_count, total_checked, stale_pct,
+        systemic, auto_excludable,
     )
 
-    # Send Telegram alert
+    if auto_excludable:
+        # Auto-exclude individual stale tickers and continue
+        from data.auto_exclusions import add_exclusion, quarantine_cache
+
+        excluded_details = []
+        for ticker in stale_tickers:
+            # Get last data date for the alert
+            df = data.get(ticker)
+            last_date = "unknown"
+            if df is not None and not df.empty:
+                try:
+                    last_date = df.index.max().strftime("%Y-%m-%d")
+                except Exception:
+                    pass
+
+            add_exclusion(
+                ticker=ticker,
+                market_id=market_label,
+                reason=f"stale_data: last data {last_date}, expected >= {expected}",
+                last_data_date=last_date,
+            )
+            quarantine_cache(ticker, market_label)
+            excluded_details.append(f"{ticker} (last: {last_date})")
+
+            # Remove from data dict so downstream gets clean data
+            data.pop(ticker, None)
+
+        logger.info(
+            "Auto-excluded %d stale tickers from %s: %s",
+            len(excluded_details), market_label, excluded_details,
+        )
+
+        # Send Telegram alert for auto-exclusions
+        try:
+            from utils.telegram import send_message
+            ticker_lines = "\n".join(f"  • {d}" for d in excluded_details)
+            alert = (
+                f"⚠️ <b>AUTO-EXCLUDED STALE TICKERS [{market_label.upper()}]</b>\n\n"
+                f"Auto-excluded <b>{len(excluded_details)}</b> ticker(s):\n"
+                f"{ticker_lines}\n\n"
+                f"Expected data >= {expected}\n"
+                f"Pipeline continuing with {freshness['fresh_count']} fresh tickers.\n\n"
+                f"💡 These tickers will be retried weekly. "
+                f"Check if delisted or renamed."
+            )
+            send_message(alert)
+        except Exception as tg_exc:
+            logger.warning("Could not send auto-exclusion Telegram alert: %s", tg_exc)
+
+        return True  # Pipeline continues
+
+    # Systemic stale data — may need to halt
+    logger.warning(
+        "SYSTEMIC stale data [%s]: %d/%d (%.1f%%) stale. "
+        "This suggests a data provider issue, not individual ticker problems.",
+        market_label, stale_count, total_checked, stale_pct,
+    )
+
+    # Send Telegram alert for systemic issue
     try:
         from utils.telegram import send_message
-        alert = (
-            f"⚠️ <b>ATLAS STALE DATA WARNING [{market_label.upper()}]</b>\n\n"
-            f"Stale tickers: <b>{stale_count}</b> older than {expected}\n"
-            f"Oldest latest date: {oldest}\n"
-            f"Sample: {stale_sample}\n\n"
-        )
+        stale_sample = stale_tickers[:10]
+        halt = True  # safe default
         if config:
             halt = config.get("trading", {}).get(
                 "live_safety", {}
             ).get("halt_on_stale_data", True)
-            if halt:
-                alert += "🛑 Pipeline HALTED (halt_on_stale_data=true)"
-            else:
-                alert += "⚡ Continuing despite stale data (halt_on_stale_data=false)"
+
+        alert = (
+            f"🛑 <b>SYSTEMIC STALE DATA [{market_label.upper()}]</b>\n\n"
+            f"Stale tickers: <b>{stale_count}/{total_checked}</b> ({stale_pct:.1f}%)\n"
+            f"Expected data >= {expected}\n"
+            f"Oldest latest date: {oldest}\n"
+            f"Sample: {stale_sample}\n\n"
+        )
+        if halt:
+            alert += "🛑 Pipeline HALTED (halt_on_stale_data=true)\n"
+            alert += "This looks like a data provider outage, not individual delistings."
+        else:
+            alert += "⚡ Continuing despite systemic stale data (halt_on_stale_data=false)"
         send_message(alert)
     except Exception as tg_exc:
         logger.warning("Could not send stale data Telegram alert: %s", tg_exc)
@@ -1275,14 +1497,14 @@ def verify_ingest_freshness(
 
     if halt:
         raise RuntimeError(
-            f"STALE DATA: {stale_count} tickers have data older than {expected}. "
-            "Set halt_on_stale_data=false in config to continue despite stale data."
+            f"SYSTEMIC STALE DATA: {stale_count}/{total_checked} tickers ({stale_pct:.1f}%) "
+            f"have data older than {expected}. This suggests a data provider issue. "
+            "Set halt_on_stale_data=false in config to continue."
         )
 
-    logger.warning(
-        "Continuing pipeline with stale data (halt_on_stale_data=false)"
-    )
+    logger.warning("Continuing pipeline with systemic stale data (halt_on_stale_data=false)")
     return False
+
 
 
 # ---------------------------------------------------------------------------

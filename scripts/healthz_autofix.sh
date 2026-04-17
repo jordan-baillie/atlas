@@ -10,6 +10,7 @@
 # Cron: 00 18 * * 1-5 (18:00 AEST, 1h before premarket)
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail
+unset ANTHROPIC_API_KEY CLAUDE_API_KEY  # Atlas hardening: force pi to use OAuth (Claude Max)
 
 PROJECT="/root/atlas"
 HEALTHZ="$PROJECT/pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py"

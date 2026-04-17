@@ -13,6 +13,7 @@
 # Max 2 recovery attempts before escalating to human.
 # ═══════════════════════════════════════════════════════════════
 set -uo pipefail  # no -e: we handle errors ourselves
+unset ANTHROPIC_API_KEY CLAUDE_API_KEY  # Atlas hardening: force pi to use OAuth (Claude Max)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(dirname "$SCRIPT_DIR")"

@@ -178,6 +178,16 @@ def run_llm_loop(
     if log_path is None:
         log_path = LOGS_DIR / f"llm_loop_{date_str}.log"
 
+    # Circuit breaker — skip if Claude is exhausted
+    try:
+        from utils.claude_circuit_breaker import is_tripped, remaining_cooldown_sec
+        if is_tripped():
+            mins = remaining_cooldown_sec() // 60
+            logger.error("Claude circuit breaker tripped — %d min cooldown remaining. Skipping LLM loop.", mins)
+            return {"status": "breaker_tripped", "error": f"circuit breaker tripped, {mins}m left", "runtime_s": 0}
+    except ImportError:
+        pass  # Breaker not available, proceed anyway
+
     # Pre-check Pi auth
     try:
         from scripts.claude_auth_check import check_pi_auth
@@ -204,6 +214,7 @@ def run_llm_loop(
         "--model", "claude-sonnet-4-6",
         "--mode", "json",
         "--tools", "bash,read",
+        "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
     ]
 
     timeout_s = (minutes + 5) * 60  # extra 5 min buffer for startup/cleanup
@@ -237,6 +248,13 @@ def run_llm_loop(
             f.write(f"\n=== STDOUT ===\n{output}\n")
             if stderr:
                 f.write(f"\n=== STDERR ===\n{stderr}\n")
+
+        # Scan for exhaustion markers and trip breaker if found
+        try:
+            from utils.claude_circuit_breaker import scan_and_trip
+            scan_and_trip((output or "") + "\n" + (stderr or ""), reason_prefix="llm_loop_runner")
+        except ImportError:
+            pass
 
         if result.returncode != 0:
             logger.warning("Pi CLI exited with code %d", result.returncode)

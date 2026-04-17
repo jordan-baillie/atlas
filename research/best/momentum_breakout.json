@@ -86,7 +86,7 @@
     "runtime_s": 506.7
   },
   "description": "atr_stop_mult: 1.4 \u2192 1.26",
-  "experiments_run": 44,
+  "experiments_run": 106,
   "experiments_kept": 12,
   "updated_at": "2026-04-13T11:51:40.390880+00:00"
 }

@@ -48,6 +48,7 @@ signal.signal(signal.SIGHUP, signal.SIG_IGN)
 PROJECT_ROOT = Path("/root/atlas")
 SECRETS_PATH = Path(os.environ.get("ATLAS_SECRETS_PATH", str(Path.home() / ".atlas-secrets.json")))
 SERVE_DIR = PROJECT_ROOT / "dashboard" / "data"
+REACT_DIR = PROJECT_ROOT / "dashboard-ui" / "dist"
 BIND = "127.0.0.1"
 PORT = 8899
 
@@ -245,6 +246,52 @@ def _reject_plan(trade_date: str, market_id: str) -> dict:
     return {"ok": True, "status": "REJECTED"}
 
 
+
+def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
+    """Calculate per-position daily PnL from Tiingo cached parquet data.
+
+    Returns dict with:
+      - per_position: {ticker: {yesterday_close, today_close, shares, daily_pnl}}
+      - total_pnl: float
+    """
+    import pandas as pd
+    from pathlib import Path
+
+    cache_dir = Path(__file__).parent.parent / "data" / "cache" / market_id
+    result = {"per_position": {}, "total_pnl": 0.0}
+
+    for p in positions:
+        ticker = p.get("ticker", "")
+        shares = float(p.get("qty", p.get("shares", 0)) or 0)
+        if not ticker or shares == 0:
+            continue
+
+        parquet_path = cache_dir / f"{ticker}.parquet"
+        if not parquet_path.exists():
+            continue
+
+        try:
+            df = pd.read_parquet(parquet_path)
+            if len(df) < 2:
+                continue
+            today_close = float(df["close"].iloc[-1])
+            yesterday_close = float(df["close"].iloc[-2])
+            daily_pnl = round(shares * (today_close - yesterday_close), 2)
+
+            result["per_position"][ticker] = {
+                "yesterday_close": yesterday_close,
+                "today_close": today_close,
+                "shares": shares,
+                "daily_pnl": daily_pnl,
+            }
+            result["total_pnl"] += daily_pnl
+        except Exception:
+            continue
+
+    result["total_pnl"] = round(result["total_pnl"], 2)
+    return result
+
+
 # ── Dashboard data builder (ported verbatim from dashboard_server.py) ─────────
 
 def _build_dashboard_data() -> dict:
@@ -324,8 +371,12 @@ def _build_dashboard_data() -> dict:
             trade_meta: dict = {}
             for t in all_trades:
                 tk = t["ticker"]
-                if tk not in trade_meta:          # first match wins
-                    trade_meta[tk] = dict(t)
+                td = dict(t)
+                if tk not in trade_meta:
+                    trade_meta[tk] = td
+                elif trade_meta[tk].get("strategy") == "reconciled" and td.get("strategy") != "reconciled":
+                    # Prefer real strategy over reconciled placeholder
+                    trade_meta[tk] = td
             for p in positions:
                 meta = trade_meta.get(p.get("ticker", ""))
                 if meta:
@@ -406,25 +457,52 @@ def _build_dashboard_data() -> dict:
         ).fetchall()
         portfolio_history = [{**dict(r), "value": r["equity"]} for r in equity_rows]
 
-        # Fix 1: Update today's row with live equity if stale
-        live_equity = (result.get("summary") or {}).get("equity")
+        # Fix 1: Update today's row with live atlas equity
+        # Compute atlas equity (same formula as LivePortfolio.equity())
+        # instead of using broker equity which includes manual positions
+        _starting_eq = config.get("risk", {}).get("starting_equity", 5000)
+        _atlas_pos = [p for p in positions if p.get("strategy") not in ("unknown", "", None)]
+        _atlas_entry_cost = sum(
+            float(p.get("entry_price", 0) or 0) * float(p.get("qty", p.get("shares", 0)) or 0)
+            for p in _atlas_pos
+        )
+        _atlas_pos_value = sum(float(p.get("market_value", 0) or 0) for p in _atlas_pos)
+        _realized_row = db.execute(
+            "SELECT COALESCE(SUM(pnl), 0) as total FROM trades WHERE exit_date IS NOT NULL"
+        ).fetchone()
+        _total_realized = float(_realized_row["total"]) if _realized_row else 0.0
+        live_equity = round(_starting_eq - _atlas_entry_cost + _total_realized + _atlas_pos_value, 2)
         if portfolio_history and live_equity:
             from datetime import datetime as _dt
             today_str = _dt.now().strftime("%Y-%m-%d")
             last_row = portfolio_history[-1]
             if last_row.get("date") == today_str:
+                # Today's row exists — update it with live equity
                 if abs((last_row.get("equity") or 0) - live_equity) > 0.01:
                     last_row["equity"] = round(live_equity, 2)
                     last_row["value"] = round(live_equity, 2)
+                last_row["day_pnl"] = (result.get("summary") or {}).get("today_pnl", 0)
             else:
-                # Today's row doesn't exist yet — append a live point
-                _eq_val = round(live_equity, 2)
-                portfolio_history.append({
-                    "date": today_str,
-                    "equity": _eq_val,
-                    "value": _eq_val,
-                    "day_pnl": (result.get("summary") or {}).get("today_pnl", 0),
-                })
+                # Check if market is open — only append a new date row
+                # on trading days to avoid weekend/holiday jumps
+                market_clock = result.get("market_clock") or {}
+                is_trading_day = market_clock.get("is_open", False)
+                # Also check weekday as fallback
+                if not is_trading_day:
+                    is_trading_day = _dt.now().weekday() < 5
+                if is_trading_day:
+                    _eq_val = round(live_equity, 2)
+                    portfolio_history.append({
+                        "date": today_str,
+                        "equity": _eq_val,
+                        "value": _eq_val,
+                        "day_pnl": (result.get("summary") or {}).get("today_pnl", 0),
+                    })
+                else:
+                    # Weekend/holiday: update the last row to reflect
+                    # current (most accurate) equity
+                    last_row["equity"] = round(live_equity, 2)
+                    last_row["value"] = round(live_equity, 2)
         result["portfolio_history"] = portfolio_history
 
         # Strategy performance aggregated from closed trades
@@ -549,13 +627,35 @@ def _build_dashboard_data() -> dict:
     # ── 5. Enrich summary with today_pnl + max_positions ─────────────────────
     if "summary" not in result:
         result["summary"] = {}
-    result["summary"]["today_pnl"] = round(
-        sum(
-            p.get("intraday_pnl", 0) or p.get("today_pnl", 0) or 0
-            for p in positions
-        ),
-        2,
-    )
+
+    # Use Tiingo cached parquet prices (accurate) instead of Alpaca intraday PnL (stale)
+    tiingo_pnl = _calc_tiingo_daily_pnl(positions, market_id=market_id)
+    result["summary"]["today_pnl"] = tiingo_pnl["total_pnl"]
+    result["summary"]["today_pnl_detail"] = tiingo_pnl["per_position"]
+
+    # Also enrich each position with Tiingo-based intraday_pnl
+    for p in positions:
+        ticker = p.get("ticker", "")
+        if ticker in tiingo_pnl["per_position"]:
+            tp = tiingo_pnl["per_position"][ticker]
+            p["intraday_pnl"] = tp["daily_pnl"]
+            p["intraday_pnl_pct"] = round(
+                (tp["today_close"] - tp["yesterday_close"]) / tp["yesterday_close"] * 100, 4
+            ) if tp["yesterday_close"] != 0 else 0.0
+            p["current_price_tiingo"] = tp["today_close"]
+    # Backfill today's day_pnl in portfolio_history (section 2 ran before
+    # Tiingo PnL was computed, so it was 0 — fix it now).
+    _ph_list = result.get("portfolio_history", [])
+    if _ph_list:
+        from datetime import datetime as _dt2
+        _today = _dt2.now().strftime("%Y-%m-%d")
+        # Update today's row AND any appended row with correct day_pnl
+        for _row in reversed(_ph_list):
+            if _row.get("date") == _today:
+                _row["day_pnl"] = tiingo_pnl["total_pnl"]
+            else:
+                break  # stop once we pass today's row(s)
+
     result["summary"]["max_positions"] = config.get("risk", {}).get(
         "max_open_positions", 10
     )
@@ -1803,7 +1903,7 @@ async def chat_create_session_endpoint(
         logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name")
-    model = body.get("model", "claude-opus-4-6")
+    model = body.get("model", "claude-opus-4-7")
     session = _chat_create_session(name=name, model=model)
     return JSONResponse(session)
 
@@ -2077,6 +2177,227 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ── Research Tab API — Overview, Leaderboard, Controls ───────────────────────
+
+@app.get("/api/research/overview")
+def research_overview(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Comprehensive research overview: universes, engine status, daily metrics."""
+    try:
+        import json as _json
+        from db.atlas_db import get_db
+
+        # Load priorities config
+        priorities_path = PROJECT_ROOT / "config" / "research_priorities.json"
+        priorities = {}
+        if priorities_path.exists():
+            with open(priorities_path) as f:
+                pdata = _json.load(f)
+                priorities = pdata.get("research_priorities", {})
+
+        # Load research_best for best sharpes per strategy/universe
+        with get_db() as db:
+            # Per-universe stats from research_experiments
+            universe_stats = {}
+            for r in db.execute("""
+                SELECT universe,
+                       COUNT(*) as total_experiments,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept,
+                       MAX(sharpe) as best_sharpe,
+                       MAX(created_at) as last_experiment
+                FROM research_experiments
+                GROUP BY universe
+            """).fetchall():
+                d = dict(r)
+                universe_stats[d["universe"]] = d
+
+            # Today's stats per universe
+            today_stats = {}
+            for r in db.execute("""
+                SELECT universe,
+                       COUNT(*) as experiments_today,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept_today
+                FROM research_experiments
+                WHERE created_at >= date('now')
+                GROUP BY universe
+            """).fetchall():
+                d = dict(r)
+                today_stats[d["universe"]] = d
+
+            # Best per strategy per universe from research_best
+            best_by_universe = {}
+            for r in db.execute("SELECT strategy, universe, sharpe, trades FROM research_best WHERE sharpe > 0 ORDER BY sharpe DESC").fetchall():
+                d = dict(r)
+                uni = d["universe"]
+                if uni not in best_by_universe:
+                    best_by_universe[uni] = []
+                best_by_universe[uni].append({"strategy": d["strategy"], "best_sharpe": d["sharpe"], "trades": d["trades"]})
+
+            # Strategy breakdown per universe from experiments
+            strat_breakdown = {}
+            for r in db.execute("""
+                SELECT universe, strategy, COUNT(*) as experiments,
+                       MAX(sharpe) as best_sharpe,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept
+                FROM research_experiments
+                GROUP BY universe, strategy
+            """).fetchall():
+                d = dict(r)
+                uni = d["universe"]
+                if uni not in strat_breakdown:
+                    strat_breakdown[uni] = {}
+                strat_breakdown[uni][d["strategy"]] = {
+                    "best_sharpe": d["best_sharpe"],
+                    "experiments": d["experiments"],
+                    "kept": d["kept"]
+                }
+
+            # Build universe list
+            all_universes = set(list(priorities.keys()) + list(universe_stats.keys()))
+            universes = []
+            for uid in sorted(all_universes):
+                pri = priorities.get(uid, {})
+                stats = universe_stats.get(uid, {})
+                today = today_stats.get(uid, {})
+                total_exp = stats.get("total_experiments", 0)
+                kept_total = stats.get("kept", 0)
+                exp_today = today.get("experiments_today", 0)
+                kept_today_val = today.get("kept_today", 0)
+
+                universes.append({
+                    "id": uid,
+                    "mode": pri.get("mode", "passive"),
+                    "priority": pri.get("priority", "low"),
+                    "best_sharpe": stats.get("best_sharpe", 0) or 0,
+                    "total_experiments": total_exp,
+                    "experiments_today": exp_today,
+                    "kept_today": kept_today_val,
+                    "keep_rate": round(kept_total / total_exp * 100, 1) if total_exp > 0 else 0,
+                    "strategies": strat_breakdown.get(uid, {}),
+                    "top_strategies": best_by_universe.get(uid, [])[:5],
+                    "last_experiment": stats.get("last_experiment"),
+                    "windows_per_day": pri.get("windows_per_day", 0),
+                })
+
+            # Engine status
+            import subprocess
+            try:
+                result = subprocess.run(["systemctl", "is-active", "atlas-research-window"],
+                                       capture_output=True, text=True, timeout=5)
+                engine_status = result.stdout.strip()
+                if engine_status == "active":
+                    engine_status = "running"
+                elif engine_status == "inactive":
+                    engine_status = "idle"
+                else:
+                    engine_status = "idle"
+            except Exception:
+                engine_status = "unknown"
+
+            # Total all-time and daily aggregates
+            totals = db.execute("""
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN created_at >= date('now') THEN 1 ELSE 0 END) as today,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept_all
+                FROM research_experiments
+            """).fetchone()
+
+            # Experiments per day for last 14 days (sparkline data)
+            daily_counts = [dict(r) for r in db.execute("""
+                SELECT date(created_at) as date, COUNT(*) as count,
+                       SUM(CASE WHEN status='kept' THEN 1 ELSE 0 END) as kept
+                FROM research_experiments
+                WHERE created_at >= date('now', '-14 days')
+                GROUP BY date(created_at)
+                ORDER BY date
+            """).fetchall()]
+
+            return JSONResponse(content={
+                "universes": universes,
+                "engine": {
+                    "status": engine_status,
+                    "total_experiments_all_time": totals["total"],
+                    "experiments_today": totals["today"],
+                    "kept_all_time": totals["kept_all"],
+                    "daily_counts": daily_counts,
+                },
+            })
+    except Exception as e:
+        logger.exception("research_overview failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/research/leaderboard")
+def research_leaderboard(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Best strategy/universe combos ranked by Sharpe from research_best table."""
+    try:
+        import json as _json
+        from db.atlas_db import get_db
+        with get_db() as db:
+            rows = []
+            for r in db.execute("""
+                SELECT rb.strategy, rb.universe, rb.sharpe, rb.trades, rb.max_dd_pct, rb.updated_at,
+                       (SELECT COUNT(*) FROM research_experiments re
+                        WHERE re.strategy = rb.strategy AND re.universe = rb.universe) as total_experiments
+                FROM research_best rb
+                WHERE rb.sharpe > 0
+                ORDER BY rb.sharpe DESC
+            """).fetchall():
+                d = dict(r)
+                rows.append(d)
+            return JSONResponse(content={"leaderboard": rows})
+    except Exception as e:
+        logger.exception("research_leaderboard failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/research/prioritize")
+async def research_prioritize(
+    request: Request,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """Update priority for a universe in research_priorities.json."""
+    import json as _json
+    try:
+        body = await request.json()
+        universe = body.get("universe")
+        priority = body.get("priority")  # high, medium, low
+        action = body.get("action")  # pause, resume, or None
+
+        if not universe:
+            raise HTTPException(status_code=400, detail="universe required")
+
+        priorities_path = PROJECT_ROOT / "config" / "research_priorities.json"
+        with open(priorities_path) as f:
+            pdata = _json.load(f)
+
+        rp = pdata.get("research_priorities", {})
+        if universe not in rp:
+            raise HTTPException(status_code=404, detail=f"Universe {universe} not found")
+
+        if priority and priority in ("high", "medium", "low"):
+            rp[universe]["priority"] = priority
+
+        if action == "pause":
+            rp[universe]["paused"] = True
+        elif action == "resume":
+            rp[universe].pop("paused", None)
+
+        pdata["research_priorities"] = rp
+        pdata["_updated"] = __import__("datetime").date.today().isoformat()
+
+        with open(priorities_path, "w") as f:
+            _json.dump(pdata, f, indent=2)
+
+        return JSONResponse(content={"ok": True, "universe": universe, "updated": rp[universe]})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("research_prioritize failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ── Research Dashboard API ────────────────────────────────────────────────────
 
 @app.get("/api/research/summary")
@@ -2345,6 +2666,7 @@ def serve_agent_page(
 
 
 # Static file catch-all  (MUST be last — fallback after all API routes)
+# Serves React SPA from dashboard-ui/dist/ with fallback to index.html
 # ═══════════════════════════════════════════════════════════════════════════════
 
 @app.get("/{path:path}")
@@ -2352,37 +2674,51 @@ def serve_static(
     path: str = "",
     _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """Serve static files from dashboard/data/ with appropriate cache headers.
+    """Serve React SPA from dashboard-ui/dist/.
 
-    Mirrors SimpleHTTPRequestHandler behaviour from the original server:
-      - .json  → no-cache, no-store, must-revalidate
-      - .html  → no-cache
-      - other  → public, max-age=3600
+    - Exact file matches (JS/CSS/SVG) → serve directly with cache headers
+    - Everything else → serve index.html (SPA client-side routing)
+    - Fallback to legacy dashboard/data/ for old static files
     """
     if not path:
         path = "index.html"
 
-    # Prevent path traversal
+    # --- Try React dist first ---
+    react_root = REACT_DIR.resolve()
+    try:
+        react_file = (REACT_DIR / path).resolve()
+        if str(react_file).startswith(str(react_root)) and react_file.exists() and react_file.is_file():
+            if path.startswith("assets/"):
+                cache = "public, max-age=31536000, immutable"  # hashed filenames
+            elif path.endswith(".html"):
+                cache = "no-cache"
+            else:
+                cache = "public, max-age=3600"
+            return FileResponse(str(react_file), headers={"Cache-Control": cache})
+    except (ValueError, OSError):
+        pass
+
+    # --- Fallback to legacy dashboard/data/ for old static files (.json etc) ---
     try:
         serve_root = SERVE_DIR.resolve()
-        file_path = (SERVE_DIR / path).resolve()
-        if not str(file_path).startswith(str(serve_root)):
-            raise HTTPException(status_code=403, detail="Forbidden")
+        legacy_file = (SERVE_DIR / path).resolve()
+        if str(legacy_file).startswith(str(serve_root)) and legacy_file.exists() and legacy_file.is_file():
+            if path.endswith(".json"):
+                cache = "no-cache, no-store, must-revalidate"
+            elif path.endswith(".html"):
+                cache = "no-cache"
+            else:
+                cache = "public, max-age=3600"
+            return FileResponse(str(legacy_file), headers={"Cache-Control": cache})
     except (ValueError, OSError):
-        raise HTTPException(status_code=403, detail="Forbidden")
+        pass
 
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="Not found")
+    # --- SPA fallback: serve React index.html for client-side routing ---
+    index_file = REACT_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file), headers={"Cache-Control": "no-cache"})
 
-    # Cache-control matching original end_headers() logic
-    if path.endswith(".json"):
-        cache = "no-cache, no-store, must-revalidate"
-    elif path.endswith(".html") or path in ("", "/"):
-        cache = "no-cache"
-    else:
-        cache = "public, max-age=3600"
-
-    return FileResponse(str(file_path), headers={"Cache-Control": cache})
+    raise HTTPException(status_code=404, detail="Not found")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

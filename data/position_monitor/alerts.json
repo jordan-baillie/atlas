@@ -1,74 +1,5 @@
 [
   {
-    "position_id": "0053ac1a7b04",
-    "ticker": "RTX",
-    "condition_id": "rtx_sector",
-    "condition_label": "Defence sector momentum (ITA/XAR)",
-    "old_status": "passing",
-    "new_status": "failing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-06T04:06:51"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "warning",
-    "new_status": "passing",
-    "value": null,
-    "source": "iran_monitor_agent",
-    "timestamp": "2026-03-06T04:06:56"
-  },
-  {
-    "position_id": "0053ac1a7b04",
-    "ticker": "RTX",
-    "condition_id": "rtx_prestrike",
-    "condition_label": "RTX above $195 (pre-strike level)",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 200.51,
-    "timestamp": "2026-03-06T04:07:29"
-  },
-  {
-    "position_id": "0a70124996f3",
-    "ticker": "INSW",
-    "type": "invalidation_breach",
-    "message": "Price $71.64 breached invalidation $72.00",
-    "timestamp": "2026-03-06T04:07:30"
-  },
-  {
-    "position_id": "131755aa1899",
-    "ticker": "NEM",
-    "condition_id": "nem_floor",
-    "condition_label": "NEM above $100 floor",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 114.63,
-    "timestamp": "2026-03-06T04:07:30"
-  },
-  {
-    "position_id": "131755aa1899",
-    "ticker": "NEM",
-    "condition_id": "nem_ma50",
-    "condition_label": "NEM above 50-day MA",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 114.63,
-    "timestamp": "2026-03-06T04:07:30"
-  },
-  {
-    "position_id": "d3759efc6f95",
-    "ticker": "PSQ",
-    "condition_id": "psq_qqq_ma",
-    "condition_label": "QQQ below 50-day MA",
-    "old_status": "passing",
-    "new_status": "warning",
-    "value": 604.3,
-    "timestamp": "2026-03-06T04:07:32"
-  },
-  {
     "position_id": "d3759efc6f95",
     "ticker": "PSQ",
     "condition_id": "psq_qqq_ma",
@@ -1973,5 +1904,75 @@
     "new_status": "failing",
     "value": 218.84,
     "timestamp": "2026-04-11T08:04:37"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "failing",
+    "new_status": "passing",
+    "value": 226.27,
+    "timestamp": "2026-04-14T08:00:15"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_gold",
+    "condition_label": "Gold spot price (GC=F)",
+    "old_status": "failing",
+    "new_status": "warning",
+    "value": 4864.5,
+    "timestamp": "2026-04-15T08:00:13"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_gold",
+    "condition_label": "Gold spot price (GC=F)",
+    "old_status": "failing",
+    "new_status": "warning",
+    "value": 4864.5,
+    "timestamp": "2026-04-15T08:00:16"
+  },
+  {
+    "position_id": "131755aa1899",
+    "ticker": "NEM",
+    "condition_id": "nem_gold",
+    "condition_label": "Gold spot price (GC=F)",
+    "old_status": "failing",
+    "new_status": "warning",
+    "value": 4864.5,
+    "timestamp": "2026-04-15T08:00:16"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 215.65,
+    "timestamp": "2026-04-15T08:00:16"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 215.65,
+    "timestamp": "2026-04-15T08:00:18"
+  },
+  {
+    "position_id": "24c23b54f453",
+    "ticker": "CHTR",
+    "condition_id": "chtr_ma50",
+    "condition_label": "CHTR above 50-day MA",
+    "old_status": "passing",
+    "new_status": "failing",
+    "value": 215.65,
+    "timestamp": "2026-04-15T08:00:18"
   }
 ]

@@ -546,15 +546,35 @@ def run_agent(strategy: str, cycle: int, director_exps: list[dict] | None = None
     logger.info("AGENT: %s (budget %ds)", strategy, AGENT_TIMEOUT)
     prompt = build_agent_prompt(strategy, cycle, director_exps=director_exps)
     t0 = time.time()
+
+    # Circuit breaker — skip if Claude is exhausted
+    try:
+        from utils.claude_circuit_breaker import is_tripped, remaining_cooldown_sec, scan_and_trip
+        if is_tripped():
+            mins = remaining_cooldown_sec() // 60
+            print(f"[autoresearch] Circuit breaker tripped ({mins}m cooldown) — skipping pi call", flush=True)
+            logger.warning("Claude circuit breaker tripped — %dm cooldown remaining. Skipping agent pi call.", mins)
+            return {"exit_code": -3, "duration_s": 0.0}
+    except ImportError:
+        scan_and_trip = None  # degrade gracefully
+
     try:
         result = subprocess.run(
-            ["pi", "--print", "--skill", SKILL_DIR, "--no-session", prompt],
+            ["pi", "--print", "--skill", SKILL_DIR, "--no-session",
+             "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
+             prompt],
             timeout=AGENT_TIMEOUT + 60,
             capture_output=False,
         )
         duration = time.time() - t0
         logger.info("AGENT done: %s (exit=%d, %.1f min)",
                      strategy, result.returncode, duration / 60)
+        # Scan captured output for exhaustion markers (capture_output=False so stdout/stderr are None — safe no-op)
+        try:
+            if scan_and_trip is not None:
+                scan_and_trip((result.stdout or "") + "\n" + (result.stderr or ""), reason_prefix="autoresearch")
+        except Exception:
+            pass
         return {"exit_code": result.returncode, "duration_s": duration}
     except subprocess.TimeoutExpired:
         duration = time.time() - t0

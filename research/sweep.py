@@ -849,6 +849,7 @@ def _sweep_strategy_parallel(
                             f"{param_name}={r['value']}",
                             "discard",
                             f"{param_name}: {current_value}→{r['value']} (combined-fail)",
+                            market=session.market,
                         )
                     consecutive_param_fails += 1
                     total_run += len(results)  # already added below but not here yet
@@ -883,6 +884,7 @@ def _sweep_strategy_parallel(
                     f"{param_name}={best_value}", "keep",
                     f"{param_name}: {current_value}→{best_value} "
                     f"(best of {len(candidates)})",
+                    market=session.market,
                 )
                 _append_journal(
                     session.strategy, session.market, best["metrics"],
@@ -952,6 +954,7 @@ def _sweep_strategy_parallel(
                             f"{param_name}={r['value']}",
                             "discard",
                             f"{param_name}: {current_value}→{r['value']}",
+                            market=session.market,
                         )
                         # Brain: record discarded params
                         try:
@@ -972,6 +975,7 @@ def _sweep_strategy_parallel(
                         f"{param_name}={r['value']}",
                         "discard",
                         f"{param_name}: {current_value}→{r['value']}",
+                        market=session.market,
                     )
                     # Brain: record discarded params
                     try:

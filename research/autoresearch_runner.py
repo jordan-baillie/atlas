@@ -610,6 +610,23 @@ def run_session(
             from universe.builder import build_from_definition
             universe_data = build_from_definition(universe)
             session._data = universe_data
+            if not universe_data:
+                msg = (
+                    f"Universe '{universe}' returned 0 tickers — no data available. "
+                    f"Skipping session."
+                )
+                logger.error(msg)
+                # Send alert instead of silently skipping
+                _try_send_telegram(
+                    f"⚠️ Universe <b>{universe}</b> has 0 data in SQLite — "
+                    f"ingest pipeline may be broken. "
+                    f"Run: <code>python3 scripts/cli.py ingest -m {universe}</code>"
+                )
+                _print_summary(
+                    strategy, market, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0,
+                    status="skipped",
+                )
+                return
             # Tag session so results / brain writes use the correct universe key
             session.market = universe
             logger.info(
