@@ -15,6 +15,79 @@ sys.path.insert(0, str(PROJECT))
 
 from strategies.base import Signal  # noqa: E402
 
+
+# ---------------------------------------------------------------------------
+# Test-log isolation — prevent pytest output from polluting prod atlas.log
+# ---------------------------------------------------------------------------
+import logging as _logging
+import os as _os
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_test_logs():
+    """Redirect root logger file output to tests/logs/pytest.log for the session.
+
+    Background: utils.logging_config.setup_logging() attaches a FileHandler
+    pointing at logs/atlas.log. Importing modules that call setup_logging()
+    during pytest causes test-time errors (mock failures, intentional bad
+    inputs) to leak into the production log, where atlas-error-watchdog
+    picks them up as real alerts.
+
+    This fixture: at session start, removes any FileHandler whose baseFilename
+    points at the prod atlas.log; replaces it with a FileHandler at
+    tests/logs/pytest.log. At teardown, restores the original handlers.
+    """
+    project_root = Path(__file__).resolve().parent.parent
+    prod_log = (project_root / "logs" / "atlas.log").resolve()
+    test_log_dir = project_root / "tests" / "logs"
+    test_log_dir.mkdir(parents=True, exist_ok=True)
+    test_log = test_log_dir / "pytest.log"
+
+    root = _logging.getLogger()
+    original_handlers = list(root.handlers)
+    removed = []
+    for h in list(root.handlers):
+        if isinstance(h, _logging.FileHandler):
+            try:
+                if Path(h.baseFilename).resolve() == prod_log:
+                    root.removeHandler(h)
+                    removed.append(h)
+                    try:
+                        h.close()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+    test_handler = _logging.FileHandler(test_log, mode="a")
+    test_handler.setFormatter(_logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    ))
+    root.addHandler(test_handler)
+
+    # Also intercept future setup_logging() calls during the session by
+    # marking the module as already-set-up. Prevents import-time re-attach.
+    try:
+        from utils import logging_config as _lc
+        _lc._setup_done = True
+    except Exception:
+        pass
+
+    yield
+
+    # Teardown — restore original handlers
+    root.removeHandler(test_handler)
+    try:
+        test_handler.close()
+    except Exception:
+        pass
+    # Re-add any handlers we removed (in case parallel test discovery needs them)
+    for h in removed:
+        try:
+            root.addHandler(h)
+        except Exception:
+            pass
+
 # ---------------------------------------------------------------------------
 # Minimal config that satisfies all strategy constructors (no network calls)
 # ---------------------------------------------------------------------------
