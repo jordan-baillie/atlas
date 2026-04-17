@@ -35,6 +35,7 @@ _SEARCH_DIRS = [
     CACHE_ROOT / "gold_etfs",
     CACHE_ROOT / "treasury_etfs",
     CACHE_ROOT / "commodity_etfs",
+    CACHE_ROOT / "indices",  # VIX and other index benchmarks
 ]
 
 _ET = ZoneInfo("America/New_York")
