@@ -94,3 +94,4 @@ data/chat.db
 data/chat/
 tests/screenshots/
 .gitnexus
+data/cache/chart_images/

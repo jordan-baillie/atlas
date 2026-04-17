@@ -88,6 +88,9 @@ class OverlayDecision:
     confidence: float = 0.0
     """Overlay confidence in the decision (0.0–1.0)."""
 
+    chart_vision_signals: List[dict] = field(default_factory=list)
+    """Visual pattern signals from chart image analysis (empty when vision is disabled)."""
+
     @classmethod
     def no_change(cls, reasoning: str = "no change — overlay defaulted") -> "OverlayDecision":
         """Factory for a safe no-op decision (used on errors and soft passes)."""
@@ -98,6 +101,7 @@ class OverlayDecision:
             tickers_to_avoid=[],
             reasoning=reasoning,
             confidence=0.0,
+            chart_vision_signals=[],
         )
 
 
@@ -346,6 +350,120 @@ def _call_pi(user_prompt: str) -> Optional[dict]:
 
     return parsed
 
+
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Vision-augmented pi CLI invocation
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def _call_pi_with_vision(
+    user_prompt: str,
+    image_labels_and_paths,  # list[tuple[str, Path]]
+    model: str = "claude-opus-4-7",
+    timeout: int = 300,
+) -> Optional[dict]:
+    """
+    Invoke pi CLI with chart images attached and return the parsed response.
+
+    Augments user_prompt with a vision-specific instruction block, then calls
+    call_pi_vision with the supplied image paths.  Returns parsed JSON dict or
+    None on any error.  Never raises — all errors are caught and logged.
+
+    Parameters
+    ----------
+    user_prompt : str
+        Baseline text prompt (same as _call_pi receives).
+    image_labels_and_paths : list of (label, Path) tuples
+        Chart images to attach.  Labels are embedded in the augmented prompt
+        so the model can reference them by name.
+    model : str
+        Vision-capable Claude model (default: claude-opus-4-7).
+    timeout : int
+        Subprocess timeout in seconds (default: 300 — vision calls are slow).
+    """
+    try:
+        from utils.claude_circuit_breaker import is_tripped, scan_and_trip
+        if is_tripped():
+            log.warning(
+                "Claude circuit breaker tripped — overlay vision skipping, returning None"
+            )
+            return None
+    except ImportError:
+        scan_and_trip = None  # degrade gracefully
+
+    from utils.pi_subprocess import call_pi_vision, PiSubprocessError  # noqa: PLC0415
+
+    labels = [label for label, _ in image_labels_and_paths]
+    paths = [p for _, p in image_labels_and_paths]
+    n = len(paths)
+
+    labels_txt = "\n".join(f"  - {lbl}" for lbl in labels)
+    vision_block = (
+        "\n\n=== CHART IMAGES ATTACHED ===\n"
+        f"You also have {n} chart image{'s' if n != 1 else ''} attached. "
+        "Use them for visual pattern recognition: failed breakouts, bear flags, "
+        "broken trendlines, support/resistance levels derived from price action, "
+        "trend structure. Image coordinates are 1:1 with pixels.\n\n"
+        f"Attached image labels (in order):\n{labels_txt}\n\n"
+        "In addition to the standard response fields, include a new top-level "
+        'field "chart_vision_signals": an array of objects with keys '
+        "{ticker, pattern, support, resistance, tighten_rec, confidence}. "
+        "Only populate this for tickers where the visual analysis produced a "
+        "meaningful signal. Empty array is valid."
+    )
+
+    augmented_prompt = user_prompt + vision_block
+
+    log.debug("Calling pi CLI with vision (%d images, model=%s).", n, model)
+
+    try:
+        stdout_raw = call_pi_vision(
+            augmented_prompt,
+            paths,
+            model=model,
+            timeout=timeout,
+            mode=None,
+            system_prompt=SYSTEM_PROMPT,
+            cwd="/root/atlas",
+        )
+    except PiSubprocessError as exc:
+        log.warning("pi CLI vision invocation failed — vision skipped: %s", exc)
+        return None
+    except Exception as exc:
+        log.warning(
+            "pi CLI vision invocation failed (%s: %s) — vision skipped",
+            type(exc).__name__, exc,
+        )
+        return None
+
+    if scan_and_trip is not None:
+        scan_and_trip(stdout_raw, reason_prefix="overlay_engine_vision")
+
+    stdout = stdout_raw.strip()
+    log.info(
+        "pi CLI vision raw response: %.800s%s",
+        stdout,
+        "..." if len(stdout) > 800 else "",
+    )
+
+    parsed = _try_parse_json(stdout)
+    if parsed is None:
+        log.warning("Could not parse pi CLI vision output as JSON — vision skipped")
+        return None
+
+    # Unwrap pi envelope if present ({type: result, text: "..."} pattern)
+    if "text" in parsed and isinstance(parsed.get("text"), str):
+        inner = _try_parse_json(parsed["text"])
+        if inner is not None:
+            parsed = inner
+    elif "content" in parsed and isinstance(parsed.get("content"), str):
+        inner = _try_parse_json(parsed["content"])
+        if inner is not None:
+            parsed = inner
+
+    return parsed
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Response validation — enforces ASYMMETRIC CONSTRAINT
@@ -727,7 +845,49 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
         # ── Step 5: Validate response (enforces ASYMMETRIC CONSTRAINT) ───────
         decision = _validate_response(raw_response, regime)
 
-    log.info(
+
+    # ── Vision overlay (feature-flagged, default OFF) ────────────────────────
+    # Lazy-imported so zero overhead when flag is off.  Non-fatal — any error
+    # here is logged and skipped; the text-only decision already stands.
+    try:
+        from utils.config import load_config
+        cfg_vision = load_config().get("overlay_vision", {"enabled": False})
+    except Exception:
+        cfg_vision = {"enabled": False}
+
+    if cfg_vision.get("enabled", False):
+        try:
+            from overlay.sources.chart_renders import render_reference_set  # lazy
+            # Best-effort: read held positions for personalised charts
+            try:
+                from brokers.live_portfolio import live_portfolio
+                positions = (
+                    [p.ticker for p in live_portfolio.get_open_positions()]
+                    if live_portfolio else []
+                )
+            except Exception:
+                positions = []
+            max_imgs = int(cfg_vision.get("max_images", 10))
+            images = render_reference_set(positions, max_images=max_imgs)
+            if images:
+                labels_and_paths = list(images.items())
+                vision_raw = _call_pi_with_vision(
+                    user_prompt,
+                    labels_and_paths,
+                    model=cfg_vision.get("model", "claude-opus-4-7"),
+                    timeout=int(cfg_vision.get("timeout_seconds", 300)),
+                )
+                if vision_raw and isinstance(vision_raw.get("chart_vision_signals"), list):
+                    decision.chart_vision_signals = vision_raw["chart_vision_signals"]
+                    log.info(
+                        "A/B COMPARE — text-only adjust=%s; vision-augmented signals=%d",
+                        decision.adjust,
+                        len(decision.chart_vision_signals),
+                    )
+        except Exception as exc:
+            log.warning("Overlay vision path failed (non-fatal): %s", exc)
+
+        log.info(
         "Overlay decision: adjust=%s sizing_override=%s "
         "universes_off=%s tickers_avoid=%s confidence=%.2f",
         decision.adjust,
