@@ -1,0 +1,23 @@
+{
+  "default_threshold_hours": 6,
+  "rth_threshold_hours": 2,
+  "min_alert_gap_hours": 4,
+  "services": {
+    "postclose": {
+      "expected_cron": "0 22 * * 1-5",
+      "threshold_hours": 6,
+      "description": "EOD settlement — runs weekdays 22:00 UTC (08:00 AEST Tue-Sat)"
+    },
+    "premarket": {
+      "expected_cron": "0 9 * * 1-5",
+      "threshold_hours": 6,
+      "description": "Pre-market ingest + plan — runs weekdays 09:00 UTC (19:00 AEST Mon-Fri)"
+    },
+    "health-check": {
+      "expected_cron": "0 23 * * 5",
+      "threshold_hours": 24,
+      "description": "Weekly strategy health check — runs Fridays 23:00 UTC (09:00 AEST Saturday)"
+    }
+  },
+  "ignored_prefixes": ["test", "verify"]
+}
