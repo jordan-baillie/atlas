@@ -30,6 +30,36 @@ PI_BIN = "pi"  # Assumes pi is in PATH
 MULTI_TEAM_EXT = Path("/root/.pi/extensions/multi-team/index.ts")
 SESSIONS_DIR = PROJECT_ROOT / "data" / "chat" / "sessions"
 
+HOMER_PERSONA_PATH = Path("/root/.pi/agent/HOMER_PERSONA.md")
+
+
+def _load_system_prompt() -> str:
+    """Load the HomerBot persona as the pi subprocess system prompt.
+
+    The persona is intentionally scoped here — it applies ONLY to Atlas
+    dashboard chat sessions (HomerBot at /homerbot). Do NOT move this into
+    /root/.pi/agent/AGENTS.md, which is loaded by every pi subprocess in the
+    system and would leak the persona into team leads, workers, and the
+    orchestrator.
+
+    Falls back to the generic Claude Code prompt if the persona file is
+    missing so the dashboard still works if someone deletes it.
+    """
+    if HOMER_PERSONA_PATH.exists():
+        try:
+            text = HOMER_PERSONA_PATH.read_text().strip()
+            if text:
+                return text
+        except OSError:
+            logger.warning(
+                "Failed to read HomerBot persona at %s; falling back",
+                HOMER_PERSONA_PATH,
+            )
+    return "You are Claude Code, Anthropic's official CLI for Claude."
+
+
+_SYSTEM_PROMPT = _load_system_prompt()
+
 
 # ── Event model ──────────────────────────────────────────────────────────────
 
@@ -300,7 +330,7 @@ class PiSessionManager:
             "--no-skills",
             "--no-prompt-templates",
             "--no-themes",
-            "--system-prompt", "You are Claude Code, Anthropic's official CLI for Claude.",
+            "--system-prompt", _SYSTEM_PROMPT,
         ]
 
         cmd.append("--no-extensions")
