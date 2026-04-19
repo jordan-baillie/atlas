@@ -22,7 +22,7 @@ import sqlite3
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date as _date, datetime, timezone
 from pathlib import Path
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
@@ -233,6 +233,46 @@ def check_director_coverage(dry_run: bool = False) -> None:
 # Check 3 — zero-byte autoresearch logs in last 24 h
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+# ─── Autoresearch log helpers ─────────────────────────────────────────────────
+
+_AR_RE = re.compile(r"^autoresearch_(?P<strat>[a-z_]+)_(?P<d>\d{8})\.log$")
+
+
+def _is_rotation_stub(log_file: Path) -> bool:
+    """Return True if *log_file* looks like a logrotate-created empty stub.
+
+    Two independent signals are checked (either is sufficient):
+    1. A rotated sibling ``<file>.log-YYYYMMDD`` exists with size > 0 in the
+       same directory — the definitive rotation-stub signal.
+    2. The date encoded in the filename is not today's local date.  The runner
+       names files by the day it starts, so a past-dated zero-byte file is
+       either a logrotate stub from a prior day or an older empty run — neither
+       is actionable today.
+    """
+    # Signal 1 — a non-empty rotated sibling exists
+    for sib in log_file.parent.glob(log_file.name + "-*"):
+        try:
+            if sib.stat().st_size > 0:
+                return True
+        except OSError:
+            continue
+
+    # Signal 2 — filename date is not today's local date
+    m = _AR_RE.match(log_file.name)
+    if m:
+        try:
+            file_date = _date.fromisoformat(
+                f"{m['d'][0:4]}-{m['d'][4:6]}-{m['d'][6:8]}"
+            )
+            if file_date != _date.today():
+                return True
+        except ValueError:
+            pass
+
+    return False
+
+
 def check_autoresearch_logs(dry_run: bool = False) -> None:
     """Alert if any autoresearch_*.log file written in the last 24 h is zero bytes."""
     logger.info("check_autoresearch_logs: scanning %s", LOGS_DIR)
@@ -252,7 +292,7 @@ def check_autoresearch_logs(dry_run: bool = False) -> None:
                 st = log_file.stat()
             except OSError:
                 continue
-            if st.st_mtime >= cutoff_ts and st.st_size == 0:
+            if st.st_mtime >= cutoff_ts and st.st_size == 0 and not _is_rotation_stub(log_file):
                 zero_byte_files.append(log_file.name)
 
         if zero_byte_files:
@@ -263,7 +303,7 @@ def check_autoresearch_logs(dry_run: bool = False) -> None:
             )
             _alert(
                 f"⚠️ [Atlas] {n} zero-byte autoresearch log(s) in last 24h: {names}"
-                " — LLM loop failed to emit output",
+                " — autoresearch parameter-sweep runner produced no output" " (logrotate stubs filtered)",
                 level="WARNING",
                 dry_run=dry_run,
             )
