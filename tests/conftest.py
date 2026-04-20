@@ -100,6 +100,39 @@ def pytest_configure(config: pytest.Config) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Session-level DB isolation — runs BEFORE any module/class/function fixture.
+# Catches writes from module-scoped fixtures (e.g. test_baseline_regression's
+# baseline_result fixture which runs before function-scoped isolation).
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_prod_db_session(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Point atlas_db at a session-wide tmp DB from the very start of the run.
+
+    Session-scope ensures this activates before module-scope fixtures, which
+    would otherwise leak writes to production data/atlas.db before any
+    function-scope fixture can intervene.
+    """
+    try:
+        import db.atlas_db as _adb
+        from db.atlas_db import init_db
+    except Exception:
+        yield
+        return
+    from _pytest.monkeypatch import MonkeyPatch
+    mp = MonkeyPatch()
+    session_db = tmp_path_factory.mktemp("session_db") / "atlas_session.db"
+    original = getattr(_adb, "_db_path_override", None)
+    mp.setattr(_adb, "_db_path_override", str(session_db))
+    try:
+        init_db()
+    except Exception:
+        pass
+    yield
+    mp.setattr(_adb, "_db_path_override", original)
+    mp.undo()
+
+
 @pytest.fixture(autouse=True)
 def _isolate_prod_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
     """Redirect all atlas_db writes to a throw-away tmp file per test.
