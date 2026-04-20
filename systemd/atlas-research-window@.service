@@ -15,7 +15,7 @@ KillMode=control-group
 SendSIGKILL=yes
 Nice=10
 OOMScoreAdjust=500
-EnvironmentFile=/etc/openclaw/openclaw.env
+EnvironmentFile=-/etc/openclaw/openclaw.env
 Environment=PYTHONUNBUFFERED=1
 Environment=HOME=/root
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
