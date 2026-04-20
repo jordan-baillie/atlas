@@ -1,1560 +1,3198 @@
 {
   "validation_type": "v9.2_oos_validation",
-  "timestamp": "2026-02-18T21:31:21.788128",
-  "split_date": "2025-06-01",
+  "timestamp": "2026-04-19T20:00:09.457052",
+  "config_version": "unknown",
+  "config_path": "/root/atlas/config/active/sp500.json",
+  "output_path": "/root/atlas/backtest/results/v92_oos_validation.json",
+  "market": "sp500",
+  "split_date": "2024-11-21",
+  "warmup_date": "2024-08-23",
+  "n_perturbation_trials": 10,
+  "perturbation_range": [
+    0.8,
+    1.2
+  ],
   "test1_time_period_split": {
     "in_sample": {
-      "total_trades": 162,
-      "total_pnl": 1081.25,
-      "avg_trade": 6.67,
-      "win_rate_pct": 51.23,
-      "profit_factor": 1.65,
-      "sharpe": 0.7117,
-      "cagr_pct": 17.0886,
-      "max_drawdown_pct": 7.7554
+      "total_trades": 210,
+      "cagr_pct": 9.3837,
+      "sharpe": 0.4564,
+      "profit_factor": 1.4215,
+      "max_drawdown_pct": 9.5392,
+      "win_rate_pct": 55.71,
+      "total_pnl": 2558.03,
+      "sortino": 0.6349,
+      "avg_trade": 12.18,
+      "final_equity": 7558.08
     },
     "out_of_sample": {
-      "total_trades": 145,
-      "total_pnl": -54.73,
-      "avg_trade": -0.38,
-      "win_rate_pct": 41.38,
-      "profit_factor": 0.9682,
-      "sharpe": -0.3644,
-      "cagr_pct": 2.1957,
-      "max_drawdown_pct": 7.706
+      "total_trades": 39,
+      "cagr_pct": -11.7721,
+      "sharpe": -2.0647,
+      "profit_factor": 0.7851,
+      "max_drawdown_pct": 8.5209,
+      "win_rate_pct": 48.72,
+      "total_pnl": -221.6,
+      "sortino": -2.6098,
+      "avg_trade": -5.68,
+      "final_equity": 4660.38
     },
     "degradation_pct": {
-      "cagr_pct": -87.15,
-      "sharpe": -151.2,
-      "profit_factor": -41.32,
-      "win_rate_pct": -19.23
+      "cagr_pct": -225.45,
+      "sharpe": -552.39,
+      "profit_factor": -44.77,
+      "win_rate_pct": -12.55
     },
     "full_metrics": {
-      "cagr_pct": 11.2076,
-      "sharpe": 0.6734,
-      "profit_factor": 1.3034,
-      "max_drawdown_pct": 7.7554,
-      "win_rate_pct": 46.58,
-      "total_trades": 307,
-      "total_pnl": 1026.52
+      "total_trades": 293,
+      "cagr_pct": 5.7718,
+      "sharpe": 0.1247,
+      "profit_factor": 1.2417,
+      "max_drawdown_pct": 12.8101,
+      "win_rate_pct": 54.27,
+      "total_pnl": 2089.34,
+      "sortino": 0.1551,
+      "avg_trade": 7.13,
+      "final_equity": 6989.48
     },
-    "runtime_s": 286.4
+    "runtime_s": 294.2
   },
   "test2_perturbation": {
     "summary": {
       "cagr_pct": {
-        "mean": 2.6723,
-        "std": 4.8075,
-        "min": -7.1556,
-        "max": 7.2974
+        "mean": 3.8976,
+        "std": 2.2081,
+        "min": 0.4447,
+        "max": 8.3604
       },
       "sharpe": {
-        "mean": -0.0598,
-        "std": 0.4416,
-        "min": -0.9326,
-        "max": 0.4469
+        "mean": -0.0847,
+        "std": 0.2517,
+        "min": -0.5333,
+        "max": 0.3871
       },
       "profit_factor": {
-        "mean": 1.1026,
-        "std": 0.1747,
-        "min": 0.7851,
-        "max": 1.397
+        "mean": 1.1977,
+        "std": 0.1185,
+        "min": 1.0321,
+        "max": 1.4488
       },
       "max_drawdown_pct": {
-        "mean": 13.1459,
-        "std": 6.0594,
-        "min": 6.8732,
-        "max": 25.2761
+        "mean": 13.5674,
+        "std": 2.8921,
+        "min": 10.0857,
+        "max": 20.218
       },
       "total_trades": {
-        "mean": 233.2,
-        "std": 34.6808,
-        "min": 172.0,
-        "max": 276.0
+        "mean": 286.3,
+        "std": 53.6583,
+        "min": 219.0,
+        "max": 431.0
       }
     },
     "trials": [
       {
-        "cagr_pct": -7.1556,
-        "sharpe": -0.9326,
-        "profit_factor": 0.7851,
-        "max_drawdown_pct": 25.2761,
-        "win_rate_pct": 40.59,
-        "total_trades": 271,
-        "total_pnl": -778.31,
+        "total_trades": 311,
+        "cagr_pct": 3.2777,
+        "sharpe": -0.1237,
+        "profit_factor": 1.1489,
+        "max_drawdown_pct": 14.5464,
+        "win_rate_pct": 49.2,
+        "total_pnl": 1263.89,
+        "sortino": -0.1663,
+        "avg_trade": 4.06,
+        "final_equity": 6067.57,
         "trial": 1,
         "seed": 42,
-        "runtime_s": 314.4,
+        "runtime_s": 167.6,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 1.0558,
+              "perturbed": 0.2639
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.81,
+              "perturbed": 1.215
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.91,
+              "perturbed": 14
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.8893,
+              "perturbed": 13
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0946,
+              "perturbed": 22
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 1.0707,
+              "perturbed": 21
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 1.1569,
+              "perturbed": 6.9412
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.8348,
+              "perturbed": 12
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 37,
-              "factor": 1.0558
+              "factor": 0.9688,
+              "perturbed": 34
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 0.8119,
+              "perturbed": 24
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.62,
-              "factor": 0.81
+              "factor": 0.8875,
+              "perturbed": -1.7749
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0021,
+              "perturbed": 20
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.275,
-              "factor": 0.91
+              "original": 1.5,
+              "factor": 0.8106,
+              "perturbed": 1.2159
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.3339,
-              "factor": 0.8893
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 8,
-              "factor": 1.0946
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 3.212,
-              "factor": 1.0707
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 2.3137,
-              "factor": 1.1569
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 25,
-              "factor": 0.8348
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.9688,
-              "factor": 0.9688
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 2.4358,
-              "factor": 0.8119
+              "original": 2.5,
+              "factor": 0.8795,
+              "perturbed": 2.1988
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 18,
-              "factor": 0.8875
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 20,
-              "factor": 1.0021
+              "factor": 1.06,
+              "perturbed": 21
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 41,
-              "factor": 0.8106
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 1.018,
+              "perturbed": 0.7126
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0176,
-              "factor": 0.8795
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.7098,
-              "factor": 1.06
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 25,
-              "factor": 1.018
+            "weight": {
+              "original": 0.3,
+              "factor": 0.8882,
+              "perturbed": 0.2665
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0089,
-              "factor": 0.8882
+              "original": -0.008,
+              "factor": 1.0357,
+              "perturbed": -0.0083
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2071,
-              "factor": 1.0357
+              "original": 0.7,
+              "factor": 1.1238,
+              "perturbed": 0.7866
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 45,
-              "factor": 1.1238
+              "original": 35,
+              "factor": 0.8026,
+              "perturbed": 28
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.1223,
+              "perturbed": 1.6835
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 1.0793,
+              "perturbed": 27
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.9361,
+              "perturbed": 0.9361
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 0.8622,
+              "perturbed": 6
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.1829,
+              "perturbed": 0.9463
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 0.9346,
+              "perturbed": 9
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.8371,
+              "perturbed": 0.0419
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8387,
+              "perturbed": 0.1258
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.6052,
-              "factor": 0.8026
+              "factor": 1.139,
+              "perturbed": 2.278
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.0415,
+              "perturbed": 3.1245
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 1.1229,
+              "perturbed": 3.93
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 1.0919,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 1.0145,
+              "perturbed": 41
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 1.1892,
+              "perturbed": 178
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 0.9514,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.0208,
+              "perturbed": 0.5104
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.1318,
+              "perturbed": 6
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.0474,
+              "perturbed": 68
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 17,
-              "factor": 1.1223
+              "original": 5,
+              "factor": 1.1447,
+              "perturbed": 6
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 1.0309,
+              "perturbed": 14
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0818,
+              "perturbed": 1.0818
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.8183,
+              "perturbed": 0.2046
             }
           }
         }
       },
       {
-        "cagr_pct": 5.5593,
-        "sharpe": 0.1827,
-        "profit_factor": 1.152,
-        "max_drawdown_pct": 9.9201,
-        "win_rate_pct": 45.7,
-        "total_trades": 256,
-        "total_pnl": 490.17,
+        "total_trades": 219,
+        "cagr_pct": 4.9868,
+        "sharpe": 0.0417,
+        "profit_factor": 1.3371,
+        "max_drawdown_pct": 12.2215,
+        "win_rate_pct": 53.42,
+        "total_pnl": 1848.55,
+        "sortino": 0.0556,
+        "avg_trade": 8.44,
+        "final_equity": 6687.55,
         "trial": 2,
         "seed": 43,
-        "runtime_s": 286.3,
+        "runtime_s": 161.2,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.8154,
+              "perturbed": 0.2039
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 1.0785,
+              "perturbed": 1.6177
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.8576,
+              "perturbed": 13
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.985,
+              "perturbed": 15
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0687,
+              "perturbed": 21
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 1.1172,
+              "perturbed": 22
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.9813,
+              "perturbed": 5.8877
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.9993,
+              "perturbed": 14
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 29,
-              "factor": 0.8154
+              "factor": 0.8077,
+              "perturbed": 28
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 0.973,
+              "perturbed": 29
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -2.157,
-              "factor": 1.0785
+              "factor": 0.9489,
+              "perturbed": -1.8979
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.1409,
+              "perturbed": 23
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.1439,
-              "factor": 0.8576
+              "original": 1.5,
+              "factor": 1.0188,
+              "perturbed": 1.5282
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.4775,
-              "factor": 0.985
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 7,
-              "factor": 1.0687
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 3.3515,
-              "factor": 1.1172
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.9626,
-              "factor": 0.9813
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 30,
-              "factor": 0.9993
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.8077,
-              "factor": 0.8077
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 2.9189,
-              "factor": 0.973
+              "original": 2.5,
+              "factor": 1.1021,
+              "perturbed": 2.7553
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 19,
-              "factor": 0.9489
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 23,
-              "factor": 1.1409
+              "factor": 0.9736,
+              "perturbed": 19
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 51,
-              "factor": 1.0188
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.8705,
+              "perturbed": 0.6093
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.022,
-              "factor": 1.1021
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.4077,
-              "factor": 0.9736
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 22,
-              "factor": 0.8705
+            "weight": {
+              "original": 0.3,
+              "factor": 1.1404,
+              "perturbed": 0.3421
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0114,
-              "factor": 1.1404
+              "original": -0.008,
+              "factor": 1.1281,
+              "perturbed": -0.009
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2256,
-              "factor": 1.1281
+              "original": 0.7,
+              "factor": 0.9503,
+              "perturbed": 0.6652
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 38,
-              "factor": 0.9503
+              "original": 35,
+              "factor": 0.8383,
+              "perturbed": 29
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.005,
+              "perturbed": 1.5075
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.9984,
+              "perturbed": 25
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.1089,
+              "perturbed": 1.1089
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 1.0389,
+              "perturbed": 7
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.0027,
+              "perturbed": 0.8021
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.0301,
+              "perturbed": 10
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.9508,
+              "perturbed": 0.0475
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8196,
+              "perturbed": 0.1229
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.6766,
-              "factor": 0.8383
+              "factor": 0.8245,
+              "perturbed": 1.649
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1768,
+              "perturbed": 3.5303
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 1.1356,
+              "perturbed": 3.9747
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.9185,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 1.1555,
+              "perturbed": 46
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 1.0089,
+              "perturbed": 151
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 0.8412,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.1423,
+              "perturbed": 0.5711
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.0338,
+              "perturbed": 5
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.1731,
+              "perturbed": 76
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 15,
-              "factor": 1.005
+              "original": 5,
+              "factor": 1.0717,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.8376,
+              "perturbed": 12
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0491,
+              "perturbed": 1.0491
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 1.1148,
+              "perturbed": 0.2787
             }
           }
         }
       },
       {
-        "cagr_pct": 2.6527,
-        "sharpe": -0.0627,
-        "profit_factor": 1.073,
-        "max_drawdown_pct": 15.1251,
-        "win_rate_pct": 47.62,
-        "total_trades": 189,
-        "total_pnl": 217.2,
+        "total_trades": 256,
+        "cagr_pct": 1.6778,
+        "sharpe": -0.3325,
+        "profit_factor": 1.1032,
+        "max_drawdown_pct": 15.3739,
+        "win_rate_pct": 51.95,
+        "total_pnl": 624.76,
+        "sortino": -0.3912,
+        "avg_trade": 2.44,
+        "final_equity": 5531.28,
         "trial": 3,
         "seed": 44,
-        "runtime_s": 305.8,
+        "runtime_s": 163.0,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9634,
+              "perturbed": 0.2409
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 1.0168,
+              "perturbed": 1.5252
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 1.1448,
+              "perturbed": 17
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.8707,
+              "perturbed": 13
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 0.8901,
+              "perturbed": 18
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 0.8116,
+              "perturbed": 16
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.8467,
+              "perturbed": 5.08
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.8035,
+              "perturbed": 11
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 34,
-              "factor": 0.9634
+              "factor": 0.8627,
+              "perturbed": 30
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 1.0055,
+              "perturbed": 30
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -2.0336,
-              "factor": 1.0168
+              "factor": 1.1958,
+              "perturbed": -2.3916
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0774,
+              "perturbed": 22
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.862,
-              "factor": 1.1448
+              "original": 1.5,
+              "factor": 0.9514,
+              "perturbed": 1.4271
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.306,
-              "factor": 0.8707
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 6,
-              "factor": 0.8901
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 2.4349,
-              "factor": 0.8116
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.6933,
-              "factor": 0.8467
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 24,
-              "factor": 0.8035
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.8627,
-              "factor": 0.8627
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 3.0165,
-              "factor": 1.0055
+              "original": 2.5,
+              "factor": 0.962,
+              "perturbed": 2.405
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 24,
-              "factor": 1.1958
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 22,
-              "factor": 1.0774
+              "factor": 1.0765,
+              "perturbed": 22
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 48,
-              "factor": 0.9514
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.9304,
+              "perturbed": 0.6513
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0192,
-              "factor": 0.962
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.7678,
-              "factor": 1.0765
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 23,
-              "factor": 0.9304
+            "weight": {
+              "original": 0.3,
+              "factor": 0.8294,
+              "perturbed": 0.2488
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0083,
-              "factor": 0.8294
+              "original": -0.008,
+              "factor": 1.1366,
+              "perturbed": -0.0091
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2273,
-              "factor": 1.1366
+              "original": 0.7,
+              "factor": 1.0469,
+              "perturbed": 0.7328
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 42,
-              "factor": 1.0469
+              "original": 35,
+              "factor": 0.8448,
+              "perturbed": 30
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 0.828,
+              "perturbed": 1.242
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.8379,
+              "perturbed": 21
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.1836,
+              "perturbed": 1.1836
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 0.8431,
+              "perturbed": 6
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.0501,
+              "perturbed": 0.8401
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.1878,
+              "perturbed": 12
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.814,
+              "perturbed": 0.0407
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.9544,
+              "perturbed": 0.1432
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.6896,
-              "factor": 0.8448
+              "factor": 0.9909,
+              "perturbed": 1.9818
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1668,
+              "perturbed": 3.5003
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.8754,
+              "perturbed": 3.064
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.9033,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 0.8992,
+              "perturbed": 36
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 0.8197,
+              "perturbed": 123
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 1.0695,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.1267,
+              "perturbed": 0.5633
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 0.9745,
+              "perturbed": 5
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 0.8151,
+              "perturbed": 53
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 12,
-              "factor": 0.828
+              "original": 5,
+              "factor": 1.0854,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 1.0948,
+              "perturbed": 15
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0614,
+              "perturbed": 1.0614
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9315,
+              "perturbed": 0.2329
             }
           }
         }
       },
       {
-        "cagr_pct": -5.6079,
-        "sharpe": -0.8374,
-        "profit_factor": 0.8289,
-        "max_drawdown_pct": 23.5002,
-        "win_rate_pct": 35.68,
-        "total_trades": 199,
-        "total_pnl": -586.74,
+        "total_trades": 270,
+        "cagr_pct": 2.3479,
+        "sharpe": -0.2237,
+        "profit_factor": 1.1013,
+        "max_drawdown_pct": 20.218,
+        "win_rate_pct": 46.67,
+        "total_pnl": 824.94,
+        "sortino": -0.3101,
+        "avg_trade": 3.06,
+        "final_equity": 5750.9,
         "trial": 4,
         "seed": 45,
-        "runtime_s": 299.4,
+        "runtime_s": 164.9,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9088,
+              "perturbed": 0.2272
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.9952,
+              "perturbed": 1.4928
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.8328,
+              "perturbed": 12
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.9355,
+              "perturbed": 14
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 0.8289,
+              "perturbed": 17
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 0.8044,
+              "perturbed": 16
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.9135,
+              "perturbed": 5.4812
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.8471,
+              "perturbed": 12
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 32,
-              "factor": 0.9088
+              "factor": 0.9244,
+              "perturbed": 32
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 1.0974,
+              "perturbed": 33
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.9904,
-              "factor": 0.9952
+              "factor": 0.8143,
+              "perturbed": -1.6286
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.05,
+              "perturbed": 21
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.0819,
-              "factor": 0.8328
+              "original": 1.5,
+              "factor": 0.854,
+              "perturbed": 1.281
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.4032,
-              "factor": 0.9355
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 6,
-              "factor": 0.8289
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 2.4132,
-              "factor": 0.8044
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.8271,
-              "factor": 0.9135
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 25,
-              "factor": 0.8471
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.9244,
-              "factor": 0.9244
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 3.2922,
-              "factor": 1.0974
+              "original": 2.5,
+              "factor": 1.118,
+              "perturbed": 2.7951
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 16,
-              "factor": 0.8143
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 21,
-              "factor": 1.05
+              "factor": 1.0948,
+              "perturbed": 22
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 43,
-              "factor": 0.854
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.8844,
+              "perturbed": 0.6191
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0224,
-              "factor": 1.118
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.8318,
-              "factor": 1.0948
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 22,
-              "factor": 0.8844
+            "weight": {
+              "original": 0.3,
+              "factor": 1.1392,
+              "perturbed": 0.3418
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0114,
-              "factor": 1.1392
+              "original": -0.008,
+              "factor": 1.0869,
+              "perturbed": -0.0087
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2174,
-              "factor": 1.0869
+              "original": 0.7,
+              "factor": 0.83,
+              "perturbed": 0.581
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 33,
-              "factor": 0.83
+              "original": 35,
+              "factor": 0.9633,
+              "perturbed": 34
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.0802,
+              "perturbed": 1.6203
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 1.1692,
+              "perturbed": 29
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.8689,
+              "perturbed": 0.8689
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 0.9007,
+              "perturbed": 6
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.11,
+              "perturbed": 0.888
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.1851,
+              "perturbed": 12
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.8375,
+              "perturbed": 0.0419
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8359,
+              "perturbed": 0.1254
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.9265,
-              "factor": 0.9633
+              "factor": 1.1005,
+              "perturbed": 2.2009
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 0.9268,
+              "perturbed": 2.7804
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.9547,
+              "perturbed": 3.3415
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 1.1505,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 1.0983,
+              "perturbed": 44
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 1.0643,
+              "perturbed": 160
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 1.1471,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.0928,
+              "perturbed": 0.5464
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.1241,
+              "perturbed": 6
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.0573,
+              "perturbed": 69
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 16,
-              "factor": 1.0802
+              "original": 5,
+              "factor": 1.0373,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.8239,
+              "perturbed": 12
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.1638,
+              "perturbed": 1.1638
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 1.1647,
+              "perturbed": 0.2912
             }
           }
         }
       },
       {
-        "cagr_pct": 7.039,
-        "sharpe": 0.3092,
-        "profit_factor": 1.2118,
-        "max_drawdown_pct": 11.4896,
-        "win_rate_pct": 48.66,
-        "total_trades": 261,
-        "total_pnl": 673.03,
+        "total_trades": 431,
+        "cagr_pct": 4.7881,
+        "sharpe": 0.0263,
+        "profit_factor": 1.1767,
+        "max_drawdown_pct": 11.5159,
+        "win_rate_pct": 58.7,
+        "total_pnl": 1700.47,
+        "sortino": 0.0341,
+        "avg_trade": 3.95,
+        "final_equity": 6612.9,
         "trial": 5,
         "seed": 46,
-        "runtime_s": 308.5,
+        "runtime_s": 154.9,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 1.1553,
+              "perturbed": 0.2888
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.96,
+              "perturbed": 1.44
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 1.0354,
+              "perturbed": 16
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 1.1439,
+              "perturbed": 17
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 0.8914,
+              "perturbed": 18
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 1.0063,
+              "perturbed": 20
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 1.0335,
+              "perturbed": 6.201
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 1.1789,
+              "perturbed": 17
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 40,
-              "factor": 1.1553
+              "factor": 0.8129,
+              "perturbed": 28
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 0.8276,
+              "perturbed": 25
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.92,
-              "factor": 0.96
+              "factor": 0.928,
+              "perturbed": -1.8561
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.13,
+              "perturbed": 23
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.5886,
-              "factor": 1.0354
+              "original": 1.5,
+              "factor": 1.1373,
+              "perturbed": 1.7059
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.7159,
-              "factor": 1.1439
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 6,
-              "factor": 0.8914
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 3.0189,
-              "factor": 1.0063
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 2.067,
-              "factor": 1.0335
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 35,
-              "factor": 1.1789
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.8129,
-              "factor": 0.8129
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 2.4827,
-              "factor": 0.8276
+              "original": 2.5,
+              "factor": 0.8542,
+              "perturbed": 2.1354
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 19,
-              "factor": 0.928
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 23,
-              "factor": 1.13
+              "factor": 1.1678,
+              "perturbed": 23
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 57,
-              "factor": 1.1373
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 1.0111,
+              "perturbed": 0.7078
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0171,
-              "factor": 0.8542
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 4.0874,
-              "factor": 1.1678
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 25,
-              "factor": 1.0111
+            "weight": {
+              "original": 0.3,
+              "factor": 1.1872,
+              "perturbed": 0.3561
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0119,
-              "factor": 1.1872
+              "original": -0.008,
+              "factor": 1.1738,
+              "perturbed": -0.0094
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2348,
-              "factor": 1.1738
+              "original": 0.7,
+              "factor": 0.8372,
+              "perturbed": 0.586
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 33,
-              "factor": 0.8372
+              "original": 35,
+              "factor": 1.1897,
+              "perturbed": 42
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 0.9915,
+              "perturbed": 1.4872
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.8624,
+              "perturbed": 22
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.9862,
+              "perturbed": 0.9862
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 0.8297,
+              "perturbed": 6
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.0995,
+              "perturbed": 0.8796
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.0178,
+              "perturbed": 10
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.8438,
+              "perturbed": 0.0422
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8905,
+              "perturbed": 0.1336
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 2.3795,
-              "factor": 1.1897
+              "factor": 1.0026,
+              "perturbed": 2.0053
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1114,
+              "perturbed": 3.3342
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.91,
+              "perturbed": 3.1851
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.8427,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 0.9419,
+              "perturbed": 38
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 0.8276,
+              "perturbed": 124
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 0.9342,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.1487,
+              "perturbed": 0.5744
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 0.8735,
+              "perturbed": 4
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 0.9207,
+              "perturbed": 60
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 15,
-              "factor": 0.9915
+              "original": 5,
+              "factor": 1.1093,
+              "perturbed": 6
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.8815,
+              "perturbed": 12
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.8459,
+              "perturbed": 0.8459
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.8993,
+              "perturbed": 0.2248
             }
           }
         }
       },
       {
-        "cagr_pct": 7.2974,
-        "sharpe": 0.4469,
-        "profit_factor": 1.397,
-        "max_drawdown_pct": 6.8732,
-        "win_rate_pct": 50.58,
-        "total_trades": 172,
-        "total_pnl": 692.8,
+        "total_trades": 270,
+        "cagr_pct": 0.4447,
+        "sharpe": -0.5333,
+        "profit_factor": 1.0321,
+        "max_drawdown_pct": 16.0699,
+        "win_rate_pct": 51.85,
+        "total_pnl": 175.43,
+        "sortino": -0.6951,
+        "avg_trade": 0.65,
+        "final_equity": 5145.36,
         "trial": 6,
         "seed": 47,
-        "runtime_s": 304.7,
+        "runtime_s": 157.0,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9407,
+              "perturbed": 0.2352
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.9721,
+              "perturbed": 1.4581
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.9815,
+              "perturbed": 15
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.9374,
+              "perturbed": 14
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.005,
+              "perturbed": 20
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 0.957,
+              "perturbed": 19
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.8164,
+              "perturbed": 4.8982
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.9674,
+              "perturbed": 14
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 33,
-              "factor": 0.9407
+              "factor": 0.8095,
+              "perturbed": 28
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 0.841,
+              "perturbed": 25
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.9441,
-              "factor": 0.9721
+              "factor": 0.9055,
+              "perturbed": -1.811
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.1862,
+              "perturbed": 24
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.4537,
-              "factor": 0.9815
+              "original": 1.5,
+              "factor": 0.9926,
+              "perturbed": 1.4889
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.4061,
-              "factor": 0.9374
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 7,
-              "factor": 1.005
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 2.8709,
-              "factor": 0.957
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.6327,
-              "factor": 0.8164
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 29,
-              "factor": 0.9674
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.8095,
-              "factor": 0.8095
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 2.5229,
-              "factor": 0.841
+              "original": 2.5,
+              "factor": 1.0187,
+              "perturbed": 2.5467
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 18,
-              "factor": 0.9055
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 24,
-              "factor": 1.1862
+              "factor": 1.167,
+              "perturbed": 23
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 50,
-              "factor": 0.9926
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 1.1595,
+              "perturbed": 0.8116
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0204,
-              "factor": 1.0187
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 4.0844,
-              "factor": 1.167
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 29,
-              "factor": 1.1595
+            "weight": {
+              "original": 0.3,
+              "factor": 1.027,
+              "perturbed": 0.3081
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0103,
-              "factor": 1.027
+              "original": -0.008,
+              "factor": 0.892,
+              "perturbed": -0.0071
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.1784,
-              "factor": 0.892
+              "original": 0.7,
+              "factor": 1.0093,
+              "perturbed": 0.7065
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 40,
-              "factor": 1.0093
+              "original": 35,
+              "factor": 0.9436,
+              "perturbed": 33
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.1831,
+              "perturbed": 1.7747
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.8133,
+              "perturbed": 20
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.9497,
+              "perturbed": 0.9497
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 1.075,
+              "perturbed": 8
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.0404,
+              "perturbed": 0.8323
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.0231,
+              "perturbed": 10
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 1.1048,
+              "perturbed": 0.0552
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8954,
+              "perturbed": 0.1343
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.8873,
-              "factor": 0.9436
+              "factor": 1.1362,
+              "perturbed": 2.2725
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.166,
+              "perturbed": 3.4979
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.8141,
+              "perturbed": 2.8494
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.9336,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 0.9451,
+              "perturbed": 38
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 0.9534,
+              "perturbed": 143
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 1.0161,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 0.9011,
+              "perturbed": 0.4506
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.0595,
+              "perturbed": 5
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.1524,
+              "perturbed": 75
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 18,
-              "factor": 1.1831
+              "original": 5,
+              "factor": 1.1708,
+              "perturbed": 6
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 1.1383,
+              "perturbed": 16
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.8874,
+              "perturbed": 0.8874
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 1.0977,
+              "perturbed": 0.2744
             }
           }
         }
       },
       {
-        "cagr_pct": 2.8791,
-        "sharpe": -0.0562,
-        "profit_factor": 1.0721,
-        "max_drawdown_pct": 10.5725,
-        "win_rate_pct": 43.12,
-        "total_trades": 276,
-        "total_pnl": 245.59,
+        "total_trades": 284,
+        "cagr_pct": 4.7799,
+        "sharpe": 0.032,
+        "profit_factor": 1.1985,
+        "max_drawdown_pct": 10.7563,
+        "win_rate_pct": 53.17,
+        "total_pnl": 1769.07,
+        "sortino": 0.044,
+        "avg_trade": 6.23,
+        "final_equity": 6609.82,
         "trial": 7,
         "seed": 48,
-        "runtime_s": 302.6,
+        "runtime_s": 169.6,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 1.0193,
+              "perturbed": 0.2548
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.8528,
+              "perturbed": 1.2791
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 1.0846,
+              "perturbed": 16
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.9209,
+              "perturbed": 14
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.1753,
+              "perturbed": 24
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 0.8771,
+              "perturbed": 18
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 1.1048,
+              "perturbed": 6.6288
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.8663,
+              "perturbed": 12
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 36,
-              "factor": 1.0193
+              "factor": 1.1864,
+              "perturbed": 42
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 1.1494,
+              "perturbed": 34
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.7055,
-              "factor": 0.8528
+              "factor": 0.843,
+              "perturbed": -1.686
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0597,
+              "perturbed": 21
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.7115,
-              "factor": 1.0846
+              "original": 1.5,
+              "factor": 0.8872,
+              "perturbed": 1.3308
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.3814,
-              "factor": 0.9209
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 8,
-              "factor": 1.1753
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 2.6313,
-              "factor": 0.8771
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 2.2096,
-              "factor": 1.1048
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 26,
-              "factor": 0.8663
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 1.1864,
-              "factor": 1.1864
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 3.4483,
-              "factor": 1.1494
+              "original": 2.5,
+              "factor": 1.0046,
+              "perturbed": 2.5116
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 17,
-              "factor": 0.843
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 21,
-              "factor": 1.0597
+              "factor": 1.1401,
+              "perturbed": 23
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 44,
-              "factor": 0.8872
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.862,
+              "perturbed": 0.6034
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0201,
-              "factor": 1.0046
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.9904,
-              "factor": 1.1401
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 22,
-              "factor": 0.862
+            "weight": {
+              "original": 0.3,
+              "factor": 0.8868,
+              "perturbed": 0.2661
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0089,
-              "factor": 0.8868
+              "original": -0.008,
+              "factor": 0.8293,
+              "perturbed": -0.0066
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.1659,
-              "factor": 0.8293
+              "original": 0.7,
+              "factor": 0.8254,
+              "perturbed": 0.5778
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 33,
-              "factor": 0.8254
+              "original": 35,
+              "factor": 0.9996,
+              "perturbed": 35
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 0.8652,
+              "perturbed": 1.2978
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.8515,
+              "perturbed": 21
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0793,
+              "perturbed": 1.0793
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 0.9167,
+              "perturbed": 6
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 0.9356,
+              "perturbed": 0.7485
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 0.9351,
+              "perturbed": 9
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 1.1366,
+              "perturbed": 0.0568
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.9088,
+              "perturbed": 0.1363
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.9991,
-              "factor": 0.9996
+              "factor": 1.0592,
+              "perturbed": 2.1184
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1743,
+              "perturbed": 3.5229
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 1.0285,
+              "perturbed": 3.5996
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.9132,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 0.8553,
+              "perturbed": 34
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 1.0611,
+              "perturbed": 159
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 0.8702,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 0.9607,
+              "perturbed": 0.4804
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.1261,
+              "perturbed": 6
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.113,
+              "perturbed": 72
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 13,
-              "factor": 0.8652
+              "original": 5,
+              "factor": 0.9109,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.9465,
+              "perturbed": 13
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.9156,
+              "perturbed": 0.9156
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9166,
+              "perturbed": 0.2291
             }
           }
         }
       },
       {
-        "cagr_pct": 6.2107,
-        "sharpe": 0.252,
-        "profit_factor": 1.227,
-        "max_drawdown_pct": 7.8941,
-        "win_rate_pct": 47.0,
-        "total_trades": 217,
-        "total_pnl": 627.95,
+        "total_trades": 272,
+        "cagr_pct": 2.3796,
+        "sharpe": -0.2658,
+        "profit_factor": 1.149,
+        "max_drawdown_pct": 12.0214,
+        "win_rate_pct": 52.21,
+        "total_pnl": 870.64,
+        "sortino": -0.3549,
+        "avg_trade": 3.2,
+        "final_equity": 5761.45,
         "trial": 8,
         "seed": 49,
-        "runtime_s": 298.7,
+        "runtime_s": 152.5,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.8268,
+              "perturbed": 0.2067
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.9653,
+              "perturbed": 1.4479
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.8442,
+              "perturbed": 13
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 1.1008,
+              "perturbed": 17
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0045,
+              "perturbed": 20
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 0.8199,
+              "perturbed": 16
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.8179,
+              "perturbed": 4.9075
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 1.0944,
+              "perturbed": 15
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 29,
-              "factor": 0.8268
+              "factor": 0.8617,
+              "perturbed": 30
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 1.0935,
+              "perturbed": 33
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.9306,
-              "factor": 0.9653
+              "factor": 1.0522,
+              "perturbed": -2.1044
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0017,
+              "perturbed": 20
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.1105,
-              "factor": 0.8442
+              "original": 1.5,
+              "factor": 1.1423,
+              "perturbed": 1.7135
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.6513,
-              "factor": 1.1008
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 7,
-              "factor": 1.0045
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 2.4596,
-              "factor": 0.8199
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.6358,
-              "factor": 0.8179
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 33,
-              "factor": 1.0944
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 0.8617,
-              "factor": 0.8617
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 3.2805,
-              "factor": 1.0935
+              "original": 2.5,
+              "factor": 1.041,
+              "perturbed": 2.6026
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 21,
-              "factor": 1.0522
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 20,
-              "factor": 1.0017
+              "factor": 1.0293,
+              "perturbed": 21
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 57,
-              "factor": 1.1423
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.96,
+              "perturbed": 0.672
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0208,
-              "factor": 1.041
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.6027,
-              "factor": 1.0293
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 24,
-              "factor": 0.96
+            "weight": {
+              "original": 0.3,
+              "factor": 0.8995,
+              "perturbed": 0.2698
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.009,
-              "factor": 0.8995
+              "original": -0.008,
+              "factor": 0.8552,
+              "perturbed": -0.0068
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.171,
-              "factor": 0.8552
+              "original": 0.7,
+              "factor": 0.9693,
+              "perturbed": 0.6785
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 39,
-              "factor": 0.9693
+              "original": 35,
+              "factor": 0.9504,
+              "perturbed": 33
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.109,
+              "perturbed": 1.6635
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 0.9073,
+              "perturbed": 23
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.9594,
+              "perturbed": 0.9594
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 1.1784,
+              "perturbed": 8
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.0481,
+              "perturbed": 0.8385
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.0645,
+              "perturbed": 11
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 1.0752,
+              "perturbed": 0.0538
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 1.164,
+              "perturbed": 0.1746
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.9008,
-              "factor": 0.9504
+              "factor": 0.8825,
+              "perturbed": 1.765
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1081,
+              "perturbed": 3.3244
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.8262,
+              "perturbed": 2.8918
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.902,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 1.0383,
+              "perturbed": 42
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 0.9274,
+              "perturbed": 139
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 0.995,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 0.8889,
+              "perturbed": 0.4444
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 0.9021,
+              "perturbed": 5
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 0.9749,
+              "perturbed": 63
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 17,
-              "factor": 1.109
+              "original": 5,
+              "factor": 1.0448,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 1.0772,
+              "perturbed": 15
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0,
+              "perturbed": 1.0
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9516,
+              "perturbed": 0.2379
             }
           }
         }
       },
       {
-        "cagr_pct": 4.7854,
-        "sharpe": 0.1221,
-        "profit_factor": 1.2039,
-        "max_drawdown_pct": 8.5129,
-        "win_rate_pct": 50.4,
-        "total_trades": 250,
-        "total_pnl": 465.92,
+        "total_trades": 295,
+        "cagr_pct": 5.933,
+        "sharpe": 0.1446,
+        "profit_factor": 1.2817,
+        "max_drawdown_pct": 10.0857,
+        "win_rate_pct": 55.59,
+        "total_pnl": 2131.65,
+        "sortino": 0.1952,
+        "avg_trade": 7.23,
+        "final_equity": 7052.84,
         "trial": 9,
         "seed": 50,
-        "runtime_s": 298.1,
+        "runtime_s": 166.8,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.999,
+              "perturbed": 0.2498
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 0.9065,
+              "perturbed": 1.3597
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 1.055,
+              "perturbed": 16
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 0.897,
+              "perturbed": 13
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 0.9893,
+              "perturbed": 20
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 1.1881,
+              "perturbed": 24
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 0.8341,
+              "perturbed": 5.0045
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.927,
+              "perturbed": 13
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 35,
-              "factor": 0.999
+              "factor": 1.0706,
+              "perturbed": 37
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 0.8341,
+              "perturbed": 25
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -1.8129,
-              "factor": 0.9065
+              "factor": 0.8613,
+              "perturbed": -1.7227
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.1301,
+              "perturbed": 23
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.6374,
-              "factor": 1.055
+              "original": 1.5,
+              "factor": 1.1919,
+              "perturbed": 1.7878
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.3455,
-              "factor": 0.897
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 7,
-              "factor": 0.9893
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 3.5644,
-              "factor": 1.1881
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 1.6682,
-              "factor": 0.8341
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 28,
-              "factor": 0.927
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 1.0706,
-              "factor": 1.0706
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 2.5023,
-              "factor": 0.8341
+              "original": 2.5,
+              "factor": 0.9277,
+              "perturbed": 2.3193
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 17,
-              "factor": 0.8613
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 23,
-              "factor": 1.1301
+              "factor": 0.8756,
+              "perturbed": 18
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 60,
-              "factor": 1.1919
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 1.189,
+              "perturbed": 0.8323
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0186,
-              "factor": 0.9277
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 3.0646,
-              "factor": 0.8756
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 30,
-              "factor": 1.189
+            "weight": {
+              "original": 0.3,
+              "factor": 0.9316,
+              "perturbed": 0.2795
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0093,
-              "factor": 0.9316
+              "original": -0.008,
+              "factor": 1.0415,
+              "perturbed": -0.0083
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2083,
-              "factor": 1.0415
+              "original": 0.7,
+              "factor": 1.043,
+              "perturbed": 0.7301
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 42,
-              "factor": 1.043
+              "original": 35,
+              "factor": 1.054,
+              "perturbed": 37
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 1.1662,
+              "perturbed": 1.7492
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 1.185,
+              "perturbed": 30
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0773,
+              "perturbed": 1.0773
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 1.13,
+              "perturbed": 8
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 1.1175,
+              "perturbed": 0.894
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.0572,
+              "perturbed": 11
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 0.9721,
+              "perturbed": 0.0486
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 0.8909,
+              "perturbed": 0.1336
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 2.108,
-              "factor": 1.054
+              "factor": 0.9065,
+              "perturbed": 1.8129
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.172,
+              "perturbed": 3.516
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 1.08,
+              "perturbed": 3.7801
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 0.8423,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 1.1643,
+              "perturbed": 47
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 0.9084,
+              "perturbed": 136
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 1.077,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 0.984,
+              "perturbed": 0.492
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 0.9079,
+              "perturbed": 5
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 0.8837,
+              "perturbed": 57
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 17,
-              "factor": 1.1662
+              "original": 5,
+              "factor": 1.0316,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.9647,
+              "perturbed": 14
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.0498,
+              "perturbed": 1.0498
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 1.0784,
+              "perturbed": 0.2696
             }
           }
         }
       },
       {
-        "cagr_pct": 3.0628,
-        "sharpe": -0.0225,
-        "profit_factor": 1.0756,
-        "max_drawdown_pct": 12.2953,
-        "win_rate_pct": 43.15,
-        "total_trades": 241,
-        "total_pnl": 266.87,
+        "total_trades": 255,
+        "cagr_pct": 8.3604,
+        "sharpe": 0.3871,
+        "profit_factor": 1.4488,
+        "max_drawdown_pct": 12.8645,
+        "win_rate_pct": 54.12,
+        "total_pnl": 3089.35,
+        "sortino": 0.5772,
+        "avg_trade": 12.12,
+        "final_equity": 8066.51,
         "trial": 10,
         "seed": 51,
-        "runtime_s": 303.7,
+        "runtime_s": 164.8,
         "perturbation_log": {
+          "momentum_breakout": {
+            "weight": {
+              "original": 0.25,
+              "factor": 0.8974,
+              "perturbed": 0.2244
+            },
+            "atr_stop_mult": {
+              "original": 1.5,
+              "factor": 1.0009,
+              "perturbed": 1.5013
+            },
+            "max_hold_days": {
+              "original": 15,
+              "factor": 0.8648,
+              "perturbed": 13
+            },
+            "lookback_days": {
+              "original": 15,
+              "factor": 1.1285,
+              "perturbed": 17
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 0.8926,
+              "perturbed": 18
+            },
+            "trend_ma_period": {
+              "original": 20,
+              "factor": 1.0209,
+              "perturbed": 20
+            },
+            "profit_target_atr_mult": {
+              "original": 6.0,
+              "factor": 1.1705,
+              "perturbed": 7.0233
+            }
+          },
           "mean_reversion": {
+            "rsi_period": {
+              "original": 14,
+              "factor": 0.959,
+              "perturbed": 13
+            },
             "rsi_oversold": {
               "original": 35,
-              "perturbed": 31,
-              "factor": 0.8974
+              "factor": 1.1871,
+              "perturbed": 42
+            },
+            "zscore_lookback": {
+              "original": 30,
+              "factor": 1.0926,
+              "perturbed": 33
             },
             "zscore_entry": {
               "original": -2.0,
-              "perturbed": -2.0018,
-              "factor": 1.0009
+              "factor": 1.0192,
+              "perturbed": -2.0385
+            },
+            "atr_period": {
+              "original": 20,
+              "factor": 1.0516,
+              "perturbed": 21
             },
             "atr_stop_mult": {
-              "original": 2.5,
-              "perturbed": 2.1619,
-              "factor": 0.8648
+              "original": 1.5,
+              "factor": 1.0344,
+              "perturbed": 1.5516
             },
             "profit_target_atr_mult": {
-              "original": 1.5,
-              "perturbed": 1.6927,
-              "factor": 1.1285
-            },
-            "max_hold_days": {
-              "original": 7,
-              "perturbed": 6,
-              "factor": 0.8926
-            }
-          },
-          "bb_squeeze": {
-            "bb_std": {
-              "original": 3.0,
-              "perturbed": 3.0628,
-              "factor": 1.0209
-            },
-            "kc_atr_mult": {
-              "original": 2.0,
-              "perturbed": 2.3411,
-              "factor": 1.1705
-            },
-            "momentum_period": {
-              "original": 30,
-              "perturbed": 29,
-              "factor": 0.959
-            },
-            "atr_stop_mult": {
-              "original": 1.0,
-              "perturbed": 1.1871,
-              "factor": 1.1871
-            },
-            "trailing_stop_atr_mult": {
-              "original": 3.0,
-              "perturbed": 3.2778,
-              "factor": 1.0926
+              "original": 2.5,
+              "factor": 0.9441,
+              "perturbed": 2.3602
             },
             "max_hold_days": {
               "original": 20,
-              "perturbed": 20,
-              "factor": 1.0192
-            }
-          },
-          "trend_following": {
-            "fast_ma": {
-              "original": 20,
-              "perturbed": 21,
-              "factor": 1.0516
+              "factor": 1.1987,
+              "perturbed": 24
             },
-            "slow_ma": {
-              "original": 50,
-              "perturbed": 52,
-              "factor": 1.0344
+            "ibs_max": {
+              "original": 0.7,
+              "factor": 0.9616,
+              "perturbed": 0.6731
             },
-            "pullback_pct": {
-              "original": 0.02,
-              "perturbed": 0.0189,
-              "factor": 0.9441
-            },
-            "atr_stop_mult": {
-              "original": 3.5,
-              "perturbed": 4.1954,
-              "factor": 1.1987
-            },
-            "max_hold_days": {
-              "original": 25,
-              "perturbed": 24,
-              "factor": 0.9616
+            "weight": {
+              "original": 0.3,
+              "factor": 1.1935,
+              "perturbed": 0.3581
             }
           },
           "opening_gap": {
             "gap_threshold": {
-              "original": -0.01,
-              "perturbed": -0.0119,
-              "factor": 1.1935
+              "original": -0.008,
+              "factor": 1.141,
+              "perturbed": -0.0091
             },
             "ibs_confirm": {
-              "original": 0.2,
-              "perturbed": 0.2282,
-              "factor": 1.141
+              "original": 0.7,
+              "factor": 0.8113,
+              "perturbed": 0.5679
             },
             "rsi14_max": {
-              "original": 40,
-              "perturbed": 32,
-              "factor": 0.8113
+              "original": 35,
+              "factor": 0.9033,
+              "perturbed": 32
+            },
+            "vol_surge_threshold": {
+              "original": 1.5,
+              "factor": 0.9911,
+              "perturbed": 1.4867
+            },
+            "atr_period": {
+              "original": 25,
+              "factor": 1.1258,
+              "perturbed": 28
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 0.8711,
+              "perturbed": 0.8711
+            },
+            "sma_exit_period": {
+              "original": 7,
+              "factor": 1.0463,
+              "perturbed": 7
+            },
+            "ibs_exit_threshold": {
+              "original": 0.8,
+              "factor": 0.9469,
+              "perturbed": 0.7575
+            },
+            "max_hold_days": {
+              "original": 10,
+              "factor": 1.1143,
+              "perturbed": 11
+            },
+            "weight": {
+              "original": 0.05,
+              "factor": 1.1706,
+              "perturbed": 0.0585
+            }
+          },
+          "sector_rotation": {
+            "weight": {
+              "original": 0.15,
+              "factor": 1.1048,
+              "perturbed": 0.1657
             },
             "atr_stop_mult": {
               "original": 2.0,
-              "perturbed": 1.8066,
-              "factor": 0.9033
+              "factor": 0.8773,
+              "perturbed": 1.7546
+            },
+            "trailing_stop_atr_mult": {
+              "original": 3.0,
+              "factor": 1.1041,
+              "perturbed": 3.3123
+            },
+            "profit_target_atr_mult": {
+              "original": 3.5,
+              "factor": 0.9753,
+              "perturbed": 3.4134
+            }
+          },
+          "connors_rsi2": {
+            "rsi_period": {
+              "original": 3,
+              "factor": 1.1349,
+              "perturbed": 3
+            },
+            "rsi_entry": {
+              "original": 40,
+              "factor": 0.988,
+              "perturbed": 40
+            },
+            "sma_trend_period": {
+              "original": 150,
+              "factor": 1.1627,
+              "perturbed": 174
+            },
+            "min_consecutive_down": {
+              "original": 1,
+              "factor": 1.1945,
+              "perturbed": 1
+            },
+            "ibs_max": {
+              "original": 0.5,
+              "factor": 1.1297,
+              "perturbed": 0.5648
+            },
+            "sma_exit_period": {
+              "original": 5,
+              "factor": 1.1304,
+              "perturbed": 6
+            },
+            "rsi_exit": {
+              "original": 65,
+              "factor": 1.1276,
+              "perturbed": 73
             },
             "max_hold_days": {
-              "original": 15,
-              "perturbed": 15,
-              "factor": 0.9911
+              "original": 5,
+              "factor": 1.0369,
+              "perturbed": 5
+            },
+            "atr_period": {
+              "original": 14,
+              "factor": 0.8699,
+              "perturbed": 12
+            },
+            "atr_stop_mult": {
+              "original": 1.0,
+              "factor": 1.1945,
+              "perturbed": 1.1945
+            },
+            "weight": {
+              "original": 0.25,
+              "factor": 0.9857,
+              "perturbed": 0.2464
             }
           }
         }
       }
     ],
-    "collapse_count": 2,
+    "collapse_count": 0,
     "robust": true
   },
   "test3_walkforward_consistency": {
     "full_metrics": {
-      "cagr_pct": 11.2076,
-      "sharpe": 0.6734,
-      "profit_factor": 1.3034,
-      "max_drawdown_pct": 7.7554,
-      "win_rate_pct": 46.58,
-      "total_trades": 307,
-      "total_pnl": 1026.52
+      "total_trades": 293,
+      "cagr_pct": 5.7718,
+      "sharpe": 0.1247,
+      "profit_factor": 1.2417,
+      "max_drawdown_pct": 12.8101,
+      "win_rate_pct": 54.27,
+      "total_pnl": 2089.34,
+      "sortino": 0.1551,
+      "avg_trade": 7.13,
+      "final_equity": 6989.48
     },
     "window_analysis": {
-      "n_windows": 22,
-      "n_positive_windows": 13,
-      "n_negative_windows": 9,
-      "win_rate_windows_pct": 59.1,
-      "mean_window_return_pct": 0.9682,
-      "std_window_return_pct": 3.1528,
-      "min_window_return_pct": -4.892,
-      "max_window_return_pct": 9.0869,
-      "mean_trades_per_window": 13.7,
+      "n_windows": 69,
+      "n_positive_windows": 40,
+      "n_negative_windows": 29,
+      "win_rate_windows_pct": 58.0,
+      "mean_window_return_pct": 0.5234,
+      "std_window_return_pct": 2.8763,
+      "min_window_return_pct": -9.6762,
+      "max_window_return_pct": 8.1706,
+      "median_window_return_pct": 0.5662,
+      "mean_window_pnl": 28.56,
+      "std_window_pnl": 196.25,
+      "mean_trades_per_window": 4.2,
+      "total_trades_across_windows": 291,
       "per_window_detail": [
         {
           "window": 1,
-          "test_start": "2024-02-15",
-          "test_end": "2024-05-16",
-          "trades": 30,
-          "pnl": 74.06,
-          "return_pct": 1.481
+          "test_start": "2020-04-15",
+          "test_end": "2020-07-14",
+          "trades": 0,
+          "pnl": 0,
+          "return_pct": 0.0,
+          "equity_start": 5011.79,
+          "equity_end": 5011.79
         },
         {
           "window": 2,
-          "test_start": "2024-03-15",
-          "test_end": "2024-06-17",
-          "trades": 7,
-          "pnl": -120.88,
-          "return_pct": -2.3825
+          "test_start": "2020-05-14",
+          "test_end": "2020-08-12",
+          "trades": 0,
+          "pnl": 0,
+          "return_pct": 0.0,
+          "equity_start": 5011.79,
+          "equity_end": 5011.79
         },
         {
           "window": 3,
-          "test_start": "2024-04-17",
-          "test_end": "2024-07-16",
-          "trades": 11,
-          "pnl": 118.64,
-          "return_pct": 2.3952
+          "test_start": "2020-06-15",
+          "test_end": "2020-09-11",
+          "trades": 0,
+          "pnl": 0,
+          "return_pct": 0.0,
+          "equity_start": 5011.79,
+          "equity_end": 5011.79
         },
         {
           "window": 4,
-          "test_start": "2024-05-17",
-          "test_end": "2024-08-14",
-          "trades": 14,
-          "pnl": 171.81,
-          "return_pct": 3.3879
+          "test_start": "2020-07-15",
+          "test_end": "2020-10-12",
+          "trades": 0,
+          "pnl": 0,
+          "return_pct": 0.0,
+          "equity_start": 5011.79,
+          "equity_end": 5011.79
         },
         {
           "window": 5,
-          "test_start": "2024-06-18",
-          "test_end": "2024-09-12",
+          "test_start": "2020-08-13",
+          "test_end": "2020-11-10",
           "trades": 6,
-          "pnl": 2.81,
-          "return_pct": 0.0538
+          "pnl": 160.25,
+          "return_pct": 3.1975,
+          "equity_start": 5011.79,
+          "equity_end": 5172.04
         },
         {
           "window": 6,
-          "test_start": "2024-07-17",
-          "test_end": "2024-10-11",
-          "trades": 9,
-          "pnl": -26.79,
-          "return_pct": -0.5108
+          "test_start": "2020-09-14",
+          "test_end": "2020-12-10",
+          "trades": 3,
+          "pnl": -36.18,
+          "return_pct": -0.6995,
+          "equity_start": 5172.04,
+          "equity_end": 5135.86
         },
         {
           "window": 7,
-          "test_start": "2024-08-15",
-          "test_end": "2024-11-11",
-          "trades": 18,
-          "pnl": -88.67,
-          "return_pct": -1.6986
+          "test_start": "2020-10-13",
+          "test_end": "2021-01-12",
+          "trades": 3,
+          "pnl": 98.81,
+          "return_pct": 1.9239,
+          "equity_start": 5135.86,
+          "equity_end": 5234.67
         },
         {
           "window": 8,
-          "test_start": "2024-09-13",
-          "test_end": "2024-12-10",
-          "trades": 11,
-          "pnl": 387.76,
-          "return_pct": 7.5574
+          "test_start": "2020-11-11",
+          "test_end": "2021-02-11",
+          "trades": 3,
+          "pnl": -89.46,
+          "return_pct": -1.709,
+          "equity_start": 5234.67,
+          "equity_end": 5145.21
         },
         {
           "window": 9,
-          "test_start": "2024-10-14",
-          "test_end": "2025-01-13",
-          "trades": 19,
-          "pnl": -49.4,
-          "return_pct": -0.8949
+          "test_start": "2020-12-11",
+          "test_end": "2021-03-15",
+          "trades": 3,
+          "pnl": -87.84,
+          "return_pct": -1.7072,
+          "equity_start": 5145.21,
+          "equity_end": 5057.37
         },
         {
           "window": 10,
-          "test_start": "2024-11-12",
-          "test_end": "2025-02-12",
-          "trades": 5,
-          "pnl": 28.64,
-          "return_pct": 0.5235
+          "test_start": "2021-01-13",
+          "test_end": "2021-04-14",
+          "trades": 2,
+          "pnl": 58.18,
+          "return_pct": 1.1504,
+          "equity_start": 5057.37,
+          "equity_end": 5115.55
         },
         {
           "window": 11,
-          "test_start": "2024-12-11",
-          "test_end": "2025-03-13",
-          "trades": 10,
-          "pnl": -42.07,
-          "return_pct": -0.7652
+          "test_start": "2021-02-12",
+          "test_end": "2021-05-13",
+          "trades": 3,
+          "pnl": 211.0,
+          "return_pct": 4.1247,
+          "equity_start": 5115.55,
+          "equity_end": 5326.55
         },
         {
           "window": 12,
-          "test_start": "2025-01-14",
-          "test_end": "2025-04-11",
-          "trades": 7,
-          "pnl": -58.79,
-          "return_pct": -1.0777
+          "test_start": "2021-03-16",
+          "test_end": "2021-06-14",
+          "trades": 2,
+          "pnl": 141.05,
+          "return_pct": 2.6481,
+          "equity_start": 5326.55,
+          "equity_end": 5467.6
         },
         {
           "window": 13,
-          "test_start": "2025-02-13",
-          "test_end": "2025-05-15",
-          "trades": 6,
-          "pnl": 490.44,
-          "return_pct": 9.0869
+          "test_start": "2021-04-15",
+          "test_end": "2021-07-14",
+          "trades": 4,
+          "pnl": 289.88,
+          "return_pct": 5.3018,
+          "equity_start": 5467.6,
+          "equity_end": 5757.48
         },
         {
           "window": 14,
-          "test_start": "2025-03-14",
-          "test_end": "2025-06-16",
-          "trades": 6,
-          "pnl": 205.96,
-          "return_pct": 3.4981
+          "test_start": "2021-05-14",
+          "test_end": "2021-08-12",
+          "trades": 7,
+          "pnl": 65.12,
+          "return_pct": 1.1311,
+          "equity_start": 5757.48,
+          "equity_end": 5822.6
         },
         {
           "window": 15,
-          "test_start": "2025-04-14",
-          "test_end": "2025-07-15",
-          "trades": 16,
-          "pnl": 75.12,
-          "return_pct": 1.233
+          "test_start": "2021-06-15",
+          "test_end": "2021-09-13",
+          "trades": 4,
+          "pnl": 327.98,
+          "return_pct": 5.6329,
+          "equity_start": 5822.6,
+          "equity_end": 6150.58
         },
         {
           "window": 16,
-          "test_start": "2025-05-16",
-          "test_end": "2025-08-13",
-          "trades": 15,
-          "pnl": -44.91,
-          "return_pct": -0.728
+          "test_start": "2021-07-15",
+          "test_end": "2021-10-12",
+          "trades": 6,
+          "pnl": -278.84,
+          "return_pct": -4.5336,
+          "equity_start": 6150.58,
+          "equity_end": 5871.74
         },
         {
           "window": 17,
-          "test_start": "2025-06-17",
-          "test_end": "2025-09-11",
-          "trades": 18,
-          "pnl": -299.55,
-          "return_pct": -4.892
+          "test_start": "2021-08-13",
+          "test_end": "2021-11-10",
+          "trades": 5,
+          "pnl": 88.65,
+          "return_pct": 1.5098,
+          "equity_start": 5871.74,
+          "equity_end": 5960.39
         },
         {
           "window": 18,
-          "test_start": "2025-07-16",
-          "test_end": "2025-10-10",
-          "trades": 16,
-          "pnl": 189.81,
-          "return_pct": 3.2592
+          "test_start": "2021-09-14",
+          "test_end": "2021-12-10",
+          "trades": 5,
+          "pnl": 33.75,
+          "return_pct": 0.5662,
+          "equity_start": 5960.39,
+          "equity_end": 5994.14
         },
         {
           "window": 19,
-          "test_start": "2025-08-14",
-          "test_end": "2025-11-10",
-          "trades": 21,
-          "pnl": -177.15,
-          "return_pct": -2.9453
+          "test_start": "2021-10-13",
+          "test_end": "2022-01-11",
+          "trades": 5,
+          "pnl": 489.76,
+          "return_pct": 8.1706,
+          "equity_start": 5994.14,
+          "equity_end": 6483.9
         },
         {
           "window": 20,
-          "test_start": "2025-09-12",
-          "test_end": "2025-12-09",
-          "trades": 17,
-          "pnl": 164.91,
-          "return_pct": 2.8253
+          "test_start": "2021-11-11",
+          "test_end": "2022-02-10",
+          "trades": 5,
+          "pnl": -184.05,
+          "return_pct": -2.8386,
+          "equity_start": 6483.9,
+          "equity_end": 6299.85
         },
         {
           "window": 21,
-          "test_start": "2025-10-13",
-          "test_end": "2026-01-12",
-          "trades": 17,
-          "pnl": 8.9,
-          "return_pct": 0.1481
+          "test_start": "2021-12-13",
+          "test_end": "2022-03-14",
+          "trades": 6,
+          "pnl": -217.56,
+          "return_pct": -3.4534,
+          "equity_start": 6299.85,
+          "equity_end": 6082.29
         },
         {
           "window": 22,
-          "test_start": "2025-11-11",
-          "test_end": "2026-02-11",
-          "trades": 22,
-          "pnl": 105.05,
-          "return_pct": 1.7472
+          "test_start": "2022-01-12",
+          "test_end": "2022-04-12",
+          "trades": 6,
+          "pnl": 45.16,
+          "return_pct": 0.7425,
+          "equity_start": 6082.29,
+          "equity_end": 6127.45
+        },
+        {
+          "window": 23,
+          "test_start": "2022-02-11",
+          "test_end": "2022-05-12",
+          "trades": 2,
+          "pnl": -54.79,
+          "return_pct": -0.8942,
+          "equity_start": 6127.45,
+          "equity_end": 6072.66
+        },
+        {
+          "window": 24,
+          "test_start": "2022-03-15",
+          "test_end": "2022-06-13",
+          "trades": 4,
+          "pnl": 47.08,
+          "return_pct": 0.7753,
+          "equity_start": 6072.66,
+          "equity_end": 6119.74
+        },
+        {
+          "window": 25,
+          "test_start": "2022-04-13",
+          "test_end": "2022-07-14",
+          "trades": 6,
+          "pnl": 22.1,
+          "return_pct": 0.3611,
+          "equity_start": 6119.74,
+          "equity_end": 6141.84
+        },
+        {
+          "window": 26,
+          "test_start": "2022-05-13",
+          "test_end": "2022-08-12",
+          "trades": 5,
+          "pnl": 151.37,
+          "return_pct": 2.4646,
+          "equity_start": 6141.84,
+          "equity_end": 6293.21
+        },
+        {
+          "window": 27,
+          "test_start": "2022-06-14",
+          "test_end": "2022-09-13",
+          "trades": 2,
+          "pnl": 129.38,
+          "return_pct": 2.0559,
+          "equity_start": 6293.21,
+          "equity_end": 6422.59
+        },
+        {
+          "window": 28,
+          "test_start": "2022-07-15",
+          "test_end": "2022-10-12",
+          "trades": 4,
+          "pnl": -199.53,
+          "return_pct": -3.1067,
+          "equity_start": 6422.59,
+          "equity_end": 6223.06
+        },
+        {
+          "window": 29,
+          "test_start": "2022-08-15",
+          "test_end": "2022-11-10",
+          "trades": 5,
+          "pnl": 23.37,
+          "return_pct": 0.3755,
+          "equity_start": 6223.06,
+          "equity_end": 6246.43
+        },
+        {
+          "window": 30,
+          "test_start": "2022-09-14",
+          "test_end": "2022-12-12",
+          "trades": 3,
+          "pnl": 91.67,
+          "return_pct": 1.4676,
+          "equity_start": 6246.43,
+          "equity_end": 6338.1
+        },
+        {
+          "window": 31,
+          "test_start": "2022-10-13",
+          "test_end": "2023-01-12",
+          "trades": 3,
+          "pnl": 148.33,
+          "return_pct": 2.3403,
+          "equity_start": 6338.1,
+          "equity_end": 6486.43
+        },
+        {
+          "window": 32,
+          "test_start": "2022-11-11",
+          "test_end": "2023-02-13",
+          "trades": 4,
+          "pnl": 317.16,
+          "return_pct": 4.8896,
+          "equity_start": 6486.43,
+          "equity_end": 6803.59
+        },
+        {
+          "window": 33,
+          "test_start": "2022-12-13",
+          "test_end": "2023-03-15",
+          "trades": 2,
+          "pnl": -75.24,
+          "return_pct": -1.1059,
+          "equity_start": 6803.59,
+          "equity_end": 6728.35
+        },
+        {
+          "window": 34,
+          "test_start": "2023-01-13",
+          "test_end": "2023-04-14",
+          "trades": 5,
+          "pnl": 274.59,
+          "return_pct": 4.0811,
+          "equity_start": 6728.35,
+          "equity_end": 7002.94
+        },
+        {
+          "window": 35,
+          "test_start": "2023-02-14",
+          "test_end": "2023-05-15",
+          "trades": 5,
+          "pnl": 59.5,
+          "return_pct": 0.8496,
+          "equity_start": 7002.94,
+          "equity_end": 7062.44
+        },
+        {
+          "window": 36,
+          "test_start": "2023-03-16",
+          "test_end": "2023-06-14",
+          "trades": 3,
+          "pnl": -237.01,
+          "return_pct": -3.3559,
+          "equity_start": 7062.44,
+          "equity_end": 6825.43
+        },
+        {
+          "window": 37,
+          "test_start": "2023-04-17",
+          "test_end": "2023-07-17",
+          "trades": 4,
+          "pnl": 221.33,
+          "return_pct": 3.2427,
+          "equity_start": 6825.43,
+          "equity_end": 7046.76
+        },
+        {
+          "window": 38,
+          "test_start": "2023-05-16",
+          "test_end": "2023-08-15",
+          "trades": 5,
+          "pnl": 140.19,
+          "return_pct": 1.9894,
+          "equity_start": 7046.76,
+          "equity_end": 7186.95
+        },
+        {
+          "window": 39,
+          "test_start": "2023-06-15",
+          "test_end": "2023-09-14",
+          "trades": 3,
+          "pnl": -46.22,
+          "return_pct": -0.6431,
+          "equity_start": 7186.95,
+          "equity_end": 7140.73
+        },
+        {
+          "window": 40,
+          "test_start": "2023-07-18",
+          "test_end": "2023-10-13",
+          "trades": 6,
+          "pnl": -173.87,
+          "return_pct": -2.4349,
+          "equity_start": 7140.73,
+          "equity_end": 6966.86
+        },
+        {
+          "window": 41,
+          "test_start": "2023-08-16",
+          "test_end": "2023-11-13",
+          "trades": 4,
+          "pnl": 231.74,
+          "return_pct": 3.3263,
+          "equity_start": 6966.86,
+          "equity_end": 7198.6
+        },
+        {
+          "window": 42,
+          "test_start": "2023-09-15",
+          "test_end": "2023-12-13",
+          "trades": 5,
+          "pnl": 206.67,
+          "return_pct": 2.871,
+          "equity_start": 7198.6,
+          "equity_end": 7405.27
+        },
+        {
+          "window": 43,
+          "test_start": "2023-10-16",
+          "test_end": "2024-01-16",
+          "trades": 4,
+          "pnl": 273.07,
+          "return_pct": 3.6875,
+          "equity_start": 7405.27,
+          "equity_end": 7678.34
+        },
+        {
+          "window": 44,
+          "test_start": "2023-11-14",
+          "test_end": "2024-02-14",
+          "trades": 4,
+          "pnl": -13.38,
+          "return_pct": -0.1743,
+          "equity_start": 7678.34,
+          "equity_end": 7664.96
+        },
+        {
+          "window": 45,
+          "test_start": "2023-12-14",
+          "test_end": "2024-03-15",
+          "trades": 6,
+          "pnl": 40.05,
+          "return_pct": 0.5225,
+          "equity_start": 7664.96,
+          "equity_end": 7705.01
+        },
+        {
+          "window": 46,
+          "test_start": "2024-01-17",
+          "test_end": "2024-04-16",
+          "trades": 5,
+          "pnl": -234.2,
+          "return_pct": -3.0396,
+          "equity_start": 7705.01,
+          "equity_end": 7470.81
+        },
+        {
+          "window": 47,
+          "test_start": "2024-02-15",
+          "test_end": "2024-05-15",
+          "trades": 3,
+          "pnl": -239.91,
+          "return_pct": -3.2113,
+          "equity_start": 7470.81,
+          "equity_end": 7230.9
+        },
+        {
+          "window": 48,
+          "test_start": "2024-03-18",
+          "test_end": "2024-06-14",
+          "trades": 6,
+          "pnl": 253.13,
+          "return_pct": 3.5007,
+          "equity_start": 7230.9,
+          "equity_end": 7484.03
+        },
+        {
+          "window": 49,
+          "test_start": "2024-04-17",
+          "test_end": "2024-07-17",
+          "trades": 4,
+          "pnl": 355.04,
+          "return_pct": 4.744,
+          "equity_start": 7484.03,
+          "equity_end": 7839.07
+        },
+        {
+          "window": 50,
+          "test_start": "2024-05-16",
+          "test_end": "2024-08-15",
+          "trades": 6,
+          "pnl": -494.36,
+          "return_pct": -6.3064,
+          "equity_start": 7839.07,
+          "equity_end": 7344.71
+        },
+        {
+          "window": 51,
+          "test_start": "2024-06-17",
+          "test_end": "2024-09-16",
+          "trades": 3,
+          "pnl": -10.4,
+          "return_pct": -0.1416,
+          "equity_start": 7344.71,
+          "equity_end": 7334.31
+        },
+        {
+          "window": 52,
+          "test_start": "2024-07-18",
+          "test_end": "2024-10-15",
+          "trades": 6,
+          "pnl": 222.04,
+          "return_pct": 3.0274,
+          "equity_start": 7334.31,
+          "equity_end": 7556.35
+        },
+        {
+          "window": 53,
+          "test_start": "2024-08-16",
+          "test_end": "2024-11-13",
+          "trades": 3,
+          "pnl": 95.73,
+          "return_pct": 1.2669,
+          "equity_start": 7556.35,
+          "equity_end": 7652.08
+        },
+        {
+          "window": 54,
+          "test_start": "2024-09-17",
+          "test_end": "2024-12-13",
+          "trades": 5,
+          "pnl": 98.83,
+          "return_pct": 1.2915,
+          "equity_start": 7652.08,
+          "equity_end": 7750.91
+        },
+        {
+          "window": 55,
+          "test_start": "2024-10-16",
+          "test_end": "2025-01-16",
+          "trades": 4,
+          "pnl": -749.99,
+          "return_pct": -9.6762,
+          "equity_start": 7750.91,
+          "equity_end": 7000.92
+        },
+        {
+          "window": 56,
+          "test_start": "2024-11-14",
+          "test_end": "2025-02-18",
+          "trades": 6,
+          "pnl": 262.76,
+          "return_pct": 3.7532,
+          "equity_start": 7000.92,
+          "equity_end": 7263.68
+        },
+        {
+          "window": 57,
+          "test_start": "2024-12-16",
+          "test_end": "2025-03-19",
+          "trades": 4,
+          "pnl": -1.24,
+          "return_pct": -0.0171,
+          "equity_start": 7263.68,
+          "equity_end": 7262.44
+        },
+        {
+          "window": 58,
+          "test_start": "2025-01-17",
+          "test_end": "2025-04-17",
+          "trades": 6,
+          "pnl": -227.49,
+          "return_pct": -3.1324,
+          "equity_start": 7262.44,
+          "equity_end": 7034.95
+        },
+        {
+          "window": 59,
+          "test_start": "2025-02-19",
+          "test_end": "2025-05-19",
+          "trades": 6,
+          "pnl": -10.73,
+          "return_pct": -0.1525,
+          "equity_start": 7034.95,
+          "equity_end": 7024.22
+        },
+        {
+          "window": 60,
+          "test_start": "2025-03-20",
+          "test_end": "2025-06-18",
+          "trades": 2,
+          "pnl": 70.96,
+          "return_pct": 1.0102,
+          "equity_start": 7024.22,
+          "equity_end": 7095.18
+        },
+        {
+          "window": 61,
+          "test_start": "2025-04-21",
+          "test_end": "2025-07-21",
+          "trades": 6,
+          "pnl": 13.24,
+          "return_pct": 0.1866,
+          "equity_start": 7095.18,
+          "equity_end": 7108.42
+        },
+        {
+          "window": 62,
+          "test_start": "2025-05-20",
+          "test_end": "2025-08-19",
+          "trades": 6,
+          "pnl": 106.81,
+          "return_pct": 1.5026,
+          "equity_start": 7108.42,
+          "equity_end": 7215.23
+        },
+        {
+          "window": 63,
+          "test_start": "2025-06-20",
+          "test_end": "2025-09-18",
+          "trades": 6,
+          "pnl": -147.09,
+          "return_pct": -2.0386,
+          "equity_start": 7215.23,
+          "equity_end": 7068.14
+        },
+        {
+          "window": 64,
+          "test_start": "2025-07-22",
+          "test_end": "2025-10-17",
+          "trades": 6,
+          "pnl": -113.8,
+          "return_pct": -1.61,
+          "equity_start": 7068.14,
+          "equity_end": 6954.34
+        },
+        {
+          "window": 65,
+          "test_start": "2025-08-20",
+          "test_end": "2025-11-17",
+          "trades": 5,
+          "pnl": 50.87,
+          "return_pct": 0.7315,
+          "equity_start": 6954.34,
+          "equity_end": 7005.21
+        },
+        {
+          "window": 66,
+          "test_start": "2025-09-19",
+          "test_end": "2025-12-17",
+          "trades": 6,
+          "pnl": -41.94,
+          "return_pct": -0.5987,
+          "equity_start": 7005.21,
+          "equity_end": 6963.27
+        },
+        {
+          "window": 67,
+          "test_start": "2025-10-20",
+          "test_end": "2026-01-20",
+          "trades": 3,
+          "pnl": -26.22,
+          "return_pct": -0.3765,
+          "equity_start": 6963.27,
+          "equity_end": 6937.05
+        },
+        {
+          "window": 68,
+          "test_start": "2025-11-18",
+          "test_end": "2026-02-19",
+          "trades": 8,
+          "pnl": 40.36,
+          "return_pct": 0.5818,
+          "equity_start": 6937.05,
+          "equity_end": 6977.41
+        },
+        {
+          "window": 69,
+          "test_start": "2025-12-18",
+          "test_end": "2026-03-20",
+          "trades": 4,
+          "pnl": 5.17,
+          "return_pct": 0.0741,
+          "equity_start": 6977.41,
+          "equity_end": 6982.58
         }
       ]
     },
-    "runtime_s": 286.4
+    "runtime_s": 157.8
   },
   "summary": {
     "test1_verdict": "FAIL - significant OOS degradation",
     "test2_verdict": "PASS",
     "test3_verdict": "PASS - majority profitable",
     "overall_verdict": "MIXED - review individual tests",
-    "total_runtime_s": 3308.9,
-    "total_runtime_min": 55.1
+    "total_runtime_s": 1919.4,
+    "total_runtime_min": 32.0
   }
 }
