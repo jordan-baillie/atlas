@@ -29,8 +29,14 @@ DST_DIR=/etc/systemd/system
 # on the host. The unit file is mirrored for version control, but it
 # must be turned on intentionally via `systemctl enable --now
 # atlas-research-runner.service` — never automatically by this installer.
+#
+# NOTE: atlas-discovery.service is a `static` unit (no [Install] section).
+# It cannot be `systemctl enable`d directly — it is triggered by
+# atlas-discovery.timer, which IS enabled below. Same pattern for
+# atlas-silent-failure-watchdog.service.
 TIMERS_TO_ENABLE=(
     atlas-heartbeat-watchdog.timer
+    atlas-silent-failure-watchdog.timer
     atlas-research-window@sp500.timer
     atlas-research-window@commodity_etfs.timer
     atlas-research-window@sector_etfs.timer
@@ -39,6 +45,8 @@ TIMERS_TO_ENABLE=(
     atlas-research-window@defensive_etfs.timer
     atlas-research-window@crypto.timer
     atlas-director.timer
+    atlas-discovery.timer
+    atlas-backup.timer
 )
 
 changed=0

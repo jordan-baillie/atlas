@@ -1,0 +1,25 @@
+[Unit]
+Description=Atlas Backup Service - Comprehensive project backup
+Documentation=man:restic(1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/scripts/backup-all-projects.sh
+StandardOutput=journal
+StandardError=journal
+User=root
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# Timeout after 2 hours
+TimeoutStartSec=7200
+
+[Install]
+WantedBy=multi-user.target

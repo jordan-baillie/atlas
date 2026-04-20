@@ -1,0 +1,10 @@
+[Unit]
+Description=Atlas Silent Failure Watchdog — hourly degraded-output check
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=atlas-silent-failure-watchdog.service
+
+[Install]
+WantedBy=timers.target

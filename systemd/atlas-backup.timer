@@ -1,0 +1,12 @@
+[Unit]
+Description=Atlas Backup Timer - Daily at 04:00 AEST
+Documentation=man:restic(1)
+
+[Timer]
+# Run daily at 04:00 (local time, AEST)
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

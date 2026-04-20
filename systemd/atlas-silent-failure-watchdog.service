@@ -1,0 +1,13 @@
+[Unit]
+Description=Atlas Silent Failure Watchdog — detect degraded services with exit-0 success
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/atlas
+ExecStart=/usr/bin/python3 /root/atlas/scripts/silent_failure_watchdog.py
+Nice=10
+TimeoutStartSec=120
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/root
+Environment=TZ=Australia/Brisbane
