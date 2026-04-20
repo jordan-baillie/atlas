@@ -1,20 +1,114 @@
 """Unit tests for regime.distributions."""
+import sqlite3
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from regime.distributions import RegimeDistributions, MIN_OBSERVATIONS
 from regime.states import RegimeState
 
-# This module reads real SPY OHLCV + regime_history data from prod DB (module-scoped
-# fixture calls fit() which SELECTs from ohlcv + regime_history).  It also writes
-# 6 rows via _persist_stats() (INSERT OR REPLACE on regime_distributions).
-# Both operations require the real production DB.
-pytestmark = pytest.mark.no_isolate_prod_db
+# ---------------------------------------------------------------------------
+# Isolated seeded DB — copy just the tables this module needs from prod.
+# No writes go to production data/atlas.db.
+# ---------------------------------------------------------------------------
+
+_PROD_DB = Path(__file__).resolve().parent.parent / "data" / "atlas.db"
 
 
 @pytest.fixture(scope="module")
-def fitted():
-    rd = RegimeDistributions()
+def seeded_db(tmp_path_factory):
+    """Create a module-scoped tmp SQLite DB with SPY OHLCV + regime_history.
+
+    Reads are done via a direct sqlite3 connection to the prod DB (bypassing
+    _db_path_override so the isolation fixture does not redirect this open).
+    All writes (including _persist_stats) go to the seeded tmp DB.
+    """
+    tmp = tmp_path_factory.mktemp("regime_dist") / "seeded.db"
+
+    src = sqlite3.connect(f"file:{_PROD_DB}?mode=ro", uri=True)
+    src.row_factory = sqlite3.Row
+
+    dst = sqlite3.connect(str(tmp))
+    dst.execute("PRAGMA journal_mode=WAL")
+    dst.execute("PRAGMA foreign_keys=ON")
+    dst.execute("""
+        CREATE TABLE IF NOT EXISTS ohlcv (
+            ticker TEXT NOT NULL,
+            date TEXT NOT NULL,
+            open REAL NOT NULL,
+            high REAL NOT NULL,
+            low REAL NOT NULL,
+            close REAL NOT NULL,
+            adj_close REAL,
+            volume INTEGER NOT NULL,
+            universe TEXT NOT NULL,
+            source TEXT DEFAULT 'tiingo',
+            PRIMARY KEY (ticker, date)
+        )
+    """)
+    dst.execute("""
+        CREATE TABLE IF NOT EXISTS regime_history (
+            date TEXT PRIMARY KEY,
+            regime_state TEXT NOT NULL,
+            trend_score REAL,
+            risk_score REAL,
+            active_universes TEXT,
+            sizing_multiplier REAL DEFAULT 1.0,
+            enabled_strategies TEXT,
+            reasoning TEXT,
+            model_version TEXT
+        )
+    """)
+    dst.execute("""
+        CREATE TABLE IF NOT EXISTS regime_distributions (
+            state TEXT PRIMARY KEY,
+            mean REAL, vol REAL, skew REAL, kurt REAL,
+            var_5 REAL, cvar_5 REAL, n_samples INTEGER, fitted_at TEXT
+        )
+    """)
+
+    # Copy SPY OHLCV rows
+    spy_rows = src.execute(
+        "SELECT ticker,date,open,high,low,close,adj_close,volume,universe,source "
+        "FROM ohlcv WHERE ticker='SPY' ORDER BY date"
+    ).fetchall()
+    dst.executemany(
+        "INSERT OR IGNORE INTO ohlcv "
+        "(ticker,date,open,high,low,close,adj_close,volume,universe,source) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        [(r["ticker"],r["date"],r["open"],r["high"],r["low"],r["close"],
+          r["adj_close"],r["volume"],r["universe"],r["source"])
+         for r in spy_rows],
+    )
+
+    # Copy regime_history rows
+    rh_rows = src.execute(
+        "SELECT date,regime_state,trend_score,risk_score,active_universes,"
+        "sizing_multiplier,enabled_strategies,reasoning,model_version "
+        "FROM regime_history ORDER BY date"
+    ).fetchall()
+    dst.executemany(
+        "INSERT OR IGNORE INTO regime_history "
+        "(date,regime_state,trend_score,risk_score,active_universes,"
+        "sizing_multiplier,enabled_strategies,reasoning,model_version) "
+        "VALUES (?,?,?,?,?,?,?,?,?)",
+        [(r["date"],r["regime_state"],r["trend_score"],r["risk_score"],
+          r["active_universes"],r["sizing_multiplier"],r["enabled_strategies"],
+          r["reasoning"],r["model_version"])
+         for r in rh_rows],
+    )
+
+    dst.commit()
+    src.close()
+    dst.close()
+    return str(tmp)
+
+
+@pytest.fixture(scope="module")
+def fitted(seeded_db):
+    """Fit RegimeDistributions against the seeded tmp DB (not prod)."""
+    rd = RegimeDistributions(db_path=seeded_db)
     rd.fit(lookback_years=10)
     return rd
 
