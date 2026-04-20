@@ -33,6 +33,43 @@ def load_config(market_id: str) -> dict:
         return json.load(f)
 
 
+
+def _lookup_strategy(ticker: str, market_id: str, state_positions: dict) -> str:
+    """Resolve strategy for an untracked broker position.
+
+    Priority:
+      1. brokers/state/live_{market}.json position record (if strategy != 'unknown')
+      2. Most recent plans/plan_{market}_*.json proposed_entries matching ticker
+      3. Fallback: 'reconciled' (last resort — loses strategy attribution)
+    """
+    # 1. Broker state
+    sp = state_positions.get(ticker) or {}
+    strat = sp.get("strategy") or ""
+    if strat and strat != "unknown":
+        return strat
+
+    # 2. Plan files — newest first
+    try:
+        import glob
+        pattern = str(PROJECT / "plans" / f"plan_{market_id}_*.json")
+        for path in sorted(glob.glob(pattern), reverse=True):
+            try:
+                with open(path) as f:
+                    plan = json.load(f)
+                for entry in plan.get("proposed_entries", []) or []:
+                    if entry.get("ticker") == ticker and entry.get("strategy"):
+                        return entry["strategy"]
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # 3. Fallback — flagged so audits can find them
+    log.warning("Strategy lookup for %s/%s fell through to 'reconciled' — audit this",
+                ticker, market_id)
+    return "reconciled"
+
+
 def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict:
     """Main reconciliation logic. Returns dict with stats.
 
@@ -78,15 +115,40 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
             except Exception:
                 universe_tickers = None
 
-        if universe_tickers:
-            broker_map = {p.ticker: p for p in broker_positions if p.ticker in universe_tickers}
+        # Load state-file tickers for this market — broker JSON is ground truth for
+        # "what positions this market actually holds", independent of universe membership.
+        state_tickers: set = set()
+        state_positions: dict = {}
+        _state_path = PROJECT / "brokers" / "state" / f"live_{market_id}.json"
+        if _state_path.exists():
+            try:
+                with open(_state_path) as _sf:
+                    _state = json.load(_sf)
+                _state_pos_list = _state.get("positions", []) or []
+                state_tickers = {p["ticker"] for p in _state_pos_list if p.get("ticker")}
+                state_positions = {p["ticker"]: p for p in _state_pos_list if p.get("ticker")}
+            except Exception as _sf_exc:
+                log.warning("Could not load state file %s: %s", _state_path, _sf_exc)
+
+        # Accept a broker position if EITHER: it's in the universe OR it's in this
+        # market's state file. This catches tickers held by the market but outside
+        # the universe definition (e.g. sector ETFs tracked in live_sp500.json).
+        if universe_tickers or state_tickers:
+            _allow = (universe_tickers or set()) | state_tickers
+            broker_map = {p.ticker: p for p in broker_positions if p.ticker in _allow}
             skipped = len(broker_positions) - len(broker_map)
             if skipped:
-                log.info("Filtered broker positions: %d in-universe, %d skipped (other markets)",
-                         len(broker_map), skipped)
+                log.info(
+                    "Filtered broker positions: %d in-scope (universe=%d, state_file=%d), "
+                    "%d skipped (other markets)",
+                    len(broker_map), len(universe_tickers or set()), len(state_tickers), skipped,
+                )
         else:
             broker_map = {p.ticker: p for p in broker_positions}
-            log.warning("Could not load universe tickers for %s — using ALL broker positions", market_id)
+            log.warning(
+                "Could not load universe OR state tickers for %s — using ALL broker positions",
+                market_id,
+            )
 
         log.info("Broker positions for %s: %d", market_id, len(broker_map))
 
@@ -165,7 +227,7 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
 
                 atlas_db.record_trade_entry(
                     ticker=ticker,
-                    strategy="reconciled",
+                    strategy=_lookup_strategy(ticker, market_id, state_positions),
                     universe=market_id,
                     entry_price=entry_price,
                     shares=shares,

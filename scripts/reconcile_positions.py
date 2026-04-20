@@ -264,6 +264,55 @@ def reconcile_positions(
             
             internal_state["positions"] = corrected_positions
             save_internal_state(market_id, internal_state)
+
+            # Dual-write to SQLite: insert any corrected position not already tracked as open.
+            # Uses the same strategy-resolution priority as reconcile_ledger: state file
+            # → plans → 'reconciled' fallback. Failures are logged but non-fatal because
+            # JSON is the source of truth for live positions.
+            try:
+                from db import atlas_db
+                with atlas_db.get_db() as _db:
+                    _existing = {
+                        row["ticker"]
+                        for row in _db.execute(
+                            "SELECT ticker FROM trades WHERE status='open' AND universe=?",
+                            (market_id,),
+                        ).fetchall()
+                    }
+                for cp in corrected_positions:
+                    if cp["ticker"] in _existing:
+                        continue
+                    _strategy = cp.get("strategy") or "reconciled"
+                    if _strategy == "unknown":
+                        _strategy = "reconciled"
+                    try:
+                        atlas_db.record_trade_entry(
+                            ticker=cp["ticker"],
+                            strategy=_strategy,
+                            universe=market_id,
+                            entry_price=float(cp.get("entry_price") or 0),
+                            shares=int(cp.get("shares") or 0),
+                            stop_price=float(cp.get("stop_price") or 0),
+                            take_profit=None,
+                            confidence=0.0,
+                            regime_state=None,
+                            direction="long",
+                        )
+                        logger.info(
+                            "reconcile_positions: SQLite dual-write inserted %s/%s",
+                            cp["ticker"], _strategy,
+                        )
+                    except Exception as _db_exc:
+                        logger.error(
+                            "reconcile_positions: SQLite dual-write FAILED for %s: %s",
+                            cp["ticker"], _db_exc, exc_info=True,
+                        )
+            except Exception as _dw_exc:
+                logger.error(
+                    "reconcile_positions: SQLite dual-write block failed: %s",
+                    _dw_exc, exc_info=True,
+                )
+
             result["fixed"] = True
             logger.info("Internal state corrected with %d positions from broker", len(corrected_positions))
 
