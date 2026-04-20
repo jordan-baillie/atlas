@@ -8,7 +8,7 @@ WorkingDirectory=/root/atlas
 ExecStart=/usr/bin/python3 -u research/discovery/run.py
 TimeoutStartSec=3600
 Nice=15
-EnvironmentFile=/etc/openclaw/openclaw.env
+EnvironmentFile=-/etc/openclaw/openclaw.env
 Environment=PYTHONUNBUFFERED=1
 Environment=HOME=/root
 Environment=PATH=/usr/local/bin:/usr/bin:/bin

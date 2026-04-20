@@ -71,6 +71,26 @@ if (( changed )); then
     echo "daemon-reload: done"
 fi
 
+echo
+echo "=== Preflight: external EnvironmentFile dependencies ==="
+missing_env=()
+while IFS= read -r env_path; do
+    # Strip the leading '-' (systemd syntax for "ignore if missing")
+    real_path="${env_path#-}"
+    if [[ ! -f "$real_path" ]]; then
+        missing_env+=("$real_path")
+    fi
+done < <(grep -hE '^EnvironmentFile=' "$SRC_DIR"/*.service 2>/dev/null | cut -d= -f2)
+
+if (( ${#missing_env[@]} > 0 )); then
+    echo "WARNING: the following EnvironmentFile paths referenced by atlas units do not exist on this host:"
+    for f in "${missing_env[@]}"; do echo "  - $f"; done
+    echo "Services referencing these files will fail at invocation. Provision them before enabling."
+    echo "If any path starts with '-' in the unit, systemd will tolerate its absence."
+else
+    echo "✓ All EnvironmentFile paths exist."
+fi
+
 for timer in "${TIMERS_TO_ENABLE[@]}"; do
     unit_file="$SRC_DIR/$timer"
     if [[ ! -e "$unit_file" ]]; then
