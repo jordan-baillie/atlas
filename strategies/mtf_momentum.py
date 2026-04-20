@@ -352,6 +352,20 @@ class MTFMomentum(BaseStrategy):
 
                 stop_price = pos.get("stop_price", entry_price - self.atr_stop_mult * current_atr)
 
+                # Pre-compute trailing stop hit (Audit C7 follow-up: single flat predicate
+                # so the elif chain doesn't shadow time_exit when days_held >= 3 but
+                # trail doesn't actually fire). Trail gate: days_held >= 3, whipsaw guard.
+                # Audit H3: trail from highest high since entry, not from today_close.
+                trail_hit = False
+                if days_held >= 3:
+                    entry_ts = pd.Timestamp(entry_date)
+                    mask_since_entry = df.index >= entry_ts
+                    if mask_since_entry.any():
+                        highest = float(df.loc[mask_since_entry, "high"].max())
+                        trail_stop = highest - self.trailing_stop_atr_mult * current_atr
+                        if today_close <= trail_stop:
+                            trail_hit = True
+
                 # 1. Stop loss
                 if today_close <= stop_price:
                     exits.append({
@@ -371,21 +385,15 @@ class MTFMomentum(BaseStrategy):
                         "details": f"{ticker} take profit at ${today_close:.2f}",
                     })
 
-                # 3. Trailing stop
-                elif days_held >= 3:
-                    # Audit H3: trail from highest high since entry, not from today_close
-                    entry_ts = pd.Timestamp(entry_date)
-                    mask_since_entry = df.index >= entry_ts
-                    if mask_since_entry.any():
-                        highest = float(df.loc[mask_since_entry, "high"].max())
-                        trail_stop = highest - self.trailing_stop_atr_mult * current_atr
-                        if today_close <= trail_stop:
-                            exits.append({
-                                "ticker": ticker,
-                                "reason": "trailing_stop",
-                                "exit_price": today_close,
-                                "details": f"{ticker} trailing stop at ${today_close:.2f}",
-                            })
+                # 3. Trailing stop (single-predicate elif — C7 follow-up so time_exit
+                #    isn't shadowed when days_held >= 3 but trail doesn't fire)
+                elif trail_hit:
+                    exits.append({
+                        "ticker": ticker,
+                        "reason": "trailing_stop",
+                        "exit_price": today_close,
+                        "details": f"{ticker} trailing stop at ${today_close:.2f}",
+                    })
 
                 # 4. Time exit
                 elif days_held >= self.max_hold_days:

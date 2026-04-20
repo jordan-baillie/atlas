@@ -380,3 +380,199 @@ class TestC7ExitReachability:
             "C7: take_profit condition must be 'elif' (exclusive with stop_loss). "
             "If it were a bare 'if', both could fire on the same bar."
         )
+
+
+# ═══════════════════════════════════════════════════════════════
+# C7 follow-up — trailing elif must not shadow time_exit
+# ═══════════════════════════════════════════════════════════════
+
+class TestC7FollowupTimeExitShadowing:
+    """C7 follow-up: trailing elif must not shadow time_exit when max_hold_days > 3.
+
+    Before the fix, the `elif days_held >= 3:` outer condition on the trailing
+    branch consumed the elif chain even when the inner trail price check did NOT
+    fire an exit.  Result: time_exit was unreachable whenever
+        max_hold_days > 3  AND  days_held >= 3  AND  trail didn't actually hit.
+
+    Fix (C7 follow-up): pre-compute `trail_hit` as a single boolean, then gate
+    the trailing branch on `elif trail_hit:`.  The elif chain only commits when
+    trailing actually fires; otherwise it falls through to time_exit correctly.
+
+    All 4 tests use max_hold_days=5 (> 3) to stress-test the previously-buggy
+    path.  test_time_exit_fires_day5_max_hold_5_no_stop_tp_trail is the key
+    regression test — it FAILED on the pre-fix code and PASSES after the fix.
+    """
+
+    @staticmethod
+    def _make_strategy(max_hold_days: int = 5) -> MTFMomentum:
+        cfg = _cfg()
+        cfg["strategies"]["mtf_momentum"]["max_hold_days"] = max_hold_days
+        return MTFMomentum(cfg)
+
+    # ── 1. Stop loss ──────────────────────────────────────────────────────────
+
+    def test_stop_loss_fires_day1_with_long_max_hold(self):
+        """Branch 1 (stop_loss): fires on day 1 even with max_hold_days=5.
+
+        days_ago=1 → days_held=1 (< 3, trail pre-compute skipped entirely).
+        close=90 <= stop=95 → stop_loss fires.
+        """
+        strategy = self._make_strategy(max_hold_days=5)
+        ticker = "TEST"
+
+        df = _held_df(n=40, close_today=90.0)   # close well below stop
+        pos = _pos(
+            ticker=ticker,
+            entry_price=100.0,
+            stop=95.0,           # 90 <= 95 → fires
+            take_profit=999.0,   # unreachable
+            days_ago=1,
+        )
+
+        exits = strategy.check_exits(data={ticker: df}, positions=[pos])
+        reasons = [e["reason"] for e in exits]
+
+        assert "stop_loss" in reasons, (
+            f"C7 follow-up: expected 'stop_loss' (close=90, stop=95, days_held=1). "
+            f"Got: {reasons}"
+        )
+
+    # ── 2. Take profit ────────────────────────────────────────────────────────
+
+    def test_take_profit_fires_day8_with_long_max_hold(self):
+        """Branch 2 (take_profit): fires on day 8 with max_hold_days=5 and close >= tp.
+
+        days_ago=8 → days_held=8 (>= 3, trail pre-compute runs).
+        Smooth uptrend df: trail_stop = highest_high - 2.5*ATR ≈ 107.
+        close=116 > trail_stop → trail_hit=False.
+        close=116 >= tp=115 → take_profit fires.
+        """
+        strategy = self._make_strategy(max_hold_days=5)
+        ticker = "TEST"
+
+        df = _held_df(n=60, close_today=116.0)
+        pos = _pos(
+            ticker=ticker,
+            entry_price=100.0,
+            stop=80.0,           # far below — won't trigger
+            take_profit=115.0,   # 116 >= 115 → fires
+            days_ago=8,
+        )
+
+        exits = strategy.check_exits(data={ticker: df}, positions=[pos])
+        reasons = [e["reason"] for e in exits]
+
+        assert "take_profit" in reasons, (
+            f"C7 follow-up: expected 'take_profit' (close=116, tp=115, days_held=8). "
+            f"Got: {reasons}"
+        )
+        assert "trailing_stop" not in reasons, (
+            f"C7 follow-up: 'trailing_stop' must not appear when take_profit fires. "
+            f"Got: {reasons}"
+        )
+
+    # ── 3. Trailing stop ──────────────────────────────────────────────────────
+
+    def test_trailing_fires_day60_with_long_max_hold(self):
+        """Branch 3 (trailing_stop): fires when price rallied then dropped, max_hold_days=5.
+
+        Tie-breaker applied: days_ago=60 (all 60 bars in the 'since entry' mask).
+        With days_ago=4 or days_ago=8 only 3-6 tail bars are captured; the
+        highest high since entry is too close to current close (~106) so
+        trail_stop < today_close and trail doesn't fire.  Using days_ago=60
+        captures the full rally peak at ~121.2, producing
+        trail_stop ≈ 115.8 >> today_close=103, so trail fires deterministically.
+
+        Pattern: rally 100→120 (first 30 bars) then drop 120→103 (last 30 bars).
+        tp=200 (unreachable), stop=80 (unreachable).
+        """
+        strategy = self._make_strategy(max_hold_days=5)
+        ticker = "TEST"
+
+        n = 60
+        dates = pd.date_range(end=pd.Timestamp.today(), periods=n, freq="B")
+        up = np.linspace(100.0, 120.0, n // 2)
+        down = np.linspace(120.0, 103.0, n - n // 2)
+        prices = np.concatenate([up, down])
+        df = pd.DataFrame(
+            {
+                "open": prices * 0.999,
+                "high": prices * 1.01,
+                "low": prices * 0.99,
+                "close": prices,
+                "volume": np.full(n, 500_000),
+            },
+            index=dates,
+        )
+        df.iloc[-1, df.columns.get_loc("close")] = 103.0
+        df.iloc[-1, df.columns.get_loc("low")] = 102.0
+
+        pos = _pos(
+            ticker=ticker,
+            entry_price=100.0,
+            stop=80.0,           # far below — won't trigger
+            take_profit=200.0,   # far above — won't trigger
+            days_ago=n,          # all bars in mask
+        )
+
+        exits = strategy.check_exits(data={ticker: df}, positions=[pos])
+        reasons = [e["reason"] for e in exits]
+
+        assert "trailing_stop" in reasons, (
+            f"C7 follow-up: expected 'trailing_stop' (peak=121.2, close=103, "
+            f"trail_stop≈115.8). Got: {reasons}"
+        )
+
+    # ── 4. Time exit (KEY REGRESSION TEST) ───────────────────────────────────
+
+    def test_time_exit_fires_day5_max_hold_5_no_stop_tp_trail(self):
+        """Branch 4 (time_exit): KEY regression — fails on pre-fix code, passes after.
+
+        Before the C7 follow-up fix:
+          `elif days_held >= 3:` consumed the elif chain even when the inner
+          trail price check FAILED.  days_held=5 >= 3 → chain consumed;
+          trail_stop ≈ 97 << today_close=105 → no exit appended, but chain is
+          committed, so `elif days_held >= max_hold_days:` is NEVER reached.
+          Result: no exit at all, even though days_held=5 >= max_hold_days=5.
+
+        After the fix:
+          `trail_hit=False` (smooth uptrend, no significant drop since entry).
+          `elif trail_hit:` → False → falls through.
+          `elif days_held >= max_hold_days:` → 5 >= 5 → time_exit fires. ✓
+
+        Setup: smooth uptrend _held_df (no high-to-close gap > 2.5*ATR),
+        stop=50 (unreachable), tp=999 (unreachable), days_ago=5.
+        """
+        strategy = self._make_strategy(max_hold_days=5)
+        ticker = "TEST"
+
+        # Smooth uptrend: prices 95→105, high=price*1.02, low=price*0.98.
+        # ATR(10) ≈ 3.93; highest_high (last ~4 bars) ≈ 106.93;
+        # trail_stop ≈ 97.10 << today_close=105 → trail_hit=False. ✓
+        df = _held_df(n=60, close_today=105.0)
+        pos = _pos(
+            ticker=ticker,
+            entry_price=100.0,
+            stop=50.0,           # far below — won't trigger
+            take_profit=999.0,   # far above — won't trigger
+            days_ago=5,          # days_held=5 == max_hold_days=5
+        )
+
+        exits = strategy.check_exits(data={ticker: df}, positions=[pos])
+        reasons = [e["reason"] for e in exits]
+
+        assert "time_exit" in reasons, (
+            f"C7 follow-up REGRESSION: expected 'time_exit' with max_hold_days=5, "
+            f"days_held=5, smooth uptrend (trail_hit=False). "
+            f"This test FAILS on pre-fix code (elif days_held>=3 shadowed the chain). "
+            f"Got: {reasons}"
+        )
+        assert "trailing_stop" not in reasons, (
+            f"C7 follow-up: 'trailing_stop' must not appear in a smooth uptrend. "
+            f"Got: {reasons}"
+        )
+        assert "stop_loss" not in reasons, (
+            f"C7 follow-up: 'stop_loss' must not appear (stop=50, close=105). "
+            f"Got: {reasons}"
+        )
+
