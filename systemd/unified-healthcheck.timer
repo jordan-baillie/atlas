@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Unified Health Check Every 6 Hours
+Requires=unified-healthcheck.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
