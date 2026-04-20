@@ -1,0 +1,87 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "treasury_etfs",
+  "params": {
+    "atr_stop_mult": 1.0,
+    "max_hold_days": 15,
+    "lookback_days": 15,
+    "atr_period": 25,
+    "trend_ma_period": 10,
+    "breakout_period": 10
+  },
+  "metrics": {
+    "total_trades": 51,
+    "cagr_pct": 10.5062,
+    "cagr_full_period_pct": 4.2776,
+    "sharpe": 0.7098,
+    "sortino": 0.9358,
+    "max_drawdown_pct": 6.283,
+    "win_rate_pct": 50.98,
+    "profit_factor": 2.2206,
+    "total_pnl": 1703.96,
+    "avg_trade": 33.41,
+    "final_equity": 6715.75,
+    "expectancy_r": 0.6479,
+    "avg_r": 0.6479,
+    "r_count": 51,
+    "edge_p_value": 0.06523,
+    "edge_significant": false,
+    "var_95_pct": 0.792,
+    "cvar_95_pct": 1.189,
+    "calmar": 1.6722,
+    "mc_p95_drawdown_pct": 9.66,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 14,
+        "total_pnl": 1495.53,
+        "win_rate_pct": 42.9
+      },
+      "mean_reversion": {
+        "trades": 10,
+        "total_pnl": 232.79,
+        "win_rate_pct": 50.0
+      },
+      "connors_rsi2": {
+        "trades": 27,
+        "total_pnl": -24.36,
+        "win_rate_pct": 55.6
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 12,
+        "win_rate_pct": 50.0,
+        "avg_trade": 13.41,
+        "total_pnl": 160.98,
+        "profit_factor": 1.5367,
+        "sharpe_approx": 0.1697,
+        "avg_r": 0.2143
+      },
+      "bull": {
+        "trades": 21,
+        "win_rate_pct": 52.4,
+        "avg_trade": 47.3,
+        "total_pnl": 993.38,
+        "profit_factor": 2.9472,
+        "sharpe_approx": 0.3458,
+        "avg_r": 0.9787
+      },
+      "neutral": {
+        "trades": 18,
+        "win_rate_pct": 50.0,
+        "avg_trade": 30.53,
+        "total_pnl": 549.6,
+        "profit_factor": 1.9382,
+        "sharpe_approx": 0.2276,
+        "avg_r": 0.5511
+      }
+    },
+    "solo_sharpe": 0.7528,
+    "runtime_s": 4.0
+  },
+  "description": "trend_ma_period: 20 \u2192 10",
+  "experiments_run": 0,
+  "experiments_kept": 6,
+  "updated_at": "2026-04-19T17:10:17.410890+00:00"
+}

@@ -38,7 +38,7 @@
     "runtime_s": 49.4
   },
   "description": "sma200_filter=False",
-  "experiments_run": 4,
+  "experiments_run": 5,
   "experiments_kept": 4,
   "updated_at": "2026-03-12T01:05:53.212597+00:00"
 }

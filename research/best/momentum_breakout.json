@@ -2,7 +2,7 @@
   "strategy": "momentum_breakout",
   "market": "sp500",
   "params": {
-    "atr_stop_mult": 1.26,
+    "atr_stop_mult": 1.0,
     "max_hold_days": 15,
     "lookback_days": 15,
     "atr_period": 20,
@@ -10,83 +10,88 @@
     "breakout_period": 10
   },
   "metrics": {
-    "total_trades": 631,
-    "cagr_pct": 10.4466,
-    "cagr_full_period_pct": 8.7949,
-    "sharpe": 0.3954,
-    "sortino": 0.5017,
-    "max_drawdown_pct": 22.0305,
-    "win_rate_pct": 39.14,
-    "profit_factor": 1.223,
-    "total_pnl": 4018.02,
-    "avg_trade": 6.37,
-    "final_equity": 9031.82,
-    "expectancy_r": 0.1901,
-    "avg_r": 0.1901,
-    "r_count": 631,
-    "edge_p_value": 0.00934,
+    "total_trades": 1036,
+    "cagr_pct": 24.1174,
+    "cagr_full_period_pct": 20.0565,
+    "sharpe": 0.8199,
+    "sortino": 1.1054,
+    "max_drawdown_pct": 34.5646,
+    "win_rate_pct": 40.64,
+    "profit_factor": 1.2797,
+    "total_pnl": 12996.43,
+    "avg_trade": 12.54,
+    "final_equity": 18037.68,
+    "expectancy_r": 0.2213,
+    "avg_r": 0.2213,
+    "r_count": 1036,
+    "edge_p_value": 0.000183,
     "edge_significant": true,
-    "var_95_pct": 1.594,
-    "cvar_95_pct": 2.486,
-    "calmar": 0.4742,
-    "mc_p95_drawdown_pct": 31.93,
+    "var_95_pct": 2.344,
+    "cvar_95_pct": 3.568,
+    "calmar": 0.6977,
+    "mc_p95_drawdown_pct": 46.94,
     "mc_fragile": false,
     "strategy_breakdown": {
       "momentum_breakout": {
-        "trades": 119,
-        "total_pnl": 1966.95,
-        "win_rate_pct": 30.3
+        "trades": 128,
+        "total_pnl": 4337.38,
+        "win_rate_pct": 29.7
       },
       "sector_rotation": {
-        "trades": 498,
-        "total_pnl": 1757.5,
-        "win_rate_pct": 40.4
+        "trades": 878,
+        "total_pnl": 7915.17,
+        "win_rate_pct": 41.2
       },
       "connors_rsi2": {
-        "trades": 1,
-        "total_pnl": 28.27,
-        "win_rate_pct": 100.0
+        "trades": 5,
+        "total_pnl": 125.74,
+        "win_rate_pct": 80.0
       },
       "mean_reversion": {
-        "trades": 13,
-        "total_pnl": 265.3,
-        "win_rate_pct": 69.2
+        "trades": 24,
+        "total_pnl": 848.77,
+        "win_rate_pct": 70.8
+      },
+      "opening_gap": {
+        "trades": 1,
+        "total_pnl": -230.63,
+        "win_rate_pct": 0.0
       }
     },
     "regime_metrics": {
       "bear": {
-        "trades": 18,
-        "win_rate_pct": 38.9,
-        "avg_trade": 15.89,
-        "total_pnl": 285.98,
-        "profit_factor": 1.9211,
-        "sharpe_approx": 0.2068,
-        "avg_r": 0.6868
+        "trades": 15,
+        "win_rate_pct": 53.3,
+        "avg_trade": 8.19,
+        "total_pnl": 122.91,
+        "profit_factor": 1.4575,
+        "sharpe_approx": 0.1265,
+        "avg_r": 0.6331
       },
       "bull": {
-        "trades": 208,
-        "win_rate_pct": 34.6,
-        "avg_trade": 3.12,
-        "total_pnl": 649.99,
-        "profit_factor": 1.1037,
-        "sharpe_approx": 0.037,
-        "avg_r": 0.0994
+        "trades": 335,
+        "win_rate_pct": 41.5,
+        "avg_trade": 23.5,
+        "total_pnl": 7874.14,
+        "profit_factor": 1.4273,
+        "sharpe_approx": 0.1338,
+        "avg_r": 0.2711
       },
       "neutral": {
-        "trades": 405,
-        "win_rate_pct": 41.5,
-        "avg_trade": 7.61,
-        "total_pnl": 3082.05,
-        "profit_factor": 1.2695,
-        "sharpe_approx": 0.0849,
-        "avg_r": 0.2146
+        "trades": 686,
+        "win_rate_pct": 39.9,
+        "avg_trade": 7.29,
+        "total_pnl": 4999.38,
+        "profit_factor": 1.1801,
+        "sharpe_approx": 0.0575,
+        "avg_r": 0.188
       }
     },
-    "solo_sharpe": 0.3067,
-    "runtime_s": 506.7
+    "solo_sharpe": 0.3202,
+    "runtime_s": 117.4
   },
-  "description": "atr_stop_mult: 1.4 \u2192 1.26",
-  "experiments_run": 106,
-  "experiments_kept": 12,
-  "updated_at": "2026-04-13T11:51:40.390880+00:00"
+  "description": "atr_stop_mult=1.0: testing stop distance",
+  "experiments_run": 184,
+  "experiments_kept": 13,
+  "updated_at": "2026-04-19T14:34:45.559814+00:00"
 }

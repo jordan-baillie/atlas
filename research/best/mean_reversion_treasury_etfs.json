@@ -1,6 +1,6 @@
 {
   "strategy": "mean_reversion",
-  "market": "sector_etfs",
+  "market": "treasury_etfs",
   "params": {
     "rsi_period": 14,
     "rsi_oversold": 39,
@@ -80,38 +80,38 @@
     },
     "regime_metrics": {
       "bear": {
-        "trades": 10,
-        "win_rate_pct": 50.0,
-        "avg_trade": 36.3,
-        "total_pnl": 363.04,
-        "profit_factor": 2.1481,
-        "sharpe_approx": 0.3086,
-        "avg_r": 0.6944
+        "trades": 14,
+        "win_rate_pct": 57.1,
+        "avg_trade": 61.44,
+        "total_pnl": 860.11,
+        "profit_factor": 3.8134,
+        "sharpe_approx": 0.4661,
+        "avg_r": 0.9504
       },
       "bull": {
-        "trades": 23,
-        "win_rate_pct": 56.5,
-        "avg_trade": 44.38,
-        "total_pnl": 1020.68,
-        "profit_factor": 2.413,
-        "sharpe_approx": 0.316,
-        "avg_r": 0.6626
+        "trades": 19,
+        "win_rate_pct": 63.2,
+        "avg_trade": 60.6,
+        "total_pnl": 1151.43,
+        "profit_factor": 3.1008,
+        "sharpe_approx": 0.408,
+        "avg_r": 0.8957
       },
       "neutral": {
         "trades": 17,
-        "win_rate_pct": 64.7,
-        "avg_trade": 64.88,
-        "total_pnl": 1103.04,
-        "profit_factor": 3.7319,
-        "sharpe_approx": 0.4828,
-        "avg_r": 0.9692
+        "win_rate_pct": 52.9,
+        "avg_trade": 27.95,
+        "total_pnl": 475.22,
+        "profit_factor": 1.8075,
+        "sharpe_approx": 0.2391,
+        "avg_r": 0.4904
       }
     },
     "solo_sharpe": -0.2239,
-    "runtime_s": 5.1
+    "runtime_s": 3.5
   },
   "description": "atr_stop_mult: 1.35 \u2192 1.22",
   "experiments_run": 0,
-  "experiments_kept": 20,
-  "updated_at": "2026-04-19T15:02:17.721193+00:00"
+  "experiments_kept": 11,
+  "updated_at": "2026-04-19T17:01:33.919289+00:00"
 }

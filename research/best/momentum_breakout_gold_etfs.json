@@ -1,0 +1,87 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "gold_etfs",
+  "params": {
+    "atr_stop_mult": 1.0,
+    "max_hold_days": 15,
+    "lookback_days": 15,
+    "atr_period": 25,
+    "trend_ma_period": 10,
+    "breakout_period": 10
+  },
+  "metrics": {
+    "total_trades": 51,
+    "cagr_pct": 10.5062,
+    "cagr_full_period_pct": 4.2776,
+    "sharpe": 0.7098,
+    "sortino": 0.9358,
+    "max_drawdown_pct": 6.283,
+    "win_rate_pct": 50.98,
+    "profit_factor": 2.2206,
+    "total_pnl": 1703.96,
+    "avg_trade": 33.41,
+    "final_equity": 6715.75,
+    "expectancy_r": 0.6479,
+    "avg_r": 0.6479,
+    "r_count": 51,
+    "edge_p_value": 0.06523,
+    "edge_significant": false,
+    "var_95_pct": 0.792,
+    "cvar_95_pct": 1.189,
+    "calmar": 1.6722,
+    "mc_p95_drawdown_pct": 9.66,
+    "mc_fragile": false,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 14,
+        "total_pnl": 1495.53,
+        "win_rate_pct": 42.9
+      },
+      "mean_reversion": {
+        "trades": 10,
+        "total_pnl": 232.79,
+        "win_rate_pct": 50.0
+      },
+      "connors_rsi2": {
+        "trades": 27,
+        "total_pnl": -24.36,
+        "win_rate_pct": 55.6
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 2,
+        "win_rate_pct": 100.0,
+        "avg_trade": 93.31,
+        "total_pnl": 186.62,
+        "profit_factor": Infinity,
+        "sharpe_approx": 1.3302,
+        "avg_r": 1.6201
+      },
+      "bull": {
+        "trades": 26,
+        "win_rate_pct": 50.0,
+        "avg_trade": 47.48,
+        "total_pnl": 1234.51,
+        "profit_factor": 2.7787,
+        "sharpe_approx": 0.3277,
+        "avg_r": 0.9252
+      },
+      "neutral": {
+        "trades": 23,
+        "win_rate_pct": 47.8,
+        "avg_trade": 12.3,
+        "total_pnl": 282.83,
+        "profit_factor": 1.403,
+        "sharpe_approx": 0.1272,
+        "avg_r": 0.25
+      }
+    },
+    "solo_sharpe": 0.7528,
+    "runtime_s": 3.6
+  },
+  "description": "trend_ma_period: 20 \u2192 10",
+  "experiments_run": 0,
+  "experiments_kept": 6,
+  "updated_at": "2026-04-19T16:10:12.138053+00:00"
+}

@@ -1,6 +1,6 @@
 {
   "strategy": "mean_reversion",
-  "market": "sector_etfs",
+  "market": "gold_etfs",
   "params": {
     "rsi_period": 14,
     "rsi_oversold": 39,
@@ -80,38 +80,38 @@
     },
     "regime_metrics": {
       "bear": {
-        "trades": 10,
-        "win_rate_pct": 50.0,
-        "avg_trade": 36.3,
-        "total_pnl": 363.04,
-        "profit_factor": 2.1481,
-        "sharpe_approx": 0.3086,
-        "avg_r": 0.6944
+        "trades": 3,
+        "win_rate_pct": 66.7,
+        "avg_trade": 85.02,
+        "total_pnl": 255.05,
+        "profit_factor": 5.8342,
+        "sharpe_approx": 0.702,
+        "avg_r": 1.4421
       },
       "bull": {
-        "trades": 23,
-        "win_rate_pct": 56.5,
-        "avg_trade": 44.38,
-        "total_pnl": 1020.68,
-        "profit_factor": 2.413,
-        "sharpe_approx": 0.316,
-        "avg_r": 0.6626
+        "trades": 24,
+        "win_rate_pct": 58.3,
+        "avg_trade": 52.64,
+        "total_pnl": 1263.47,
+        "profit_factor": 2.7491,
+        "sharpe_approx": 0.3676,
+        "avg_r": 0.8168
       },
       "neutral": {
-        "trades": 17,
-        "win_rate_pct": 64.7,
-        "avg_trade": 64.88,
-        "total_pnl": 1103.04,
-        "profit_factor": 3.7319,
-        "sharpe_approx": 0.4828,
-        "avg_r": 0.9692
+        "trades": 23,
+        "win_rate_pct": 56.5,
+        "avg_trade": 42.1,
+        "total_pnl": 968.24,
+        "profit_factor": 2.4512,
+        "sharpe_approx": 0.3349,
+        "avg_r": 0.6405
       }
     },
-    "solo_sharpe": -0.2239,
-    "runtime_s": 5.1
+    "solo_sharpe": -0.2157,
+    "runtime_s": 3.3
   },
   "description": "atr_stop_mult: 1.35 \u2192 1.22",
   "experiments_run": 0,
-  "experiments_kept": 20,
-  "updated_at": "2026-04-19T15:02:17.721193+00:00"
+  "experiments_kept": 9,
+  "updated_at": "2026-04-19T16:01:33.859638+00:00"
 }
