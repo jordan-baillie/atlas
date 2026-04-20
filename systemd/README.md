@@ -12,6 +12,9 @@ Version-controlled mirror of systemd unit files that live in `/etc/systemd/syste
 | `atlas-research-window.timer` | timer | Legacy 5-windows-per-weekday + 4-per-weekend schedule for the above. **Disabled in production.** |
 | `atlas-research-window@.service` | template | Per-universe sweep (`scripts/research_window_universe.sh %i`). `TimeoutStartSec=6000` — covers worst-case sp500 instance (4200s sweep + 1500s LLM + 300s slack). |
 | `atlas-research-window@<universe>.timer` × 7 | timers | Nightly per-universe sweeps, staggered hourly 23:00–05:00 local. |
+| `atlas-director.service` | oneshot | Runs `scripts/director_cron.py` — weekly queue management + portfolio review digest. |
+| `atlas-director.timer` | timer | Fires director once weekly, Sun 08:00 AEST (Sat 22:00 UTC). **Enabled in production.** |
+| `atlas-research-runner.service` | simple daemon | Long-running queue consumer (`scripts/research_runner.py`) — pops pending experiments off the research queue. **Disabled in production** — mirrored for version control only; `install.sh` does NOT enable it. |
 
 ## Per-universe schedule
 
@@ -27,6 +30,26 @@ Version-controlled mirror of systemd unit files that live in `/etc/systemd/syste
 
 Each timer triggers `atlas-research-window@<universe>.service`, which runs `scripts/research_window_universe.sh <universe>`.
 
+## Director schedule
+
+`atlas-director.timer` fires `atlas-director.service` once weekly:
+
+| Field | Value |
+|-------|-------|
+| `OnCalendar` | `Sat 22:00:00 UTC` |
+| Local time | Sunday 08:00 AEST |
+| `Persistent` | `true` (runs on next boot if missed) |
+
+`director_cron.py` does a queue-health check, conditionally regenerates experiments if the queue is low, conditionally re-runs the portfolio optimizer (threshold: 7 days since last run), conditionally triggers discovery (weekly), and posts a Telegram digest.
+
+## Research runner (disabled)
+
+`atlas-research-runner.service` is a `Type=simple` long-running daemon that consumes the research queue continuously. It is **disabled** on the production host — the nightly per-universe sweep timers handle research work on a schedule instead. The unit file is mirrored here for version control, but `install.sh` deliberately skips it (see NOTE in the script). Enable manually only if you intentionally want continuous queue consumption:
+
+```
+sudo systemctl enable --now atlas-research-runner.service
+```
+
 ## Deploy
 
 Run on the target host as root:
@@ -35,7 +58,7 @@ Run on the target host as root:
 sudo /root/atlas/systemd/install.sh
 ```
 
-The script symlinks every `*.service`/`*.timer` in this directory into `/etc/systemd/system/`, runs `daemon-reload`, and enables+starts the production timer set (heartbeat watchdog + 7 per-universe sweeps). It is idempotent — re-runs are silent no-ops.
+The script symlinks every `*.service`/`*.timer` in this directory into `/etc/systemd/system/`, runs `daemon-reload`, and enables+starts the production timer set (heartbeat watchdog + 7 per-universe sweeps + weekly director). It is idempotent — re-runs are silent no-ops.
 
 `atlas-research-window.timer` (legacy multi-phase) is intentionally left disabled. Enable manually with `systemctl enable --now atlas-research-window.timer` if you want the old 5-window-per-weekday schedule.
 

@@ -17,11 +17,18 @@ SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DST_DIR=/etc/systemd/system
 
 # Timers enabled+started by this script.
-# Matches current production state (as of 2026-04-19).
+# Matches current production state (as of 2026-04-20).
+#
 # NOTE: atlas-research-window.timer is intentionally NOT enabled here —
 # it is the legacy multi-phase timer, currently disabled in production;
 # the per-universe timers below replaced it. The file is still mirrored
 # for version-control completeness and can be enabled manually if needed.
+#
+# NOTE: atlas-research-runner.service is intentionally NOT enabled by
+# this script. It is a queue-based research daemon currently disabled
+# on the host. The unit file is mirrored for version control, but it
+# must be turned on intentionally via `systemctl enable --now
+# atlas-research-runner.service` — never automatically by this installer.
 TIMERS_TO_ENABLE=(
     atlas-heartbeat-watchdog.timer
     atlas-research-window@sp500.timer
@@ -31,6 +38,7 @@ TIMERS_TO_ENABLE=(
     atlas-research-window@treasury_etfs.timer
     atlas-research-window@defensive_etfs.timer
     atlas-research-window@crypto.timer
+    atlas-director.timer
 )
 
 changed=0
