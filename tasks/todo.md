@@ -57,6 +57,25 @@ session — none are quick fixes.
       still open — earliest close date: Sat 2026-04-25. #192 remains
       open until gate closes.
 
+- [x] **#251 — OHLCV test-leak cleanup + fixture hardening.** Discovered
+      that `tests/test_auto_exclusions.py` and `tests/test_ingest.py`
+      leaked OHLCV rows into production `data/atlas.db` via
+      `data/ingest.py::_save_cache()`'s unconditional SQLite dual-write.
+      Pollution included: 22 AAPL/MSFT dummy rows (open=0, volume=1000,
+      close=100..109, dates 2026-04-06..2026-04-20), plus 80 rows for
+      tickers TEST/RNDM/COLS/STALE. Fixed via:
+      - Module-scope `autouse` DB-isolation fixture added to both test
+        files (mirrors `test_dual_write_leak_regression.py::_isolate_db`)
+        — prevents future pollution
+      - `scripts/cleanup_dummy_ohlcv.py` idempotent repair: DELETE 22
+        dummy rows, UPSERT 18 real rows from parquet (04-06..04-16);
+        04-17 + 04-20 left to next daily ingest
+      - `tests/test_no_prod_db_writes.py` regression test: runs the two
+        suites in subprocess and asserts `data/atlas.db` mtime/size
+        unchanged, plus zero dummy-pattern rows remain
+      Related: #192 (does NOT close the gate — gate remains open on
+      5 consecutive real-cron PASSes starting Tue 2026-04-21).
+
 - [ ] **#192 — Kill JSON trade-ledger dual-write.** Atlas currently writes
       trades to both `data/state.json` and SQLite. Requires data-migration
       script + careful cutover + rollback plan. Out of scope for audit
