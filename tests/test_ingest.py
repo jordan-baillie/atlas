@@ -14,6 +14,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import db.atlas_db as _adb
+from db.atlas_db import init_db
+
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 
@@ -29,6 +32,20 @@ from data.ingest import (  # noqa: E402
     _save_cache,
     _market_cache_dir,
 )
+
+
+# ---------------------------------------------------------------------------
+# DB isolation — prevent writes to production atlas.db
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _isolate_db(tmp_path, monkeypatch):
+    """Point atlas_db at a throw-away temp DB so tests never touch production."""
+    db_path = str(tmp_path / "test_ingest.db")
+    monkeypatch.setattr(_adb, "_db_path_override", db_path)
+    init_db()
+    yield
+    monkeypatch.setattr(_adb, "_db_path_override", None)
 
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,9 @@ from unittest.mock import MagicMock, patch, ANY
 import pandas as pd
 import pytest
 
+import db.atlas_db as _adb
+from db.atlas_db import init_db
+
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 
@@ -44,6 +47,16 @@ def _last_weekday_str() -> str:
 
 def _old_date_str(days_ago: int = 7) -> str:
     return (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_db(tmp_path, monkeypatch):
+    """Point atlas_db at a throw-away temp DB so tests never touch production."""
+    db_path = str(tmp_path / "test_auto_exclusions.db")
+    monkeypatch.setattr(_adb, "_db_path_override", db_path)
+    init_db()
+    yield
+    monkeypatch.setattr(_adb, "_db_path_override", None)
 
 
 # ── Auto-exclusion module tests ──────────────────────────────
