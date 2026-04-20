@@ -230,6 +230,92 @@ def phase4_verify() -> bool:
     return ok
 
 
+
+# ── Phase 5/6 — Synthetic tickers + volume=1000 cleanup ─────────────────────
+
+_SYNTHETIC_TICKERS: tuple[str, ...] = ("TEST", "RNDM", "COLS", "STALE")
+
+_SYNTHETIC_WHERE = "ticker IN ('TEST','RNDM','COLS','STALE')"
+_VOL1000_WHERE = "volume = 1000"
+
+
+def phase5_cleanup_synthetic_and_volume1000() -> dict[str, int]:
+    """
+    Delete all rows belonging to synthetic test tickers (TEST, RNDM, COLS,
+    STALE) and any remaining rows with volume = 1000 (real-price crypto rows
+    leaked by tests with synthetic volume).
+
+    Returns a dict with keys 'synthetic_deleted' and 'vol1000_deleted'.
+    Idempotent — re-running yields 0 deletions.
+    """
+    with get_db() as db:
+        # Count before
+        syn_before = db.execute(
+            f"SELECT COUNT(*) FROM ohlcv WHERE {_SYNTHETIC_WHERE}"
+        ).fetchone()[0]
+        vol_before = db.execute(
+            f"SELECT COUNT(*) FROM ohlcv WHERE {_VOL1000_WHERE} AND NOT ({_SYNTHETIC_WHERE})"
+        ).fetchone()[0]
+
+        logger.info(
+            "Phase 5 — before: synthetic-ticker rows=%d, volume=1000 rows (non-synthetic)=%d",
+            syn_before,
+            vol_before,
+        )
+
+        # Delete synthetic tickers first
+        db.execute(f"DELETE FROM ohlcv WHERE {_SYNTHETIC_WHERE}")
+        syn_deleted = db.execute("SELECT changes()").fetchone()[0]
+
+        # Then delete any remaining volume=1000 rows (real-price but fake volume)
+        db.execute(f"DELETE FROM ohlcv WHERE {_VOL1000_WHERE}")
+        vol_deleted = db.execute("SELECT changes()").fetchone()[0]
+
+    logger.info(
+        "Phase 5 — deleted %d synthetic-ticker rows, %d volume=1000 rows",
+        syn_deleted,
+        vol_deleted,
+    )
+    return {"synthetic_deleted": syn_deleted, "vol1000_deleted": vol_deleted}
+
+
+def phase6_verify_synthetic_absent() -> bool:
+    """
+    Assert that 0 rows remain that match:
+      ticker IN ('TEST','RNDM','COLS','STALE')  OR  volume = 1000
+
+    Returns True on success; logs ERROR and returns False on failure.
+    """
+    query = (
+        "SELECT COUNT(*) FROM ohlcv "
+        f"WHERE {_SYNTHETIC_WHERE} OR {_VOL1000_WHERE}"
+    )
+    with get_db() as db:
+        remaining = db.execute(query).fetchone()[0]
+
+    if remaining != 0:
+        # Log a sample of what's still there to aid debugging
+        with get_db() as db:
+            samples = db.execute(
+                "SELECT ticker, date, volume FROM ohlcv "
+                f"WHERE {_SYNTHETIC_WHERE} OR {_VOL1000_WHERE} LIMIT 10"
+            ).fetchall()
+        for s in samples:
+            logger.error(
+                "  Phase 6 residual: ticker=%s date=%s volume=%d",
+                s["ticker"],
+                s["date"],
+                s["volume"],
+            )
+        logger.error(
+            "Phase 6 FAIL — %d synthetic/volume=1000 rows still remain",
+            remaining,
+        )
+        return False
+
+    logger.info("Phase 6 — synthetic/volume=1000 rows remaining: 0 ✓")
+    return True
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
@@ -240,7 +326,13 @@ def main() -> int:
     phase2_delete()
     phase3_upsert_parquet()
 
-    success = phase4_verify()
+    success_p4 = phase4_verify()
+
+    # Phase 5+6: synthetic ticker and volume=1000 residual cleanup
+    phase5_cleanup_synthetic_and_volume1000()
+    success_p6 = phase6_verify_synthetic_absent()
+
+    success = success_p4 and success_p6
 
     if success:
         logger.info("=== cleanup_dummy_ohlcv.py DONE — all checks passed ===")
