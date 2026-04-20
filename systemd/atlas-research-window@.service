@@ -6,6 +6,7 @@ After=network.target
 Type=oneshot
 WorkingDirectory=/root/atlas
 ExecStart=/root/atlas/scripts/research_window_universe.sh %i
+EnvironmentFile=-/etc/atlas/atlas.conf
 # Covers worst-case instance (sp500: 4200s sweep + 1500s LLM + 300s slack).
 # Shorter universes exit on completion; wider bound is just a safety net.
 TimeoutStartSec=6000

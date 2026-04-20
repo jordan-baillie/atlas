@@ -6,6 +6,7 @@ After=network.target
 Type=oneshot
 WorkingDirectory=/root/atlas
 ExecStart=/root/atlas/scripts/research_cron.sh
+EnvironmentFile=-/etc/atlas/atlas.conf
 # 1h/worker × 5 strategies ÷ 3 workers ≈ 2h sweep + 25m LLM + buffer
 TimeoutStartSec=9900
 # Give SIGTERM 60s to clean up pool workers, then SIGKILL everything

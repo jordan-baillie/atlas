@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 WorkingDirectory=/root/atlas
 ExecStart=/usr/bin/python3 -u scripts/research_runner.py
+EnvironmentFile=-/etc/atlas/atlas.conf
 Restart=on-failure
 RestartSec=60
 # Low priority so sweep and trading crons preempt

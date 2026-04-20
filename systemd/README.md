@@ -95,3 +95,25 @@ The script symlinks every `*.service`/`*.timer` in this directory into `/etc/sys
 ## Timeout rationale
 
 `atlas-research-window@.service` uses `TimeoutStartSec=6000` (was 3600 before 2026-04-19). The old 3600s bound was killing long sp500 sweeps mid-LLM promotion; 6000s leaves ~100s of slack above the worst-case 4200s sweep + 1500s LLM budget. Shorter universes complete in well under an hour and exit early — the longer bound is a safety net, not the expected run time.
+
+## Path parameterization
+
+`/etc/atlas/atlas.conf` (deployed from `systemd/atlas.conf.template` by `install.sh`) exposes shared environment variables to every atlas unit via `EnvironmentFile=-/etc/atlas/atlas.conf` (optional — missing file is tolerated).
+
+Current vars:
+
+| Var | Default | Purpose |
+|-----|---------|---------|
+| `ATLAS_HOME` | `/root/atlas` | Project root. |
+| `ATLAS_PYTHON` | `/usr/bin/python3` | Interpreter. |
+
+**Note**: current unit files still hardcode `/root/atlas/...` and `/usr/bin/python3` in `WorkingDirectory=` and `ExecStart=`. The variables are available for future parameterization but are not yet referenced. Editing `atlas.conf` alone does NOT relocate the atlas install.
+
+### Relocation procedure (future, when needed)
+
+1. Edit `/etc/atlas/atlas.conf` — update `ATLAS_HOME` to the new path.
+2. Edit each `.service` file in `systemd/` — replace hardcoded `/root/atlas` with `${ATLAS_HOME}` in `WorkingDirectory=` and `ExecStart=`.
+3. `sudo systemctl daemon-reload`
+4. `sudo systemctl restart atlas-*.service` (or individually).
+
+Done as a separate, tested refactor — not as part of this sweep.

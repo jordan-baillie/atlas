@@ -16,6 +16,15 @@ fi
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DST_DIR=/etc/systemd/system
 
+# Install shared atlas environment file if missing.
+ATLAS_CONF_DIR=/etc/atlas
+ATLAS_CONF=$ATLAS_CONF_DIR/atlas.conf
+if [[ ! -f "$ATLAS_CONF" ]]; then
+    install -d -m 755 "$ATLAS_CONF_DIR"
+    install -m 644 "$SRC_DIR/atlas.conf.template" "$ATLAS_CONF"
+    echo "installed: $ATLAS_CONF (from atlas.conf.template)"
+fi
+
 # Timers enabled+started by this script.
 # Matches current production state (as of 2026-04-20).
 #

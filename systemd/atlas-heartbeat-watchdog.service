@@ -6,5 +6,6 @@ After=network.target
 Type=oneshot
 WorkingDirectory=/root/atlas
 ExecStart=/usr/bin/python3 /root/atlas/scripts/heartbeat_watchdog.py
+EnvironmentFile=-/etc/atlas/atlas.conf
 StandardOutput=journal
 StandardError=journal

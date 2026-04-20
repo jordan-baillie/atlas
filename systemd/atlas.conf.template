@@ -1,0 +1,11 @@
+# Atlas systemd environment — shared across all atlas-*.service units.
+# Deployed to /etc/atlas/atlas.conf by systemd/install.sh.
+#
+# These variables are AVAILABLE to all atlas units via
+# `EnvironmentFile=-/etc/atlas/atlas.conf` (optional include).
+# Current unit files still hardcode paths — these vars exist for future
+# parameterization. Editing this file alone does NOT relocate atlas;
+# see README section "Path parameterization" for the relocation procedure.
+
+ATLAS_HOME=/root/atlas
+ATLAS_PYTHON=/usr/bin/python3

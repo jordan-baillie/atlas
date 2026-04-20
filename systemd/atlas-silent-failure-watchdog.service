@@ -6,6 +6,7 @@ After=network.target
 Type=oneshot
 WorkingDirectory=/root/atlas
 ExecStart=/usr/bin/python3 /root/atlas/scripts/silent_failure_watchdog.py
+EnvironmentFile=-/etc/atlas/atlas.conf
 Nice=10
 TimeoutStartSec=300
 Environment=PYTHONUNBUFFERED=1

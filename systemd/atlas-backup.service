@@ -7,6 +7,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/root/scripts/backup-all-projects.sh
+EnvironmentFile=-/etc/atlas/atlas.conf
 StandardOutput=journal
 StandardError=journal
 User=root

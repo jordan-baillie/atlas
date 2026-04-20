@@ -6,6 +6,7 @@ After=network.target
 Type=oneshot
 WorkingDirectory=/root/atlas
 ExecStart=/usr/bin/python3 -u scripts/director_cron.py
+EnvironmentFile=-/etc/atlas/atlas.conf
 TimeoutStartSec=4200
 Nice=10
 Environment=PYTHONUNBUFFERED=1
