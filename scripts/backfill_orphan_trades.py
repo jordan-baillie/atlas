@@ -41,6 +41,9 @@ PLANS_DIR = PROJECT / "plans"
 
 logger = logging.getLogger(__name__)
 
+# Strategies that are not real — fall through to plan lookup
+POISON_STRATEGIES = ("unknown", "", "reconciled")
+
 
 # ── Strategy resolution ───────────────────────────────────────────────────────
 
@@ -87,7 +90,7 @@ def resolve_strategy(
     -------
     (strategy, source) where source is 'broker', 'plan', or 'fallback'.
     """
-    if broker_strategy and broker_strategy not in ("unknown", ""):
+    if broker_strategy and broker_strategy not in POISON_STRATEGIES:
         return broker_strategy, "broker"
 
     plan_strat = _load_plan_strategy(ticker, market_id)
@@ -152,8 +155,8 @@ def load_broker_positions() -> tuple[dict[str, dict[str, Any]], dict[str, int]]:
             if existing is None:
                 positions_by_ticker[ticker] = pos_enriched
             elif (
-                existing.get("strategy", "unknown") in ("unknown", "")
-                and pos_enriched.get("strategy", "unknown") not in ("unknown", "")
+                existing.get("strategy", "unknown") in POISON_STRATEGIES
+                and pos_enriched.get("strategy", "unknown") not in POISON_STRATEGIES
             ):
                 # Upgrade to entry with a known strategy
                 positions_by_ticker[ticker] = pos_enriched
@@ -380,10 +383,9 @@ def run(dry_run: bool = False, quiet: bool = False) -> int:
         row = sqlite_rows[0]
         sqlite_strategy = (row.get("strategy") or "").strip()
 
-        # Only update if broker JSON has a definitive (non-unknown) strategy
-        # that differs from what SQLite currently has.
+        # Path A: broker has a definitive (non-poison) strategy that differs
         if (
-            broker_strategy not in ("unknown", "")
+            broker_strategy not in POISON_STRATEGIES
             and broker_strategy != sqlite_strategy
         ):
             label = (
@@ -396,6 +398,20 @@ def run(dry_run: bool = False, quiet: bool = False) -> int:
                 row["id"], ticker, sqlite_strategy, broker_strategy, dry_run
             ):
                 failures.append(label)
+        # Path B: broker strategy is poison, but SQLite strategy is also poison — try to resolve via plan
+        elif sqlite_strategy in POISON_STRATEGIES:
+            resolved, source = resolve_strategy(ticker, market_id, broker_strategy)
+            if resolved not in POISON_STRATEGIES and resolved != sqlite_strategy:
+                label = (
+                    f"UPDATE: {ticker} strategy '{sqlite_strategy}'"
+                    f" → '{resolved}' (id={row['id']}) — from {source}"
+                )
+                updates.append(label)
+                _print(f"  {label}")
+                if not _do_update_strategy(
+                    row["id"], ticker, sqlite_strategy, resolved, dry_run
+                ):
+                    failures.append(label)
 
     # ── Log SQLite-only positions (no broker backing) ──────────────────────
     broker_tickers = set(broker_positions.keys())

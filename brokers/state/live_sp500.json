@@ -13,7 +13,7 @@
     },
     {
       "ticker": "FCX",
-      "strategy": "reconciled",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-21",
       "entry_price": 68.03,
       "shares": 5,
@@ -22,7 +22,7 @@
     },
     {
       "ticker": "GLD",
-      "strategy": "unknown",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-21",
       "entry_price": 442.8,
       "shares": 2,
@@ -31,7 +31,7 @@
     },
     {
       "ticker": "SLV",
-      "strategy": "unknown",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-21",
       "entry_price": 71.92,
       "shares": 6,
@@ -40,7 +40,7 @@
     },
     {
       "ticker": "UNG",
-      "strategy": "unknown",
+      "strategy": "connors_rsi2",
       "entry_date": "2026-04-21",
       "entry_price": 10.68,
       "shares": 54,
@@ -49,7 +49,7 @@
     },
     {
       "ticker": "XLY",
-      "strategy": "unknown",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-21",
       "entry_price": 116.44,
       "shares": 10,
