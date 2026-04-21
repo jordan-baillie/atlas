@@ -61,6 +61,38 @@ if [ "$DOW" -le 5 ] || [ "$DOW" -eq 6 ]; then
     fi
 fi
 
+# ── Step 2b: Hard-gate — immediate Telegram CRITICAL on drift ──
+# Parses reconcile output for PHANTOM/UNTRACKED/MISMATCH/DRIFT keywords.
+# If drift is detected we send a CRITICAL alert directly (NOT via the
+# pi-agent cooldown path) so the operator knows even when --fix auto-corrects.
+# This fires even if the fix succeeded — awareness is the goal.
+if [ -n "$RECONCILE_OUT" ]; then
+    DRIFT_LINES=$(echo "$RECONCILE_OUT" | grep -E "PHANTOM|UNTRACKED|MISMATCH|DRIFT" | head -10 || true)
+    if [ -n "$DRIFT_LINES" ]; then
+        DRIFT_COUNT=$(echo "$DRIFT_LINES" | grep -c . || true)
+        log "CRITICAL: ledger/broker drift detected (${DRIFT_COUNT} line(s)) — sending immediate alert"
+        DRIFT_ESCAPED=$(echo "$DRIFT_LINES" | head -600 | python3 -c "
+import sys
+data = sys.stdin.read()
+# Escape characters that would break the Python string argument
+data = data.replace('\\\\', '\\\\\\\\').replace(\"'\", \"\\\\'\")[:500]
+print(data)
+" 2>/dev/null || echo "(see reconcile log)")
+        python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+drift_msg = '$DRIFT_ESCAPED'
+send_message(
+    '\U0001f6a8 <b>Ledger\u2194Broker Drift Detected</b>\n\n'
+    '<pre>' + drift_msg + '</pre>\n\n'
+    '<i>Auto-fix was applied. Verify brokers/state/live_sp500.json '
+    'and confirm strategy attribution is correct.</i>'
+)
+" 2>/dev/null || true
+    fi
+fi
+
 # ── Step 3: Extract issues ───────────────────────────────────
 ISSUES=$(echo "$HEALTHZ_JSON" | python3 -c "
 import sys, json
@@ -300,6 +332,32 @@ send_message('🚨 <b>Hourly watchdog agent crashed</b> (exit $PI_EXIT).\nCheck:
     fi
 fi
 
+
+# ── Cronus journal liveness check ─────────────────────────────────────────────
+# Alert if either cronus service produced no journal output in the last hour.
+# An active-but-silent service usually means hung event loop / deadlock.
+for svc in cronus-trader cronus-risk-guardian; do
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+        recent=$(journalctl -u "$svc" --since "1 hour ago" --no-pager -q 2>/dev/null | wc -l)
+        if [ "$recent" -eq 0 ]; then
+            log "WARNING: $svc is active but emitted no journal output in the last hour"
+            if [ -f /root/.atlas-secrets.json ]; then
+                _tok=$(jq -r '.telegram_bot_token // empty' /root/.atlas-secrets.json 2>/dev/null)
+                _chat=$(jq -r '.telegram_chat_id // empty' /root/.atlas-secrets.json 2>/dev/null)
+                if [ -n "$_tok" ] && [ -n "$_chat" ]; then
+                    _msg="⚠️ <b>${svc} silent</b>%0ANo journal output in last 1 hour.%0AService is <code>active</code> but may be hung.%0Ahost: <code>$(hostname)</code>"
+                    curl -s -X POST "https://api.telegram.org/bot${_tok}/sendMessage" \
+                        -d "chat_id=${_chat}" \
+                        -d "text=${_msg}" \
+                        -d "parse_mode=HTML" >/dev/null 2>&1 || true
+                fi
+            fi
+        else
+            log "OK: $svc journal output in last hour: ${recent} lines"
+        fi
+    fi
+done
+
 # ── Stale lock cleanup ───────────────────────────────────────
 # Cron jobs use flock(1) advisory locks on /tmp/*.lock files.
 # If a job crashes or times out, the kernel releases the flock,
@@ -342,6 +400,31 @@ if command -v restic &>/dev/null && [ -d "$RESTIC_REPOSITORY" ]; then
     fi
 fi
 unset RESTIC_PASSWORD
+
+# ── Dashboard dist staleness check ──────────────────────────
+# Alert if the React SPA dist/ hasn't been rebuilt in > 6 hours.
+# The atlas-dashboard-refresh.timer should rebuild hourly.
+DASHBOARD_DIST="$PROJECT/dashboard-ui/dist/index.html"
+if [ -f "$DASHBOARD_DIST" ]; then
+    DIST_AGE_H=$(( ($(date +%s) - $(stat -c %Y "$DASHBOARD_DIST")) / 3600 ))
+    if [ "$DIST_AGE_H" -gt 6 ]; then
+        log "WARNING: dashboard dist is ${DIST_AGE_H}h old (>6h threshold)"
+        systemctl start atlas-dashboard-refresh.service 2>/dev/null || true
+        python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+age = int('${DIST_AGE_H}')
+send_message(
+    '\u26a0\ufe0f <b>Dashboard dist is {}h stale</b>\n'
+    'Expected hourly refresh via atlas-dashboard-refresh.timer.\n'
+    'Triggered manual rebuild.'.format(age)
+)
+" 2>/dev/null || true
+    else
+        log "Dashboard dist OK: ${DIST_AGE_H}h old"
+    fi
+fi
 
 # ── Cleanup ──────────────────────────────────────────────────
 find "$LOG_DIR" -name "healthz-hourly_*.log" -mtime +3 -delete 2>/dev/null
