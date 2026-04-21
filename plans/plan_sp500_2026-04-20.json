@@ -1,0 +1,81 @@
+{
+  "trade_date": "2026-04-20",
+  "generated_at": "2026-04-20T19:06:42.559542",
+  "market_id": "sp500",
+  "config_version": "v3.2",
+  "status": "APPROVED",
+  "portfolio_snapshot": {
+    "equity": 5308.5,
+    "cash": 520.58,
+    "open_positions": 3,
+    "total_pnl": 296.71,
+    "total_pnl_pct": 5.92
+  },
+  "proposed_entries": [],
+  "rejected_entries": [],
+  "proposed_exits": [],
+  "total_signals_generated": 0,
+  "risk_summary": {
+    "total_proposed_cost": 0,
+    "total_proposed_risk": 0,
+    "risk_pct_of_equity": 0.0,
+    "positions_after": 3,
+    "cash_after_entries": 520.58,
+    "portfolio_exposure_pct": 90.19
+  },
+  "open_positions": [
+    {
+      "ticker": "AMD",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-20",
+      "entry_price": 278.25,
+      "current_price": 278.29,
+      "shares": 2,
+      "unrealized_pnl": 0.08,
+      "unrealized_pnl_pct": 0.01,
+      "stop_price": 262.83,
+      "take_profit": null,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "FCX",
+      "strategy": "reconciled",
+      "entry_date": "2026-04-20",
+      "entry_price": 68.03,
+      "current_price": 70.21,
+      "shares": 5,
+      "unrealized_pnl": 10.9,
+      "unrealized_pnl_pct": 3.2,
+      "stop_price": 66.495,
+      "take_profit": null,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    },
+    {
+      "ticker": "STZ",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-20",
+      "entry_price": 163.9457,
+      "current_price": 162.4,
+      "shares": 5,
+      "unrealized_pnl": -7.73,
+      "unrealized_pnl_pct": -0.94,
+      "stop_price": 159.51,
+      "take_profit": null,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    }
+  ],
+  "allocation_summary": {},
+  "vol_scale_applied": 1.0,
+  "regime_gate_blocked": true,
+  "regime_gate_reason": "regime data is 3 days stale (last: 2026-04-17, max: 2)",
+  "approved_at": "2026-04-20T23:15:01.892899"
+}

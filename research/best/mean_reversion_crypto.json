@@ -41,30 +41,30 @@
   },
   "metrics": {
     "total_trades": 26,
-    "cagr_pct": 5.5663,
-    "cagr_full_period_pct": 2.9849,
-    "sharpe": -0.0103,
-    "sortino": -0.0137,
-    "max_drawdown_pct": 6.731,
+    "cagr_pct": 5.619,
+    "cagr_full_period_pct": 3.008,
+    "sharpe": -0.0081,
+    "sortino": -0.0108,
+    "max_drawdown_pct": 6.7215,
     "win_rate_pct": 46.15,
-    "profit_factor": 2.0147,
-    "total_pnl": 877.27,
-    "avg_trade": 33.74,
-    "final_equity": 5855.42,
-    "expectancy_r": 0.9356,
-    "avg_r": 0.9356,
+    "profit_factor": 2.0321,
+    "total_pnl": 883.67,
+    "avg_trade": 33.99,
+    "final_equity": 5863.82,
+    "expectancy_r": 0.9385,
+    "avg_r": 0.9385,
     "r_count": 26,
-    "edge_p_value": 0.054769,
+    "edge_p_value": 0.053603,
     "edge_significant": false,
-    "var_95_pct": 1.471,
-    "cvar_95_pct": 2.398,
-    "calmar": 0.827,
-    "mc_p95_drawdown_pct": 8.61,
+    "var_95_pct": 1.468,
+    "cvar_95_pct": 2.395,
+    "calmar": 0.836,
+    "mc_p95_drawdown_pct": 8.48,
     "mc_fragile": false,
     "strategy_breakdown": {
       "momentum_breakout": {
         "trades": 15,
-        "total_pnl": 545.76,
+        "total_pnl": 552.16,
         "win_rate_pct": 40.0
       },
       "mean_reversion": {
@@ -86,27 +86,27 @@
       "bull": {
         "trades": 8,
         "win_rate_pct": 50.0,
-        "avg_trade": 58.45,
-        "total_pnl": 467.58,
-        "profit_factor": 2.838,
-        "sharpe_approx": 0.4338,
-        "avg_r": 1.5959
+        "avg_trade": 59.5,
+        "total_pnl": 475.98,
+        "profit_factor": 2.935,
+        "sharpe_approx": 0.4458,
+        "avg_r": 1.6094
       },
       "neutral": {
         "trades": 8,
         "win_rate_pct": 37.5,
-        "avg_trade": 16.05,
-        "total_pnl": 128.42,
-        "profit_factor": 1.5274,
-        "sharpe_approx": 0.1727,
-        "avg_r": 0.4432
+        "avg_trade": 15.8,
+        "total_pnl": 126.42,
+        "profit_factor": 1.5192,
+        "sharpe_approx": 0.1707,
+        "avg_r": 0.4391
       }
     },
     "solo_sharpe": -0.5129,
-    "runtime_s": 4.8
+    "runtime_s": 5.4
   },
   "description": "atr_stop_mult: 1.35 \u2192 1.22",
   "experiments_run": 0,
-  "experiments_kept": 9,
-  "updated_at": "2026-04-19T19:01:57.830122+00:00"
+  "experiments_kept": 11,
+  "updated_at": "2026-04-20T19:02:08.698887+00:00"
 }

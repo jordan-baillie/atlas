@@ -5,7 +5,7 @@
     {
       "ticker": "AMD",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 278.25,
       "shares": 2,
       "stop_price": 262.83,
@@ -14,16 +14,16 @@
     {
       "ticker": "FCX",
       "strategy": "reconciled",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 68.03,
       "shares": 5,
-      "stop_price": 66.495,
+      "stop_price": 66.755,
       "order_id": ""
     },
     {
       "ticker": "GLD",
       "strategy": "unknown",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 420.65999999999997,
@@ -32,25 +32,16 @@
     {
       "ticker": "SLV",
       "strategy": "unknown",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 71.92,
       "shares": 6,
       "stop_price": 68.324,
       "order_id": ""
     },
     {
-      "ticker": "STZ",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-18",
-      "entry_price": 163.9457,
-      "shares": 5,
-      "stop_price": 159.51,
-      "order_id": ""
-    },
-    {
       "ticker": "UNG",
       "strategy": "unknown",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 10.68,
       "shares": 54,
       "stop_price": 10.145999999999999,
@@ -59,7 +50,7 @@
     {
       "ticker": "XLY",
       "strategy": "unknown",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 116.44,
       "shares": 10,
       "stop_price": 110.618,
@@ -1739,10 +1730,43 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-20",
+      "equity": 5309.4,
+      "cash": 1318.15,
+      "positions_value": 3991.25,
+      "num_positions": 2,
+      "total_realized_pnl": 293.46,
+      "total_closed_trades": 28,
+      "positions": [
+        {
+          "ticker": "AMD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 278.25,
+          "current_price": 274.95,
+          "unrealized_pnl": -6.6,
+          "mae": -1.19,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 70.18,
+          "unrealized_pnl": 10.75,
+          "mae": 0.0,
+          "mfe": 3.16,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5374.77,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-18T09:00:09.949923"
+  "last_saved": "2026-04-21T09:00:11.011344"
 }

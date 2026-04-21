@@ -5,18 +5,18 @@
     {
       "ticker": "FCX",
       "strategy": "reconciled",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 68.03,
       "shares": 5,
-      "stop_price": 66.495,
+      "stop_price": 66.755,
       "order_id": "",
       "stop_order_id": "5393b1d1-001b-4b8d-a251-5a5cc4c64e0b",
       "tp_order_id": ""
     },
     {
       "ticker": "GLD",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-18",
+      "strategy": "reconciled",
+      "entry_date": "2026-04-21",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 428.06,
@@ -26,8 +26,8 @@
     },
     {
       "ticker": "SLV",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-18",
+      "strategy": "reconciled",
+      "entry_date": "2026-04-21",
       "entry_price": 71.92,
       "shares": 6,
       "stop_price": 71.56,
@@ -38,10 +38,10 @@
     {
       "ticker": "UNG",
       "strategy": "reconciled",
-      "entry_date": "2026-04-18",
+      "entry_date": "2026-04-21",
       "entry_price": 10.68,
       "shares": 54,
-      "stop_price": 10.4,
+      "stop_price": 10.47,
       "order_id": "",
       "stop_order_id": "36edef0f-37ae-4ec9-bfd3-3d2be113ac17",
       "tp_order_id": ""
@@ -279,10 +279,65 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-20",
+      "equity": 5019.89,
+      "cash": 1318.15,
+      "positions_value": 3701.74,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 70.18,
+          "unrealized_pnl": 10.75,
+          "mae": 0.0,
+          "mfe": 3.16,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "reconciled",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 442.09,
+          "unrealized_pnl": -1.42,
+          "mae": -0.16,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "reconciled",
+          "shares": 6,
+          "entry_price": 71.92,
+          "current_price": 72.15,
+          "unrealized_pnl": 1.38,
+          "mae": 0.0,
+          "mfe": 0.32,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.85,
+          "unrealized_pnl": 9.18,
+          "mae": 0.0,
+          "mfe": 1.59,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5036.06,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-18T08:01:03.523574"
+  "last_saved": "2026-04-21T08:00:45.006715"
 }

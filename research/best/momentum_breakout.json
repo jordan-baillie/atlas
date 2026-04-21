@@ -91,7 +91,7 @@
     "runtime_s": 117.4
   },
   "description": "atr_stop_mult=1.0: testing stop distance",
-  "experiments_run": 184,
+  "experiments_run": 196,
   "experiments_kept": 13,
   "updated_at": "2026-04-19T14:34:45.559814+00:00"
 }
