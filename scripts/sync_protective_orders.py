@@ -58,6 +58,11 @@ _DEFAULT_BROKER: dict[str, str] = {
 # State file tracking stop orders observed in "held" status
 _HELD_STATE_FILE = PROJECT / "data" / "stops_held_state.json"
 
+# Max consecutive held-cancel-resubmit cycles before giving up on a ticker.
+# After this many attempts, the ticker is flagged permanently_skipped and
+# the operator is alerted at most once per calendar day.
+_HELD_MAX_RETRIES = 4
+
 
 # ═══════════════════════════════════════════════════════════════
 # Config loading
@@ -142,6 +147,49 @@ def _save_held_state(state: dict, state_file: Path | None = None) -> None:
         logger.warning("Could not save held-stop state file %s: %s", path, exc)
 
 
+def _maybe_alert_stuck(
+    ticker: str,
+    market_id: str,
+    *,
+    reason: str,
+    state: dict,
+    key: str,
+    send_telegram: bool = True,
+    permanent: bool = False,
+    now_iso: str | None = None,
+) -> bool:
+    """Send ONE Telegram alert per calendar day for a stuck-held ticker.
+
+    Updates state[key]["last_alerted_date"] so the same ticker does not
+    spam the operator multiple times per day. Returns True if an alert
+    was sent (or would have been in dry mode), False if suppressed.
+    """
+    today = (now_iso or datetime.now().isoformat())[:10]
+    entry = state.get(key) or {}
+    if entry.get("last_alerted_date") == today:
+        return False  # already alerted today
+    entry["last_alerted_date"] = today
+    state[key] = entry
+    if not send_telegram:
+        return True
+    try:
+        from utils.telegram import send_message
+        status_line = (
+            "account-level reject (permanent)" if permanent else "retry cap reached"
+        )
+        msg = (
+            f"🚨 <b>Stop stuck-held for {ticker}</b>\n"
+            f"Market: {market_id.upper()}\n"
+            f"Reason: <code>{reason}</code>\n"
+            f"Status: {status_line}\n"
+            f"<i>Manual intervention needed — not resubmitting further today.</i>"
+        )
+        send_message(msg)
+    except Exception as tg_exc:
+        logger.warning("_maybe_alert_stuck: Telegram alert failed (non-fatal): %s", tg_exc)
+    return True
+
+
 def _handle_held_stops(
     broker,
     market_id: str,
@@ -188,7 +236,8 @@ def _handle_held_stops(
         return {"resubmitted": resubmitted, "newly_held": newly_held, "errors": errors}
 
     # Identify stop SELL orders with raw status == "held"
-    currently_held: dict[str, str] = {}   # ticker → order_id
+    # Capture the full raw dict per ticker so we can inspect reject_reason.
+    currently_held: dict[str, dict] = {}   # ticker → {"order_id": str, "raw": dict, "status": str}
     for order in open_orders:
         raw = getattr(order, "raw", {}) or {}
         order_status = raw.get("status", "")
@@ -201,7 +250,11 @@ def _handle_held_stops(
             and side == "sell"
             and ticker
         ):
-            currently_held[ticker] = getattr(order, "order_id", "") or ""
+            currently_held[ticker] = {
+                "order_id": getattr(order, "order_id", "") or "",
+                "raw": raw,
+                "status": order_status,
+            }
 
     if currently_held:
         logger.info(
@@ -213,65 +266,161 @@ def _handle_held_stops(
 
     state = _load_held_state(state_file)
 
-    # Determine which tickers to resubmit vs record-new
-    for ticker, order_id in currently_held.items():
-        key = f"{ticker}::{market_id}"
-        if key in state:
-            # Second+ consecutive held cycle → cancel so sync_all_protective_orders re-places
-            if dry_run:
-                logger.info(
-                    "[DRY RUN] _handle_held_stops: would cancel+resubmit stuck held stop "
-                    "for %s (was held since %s, order_id=%s)",
-                    ticker, state[key].get("first_seen", "?"), order_id,
-                )
-                resubmitted.append(ticker)
-                # Remove from state even in dry-run so next real run starts fresh
-                state.pop(key, None)
-            else:
-                logger.warning(
-                    "Stop for %s (%s) has been held for ≥2 consecutive sync cycles "
-                    "(first seen %s, order_id=%s) — cancelling and resubmitting",
-                    ticker, market_id, state[key].get("first_seen", "?"), order_id,
-                )
-                cancel_result = broker.cancel_order(order_id)
-                if cancel_result and cancel_result.success:
-                    logger.info(
-                        "_handle_held_stops: successfully cancelled held stop for %s (id=%s)",
-                        ticker, order_id,
-                    )
-                    state.pop(key, None)
-                    resubmitted.append(ticker)
+    # Tokens in status/reject_reason that indicate a permanent account-level issue.
+    _HARD_REJECT_TOKENS = (
+        "pdt", "day_trading", "short_sale", "hard_to_borrow",
+        "insufficient_buying_power", "insufficient_bp", "htb",
+        "trade_suspended", "account_restricted",
+    )
 
-                    if send_telegram:
-                        try:
-                            from utils.telegram import send_message
-                            send_message(
-                                f"⚠️ Resubmitted stuck <code>held</code> stop for "
-                                f"<b>{ticker}</b>\n"
-                                f"Market: {market_id.upper()} | "
-                                f"Order: <code>{order_id[:16]}</code>"
-                            )
-                        except Exception as tg_exc:
-                            logger.warning(
-                                "_handle_held_stops: Telegram alert failed (non-fatal): %s",
-                                tg_exc,
-                            )
-                else:
-                    err_msg = getattr(cancel_result, "message", "unknown") if cancel_result else "cancel_order returned None"
-                    logger.error(
-                        "_handle_held_stops: cancel_order FAILED for %s (id=%s): %s",
-                        ticker, order_id, err_msg,
-                    )
-                    errors.append(ticker)
-        else:
-            # First time seeing this ticker as held — record, do NOT cancel yet
+    for ticker, info in currently_held.items():
+        order_id = info["order_id"]
+        raw = info["raw"]
+        order_status = info.get("status", "")
+        _rr_raw = raw.get("reject_reason") or raw.get("rejected_reason") or ""
+        reject_reason = _rr_raw.lower() if isinstance(_rr_raw, str) else ""
+        hard_reject = any(
+            tok in f"{reject_reason} {order_status}".lower()
+            for tok in _HARD_REJECT_TOKENS
+        )
+
+        key = f"{ticker}::{market_id}"
+        entry = state.get(key)  # None if first observation ever
+
+        # Branch 0 — account-level hard reject: permanently skip, alert once
+        if hard_reject:
+            if not (entry or {}).get("permanently_skipped"):
+                logger.error(
+                    "_handle_held_stops: %s (%s) rejected for account-level reason "
+                    "(reject_reason=%r status=%r) — will NOT resubmit",
+                    ticker, market_id, reject_reason, order_status,
+                )
+            base = entry or {"first_seen": _now, "order_id": order_id, "retry_count": 0}
+            new_entry = {
+                "first_seen": base.get("first_seen", _now),
+                "order_id": order_id,
+                "retry_count": base.get("retry_count", 0),
+                "last_alerted_date": base.get("last_alerted_date", ""),
+                "permanently_skipped": True,
+                "skip_reason": reject_reason or order_status or "account_level",
+            }
+            state[key] = new_entry
+            _maybe_alert_stuck(
+                ticker, market_id,
+                reason=new_entry["skip_reason"],
+                state=state, key=key,
+                send_telegram=send_telegram,
+                permanent=True, now_iso=_now,
+            )
+            errors.append(ticker)
+            continue
+
+        # Branch 1 — already permanently skipped: no cancel, maybe alert once/day
+        if entry and entry.get("permanently_skipped"):
+            _maybe_alert_stuck(
+                ticker, market_id,
+                reason=entry.get("skip_reason", "unknown"),
+                state=state, key=key,
+                send_telegram=send_telegram,
+                permanent=True, now_iso=_now,
+            )
+            continue
+
+        # Branch 2 — first observation: record, do not cancel
+        if entry is None:
             logger.info(
                 "_handle_held_stops: stop for %s (%s) is held for the first time "
                 "(order_id=%s) — recording, will resubmit next cycle if still held",
                 ticker, market_id, order_id,
             )
-            state[key] = {"first_seen": _now, "order_id": order_id}
+            state[key] = {
+                "first_seen": _now,
+                "order_id": order_id,
+                "retry_count": 0,
+                "last_alerted_date": "",
+                "permanently_skipped": False,
+                "skip_reason": "",
+            }
             newly_held.append(ticker)
+            continue
+
+        # Branch 3 — retry cap reached: flip to permanently_skipped, alert once/day, NO cancel
+        retry_count = int(entry.get("retry_count", 0))
+        if retry_count >= _HELD_MAX_RETRIES:
+            logger.warning(
+                "_handle_held_stops: %s (%s) exceeded max retries (%d) — "
+                "flagging permanently_skipped",
+                ticker, market_id, _HELD_MAX_RETRIES,
+            )
+            entry["permanently_skipped"] = True
+            entry["skip_reason"] = f"max_retries_{_HELD_MAX_RETRIES}"
+            state[key] = entry
+            _maybe_alert_stuck(
+                ticker, market_id,
+                reason=entry["skip_reason"],
+                state=state, key=key,
+                send_telegram=send_telegram,
+                permanent=False, now_iso=_now,
+            )
+            continue
+
+        # Branch 4 — within retry budget: cancel so sync re-places on the next pass
+        entry["retry_count"] = retry_count + 1
+        entry["order_id"] = order_id
+        state[key] = entry  # persist attempt counter BEFORE cancel attempt
+
+        if dry_run:
+            logger.info(
+                "[DRY RUN] _handle_held_stops: would cancel+resubmit stuck held stop "
+                "for %s (was held since %s, order_id=%s, retry=%d/%d)",
+                ticker, entry.get("first_seen", "?"), order_id,
+                entry["retry_count"], _HELD_MAX_RETRIES,
+            )
+            resubmitted.append(ticker)
+            continue
+
+        logger.warning(
+            "Stop for %s (%s) has been held for ≥2 consecutive sync cycles "
+            "(first seen %s, order_id=%s, retry=%d/%d) — cancelling and resubmitting",
+            ticker, market_id, entry.get("first_seen", "?"), order_id,
+            entry["retry_count"], _HELD_MAX_RETRIES,
+        )
+        cancel_result = broker.cancel_order(order_id)
+        if cancel_result and getattr(cancel_result, "success", False):
+            logger.info(
+                "_handle_held_stops: successfully cancelled held stop for %s (id=%s)",
+                ticker, order_id,
+            )
+            resubmitted.append(ticker)
+            # IMPORTANT: do NOT pop entry from state anymore — retry_count must
+            # persist across cycles to enforce the cap. Cleanup happens only
+            # when the ticker is no longer in currently_held (resolved_keys
+            # block below).
+            if send_telegram:
+                try:
+                    from utils.telegram import send_message
+                    send_message(
+                        f"⚠️ Resubmitted stuck <code>held</code> stop for "
+                        f"<b>{ticker}</b>\n"
+                        f"Market: {market_id.upper()} | "
+                        f"Order: <code>{order_id[:16]}</code> | "
+                        f"Retry: {entry['retry_count']}/{_HELD_MAX_RETRIES}"
+                    )
+                except Exception as tg_exc:
+                    logger.warning(
+                        "_handle_held_stops: Telegram alert failed (non-fatal): %s",
+                        tg_exc,
+                    )
+        else:
+            err_msg = (
+                getattr(cancel_result, "message", "unknown")
+                if cancel_result else "cancel_order returned None"
+            )
+            logger.error(
+                "_handle_held_stops: cancel_order FAILED for %s (id=%s): %s",
+                ticker, order_id, err_msg,
+            )
+            errors.append(ticker)
 
     # Clean up state entries for tickers that are no longer held (resolved on their own)
     resolved_keys = [k for k in list(state.keys()) if k.split("::")[0] not in currently_held]
@@ -413,6 +562,7 @@ def sync_market(
             _exec = LiveExecutor.__new__(LiveExecutor)
             _exec._broker = broker
             _exec._connected = True
+            _exec.config = config
 
             reconciled_entries = _exec.reconcile_entry_fills(plan=plan)
             if reconciled_entries:
