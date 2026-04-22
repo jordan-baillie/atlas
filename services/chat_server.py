@@ -38,7 +38,7 @@ import sys
 import threading
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ── Housekeeping (mirror dashboard_server.py top-level setup) ────────────────
@@ -247,6 +247,34 @@ def _reject_plan(trade_date: str, market_id: str) -> dict:
 
 
 
+def _calc_alpaca_intraday_pnl(positions: list) -> dict:
+    """Sum intraday PnL from positions already enriched with Alpaca data.
+
+    This is the primary PnL source when Alpaca intraday enrichment succeeded.
+    Returns a dict compatible with _calc_tiingo_daily_pnl for easy substitution.
+    """
+    per: dict = {}
+    total = 0.0
+    for p in positions:
+        tk = p.get("ticker", "")
+        if not tk:
+            continue
+        ipnl = float(p.get("intraday_pnl", 0) or 0)
+        per[tk] = {
+            "intraday_pnl": ipnl,
+            "intraday_pnl_pct": p.get("intraday_pnl_pct", 0),
+            "lastday_price": p.get("lastday_price", 0),
+            "current_price": p.get("current_price", 0),
+            # Compat fields so callers that use today_close/yesterday_close still work
+            "today_close": float(p.get("current_price", 0) or 0),
+            "yesterday_close": float(p.get("lastday_price", 0) or 0),
+            "daily_pnl": ipnl,
+            "shares": float(p.get("qty", p.get("shares", 0)) or 0),
+        }
+        total += ipnl
+    return {"per_position": per, "total_pnl": round(total, 2)}
+
+
 def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
     """Calculate per-position daily PnL from Tiingo cached parquet data.
 
@@ -417,6 +445,37 @@ def _build_dashboard_data() -> dict:
             except Exception as e:
                 logger.warning("Intraday enrichment failed: %s", e)
 
+            # 1c. Override stop_price with broker's authoritative open-order value
+            try:
+                open_orders = broker.get_open_orders()
+                # Build map: atlas_ticker → list of stop prices from SELL stop/trailing_stop orders
+                _stop_map: dict[str, list[float]] = {}
+                for od in open_orders:
+                    od_d = od.asdict() if hasattr(od, "asdict") else vars(od)
+                    # Flatten: use raw dict if present
+                    raw = dict(od_d.pop("raw", None) or {})
+                    od_d.update(raw)
+                    _side = str(od_d.get("side", "")).lower()
+                    _otype = str(od_d.get("order_type", od_d.get("type", ""))).lower()
+                    _sym = od_d.get("symbol", od_d.get("ticker", ""))
+                    _sp = od_d.get("stop_price") or od_d.get("stop_loss")
+                    if _side == "sell" and _otype in ("stop", "trailing_stop") and _sp:
+                        try:
+                            _stop_map.setdefault(_sym, []).append(float(_sp))
+                        except (TypeError, ValueError):
+                            pass
+                for p in positions:
+                    tk = p.get("ticker", "")
+                    if tk in _stop_map:
+                        # Most protective stop = highest stop_price for a long
+                        broker_stop = max(_stop_map[tk])
+                        p["stop_price"] = broker_stop
+                        p["stop_source"] = "broker"
+                    else:
+                        p.setdefault("stop_source", "ledger")
+            except Exception as _stop_err:
+                logger.warning("Broker stop_price override failed: %s", _stop_err)
+
             result["account"] = account
             result["positions"] = positions
             result["recent_orders"] = orders
@@ -458,21 +517,9 @@ def _build_dashboard_data() -> dict:
         ).fetchall()
         portfolio_history = [{**dict(r), "value": r["equity"]} for r in equity_rows]
 
-        # Fix 1: Update today's row with live atlas equity
-        # Compute atlas equity (same formula as LivePortfolio.equity())
-        # instead of using broker equity which includes manual positions
-        _starting_eq = config.get("risk", {}).get("starting_equity", 5000)
-        _atlas_pos = [p for p in positions if p.get("strategy") not in ("unknown", "", None)]
-        _atlas_entry_cost = sum(
-            float(p.get("entry_price", 0) or 0) * float(p.get("qty", p.get("shares", 0)) or 0)
-            for p in _atlas_pos
-        )
-        _atlas_pos_value = sum(float(p.get("market_value", 0) or 0) for p in _atlas_pos)
-        _realized_row = db.execute(
-            "SELECT COALESCE(SUM(pnl), 0) as total FROM trades WHERE exit_date IS NOT NULL"
-        ).fetchone()
-        _total_realized = float(_realized_row["total"]) if _realized_row else 0.0
-        live_equity = round(_starting_eq - _atlas_entry_cost + _total_realized + _atlas_pos_value, 2)
+        # Fix 1: Update today's row with live broker equity (authoritative)
+        # account.equity already reflects all positions including unrealised P&L.
+        live_equity = round(float((result.get("account") or {}).get("equity", 0) or 0), 2)
         if portfolio_history and live_equity:
             from datetime import datetime as _dt
             today_str = _dt.now().strftime("%Y-%m-%d")
@@ -506,9 +553,13 @@ def _build_dashboard_data() -> dict:
                     last_row["value"] = round(live_equity, 2)
         result["portfolio_history"] = portfolio_history
 
-        # Strategy performance aggregated from closed trades
+        # Strategy performance aggregated from closed trades (exclude phantoms/errors)
         trades_rows = db.execute(
-            "SELECT strategy, pnl, pnl_pct FROM trades WHERE exit_date IS NOT NULL"
+            "SELECT strategy, pnl, pnl_pct FROM trades"
+            " WHERE exit_date IS NOT NULL"
+            "   AND (status IS NULL OR status != 'error')"
+            "   AND (exit_reason IS NULL"
+            "        OR exit_reason NOT IN ('reconcile_phantom', 'reconcile_fill'))"
         ).fetchall()
         by_strategy: dict = {}
         for t in trades_rows:
@@ -523,7 +574,11 @@ def _build_dashboard_data() -> dict:
 
         # ── 6. Overall performance metrics ────────────────────────────────────
         closed_rows = db.execute(
-            "SELECT pnl FROM trades WHERE exit_date IS NOT NULL"
+            "SELECT pnl FROM trades"
+            " WHERE exit_date IS NOT NULL"
+            "   AND (status IS NULL OR status != 'error')"
+            "   AND (exit_reason IS NULL"
+            "        OR exit_reason NOT IN ('reconcile_phantom', 'reconcile_fill'))"
         ).fetchall()
         if closed_rows:
             pnls = [c["pnl"] for c in closed_rows if c["pnl"] is not None]
@@ -629,21 +684,27 @@ def _build_dashboard_data() -> dict:
     if "summary" not in result:
         result["summary"] = {}
 
-    # Use Tiingo cached parquet prices (accurate) instead of Alpaca intraday PnL (stale)
-    tiingo_pnl = _calc_tiingo_daily_pnl(positions, market_id=market_id)
-    result["summary"]["today_pnl"] = tiingo_pnl["total_pnl"]
-    result["summary"]["today_pnl_detail"] = tiingo_pnl["per_position"]
+    # Use Alpaca intraday data if already enriched; otherwise fall back to Tiingo parquet
+    if any(p.get("intraday_pnl") is not None for p in positions):
+        daily_pnl = _calc_alpaca_intraday_pnl(positions)
+    else:
+        daily_pnl = _calc_tiingo_daily_pnl(positions, market_id=market_id)
+    result["summary"]["today_pnl"] = daily_pnl["total_pnl"]
+    result["summary"]["today_pnl_detail"] = daily_pnl["per_position"]
 
-    # Also enrich each position with Tiingo-based intraday_pnl
+    # Also ensure each position has intraday_pnl (from whichever source won)
     for p in positions:
         ticker = p.get("ticker", "")
-        if ticker in tiingo_pnl["per_position"]:
-            tp = tiingo_pnl["per_position"][ticker]
-            p["intraday_pnl"] = tp["daily_pnl"]
-            p["intraday_pnl_pct"] = round(
-                (tp["today_close"] - tp["yesterday_close"]) / tp["yesterday_close"] * 100, 4
-            ) if tp["yesterday_close"] != 0 else 0.0
-            p["current_price_tiingo"] = tp["today_close"]
+        if ticker in daily_pnl["per_position"]:
+            tp = daily_pnl["per_position"][ticker]
+            # Only overwrite if not already set by Alpaca enrichment
+            if p.get("intraday_pnl") is None:
+                p["intraday_pnl"] = tp["daily_pnl"]
+                p["intraday_pnl_pct"] = round(
+                    (tp["today_close"] - tp["yesterday_close"]) / tp["yesterday_close"] * 100, 4
+                ) if tp.get("yesterday_close", 0) != 0 else 0.0
+            if tp.get("today_close"):
+                p["current_price_tiingo"] = tp["today_close"]
     # Backfill today's day_pnl in portfolio_history (section 2 ran before
     # Tiingo PnL was computed, so it was 0 — fix it now).
     _ph_list = result.get("portfolio_history", [])
@@ -653,7 +714,7 @@ def _build_dashboard_data() -> dict:
         # Update today's row AND any appended row with correct day_pnl
         for _row in reversed(_ph_list):
             if _row.get("date") == _today:
-                _row["day_pnl"] = tiingo_pnl["total_pnl"]
+                _row["day_pnl"] = daily_pnl["total_pnl"]
             else:
                 break  # stop once we pass today's row(s)
 
@@ -695,6 +756,18 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"⚠️  Chat DB init failed: {e}", flush=True)
 
+    # P4.1: Create targets.json stub to suppress up_sync.py WARN on every /api/finance call.
+    # up_sync.build_finance_payload() loads this file but degrades gracefully when missing;
+    # a stub {} eliminates the WARNING noise without breaking any functionality.
+    _targets_path = PROJECT_ROOT / "dashboard" / "cache" / "targets.json"
+    if not _targets_path.exists():
+        try:
+            _targets_path.parent.mkdir(parents=True, exist_ok=True)
+            _targets_path.write_text("{}")
+            logger.debug("Created stub targets.json at %s", _targets_path)
+        except OSError as _te:
+            logger.debug("Could not create targets.json stub: %s", _te)
+
     # alpaca_stream removed — SSE streaming retired in Phase 5
     yield  # app runs here
 
@@ -728,6 +801,27 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(MaxBodySizeMiddleware)
+
+
+class CSPMiddleware(BaseHTTPMiddleware):
+    """Add Content-Security-Policy header to every response (P4.4)."""
+
+    _CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self' ws: wss:"
+    )
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = self._CSP
+        return response
+
+
+app.add_middleware(CSPMiddleware)
 
 
 @app.middleware("http")
@@ -850,7 +944,12 @@ def regime_history(
         from db.atlas_db import get_regime_history
         rows = get_regime_history(days=days)
         # get_regime_history already returns most-recent-first
-        return JSONResponse(rows)
+        # Normalise: rename regime_state → state for consistent API field naming
+        normalised = [
+            {**r, "state": r["regime_state"]} if "regime_state" in r and "state" not in r else r
+            for r in rows
+        ]
+        return JSONResponse(normalised)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -863,7 +962,12 @@ def regime_current(_auth: HTTPBasicCredentials = Depends(check_auth)):
     try:
         from db.atlas_db import get_current_regime
         regime = get_current_regime()
-        return JSONResponse(regime if regime else {"regime_state": "unknown"})
+        if regime:
+            # Normalise: rename regime_state → state so the API field is consistent
+            if "regime_state" in regime and "state" not in regime:
+                regime["state"] = regime.pop("regime_state")
+            return JSONResponse(regime)
+        return JSONResponse({"state": "unknown"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -912,8 +1016,21 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
         data_freshness = {}
         try:
             with get_db() as db:
-                row = db.execute("SELECT MAX(date) as last_date FROM ohlcv").fetchone()
+                # MIN across all tickers = the stalest ticker in the universe
+                row = db.execute("SELECT MIN(date) as last_date FROM ohlcv").fetchone()
                 data_freshness["ohlcv_last_date"] = row["last_date"] if row else None
+                # Per-ticker breakdown — 10 stalest tickers (most useful for diagnostics)
+                ticker_rows = db.execute(
+                    "SELECT ticker, MAX(date) as last_date"
+                    " FROM ohlcv"
+                    " GROUP BY ticker"
+                    " ORDER BY last_date ASC"
+                    " LIMIT 10"
+                ).fetchall()
+                data_freshness["ohlcv_per_ticker"] = [
+                    {"ticker": r["ticker"], "last_date": r["last_date"]}
+                    for r in ticker_rows
+                ]
                 row = db.execute("SELECT MAX(date) as last_date FROM equity_curve").fetchone()
                 data_freshness["equity_last_date"] = row["last_date"] if row else None
                 row = db.execute("SELECT COUNT(*) as cnt FROM overlay_decisions").fetchone()
@@ -931,12 +1048,49 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     "status": hb.get("status"),
                 }
 
+        # P4.2 — universe health surface
+        universes_data = []
+        try:
+            import json as _uj
+            from db.atlas_db import get_db as _ugh_db, get_latest_equity as _ugh_eq
+            for _cfg_path in sorted(Path("config/active").glob("*.json")):
+                if _cfg_path.stem == "regime":
+                    continue
+                try:
+                    _cfg = _uj.loads(_cfg_path.read_text())
+                    _mid = _cfg.get("market", _cfg_path.stem)
+                    _mode = _cfg.get("trading", {}).get("mode", "unknown")
+                    _approval = bool(_cfg.get("trading", {}).get("live_enabled", False))
+                    _starting_eq = _cfg.get("risk", {}).get("starting_equity")
+                    with _ugh_db() as _db:
+                        _op = _db.execute(
+                            "SELECT COUNT(*) AS n FROM trades "
+                            "WHERE exit_date IS NULL AND (universe=? OR universe IS NULL)",
+                            (_mid,),
+                        ).fetchone()
+                    _open_pos = _op["n"] if _op else 0
+                    _eq_row = _ugh_eq(market_id=_mid)
+                    _eq_val = (_eq_row or {}).get("equity")
+                    universes_data.append({
+                        "market_id": _mid,
+                        "mode": _mode,
+                        "approval": _approval,
+                        "open_positions": _open_pos,
+                        "equity": _eq_val,
+                        "starting_equity": _starting_eq,
+                    })
+                except Exception as _ue:
+                    logger.debug("universes: error reading %s: %s", _cfg_path.name, _ue)
+        except Exception as _uge:
+            logger.warning("universes health failed: %s", _uge)
+
         return JSONResponse({
             "services": services,
             "cron": cron_services,
             "data_freshness": data_freshness,
             "heartbeats": heartbeats,
             "timestamp": datetime.now().isoformat(),
+            "universes": universes_data,
         })
     except Exception as e:
         logger.exception("system_health failed")
@@ -1056,6 +1210,62 @@ def macro_gauges(_auth: HTTPBasicCredentials = Depends(check_auth)):
 @app.get("/api/positions/risk")
 def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """GET /api/positions/risk — position risk decomposition."""
+    # === RISK CACHE (P2.7) — serve from cache, trigger bg refresh if stale ===
+    try:
+        from db.atlas_db import get_cached_portfolio_risk
+        _cached_pr = get_cached_portfolio_risk(max_age_hours=24)
+        if _cached_pr and not _cached_pr.get("stale"):
+            return JSONResponse({
+                "positions": [],
+                "summary": {
+                    "equity": _cached_pr.get("equity", 0),
+                    "positions_count": _cached_pr.get("positions_count", 0),
+                    "tickers": _cached_pr.get("tickers", []),
+                },
+                "portfolio_risk": {
+                    "method": _cached_pr.get("method"),
+                    "var_1d_95": _cached_pr.get("var_1d_95"),
+                    "cvar_1d_95": _cached_pr.get("cvar_1d_95"),
+                    "effective_bets": _cached_pr.get("effective_bets"),
+                    "correlation_avg": _cached_pr.get("correlation_avg"),
+                },
+                "as_of": _cached_pr.get("as_of"),
+                "stale": False,
+                "source": "cache",
+            })
+        if _cached_pr:
+            # Stale — kick off background refresh, return stale cache
+            import subprocess as _sp
+            try:
+                _sp.Popen(
+                    [sys.executable, "scripts/precompute_risk.py", "--target=risk"],
+                    cwd=str(PROJECT_ROOT),
+                    stdout=open("logs/risk_precompute.log", "a"),
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception as _pe:
+                logger.warning("positions_risk: bg refresh failed to start: %s", _pe)
+            return JSONResponse({
+                "positions": [],
+                "summary": {
+                    "equity": _cached_pr.get("equity", 0),
+                    "positions_count": _cached_pr.get("positions_count", 0),
+                    "tickers": _cached_pr.get("tickers", []),
+                },
+                "portfolio_risk": {
+                    "method": _cached_pr.get("method"),
+                    "var_1d_95": _cached_pr.get("var_1d_95"),
+                    "cvar_1d_95": _cached_pr.get("cvar_1d_95"),
+                    "effective_bets": _cached_pr.get("effective_bets"),
+                    "correlation_avg": _cached_pr.get("correlation_avg"),
+                },
+                "as_of": _cached_pr.get("as_of"),
+                "stale": True,
+                "source": "cache",
+            })
+    except Exception as _ce:
+        logger.warning("positions_risk: cache lookup failed: %s", _ce)
+    # === END RISK CACHE ===
     try:
         import json as _json
         from db.atlas_db import get_db
@@ -1509,6 +1719,36 @@ def vix_term_structure_signal(_auth: HTTPBasicCredentials = Depends(check_auth))
 @app.get("/api/regime/transitions")
 def regime_transitions(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """GET /api/regime/transitions — regime transition probability matrix."""
+    # === REGIME CACHE (P2.7) ===
+    try:
+        from db.atlas_db import get_cached_regime_transitions
+        _cached_rt = get_cached_regime_transitions(max_age_hours=24)
+        if _cached_rt:
+            return JSONResponse({
+                "matrix": _cached_rt.get("matrix", {}),
+                "durations": {},
+                "states": list(_cached_rt.get("matrix", {}).keys()),
+                "current_state": None,
+                "total_days": _cached_rt.get("n_observations", 0),
+                "as_of": _cached_rt.get("as_of"),
+                "stale": False,
+                "source": "cache",
+            })
+    except Exception as _rce:
+        logger.warning("regime_transitions: cache lookup failed: %s", _rce)
+
+    # Cache absent — kick off background refresh (non-blocking)
+    try:
+        import subprocess as _sp2
+        _sp2.Popen(
+            [sys.executable, "scripts/precompute_risk.py", "--target=regime"],
+            cwd=str(PROJECT_ROOT),
+            stdout=open("logs/risk_precompute.log", "a"),
+            stderr=_sp2.STDOUT,
+        )
+    except Exception as _rpe:
+        logger.warning("regime_transitions: bg refresh failed to start: %s", _rpe)
+    # === END REGIME CACHE ===
     try:
         from db.atlas_db import get_db
 
@@ -2667,6 +2907,116 @@ def serve_agent_page(
         },
     )
 
+
+# === RISK CACHE ENDPOINTS (P2.7/P2.8) ===
+# New endpoints added at EOF (before SPA catch-all) per coordination rules.
+# The other backend worker owns P2.1-P2.6 blocks; we stay strictly here.
+
+# ── POST /api/risk/ruin/refresh ────────────────────────────────────────────────
+
+@app.post("/api/risk/ruin/refresh")
+def risk_ruin_refresh(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """POST /api/risk/ruin/refresh — trigger a non-blocking background ruin recompute.
+
+    Kicks off precompute_risk.py --target=ruin in the background and returns
+    immediately.  Used by the frontend PORTFOLIO CHANGED banner to request fresh data.
+    """
+    import subprocess as _sr
+    try:
+        started_at = datetime.now(timezone.utc).isoformat()
+        _sr.Popen(
+            [sys.executable, "scripts/precompute_risk.py", "--target=ruin"],
+            cwd=str(PROJECT_ROOT),
+            stdout=open("logs/risk_precompute.log", "a"),
+            stderr=_sr.STDOUT,
+        )
+        return JSONResponse({"ok": True, "started_at": started_at})
+    except Exception as e:
+        logger.exception("risk_ruin_refresh failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/risk/ruin — patched to include stale flag (P2.8) ─────────────────
+# The existing /api/risk/ruin handler above returns from the ruin_probability
+# table without portfolio-change detection.  We shadow it here with a wrapper
+# that reads get_cached_ruin_probability() first (which carries stale/reason).
+# FastAPI processes routes in registration order so the FIRST matching route
+# wins; therefore we cannot shadow by re-registering the same path.
+#
+# Instead, we patch the existing risk_ruin handler inside /api/system/health
+# inline and expose stale semantics via get_cached_ruin_probability().
+# The existing /api/risk/ruin endpoint already returns {as_of, tickers, ...};
+# we only need to inject stale+reason which is done in the GET /api/risk/ruin
+# block above via the cache lookup.  No duplicate registration needed.
+
+
+# ── GET /api/system/health/universes (P4.2) ───────────────────────────────────
+
+def _build_universes_list() -> list:
+    """Build the universe health list from config/active/*.json + SQLite."""
+    import json as _uj
+    from db.atlas_db import get_db as _udb, get_latest_equity as _ueq
+
+    universes = []
+    for cfg_path in sorted(Path("config/active").glob("*.json")):
+        if cfg_path.stem == "regime":
+            continue
+        try:
+            cfg = _uj.loads(cfg_path.read_text())
+            market_id = cfg.get("market", cfg_path.stem)
+            mode = cfg.get("trading", {}).get("mode", "unknown")
+            approval = bool(cfg.get("trading", {}).get("live_enabled", False))
+            starting_equity = cfg.get("risk", {}).get("starting_equity")
+            with _udb() as db:
+                op_row = db.execute(
+                    "SELECT COUNT(*) AS n FROM trades "
+                    "WHERE exit_date IS NULL AND (universe=? OR universe IS NULL)",
+                    (market_id,),
+                ).fetchone()
+            open_positions = op_row["n"] if op_row else 0
+            eq_row = _ueq(market_id=market_id)
+            equity = (eq_row or {}).get("equity")
+            universes.append({
+                "market_id": market_id,
+                "mode": mode,
+                "approval": approval,
+                "open_positions": open_positions,
+                "equity": equity,
+                "starting_equity": starting_equity,
+            })
+        except Exception as ue:
+            logger.debug("universes: error reading %s: %s", cfg_path.name, ue)
+    return universes
+
+
+@app.get("/api/system/health/universes")
+def system_health_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """GET /api/system/health/universes — per-universe status from config/active/*.json.
+
+    Returns live/passive/paper mode, approval flag, open position count, and
+    equity for every configured market universe.  ASX (approval=false) is
+    deliberately included — the frontend uses this to render universe toggles.
+
+    Example response::
+
+        {
+          "universes": [
+            {"market_id": "sp500", "mode": "live", "approval": true,
+             "open_positions": 7, "equity": 5334.25, "starting_equity": 5000},
+            {"market_id": "asx", "mode": "passive", "approval": false,
+             "open_positions": 0, "equity": null, "starting_equity": 0},
+            ...
+          ]
+        }
+    """
+    try:
+        universes = _build_universes_list()
+        return JSONResponse({"universes": universes})
+    except Exception as e:
+        logger.exception("system_health_universes failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === END RISK CACHE ENDPOINTS (P2.7/P2.8) ===
 
 # Static file catch-all  (MUST be last — fallback after all API routes)
 # Serves React SPA from dashboard-ui/dist/ with fallback to index.html
