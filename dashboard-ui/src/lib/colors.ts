@@ -15,14 +15,32 @@ export const STRATEGY_COLORS: Record<string, string> = {
   short_term_mr: '#a855f7',
 }
 
+// New 6-state regime taxonomy (canonical keys)
 export const REGIME_COLORS: Record<string, string> = {
-  bull_quiet: '#22c55e',
-  bull_volatile: '#84cc16',
-  bear_quiet: '#ef4444',
-  bear_volatile: '#dc2626',
-  neutral: '#a1a1aa',
-  transition_uncertain: '#f59e0b',
+  bull_risk_on:         '#16a34a',   // bright green
+  bull_risk_off:        '#65a30d',   // olive green
+  transition_uncertain: '#f59e0b',   // amber
+  bear_risk_off:        '#dc2626',   // red
+  bear_capitulation:    '#7f1d1d',   // dark red
+  recovery_early:       '#0ea5e9',   // sky blue
+
+  // Legacy aliases — old DB rows may still have these strings
+  bull_quiet:           '#65a30d',   // → bull_risk_off color
+  bull_volatile:        '#16a34a',   // → bull_risk_on color
+  bear_quiet:           '#dc2626',   // → bear_risk_off color
+  bear_volatile:        '#7f1d1d',   // → bear_capitulation color
+  neutral:              '#a1a1aa',   // grey (no equivalent in new schema)
 }
+
+// The canonical new-schema names (used to filter legend)
+export const CANONICAL_REGIME_NAMES = [
+  'bull_risk_on',
+  'bull_risk_off',
+  'transition_uncertain',
+  'bear_risk_off',
+  'bear_capitulation',
+  'recovery_early',
+] as const
 
 export function getStrategyColor(name: string | null | undefined): string {
   if (!name) return '#a1a1aa'

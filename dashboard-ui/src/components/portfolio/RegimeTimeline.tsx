@@ -1,5 +1,5 @@
 import type { RegimeHistoryDay } from '../../api/types'
-import { getRegimeColor, REGIME_COLORS } from '../../lib/colors'
+import { getRegimeColor, CANONICAL_REGIME_NAMES } from '../../lib/colors'
 
 interface Props { history: RegimeHistoryDay[] }
 
@@ -83,8 +83,10 @@ export function RegimeTimeline({ history }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-3 mt-3">
-        {(states.length > 0 ? states : Object.keys(REGIME_COLORS)).map((s) => {
+        {CANONICAL_REGIME_NAMES.map((s) => {
           const isCurrent = s === currentState
+          const seen = states.includes(s)
+          if (!seen && !isCurrent) return null
           return (
             <div
               key={s}

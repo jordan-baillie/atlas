@@ -176,6 +176,9 @@ export interface RegimeTransitions {
   states?: string[]
   current_state?: string
   total_days?: number
+  as_of?: string
+  stale?: boolean
+  reason?: string
 }
 
 // ============================================================================
@@ -345,6 +348,9 @@ export interface PositionRisk {
   portfolio_risk?: PortfolioRiskMetrics | null
   vol_cones?: Record<string, VolConeInfo>
   stop_probability?: Record<string, StopProbabilityEntry>
+  as_of?: string
+  stale?: boolean
+  reason?: string
 }
 
 // ============================================================================
@@ -632,6 +638,8 @@ export interface RuinProbability {
   horizons: Record<string, RuinHorizon>
   status?: string
   source?: string
+  stale?: boolean
+  reason?: string
 }
 
 export interface ForecastHorizon {
@@ -671,4 +679,17 @@ export interface StrategyEV {
 export interface SignalEVResponse {
   strategies: StrategyEV[]
   source?: string
+}
+
+// ============================================================================
+// /api/system/health/universes
+// ============================================================================
+
+export interface UniverseInfo {
+  market_id?: string
+  name?: string
+  mode?: string          // 'active' | 'passive' | etc.
+  exchange?: string
+  currency?: string
+  region?: string
 }
