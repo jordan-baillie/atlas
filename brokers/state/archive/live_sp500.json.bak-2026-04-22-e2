@@ -30,12 +30,39 @@
       "order_id": ""
     },
     {
+      "ticker": "GLD",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 442.8,
+      "shares": 2,
+      "stop_price": 420.65999999999997,
+      "order_id": ""
+    },
+    {
       "ticker": "ON",
       "strategy": "reconciled",
       "entry_date": "2026-04-22",
       "entry_price": 85.51,
       "shares": 4,
       "stop_price": 81.16,
+      "order_id": ""
+    },
+    {
+      "ticker": "UNG",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 10.68,
+      "shares": 54,
+      "stop_price": 10.145999999999999,
+      "order_id": ""
+    },
+    {
+      "ticker": "XLY",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 116.44,
+      "shares": 10,
+      "stop_price": 110.618,
       "order_id": ""
     }
   ],
@@ -1805,5 +1832,5 @@
   "daily_high_water": 5374.77,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-22T11:04:30.839135"
+  "last_saved": "2026-04-22T10:00:13.319390"
 }

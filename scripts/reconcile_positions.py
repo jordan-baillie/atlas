@@ -170,10 +170,56 @@ def reconcile_positions(
 
         # ── Get broker positions ──────────────────────────────
         broker_positions = broker.get_positions()
-        result["summary"]["broker_count"] = len(broker_positions)
 
-        # Build lookup: ticker -> broker position
-        broker_map = {p.ticker: p for p in broker_positions}
+        # Load universe tickers for this market
+        universe_tickers: set = set()
+        try:
+            from universe.builder import get_universe_tickers
+            universe_tickers = set(get_universe_tickers(market_id))
+        except Exception as _u_exc:
+            logger.warning("Could not load universe tickers for %s: %s", market_id, _u_exc)
+
+        # Load state-file tickers (already loaded into internal_map above — reuse)
+        state_tickers = set(internal_map.keys())
+
+        # Load tickers tracked by OTHER markets — positions managed elsewhere should
+        # not be flagged as UNTRACKED for this market even if they are in the universe
+        # (e.g. FCX is in commodity_etfs universe but managed under sp500).
+        other_market_tickers: set = set()
+        for _other_market in _MARKETS:
+            if _other_market == market_id:
+                continue
+            _other_path = PROJECT / "brokers" / "state" / f"live_{_other_market}.json"
+            if _other_path.exists():
+                try:
+                    import json as _json
+                    _other_state = _json.loads(_other_path.read_text())
+                    for _op in _other_state.get("positions", []):
+                        other_market_tickers.add(_op["ticker"])
+                except Exception as _om_exc:
+                    logger.debug("Could not load other-market state %s: %s", _other_market, _om_exc)
+
+        # Accept a broker position if EITHER: it's in the universe OR it's in this
+        # market's state file. This catches tickers held by the market but outside
+        # the universe definition (e.g. sector ETFs tracked in live_<market>.json).
+        # BUT: exclude tickers actively managed by another market (avoids cross-market UNTRACKED noise).
+        if universe_tickers or state_tickers:
+            _allow = (universe_tickers - other_market_tickers) | state_tickers
+            broker_map = {p.ticker: p for p in broker_positions if p.ticker in _allow}
+            _skipped = len(broker_positions) - len(broker_map)
+            if _skipped:
+                logger.info(
+                    "Filtered broker positions for %s: %d in-scope (universe=%d, state_file=%d, other_market_exclusions=%d), %d skipped",
+                    market_id, len(broker_map), len(universe_tickers), len(state_tickers), len(other_market_tickers), _skipped,
+                )
+        else:
+            broker_map = {p.ticker: p for p in broker_positions}
+            logger.warning(
+                "Could not load universe OR state tickers for %s — using ALL broker positions",
+                market_id,
+            )
+
+        result["summary"]["broker_count"] = len(broker_map)  # report in-scope count, not raw broker count
 
         # ── Compare: internal vs broker ──────────────────────
 
@@ -248,9 +294,11 @@ def reconcile_positions(
         if fix and result["discrepancies"] and not dry_run:
             logger.info("Applying fixes to internal state...")
             
-            # Build corrected positions list from broker
+            # Build corrected positions list from in-scope broker positions only.
+            # Use broker_map (already filtered by universe∪state) to avoid pulling
+            # cross-market positions (e.g. commodity ETFs) into this market's state.
             corrected_positions = []
-            for bp in broker_positions:
+            for bp in broker_map.values():
                 # Preserve strategy/entry_date/stop_price from internal if available
                 internal_pos = internal_map.get(bp.ticker, {})
                 corrected_positions.append({

@@ -3,12 +3,48 @@
   "mode": "live",
   "positions": [
     {
+      "ticker": "AMD",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 278.25,
+      "shares": 2,
+      "stop_price": 264.3375,
+      "order_id": ""
+    },
+    {
+      "ticker": "CHTR",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 243.93,
+      "shares": 1,
+      "stop_price": 231.7335,
+      "order_id": ""
+    },
+    {
+      "ticker": "FCX",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-22",
+      "entry_price": 68.03,
+      "shares": 5,
+      "stop_price": 66.755,
+      "order_id": ""
+    },
+    {
       "ticker": "GLD",
       "strategy": "momentum_breakout",
       "entry_date": "2026-04-22",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 418.105,
+      "order_id": ""
+    },
+    {
+      "ticker": "ON",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 85.51,
+      "shares": 4,
+      "stop_price": 81.2345,
       "order_id": ""
     },
     {
@@ -366,5 +402,5 @@
   "daily_high_water": 5036.06,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-22T11:04:30.841127"
+  "last_saved": "2026-04-22T09:00:13.410947"
 }

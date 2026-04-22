@@ -16,6 +16,9 @@
 #
 # Cron: 0 * * * * /root/atlas/scripts/healthz_hourly.sh
 # ═══════════════════════════════════════════════════════════════
+# NOTE (2026-04-22): --fix is disabled by default until the reconcile_positions
+# universe∪state-file filter is validated across 2 daily cycles. Set
+# ATLAS_RECONCILE_AUTOFIX=1 in the environment (or cron line) to re-enable.
 set -uo pipefail
 unset ANTHROPIC_API_KEY CLAUDE_API_KEY  # Atlas hardening: force pi to use OAuth (Claude Max)
 
@@ -53,8 +56,15 @@ DOW=$(date +%u)  # 1=Mon, 7=Sun
 HOUR=$(date +%H)
 if [ "$DOW" -le 5 ] || [ "$DOW" -eq 6 ]; then
     # Tue-Sat AEST covers Mon-Fri US sessions
+    # E2 mitigation: only pass --fix when explicitly enabled.
+    # Until the universe∪state filter is validated across 2 full daily cycles,
+    # auto-fix runs in REPORT-ONLY mode.
+    RECONCILE_FIX_FLAG=""
+    if [ "${ATLAS_RECONCILE_AUTOFIX:-0}" = "1" ]; then
+        RECONCILE_FIX_FLAG="--fix"
+    fi
     for MKT in sp500 commodity_etfs; do
-        MKT_OUT=$(python3 "$RECONCILE" --market "$MKT" --fix 2>&1) || MKT_EXIT=$?
+        MKT_OUT=$(python3 "$RECONCILE" --market "$MKT" $RECONCILE_FIX_FLAG 2>&1) || MKT_EXIT=$?
         log "Reconcile $MKT exit code: ${MKT_EXIT:-0}"
         if [ -n "$MKT_OUT" ]; then
             log "Reconcile $MKT output:"
