@@ -59,6 +59,8 @@ class BacktestResult:
     metrics: Dict[str, Any] = field(default_factory=dict)
     benchmark_metrics: Dict[str, Any] = field(default_factory=dict)
     walk_forward_windows: List[Dict[str, Any]] = field(default_factory=list)
+    windows_configured: int = 0
+    windows_skipped: int = 0
 
     def summary(self) -> str:
         """Return a human-readable summary of backtest results."""
@@ -1167,6 +1169,10 @@ class BacktestEngine:
         equity_history: List[float] = []  # Phase 8D: track equity for dynamic sizing
         walk_forward_windows: List[Dict[str, Any]] = []
 
+        # Walk-forward window coverage counters (surfaced in BacktestResult)
+        windows_configured = 0
+        windows_skipped = 0
+
         # Phase1-Fix3: Persistent positions across windows
         open_positions: List[Dict[str, Any]] = []
         # Track which dates have been simulated to avoid double-processing
@@ -1289,6 +1295,7 @@ class BacktestEngine:
         window_num = 0
 
         while window_start + self.train_window + self.test_window <= total_days:
+            windows_configured += 1
             window_num += 1
             train_start_idx = window_start
             train_end_idx = window_start + self.train_window - 1
@@ -1343,6 +1350,7 @@ class BacktestEngine:
 
             if not window_data:
                 logger.warning(f"Window {window_num}: no data, skipping")
+                windows_skipped += 1
                 window_start += self.step_days
                 continue
 
@@ -1487,6 +1495,8 @@ class BacktestEngine:
             metrics=metrics,
             benchmark_metrics=benchmark_metrics,
             walk_forward_windows=walk_forward_windows,
+            windows_configured=windows_configured,
+            windows_skipped=windows_skipped,
         )
 
         logger.info(f"Backtest complete: {len(all_trades)} total trades")

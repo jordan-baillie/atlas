@@ -25,6 +25,10 @@ ATLAS_ROOT = DISCOVERY_DIR.parent.parent
 if str(ATLAS_ROOT) not in sys.path:
     sys.path.insert(0, str(ATLAS_ROOT))
 
+# Lazy import: research.db available only after sys.path is configured above.
+# Import is deferred to call-time inside discover_daily() to avoid module-level
+# ImportError if atlas root is not on the path in some execution contexts.
+
 logger = logging.getLogger("discovery")
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
@@ -188,6 +192,8 @@ def _filter_papers(papers: list) -> list:
     if not papers:
         return []
 
+    logger.info("filter_papers: evaluating %d input papers via Claude", len(papers))
+
     prompt_file = PROMPTS_DIR / "filter.md"
     if not prompt_file.exists():
         logger.warning("filter.md prompt not found — passing all %d papers", len(papers))
@@ -220,6 +226,25 @@ def _filter_papers(papers: list) -> list:
         filtered = [p for p in scored if isinstance(p, dict)]
 
     logger.info("filter_papers: %d → %d (score ≥ 6)", len(papers), len(filtered))
+
+    # Verbose diagnostics
+    scored_count = len(scored)
+    rejected = [p for p in scored if isinstance(p, dict) and p.get("score", 0) < 6]
+    logger.info("filter_papers diagnostics: input=%d, scored=%d, kept(>=6)=%d, rejected(<6)=%d",
+                len(papers), scored_count, len(filtered), len(rejected))
+
+    if rejected:
+        # Show up to 5 rejected papers with titles and scores
+        for p in rejected[:5]:
+            logger.info("  REJECT score=%s: %s",
+                        p.get("score", "?"),
+                        (p.get("title") or p.get("url") or "<untitled>")[:80])
+
+    if scored_count == 0 and len(papers) > 0:
+        logger.warning("filter_papers: claude returned 0 scored items from %d input — "
+                       "likely parse error; first raw result type=%s",
+                       len(papers), type(result).__name__)
+
     return filtered
 
 
@@ -666,6 +691,24 @@ def discover_daily() -> DailyReport:
         _log_daily_run(report)
     except Exception as e:
         logger.error("_log_daily_run failed: %s", e)
+
+    # Log to research_discoveries SQLite table for dashboard visibility
+    try:
+        from research.db import log_discovery  # noqa: PLC0415 — deferred (sys.path)
+        log_discovery(
+            run_date=today,
+            papers_found=papers_found,
+            papers_filtered=papers_filtered,
+            specs_extracted=specs_extracted,
+            strategies_generated=len(strategies_generated),
+            paper_titles=[
+                (p.get("title") if isinstance(p, dict) else str(p))
+                for p in papers[:20]  # cap to 20 to keep the row small
+            ],
+            status="completed" if not errors else "partial",
+        )
+    except Exception as exc:
+        logger.warning("log_discovery failed (non-fatal): %s", exc)
 
     try:
         _send_telegram_digest(report)

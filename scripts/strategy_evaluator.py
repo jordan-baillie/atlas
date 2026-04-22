@@ -330,7 +330,16 @@ def run_backtest(cfg: dict, data: dict, strategy_names: list = None) -> dict:
         # Monte Carlo drawdown
         'mc_p95_drawdown_pct': round(m.get('mc_p95_drawdown', 0) * 100, 2),
         'mc_fragile': m.get('mc_fragile', False),
+        # Walk-forward window coverage (Gate 5 in research.loop.keep_or_discard)
+        'windows_configured': getattr(result, 'windows_configured', 0) or m.get('windows_configured', 0),
+        'windows_used': len(getattr(result, 'walk_forward_windows', []) or []),
+        'window_coverage_pct': 0.0,  # computed next
     }
+
+    # Compute walk-forward window coverage percentage
+    wc = metrics.get('windows_configured', 0) or 0
+    wu = metrics.get('windows_used', 0) or 0
+    metrics['window_coverage_pct'] = round(100.0 * wu / wc, 2) if wc > 0 else 100.0
 
     # Per-strategy breakdown if available
     if hasattr(result, 'strategy_breakdown') and result.strategy_breakdown:

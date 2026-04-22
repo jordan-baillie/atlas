@@ -16,6 +16,7 @@
 #   55 18 * * 1-5  /root/atlas/scripts/pi-cron.sh reconcile sp500
 #   00 10 1 * *    /root/atlas/scripts/pi-cron.sh calibrate sp500
 #   00 8  * * 0    /root/atlas/scripts/pi-cron.sh rejected-signals sp500
+#   00 7  * * *   /root/atlas/scripts/cleanup_research_locks.sh   # purge research/locks/*.json >7d old
 #
 # Setup:
 #   1. Ensure pi is logged in: pi (interactive) — OAuth login persists in ~/.pi/agent/auth.json
