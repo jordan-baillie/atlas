@@ -452,8 +452,28 @@ class LivePortfolio:
             # Build lookup from existing state
             existing = {p.get("ticker"): p for p in state.get("positions", [])}
 
+            # Universe-membership guard: prevents cross-market ticker contamination
+            # (e.g., sector_etfs tickers bleeding into commodity_etfs state).
+            # self.positions is already filtered on load, but this is defence-in-depth
+            # for code paths (e.g. reconcile_entry_fills) that append to self.positions
+            # directly without going through _refresh_from_broker.
+            try:
+                from markets import get_market as _get_market
+                _market_profile = _get_market(self.market_id)
+                _universe_tickers: set | None = set(_market_profile.get_formatted_tickers())
+            except Exception:
+                _universe_tickers = None  # fail open — don't filter if universe unknown
+
             merged = []
             for pos in self.positions:
+                # Skip tickers that don't belong to this market's universe
+                if _universe_tickers is not None and pos.ticker not in _universe_tickers:
+                    logger.warning(
+                        "_update_state_positions: %s is not in %s universe — "
+                        "skipping state backfill (belongs to another universe)",
+                        pos.ticker, self.market_id,
+                    )
+                    continue
                 prev = existing.get(pos.ticker, {})
                 merged.append({
                     "ticker": pos.ticker,

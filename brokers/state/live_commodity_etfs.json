@@ -3,13 +3,26 @@
   "mode": "live",
   "positions": [
     {
+      "ticker": "FCX",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-22",
+      "entry_price": 68.03,
+      "shares": 5,
+      "stop_price": 66.755,
+      "order_id": "",
+      "stop_order_id": "5393b1d1-001b-4b8d-a251-5a5cc4c64e0b",
+      "tp_order_id": ""
+    },
+    {
       "ticker": "GLD",
       "strategy": "momentum_breakout",
       "entry_date": "2026-04-22",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 418.105,
-      "order_id": ""
+      "order_id": "",
+      "stop_order_id": "70b8e824-e8c3-4092-81f6-47fcbabeb7ad",
+      "tp_order_id": ""
     },
     {
       "ticker": "UNG",
@@ -18,16 +31,9 @@
       "entry_price": 10.68,
       "shares": 54,
       "stop_price": 10.47,
-      "order_id": ""
-    },
-    {
-      "ticker": "XLY",
-      "strategy": "unknown",
-      "entry_date": "2026-04-22",
-      "entry_price": 116.44,
-      "shares": 10,
-      "stop_price": 110.618,
-      "order_id": ""
+      "order_id": "",
+      "stop_order_id": "36edef0f-37ae-4ec9-bfd3-3d2be113ac17",
+      "tp_order_id": ""
     }
   ],
   "closed_trades": [],
