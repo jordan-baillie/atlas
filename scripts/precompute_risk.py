@@ -20,6 +20,7 @@ Also triggered on-demand via POST /api/risk/ruin/refresh and when
 from __future__ import annotations
 
 import argparse
+import os
 import json
 import logging
 import sys
@@ -37,6 +38,14 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 logger = logging.getLogger("precompute_risk")
+
+# Allow tests / CI to point the script at a specific DB without patching code.
+_atlas_db_override = os.environ.get("ATLAS_DB_PATH")
+if _atlas_db_override:
+    import db.atlas_db as _adb_mod
+    _adb_mod._db_path_override = _atlas_db_override
+    _adb_mod._risk_cache_tables_ensured = False
+    logger.info("DB override from ATLAS_DB_PATH: %s", _atlas_db_override)
 
 
 REGIME_STATES = [
