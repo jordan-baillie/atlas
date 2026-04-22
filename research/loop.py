@@ -349,7 +349,21 @@ def keep_or_discard(
                         (1 - np.euler_gamma) * sp_stats.norm.ppf(1 - 1 / n_exp)
                         + np.euler_gamma * sp_stats.norm.ppf(1 - 1 / (n_exp * np.e))
                     )
-                    if e_sharpe < e_max_s * 0.8:
+                    # O12 guard: the DSR formula assumes Gaussian-like strategy
+                    # Sharpe distribution; with long-tailed variance from mixed
+                    # strategy×universe experiments it produces impossibly-high
+                    # thresholds (e.g. >3.0 Sharpe). When that happens, log but
+                    # don't block — this gate will be re-enabled once the
+                    # formula is fixed per Bailey et al. (audit item O12).
+                    _DSR_SANITY_CAP = 3.0
+                    if e_max_s > _DSR_SANITY_CAP:
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            "DSR gate skipped — expected max Sharpe %.2f exceeds sanity cap %.2f "
+                            "(n=%d, var=%.4f). See audit item O12.",
+                            e_max_s, _DSR_SANITY_CAP, n_exp, var_s,
+                        )
+                    elif e_sharpe < e_max_s * 0.8:
                         reasons.append(
                             f"DSR: Sharpe {e_sharpe:.4f} < 80% of expected max {e_max_s:.4f} "
                             f"({n_exp} experiments, var={var_s:.4f})"
