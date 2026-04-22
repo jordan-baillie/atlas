@@ -1594,8 +1594,24 @@ def regime_forecast(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
 @app.get("/api/risk/ruin")
 def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
-    """GET /api/risk/ruin — portfolio probability of ruin."""
+    """GET /api/risk/ruin — portfolio probability of ruin.
+
+    P2.8: response always includes ``stale`` (bool) and ``reason`` (str|None).
+    - ``stale=False`` — cache is fresh and portfolio unchanged
+    - ``stale=True, reason="portfolio_changed"`` — cached tickers differ from
+      current open positions; frontend shows "PORTFOLIO CHANGED — recomputing"
+    """
     try:
+        # P2.8: use cache helper which handles portfolio-change detection
+        from db.atlas_db import get_cached_ruin_probability
+        cached = get_cached_ruin_probability(max_age_hours=24)
+        if cached:
+            # Surface canonical prob at top level for convenience
+            cached.setdefault("status", "ok")
+            cached.setdefault("prob", cached.get("horizons", {}).get("30d", {}).get("prob_ruin", 0.0))
+            return cached
+
+        # No cache or stale by age — run live compute
         import json as _json
         from db.atlas_db import get_db
         with get_db() as db:
@@ -1628,18 +1644,22 @@ def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     "worst_5pct_equity": rd["worst_5pct_equity"],
                     "median_end_equity": rd["median_end_equity"],
                 }
+            prob = horizons.get("30d", {}).get("prob_ruin", 0.0)
             return {
                 "current_equity": current_equity,
                 "floor": floor,
                 "floor_pct": floor_pct,
                 "n_paths": n_paths,
                 "as_of": as_of,
+                "prob": prob,
                 "tickers": tickers,
                 "horizons": horizons,
+                "stale": False,
+                "reason": None,
                 "status": "ok",
-                "source": "cached",
+                "source": "db",
             }
-        
+
         # Fallback: live compute
         from risk.ruin_probability import compute_for_current_portfolio, persist_ruin_probability
         result = compute_for_current_portfolio(floor_pct=0.70)
@@ -1648,6 +1668,9 @@ def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
         except Exception as e:
             logger.warning("persist_ruin_probability failed: %s", e)
         result["source"] = "live"
+        result.setdefault("stale", False)
+        result.setdefault("reason", None)
+        result.setdefault("prob", result.get("horizons", {}).get("30d", {}).get("prob_ruin", 0.0))
         return result
     except Exception as e:
         logger.exception("risk_ruin failed")
