@@ -2742,6 +2742,7 @@ def research_experiments(
     strategy: str = None,
     status: str = None,
     source: str = None,
+    regime: str = None,
     limit: int = 50,
     offset: int = 0,
     _auth: HTTPBasicCredentials = Depends(check_auth),
@@ -2767,6 +2768,10 @@ def research_experiments(
                 query += " AND experiment_type=?"
                 count_query += " AND experiment_type=?"
                 params.append(source)
+            if regime:
+                query += " AND regime_state=?"
+                count_query += " AND regime_state=?"
+                params.append(regime)
 
             total = db.execute(count_query, params).fetchone()["c"]
 

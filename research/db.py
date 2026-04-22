@@ -30,13 +30,27 @@ def log_experiment(
         from db.atlas_db import get_db
         exp_id = f"ar-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         db_status = "kept" if status == "keep" else "discarded" if status == "discard" else status
+
+        # Fetch latest regime_state (non-fatal — column may not exist in old DBs)
+        regime_state = None
+        try:
+            with get_db() as db_ro:
+                row = db_ro.execute(
+                    "SELECT regime_state FROM regime_history ORDER BY date DESC LIMIT 1"
+                ).fetchone()
+                if row:
+                    regime_state = row["regime_state"]
+        except Exception as rexc:
+            logger.debug("regime_state lookup failed: %s", rexc)
+
         with get_db() as db:
             db.execute("""
                 INSERT INTO research_experiments
                     (id, strategy, universe, experiment_type, params_changed, description,
                      sharpe, trades, max_dd_pct, profit_factor, cagr_pct, status,
-                     recommendation, agent_id, completed_at, window_coverage_pct)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     recommendation, agent_id, completed_at, window_coverage_pct,
+                     regime_state)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 exp_id, strategy, market, source,
                 params_changed if params_changed else None,
@@ -49,6 +63,7 @@ def log_experiment(
                 db_status, description, "autoresearch",
                 datetime.now(timezone.utc).isoformat(),
                 float(metrics.get("window_coverage_pct", 100.0) or 100.0),
+                regime_state,
             ))
     except Exception as exc:
         logger.warning("log_experiment failed: %s", exc)
