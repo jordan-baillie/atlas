@@ -260,10 +260,18 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                     continue
 
                 _backfill_strategy = _lookup_strategy(ticker, market_id, state_positions)
+                from universe.membership import derive_universe
+                _derived_universe = derive_universe(ticker, market_id)
+                if _derived_universe != market_id:
+                    log.warning(
+                        "reconcile_ledger: ticker=%s market_id=%s → universe resolved to %s "
+                        "(ticker not in %s universe)",
+                        ticker, market_id, _derived_universe, market_id,
+                    )
                 atlas_db.record_trade_entry(
                     ticker=ticker,
                     strategy=_backfill_strategy,
-                    universe=market_id,
+                    universe=_derived_universe or market_id,
                     entry_price=entry_price,
                     shares=shares,
                     stop_price=_broker_stop,

@@ -17,6 +17,16 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
+def _derive_universe_safe(ticker: str, hint: Optional[str]) -> Optional[str]:
+    """Wrapper around universe.membership.derive_universe that never raises."""
+    try:
+        from universe.membership import derive_universe
+        return derive_universe(ticker, hint)
+    except Exception as exc:
+        logger.warning("derive_universe failed for %s hint=%s: %s — leaving NULL", ticker, hint, exc)
+        return hint or None
+
 PROJECT_ROOT = Path(__file__).parent.parent
 JOURNAL_DIR = PROJECT_ROOT / "journal"
 
@@ -83,7 +93,7 @@ class DecisionJournal:
                 timestamp=entry['timestamp'],
                 ticker=entry['ticker'],
                 strategy=entry['strategy'],
-                universe=entry.get('market_id') or 'sp500',
+                universe=(_derive_universe_safe(entry.get('ticker', ''), entry.get('market_id')) or entry.get('market_id') or 'sp500'),
                 direction=entry.get('direction', 'long'),
                 entry_price=entry['entry_price'],
                 stop_price=entry['stop_price'],
@@ -172,7 +182,7 @@ class TradeLedger:
         fill_record["recorded_at"] = datetime.now().isoformat()
         # Ensure universe is present in the audit trail (parity with SQLite trades table)
         if "universe" not in fill_record:
-            fill_record["universe"] = fill_record.get("market_id") or "sp500"
+            fill_record["universe"] = _derive_universe_safe(fill_record.get("ticker", ""), fill_record.get("market_id"))
         self.trades.append({"type": "entry", **fill_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal
@@ -183,7 +193,7 @@ class TradeLedger:
             atlas_db.record_trade_entry(
                 ticker=fill_record.get('ticker', ''),
                 strategy=fill_record.get('strategy', ''),
-                universe=fill_record.get('market_id', 'sp500') or 'sp500',
+                universe=_derive_universe_safe(fill_record.get('ticker', ''), fill_record.get('market_id')),
                 entry_price=float(fill_record.get('fill_price', 0) or 0),
                 shares=int(fill_record.get('shares', 0) or 0),
                 stop_price=float(fill_record.get('stop_price', 0) or 0),
@@ -214,7 +224,7 @@ class TradeLedger:
                             and (not _strategy or _t.get("strategy") == _strategy)):
                         _uni = _t.get("universe") or _t.get("market_id")
                         break
-            trade_record["universe"] = _uni or "sp500"
+            trade_record["universe"] = _derive_universe_safe(trade_record.get("ticker", ""), _uni)
         self.trades.append({"type": "exit", **trade_record})
         self._save()
         # SQLite dual-write — JSON file is source of truth; SQLite failure is non-fatal

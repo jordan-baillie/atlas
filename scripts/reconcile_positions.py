@@ -401,10 +401,18 @@ def reconcile_positions(
                     else:
                         # INSERT new row
                         try:
+                            from universe.membership import derive_universe as _derive_uni
+                            _rp_derived_universe = _derive_uni(_ticker, market_id)
+                            if _rp_derived_universe != market_id:
+                                logger.warning(
+                                    "reconcile_positions: ticker=%s market_id=%s → "
+                                    "universe resolved to %s (ticker not in %s universe)",
+                                    _ticker, market_id, _rp_derived_universe, market_id,
+                                )
                             atlas_db.record_trade_entry(
                                 ticker=_ticker,
                                 strategy=_strategy,
-                                universe=market_id,
+                                universe=_rp_derived_universe or market_id,
                                 entry_price=float(cp.get("entry_price") or 0),
                                 shares=int(cp.get("shares") or 0),
                                 stop_price=_stop_price,
