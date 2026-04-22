@@ -314,48 +314,114 @@ def reconcile_positions(
             internal_state["positions"] = corrected_positions
             save_internal_state(market_id, internal_state)
 
-            # Dual-write to SQLite: insert any corrected position not already tracked as open.
-            # Uses the same strategy-resolution priority as reconcile_ledger: state file
-            # → plans → 'reconciled' fallback. Failures are logged but non-fatal because
-            # JSON is the source of truth for live positions.
+            # Dual-write to SQLite: upsert each corrected position with 3 guards:
+            #   1. Dedup guard: check across ALL universes by ticker (not just current market)
+            #      to prevent cross-market ghost rows; UPDATE stop_price + upgrade strategy
+            #      if existing row has a poison strategy.
+            #   2. No-unknown guard: never write strategy='unknown'; use 'reconciled' fallback.
+            #   3. No-zero-stop guard: if stop_price<=0, skip INSERT and log WARNING — a row
+            #      with stop_price=0 is a ghost that breaks downstream risk checks.
+            # Failures are logged but non-fatal — JSON state file is source of truth.
             try:
                 from db import atlas_db
+                _tickers_in_scope = tuple(cp["ticker"] for cp in corrected_positions)
                 with atlas_db.get_db() as _db:
-                    _existing = {
-                        row["ticker"]
-                        for row in _db.execute(
-                            "SELECT ticker FROM trades WHERE status='open' AND universe=?",
-                            (market_id,),
-                        ).fetchall()
-                    }
+                    if _tickers_in_scope:
+                        _ph = ",".join("?" * len(_tickers_in_scope))
+                        _open_rows = {
+                            row["ticker"]: {"id": row["id"], "strategy": row["strategy"],
+                                            "stop_price": row["stop_price"]}
+                            for row in _db.execute(
+                                f"SELECT id, ticker, strategy, stop_price FROM trades "
+                                f"WHERE status='open' AND ticker IN ({_ph})",
+                                _tickers_in_scope,
+                            ).fetchall()
+                        }
+                    else:
+                        _open_rows = {}
+
                 for cp in corrected_positions:
-                    if cp["ticker"] in _existing:
-                        continue
-                    _strategy = cp.get("strategy") or "reconciled"
-                    if _strategy == "unknown":
+                    _ticker = cp["ticker"]
+
+                    # Guard 2: resolve strategy — never write 'unknown'
+                    _strategy = cp.get("strategy") or None
+                    if not _strategy or _strategy == "unknown":
                         _strategy = "reconciled"
-                    try:
-                        atlas_db.record_trade_entry(
-                            ticker=cp["ticker"],
-                            strategy=_strategy,
-                            universe=market_id,
-                            entry_price=float(cp.get("entry_price") or 0),
-                            shares=int(cp.get("shares") or 0),
-                            stop_price=float(cp.get("stop_price") or 0),
-                            take_profit=None,
-                            confidence=0.0,
-                            regime_state=None,
-                            direction="long",
+
+                    # Guard 3: skip if stop_price is zero or missing
+                    _stop_price = float(cp.get("stop_price") or 0)
+                    if _stop_price <= 0:
+                        logger.warning(
+                            "reconcile_positions: skipping SQLite dual-write for %s — "
+                            "stop_price=0 (no reliable stop data). "
+                            "Resolve via sync_protective_orders.",
+                            _ticker,
                         )
-                        logger.info(
-                            "reconcile_positions: SQLite dual-write inserted %s/%s",
-                            cp["ticker"], _strategy,
-                        )
-                    except Exception as _db_exc:
-                        logger.error(
-                            "reconcile_positions: SQLite dual-write FAILED for %s: %s",
-                            cp["ticker"], _db_exc, exc_info=True,
-                        )
+                        continue
+
+                    existing = _open_rows.get(_ticker)
+                    if existing:
+                        # Guard 1: dedup — UPDATE instead of INSERT
+                        _ex_id = existing["id"]
+                        _ex_strategy = existing["strategy"]
+                        _updates: list[str] = []
+                        _params: list = []
+                        # Update stop_price if we have a better value
+                        if _stop_price > 0 and _stop_price != float(existing.get("stop_price") or 0):
+                            _updates.append("stop_price = ?")
+                            _params.append(_stop_price)
+                        # Upgrade strategy if existing is poison
+                        if _ex_strategy in ("unknown", "reconciled", "") and _strategy not in ("unknown", "reconciled", ""):
+                            _updates.append("strategy = ?")
+                            _params.append(_strategy)
+                            _updates.append("entry_price = ?")
+                            _params.append(float(cp.get("entry_price") or 0))
+                        if _updates:
+                            _params.append(_ex_id)
+                            try:
+                                with atlas_db.get_db() as _db:
+                                    _db.execute(
+                                        f"UPDATE trades SET {', '.join(_updates)} WHERE id = ?",
+                                        _params,
+                                    )
+                                logger.info(
+                                    "reconcile_positions: dedup_guard updated id=%d %s fields=%s",
+                                    _ex_id, _ticker, _updates,
+                                )
+                            except Exception as _upd_exc:
+                                logger.error(
+                                    "reconcile_positions: UPDATE failed for %s id=%d: %s",
+                                    _ticker, _ex_id, _upd_exc, exc_info=True,
+                                )
+                        else:
+                            logger.debug(
+                                "reconcile_positions: dedup_guard: no-op for %s id=%d",
+                                _ticker, _ex_id,
+                            )
+                    else:
+                        # INSERT new row
+                        try:
+                            atlas_db.record_trade_entry(
+                                ticker=_ticker,
+                                strategy=_strategy,
+                                universe=market_id,
+                                entry_price=float(cp.get("entry_price") or 0),
+                                shares=int(cp.get("shares") or 0),
+                                stop_price=_stop_price,
+                                take_profit=None,
+                                confidence=0.0,
+                                regime_state=None,
+                                direction="long",
+                            )
+                            logger.info(
+                                "reconcile_positions: SQLite dual-write inserted %s/%s",
+                                _ticker, _strategy,
+                            )
+                        except Exception as _db_exc:
+                            logger.error(
+                                "reconcile_positions: SQLite dual-write FAILED for %s: %s",
+                                _ticker, _db_exc, exc_info=True,
+                            )
             except Exception as _dw_exc:
                 logger.error(
                     "reconcile_positions: SQLite dual-write block failed: %s",

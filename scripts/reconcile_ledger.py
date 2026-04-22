@@ -225,13 +225,48 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                     else int(bp.shares)
                 )
 
+                # No-zero-stop guard: look up actual broker stop order before INSERT.
+                # Never use synthetic entry_price * 0.95 — that's a ghost risk value.
+                # Check open orders for a SELL stop targeting this ticker.
+                _broker_stop: float = 0.0
+                try:
+                    for _ord in broker.get_open_orders():
+                        _is_sell = getattr(_ord, "side", None)
+                        _is_sell_str = (
+                            _is_sell.value.upper()
+                            if hasattr(_is_sell, "value")
+                            else str(_is_sell).upper()
+                        )
+                        _ord_type = str(getattr(_ord, "type", "") or "").lower()
+                        if (
+                            _ord.ticker == ticker
+                            and _is_sell_str == "SELL"
+                            and _ord_type in ("stop", "trailing_stop", "stop_limit")
+                        ):
+                            _broker_stop = float(getattr(_ord, "stop_price", 0) or 0)
+                            if _broker_stop > 0:
+                                break
+                except Exception as _stop_exc:
+                    log.debug("reconcile_ledger: stop lookup failed for %s: %s", ticker, _stop_exc)
+
+                if _broker_stop <= 0:
+                    log.warning(
+                        "reconcile_ledger: skipping backfill for %s — "
+                        "no broker stop order found (stop_price=0 would create ghost row). "
+                        "Run sync_protective_orders to place stop, then re-run reconcile_ledger.",
+                        ticker,
+                    )
+                    stats["errors"].append(f"{ticker}: no broker stop (skipped INSERT)")
+                    continue
+
+                _backfill_strategy = _lookup_strategy(ticker, market_id, state_positions)
                 atlas_db.record_trade_entry(
                     ticker=ticker,
-                    strategy=_lookup_strategy(ticker, market_id, state_positions),
+                    strategy=_backfill_strategy,
                     universe=market_id,
                     entry_price=entry_price,
                     shares=shares,
-                    stop_price=round(entry_price * 0.95, 2),
+                    stop_price=_broker_stop,
                     take_profit=None,
                     confidence=0.0,
                     regime_state=None,
@@ -239,10 +274,11 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                 )
                 stats["backfilled"].append(ticker)
                 log.info(
-                    "Backfilled ledger entry for %s: %d shares @ $%.2f",
+                    "Backfilled ledger entry for %s: %d shares @ $%.2f stop=%.4f",
                     ticker,
                     shares,
                     entry_price,
+                    _broker_stop,
                 )
             except Exception as exc:
                 log.error("Failed to backfill %s: %s", ticker, exc)

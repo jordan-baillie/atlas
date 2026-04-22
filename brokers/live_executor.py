@@ -1988,9 +1988,56 @@ class LiveExecutor:
 
             # Get plan context
             plan_entry = plan_by_ticker.get(ticker, {})
-            strategy = plan_entry.get("strategy", "unknown")
+            strategy = plan_entry.get("strategy") or "reconciled"
+            if strategy == "unknown":
+                strategy = "reconciled"
             stop_price = plan_entry.get("stop_price", 0)
             planned_price = plan_entry.get("entry_price", 0)
+
+            # Guard: skip if stop_price=0 — would create a ghost row with no real stop
+            if stop_price <= 0:
+                logger.warning(
+                    "reconcile_entry_fills: skipping %s — stop_price=0 (not in plan). "
+                    "Run sync_protective_orders to place stop first.",
+                    ticker,
+                )
+                continue
+
+            # Dedup guard vs SQLite: check if this ticker already has an open row.
+            # The JSON ledger only deduplicates by order_id; SQLite dedup by ticker
+            # prevents cross-market ghost rows when fills from other-market orders
+            # are returned by the broker's 7-day history scan.
+            try:
+                from db import atlas_db as _adb
+                with _adb.get_db() as _chk_db:
+                    _sqlite_open = _chk_db.execute(
+                        "SELECT id, strategy FROM trades WHERE status='open' AND ticker=? LIMIT 1",
+                        (ticker,),
+                    ).fetchone()
+                if _sqlite_open:
+                    _existing_id = _sqlite_open["id"]
+                    _existing_strat = _sqlite_open["strategy"]
+                    if _existing_strat in ("unknown", "reconciled", "") and strategy not in ("unknown", "reconciled", ""):
+                        with _adb.get_db() as _upd_db:
+                            _upd_db.execute(
+                                "UPDATE trades SET strategy=?, stop_price=? WHERE id=?",
+                                (strategy, stop_price, _existing_id),
+                            )
+                        logger.info(
+                            "reconcile_entry_fills: dedup_guard upgraded id=%d %s strategy %s→%s",
+                            _existing_id, ticker, _existing_strat, strategy,
+                        )
+                    else:
+                        logger.debug(
+                            "reconcile_entry_fills: dedup_guard: %s already open id=%d, skipping INSERT",
+                            ticker, _existing_id,
+                        )
+                    continue
+            except Exception as _dedup_exc:
+                logger.warning(
+                    "reconcile_entry_fills: SQLite dedup check failed for %s (non-fatal): %s",
+                    ticker, _dedup_exc,
+                )
 
             # Record to TradeLedger
             ledger_record = {
