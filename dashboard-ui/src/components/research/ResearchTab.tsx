@@ -88,7 +88,7 @@ function SharpeChart() {
         </div>
       </div>
       <div className="h-[200px] md:h-[260px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={chartData}>
             <defs>
               <linearGradient id="sharpeGrad" x1="0" y1="0" x2="0" y2="1">
@@ -556,7 +556,7 @@ function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
               const s = row.sharpe ?? 0
               const color = s >= 0.5 ? 'var(--color-green)' : s >= 0.3 ? 'var(--color-amber, #eab308)' : 'var(--color-red)'
               return (
-                <tr key={`${row.strategy}-${row.universe}`} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-colors">
+                <tr key={`${row.strategy}-${row.universe}`} data-testid="leaderboard-row" className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-colors">
                   <td className="px-4 py-2 font-mono text-xs text-[var(--color-text-muted)]">{i + 1}</td>
                   <td className="px-4 py-2 text-xs font-medium">{(row.strategy ?? '').replace(/_/g, ' ')}</td>
                   <td className="px-4 py-2">

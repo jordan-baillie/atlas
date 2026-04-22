@@ -31,7 +31,7 @@ export function SpendingPaceChart({ paceData, paceStatus, paceDiff }: Props) {
           </div>
         ) : null}
       </div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={280} minWidth={0} minHeight={0}>
         <ComposedChart data={paceData}>
           <defs>
             <linearGradient id="spendingGrad" x1="0" y1="0" x2="0" y2="1">

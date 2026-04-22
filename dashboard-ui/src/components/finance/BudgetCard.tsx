@@ -24,7 +24,7 @@ export function BudgetCard({ name, limit, spent }: Props) {
   const offset = circumference * (1 - pct / 100)
 
   return (
-    <div className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border)] flex items-center gap-4">
+    <div data-testid="budget-card" className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border)] flex items-center gap-4">
       <svg width={80} height={80} className="shrink-0">
         <circle cx={40} cy={40} r={radius} fill="none" stroke="var(--color-border)" strokeWidth={6} />
         <circle cx={40} cy={40} r={radius} fill="none" stroke={color} strokeWidth={6}

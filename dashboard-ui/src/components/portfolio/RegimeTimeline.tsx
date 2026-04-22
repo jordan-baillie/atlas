@@ -36,7 +36,7 @@ export function RegimeTimeline({ history }: Props) {
   const currentState = last90.length > 0 ? last90[last90.length - 1].state : undefined
 
   return (
-    <div>
+    <div data-testid="regime-timeline">
       <div className="flex items-center justify-between mb-3">
         <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold">
           90-DAY REGIME HISTORY

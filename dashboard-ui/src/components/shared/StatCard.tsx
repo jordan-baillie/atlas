@@ -12,6 +12,7 @@ interface StatCardProps {
 export function StatCard({ label, value, sub, hero = false, accent, className = '' }: StatCardProps) {
   return (
     <div
+      data-testid="stat-card"
       className={`relative overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 md:p-5 dash-card ${className}`}
     >
       {accent && (

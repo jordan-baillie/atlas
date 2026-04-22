@@ -21,6 +21,7 @@ export function GaugeCard({ dimension }: Props) {
 
   return (
     <div
+      data-testid="macro-gauge"
       className="bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg p-4 transition-colors hover:border-[color-mix(in_srgb,var(--color-border),var(--color-text)_20%)]"
       style={{ backgroundColor: bgTint }}
     >

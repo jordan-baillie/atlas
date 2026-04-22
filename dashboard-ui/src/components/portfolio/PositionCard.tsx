@@ -12,6 +12,7 @@ export function PositionCard({ position }: Props) {
 
   return (
     <div
+      data-testid="position-card"
       className="bg-[var(--color-surface)] rounded-xl p-3 md:p-4 relative border border-[var(--color-border)] hover:translate-y-[-2px] hover:shadow-lg transition-all duration-200"
       style={{ borderLeftColor: borderColor, borderLeftWidth: 3 }}
     >

@@ -28,7 +28,7 @@ export function Sparkline({ data, color, height = 32, strokeWidth = 1.5 }: Spark
 
   return (
     <div style={{ height, width: '100%' }}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <LineChart data={chartData}>
           <defs>
             <filter id="glow">

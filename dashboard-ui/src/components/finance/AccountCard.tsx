@@ -25,6 +25,7 @@ export function AccountCard({ account }: Props) {
 
   return (
     <div
+      data-testid="account-card"
       className="bg-[var(--color-surface)] rounded-xl p-4 border border-[var(--color-border)] hover:translate-y-[-1px] hover:shadow-lg transition-all duration-200"
       style={{ borderLeftColor: color, borderLeftWidth: 3 }}
     >

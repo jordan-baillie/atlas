@@ -68,7 +68,7 @@ export function StrategyBreakdown({ performance }: Props) {
   })
 
   return (
-    <div>
+    <div data-testid="strategy-breakdown">
       <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">STRATEGY BREAKDOWN</div>
       <DataTable columns={COLUMNS} data={rows} emptyMessage="No strategy data" />
     </div>

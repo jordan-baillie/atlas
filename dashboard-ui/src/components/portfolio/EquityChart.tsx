@@ -112,7 +112,7 @@ export function EquityChart() {
         />
       </div>
       <div className="h-[220px] md:h-[260px] lg:h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <ComposedChart data={filteredData}>
             <defs>
               <linearGradient id="portfolioGrad" x1="0" y1="0" x2="0" y2="1">

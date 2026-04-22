@@ -6,7 +6,7 @@ interface Props { data: FinanceData }
 
 export function FinSummaryStrip({ data }: Props) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <div data-testid="finance-summary-strip" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <StatCard
         label="NET WORTH"
         value={`${fmtCcy(data.net_worth?.total_aud)} AUD`}
