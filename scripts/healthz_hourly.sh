@@ -421,6 +421,31 @@ if command -v restic &>/dev/null && [ -d "$RESTIC_REPOSITORY" ]; then
 fi
 unset RESTIC_PASSWORD
 
+# ── Ledger integrity regression tests ───────────────────────
+# Run the ledger integrity test suite to catch poison strategies /
+# zero-stop / duplicate open rows before they accumulate again.
+LEDGER_TEST_OUT=$(cd "$PROJECT" && python3 -m pytest tests/test_ledger_integrity.py -x --timeout=30 -q 2>&1)
+LEDGER_TEST_RC=$?
+if [ "$LEDGER_TEST_RC" -ne 0 ]; then
+    log "CRITICAL: ledger integrity tests FAILED (rc=$LEDGER_TEST_RC)"
+    log "$LEDGER_TEST_OUT"
+    python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+send_message(
+    '❌ <b>Ledger integrity tests FAILED</b>
+'
+    'Run: python3 -m pytest tests/test_ledger_integrity.py -v
+'
+    'Check for poison strategies or duplicate open rows in trades table.'
+)
+" 2>/dev/null || true
+    exit 1
+else
+    log "Ledger integrity tests OK"
+fi
+
 # ── Dashboard dist staleness check ──────────────────────────
 # Alert if the React SPA dist/ hasn't been rebuilt in > 6 hours.
 # The atlas-dashboard-refresh.timer should rebuild hourly.
