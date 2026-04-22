@@ -1,0 +1,551 @@
+{
+  "version": 1,
+  "migrated_from": "queue.json 2026-03-16",
+  "migrated_at": "2026-04-22",
+  "description": "Priority hypothesis bank: 9 vol_scaling variants + 3 momentum ablations from sharpe_roadmap",
+  "hypotheses": [
+    {
+      "id": "vol_scaling_lb20_t10",
+      "legacy_id": "20260313_110651_e142dd",
+      "title": "Vol scaling: lookback=20, target=10%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=20d, target=10% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb20_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb20_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "partial",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896808+00:00"
+    },
+    {
+      "id": "vol_scaling_lb20_t12",
+      "legacy_id": "20260313_110651_6b7bc5",
+      "title": "Vol scaling: lookback=20, target=12%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=20d, target=12% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb20_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb20_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "partial",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896838+00:00"
+    },
+    {
+      "id": "vol_scaling_lb20_t15",
+      "legacy_id": "20260313_110651_f6f8ff",
+      "title": "Vol scaling: lookback=20, target=15%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=20d, target=15% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb20_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb20_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 20,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "partial",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896858+00:00"
+    },
+    {
+      "id": "vol_scaling_lb60_t10",
+      "legacy_id": "20260313_110651_fd220f",
+      "title": "Vol scaling: lookback=60, target=10%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=60d, target=10% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb60_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb60_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "partial",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling | Auto-reset from stale claim after 6h (2026-03-13 10:00)",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896875+00:00"
+    },
+    {
+      "id": "vol_scaling_lb60_t12",
+      "legacy_id": "20260313_110651_9e30a1",
+      "title": "Vol scaling: lookback=60, target=12%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=60d, target=12% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb60_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb60_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896888+00:00"
+    },
+    {
+      "id": "vol_scaling_lb60_t15",
+      "legacy_id": "20260313_110651_ed66e2",
+      "title": "Vol scaling: lookback=60, target=15%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=60d, target=15% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb60_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb60_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 60,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896899+00:00"
+    },
+    {
+      "id": "vol_scaling_lb126_t10",
+      "legacy_id": "20260313_110651_aa077f",
+      "title": "Vol scaling: lookback=126, target=10%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=126d, target=10% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb126_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb126_t10",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.1,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896909+00:00"
+    },
+    {
+      "id": "vol_scaling_lb126_t12",
+      "legacy_id": "20260313_110651_576feb",
+      "title": "Vol scaling: lookback=126, target=12%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=126d, target=12% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb126_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb126_t12",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.12,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896920+00:00"
+    },
+    {
+      "id": "vol_scaling_lb126_t15",
+      "legacy_id": "20260313_110651_6b7f01",
+      "title": "Vol scaling: lookback=126, target=15%",
+      "strategy": "portfolio_wide",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "vol_scaling",
+      "hypothesis": "Conditional vol scaling (lookback=126d, target=15% annual vol) should reduce drawdowns and improve Sharpe. Barroso & Santa-Clara (2015).",
+      "method": "filter_test",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "filter_param": "vol_scaling",
+        "variants": [
+          {
+            "name": "disabled",
+            "value": {
+              "enabled": false
+            }
+          },
+          {
+            "name": "conditional_lb126_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": true,
+              "percentile_threshold": 80
+            }
+          },
+          {
+            "name": "always_lb126_t15",
+            "value": {
+              "enabled": true,
+              "lookback": 126,
+              "half_life": 20,
+              "target_vol": 0.15,
+              "conditional": false
+            }
+          }
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 2: volatility scaling",
+      "tags": [
+        "sharpe_roadmap",
+        "vol_scaling"
+      ],
+      "created_at": "2026-03-13T01:06:51.896933+00:00"
+    },
+    {
+      "id": "momentum_mode_ablation",
+      "legacy_id": "20260313_110651_6c4b69",
+      "title": "Momentum signal mode: raw vs risk_adjusted vs idiosyncratic",
+      "strategy": "momentum_breakout",
+      "priority": "P1",
+      "source": "queue.json wave5 migration",
+      "category": "sharpe_roadmap",
+      "hypothesis": "Risk-adjusted momentum should improve signal quality. Blitz et al. (2011) showed ~2x Sharpe. Idiosyncratic mode strips market beta.",
+      "method": "param_sweep",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "sweep_param": "signal_mode",
+        "sweep_values": [
+          "raw",
+          "risk_adjusted",
+          "idiosyncratic"
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap Priority 3: risk-adjusted momentum. Risk-adj mode should improve signal quality (Blitz et al. 2011). Test: raw vs risk_adjusted vs idiosyncratic signal_mode param.",
+      "tags": [
+        "sharpe_roadmap",
+        "signal_mode"
+      ],
+      "depends_on": [],
+      "created_at": "2026-03-13T01:06:51.896948+00:00"
+    },
+    {
+      "id": "momentum_lookback_skip_sweep",
+      "legacy_id": "20260313_110651_6e6e91",
+      "title": "Momentum lookback\u00d7skip sweep (risk_adjusted mode)",
+      "strategy": "momentum_breakout",
+      "priority": "P2",
+      "source": "queue.json wave5 migration",
+      "category": "sharpe_roadmap",
+      "hypothesis": "Novy-Marx (2012): intermediate-horizon momentum (skip recent months) outperforms. Test 126d vs 252d lookback with 0/21/42d skip in risk_adjusted mode.",
+      "method": "param_sweep",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "sweep_param": "momentum_lookback",
+        "sweep_values": [
+          126,
+          252
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap: Novy-Marx (2012) intermediate-horizon momentum. Test 126d vs 252d lookback with risk_adjusted mode. Depends on momentum_mode_ablation finding risk_adjusted wins.",
+      "tags": [
+        "sharpe_roadmap",
+        "momentum_lookback"
+      ],
+      "depends_on": [],
+      "created_at": "2026-03-13T01:06:51.896963+00:00"
+    },
+    {
+      "id": "momentum_skip_ablation",
+      "legacy_id": "20260313_110651_237d24",
+      "title": "Momentum skip sweep (risk_adjusted mode, 252d lookback)",
+      "strategy": "momentum_breakout",
+      "priority": "P2",
+      "source": "queue.json wave5 migration",
+      "category": "sharpe_roadmap",
+      "hypothesis": "Test skip periods: 0, 21, 42, 63 days with risk_adjusted signal mode.",
+      "method": "param_sweep",
+      "acceptance_criteria": {},
+      "params_to_test": {
+        "sweep_param": "momentum_skip",
+        "sweep_values": [
+          0,
+          21,
+          42,
+          63
+        ]
+      },
+      "status": "queued",
+      "notes": "Sharpe Roadmap: skip period sweep with risk_adjusted mode + 252d lookback. Test skip=0,21,42,63d. Depends on momentum_lookback_skip_sweep.",
+      "tags": [
+        "sharpe_roadmap",
+        "momentum_skip"
+      ],
+      "depends_on": [],
+      "created_at": "2026-03-13T01:06:51.896976+00:00"
+    }
+  ]
+}

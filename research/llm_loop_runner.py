@@ -83,13 +83,28 @@ def _build_prompt(minutes: int, strategies: list[str] | None = None, universe: s
     if PROGRAM_MD.exists():
         program = PROGRAM_MD.read_text()
 
+    # Load structured hypothesis bank (migrated from retired queue system)
+    hypotheses_path = ATLAS_ROOT / "research" / "hypotheses.json"
+    hypotheses_snippet = ""
+    if hypotheses_path.exists():
+        try:
+            h = json.loads(hypotheses_path.read_text())
+            hypotheses_snippet = "\n## Candidate Hypotheses (priority-ranked)\n"
+            for hyp in h.get("hypotheses", [])[:10]:  # cap at 10 for prompt budget
+                hypotheses_snippet += (
+                    f"- [{hyp.get('priority')}] {hyp.get('title')} — {hyp.get('notes', '')[:120]}\n"
+                )
+            logger.debug("Loaded %d hypotheses from %s", len(h.get("hypotheses", [])), hypotheses_path)
+        except Exception:
+            pass
+
     context = _gather_context(strategies)
 
     strategy_focus = ""
     if strategies:
         strategy_focus = f"""
 ## Strategy Focus
-Focus on these strategies in this session: {', '.join(strategies)}
+Focus on these strategies in this session: {", ".join(strategies)}
 Work through them in order. If one is already well-optimized (5+ consecutive discards), move to the next.
 """
 
@@ -106,6 +121,7 @@ Stop running experiments 2 minutes before your time is up.
 {context}
 
 {strategy_focus}
+{hypotheses_snippet}
 
 ## Your Task
 1. Review the current state above — leaderboard, history, best params.
