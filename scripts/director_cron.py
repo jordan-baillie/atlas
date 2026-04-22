@@ -363,12 +363,6 @@ def send_digest(queue_stats: dict, journal_stats: dict, coverage: dict,
         msg = (
             f"🎬 <b>Director Daily Digest</b>\n"
             f"\n"
-            f"📋 <b>Queue</b>: {q['queued']} pending "
-            f"(P1={q['by_priority'].get('P1', 0)}, "
-            f"P2={q['by_priority'].get('P2', 0)}, "
-            f"P3={q['by_priority'].get('P3', 0)})\n"
-            f"   Total: {q['total']} | Passed: {q['passed']} | Failed: {q['failed']}\n"
-            f"\n"
             f"🔬 <b>Research ({j['days']}d)</b>: {j['total']} experiments\n"
             f"   Pass: {j['passes']} | Fail: {j['fails']} | Rate: {pass_rate_str}"
             f"{best_str}\n"
@@ -450,6 +444,8 @@ def parse_args():
                         help="Force portfolio optimizer run regardless of schedule")
     parser.add_argument("--force-discovery", action="store_true",
                         help="Force experiment generation regardless of queue depth")
+    parser.add_argument("--skip-discovery", action="store_true",
+                        help="Skip experiment generation (opt-out for testing/maintenance)")
     parser.add_argument("--no-telegram", action="store_true",
                         help="Skip Telegram notification")
     return parser.parse_args()
@@ -511,18 +507,14 @@ def main() -> int:
         journal_stats["pass_rate"],
     )
 
-    # ── 2. Generate experiments if queue is running dry ──────────
+    # ── 2. Generate experiments (queue gate retired) ─────────────
+    # Queue is retired — always generate experiments (runner is no longer
+    # queue-gated). Prior queue-depth gate produced a 37-day silent block;
+    # see investigation 2026-04-22-queue-disposition.md.
     experiments_generated = 0
-    should_generate = (
-        args.force_discovery
-        or queue_stats["queued"] < MIN_QUEUE_DEPTH
-    )
-
+    should_generate = not getattr(args, 'skip_discovery', False)
     if should_generate:
-        reason = (
-            "forced" if args.force_discovery
-            else f"queue depth {queue_stats['queued']} < {MIN_QUEUE_DEPTH}"
-        )
+        reason = "forced" if args.force_discovery else "queue retired — unconditional generation"
         logger.info("Generating experiments (%s)", reason)
 
         _write_heartbeat(
@@ -530,7 +522,7 @@ def main() -> int:
             phase="queuing",
             queue_depth=queue_stats["queued"],
             activity="typing",
-            detail=f"Queue running dry ({queue_stats['queued']} pending) — generating",
+            detail="Generating experiments (queue gate retired)",
         )
 
         experiments_generated = generate_more_experiments(
@@ -542,10 +534,7 @@ def main() -> int:
             queue_stats["queued"] += experiments_generated
             logger.info("Added %d experiments to queue", experiments_generated)
     else:
-        logger.info(
-            "Queue healthy (%d pending) — skipping generation",
-            queue_stats["queued"]
-        )
+        logger.info("Experiment generation skipped (--skip-discovery)")
 
     # ── 3. Portfolio optimizer (weekly) ─────────────────────────
     portfolio_ran = False
