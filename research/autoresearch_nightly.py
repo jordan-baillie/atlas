@@ -40,6 +40,8 @@ ATLAS_ROOT = Path(__file__).resolve().parent.parent
 if str(ATLAS_ROOT) not in sys.path:
     sys.path.insert(0, str(ATLAS_ROOT))
 
+from research.db import log_session, end_session
+
 # Top-5 enabled strategies by portfolio weight
 DEFAULT_STRATEGIES = [
     "mean_reversion",      # 17%
@@ -307,6 +309,129 @@ def _send_summary_telegram(
         print(f"Telegram send failed (non-fatal): {e}")
 
 
+
+
+# ─── Strategy Filter ─────────────────────────────────────────────────────────
+
+
+def _filter_enabled_strategies(strategies: List[str], market: str) -> List[str]:
+    """Drop strategies whose `enabled` flag is False in the active config.
+
+    Returns the filtered list; logs any strategies that were skipped.
+    """
+    try:
+        from utils.config import get_active_config
+        cfg = get_active_config(market)
+    except Exception as exc:
+        print(f"[filter] Could not load active config for {market}: {exc} — running all strategies")
+        return strategies
+
+    strat_cfg = cfg.get("strategies", {}) or {}
+    enabled = []
+    for s in strategies:
+        entry = strat_cfg.get(s, {})
+        # Missing entry → assume enabled (don't silently drop strategies
+        # not yet configured for this universe)
+        is_enabled = entry.get("enabled", True) if isinstance(entry, dict) else True
+        if is_enabled:
+            enabled.append(s)
+        else:
+            print(f"[filter] Skipping {s} — disabled in {market} active config")
+    return enabled
+
+
+# ─── Promotion Sweep ──────────────────────────────────────────────────────────
+
+
+def _run_promotion_sweep(results: List[Dict], market: str, universe: str) -> List[Dict]:
+    """Call auto_promote() for each strategy that produced kept experiments.
+
+    Reads per-strategy best params from research/best/{strategy}.json (or
+    research/best/{strategy}_{universe}.json for non-sp500). If the best
+    beats the current active config's Sharpe, fires auto_promote which
+    runs all 4 gates and queues a Telegram APPROVE/REJECT request.
+
+    Returns a list of promotion outcome dicts (one per strategy processed).
+    """
+    from research.promoter import auto_promote
+    from utils.config import get_active_config
+    import json as _json
+
+    outcomes = []
+    best_dir = ATLAS_ROOT / "research" / "best"
+
+    # Ensure config directories exist
+    (ATLAS_ROOT / "config").mkdir(parents=True, exist_ok=True)
+    (ATLAS_ROOT / "config" / "candidates").mkdir(parents=True, exist_ok=True)
+
+    try:
+        active_cfg = get_active_config(market)
+    except Exception as exc:
+        print(f"[promo] Could not load active config for {market}: {exc} — skipping promotion sweep")
+        return outcomes
+
+    for r in results:
+        strategy = r.get("strategy")
+        kept = r.get("kept", 0)
+        if kept <= 0:
+            continue
+        if r.get("exit_code", 0) != 0:
+            continue  # don't promote from failed workers
+
+        # Locate the best-params file (universe-suffixed for non-sp500)
+        candidate_file = best_dir / f"{strategy}_{universe}.json"
+        if not candidate_file.exists():
+            candidate_file = best_dir / f"{strategy}.json"
+        if not candidate_file.exists():
+            print(f"[promo] No best file for {strategy} ({universe}) — skipping")
+            continue
+
+        try:
+            best_data = _json.loads(candidate_file.read_text())
+        except Exception as exc:
+            print(f"[promo] Failed to read {candidate_file}: {exc}")
+            continue
+
+        best_params = best_data.get("params", {}) or {}
+        best_metrics = best_data.get("metrics", {}) or {}
+        best_sharpe = best_metrics.get("sharpe")
+        if best_sharpe is None:
+            # Fall back to r['final_sharpe'] if set
+            best_sharpe = r.get("final_sharpe", 0.0) or 0.0
+
+        # Baseline = pre-sweep Sharpe captured by the runner
+        initial_sharpe = r.get("starting_sharpe", 0.0) or 0.0
+
+        # Gate delta-Sharpe client-side so we don't spam promoter
+        # with tiny improvements (promoter has its own gates but
+        # this saves an OOS validation subprocess per insignificant
+        # improvement).
+        delta = (best_sharpe or 0.0) - initial_sharpe
+        if delta < 0.05:
+            print(f"[promo] {strategy}: delta_sharpe={delta:+.4f} below client gate 0.05 — skipping")
+            continue
+
+        improvements = [f"nightly sweep: Sharpe {initial_sharpe:.4f} -> {best_sharpe:.4f}"]
+
+        try:
+            outcome = auto_promote(
+                strategy=strategy,
+                improved_params=best_params,
+                initial_sharpe=float(initial_sharpe),
+                final_sharpe=float(best_sharpe),
+                improvements=improvements,
+                market=market,
+            )
+            outcome["strategy"] = strategy
+            outcomes.append(outcome)
+            print(f"[promo] {strategy}: {outcome.get('reason', 'no reason')}")
+        except Exception as exc:
+            print(f"[promo] auto_promote failed for {strategy}: {exc}")
+            outcomes.append({"strategy": strategy, "promoted": False, "reason": f"exception: {exc}"})
+
+    return outcomes
+
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 
@@ -334,93 +459,131 @@ def run_nightly(
     """
     session_start = time.time()
     strategies = strategies or list(DEFAULT_STRATEGIES)
+    strategies = _filter_enabled_strategies(strategies, market)
 
-    # Resolve snapshot — only sp500 uses file-based snapshots;
-    # other universes load from build_from_definition() inside the runner
-    if universe == "sp500":
-        if snapshot_id is None:
-            snapshot_id = _find_latest_snapshot(market)
-    else:
-        snapshot_id = None  # non-sp500 universes don't use snapshots
-    print(
-        f"\n{'='*65}\n"
-        f"  Atlas Nightly Autoresearch Orchestrator\n"
-        f"{'='*65}\n"
-        f"  Strategies : {', '.join(strategies)}\n"
-        f"  Market     : {market}\n"
-        f"  Universe   : {universe}\n"
-        f"  Budget     : {hours:.1f} h per worker\n"
-        f"  Workers    : {workers}\n"
-        f"  Snapshot   : {snapshot_id or '(none — universe uses build_from_definition)'}\n"
-        f"  Started    : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
-        f"{'='*65}\n"
-    )
+    if not strategies:
+        print("[filter] No enabled strategies — nothing to run")
+        return {
+            "status": "no_strategies",
+            "strategies": [],
+            "total_screened": 0,
+            "total_promoted": 0,
+            "total_kept": 0,
+            "failures": 0,
+            "runtime_s": 0.0,
+            "snapshot_id": None,
+        }
 
-    # Spawn and monitor workers
-    worker_list = _spawn_workers(strategies, market, hours, snapshot_id, workers, universe=universe)
+    session_id = None
+    try:
+        session_id = log_session(mode="nightly_sweep", strategy=",".join(strategies))
 
-    # Collect results
-    runtime_s = time.time() - session_start
-    results = []
-    for w in worker_list:
-        r = _parse_session_results(w["strategy"], session_start)
-        r["exit_code"] = w["exit_code"]
-        r["log_path"] = w["log_path"]
-        results.append(r)
-
-    # Print summary
-    total_screened = sum(r["screened"] for r in results)
-    total_promoted = sum(r["promoted"] for r in results)
-    total_kept = sum(r["kept"] for r in results)
-    failures = [r for r in results if r.get("exit_code", 0) != 0]
-    mins = runtime_s / 60
-
-    print(
-        f"\n{'='*65}\n"
-        f"  Nightly Autoresearch Summary\n"
-        f"{'='*65}"
-    )
-    for r in results:
-        s = r["strategy"]
-        sc = r["screened"]
-        pr = r["promoted"]
-        kp = r["kept"]
-        s_sharpe = r["starting_sharpe"]
-        f_sharpe = r["final_sharpe"]
-        if r.get("exit_code", 0) != 0:
-            print(f"  {s:25s} ❌ FAILED (exit {r['exit_code']})")
-        elif kp > 0:
-            print(
-                f"  {s:25s} {sc:3d} screened → {pr:2d} promoted → {kp:2d} kept "
-                f"(Sharpe {s_sharpe:.3f} → {f_sharpe:.3f})"
-            )
+        # Resolve snapshot — only sp500 uses file-based snapshots;
+        # other universes load from build_from_definition() inside the runner
+        if universe == "sp500":
+            if snapshot_id is None:
+                snapshot_id = _find_latest_snapshot(market)
         else:
-            print(
-                f"  {s:25s} {sc:3d} screened → {pr:2d} promoted →  0 kept "
-                f"(Sharpe {s_sharpe:.3f})"
-            )
-    print(
-        f"\n  Total: {total_screened} screened, {total_promoted} promoted, {total_kept} kept"
-    )
-    if failures:
-        print(f"  ⚠️  {len(failures)} worker(s) failed")
-    print(f"  Runtime: {mins:.1f} min")
-    print(f"{'='*65}\n")
+            snapshot_id = None  # non-sp500 universes don't use snapshots
+        print(
+            f"\n{'='*65}\n"
+            f"  Atlas Nightly Autoresearch Orchestrator\n"
+            f"{'='*65}\n"
+            f"  Strategies : {', '.join(strategies)}\n"
+            f"  Market     : {market}\n"
+            f"  Universe   : {universe}\n"
+            f"  Budget     : {hours:.1f} h per worker\n"
+            f"  Workers    : {workers}\n"
+            f"  Snapshot   : {snapshot_id or '(none — universe uses build_from_definition)'}\n"
+            f"  Started    : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+            f"{'='*65}\n"
+        )
 
-    # Telegram
-    if notify:
-        _send_summary_telegram(results, runtime_s, workers)
+        # Spawn and monitor workers
+        worker_list = _spawn_workers(strategies, market, hours, snapshot_id, workers, universe=universe)
 
-    return {
-        "status": "complete",
-        "strategies": results,
-        "total_screened": total_screened,
-        "total_promoted": total_promoted,
-        "total_kept": total_kept,
-        "failures": len(failures),
-        "runtime_s": round(runtime_s, 1),
-        "snapshot_id": snapshot_id,
-    }
+        # Collect results
+        runtime_s = time.time() - session_start
+        results = []
+        for w in worker_list:
+            r = _parse_session_results(w["strategy"], session_start)
+            r["exit_code"] = w["exit_code"]
+            r["log_path"] = w["log_path"]
+            results.append(r)
+
+        # Print summary
+        total_screened = sum(r["screened"] for r in results)
+        total_promoted = sum(r["promoted"] for r in results)
+        total_kept = sum(r["kept"] for r in results)
+        failures = [r for r in results if r.get("exit_code", 0) != 0]
+        mins = runtime_s / 60
+
+        print(
+            f"\n{'='*65}\n"
+            f"  Nightly Autoresearch Summary\n"
+            f"{'='*65}"
+        )
+        for r in results:
+            s = r["strategy"]
+            sc = r["screened"]
+            pr = r["promoted"]
+            kp = r["kept"]
+            s_sharpe = r["starting_sharpe"]
+            f_sharpe = r["final_sharpe"]
+            if r.get("exit_code", 0) != 0:
+                print(f"  {s:25s} ❌ FAILED (exit {r['exit_code']})")
+            elif kp > 0:
+                print(
+                    f"  {s:25s} {sc:3d} screened → {pr:2d} promoted → {kp:2d} kept "
+                    f"(Sharpe {s_sharpe:.3f} → {f_sharpe:.3f})"
+                )
+            else:
+                print(
+                    f"  {s:25s} {sc:3d} screened → {pr:2d} promoted →  0 kept "
+                    f"(Sharpe {s_sharpe:.3f})"
+                )
+        print(
+            f"\n  Total: {total_screened} screened, {total_promoted} promoted, {total_kept} kept"
+        )
+        if failures:
+            print(f"  ⚠️  {len(failures)} worker(s) failed")
+        print(f"  Runtime: {mins:.1f} min")
+        print(f"{'='*65}\n")
+
+        # INIT-1: Promotion sweep — queues Telegram APPROVE/REJECT for strategies
+        # that improved beyond threshold. Human gate remains intact — this does
+        # NOT auto-write to config/active.
+        promotion_outcomes = _run_promotion_sweep(results, market, universe)
+        print(f"\n[promo] Promotion sweep outcome: {len(promotion_outcomes)} strategies processed")
+        for o in promotion_outcomes:
+            print(f"  - {o.get('strategy')}: promoted={o.get('promoted')} pending={o.get('pending')} reason={o.get('reason')}")
+
+        # Telegram
+        if notify:
+            _send_summary_telegram(results, runtime_s, workers)
+
+        result = {
+            "status": "complete",
+            "strategies": results,
+            "total_screened": total_screened,
+            "total_promoted": total_promoted,
+            "total_kept": total_kept,
+            "failures": len(failures),
+            "runtime_s": round(runtime_s, 1),
+            "snapshot_id": snapshot_id,
+        }
+        if session_id is not None:
+            end_session(session_id, experiments_run=total_screened,
+                        experiments_kept=total_kept, status="completed")
+        return result
+
+    except Exception:
+        if session_id is not None:
+            try:
+                end_session(session_id, experiments_run=0, experiments_kept=0, status="failed")
+            except Exception:
+                pass
+        raise
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────

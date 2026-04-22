@@ -35,8 +35,8 @@ def log_experiment(
                 INSERT INTO research_experiments
                     (id, strategy, universe, experiment_type, params_changed, description,
                      sharpe, trades, max_dd_pct, profit_factor, cagr_pct, status,
-                     recommendation, agent_id, completed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     recommendation, agent_id, completed_at, window_coverage_pct)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 exp_id, strategy, market, source,
                 params_changed if params_changed else None,
@@ -48,6 +48,7 @@ def log_experiment(
                 float(metrics.get("cagr_pct", 0) or 0),
                 db_status, description, "autoresearch",
                 datetime.now(timezone.utc).isoformat(),
+                float(metrics.get("window_coverage_pct", 100.0) or 100.0),
             ))
     except Exception as exc:
         logger.warning("log_experiment failed: %s", exc)

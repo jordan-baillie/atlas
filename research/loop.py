@@ -241,37 +241,31 @@ def _append_journal(
 
 
 def _get_dsr_stats(market: str = "sp500") -> dict:
-    """Pull experiment count and sharpe variance from SQLite for DSR calculation."""
+    """Pull experiment count and sharpe variance from SQLite for DSR calculation.
+
+    Reads from the production atlas.db via db.atlas_db.get_db() so we
+    respect any _db_path_override that tests use.
+    """
     try:
-        import sqlite3
-        db_path = Path(__file__).resolve().parent.parent / "research" / "research.db"
-        if not db_path.exists():
-            db_path = Path(__file__).resolve().parent.parent / "db" / "atlas.db"
-        if not db_path.exists():
-            return {"num_experiments": 0, "variance_of_sharpes": 0.0}
-
-        conn = sqlite3.connect(str(db_path))
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt, "
-            "COALESCE(AVG((sharpe - sub.avg_s) * (sharpe - sub.avg_s)), 0) as var_s "
-            "FROM research_experiments, "
-            "(SELECT AVG(sharpe) as avg_s FROM research_experiments) sub"
-        ).fetchone()
-        conn.close()
-
+        from db.atlas_db import get_db
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt, "
+                "COALESCE(AVG((sharpe - sub.avg_s) * (sharpe - sub.avg_s)), 0) as var_s "
+                "FROM research_experiments, "
+                "(SELECT AVG(sharpe) as avg_s FROM research_experiments "
+                " WHERE sharpe IS NOT NULL) sub "
+                "WHERE sharpe IS NOT NULL AND universe = ?",
+                (market,),
+            ).fetchone()
         if row:
-            return {"num_experiments": row[0] or 0, "variance_of_sharpes": row[1] or 0.0}
-    except Exception:
-        pass
-
-    # Fallback: try brain experiment files
-    try:
-        brain_dir = Path(__file__).resolve().parent.parent / "research" / "brain" / "experiments"
-        if brain_dir.exists():
-            count = len(list(brain_dir.glob("*.md")))
-            return {"num_experiments": max(count, 1), "variance_of_sharpes": 0.05}
-    except Exception:
-        pass
+            cnt = row[0] if isinstance(row, tuple) else (row["cnt"] if hasattr(row, "keys") else row[0])
+            var = row[1] if isinstance(row, tuple) else (row["var_s"] if hasattr(row, "keys") else row[1])
+            return {"num_experiments": int(cnt or 0),
+                    "variance_of_sharpes": float(var or 0.0)}
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("DSR stats query failed: %s", exc)
 
     return {"num_experiments": 0, "variance_of_sharpes": 0.0}
 
@@ -362,7 +356,22 @@ def keep_or_discard(
                         )
         except Exception as exc:
             import logging
-            logging.getLogger(__name__).debug("DSR check skipped: %s", exc)
+            logging.getLogger(__name__).warning("DSR check skipped: %s", exc)
+
+    # Gate 5: Walk-forward window coverage
+    # Reject experiments where >20% of planned windows were skipped (no data).
+    # Default to 100.0 when the metric isn't present so pre-telemetry
+    # code paths don't regress.
+    coverage = experiment.get("window_coverage_pct", 100.0) or 100.0
+    try:
+        coverage = float(coverage)
+    except (TypeError, ValueError):
+        coverage = 100.0
+    if coverage < 80.0 and experiment.get("windows_configured", 0):
+        reasons.append(
+            f"Window coverage {coverage:.1f}% < 80% "
+            f"({experiment.get('windows_used', 0)}/{experiment.get('windows_configured', 0)} windows used)"
+        )
 
     if reasons:
         decision = "discard"
