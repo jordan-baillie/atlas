@@ -133,8 +133,7 @@ class TestScenarioA_ExistingOpenTrade:
         mock_broker.get_open_orders.return_value = broker_orders
         mock_broker.get_history_orders.return_value = []
 
-        with patch.object(rl_mod, "AlpacaBroker", return_value=mock_broker), \
-             patch("universe.builder.get_universe_tickers", return_value=["AMD", "AVGO"]), \
+        with patch("universe.builder.get_universe_tickers", return_value=["AMD", "AVGO"]), \
              patch("universe.membership.derive_universe", return_value="sp500"):
             result = rl_mod.reconcile_ledger(market_id="sp500", dry_run=False, broker=mock_broker)
         return result
@@ -170,14 +169,13 @@ class TestScenarioA_ExistingOpenTrade:
         mock_broker.get_open_orders.return_value = broker_orders
         mock_broker.get_history_orders.return_value = []
 
-        with patch.object(rl_mod, "AlpacaBroker", return_value=mock_broker), \
-             patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
-             patch("universe.membership.derive_universe", return_value="sp500"):
+        with patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
+             patch("universe.membership.derive_universe", return_value="sp500"), \
+             patch("db.atlas_db.get_open_positions", return_value=[]):
             # Force ticker out of ledger_map by temporarily pretending ledger is empty
-            with patch.object(rl_mod.atlas_db, "get_open_positions", return_value=[]):
-                result = rl_mod.reconcile_ledger(
-                    market_id="sp500", dry_run=False, broker=mock_broker
-                )
+            result = rl_mod.reconcile_ledger(
+                market_id="sp500", dry_run=False, broker=mock_broker
+            )
 
         # Pre-insert guard should have caught it
         assert _open_count("AMD", "sp500") == 1, \
@@ -204,8 +202,7 @@ class TestScenarioB_NewUnknownPosition:
         mock_broker.get_open_orders.return_value = broker_orders
         mock_broker.get_history_orders.return_value = []
 
-        with patch.object(rl_mod, "AlpacaBroker", return_value=mock_broker), \
-             patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
+        with patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
              patch("universe.membership.derive_universe", return_value="sp500"):
             result = rl_mod.reconcile_ledger(market_id="sp500", dry_run=False, broker=mock_broker)
 
@@ -228,8 +225,7 @@ class TestScenarioB_NewUnknownPosition:
         mock_broker.get_open_orders.return_value = broker_orders
         mock_broker.get_history_orders.return_value = []
 
-        with patch.object(rl_mod, "AlpacaBroker", return_value=mock_broker), \
-             patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
+        with patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
              patch("universe.membership.derive_universe", return_value="sp500"):
             result = rl_mod.reconcile_ledger(market_id="sp500", dry_run=True, broker=mock_broker)
 
@@ -252,8 +248,7 @@ class TestScenarioC_BackToBackCalls:
         mock_broker.get_open_orders.return_value = broker_orders
         mock_broker.get_history_orders.return_value = []
 
-        with patch.object(rl_mod, "AlpacaBroker", return_value=mock_broker), \
-             patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
+        with patch("universe.builder.get_universe_tickers", return_value=["AMD"]), \
              patch("universe.membership.derive_universe", return_value="sp500"):
             return rl_mod.reconcile_ledger(market_id="sp500", dry_run=False, broker=mock_broker)
 
