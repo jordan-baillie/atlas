@@ -23,7 +23,8 @@ def _load_config() -> dict:
     try:
         with open(_CONFIG_PATH) as f:
             return json.load(f)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Price-arbiter config load failed, using defaults: {e}")
         return dict(_DEFAULT_CFG)
 
 

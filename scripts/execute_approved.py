@@ -172,8 +172,8 @@ def _notify_error(market_id: str, trade_date: str, error: str):
             f"<pre>{error[:500]}</pre>\n\n"
             f"Manual intervention required."
         )
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning(f"Error-notification Telegram send failed: {e}")
 
 
 if __name__ == "__main__":
@@ -188,6 +188,6 @@ if __name__ == "__main__":
                 f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
                 f"Check logs/execute_approved.log"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Crash-alert Telegram notification failed: {e}")
         raise

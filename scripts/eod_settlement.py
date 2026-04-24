@@ -40,8 +40,8 @@ def _health_log(level, message, detail=None):
         from monitor.health_writer import log_error, log_warning, log_info
         fn = {"error": log_error, "warning": log_warning}.get(level, log_info)
         fn("eod_settlement", message, detail)
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning(f"Health-log write failed (non-fatal): {e}")
 
 
 def load_config(market_id="asx"):
@@ -517,8 +517,8 @@ def main():
         try:
             from utils.telegram import send_message
             send_message(f"\U0001f534 <b>EOD Settlement Failed</b>\nMarket: {market_id}\nBroker connection failed after {len(_connect_delays)} attempts.\nCheck logs/eod_settlement.log")
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Broker-failure Telegram alert could not be sent: {e}")
         print("ERROR: Broker connection failed after retries. Settlement aborted.")
         return
 
@@ -807,6 +807,6 @@ if __name__ == "__main__":
                 f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
                 f"Check logs/eod_settlement.log"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Crash-alert Telegram notification failed: {e}")
         raise

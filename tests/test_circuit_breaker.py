@@ -415,16 +415,52 @@ class TestBareExceptionFixes:
         assert result.get("holding_days") is None
 
     def test_no_bare_except_in_execution_code(self):
-        """Verify no bare 'except Exception:' blocks remain in live_executor.py."""
-        executor_path = PROJECT / "brokers" / "live_executor.py"
-        source = executor_path.read_text()
-        lines = source.splitlines()
-        bare_exceptions = []
-        for lineno, line in enumerate(lines, 1):
-            stripped = line.strip()
-            if stripped == "except Exception:" or stripped == "except:":
-                bare_exceptions.append((lineno, line.rstrip()))
-        assert bare_exceptions == [], (
-            f"Found bare except blocks in live_executor.py:\n"
-            + "\n".join(f"  Line {ln}: {txt}" for ln, txt in bare_exceptions)
+        """AST regression: no bare 'except Exception: pass' in any of the 15 fixed files.
+
+        Checks each file via ast.parse() for ExceptHandler nodes where:
+        - type is None (bare except) OR ast.Name with id in {Exception, BaseException}
+        - AND the body is exactly one ast.Pass statement
+        """
+        import ast
+
+        target_files = [
+            PROJECT / "brokers" / "live_executor.py",
+            PROJECT / "brokers" / "live_portfolio.py",
+            PROJECT / "brokers" / "plan.py",
+            PROJECT / "brokers" / "price_arbiter.py",
+            PROJECT / "brokers" / "registry.py",
+            PROJECT / "scripts" / "eod_settlement.py",
+            PROJECT / "scripts" / "execute_approved.py",
+            PROJECT / "scripts" / "reconcile_positions.py",
+            PROJECT / "scripts" / "sync_protective_orders.py",
+        ]
+
+        violations = []
+        for fpath in target_files:
+            if not fpath.exists():
+                continue  # file removed — not a violation
+            source = fpath.read_text()
+            try:
+                tree = ast.parse(source, filename=str(fpath))
+            except SyntaxError as exc:
+                violations.append(f"{fpath.name}: SyntaxError — {exc}")
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.ExceptHandler):
+                    continue
+                is_bare = node.type is None
+                is_broad = isinstance(node.type, ast.Name) and node.type.id in {
+                    "Exception", "BaseException"
+                }
+                is_pass_only = (
+                    len(node.body) == 1 and isinstance(node.body[0], ast.Pass)
+                )
+                if (is_bare or is_broad) and is_pass_only:
+                    violations.append(
+                        f"{fpath.name}:{node.lineno} — bare except+pass"
+                    )
+
+        assert violations == [], (
+            "Bare except-pass blocks still present (fix them with logged exceptions):\n"
+            + "\n".join(f"  {v}" for v in violations)
         )

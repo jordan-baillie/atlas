@@ -949,8 +949,8 @@ def sync_market(
         if broker:
             try:
                 broker.disconnect()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Broker disconnect error during sync-protective cleanup: {e}")
 
     return result
 
@@ -1216,6 +1216,6 @@ if __name__ == "__main__":
                 f"<pre>{_tge(type(exc).__name__)}: {_tge(str(exc)[:500])}</pre>\n\n"
                 f"Check logs/sync_protective.log"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Crash-alert Telegram notification failed: {e}")
         raise

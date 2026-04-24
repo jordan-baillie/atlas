@@ -636,8 +636,8 @@ class LiveExecutor:
             try:
                 from utils.telegram import send_message
                 send_message(f"🛑 {msg}")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Kill-switch Telegram notification failed: {e}")
             return {"status": "halted", "reason": "kill_switch"}
         ticker = entry.get("ticker", "")
         # Price arbiter halt check (B5)

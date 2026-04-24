@@ -66,8 +66,8 @@ class TradePlanGenerator:
         try:
             from monitor.lifecycle import StrategyLifecycleManager
             lifecycle_mgr = StrategyLifecycleManager(self.config)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"StrategyLifecycleManager unavailable, skipping lifecycle caps: {e}")
 
         if lifecycle_mgr and allocation_pool.is_enabled():
             for strat_name in list(allocation_pool.pools.keys()):
@@ -147,8 +147,8 @@ class TradePlanGenerator:
                 try:
                     from datetime import date as _date
                     _trade_date_parsed = _date.fromisoformat(trade_date)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Trade date parse failed, using raw string for event lookup: {e}")
                 for entry in proposed_entries:
                     ref_date = trade_date if _trade_date_parsed is None else trade_date
                     nearby = ec.get_events_near(ref_date, window_days=3)

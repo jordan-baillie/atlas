@@ -44,8 +44,8 @@ def _register_defaults():
     try:
         from brokers.alpaca.broker import AlpacaBroker  # noqa: F401
         _BROKER_FACTORIES["alpaca"] = _make_alpaca_broker
-    except Exception:
-        logger.debug("alpaca broker not available (install: pip install alpaca-py)")
+    except Exception as e:
+        logger.debug(f"alpaca broker not available (install: pip install alpaca-py): {e}")
 
 
 def available_brokers() -> list[str]:

@@ -461,7 +461,8 @@ class LivePortfolio:
                 from markets import get_market as _get_market
                 _market_profile = _get_market(self.market_id)
                 _universe_tickers: set | None = set(_market_profile.get_formatted_tickers())
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Market universe lookup failed, skipping ticker filter: {e}")
                 _universe_tickers = None  # fail open — don't filter if universe unknown
 
             merged = []

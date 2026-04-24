@@ -52,8 +52,8 @@ def _health_log(level, message, detail=None):
         from monitor.health_writer import log_error, log_warning, log_info
         fn = {"error": log_error, "warning": log_warning}.get(level, log_info)
         fn("reconcile_positions", message, detail)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Health-log write failed (non-fatal): {e}")
 
 
 # Markets supported
@@ -457,8 +457,8 @@ def reconcile_positions(
         if broker:
             try:
                 broker.disconnect()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Broker disconnect error during reconciliation cleanup: {e}")
 
     return result
 
@@ -683,6 +683,6 @@ if __name__ == "__main__":
                 f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
                 f"Check logs/reconciliation.log"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Crash-alert Telegram notification failed: {e}")
         raise
