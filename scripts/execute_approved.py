@@ -59,15 +59,25 @@ def main():
     auto_approve = config.get("trading", {}).get("auto_approve", False)
     if status != "APPROVED":
         if auto_approve and status in ("", "PENDING", "PENDING_APPROVAL", "GENERATED", "DRAFT"):
+            _n_entries = len(plan.get("proposed_entries", []))
+            _n_exits = len(plan.get("proposed_exits", []))
             log.warning(
-                "Plan status is '%s' and auto_approve=True — auto-approving now",
-                status,
+                "AUTO_APPROVE: trade_date=%s market=%s n_entries=%d n_exits=%d "
+                "reason=config.trading.auto_approve=true",
+                trade_date, market_id, _n_entries, _n_exits,
             )
-            plan = plan_gen.approve_plan(trade_date, market_id=market_id)
+            plan = plan_gen.approve_plan(
+                trade_date, market_id=market_id, auto=True, approver="auto"
+            )
             if not plan:
                 log.error("auto_approve: approve_plan() returned None — aborting")
                 return
+            # Annotate with auto-approval metadata
+            plan["auto_approved"] = True
+            plan["approval_source"] = "auto_approve_config_flag"
             status = plan.get("status", "")
+            # Best-effort Telegram notification
+            _notify_auto_approve(market_id, trade_date, _n_entries, _n_exits)
         if status != "APPROVED":
             log.info("Plan status is '%s' (need APPROVED) — skipping", status)
             return
@@ -226,6 +236,25 @@ def _notify_execution(market_id: str, trade_date: str, report: dict):
     except Exception as e:
         log.warning("Telegram notification failed (non-fatal): %s", e)
 
+
+def _notify_auto_approve(
+    market_id: str,
+    trade_date: str,
+    n_entries: int,
+    n_exits: int,
+) -> None:
+    """Send Telegram notification when a plan is auto-approved (best-effort)."""
+    try:
+        from utils.telegram import send_message, tg_escape as _tge
+        lines = [
+            "\U0001F916 <b>AUTO-APPROVED</b> " + _tge(market_id.upper())
+            + " plan for " + _tge(trade_date),
+            "Entries: " + str(n_entries) + "  Exits: " + str(n_exits),
+            "Execution starting now...",
+        ]
+        send_message("\n".join(lines))
+    except Exception as e:
+        log.warning("Auto-approve Telegram notification failed (non-fatal): %s", e)
 
 def _notify_error(market_id: str, trade_date: str, error: str):
     """Send Telegram error alert."""
