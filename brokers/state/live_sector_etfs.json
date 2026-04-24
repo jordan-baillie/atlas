@@ -10,6 +10,15 @@
       "shares": 10,
       "stop_price": 110.618,
       "order_id": ""
+    },
+    {
+      "ticker": "XLK",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-23",
+      "entry_price": 156.77,
+      "shares": 8,
+      "stop_price": 153.5191,
+      "order_id": ""
     }
   ],
   "closed_trades": [],

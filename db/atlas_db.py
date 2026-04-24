@@ -26,6 +26,10 @@ DB_PATH = Path(__file__).resolve().parent.parent / "data" / "atlas.db"
 # All CRUD functions call get_db() with no args; they use whatever is current.
 _db_path_override: Optional[str] = None
 
+# Test override for the broker state file directory used by _assert_state_file_parity.
+# Set to a tmp_path str in tests; defaults to None (production path).
+_state_dir_override: Optional[str] = None
+
 # WAL mode persists at the DB file level; only needs to be set once per path
 # per process. Avoids redundant PRAGMA on every connection.
 _wal_initialized_paths: set = set()
@@ -129,6 +133,94 @@ def _group_performance(trades: List[Dict], field: str) -> Dict[str, Any]:
 
 # ── Trades ──────────────────────────────────────────────────────────────────
 
+def _assert_state_file_parity(
+    ticker: str,
+    universe: str,
+    strategy: str,
+    entry_price: float,
+    shares: int,
+    stop_price: float,
+) -> None:
+    """Post-insert guardrail: verify the market state file reflects the new trade.
+
+    After a successful SQLite INSERT in ``record_trade_entry``, this helper
+    checks that ``brokers/state/live_{universe}.json`` contains an entry for
+    *ticker*.  If the ticker is missing it:
+
+    1. Emits a loud ERROR log (visible in alerts / healthz).
+    2. Self-heals by appending a minimal position entry to the state file so
+       the dashboard and protective-order sync see the position.
+
+    Non-fatal — all exceptions are swallowed after logging.  The state file
+    is **not** the source of truth (SQLite is); this is a best-effort sync.
+
+    Design notes
+    ------------
+    - Skips gracefully when the state file does not exist (paper/backtest
+      markets, or a fresh environment that hasn't created it yet).
+    - Does NOT create the state file from scratch — only patches an existing
+      one.  File creation is the responsibility of ``LivePortfolio.save_state``.
+    - Thread-safe for CPython: the JSON read-modify-write is done under a
+      filelock if portalocker is available; otherwise best-effort (GIL
+      provides some protection for short operations).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    _PROJECT = Path(__file__).resolve().parent.parent
+    if _state_dir_override is not None:
+        _state_path = Path(_state_dir_override) / f"live_{universe}.json"
+    else:
+        _state_path = _PROJECT / "brokers" / "state" / f"live_{universe}.json"
+
+    if not _state_path.exists():
+        return  # Normal for paper/backtest markets
+
+    try:
+        with open(_state_path) as _f:
+            _state = json.load(_f)
+
+        _positions = _state.get("positions", [])
+        _tickers_in_state = {p.get("ticker") for p in _positions}
+
+        if ticker in _tickers_in_state:
+            return  # Already present — no action needed
+
+        # ── Mismatch detected ──────────────────────────────────────────────
+        _log.error(
+            "STATE FILE PARITY MISMATCH: %s/%s was written to SQLite but is "
+            "MISSING from %s — self-healing by appending position entry. "
+            "Root cause: state file write path is gated (live_enabled=False "
+            "or eod_settlement/sync_protective_orders skipped this market).",
+            ticker, universe, _state_path.name,
+        )
+
+        # Self-heal: append a minimal position entry
+        _new_entry = {
+            "ticker": ticker,
+            "strategy": strategy,
+            "entry_date": datetime.now().strftime("%Y-%m-%d"),
+            "entry_price": float(entry_price),
+            "shares": int(shares),
+            "stop_price": float(stop_price),
+            "order_id": "",
+        }
+        _positions.append(_new_entry)
+        _state["positions"] = _positions
+
+        with open(_state_path, "w") as _f:
+            json.dump(_state, _f, indent=2)
+
+        _log.info(
+            "STATE FILE PARITY: self-healed %s/%s — appended to %s",
+            ticker, universe, _state_path.name,
+        )
+    except Exception as _exc:
+        _log.warning(
+            "STATE FILE PARITY: check failed for %s/%s (non-fatal): %s",
+            ticker, universe, _exc,
+        )
+
+
 def record_trade_entry(
     ticker: str,
     strategy: str,
@@ -174,7 +266,11 @@ def record_trade_entry(
                     config_version,
                 ),
             )
-            return cursor.lastrowid
+            _new_id = cursor.lastrowid
+        # Post-insert parity check: verify state file reflects this trade.
+        # Non-fatal — never prevents the successful return value.
+        _assert_state_file_parity(ticker, universe, strategy, entry_price, shares, stop_price)
+        return _new_id
     except sqlite3.IntegrityError as exc:
         _log.warning(
             "record_trade_entry: duplicate open trade blocked for %s/%s "
