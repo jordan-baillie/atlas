@@ -142,24 +142,46 @@ def record_trade_entry(
     direction: str = "long",
     config_version: Optional[str] = None,
     **kwargs,
-) -> None:
-    """Insert a new open trade."""
-    with get_db() as db:
-        db.execute(
-            """
-            INSERT INTO trades
-                (ticker, strategy, universe, direction, entry_date, entry_price,
-                 shares, stop_price, take_profit, confidence, regime_at_entry,
-                 status, config_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)
-            """,
-            (
-                ticker, strategy, universe, direction,
-                datetime.now().isoformat(), entry_price,
-                shares, stop_price, take_profit, confidence, regime_state,
-                config_version,
-            ),
+) -> Optional[int]:
+    """Insert a new open trade.
+
+    Returns the new trade id on success.  Returns None (and logs a WARNING)
+    when a UNIQUE constraint violation is detected — i.e. there is already an
+    open trade for the same (ticker, universe) pair.  This makes the function
+    safe to call from concurrent processes without crashing the caller.
+
+    The UNIQUE partial index ``idx_trades_unique_open`` on
+    ``trades(ticker, universe) WHERE status='open'`` enforces the constraint at
+    the database level, making the guard atomic regardless of how many
+    processes call this simultaneously.
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        with get_db() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO trades
+                    (ticker, strategy, universe, direction, entry_date, entry_price,
+                     shares, stop_price, take_profit, confidence, regime_at_entry,
+                     status, config_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)
+                """,
+                (
+                    ticker, strategy, universe, direction,
+                    datetime.now().isoformat(), entry_price,
+                    shares, stop_price, take_profit, confidence, regime_state,
+                    config_version,
+                ),
+            )
+            return cursor.lastrowid
+    except sqlite3.IntegrityError as exc:
+        _log.warning(
+            "record_trade_entry: duplicate open trade blocked for %s/%s "
+            "(UNIQUE constraint on idx_trades_unique_open): %s",
+            ticker, universe, exc,
         )
+        return None
 
 
 def _compute_and_fill_mae_mfe(ticker: str, strategy: str, *, db=None) -> None:
