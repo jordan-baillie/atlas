@@ -713,6 +713,32 @@ def get_signals(
 
 # ── Plans ────────────────────────────────────────────────────────────────────
 
+def _validate_plan_date(date: str) -> None:
+    """Raise ValueError if plan date is suspiciously far from today (>30d or year mismatch).
+
+    This catches the P1-6 class of bug where a test fixture date like
+    '2024-03-01' leaks into production plan writes.  Date-level comparison
+    avoids sub-day float noise from datetime.utcnow().
+    """
+    if not date:
+        return  # Empty/missing date — not our concern here
+    import logging as _plan_log
+    from datetime import date as _date
+    _log = _plan_log.getLogger(__name__)
+    try:
+        plan_d = _date.fromisoformat(date[:10])
+    except ValueError:
+        return  # Non-standard date string (e.g. "2026-04-08-test") — skip silently
+    today = _date.today()
+    delta_days = abs((plan_d - today).days)
+    if delta_days > 30 or plan_d.year != today.year:
+        raise ValueError(
+            f"plan.date={date!r} is {delta_days}d from today (today year={today.year}, "
+            f"plan year={plan_d.year}) — likely hardcoded test date leaking into production. "
+            "Fix the call site or use datetime.today().strftime('%Y-%m-%d')."
+        )
+
+
 def record_plan(
     date: str,
     market_id: str,
@@ -724,6 +750,7 @@ def record_plan(
     overlay_adjustments: Optional[Dict] = None,
 ) -> int:
     """Insert a new plan. Returns the new plan id."""
+    _validate_plan_date(date)
     with get_db() as db:
         cursor = db.execute(
             """
@@ -970,45 +997,108 @@ def record_snapshot(
     exposure_by_sector: Optional[Dict] = None,
     regime_state: Optional[str] = None,
     source: str = "eod",
+    market_id: str = "sp500",
 ) -> None:
-    """Insert a portfolio snapshot."""
+    """Insert a per-market portfolio snapshot.
+
+    Args:
+        market_id: The market whose positions this snapshot covers (e.g. 'sp500',
+                   'commodity_etfs'). Use 'ALL' for the broker-level aggregate row
+                   written once per EOD cycle via record_all_markets_snapshot().
+    """
     with get_db() as db:
         db.execute(
             """
             INSERT INTO portfolio_snapshots
                 (timestamp, total_equity, cash, positions, exposure_by_universe,
-                 exposure_by_sector, regime_state, source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 exposure_by_sector, regime_state, source, market_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 timestamp, total_equity, cash,
                 json.dumps(positions) if positions is not None else None,
                 json.dumps(exposure_by_universe) if exposure_by_universe is not None else None,
                 json.dumps(exposure_by_sector) if exposure_by_sector is not None else None,
-                regime_state, source,
+                regime_state, source, market_id,
             ),
         )
 
 
-def get_latest_snapshot() -> Optional[Dict]:
-    """Return the most recent portfolio snapshot."""
+def record_all_markets_snapshot(
+    timestamp: str,
+    broker_equity: float,
+    broker_cash: float,
+    source: str = "eod",
+) -> None:
+    """Write one aggregate snapshot row (market_id='ALL') per EOD cycle.
+
+    This is the authoritative total-portfolio equity row. It uses the
+    broker-account-level figures (single Alpaca account == single equity),
+    so it is immune to "last writer wins" across per-market EOD runs.
+
+    Readers wanting the portfolio total should filter ``WHERE market_id='ALL'``.
+    """
+    positions_value = round(broker_equity - broker_cash, 2)
+    record_snapshot(
+        timestamp=timestamp,
+        total_equity=broker_equity,
+        cash=broker_cash,
+        positions=None,
+        regime_state=None,
+        source=source,
+        market_id="ALL",
+    )
+
+
+def get_latest_snapshot(market_id: str = "ALL") -> Optional[Dict]:
+    """Return the most recent portfolio snapshot for a given market.
+
+    Args:
+        market_id: Defaults to 'ALL' (broker-level aggregate). Pass a specific
+                   market ('sp500', 'commodity_etfs') to get that market's row.
+                   Pass ``None`` to get the single most-recent row regardless of
+                   market (legacy behaviour — prefer the default).
+    """
     with get_db() as db:
-        row = db.execute(
-            "SELECT * FROM portfolio_snapshots ORDER BY timestamp DESC LIMIT 1"
-        ).fetchone()
+        if market_id is None:
+            row = db.execute(
+                "SELECT * FROM portfolio_snapshots ORDER BY timestamp DESC LIMIT 1"
+            ).fetchone()
+        else:
+            row = db.execute(
+                "SELECT * FROM portfolio_snapshots"
+                " WHERE market_id=?"
+                " ORDER BY timestamp DESC LIMIT 1",
+                (market_id,),
+            ).fetchone()
         if row:
             return _decode_snapshot(dict(row))
         return None
 
 
-def get_snapshots(days: Optional[int] = None, limit: int = 10000) -> List[Dict]:
-    """Return portfolio snapshots, most recent first."""
+def get_snapshots(
+    days: Optional[int] = None,
+    limit: int = 10000,
+    market_id: Optional[str] = "ALL",
+) -> List[Dict]:
+    """Return portfolio snapshots, most recent first.
+
+    Args:
+        market_id: Filter to a specific market. Defaults to 'ALL' (aggregate rows).
+                   Pass ``None`` to return snapshots across all markets.
+    """
     with get_db() as db:
         query = "SELECT * FROM portfolio_snapshots"
         params: List[Any] = []
+        conditions: List[str] = []
+        if market_id is not None:
+            conditions.append("market_id=?")
+            params.append(market_id)
         if days:
-            query += " WHERE timestamp >= datetime('now', ?)"
+            conditions.append("timestamp >= datetime('now', ?)")
             params.append(f"-{days} days")
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
         query += f" ORDER BY timestamp DESC LIMIT {int(limit)}"
         return [
             _decode_snapshot(dict(r)) for r in db.execute(query, params).fetchall()

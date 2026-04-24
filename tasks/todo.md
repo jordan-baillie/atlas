@@ -140,10 +140,12 @@ session — none are quick fixes.
       landed (`408420f2`) but integration into signal generation incomplete.
 - [ ] **#221 — Phase 5 dashboard surfacing.** Overlay decisions + health
       section landed (`a302f9b1`); still need research-matrix coverage view.
-- [ ] **#239 — MRVL orphan fix audit.** Fix was shipped earlier; audit
-      note: **entry/exit dates on the reconciliation record are
-      inverted**. Needs a quick data-fix + a test that prevents inverted
-      dates from landing again. Flag from audit reviewer.
+- [x] **#239 — MRVL orphan fix audit.** ✅ Closed 2026-04-24.
+      Data fix: all 11 inverted-date trades swapped (entry↔exit);
+      4 status=error rows set to closed. Root cause: AEST entry_date vs
+      UTC/ET exit_date — off-by-one timezone. CHECK constraint added to
+      trades table (migration 2026-04-24-trades-date-consistency-check.py).
+      Tests: test_trade_date_check_constraint.py.
 
 ---
 

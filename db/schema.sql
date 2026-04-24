@@ -133,7 +133,10 @@ CREATE TABLE IF NOT EXISTS trades (
     status          TEXT    DEFAULT 'open',  -- 'open', 'closed'
     config_version  TEXT,
     created_at      TEXT    DEFAULT (datetime('now')),
-    updated_at      TEXT    DEFAULT (datetime('now'))
+    updated_at      TEXT    DEFAULT (datetime('now')),
+    stop_order_id   TEXT    DEFAULT '',
+    tp_order_id     TEXT    DEFAULT '',
+    CHECK (exit_date IS NULL OR exit_date >= entry_date)
 );
 CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
 CREATE INDEX IF NOT EXISTS idx_trades_strategy ON trades(strategy);
@@ -181,9 +184,12 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
     exposure_by_universe    TEXT,  -- JSON: {sp500: 0.45, treasury_etfs: 0.20}
     exposure_by_sector      TEXT,  -- JSON: {energy: 0.15, tech: 0.10}
     regime_state            TEXT,
-    source                  TEXT    DEFAULT 'eod'  -- 'eod', 'intraday', 'manual'
+    source                  TEXT    DEFAULT 'eod',  -- 'eod', 'intraday', 'manual'
+    market_id               TEXT    DEFAULT 'sp500' -- 'sp500', 'commodity_etfs', 'ALL' (aggregate)
 );
 CREATE INDEX IF NOT EXISTS idx_snapshots_ts ON portfolio_snapshots(timestamp);
+CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_market_ts
+    ON portfolio_snapshots(market_id, timestamp);
 
 -- ═══════════════════════════════════════════════════════════
 -- AI OVERLAY (Layer 3)
