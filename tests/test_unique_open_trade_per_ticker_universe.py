@@ -10,6 +10,7 @@ INSERT itself atomic, and record_trade_entry catches IntegrityError gracefully.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 import logging
 import sqlite3
 
@@ -133,10 +134,14 @@ class TestReopenAfterClose:
 
         # Close it
         with get_db() as db:
+            row = db.execute("SELECT entry_date FROM trades WHERE id=?", (id1,)).fetchone()
+            entry_dt = row['entry_date'][:10]  # YYYY-MM-DD (strip any time part)
+            # Exit one day after entry
+            exit_dt = (datetime.fromisoformat(entry_dt) + timedelta(days=1)).strftime('%Y-%m-%d')
             db.execute(
-                "UPDATE trades SET status='closed', exit_date='2026-01-02', "
+                "UPDATE trades SET status='closed', exit_date=?, "
                 "exit_price=110.0, pnl=100.0 WHERE id=?",
-                (id1,),
+                (exit_dt, id1),
             )
 
         # Now a new open should succeed
