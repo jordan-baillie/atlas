@@ -716,7 +716,7 @@ class TestEquityCurve:
 
 
 class TestPortfolioSnapshots:
-    def _record(self, total_equity=10_000.0):
+    def _record(self, total_equity=10_000.0, market_id="sp500"):
         atlas_db_module.record_snapshot(
             timestamp=_iso(),
             total_equity=total_equity,
@@ -726,11 +726,13 @@ class TestPortfolioSnapshots:
             exposure_by_sector={"technology": 0.5},
             regime_state="bull_risk_on",
             source="eod",
+            market_id=market_id,
         )
 
     def test_record_and_get_latest(self):
         self._record(total_equity=10_000.0)
-        snap = atlas_db_module.get_latest_snapshot()
+        # Use market_id='sp500' explicitly — default='ALL' returns broker aggregate row
+        snap = atlas_db_module.get_latest_snapshot("sp500")
         assert snap is not None
         assert snap["total_equity"] == pytest.approx(10_000.0)
 
@@ -738,27 +740,29 @@ class TestPortfolioSnapshots:
         self._record(total_equity=10_000.0)
         time.sleep(0.01)
         self._record(total_equity=11_000.0)
-        snap = atlas_db_module.get_latest_snapshot()
+        snap = atlas_db_module.get_latest_snapshot("sp500")
         assert snap["total_equity"] == pytest.approx(11_000.0)
 
     def test_get_snapshots_multiple(self):
         self._record(10_000.0)
         self._record(11_000.0)
-        snaps = atlas_db_module.get_snapshots()
+        snaps = atlas_db_module.get_snapshots(market_id="sp500")
         assert len(snaps) >= 2
 
     def test_positions_deserialized(self):
         self._record()
-        snap = atlas_db_module.get_latest_snapshot()
+        snap = atlas_db_module.get_latest_snapshot("sp500")
         positions = snap.get("positions")
         if isinstance(positions, str):
             positions = json.loads(positions)
         assert isinstance(positions, list)
 
     def test_get_latest_empty(self):
+        # No ALL rows in empty DB → returns None (default market_id='ALL')
         assert atlas_db_module.get_latest_snapshot() is None
 
     def test_get_snapshots_empty(self):
+        # No ALL rows in empty DB → returns [] (default market_id='ALL')
         assert atlas_db_module.get_snapshots() == []
 
 

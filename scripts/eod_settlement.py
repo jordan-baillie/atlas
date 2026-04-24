@@ -738,12 +738,24 @@ def main():
             positions_count=len(portfolio.positions),
             realized_pnl=realized_today,
         )
+        _snap_ts = datetime.now().isoformat()
         atlas_db.record_snapshot(
-            timestamp=datetime.now().isoformat(),
+            timestamp=_snap_ts,
             total_equity=eq,
             cash=portfolio.cash,
             positions=position_snapshot,
             regime_state=None,
+            market_id=market_id,
+        )
+        # Broker-level aggregate snapshot (market_id='ALL'): authoritative total equity.
+        # Written once per market EOD so the latest ALL row is from the last market to
+        # settle.  Readers wanting portfolio total should use get_latest_snapshot('ALL').
+        _broker_eq = portfolio.broker_equity()
+        _broker_cash = portfolio.cash  # same account cash for all markets
+        atlas_db.record_all_markets_snapshot(
+            timestamp=_snap_ts,
+            broker_equity=_broker_eq,
+            broker_cash=_broker_cash,
         )
         # Per-position snapshots for historical tracking
         atlas_db.record_position_snapshots(
