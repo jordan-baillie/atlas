@@ -268,6 +268,36 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                         "(ticker not in %s universe)",
                         ticker, market_id, _derived_universe, market_id,
                     )
+
+                # Pre-insert duplicate guard (belt-and-suspenders over DB UNIQUE index).
+                # The ledger_map check above catches the common case; this catches the
+                # edge case where a concurrent process inserted the row after we built
+                # ledger_map, or where the universe mismatch changes the effective key.
+                _resolved_universe = _derived_universe or market_id
+                try:
+                    with atlas_db.get_db() as _chk_db:
+                        _existing = _chk_db.execute(
+                            "SELECT id, strategy FROM trades "
+                            "WHERE ticker=? AND universe=? AND exit_date IS NULL",
+                            (ticker, _resolved_universe),
+                        ).fetchone()
+                    if _existing:
+                        log.info(
+                            "reconcile_skip_duplicate_open: ticker=%s universe=%s "
+                            "existing_id=%s existing_strategy=%s — skipping INSERT",
+                            ticker, _resolved_universe,
+                            _existing[0], _existing[1],
+                        )
+                        stats["errors"].append(
+                            f"{ticker}: duplicate open row already exists (id={_existing[0]})"
+                        )
+                        continue
+                except Exception as _chk_exc:
+                    log.warning(
+                        "reconcile_ledger: pre-insert duplicate check failed for %s (non-fatal): %s",
+                        ticker, _chk_exc,
+                    )
+
                 atlas_db.record_trade_entry(
                     ticker=ticker,
                     strategy=_backfill_strategy,
