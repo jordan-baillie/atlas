@@ -185,10 +185,11 @@ def _maybe_alert_stuck(
         status_line = (
             "account-level reject (permanent)" if permanent else "retry cap reached"
         )
+        from utils.telegram import tg_escape as _tge
         msg = (
             f"🚨 <b>Stop stuck-held for {ticker}</b>\n"
             f"Market: {market_id.upper()}\n"
-            f"Reason: <code>{reason}</code>\n"
+            f"Reason: <code>{_tge(reason)}</code>\n"
             f"Status: {status_line}\n"
             f"<i>Manual intervention needed — not resubmitting further today.</i>"
         )
@@ -976,7 +977,8 @@ def format_telegram_message(
         error = r.get("error", "")
 
         if error:
-            lines.append(f"❌ <b>{market}</b>: {error}")
+            from utils.telegram import tg_escape as _tge
+            lines.append(f"❌ <b>{market}</b>: {_tge(error)}")
             all_ok = False
             continue
 
@@ -1005,7 +1007,7 @@ def format_telegram_message(
             f"  SL: {sl_placed} placed | {sl_exists} existed | {sl_skip} skipped\n"
             f"  TP: {tp_placed} placed | {tp_exists} existed | {tp_skip} skipped"
             + (f"\n  ⚠️ {errors} errors" if errors else "")
-            + (f"\n  ⏳ {pdt_deferred} PDT-deferred (same-day entries, account < $25k — "
+            + (f"\n  ⏳ {pdt_deferred} PDT-deferred (same-day entries, account &lt; $25k — "
                f"stops placed pre-market tomorrow)" if pdt_deferred else "")
             + (f"\n  🚫 {orphans_cancelled} orphaned orders cancelled" if orphans_cancelled else "")
         )
@@ -1014,8 +1016,9 @@ def format_telegram_message(
         for ticker, tresult in r.get("results", {}).items():
             errs = tresult.get("errors", [])
             if errs:
+                from utils.telegram import tg_escape as _tge
                 for e in errs:
-                    lines.append(f"  └─ {ticker}: ⚠️ {e}")
+                    lines.append(f"  └─ {ticker}: ⚠️ {_tge(e)}")
             elif tresult.get("sl_action") == "pdt_deferred":
                 lines.append(f"  └─ {ticker}: ⏳ PDT deferred — stop placed tomorrow pre-market")
 
@@ -1207,9 +1210,10 @@ if __name__ == "__main__":
         # Top-level crash guard — alert via Telegram so cron failures aren't silent
         try:
             from utils.telegram import send_message
+            from utils.telegram import tg_escape as _tge
             send_message(
                 f"🚨 <b>sync_protective_orders CRASHED</b>\n\n"
-                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"<pre>{_tge(type(exc).__name__)}: {_tge(str(exc)[:500])}</pre>\n\n"
                 f"Check logs/sync_protective.log"
             )
         except Exception:

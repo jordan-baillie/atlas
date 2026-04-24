@@ -147,6 +147,26 @@ def _esc(text: str) -> str:
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def tg_escape(s: object) -> str:
+    """Escape a string for safe inclusion in a Telegram HTML message.
+
+    Use this for ANY dynamic/user-supplied content inserted into HTML messages
+    (error strings, broker messages, ticker descriptions, exception text, etc.).
+    Telegram HTML only supports a small subset of tags — any unrecognised
+    ``<tag>`` causes a 400 parse error.
+
+    Escapes: ``&`` → ``&amp;``, ``<`` → ``&lt;``, ``>`` → ``&gt;``
+    Returns ``""`` for None input so callers never need to guard for None.
+
+    Example::
+
+        send_message(f"Error for {ticker}: {tg_escape(broker_error_msg)}")
+    """
+    if s is None:
+        return ""
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def _build_dashboard_from_sqlite() -> Optional[dict]:
     """Build dashboard data from SQLite equity_curve + position_snapshots.
 
