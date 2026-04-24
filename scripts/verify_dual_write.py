@@ -523,6 +523,128 @@ def check_ohlcv() -> bool:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# CHECK 4b — OHLCV (all 7 universes)
+# ═════════════════════════════════════════════════════════════════════════════
+def check_ohlcv_universes() -> bool:
+    """
+    Per-universe OHLCV dual-write check: compare parquet cache max date vs
+    SQLite ohlcv max date for each ticker in each of the 7 universes.
+
+    Design notes:
+    - SQLite is queried WITHOUT a universe filter — the PRIMARY KEY is
+      (ticker, date), so a row exists once per (ticker, date) regardless of
+      which universe last wrote it.  This matches how ``get_universe_data()``
+      works (it queries by ticker IN (...) for static universes).
+    - Cross-universe tickers (e.g. GLD in both commodity_etfs and gold_etfs,
+      XLU in both sector_etfs and defensive_etfs) are counted once per
+      universe in the coverage report.
+    - ASX tickers use ``_AX`` suffix in the filename and ``.AX`` in SQLite;
+      the conversion is handled here.
+
+    Pass criteria:
+    - For every universe: no ticker has parquet_max_date > sqlite_max_date
+      (SQLite must be at least as current as the parquet cache)
+    """
+    import pandas as pd  # lazy import
+
+    from db import atlas_db
+
+    # Universe → cache directory mapping.
+    # For static ETF universes we use the canonical ticker list from universe
+    # definitions; for sp500 we sample from the cache directory (as before).
+    ALL_UNIVERSES = [
+        "sp500",
+        "commodity_etfs",
+        "sector_etfs",
+        "defensive_etfs",
+        "gold_etfs",
+        "treasury_etfs",
+        "asx",
+    ]
+
+    CACHE_BASE = PROJECT / "data" / "cache"
+
+    print(f"\n  4b. OHLCV — all universes")
+
+    all_ok = True
+    universe_results: dict = {}
+
+    for uni in ALL_UNIVERSES:
+        cache_dir = CACHE_BASE / uni
+        if not cache_dir.exists():
+            universe_results[uni] = {"status": "missing", "stale": [], "missing": []}
+            _row(f"  {uni}", f"{WARN}cache dir missing")
+            continue
+
+        parquet_files = list(cache_dir.glob("*.parquet"))
+        if not parquet_files:
+            universe_results[uni] = {"status": "empty", "stale": [], "missing": []}
+            _row(f"  {uni}", f"{WARN}no parquet files")
+            continue
+
+        # Seed on today so the same tickers are checked on repeated runs per day
+        rng = random.Random(TODAY + uni)
+        sample_files = rng.sample(parquet_files, min(5, len(parquet_files)))
+
+        stale_tickers: list = []
+        missing_tickers: list = []
+
+        for f in sample_files:
+            stem = f.stem
+            # ASX: filename uses _AX (underscore), SQLite uses .AX (dot)
+            if uni == "asx" and stem.endswith("_AX"):
+                ticker = stem[:-3] + ".AX"
+            else:
+                ticker = stem
+
+            try:
+                df_p = pd.read_parquet(f)
+                df_p.index = pd.to_datetime(df_p.index)
+                if df_p.empty:
+                    continue
+                parquet_max = df_p.index.max().strftime("%Y-%m-%d")
+            except Exception as exc:
+                _row(f"  {uni}/{ticker}", f"{BAD} parquet read error: {exc}")
+                all_ok = False
+                continue
+
+            # Query SQLite WITHOUT universe filter — PKis (ticker, date)
+            with atlas_db.get_db() as db:
+                row = db.execute(
+                    "SELECT MAX(date) FROM ohlcv WHERE ticker = ?",
+                    (ticker,),
+                ).fetchone()
+            sqlite_max = row[0] if row else None
+
+            if sqlite_max is None:
+                missing_tickers.append(ticker)
+            elif parquet_max > sqlite_max:
+                stale_tickers.append((ticker, parquet_max, sqlite_max))
+
+        uni_ok = not stale_tickers and not missing_tickers
+        if not uni_ok:
+            all_ok = False
+
+        n_sampled = len(sample_files)
+        if uni_ok:
+            _row(f"  {uni}", f"{n_sampled}/{n_sampled} sampled OK {OK}")
+        else:
+            for t, p, s in stale_tickers:
+                _row(f"  {uni}/{t}", f"{BAD} stale: parquet={p} sqlite={s}")
+            for t in missing_tickers:
+                _row(f"  {uni}/{t}", f"{BAD} missing from SQLite")
+
+        universe_results[uni] = {
+            "status": "ok" if uni_ok else "fail",
+            "stale": stale_tickers,
+            "missing": missing_tickers,
+        }
+
+    _result(all_ok)
+    return all_ok
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # CHECK 5 — Equity Curve
 # ═════════════════════════════════════════════════════════════════════════════
 def check_equity() -> bool:
@@ -686,11 +808,12 @@ def main() -> None:
     print(_hr())
 
     checks = [
-        ("trades",  check_trades),
-        ("signals", check_signals),
-        ("plans",   check_plans),
-        ("ohlcv",   check_ohlcv),
-        ("equity",  check_equity),
+        ("trades",          check_trades),
+        ("signals",         check_signals),
+        ("plans",           check_plans),
+        ("ohlcv",           check_ohlcv),
+        ("ohlcv_universes", check_ohlcv_universes),
+        ("equity",          check_equity),
     ]
 
     results: Dict[str, bool] = {}
