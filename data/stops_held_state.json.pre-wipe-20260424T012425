@@ -1,0 +1,18 @@
+{
+  "XLK::commodity_etfs": {
+    "first_seen": "2026-04-24T00:45:06.363948",
+    "order_id": "dfa9969f-a16e-4725-bc92-77dbb0f724d8",
+    "retry_count": 4,
+    "last_alerted_date": "2026-04-24",
+    "permanently_skipped": true,
+    "skip_reason": "max_retries_4"
+  },
+  "CCJ::commodity_etfs": {
+    "first_seen": "2026-04-24T07:00:07.404378",
+    "order_id": "84623b80-c4a4-424b-bb43-ef5950a27f09",
+    "retry_count": 0,
+    "last_alerted_date": "",
+    "permanently_skipped": false,
+    "skip_reason": ""
+  }
+}
