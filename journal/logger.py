@@ -111,7 +111,20 @@ class DecisionJournal:
                 market_id=entry.get('market_id', 'sp500'),
             )
         except Exception as _db_exc:
-            logger.error(f"SQLite signal dual-write FAILED for {signal.ticker}: {_db_exc}", exc_info=True)
+            logger.error(
+                "SQLite signal dual-write FAILED for %s market=%s: %s",
+                signal.ticker, entry.get("market_id", "?"), _db_exc,
+                exc_info=True,
+            )
+            # Loud alert: signal write failure breaks signal quality tracking.
+            try:
+                from utils.telegram import send_message
+                send_message(
+                    f"🚨 SIGNAL WRITE FAILURE [{entry.get('market_id', '?')}] "
+                    f"{signal.ticker}/{entry.get('strategy', '?')}: {_db_exc}"
+                )
+            except Exception:
+                pass  # Telegram alert is best-effort; never crash signal path
         logger.info(f"Decision recorded: {signal.ticker} ({signal.strategy}) -> {action}")
 
     def get_entries(self, ticker: str = None, strategy: str = None,
@@ -242,8 +255,12 @@ class TradeLedger:
             logger.info(f"SQLite dual-write: exit for {_dw_ticker} succeeded")
         except Exception as _db_exc:
             logger.error(f"SQLite trade exit dual-write FAILED for {_dw_ticker}: {_db_exc}", exc_info=True)
-        logger.info(f"Ledger exit: SELL {trade_record.get('ticker')} "
-                    f"PnL=${trade_record.get('pnl', 0):.2f}")
+        _exit_pnl = trade_record.get("pnl")
+        logger.info(
+            "Ledger exit: SELL %s PnL=$%s",
+            trade_record.get("ticker"),
+            f"{_exit_pnl:.2f}" if _exit_pnl is not None else "?",
+        )
 
     def get_closed_trades(self, days: int = None, strategy: str = None) -> list:
         """Get completed trades."""

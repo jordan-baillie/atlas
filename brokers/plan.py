@@ -684,6 +684,49 @@ class TradePlanGenerator:
             constructed.signals, exit_recommendations, prices, trade_date
         )
 
+        # P1-9 fix: inject constructor-rejected signals into plan.rejected_entries.
+        # PortfolioConstructor.construct() rejects most signals (e.g. 40 of 43).
+        # Without this block those rejections are silently discarded — they never
+        # reach cmd_plan's record_signal loop and are never written to the signals
+        # table.  We convert constructed.rejected (list[(signal, reason)]) to the
+        # same dict shape that generate_plan uses for rejected_entries.
+        if constructed.rejected:
+            _constructor_rejects: list = []
+            for _sig, _reason in constructed.rejected:
+                try:
+                    _constructor_rejects.append({
+                        "ticker": _sig.ticker,
+                        "strategy": _sig.strategy,
+                        "entry_price": _sig.entry_price,
+                        "stop_price": _sig.stop_price,
+                        "take_profit": getattr(_sig, "take_profit", None),
+                        "position_size": _sig.position_size,
+                        "position_value": round(_sig.entry_price * _sig.position_size, 2),
+                        "risk_amount": round(
+                            abs(_sig.entry_price - _sig.stop_price) * _sig.position_size, 2
+                        ),
+                        "confidence": _sig.confidence,
+                        "rationale": getattr(_sig, "rationale", ""),
+                        "features": getattr(_sig, "features", {}),
+                        "sector": getattr(_sig, "sector", "Unknown"),
+                        "market_id": getattr(
+                            _sig, "market_id", self.config.get("market", "")
+                        ),
+                        "rejection_reason": _reason,
+                    })
+                except Exception as _ser_exc:
+                    logger.debug(
+                        "constructor reject serialisation error for %s: %s",
+                        getattr(_sig, "ticker", "?"), _ser_exc,
+                    )
+            # Prepend constructor rejections so they appear before any
+            # generate_plan-internal rejections (max-position overflow etc.)
+            plan["rejected_entries"] = _constructor_rejects + plan.get("rejected_entries", [])
+            logger.info(
+                "Injected %d constructor-rejected signals into plan.rejected_entries",
+                len(_constructor_rejects),
+            )
+
         # h. Enrich plan with regime metadata.
         plan["regime_state"] = regime.state.value
         plan["active_universes"] = list(active_universes)
