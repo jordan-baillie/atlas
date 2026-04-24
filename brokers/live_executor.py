@@ -634,8 +634,8 @@ class LiveExecutor:
             msg = f"KILL SWITCH ACTIVE — entry blocked: {halt_reason()}"
             logger.critical(msg)
             try:
-                from utils.telegram import send_message
-                send_message(f"🛑 {msg}")
+                from utils.telegram import send_message, tg_escape as _tge
+                send_message(f"🛑 KILL SWITCH ACTIVE — entry blocked: {_tge(halt_reason())}")
             except Exception as e:
                 logger.warning(f"Kill-switch Telegram notification failed: {e}")
             return {"status": "halted", "reason": "kill_switch"}

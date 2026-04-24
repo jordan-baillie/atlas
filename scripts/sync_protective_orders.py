@@ -187,7 +187,7 @@ def _maybe_alert_stuck(
         )
         from utils.telegram import tg_escape as _tge
         msg = (
-            f"🚨 <b>Stop stuck-held for {ticker}</b>\n"
+            f"🚨 <b>Stop stuck-held for {_tge(ticker)}</b>\n"
             f"Market: {market_id.upper()}\n"
             f"Reason: <code>{_tge(reason)}</code>\n"
             f"Status: {status_line}\n"
@@ -421,12 +421,12 @@ def _handle_held_stops(
             # block below).
             if send_telegram:
                 try:
-                    from utils.telegram import send_message
+                    from utils.telegram import send_message, tg_escape as _tge
                     send_message(
                         f"⚠️ Resubmitted stuck <code>held</code> stop for "
-                        f"<b>{ticker}</b>\n"
+                        f"<b>{_tge(ticker)}</b>\n"
                         f"Market: {market_id.upper()} | "
-                        f"Order: <code>{order_id[:16]}</code> | "
+                        f"Order: <code>{_tge(order_id[:16])}</code> | "
                         f"Retry: {entry['retry_count']}/{_HELD_MAX_RETRIES}"
                     )
                 except Exception as tg_exc:
@@ -1013,14 +1013,14 @@ def format_telegram_message(
         )
 
         # Per-ticker detail
+        from utils.telegram import tg_escape as _tge
         for ticker, tresult in r.get("results", {}).items():
             errs = tresult.get("errors", [])
             if errs:
-                from utils.telegram import tg_escape as _tge
                 for e in errs:
-                    lines.append(f"  └─ {ticker}: ⚠️ {_tge(e)}")
+                    lines.append(f"  └─ {_tge(ticker)}: ⚠️ {_tge(e)}")
             elif tresult.get("sl_action") == "pdt_deferred":
-                lines.append(f"  └─ {ticker}: ⏳ PDT deferred — stop placed tomorrow pre-market")
+                lines.append(f"  └─ {_tge(ticker)}: ⏳ PDT deferred — stop placed tomorrow pre-market")
 
         lines.append("")
 

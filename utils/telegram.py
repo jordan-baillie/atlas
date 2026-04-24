@@ -155,7 +155,7 @@ def tg_escape(s: object) -> str:
     Telegram HTML only supports a small subset of tags — any unrecognised
     ``<tag>`` causes a 400 parse error.
 
-    Escapes: ``&`` → ``&amp;``, ``<`` → ``&lt;``, ``>`` → ``&gt;``
+    Escapes: ``&`` → ``&amp;``, ``<`` → ``&lt;``, ``>`` → ``&gt;``, ``"`` → ``&quot;``
     Returns ``""`` for None input so callers never need to guard for None.
 
     Example::
@@ -164,7 +164,13 @@ def tg_escape(s: object) -> str:
     """
     if s is None:
         return ""
-    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
 
 
 def _build_dashboard_from_sqlite() -> Optional[dict]:

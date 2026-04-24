@@ -132,7 +132,7 @@ def main():
 def _notify_execution(market_id: str, trade_date: str, report: dict):
     """Send Telegram summary of executed orders."""
     try:
-        from utils.telegram import send_message
+        from utils.telegram import send_message, tg_escape as _tge
         ok_e = report.get("successful_entries", 0)
         tot_e = report.get("total_entries", 0)
         ok_x = report.get("successful_exits", 0)
@@ -151,11 +151,11 @@ def _notify_execution(market_id: str, trade_date: str, report: dict):
             price = e.get("price", 0)
             qty = e.get("qty", 0)
             emoji = "✅" if e.get("success") else "❌"
-            lines.append(f"  {emoji} BUY {ticker} {qty}x @ ${price:.2f} [{status}]")
+            lines.append(f"  {emoji} BUY {_tge(ticker)} {qty}x @ ${price:.2f} [{_tge(status)}]")
 
         vol_gate = report.get("volatility_gate", {})
         if vol_gate.get("action") not in (None, "none"):
-            lines.append(f"\n⚠️ Vol gate: {vol_gate.get('action')} — {vol_gate.get('message', '')}")
+            lines.append(f"\n⚠️ Vol gate: {_tge(vol_gate.get('action', ''))} — {_tge(vol_gate.get('message', ''))}")
 
         lines.append("\n⏰ Market opens in ~15 min. Fills will be reconciled at sync.")
         send_message("\n".join(lines))
@@ -166,10 +166,10 @@ def _notify_execution(market_id: str, trade_date: str, report: dict):
 def _notify_error(market_id: str, trade_date: str, error: str):
     """Send Telegram error alert."""
     try:
-        from utils.telegram import send_message
+        from utils.telegram import send_message, tg_escape as _tge
         send_message(
             f"❌ <b>Execution Failed</b> ({market_id.upper()} {trade_date})\n\n"
-            f"<pre>{error[:500]}</pre>\n\n"
+            f"<pre>{_tge(error[:500])}</pre>\n\n"
             f"Manual intervention required."
         )
     except Exception as e:
@@ -182,10 +182,10 @@ if __name__ == "__main__":
     except Exception as exc:
         # Top-level crash guard — alert via Telegram so cron failures aren't silent
         try:
-            from utils.telegram import send_message
+            from utils.telegram import send_message, tg_escape as _tge
             send_message(
                 f"🚨 <b>execute_approved CRASHED</b>\n\n"
-                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"<pre>{_tge(type(exc).__name__)}: {_tge(str(exc)[:500])}</pre>\n\n"
                 f"Check logs/execute_approved.log"
             )
         except Exception as e:

@@ -496,8 +496,9 @@ def format_telegram_message(result: dict, fixed: bool) -> str:
         "",
     ]
 
+    from utils.telegram import tg_escape as _tge
     if result.get("error"):
-        lines.append(f"<b>Error:</b> {result['error']}")
+        lines.append(f"<b>Error:</b> {_tge(result['error'])}")
         return "\n".join(lines)
 
     if not discrepancies:
@@ -516,8 +517,8 @@ def format_telegram_message(result: dict, fixed: bool) -> str:
         lines.append("")
         lines.append("<b>Details:</b>")
         for disc in discrepancies[:10]:  # Limit to first 10 to avoid message overflow
-            lines.append(f"  • {disc['type']}: {disc['ticker']}")
-            lines.append(f"    {disc['details']}")
+            lines.append(f"  • {_tge(disc['type'])}: {_tge(disc['ticker'])}")
+            lines.append(f"    {_tge(disc['details'])}")
         
         if len(discrepancies) > 10:
             lines.append(f"  ... and {len(discrepancies) - 10} more")
@@ -677,10 +678,10 @@ if __name__ == "__main__":
         # Top-level crash guard — alert via Telegram so cron failures aren't silent
         _health_log("critical", f"reconcile_positions CRASHED: {exc}")
         try:
-            from utils.telegram import send_message
+            from utils.telegram import send_message, tg_escape as _tge
             send_message(
                 f"🚨 <b>reconcile_positions CRASHED</b>\n\n"
-                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"<pre>{_tge(type(exc).__name__)}: {_tge(str(exc)[:500])}</pre>\n\n"
                 f"Check logs/reconciliation.log"
             )
         except Exception as e:

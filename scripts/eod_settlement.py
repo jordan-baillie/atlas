@@ -515,8 +515,8 @@ def main():
         _health_log("error", "Broker connection failed after retries", {"market": market_id, "attempts": len(_connect_delays)})
         # Send Telegram alert
         try:
-            from utils.telegram import send_message
-            send_message(f"\U0001f534 <b>EOD Settlement Failed</b>\nMarket: {market_id}\nBroker connection failed after {len(_connect_delays)} attempts.\nCheck logs/eod_settlement.log")
+            from utils.telegram import send_message, tg_escape as _tge
+            send_message(f"\U0001f534 <b>EOD Settlement Failed</b>\nMarket: {_tge(market_id)}\nBroker connection failed after {len(_connect_delays)} attempts.\nCheck logs/eod_settlement.log")
         except Exception as e:
             log.warning(f"Broker-failure Telegram alert could not be sent: {e}")
         print("ERROR: Broker connection failed after retries. Settlement aborted.")
@@ -801,10 +801,10 @@ if __name__ == "__main__":
     except Exception as exc:
         # Top-level crash guard — alert via Telegram so cron failures aren't silent
         try:
-            from utils.telegram import send_message
+            from utils.telegram import send_message, tg_escape as _tge
             send_message(
                 f"🚨 <b>eod_settlement CRASHED</b>\n\n"
-                f"<pre>{type(exc).__name__}: {str(exc)[:500]}</pre>\n\n"
+                f"<pre>{_tge(type(exc).__name__)}: {_tge(str(exc)[:500])}</pre>\n\n"
                 f"Check logs/eod_settlement.log"
             )
         except Exception as e:
