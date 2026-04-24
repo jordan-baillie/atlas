@@ -329,6 +329,7 @@ class TradePlanGenerator:
                     date=plan.get("trade_date", ""),
                     market_id=plan.get("market_id", "sp500"),
                     plan_data=plan,
+                    status=plan_status.lower(),  # P0-A fix: propagate actual status
                 )
         except Exception as e:
             logger.warning(f"SQLite plan dual-write failed: {e}")

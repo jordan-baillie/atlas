@@ -3,36 +3,25 @@
   "mode": "live",
   "positions": [
     {
-      "ticker": "FCX",
+      "ticker": "CCJ",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-22",
-      "entry_price": 68.03,
-      "shares": 5,
-      "stop_price": 66.755,
+      "entry_date": "2026-04-24",
+      "entry_price": 126.47,
+      "shares": 4,
+      "stop_price": 120.54,
       "order_id": "",
-      "stop_order_id": "5393b1d1-001b-4b8d-a251-5a5cc4c64e0b",
+      "stop_order_id": "88a8d94c-744e-4244-b74b-e2297ee828b7",
       "tp_order_id": ""
     },
     {
       "ticker": "GLD",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-22",
+      "entry_date": "2026-04-24",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 418.105,
       "order_id": "",
       "stop_order_id": "70b8e824-e8c3-4092-81f6-47fcbabeb7ad",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "UNG",
-      "strategy": "connors_rsi2",
-      "entry_date": "2026-04-22",
-      "entry_price": 10.68,
-      "shares": 54,
-      "stop_price": 10.47,
-      "order_id": "",
-      "stop_order_id": "36edef0f-37ae-4ec9-bfd3-3d2be113ac17",
       "tp_order_id": ""
     }
   ],
@@ -367,10 +356,87 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-22",
+      "equity": 5011.15,
+      "cash": 1158.08,
+      "positions_value": 3853.07,
+      "num_positions": 3,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "momentum_breakout",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 70.36,
+          "unrealized_pnl": 11.65,
+          "mae": 0.0,
+          "mfe": 3.42,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 435.26,
+          "unrealized_pnl": -15.08,
+          "mae": -1.7,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "connors_rsi2",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.95,
+          "unrealized_pnl": 14.58,
+          "mae": 0.0,
+          "mfe": 2.53,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-23",
+      "equity": 4966.0,
+      "cash": 99.48,
+      "positions_value": 4866.52,
+      "num_positions": 2,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "CCJ",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 126.47,
+          "current_price": 123.85,
+          "unrealized_pnl": -10.48,
+          "mae": -2.07,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 431.04,
+          "unrealized_pnl": -23.52,
+          "mae": -2.66,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5036.06,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-22T11:04:30.841127"
+  "last_saved": "2026-04-24T08:00:48.014889"
 }

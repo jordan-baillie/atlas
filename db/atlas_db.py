@@ -748,8 +748,17 @@ def record_plan(
     sizing_multiplier: Optional[float] = None,
     overlay_applied: bool = False,
     overlay_adjustments: Optional[Dict] = None,
+    status: str = "pending_approval",
 ) -> int:
-    """Insert a new plan. Returns the new plan id."""
+    """Insert a new plan. Returns the new plan id.
+
+    Args:
+        status: The plan status to store (e.g. 'pending_approval', 'approved',
+                'pending').  Defaults to 'pending_approval' to match the status
+                written to the JSON plan file by TradePlanGenerator._save_plan().
+                The old hardcoded 'pending' value was a P0-A bug — it caused
+                verify_dual_write.py to fail the status-normalisation check.
+    """
     _validate_plan_date(date)
     with get_db() as db:
         cursor = db.execute(
@@ -757,7 +766,7 @@ def record_plan(
             INSERT INTO plans
                 (date, market_id, regime_state, active_universes, sizing_multiplier,
                  overlay_applied, overlay_adjustments, plan_data, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 date, market_id, regime_state,
@@ -766,6 +775,7 @@ def record_plan(
                 1 if overlay_applied else 0,
                 json.dumps(overlay_adjustments) if overlay_adjustments is not None else None,
                 json.dumps(plan_data),
+                status,
             ),
         )
         return cursor.lastrowid
