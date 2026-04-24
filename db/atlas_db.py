@@ -835,6 +835,40 @@ def update_plan_status(
         )
 
 
+def update_plan(
+    plan_id: int,
+    status: Optional[str] = None,
+    approved_at: Optional[str] = None,
+    executed_at: Optional[str] = None,
+    plan_data: Optional[Dict] = None,
+) -> None:
+    """Update an existing plan row. All args except plan_id are optional;
+    only non-None fields are written (COALESCE pattern).
+
+    This is the idempotent dual-write target used by
+    TradePlanGenerator._save_plan() to avoid inserting a new row on every
+    status transition (pending_approval -> approved -> executed).
+    """
+    with get_db() as db:
+        db.execute(
+            """
+            UPDATE plans
+            SET status      = COALESCE(?, status),
+                approved_at = COALESCE(?, approved_at),
+                executed_at = COALESCE(?, executed_at),
+                plan_data   = COALESCE(?, plan_data)
+            WHERE id = ?
+            """,
+            (
+                status,
+                approved_at,
+                executed_at,
+                json.dumps(plan_data) if plan_data is not None else None,
+                plan_id,
+            ),
+        )
+
+
 def _decode_plan(row: Dict) -> Dict:
     """Deserialize JSON columns in a plan row."""
     if row.get("plan_data"):

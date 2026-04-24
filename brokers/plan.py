@@ -302,34 +302,28 @@ class TradePlanGenerator:
             json.dump(plan, f, indent=2, default=str)
         logger.info(f"Trade plan saved: {path}")
         # SQLite dual-write (non-fatal — JSON file is source of truth)
+        # UPDATE-or-INSERT: look up the existing row first so every status
+        # transition (pending_approval -> approved -> executed) writes to the
+        # SAME row instead of inserting a duplicate.
         try:
             from db import atlas_db
-            plan_status = plan.get("status", "PENDING_APPROVAL")
-            if plan_status == "APPROVED":
-                # Update the existing SQLite record rather than inserting a duplicate
-                existing = atlas_db.get_plan(
-                    plan.get("trade_date", ""),
-                    plan.get("market_id", "sp500"),
+            plan_status = plan.get("status", "PENDING_APPROVAL").lower()
+            db_market_id = market_id or "sp500"
+            existing = atlas_db.get_plan(trade_date, db_market_id)
+            if existing:
+                atlas_db.update_plan(
+                    existing["id"],
+                    status=plan_status,
+                    approved_at=plan.get("approved_at"),
+                    executed_at=plan.get("executed_at"),
+                    plan_data=plan,
                 )
-                if existing:
-                    atlas_db.update_plan_status(
-                        existing["id"],
-                        "approved",
-                        approved_at=plan.get("approved_at"),
-                    )
-                else:
-                    # No prior record — insert one carrying the approved plan
-                    atlas_db.record_plan(
-                        date=plan.get("trade_date", ""),
-                        market_id=plan.get("market_id", "sp500"),
-                        plan_data=plan,
-                    )
             else:
                 atlas_db.record_plan(
-                    date=plan.get("trade_date", ""),
-                    market_id=plan.get("market_id", "sp500"),
+                    date=trade_date,
+                    market_id=db_market_id,
                     plan_data=plan,
-                    status=plan_status.lower(),  # P0-A fix: propagate actual status
+                    status=plan_status,
                 )
         except Exception as e:
             logger.warning(f"SQLite plan dual-write failed: {e}")
@@ -758,12 +752,28 @@ class TradePlanGenerator:
                     return json.load(f)
         return None
 
-    def approve_plan(self, trade_date: str, market_id: str = "") -> Optional[dict]:
-        """Mark a plan as approved."""
+    def approve_plan(
+        self,
+        trade_date: str,
+        market_id: str = "",
+        auto: bool = False,
+        approver: str = "human",
+    ) -> Optional[dict]:
+        """Mark a plan as approved.
+
+        Args:
+            trade_date: Date string (YYYY-MM-DD) of the plan to approve.
+            market_id:  Market identifier (e.g. 'sp500', 'commodity_etfs').
+            auto:       When True, annotates the plan as auto-approved by config.
+            approver:   Who approved — 'human' (default) or 'auto'.
+        """
         plan = self.load_plan(trade_date, market_id=market_id)
         if plan:
             plan["status"] = "APPROVED"
             plan["approved_at"] = datetime.now().isoformat()
+            plan["approver"] = approver
+            if auto:
+                plan["approval_reason"] = "auto_approve_plans config flag"
             self._save_plan(plan, trade_date)
             return plan
         return None
