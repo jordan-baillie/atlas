@@ -40,6 +40,22 @@ from brokers.base import (
 
 logger = logging.getLogger("atlas.live_executor")
 
+
+def _fmt(x: object, spec: str = "{:.2f}") -> str:
+    """None-safe numeric formatter for reconcile log messages.
+
+    Prevents ``TypeError: unsupported format string passed to NoneType.__format__``
+    when broker order objects return None for fill_price / filled_avg_price on
+    orders that have not filled yet.
+    """
+    if x is None:
+        return "?"
+    try:
+        return spec.format(x)
+    except (ValueError, TypeError):
+        return str(x)
+
+
 PROJECT_ROOT = Path(__file__).parent.parent
 
 # ── RegimeModel lazy singleton ─────────────────────────────────
@@ -2157,8 +2173,17 @@ class LiveExecutor:
                 continue
 
             ticker = str(order.symbol)
-            fill_price = float(order.filled_avg_price or 0)
-            qty = int(float(order.filled_qty or order.qty or 0))
+            # None-safe extraction — filled_avg_price can be None for non-filled legs
+            _raw_fill = order.filled_avg_price
+            _raw_qty  = order.filled_qty or order.qty
+            if _raw_fill is None or _raw_qty is None:
+                logger.debug(
+                    "reconcile_exit_fills: skip %s — fill_price or qty is None "
+                    "(order status=%s)", order.symbol, order.status,
+                )
+                continue
+            fill_price = float(_raw_fill)
+            qty = int(float(_raw_qty))
             if fill_price <= 0 or qty <= 0:
                 continue
 
