@@ -17,6 +17,7 @@
 #   00 10 1 * *    /root/atlas/scripts/pi-cron.sh calibrate sp500
 #   00 8  * * 0    /root/atlas/scripts/pi-cron.sh rejected-signals sp500
 #   00 7  * * *   /root/atlas/scripts/cleanup_research_locks.sh   # purge research/locks/*.json >7d old
+#   00 17 * * *  python3 /root/atlas/scripts/cleanup_stale_plans.py >> /root/atlas/logs/cleanup_stale_plans.log 2>&1  # expire pending plans >14d old (17:00 AEST = 07:00 UTC)
 #
 # Setup:
 #   1. Ensure pi is logged in: pi (interactive) — OAuth login persists in ~/.pi/agent/auth.json
