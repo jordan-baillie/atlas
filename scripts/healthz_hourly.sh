@@ -122,9 +122,15 @@ except:
     sys.exit(1)
 
 # Issues to IGNORE (expected state, not actionable)
+# P1-E (2026-04-24): research_queue removed (queue-retirement migration, file deleted);
+#   dashboard_data removed (legacy vanilla-JS dashboard replaced by React/Vite served
+#   dynamically — no static dashboard-data.json exists); cron_dashboard suppressed
+#   because the refresh is now a systemd timer (atlas-dashboard-refresh.timer), not cron.
 IGNORE = {
     'cron_research',       # Research disabled intentionally
-    'cron_dashboard',      # Dashboard refresh via service, not cron
+    'cron_dashboard',      # Dashboard refresh via systemd timer, not cron (see below)
+    'research_queue',      # Removed: queue file deleted in March queue-retirement migration
+    'dashboard_data',      # Removed: legacy vanilla-JS path; React dashboard has no static file
 }
 
 issues = []
@@ -219,16 +225,6 @@ try_bash_fixes() {
             *broker_orders*)
                 # Open orders (stop/limit orders) are normal — skip
                 log "Skipped: open broker orders are expected (protective stops)"
-                ;;
-            *dashboard_data*)
-                # Try refreshing dashboard data
-                if systemctl is-active --quiet atlas-dashboard; then
-                    systemctl restart atlas-dashboard 2>/dev/null
-                    fixed="${fixed}Restarted dashboard refresh\n"
-                    log "Auto-fixed: restarted atlas-dashboard"
-                else
-                    remaining="${remaining}${line}\n"
-                fi
                 ;;
             *)
                 remaining="${remaining}${line}\n"
@@ -469,6 +465,26 @@ send_message(
     exit 1
 else
     log "Ledger integrity tests OK"
+fi
+
+# ── Dashboard refresh timer check (replaces cron_dashboard check) ──
+# P1-E (2026-04-24): healthz.py's cron_dashboard check reports "NOT scheduled"
+# because the refresh moved to a systemd timer (atlas-dashboard-refresh.timer).
+# The old cron check is ignored above; we do a direct systemctl check instead.
+if ! systemctl is-active --quiet atlas-dashboard-refresh.timer 2>/dev/null; then
+    log "WARN: atlas-dashboard-refresh.timer is not active (dashboard rebuild may not run hourly)"
+    python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT')
+from utils.telegram import send_message
+send_message(
+    '\u26a0\ufe0f <b>atlas-dashboard-refresh.timer not active</b>\n'
+    'The hourly React dashboard rebuild may not be running.\n'
+    'Check: <code>systemctl status atlas-dashboard-refresh.timer</code>'
+)
+" 2>/dev/null || true
+else
+    log "Dashboard refresh timer OK: atlas-dashboard-refresh.timer active"
 fi
 
 # ── Dashboard dist staleness check ──────────────────────────
