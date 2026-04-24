@@ -70,7 +70,53 @@ def compute_ruin_probability(
             "floor": floor,
         }
 
-    # Covariance via Ledoit-Wolf shrinkage
+    # Intersect tickers with those that actually have OHLCV data.
+    # _get_returns_matrix silently drops tickers with no rows (inner-join /
+    # dropna), so tickers and returns_df.columns can diverge — causing the
+    # matmul shape mismatch at  Z (n_paths, N) @ L.T (M, M)  when N > M.
+    available_tickers = [t for t in tickers if t in returns_df.columns]
+    if len(available_tickers) < len(tickers):
+        dropped = [t for t in tickers if t not in returns_df.columns]
+        logger.warning(
+            "compute_ruin_probability: dropping %d tickers with no OHLCV history: %s",
+            len(dropped), dropped,
+        )
+        # Treat dropped positions as cash (flat) — add their value to cash bucket
+        dropped_value = sum(
+            float(p["shares"]) * float(p["current_price"])
+            for p in positions if p["ticker"] in dropped
+        )
+        cash = cash + dropped_value
+        # Rebuild ticker/position_values arrays to match returns_df columns
+        position_values = np.array([
+            float(p["shares"]) * float(p["current_price"])
+            for p in positions if p["ticker"] in available_tickers
+        ])
+        tickers = available_tickers
+        returns_df = returns_df[tickers]  # preserve column order
+
+    if not tickers:
+        # All positions had no OHLCV data — degenerate to cash-only result
+        return {
+            "current_equity": current_equity,
+            "floor": floor,
+            "floor_pct": floor_pct,
+            "n_paths": n_paths,
+            "as_of": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "horizons": {
+                f"{h}d": {
+                    "prob_ruin": 0.0,
+                    "worst_case_equity": current_equity,
+                    "worst_5pct_equity": current_equity,
+                    "median_end_equity": current_equity,
+                    "days": h,
+                }
+                for h in horizons
+            },
+            "status": "no_data_for_positions",
+        }
+
+    # Covariance via Ledoit-Wolf shrinkage  (uses filtered returns_df / tickers)
     cov = _ledoit_wolf_shrinkage(returns_df)
 
     # Daily drift: use historical mean
