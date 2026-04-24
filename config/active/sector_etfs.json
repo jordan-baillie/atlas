@@ -2,7 +2,7 @@
     "version": "v1.0",
     "project": "Atlas",
     "market": "sector_etfs",
-    "description": "Sector ETFs v1.0 — SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
+    "description": "Sector ETFs v1.0 \u2014 SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
     "universe": {
         "method": "static",
         "benchmark_ticker": "SPY"
@@ -26,7 +26,7 @@
     "trading": {
         "mode": "passive",
         "broker": "alpaca",
-        "live_enabled": false,
+        "live_enabled": true,
         "holding_period_min": 2,
         "holding_period_max": 20,
         "data_frequency": "daily",
@@ -52,7 +52,7 @@
         "flat_fee_threshold": 0,
         "min_position_value": 100.0,
         "_broker": "alpaca",
-        "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+        "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
         "slippage_model": "volume_aware",
         "slippage_impact_exponent": 0.5
     },
@@ -158,7 +158,10 @@
     },
     "data": {
         "source": "yfinance",
-        "source_priority": ["alpaca", "yfinance"],
+        "source_priority": [
+            "alpaca",
+            "yfinance"
+        ],
         "fallback_enabled": true,
         "history_years": 7,
         "cache_dir": "data/cache",
@@ -201,9 +204,18 @@
         "equity_curve_scaling": {
             "enabled": true,
             "graduated_tiers": [
-                {"threshold": 0.04, "scale": 0.75},
-                {"threshold": 0.07, "scale": 0.5},
-                {"threshold": 0.1, "scale": 0.25}
+                {
+                    "threshold": 0.04,
+                    "scale": 0.75
+                },
+                {
+                    "threshold": 0.07,
+                    "scale": 0.5
+                },
+                {
+                    "threshold": 0.1,
+                    "scale": 0.25
+                }
             ]
         }
     },
