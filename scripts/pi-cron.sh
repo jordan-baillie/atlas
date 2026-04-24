@@ -18,6 +18,7 @@
 #   00 8  * * 0    /root/atlas/scripts/pi-cron.sh rejected-signals sp500
 #   00 7  * * *   /root/atlas/scripts/cleanup_research_locks.sh   # purge research/locks/*.json >7d old
 #   00 17 * * *  python3 /root/atlas/scripts/cleanup_stale_plans.py >> /root/atlas/logs/cleanup_stale_plans.log 2>&1  # expire pending plans >14d old (17:00 AEST = 07:00 UTC)
+#   30 9  * * *   python3 /root/atlas/scripts/check_macro_freshness.py >> /root/atlas/logs/check_macro_freshness.log 2>&1  # daily macro staleness alert (09:30 UTC = 19:30 AEST)
 #
 # Setup:
 #   1. Ensure pi is logged in: pi (interactive) — OAuth login persists in ~/.pi/agent/auth.json
@@ -210,6 +211,18 @@ PY
             echo "$(date -Iseconds) WARNING: macro indicator refresh exited $MACRO_EXIT — continuing" >> "$LOG_DIR/pi-cron.log"
         else
             echo "$(date -Iseconds) Macro indicator refresh complete" >> "$LOG_DIR/pi-cron.log"
+        fi
+
+        # ── Macro freshness validation ──────────────────────────────────────
+        # Alert if any FRED/yfinance series is stale > threshold (non-blocking).
+        _IN_SET_PLUS_E=1
+        set +e
+        python3 "$PROJECT/scripts/check_macro_freshness.py" >> "$LOG_DIR/pi-cron.log" 2>&1
+        MACRO_FRESH_EXIT=$?
+        set -e
+        _IN_SET_PLUS_E=0
+        if [ "$MACRO_FRESH_EXIT" -ne 0 ]; then
+            echo "$(date -Iseconds) WARNING: macro freshness check found stale series (alert sent)" >> "$LOG_DIR/pi-cron.log"
         fi
 
         # ── VIX parquet refresh (incremental 7-day) ───────────────────────────

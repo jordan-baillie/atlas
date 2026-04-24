@@ -1136,7 +1136,14 @@ def refresh_macro_data(cache_max_age_hours: int = 24) -> bool:
     # Also persist to macro_indicators SQLite table (includes FRED data)
     try:
         from data.macro import fetch_macro_data
-        db_df = fetch_macro_data(write_to_db=True, use_cache=True)
+        db_df = fetch_macro_data(
+            write_to_db=True,
+            use_cache=True,
+            # Propagate the caller's cache-age preference to FRED so that
+            # refresh_macro_data(cache_max_age_hours=0) also forces a fresh
+            # FRED API fetch (not just yfinance).
+            fred_max_age_hours=cache_max_age_hours,
+        )
         if db_df is not None and not db_df.empty:
             logger.info(
                 f"Macro indicators written to DB: {len(db_df)} rows "

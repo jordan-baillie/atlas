@@ -468,6 +468,7 @@ def fetch_macro_data(
     use_cache: bool = True,
     write_to_db: bool = False,
     fred_api_key: Optional[str] = None,
+    fred_max_age_hours: int = 12,
 ) -> pd.DataFrame:
     """Fetch, compute, and optionally persist all macro regime indicators.
 
@@ -491,6 +492,10 @@ def fetch_macro_data(
         write_to_db:  If ``True``, write results to SQLite via
                       :func:`write_macro_indicators_to_db`.
         fred_api_key: Optional FRED API key override.
+        fred_max_age_hours: FRED local cache TTL in hours. Pass 0 to force a
+            fresh FRED API fetch. Defaults to 12. Set to 0 when the caller
+            wants to bypass the FRED cache (e.g. refresh_macro_data with
+            cache_max_age_hours=0).
 
     Returns:
         :class:`pandas.DataFrame` indexed by date with all macro_indicators
@@ -537,6 +542,7 @@ def fetch_macro_data(
             start_date=start_date,
             end_date=end_date,
             api_key=fred_api_key,
+            max_age_hours=fred_max_age_hours,
         )
     except Exception as exc:
         logger.warning("fetch_macro_data: FRED fetch failed — %s", exc)

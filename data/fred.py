@@ -475,6 +475,7 @@ def fetch_regime_macro_series(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     api_key: Optional[str] = None,
+    max_age_hours: int = 12,
 ) -> Dict[str, pd.Series]:
     """Fetch all FRED series needed for the regime model.
 
@@ -488,21 +489,28 @@ def fetch_regime_macro_series(
 
     Series are *not* aligned to each other here — the caller is
     responsible for reindexing and forward-filling.
+
+    Args:
+        max_age_hours: FRED local cache TTL in hours.  Pass 0 to force a
+                       fresh API fetch regardless of cache age.  Defaults
+                       to 12 (twice-daily refresh).
     """
     client = FREDClient(api_key=api_key)
-    kwargs: Dict[str, Any] = {}
+    # Build kwargs for fetch_series — include max_age_hours so callers can
+    # bypass the FRED cache when forcing a fresh refresh (e.g. max_age_hours=0).
+    fetch_kwargs: Dict[str, Any] = {"max_age_hours": max_age_hours}
     if start_date:
-        kwargs["observation_start"] = start_date
+        fetch_kwargs["observation_start"] = start_date
     if end_date:
-        kwargs["observation_end"] = end_date
+        fetch_kwargs["observation_end"] = end_date
 
     return {
-        "yield_2y": client.fetch_series("GS2", **kwargs),
-        "credit_oas": client.fetch_series("BAMLC0A0CM", **kwargs),
-        "dxy": client.fetch_series("DTWEXBGS", **kwargs),
-        "fed_funds": client.fetch_series("FEDFUNDS", **kwargs),
-        "unemployment_claims": client.fetch_series("ICSA", **kwargs),
-        "yield_curve_10y2y_fred": client.fetch_series("T10Y2Y", **kwargs),
+        "yield_2y": client.fetch_series("GS2", **fetch_kwargs),
+        "credit_oas": client.fetch_series("BAMLC0A0CM", **fetch_kwargs),
+        "dxy": client.fetch_series("DTWEXBGS", **fetch_kwargs),
+        "fed_funds": client.fetch_series("FEDFUNDS", **fetch_kwargs),
+        "unemployment_claims": client.fetch_series("ICSA", **fetch_kwargs),
+        "yield_curve_10y2y_fred": client.fetch_series("T10Y2Y", **fetch_kwargs),
         # put_call_ratio from CBOE (not available on FRED)
         "put_call_ratio": _fetch_cboe_put_call_ratio(start_date, end_date),
     }
