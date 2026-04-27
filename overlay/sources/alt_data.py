@@ -590,6 +590,46 @@ class AltDataCollector:
         logger.info("alt_data: wrote %d record(s) to news_intel", len(records))
 
 
+
+
+# ── Public summary helper ─────────────────────────────────────────────────────
+
+
+def get_alt_data_summary(tickers: list[str] | None = None, max_per_ticker: int = 3) -> str:
+    """Build a string summary of recent insider/screener signals for `tickers`.
+
+    Returns empty string if scraper unavailable, no tickers given, or no signals found.
+    Output format (one line per signal):
+        AAPL: Insider Buy — Tim Cook (CEO) bought 10,000 shares ($2,000,000)
+        MSFT: Insider Sale — Satya Nadella (CEO) sold 5,000 shares ($1,500,000)
+    Maximum `max_per_ticker` signals per ticker, max 30 lines total.
+    """
+    if not tickers:
+        return ""
+    try:
+        lines: list[str] = []
+        scraper = OpenInsiderScraper()
+        for ticker in tickers[:30]:  # cap to avoid runaway scrape time
+            try:
+                records = scraper.scrape(ticker)
+            except Exception as exc:
+                logger.debug("alt_data summary: skip %s: %s", ticker, exc)
+                continue
+            # Pick the top `max_per_ticker` by relevance_score
+            top = sorted(records, key=lambda r: r.get("relevance_score", 0), reverse=True)[:max_per_ticker]
+            for rec in top:
+                headline = rec.get("headline", "")
+                if headline:
+                    lines.append(f"{ticker}: {headline}")
+                if len(lines) >= 30:
+                    break
+            if len(lines) >= 30:
+                break
+        return "\n".join(lines)
+    except Exception as exc:
+        logger.warning("get_alt_data_summary failed: %s", exc)
+        return ""
+
 # ── CLI entry point ───────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

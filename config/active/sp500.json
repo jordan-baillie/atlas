@@ -422,6 +422,11 @@
     "min_confidence": 0.5,
     "max_sizing_reduction": 0.5
   },
+  "alt_data": {
+    "enabled": false,
+    "tickers": [],
+    "max_per_ticker": 3
+  },
   "_sweep_metadata": {
     "promoted_at": "2026-04-02T05:13:51.199453+00:00",
     "strategy": "connors_rsi2",

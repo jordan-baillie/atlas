@@ -165,6 +165,7 @@ def _build_user_prompt(
     sentiment: str = "",
     etf_flows: str = "",
     macro_surprise: str = "",
+    alt_data: str = "",
 ) -> str:
     """
     Build the user-facing portion of the prompt from live context.
@@ -196,6 +197,11 @@ def _build_user_prompt(
         score_lines = "\n".join(
             f"    {k}: {v:.3f}" for k, v in regime.scores.items()
         )
+
+    alt_data_section = (
+        f"\n\nALT DATA (insider/screener signals — soft signal, not a primary trigger):\n{alt_data}"
+        if alt_data else ""
+    )
 
     return f"""\
 === TODAY'S MARKET CONTEXT ===
@@ -230,7 +236,7 @@ ETF VOLUME FLOWS (institutional rotation proxy):
 
 MACRO SURPRISE INDEX (economic data vs expectations):
 {macro_surprise if macro_surprise else "No macro surprise data available."}
-
+{alt_data_section}
 === YOUR TASK ===
 Based on the regime context, news, and chart signals above, decide whether
 additional tightening is warranted today.
@@ -755,6 +761,43 @@ def _load_macro_surprise() -> str:
         return ""
 
 
+
+
+def _load_alt_data() -> str:
+    """Load alt-data (insider/screener) signals if enabled in config.
+
+    Default OFF — returns empty string unless `alt_data.enabled` is true
+    AND `alt_data.tickers` (or held positions) are available.
+    """
+    try:
+        from utils.config import load_config
+        cfg = load_config()
+    except Exception:
+        return ""
+    alt_cfg = cfg.get("alt_data", {})
+    if not alt_cfg.get("enabled", False):
+        return ""
+    try:
+        from overlay.sources.alt_data import get_alt_data_summary  # type: ignore[import]
+        tickers = alt_cfg.get("tickers", []) or []
+        # Auto-resolve from current positions if no explicit list given
+        if not tickers:
+            try:
+                from brokers.live_portfolio import LivePortfolio
+                pf = LivePortfolio(cfg, market_id=cfg.get("market", "sp500"))
+                tickers = [p.ticker for p in pf.positions if hasattr(p, "ticker")]
+            except Exception:
+                tickers = []
+        if not tickers:
+            return ""
+        return get_alt_data_summary(tickers=tickers) or ""
+    except ImportError:
+        log.debug("overlay.sources.alt_data not available — skipping alt_data")
+        return ""
+    except Exception as exc:
+        log.warning("Alt-data source error: %s — continuing without alt-data", exc)
+        return ""
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Vision A/B helpers  (Wave 4 P1)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -904,6 +947,7 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
     sentiment = _load_aaii_sentiment()
     etf_flows = _load_etf_flows()
     macro_surprise = _load_macro_surprise()
+    alt_data = _load_alt_data()
 
     data_sources: Dict = {
         "news_available": bool(news),
@@ -912,6 +956,7 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
         "sentiment_available": bool(sentiment),
         "etf_flows_available": bool(etf_flows),
         "macro_surprise_available": bool(macro_surprise),
+        "alt_data_available": bool(alt_data),
         "regime_date": regime.date,
         "regime_state": regime.state.value,
     }
@@ -923,6 +968,7 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
         sentiment=sentiment,
         etf_flows=etf_flows,
         macro_surprise=macro_surprise,
+        alt_data=alt_data,
     )
 
     # ── Step 4: Call pi CLI ──────────────────────────────────────────────────
