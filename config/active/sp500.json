@@ -1,5 +1,5 @@
 {
-  "version": "v3.2",
+  "version": "v3.2.1",
   "project": "Atlas",
   "market": "sp500",
   "description": "SP500 v2.2 \u2014 max_open_positions 10\u219215 (Task #26 research: Sharpe 0.868\u21920.983, CAGR 11.7%\u219213.3%, PnL +15%). Base: v2.1 parallel coordinate descent optimized.",
@@ -109,7 +109,7 @@
       "cointegration_filter": {
         "enabled": false
       },
-      "weight": 0.3
+      "weight": 0.0978
     },
     "trend_following": {
       "enabled": false,
@@ -168,7 +168,7 @@
     },
     "sector_rotation": {
       "enabled": true,
-      "weight": 0.15,
+      "weight": 0.25,
       "atr_stop_mult": 2.0,
       "trailing_stop_atr_mult": 3.0,
       "profit_target_atr_mult": 3.5
@@ -394,8 +394,8 @@
     "window_profitable_pct": 76.0
   },
   "_version_metadata": {
-    "created_at": "2026-04-02T15:40:42.687276",
-    "previous_version": "v3.1",
+    "created_at": "2026-04-26T08:46:30.867923",
+    "previous_version": "v3.2",
     "market": "sp500"
   },
   "_upgrade_notes": {
@@ -460,5 +460,21 @@
     "model": "claude-opus-4-7",
     "max_images": 10,
     "timeout_seconds": 300
+  },
+  "_weight_update": {
+    "updated_at": "2026-04-25T22:46:30.867900+00:00",
+    "portfolio_sharpe": 1.0452,
+    "changes": [
+      {
+        "strategy": "mean_reversion",
+        "old_weight": 0.3,
+        "new_weight": 0.0978
+      },
+      {
+        "strategy": "sector_rotation",
+        "old_weight": 0.15,
+        "new_weight": 0.25
+      }
+    ]
   }
 }

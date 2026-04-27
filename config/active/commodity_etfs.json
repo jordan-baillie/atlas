@@ -1,8 +1,8 @@
 {
-  "version": "v1.1.1",
+  "version": "v1.2",
   "project": "Atlas",
   "market": "commodity_etfs",
-  "description": "Commodity ETFs v1.0 — momentum breakout focus, live mode",
+  "description": "Commodity ETFs v1.0 \u2014 momentum breakout focus, live mode",
   "universe": {
     "method": "static",
     "benchmark_ticker": "DBC"
@@ -52,7 +52,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
@@ -60,11 +60,11 @@
     "momentum_breakout": {
       "enabled": true,
       "weight": 0.5,
-      "atr_stop_mult": 1.0,
+      "atr_stop_mult": 0.72,
       "max_hold_days": 15,
       "lookback_days": 22,
       "atr_period": 20,
-      "trend_ma_period": 20,
+      "trend_ma_period": 27,
       "profit_target_atr_mult": 6.0,
       "breakout_period": 10
     },
@@ -238,19 +238,18 @@
     "cluster_threshold": 0.7
   },
   "_sweep_metadata": {
-    "promoted_at": "2026-04-22T11:49:25.797153+00:00",
+    "promoted_at": "2026-04-27T14:15:48.978646+00:00",
     "strategy": "momentum_breakout",
-    "initial_sharpe": 0.0,
-    "final_sharpe": 0.906,
-    "delta_sharpe": 0.906,
+    "initial_sharpe": 1.0181,
+    "final_sharpe": 1.2393,
+    "delta_sharpe": 0.2212,
     "sweep_improvements": [
-      "commodity_etfs promotion trigger: Sharpe 0.0000 → 0.9060",
-      "(research_best updated 2026-04-21 14:21:57)"
+      "nightly sweep: Sharpe 1.0181 -> 1.2393"
     ]
   },
   "_version_metadata": {
-    "created_at": "2026-04-22T22:07:31.041548",
-    "previous_version": "v1.0",
+    "created_at": "2026-04-28T00:34:30.214264",
+    "previous_version": "v1.1.1",
     "market": "commodity_etfs"
   }
 }
