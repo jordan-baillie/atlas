@@ -541,6 +541,7 @@ def run_session(
     notify: bool = False,
     snapshot_id: Optional[str] = None,
     fast_screen: bool = True,
+    auto_promote_enabled: bool = True,
 ) -> dict:
     """Run a headless parameter-sweep research session for *strategy*.
 
@@ -571,11 +572,15 @@ def run_session(
         snapshot_id: Specific snapshot to use (auto-discovered if ``None``).
         fast_screen: Use two-stage solo-screen + combined-verify gating
                      (default ``True``).  Pass ``False`` for full-rigour mode.
+        auto_promote_enabled: When ``True`` (default), call
+                     ``_promote_session_result()`` after a successful session.
+                     Pass ``False`` (``--no-auto-promote`` CLI flag) to disable.
 
     Returns:
         Summary dict with ``screened``, ``promoted``, ``kept``,
         ``skipped``, ``starting_sharpe``, ``final_sharpe``,
-        ``runtime_s``, and ``status``.
+        ``runtime_s``, and ``status``.  If promotion ran, also contains a
+        ``promotion`` key with the outcome dict.
     """
     # ── Logging ──────────────────────────────────────────────────────────────
     logging.basicConfig(
@@ -913,6 +918,23 @@ def run_session(
         solo_pass_combined_fail, starting_sharpe, current_sharpe,
         runtime_s, notify, fast_screen,
     )
+
+    # ── Auto-promotion sweep ──────────────────────────────────────────────────
+    if auto_promote_enabled:
+        promo_outcome = _promote_session_result(
+            strategy=strategy,
+            market=market,
+            universe=universe,
+            kept=kept,
+            starting_sharpe=starting_sharpe,
+            final_sharpe=current_sharpe,
+        )
+        if promo_outcome is not None:
+            summary["promotion"] = promo_outcome
+            logger.info("[promo] outcome: %s", promo_outcome.get("reason", "no reason"))
+    else:
+        logger.info("[promo] disabled by --no-auto-promote")
+
     return summary
 
 
@@ -1053,6 +1075,140 @@ def _summarise_and_notify(
     return summary
 
 
+
+# ─── Promotion Helper ────────────────────────────────────────────────────────
+
+
+def _promote_session_result(
+    strategy: str,
+    market: str,
+    universe: str,
+    kept: int,
+    starting_sharpe: Optional[float],
+    final_sharpe: Optional[float],
+) -> Optional[dict]:
+    """Attempt to promote improved parameters from a completed session.
+
+    Called at the end of :func:`run_session` when *kept* > 0 and
+    ``auto_promote_enabled`` is ``True``.  Applies cheap client-side guards
+    before calling the heavyweight :func:`research.promoter.auto_promote`
+    (which runs the 4-gate OOS validation pipeline).
+
+    Args:
+        strategy:        Strategy name.
+        market:          Market ID (e.g. ``'sp500'``).
+        universe:        Universe name (e.g. ``'commodity_etfs'``).
+        kept:            Number of kept experiments in this session.
+        starting_sharpe: Sharpe at session start (combined baseline).
+        final_sharpe:    Sharpe after best improvement (combined).
+
+    Returns:
+        Outcome dict with ``promoted`` (bool) and ``reason`` (str),
+        or ``None`` if the session is unconditionally skipped (``kept == 0``).
+    """
+    # ── Guard: no improvements to promote ─────────────────────────────────────
+    if kept <= 0:
+        return None
+
+    # ── Guard: missing Sharpe values ──────────────────────────────────────────
+    if final_sharpe is None or starting_sharpe is None:
+        reason = (
+            f"missing sharpe values "
+            f"(starting={starting_sharpe}, final={final_sharpe})"
+        )
+        logger.info("[promo] refusing for %s: %s", strategy, reason)
+        return {"promoted": False, "reason": reason}
+
+    # ── Guard: negative or zero final Sharpe ─────────────────────────────────
+    if final_sharpe <= 0:
+        reason = f"negative final sharpe ({final_sharpe:.4f})"
+        logger.info("[promo] refusing for %s: %s", strategy, reason)
+        return {"promoted": False, "reason": reason}
+
+    # ── Client-side delta gate (matches nightly sweep) ────────────────────────
+    delta = final_sharpe - (starting_sharpe or 0.0)
+    if delta < 0.05:
+        reason = f"delta_sharpe={delta:+.4f} < 0.05 client gate"
+        logger.info("[promo] %s: %s — skipping", strategy, reason)
+        return {"promoted": False, "reason": reason}
+
+    # ── Read best params from SQLite (canonical), fall back to JSON ───────────
+    best_params: dict = {}
+    best_sharpe: float = final_sharpe
+
+    try:
+        import json as _json_pkg
+        from db.atlas_db import get_research_best
+
+        rows = get_research_best(strategy, universe)
+        row = rows[0] if rows else None
+        if row:
+            raw_params = row.get("params", {})
+            best_params = (
+                _json_pkg.loads(raw_params)
+                if isinstance(raw_params, str)
+                else (raw_params or {})
+            )
+            if row.get("sharpe") is not None:
+                best_sharpe = float(row["sharpe"])
+    except Exception as exc:
+        logger.warning(
+            "[promo] SQLite read failed for %s/%s: %s — falling back to JSON",
+            strategy, universe, exc,
+        )
+
+    if not best_params:
+        # JSON fallback (legacy path)
+        import json as _jf
+        best_dir = ATLAS_ROOT / "research" / "best"
+        candidate_file = best_dir / f"{strategy}_{universe}.json"
+        if not candidate_file.exists():
+            candidate_file = best_dir / f"{strategy}.json"
+        if candidate_file.exists():
+            try:
+                best_data = _jf.loads(candidate_file.read_text())
+                best_params = best_data.get("params", {}) or {}
+                meta = best_data.get("metrics", {}) or {}
+                if meta.get("sharpe"):
+                    best_sharpe = float(meta["sharpe"])
+            except Exception as exc:
+                logger.warning(
+                    "[promo] JSON fallback read failed for %s: %s", strategy, exc,
+                )
+
+    # ── Guard: no params to promote ───────────────────────────────────────────
+    if not best_params:
+        reason = f"no best params found for {strategy}/{universe}"
+        logger.info("[promo] refusing for %s: %s", strategy, reason)
+        return {"promoted": False, "reason": reason}
+
+    improvements = [
+        f"autoresearch_runner sweep: Sharpe {starting_sharpe:.4f} -> {final_sharpe:.4f}"
+    ]
+
+    try:
+        from research.promoter import auto_promote
+
+        outcome = auto_promote(
+            strategy=strategy,
+            improved_params=best_params,
+            initial_sharpe=float(starting_sharpe),
+            final_sharpe=float(best_sharpe),
+            improvements=improvements,
+            market=market,
+        )
+        outcome["strategy"] = strategy
+        logger.info("[promo] %s: %s", strategy, outcome.get("reason", "no reason"))
+        return outcome
+    except Exception as exc:
+        logger.error("[promo] auto_promote failed for %s: %s", strategy, exc)
+        return {
+            "promoted": False,
+            "reason": f"exception: {exc}",
+            "strategy": strategy,
+        }
+
+
 # ─── CLI Entry Point ─────────────────────────────────────────────────────────
 
 
@@ -1121,6 +1277,13 @@ def _parse_args(argv=None) -> argparse.Namespace:
         dest="fast_screen",
         help="Disable fast screen — every experiment runs full combined backtest.",
     )
+    parser.add_argument(
+        "--no-auto-promote",
+        action="store_false",
+        dest="auto_promote_enabled",
+        default=True,
+        help="Disable automatic promotion sweep at end of session (safety flag).",
+    )
     return parser.parse_args(argv)
 
 
@@ -1134,5 +1297,6 @@ if __name__ == "__main__":
         notify=args.notify,
         snapshot_id=args.snapshot,
         fast_screen=args.fast_screen,
+        auto_promote_enabled=args.auto_promote_enabled,
     )
     sys.exit(0 if result.get("status") in ("complete", None) else 1)
