@@ -15,6 +15,14 @@ sys.path.insert(0, str(PROJECT))
 
 from strategies.base import Signal  # noqa: E402
 
+# ---------------------------------------------------------------------------
+# Collection ignore — skip archived test files during collection.
+# (was incorrectly in pytest.ini as collect_ignore_glob; that key is only
+# valid in conftest.py, not pytest.ini).
+# Path is relative to this conftest.py file, so "archive/*" means tests/archive/*.
+# ---------------------------------------------------------------------------
+collect_ignore_glob = ["archive/*"]
+
 
 # ---------------------------------------------------------------------------
 # Test-log isolation — prevent pytest output from polluting prod atlas.log

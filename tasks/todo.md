@@ -123,9 +123,12 @@ session — none are quick fixes.
       Trades check now PASS manually; awaiting 5 consecutive real-cron
       PASSes (gate: 0/5 as of today; schedule `0 10 * * 2-6` UTC;
       earliest close Sat 2026-04-25).
-- [ ] **#215 — Overlay gate enforcement.** Confirm overlay signals actually
+- [x] **#215 — Overlay gate enforcement.** Confirm overlay signals actually
       gate order placement (not just annotate decisions). Needs end-to-end
       trace from overlay engine → plan file → executor.
+      ✅ Closed 2026-04-27 — overlay→plan→executor end-to-end trace completed
+      (audit-fix-1 batch). Cron currently runs --mode log_only; flag flip
+      would activate live.
 - [ ] **#216 — Phase 5 coverage gap.** Research matrix has stale
       `research_best` rows; population requires a dedicated compute window,
       not a code change. Blocks #219.
@@ -201,5 +204,27 @@ risky to bundle into an audit wave. Parked for future focused sessions.
 
 ---
 
-*Last reconciled: 2026-04-17 (Wave 2 close).  Prior counters (e.g.
-"253/243") were folklore — do not reinstate.*
+## ✅ DONE — Reconcile 2026-04-27 (Phase 2-4 + audit-fix sweep)
+
+Reconciled against git log since 2026-04-17. Major work:
+
+- [x] **Phase 2-4 completion (live trading capital protection)** — research-engine
+      audit fixes shipped over 2026-04-22 to 2026-04-27. Universe isolation,
+      regime tagging, commodity_etfs intraday safety, dual-write canary, etc.
+- [x] **6-fix safety audit batch (audit-fix-1..6)** — Fix 1 (overlay status
+      verified inert), Fix 2 (stops sync 3 uncovered positions), Fix 3 (inverted
+      stop CHECK constraint), Fix 4 (leverage gate), Fix 5 (sector_etfs cron),
+      Fix 6 (closed-trade dedup UNIQUE index). Commits `12e720ab`..`aba29975`.
+- [x] **Telegram noise suppression** — 4 surgical early-returns in
+      send_plan_for_approval / send_postclose_summary / _notify_auto_approve /
+      _notify_execution. Daily volume ~9 → 0-3. Commit `d7dfee85`.
+- [x] **Hermes Round 4 + Round 5 P0 (cross-project)** — calibration overhaul +
+      mlb_totals slope inversion fix. 7 commits, 552/552 tests.
+- [x] **NRL-Predict 3-fix audit pack (cross-project)** — pregame flip gate
+      disabled, model weight ablation, AusSportsBetting blocked at Cloudflare WAF.
+
+(Refer to git log for full commit list. ~30+ commits since 2026-04-17.)
+
+---
+
+*Last reconciled: 2026-04-27 (Phase 2-4 + audit-fix sweep close).  Prior counters were folklore — do not reinstate.*

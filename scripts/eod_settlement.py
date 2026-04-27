@@ -179,7 +179,11 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                             try:
                                 from regime.model import RegimeModel
                                 _eod_regime = RegimeModel().classify_current().state.value
-                            except Exception:
+                            except Exception as _re:
+                                log.debug(
+                                    "RegimeModel classification failed (non-fatal, using None): %s",
+                                    _re,
+                                )
                                 _eod_regime = None
                             atlas_db.record_trade_exit(
                                 ticker=pos.ticker,
@@ -277,7 +281,11 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                             try:
                                 from regime.model import RegimeModel
                                 _eod_regime = RegimeModel().classify_current().state.value
-                            except Exception:
+                            except Exception as _re:
+                                log.debug(
+                                    "RegimeModel classification failed (non-fatal, using None): %s",
+                                    _re,
+                                )
                                 _eod_regime = None
                             atlas_db.record_trade_exit(
                                 ticker=pos.ticker,
@@ -369,7 +377,8 @@ def generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits):
     try:
         from markets import get_market
         _settle_tz = get_market(market_id).operator_tz() if 'market_id' in dir() else BRISBANE
-    except Exception:
+    except Exception as _tz_e:
+        log.debug("Could not detect operator timezone (using Brisbane fallback): %s", _tz_e)
         _settle_tz = BRISBANE
     _settle_now = datetime.now(_settle_tz)
     lines.append(f"Settlement completed at {_settle_now.strftime('%I:%M %p %Z')}")

@@ -623,11 +623,12 @@ def main() -> int:
     log_level = logging.DEBUG if args.verbose else logging.INFO
     try:
         setup_logging("reconcile_positions", level=log_level)
-    except Exception:
+    except Exception as _setup_e:
         logging.basicConfig(
             level=log_level,
             format="%(asctime)s %(name)s %(levelname)s %(message)s",
         )
+        logger.warning("setup_logging failed, using basicConfig fallback: %s", _setup_e)
 
     market_id = args.market
     logger.info(

@@ -1138,11 +1138,12 @@ def main() -> int:
     log_level = logging.DEBUG if args.verbose else logging.INFO
     try:
         setup_logging("sync_protective_orders", level=log_level)
-    except Exception:
+    except Exception as _setup_e:
         logging.basicConfig(
             level=log_level,
             format="%(asctime)s %(name)s %(levelname)s %(message)s",
         )
+        logger.warning("setup_logging failed, using basicConfig fallback: %s", _setup_e)
 
     trade_date = args.date
     dry_run = args.dry_run

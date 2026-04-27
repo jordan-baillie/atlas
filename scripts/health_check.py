@@ -23,6 +23,32 @@ DATA_DIR = PROJECT_ROOT / 'data' / 'cache'
 CONFIG_DIR = PROJECT_ROOT / 'config'
 LOGS_DIR = PROJECT_ROOT / 'logs'
 
+# Universes that are known-passive (no live trading); health check is skipped for these.
+# Also checked via trading.live_enabled field in the config JSON.
+PASSIVE_UNIVERSES: frozenset[str] = frozenset({'asx', 'crypto'})
+
+
+def _is_inactive(cfg: dict) -> bool:
+    """Return True if the universe config marks it as inactive/passive.
+
+    Priority order:
+      1. trading.live_enabled is explicitly False  → inactive
+      2. trading.live_enabled field absent AND market in PASSIVE_UNIVERSES → inactive
+      3. Everything else → active (run the full health check)
+    """
+    trading = cfg.get('trading', {})
+    live_enabled = trading.get('live_enabled')  # None means key absent
+
+    if live_enabled is False:
+        return True
+
+    if live_enabled is None:
+        market = cfg.get('market', '').lower()
+        return market in PASSIVE_UNIVERSES
+
+    return False
+
+
 # Baseline metrics from v9.3 robust blend (full-period)
 # Update these when a new config is promoted to active
 BASELINE = {
@@ -83,7 +109,7 @@ def resolve_path(path_value, default_path):
     return p
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(
         description="Run Atlas health check against a specified config and write a report JSON."
     )
@@ -105,10 +131,10 @@ def parse_args():
         default=18,
         help='Recent data window in months (default: 18)',
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
-def main():
-    args = parse_args()
+def main(argv: list | None = None) -> int:
+    args = parse_args(argv)
     t0 = time.time()
     today = datetime.now().strftime('%Y-%m-%d')
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -124,6 +150,23 @@ def main():
         cfg = json.load(f)
     print(f"Config: {cfg.get('version', 'unknown')}")
     print(f"Config path: {cfg_path}")
+
+    # Skip inactive/passive universes — exit 0, write SKIPPED report
+    if _is_inactive(cfg):
+        universe = cfg.get('market', cfg_path.stem)
+        report = {
+            'date': today,
+            'status': 'SKIPPED',
+            'message': f'Universe {universe} is inactive — health check not applicable',
+            'config_path': str(cfg_path),
+            'report_path': str(report_path),
+            'runtime_s': round(time.time() - t0, 1),
+        }
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, 'w') as f:
+            json.dump(report, f, indent=2)
+        print(f"SKIPPED: Universe {universe} is inactive")
+        sys.exit(0)
 
     # Load recent data
     print(f"Loading last {args.months} months of data...")
@@ -144,6 +187,7 @@ def main():
             json.dump(report, f, indent=2)
         print(f"ERROR: {report['message']}")
         sys.exit(1)
+        return 1
 
     # Run backtest
     print("Running backtest on recent data...")
@@ -210,6 +254,7 @@ def main():
     print(f"Runtime: {elapsed:.1f}s")
 
     sys.exit(0 if status == 'HEALTHY' else 1)
+    return 0 if status == 'HEALTHY' else 1
 
 if __name__ == '__main__':
     main()
