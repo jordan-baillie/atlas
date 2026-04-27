@@ -65,14 +65,33 @@ THRESHOLDS = {
     'pf_floor': 1.0,           # Flag if Profit Factor drops below 1.0
 }
 
-def load_data_recent(months=6, min_rows=60):
-    """Load only the last ~6 months of data for quick health check."""
+def load_data_recent(months=18, min_rows=60, universe: str | None = None):
+    """Load only the last ~N months of data for quick health check.
+
+    If ``universe`` is given, scopes to data/cache/<universe>/*.parquet.
+    Otherwise recurses across all subdirs (data/cache/**/*.parquet) for
+    backwards compatibility with the old flat layout.
+    """
     dd = {}
     cutoff = pd.Timestamp.now() - pd.DateOffset(months=months)
-    for pf in sorted(DATA_DIR.glob('*.parquet')):
-        if pf.stem == 'IOZ_AX': continue
+
+    if universe:
+        scan_dir = DATA_DIR / universe
+        if not scan_dir.exists():
+            # Missing universe dir is non-fatal — return empty dict, caller decides
+            return dd
+        files = sorted(scan_dir.glob('*.parquet'))
+    else:
+        files = sorted(DATA_DIR.rglob('*.parquet'))
+
+    for pf in files:
+        if pf.stem == 'IOZ_AX':
+            continue
         ticker = pf.stem.replace('_AX', '.AX')
-        df = pd.read_parquet(pf)
+        try:
+            df = pd.read_parquet(pf)
+        except Exception:
+            continue
         df.columns = [c.lower() for c in df.columns]
         if 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
@@ -170,7 +189,7 @@ def main(argv: list | None = None) -> int:
 
     # Load recent data
     print(f"Loading last {args.months} months of data...")
-    data = load_data_recent(months=args.months, min_rows=60)
+    data = load_data_recent(months=args.months, min_rows=60, universe=cfg.get('market'))
     print(f"  {len(data)} tickers loaded")
 
     if len(data) < 10:
