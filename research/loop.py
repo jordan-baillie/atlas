@@ -45,6 +45,17 @@ if str(ATLAS_ROOT) not in sys.path:
 
 logger = logging.getLogger("autoresearch")
 
+# Module-level imports for test patchability
+try:
+    from research.freshness import check_freshness  # noqa: F401
+except Exception:  # pragma: no cover
+    check_freshness = None  # type: ignore[assignment]
+
+try:
+    from db.atlas_db import upsert_research_best  # noqa: F401
+except Exception:  # pragma: no cover
+    upsert_research_best = None  # type: ignore[assignment]
+
 BEST_DIR = ATLAS_ROOT / "research" / "best"
 RESULTS_DIR = ATLAS_ROOT / "research" / "results"
 JOURNAL_PATH = ATLAS_ROOT / "research" / "journal.json"
@@ -154,6 +165,18 @@ def save_best(
     research_best table.
     """
     universe = market or "sp500"
+
+    # Freshness guard — reject stale or time-regressing writes
+    # check_freshness is imported at module level for test patchability
+    if check_freshness is not None:
+        try:
+            _allow, _reason = check_freshness(strategy, universe)
+            if not _allow:
+                logger.warning("[save_best] blocked by freshness guard: %s", _reason)
+                return
+        except Exception as _fg_exc:
+            logger.debug("[save_best] freshness guard failed (non-fatal): %s", _fg_exc)
+
     BEST_DIR.mkdir(parents=True, exist_ok=True)
     existing = load_best(strategy, universe) or {}
     existing.update({
@@ -171,21 +194,19 @@ def save_best(
         json.dump(existing, f, indent=2, default=str)
 
     # Also write to SQLite research_best table
-    try:
-        from db.atlas_db import upsert_research_best
-        upsert_research_best(
-            strategy=strategy,
-            universe=universe,
-            params=params,
-            sharpe=float(metrics.get("sharpe", 0) or 0),
-            trades=int(metrics.get("total_trades", 0) or 0),
-            max_dd_pct=float(metrics.get("max_drawdown_pct", 0) or 0),
-        )
-    except Exception as exc:
-        import logging
-        logging.getLogger(__name__).warning(
-            "Failed to write research_best to SQLite: %s", exc
-        )
+    # upsert_research_best imported at module level for test patchability
+    if upsert_research_best is not None:
+        try:
+            upsert_research_best(
+                strategy=strategy,
+                universe=universe,
+                params=params,
+                sharpe=float(metrics.get("sharpe", 0) or 0),
+                trades=int(metrics.get("total_trades", 0) or 0),
+                max_dd_pct=float(metrics.get("max_drawdown_pct", 0) or 0),
+            )
+        except Exception as exc:
+            logger.warning("Failed to write research_best to SQLite: %s", exc)
 
     # Regenerate brain/strategies/{strategy}.md so LLM context stays fresh.
     # Non-fatal — brain.md is a derived artifact, not authoritative.

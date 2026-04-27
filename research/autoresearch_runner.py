@@ -1182,6 +1182,30 @@ def _promote_session_result(
         logger.info("[promo] refusing for %s: %s", strategy, reason)
         return {"promoted": False, "reason": reason}
 
+    # ── Freshness guard — reject stale or time-regressing promotes ──────────────
+    try:
+        from research.freshness import check_freshness as _cf
+        import json as _json_fw
+        from db.atlas_db import get_research_best as _grb
+        _rows = _grb(strategy, universe)
+        _row_ts = None
+        if _rows:
+            _raw_ts = _rows[0].get("updated_at")
+            if _raw_ts:
+                try:
+                    from datetime import datetime, timezone as _tz
+                    _row_ts = datetime.fromisoformat(_raw_ts.replace("Z", "+00:00"))
+                    if _row_ts.tzinfo is None:
+                        _row_ts = _row_ts.replace(tzinfo=_tz.utc)
+                except (ValueError, TypeError):
+                    pass
+        _allow, _reason = _cf(strategy, universe, candidate_timestamp=_row_ts)
+        if not _allow:
+            logger.warning("[promo] freshness guard blocked %s: %s", strategy, _reason)
+            return {"promoted": False, "reason": _reason, "strategy": strategy}
+    except Exception as _fg_exc:
+        logger.debug("[promo] freshness guard failed (non-fatal): %s", _fg_exc)
+
     improvements = [
         f"autoresearch_runner sweep: Sharpe {starting_sharpe:.4f} -> {final_sharpe:.4f}"
     ]
