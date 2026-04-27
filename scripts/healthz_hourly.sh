@@ -525,6 +525,22 @@ else
     log "Signal-write check OK"
 fi
 
+# ── Overlay evaluator backlog check ──────────────────────────
+# Wave B-2 (2026-04-28): alerts when >5 unevaluated overlay decisions are
+# older than 2 days. Wraps overlay.evaluator.check_evaluator_backlog().
+OVERLAY_BACKLOG_RC=0
+python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT')
+from scripts.health_check import _check_overlay_backlog
+sys.exit(0 if _check_overlay_backlog(threshold=5) else 1)
+" >> "$LOG_FILE" 2>&1 || OVERLAY_BACKLOG_RC=$?
+if [ "$OVERLAY_BACKLOG_RC" -ne 0 ]; then
+    log "WARN: overlay evaluator backlog (exit $OVERLAY_BACKLOG_RC) — Telegram alert sent"
+else
+    log "Overlay evaluator backlog check OK"
+fi
+
 # ── SuperCoach API reachability check ────────────────────────
 # Layered check: localhost direct (bypasses Caddy) + basicauth-authed public.
 # Direct failure = app is down; public-only failure = Caddy routing broken.

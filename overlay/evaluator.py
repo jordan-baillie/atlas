@@ -56,7 +56,7 @@ def _get_spy_returns_after(timestamp: str, lookahead: int = _LOOKAHEAD_DAYS) -> 
 
     spy_df = _load_spy_ohlcv(start_date, end_date)
     if spy_df is None or spy_df.empty:
-        logger.debug("evaluator: no SPY data %s → %s", start_date, end_date)
+        logger.debug("evaluator: no SPY data %s %s", start_date, end_date)
         return None
 
     # We need at least lookahead trading days
@@ -113,43 +113,56 @@ def _score_decision(action: str, spy_return: Optional[float]) -> tuple[int, str]
         if spy_return < _TIGHTEN_CORRECT_THRESHOLD:
             return (
                 1,
-                f"Market fell {pct:.2f}% over {_LOOKAHEAD_DAYS}d — tightening protected downside ✓",
+                f"Market fell {pct:.2f}% over {_LOOKAHEAD_DAYS}d — tightening protected downside",
             )
         elif spy_return > _TIGHTEN_MISSED_THRESHOLD:
             return (
                 0,
-                f"Market rose {pct:.2f}% over {_LOOKAHEAD_DAYS}d — tightening missed upside ✗",
+                f"Market rose {pct:.2f}% over {_LOOKAHEAD_DAYS}d — tightening missed upside",
             )
         else:
             return (
                 1,
-                f"Market flat/neutral ({pct:.2f}%) over {_LOOKAHEAD_DAYS}d — tightening not costly (neutral) ✓",
+                f"Market flat/neutral ({pct:.2f}%) over {_LOOKAHEAD_DAYS}d — tightening not costly (neutral)",
             )
     else:
         # action = 'no_change' or any other value
         if spy_return < _NO_CHANGE_DROP_THRESHOLD:
             return (
                 0,
-                f"Market dropped {pct:.2f}% over {_LOOKAHEAD_DAYS}d — should have tightened ✗",
+                f"Market dropped {pct:.2f}% over {_LOOKAHEAD_DAYS}d — should have tightened",
             )
         else:
             return (
                 1,
-                f"Market stable/up ({pct:.2f}%) over {_LOOKAHEAD_DAYS}d — no-change was appropriate ✓",
+                f"Market stable/up ({pct:.2f}%) over {_LOOKAHEAD_DAYS}d — no-change was appropriate",
             )
 
 
 # ── Main evaluation function ──────────────────────────────────────────────────
 
 def evaluate_overlay_decisions(days: int = 7) -> dict:
-    """Score unevaluated overlay decisions from the past *days* days.
+    """Score unevaluated overlay decisions using a two-pass strategy.
 
-    For each unevaluated decision the function:
-    1. Fetches SPY returns for the *_LOOKAHEAD_DAYS* trading days after the
-       decision timestamp.
-    2. Determines whether the decision was correct (see thresholds above).
-    3. Persists the outcome via ``update_overlay_outcome()``.
-    4. Returns an accuracy summary dict.
+    **Pass 1 — catch-up sweep** (new behaviour):
+        Fetches ALL unevaluated decisions regardless of age (via
+        ``get_overlay_decisions(unevaluated_only=True)``).  For each one,
+        attempts to score it if ``_LOOKAHEAD_DAYS`` of SPY data are now
+        available.  Decisions that still lack sufficient lookahead are skipped
+        with an INFO log; they will be retried on the next run.
+
+        This fixes the silent-skip bug where Wed/Thu/Fri decisions fell outside
+        the 7-day recency window before being evaluated the following Saturday.
+
+    **Pass 2 — stats window** (existing behaviour, unchanged):
+        Re-fetches decisions in the last *days* calendar days (evaluated + not)
+        to compute accuracy statistics for the Telegram summary.
+
+    Parameters
+    ----------
+    days:
+        Calendar-day window used for the accuracy-stats summary (Pass 2).
+        Does NOT affect which decisions are attempted for evaluation in Pass 1.
 
     Returns
     -------
@@ -160,30 +173,32 @@ def evaluate_overlay_decisions(days: int = 7) -> dict:
     """
     from db.atlas_db import get_overlay_decisions, update_overlay_outcome  # type: ignore
 
-    decisions = get_overlay_decisions(days=days)
-    unevaluated = [d for d in decisions if not d.get("outcome_evaluated")]
+    # ── Pass 1: attempt to evaluate ALL unevaluated decisions ─────────────
+    all_unevaluated = get_overlay_decisions(unevaluated_only=True)
 
     logger.info(
-        "evaluator: %d total decisions (last %d days), %d unevaluated",
-        len(decisions),
-        days,
-        len(unevaluated),
+        "evaluator: pass1 found %d unevaluated decisions (all ages)",
+        len(all_unevaluated),
     )
 
     evaluated_count = 0
     skipped_count = 0
 
-    for d in unevaluated:
+    for d in all_unevaluated:
         decision_id = d["id"]
         action = d.get("action", "no_change")
         timestamp = d.get("timestamp", "")
 
-        # Decisions made today might not have 3 days of future data yet
         spy_return = _get_spy_returns_after(timestamp)
         if spy_return is None:
-            # Data not yet available — may be too recent
+            # Not enough future SPY data yet — this decision is genuinely too
+            # recent.  It will be retried on the next evaluation run.
             skipped_count += 1
-            logger.debug("evaluator: skipping id=%d (insufficient future data)", decision_id)
+            logger.info(
+                "evaluator: id=%d action=%s skipped (insufficient lookahead)",
+                decision_id,
+                action,
+            )
             continue
 
         outcome_correct, outcome_notes = _score_decision(action, spy_return)
@@ -194,7 +209,7 @@ def evaluate_overlay_decisions(days: int = 7) -> dict:
                 outcome_notes=outcome_notes,
             )
             evaluated_count += 1
-            logger.debug(
+            logger.info(
                 "evaluator: id=%d action=%s correct=%d  %s",
                 decision_id,
                 action,
@@ -205,8 +220,14 @@ def evaluate_overlay_decisions(days: int = 7) -> dict:
             logger.error("evaluator: failed to update id=%d: %s", decision_id, exc)
             skipped_count += 1
 
-    # ── Compute accuracy stats ─────────────────────────────────────────────
-    # Re-load decisions so we include the ones we just evaluated
+    logger.info(
+        "evaluator: pass1 evaluated=%d skipped=%d (insufficient lookahead)",
+        evaluated_count,
+        skipped_count,
+    )
+
+    # ── Pass 2: accuracy stats over the recency window ────────────────────
+    # Re-load decisions so we include the ones we just evaluated.
     all_decisions = get_overlay_decisions(days=days)
     evaluated_all = [d for d in all_decisions if d.get("outcome_evaluated")]
 
@@ -252,6 +273,56 @@ def evaluate_overlay_decisions(days: int = 7) -> dict:
     return stats
 
 
+# ── Backlog health check ──────────────────────────────────────────────────────
+
+def check_evaluator_backlog(threshold: int = 5) -> tuple[bool, int, float]:
+    """Check whether the overlay evaluator has a stale backlog.
+
+    A decision is considered *stale* when it is more than 2 calendar days old
+    and still has ``outcome_evaluated = 0``.  Any such decision has had at
+    least one weekly evaluation run pass without processing it, which indicates
+    the window-logic bug (or a new variant of it).
+
+    Parameters
+    ----------
+    threshold:
+        Maximum number of stale decisions before the check reports unhealthy.
+        Default is 5 (matches healthz alert gate).
+
+    Returns
+    -------
+    (is_healthy, backlog_count, oldest_age_days)
+        is_healthy:     ``True`` when backlog_count <= threshold.
+        backlog_count:  number of unevaluated decisions older than 2 days.
+        oldest_age_days: age of the oldest such decision in decimal days
+                         (0.0 when backlog is empty).
+    """
+    try:
+        from db.atlas_db import get_db  # type: ignore
+        with get_db() as db:
+            row = db.execute(
+                """
+                SELECT
+                    COUNT(*) AS cnt,
+                    MAX(
+                        (julianday('now') - julianday(timestamp))
+                    ) AS oldest_age_days
+                FROM overlay_decisions
+                WHERE outcome_evaluated = 0
+                  AND timestamp < datetime('now', '-2 days')
+                """,
+            ).fetchone()
+            backlog_count: int = int(row["cnt"] or 0)
+            oldest_age_days: float = float(row["oldest_age_days"] or 0.0)
+    except Exception as exc:
+        logger.error("check_evaluator_backlog: DB query failed: %s", exc)
+        # Treat query failure as healthy to avoid false-positive alerts.
+        return True, 0, 0.0
+
+    is_healthy = backlog_count <= threshold
+    return is_healthy, backlog_count, round(oldest_age_days, 1)
+
+
 # ── Telegram reporting ────────────────────────────────────────────────────────
 
 def _format_stats(stats: dict) -> str:
@@ -263,8 +334,8 @@ def _format_stats(stats: dict) -> str:
         f"📊 <b>Overlay Weekly Review</b> ({stats.get('period_days', 7)}d)",
         "",
         f"Decisions reviewed:  {stats.get('evaluated_count', 0)} / {stats.get('total_decisions', 0)}",
-        f"  • Tighten:   {stats.get('tighten_count', 0)}  ({stats.get('tighten_correct_pct', 0):.1f}% correct)",
-        f"  • No-change: {stats.get('no_change_count', 0)}  ({stats.get('no_change_correct_pct', 0):.1f}% correct)",
+        f"  Tighten:   {stats.get('tighten_count', 0)}  ({stats.get('tighten_correct_pct', 0):.1f}% correct)",
+        f"  No-change: {stats.get('no_change_count', 0)}  ({stats.get('no_change_correct_pct', 0):.1f}% correct)",
         "",
         f"Overall accuracy: <b>{stats.get('overall_accuracy_pct', 0):.1f}%</b>",
         f"Net value: {net_emoji} <b>{stats.get('net_value', 'neutral').upper()}</b>",

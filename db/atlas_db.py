@@ -1253,15 +1253,43 @@ def record_overlay_decision(
         return cursor.lastrowid
 
 
-def get_overlay_decisions(days: Optional[int] = None) -> List[Dict]:
-    """Return overlay decisions, most recent first."""
+def get_overlay_decisions(
+    days: Optional[int] = None,
+    unevaluated_only: bool = False,
+) -> List[Dict]:
+    """Return overlay decisions, most recent first.
+
+    Parameters
+    ----------
+    days:
+        When provided (and *unevaluated_only* is False), restrict to decisions
+        made within the last *days* calendar days.  When ``None``, all rows are
+        returned.
+    unevaluated_only:
+        When ``True`` the *days* filter is **ignored for unevaluated rows** —
+        every row with ``outcome_evaluated = 0`` is returned regardless of age
+        (up to a safety cap of 365 days).  Already-evaluated rows are not
+        included in the result.  This flag exists so the weekly evaluator can
+        catch up on decisions that fell outside the normal look-back window
+        without breaking callers that use the recency-filtered path.
+    """
     with get_db() as db:
-        query = "SELECT * FROM overlay_decisions"
-        params: List[Any] = []
-        if days:
-            query += " WHERE timestamp >= datetime('now', ?)"
-            params.append(f"-{days} days")
-        query += " ORDER BY timestamp DESC"
+        if unevaluated_only:
+            # Return ALL unevaluated rows up to a safe upper-age limit.
+            query = (
+                "SELECT * FROM overlay_decisions"
+                " WHERE outcome_evaluated = 0"
+                "   AND timestamp >= datetime('now', '-365 days')"
+                " ORDER BY timestamp DESC"
+            )
+            params: List[Any] = []
+        else:
+            query = "SELECT * FROM overlay_decisions"
+            params = []
+            if days:
+                query += " WHERE timestamp >= datetime('now', ?)"
+                params.append(f"-{days} days")
+            query += " ORDER BY timestamp DESC"
         rows = db.execute(query, params).fetchall()
         result = []
         for row in rows:

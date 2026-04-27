@@ -256,5 +256,59 @@ def main(argv: list | None = None) -> int:
     sys.exit(0 if status == 'HEALTHY' else 1)
     return 0 if status == 'HEALTHY' else 1
 
+
+
+# ── Overlay evaluator backlog check ──────────────────────────────────────────
+
+def _check_overlay_backlog(threshold: int = 5, dry_run: bool = False) -> bool:
+    """Check for stale unevaluated overlay decisions and alert via Telegram.
+
+    Wraps :func:`overlay.evaluator.check_evaluator_backlog`.  When the backlog
+    exceeds *threshold* (decisions older than 2 days with outcome_evaluated=0),
+    a WARN-level Telegram alert is sent.
+
+    Parameters
+    ----------
+    threshold:
+        Number of stale decisions above which the alert fires (default 5).
+    dry_run:
+        When ``True``, print the alert text instead of sending to Telegram.
+
+    Returns
+    -------
+    bool
+        ``True`` when healthy (backlog within threshold), ``False`` otherwise.
+    """
+    try:
+        from overlay.evaluator import check_evaluator_backlog  # type: ignore
+        is_healthy, backlog_count, oldest_age_days = check_evaluator_backlog(threshold=threshold)
+    except Exception as exc:
+        print(f"WARNING: _check_overlay_backlog import/call failed: {exc}", file=sys.stderr)
+        return True  # non-fatal — don't block other checks
+
+    if is_healthy:
+        print(f"Overlay evaluator backlog OK: {backlog_count} stale decisions (threshold={threshold})")
+        return True
+
+    alert_text = (
+        f"\u26a0\ufe0f <b>Overlay evaluator backlog</b>\n"
+        f"{backlog_count} decisions are unevaluated and older than 2 days "
+        f"(oldest: {oldest_age_days:.1f}d, threshold: {threshold}).\n"
+        f"Run: <code>python3 -m overlay.cron --evaluate</code>"
+    )
+    print(f"WARNING: overlay evaluator backlog={backlog_count} oldest={oldest_age_days:.1f}d")
+
+    if dry_run:
+        print(f"[DRY-RUN] Would send Telegram: {alert_text}")
+        return False
+
+    try:
+        from utils.telegram import send_message  # type: ignore
+        send_message(alert_text)
+    except Exception as exc:
+        print(f"WARNING: Telegram send failed (non-fatal): {exc}", file=sys.stderr)
+
+    return False
+
 if __name__ == '__main__':
     main()
