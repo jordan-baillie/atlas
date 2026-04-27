@@ -7,6 +7,7 @@ import { SectionBoundary } from '../layout/SectionBoundary'
 import { ChartTooltip } from '../shared/ChartTooltip'
 import { fmtNum, fmtPct, fmtDateShort, fmtRelativeTime } from '../../lib/format'
 import type { StrategyDetail, Experiment, BrainParam, Discovery, UniverseInfo, LeaderboardEntry, DailyCount } from '../../api/research-types'
+import { CoverageMatrix } from './CoverageMatrix'
 
 // ── Keep Rate Ring SVG ──────────────────────────────────────────
 function KeepRateRing({ rate, size = 40 }: { rate: number; size?: number }) {
@@ -646,6 +647,12 @@ export function ResearchTab() {
           </SectionBoundary>
         </div>
       )}
+
+      <div className="animate-in">
+        <SectionBoundary title="Coverage">
+          <CoverageMatrix enabled={true} />
+        </SectionBoundary>
+      </div>
 
       {universes.length > 0 && (
         <div className="animate-in">

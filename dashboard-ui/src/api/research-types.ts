@@ -178,3 +178,42 @@ export interface LeaderboardEntry {
 export interface ResearchLeaderboard {
   leaderboard?: LeaderboardEntry[]
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/research/coverage
+// ---------------------------------------------------------------------------
+export type CoverageCellStatus = 'fresh' | 'stale' | 'very_stale'
+
+export interface CoverageCell {
+  sharpe: number | null
+  trades: number | null
+  updated_at: string | null
+  age_days: number | null
+  status: CoverageCellStatus
+}
+
+export interface ResearchCoverage {
+  strategies: string[]
+  universes: string[]
+  matrix: Record<string, Record<string, CoverageCell | null>>
+  generated_at: string
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/promotions/pending
+// ---------------------------------------------------------------------------
+export interface PendingPromotion {
+  pending_id: string
+  strategy: string
+  market: string
+  delta_sharpe: number
+  final_sharpe: number
+  timestamp: string
+  metadata: Record<string, unknown>
+  status: string
+}
+
+export interface PendingPromotionsResponse {
+  pending: PendingPromotion[]
+  count: number
+}

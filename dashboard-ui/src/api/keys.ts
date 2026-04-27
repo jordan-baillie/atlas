@@ -37,5 +37,9 @@ export const qk = {
     experiments: (params: Record<string, unknown>) => [...qk.research.all(), 'experiments', params] as const,
     brain: () => [...qk.research.all(), 'brain'] as const,
     discoveries: () => [...qk.research.all(), 'discoveries'] as const,
+    coverage: () => [...qk.research.all(), 'coverage'] as const,
+  },
+  promotions: {
+    pending: () => ['promotions', 'pending'] as const,
   },
 } as const

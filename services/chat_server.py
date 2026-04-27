@@ -2931,6 +2931,65 @@ def research_brain(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# ── C4: Research coverage matrix ─────────────────────────────────────────────
+
+@app.get("/api/research/coverage")
+def research_coverage(_auth: HTTPBasicCredentials = Depends(check_auth)):
+    """Coverage matrix: strategies × universes → last-promotion-date + sharpe."""
+    try:
+        from db.atlas_db import get_db
+        from datetime import datetime, timezone
+
+        with get_db() as db:
+            rows = [dict(r) for r in db.execute(
+                "SELECT strategy, universe, sharpe, trades, updated_at "
+                "FROM research_best ORDER BY strategy, universe"
+            ).fetchall()]
+
+        strategies = sorted({r["strategy"] for r in rows})
+        universes = sorted({r["universe"] for r in rows})
+
+        now = datetime.now(timezone.utc)
+        matrix: dict = {s: {u: None for u in universes} for s in strategies}
+        for r in rows:
+            updated_at_str = r.get("updated_at")
+            age_days = None
+            status = "never"
+            if updated_at_str:
+                try:
+                    # SQLite datetime('now') format: 'YYYY-MM-DD HH:MM:SS' in UTC
+                    ts = datetime.fromisoformat(updated_at_str.replace(" ", "T"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    age_days = (now - ts).total_seconds() / 86400
+                    if age_days < 7:
+                        status = "fresh"
+                    elif age_days < 14:
+                        status = "stale"
+                    else:
+                        status = "very_stale"
+                except (ValueError, TypeError):
+                    pass
+            matrix[r["strategy"]][r["universe"]] = {
+                "sharpe": r["sharpe"],
+                "trades": r["trades"],
+                "updated_at": updated_at_str,
+                "age_days": round(age_days, 1) if age_days is not None else None,
+                "status": status,
+            }
+
+        return JSONResponse(content={
+            "strategies": strategies,
+            "universes": universes,
+            "matrix": matrix,
+            "generated_at": now.isoformat(),
+        })
+    except Exception as e:
+        logger.exception("research_coverage failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # ── /chat route — full-page agent interface ──────────────────────────────────
 
 @app.get("/homerbot")

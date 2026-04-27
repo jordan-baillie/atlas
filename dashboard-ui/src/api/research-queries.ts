@@ -10,6 +10,8 @@ import type {
   ResearchDiscoveries,
   ResearchOverview,
   ResearchLeaderboard,
+  ResearchCoverage,
+  PendingPromotionsResponse,
 } from './research-types'
 
 const STALE_5MIN = 5 * 60_000
@@ -99,5 +101,24 @@ export function useResearchLeaderboard(enabled: boolean) {
     enabled,
     placeholderData: keepPreviousData,
     staleTime: STALE_5MIN,
+  })
+}
+
+export function useResearchCoverage(enabled: boolean) {
+  return useQuery({
+    queryKey: qk.research.coverage(),
+    queryFn: () => get<ResearchCoverage>('/api/research/coverage'),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: STALE_5MIN,
+  })
+}
+
+export function usePendingPromotions() {
+  return useQuery({
+    queryKey: qk.promotions.pending(),
+    queryFn: () => get<PendingPromotionsResponse>('/api/promotions/pending'),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   })
 }
