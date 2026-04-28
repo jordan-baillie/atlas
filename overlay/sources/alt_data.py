@@ -444,6 +444,26 @@ class FinvizScraper:
 
 # ── Class 3: Orchestrator ────────────────────────────────────────────────────
 
+
+
+# ── Config helper ─────────────────────────────────────────────────────────────
+
+
+def _load_alt_data_config() -> Dict[str, Any]:
+    """Load the alt_data section from config/active/sp500.json.
+
+    Returns an empty dict on any error so callers can fall back gracefully.
+    """
+    try:
+        config_path = _PROJECT_ROOT / "config" / "active" / "sp500.json"
+        with open(config_path) as _f:
+            _cfg = json.load(_f)
+        return _cfg.get("alt_data", {})
+    except Exception as exc:
+        logger.warning("alt_data: could not load config — %s", exc)
+        return {}
+
+
 class AltDataCollector:
     """
     Orchestrates OpenInsider + Finviz scraping for Atlas portfolio tickers.
@@ -453,9 +473,15 @@ class AltDataCollector:
         tickers:  Optional explicit ticker list (overrides auto-detection).
     """
 
-    def __init__(self, dry_run: bool = False, tickers: Optional[List[str]] = None) -> None:
+    def __init__(
+        self,
+        dry_run: bool = False,
+        tickers: Optional[List[str]] = None,
+        config: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.dry_run = dry_run
         self._ticker_override = tickers  # set via constructor; also overridable in run()
+        self._config_override = config   # override for tests; None → load from file
 
     # ── ticker resolution ────────────────────────────────────────────────────
 
@@ -497,14 +523,49 @@ class AltDataCollector:
         Returns:
             Summary dict: {tickers, openinsider_records, finviz_records, errors}
         """
+        # ── Load config + validate mode ──────────────────────────────────────
+        alt_cfg = (
+            self._config_override
+            if self._config_override is not None
+            else _load_alt_data_config()
+        )
+        _mode = alt_cfg.get("mode", "observe")
+        _max_per_ticker_cfg = int(alt_cfg.get("max_per_ticker", 3))
+
+        if _mode not in ("observe", "active"):
+            logger.warning(
+                "[alt_data] unknown mode=%r — expected 'observe' or 'active'; "
+                "aborting run to avoid unintended side-effects",
+                _mode,
+            )
+            return {
+                "tickers": [],
+                "openinsider_records": 0,
+                "finviz_records": 0,
+                "errors": [f"unknown mode: {_mode!r}"],
+            }
+
         if tickers:
             self._ticker_override = tickers
 
+        # If no explicit CLI/constructor override but config supplies tickers, use them.
+        # This covers: (a) tests passing a config dict; (b) production cron reading
+        # config/active/sp500.json which now lists 199 watchlist tickers.
+        if not self._ticker_override and alt_cfg.get("tickers"):
+            self._ticker_override = list(alt_cfg["tickers"])
+
         active_tickers = self.get_tickers()
+
+        # Structured startup observation log (greppable)
+        logger.info(
+            "[alt_data] mode=%s tickers=%d max_per_ticker=%d",
+            _mode, len(active_tickers), _max_per_ticker_cfg,
+        )
         logger.info(
             "alt_data: starting run for %d ticker(s) (dry_run=%s)",
             len(active_tickers), self.dry_run,
         )
+        _run_start = time.monotonic()
 
         openinsider_scraper = OpenInsiderScraper()
         finviz_scraper = FinvizScraper()
@@ -548,6 +609,9 @@ class AltDataCollector:
         else:
             self._write_records(all_records, errors)
 
+        _elapsed_ms = int((time.monotonic() - _run_start) * 1000)
+        _total_hits = openinsider_count + finviz_count
+
         result = {
             "tickers": active_tickers,
             "openinsider_records": openinsider_count,
@@ -555,6 +619,11 @@ class AltDataCollector:
             "errors": errors,
         }
         logger.info("alt_data: run complete — %s", result)
+        # Structured end-of-batch observation log (greppable)
+        logger.info(
+            "[alt_data] mode=%s tickers=%d hits=%d latency_ms=%d",
+            _mode, len(active_tickers), _total_hits, _elapsed_ms,
+        )
         return result
 
     # ── DB write ─────────────────────────────────────────────────────────────
