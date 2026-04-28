@@ -213,8 +213,11 @@ class LivePortfolio:
                         f"⚠️ dual_write_market_state failed for "
                         f"{self.market_id}: {_dw_exc}"
                     )
-                except Exception:
-                    pass
+                except Exception as _tg_exc:
+                    logger.warning(
+                        "dual_write_market_state telegram alert failed (non-blocking): %s",
+                        _tg_exc,
+                    )
                 # DO NOT re-raise — JSON write must succeed even if SQLite fails
 
     # ── Broker connection ──────────────────────────────────────

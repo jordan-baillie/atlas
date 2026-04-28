@@ -1041,8 +1041,11 @@ class LiveExecutor:
                             f"Current MV: ${_cur_mv:,.0f} | Order MV: ${_prosp_mv:,.0f}"
                             f" | Equity: ${_lev_acct.equity:,.0f}"
                         )
-                    except Exception:
-                        pass
+                    except Exception as _tg_exc:
+                        logger.warning(
+                            "leverage_gate telegram alert failed (non-blocking): %s",
+                            _tg_exc,
+                        )
                     return {
                         "ticker": ticker, "side": side_label,
                         "qty": qty, "price": _order_price,
