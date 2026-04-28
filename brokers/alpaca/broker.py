@@ -582,6 +582,7 @@ class AlpacaBroker(BrokerAdapter):
                 trail_percent=kwargs.get("trail_percent"),
                 trail_price=kwargs.get("trail_price"),
                 stop_loss_price=kwargs.get("stop_loss_price"),
+                take_profit_price=kwargs.get("take_profit_price"),
             )
         except ValueError as e:
             logger.error("build_order_request failed for %s: %s", ticker, e)
@@ -1751,6 +1752,7 @@ def _build_order_request(
     trail_percent: Optional[float] = None,
     trail_price: Optional[float] = None,
     stop_loss_price: Optional[float] = None,
+    take_profit_price: Optional[float] = None,
 ) -> object:
     """Build the appropriate alpaca-py order request object.
 
@@ -1805,16 +1807,20 @@ def _build_order_request(
             client_order_id=client_id,
             extended_hours=extended_hours,
         )
-        # OTO bracket: attach stop-loss leg so it activates on fill
-        if stop_loss_price and stop_loss_price > 0:
-            limit_kwargs["order_class"] = OrderClass.OTO
-            limit_kwargs["stop_loss"] = StopLossRequest(
-                stop_price=round(stop_loss_price, 2),
-            )
+        # Native BRACKET order: stop_loss + take_profit attached atomically.
+        # Activates child legs on parent fill in a single API call (no race window).
+        if stop_loss_price and stop_loss_price > 0 and take_profit_price and take_profit_price > 0:
+            limit_kwargs["order_class"] = OrderClass.BRACKET
+            limit_kwargs["stop_loss"] = StopLossRequest(stop_price=round(stop_loss_price, 2))
+            limit_kwargs["take_profit"] = TakeProfitRequest(limit_price=round(take_profit_price, 2))
             logger.info(
-                "OTO bracket: %s entry=$%.2f stop=$%.2f",
-                symbol, price, stop_loss_price,
+                "BRACKET: %s entry=$%.2f stop=$%.2f tp=$%.2f",
+                symbol, price, stop_loss_price, take_profit_price,
             )
+        elif stop_loss_price and stop_loss_price > 0:
+            limit_kwargs["order_class"] = OrderClass.OTO
+            limit_kwargs["stop_loss"] = StopLossRequest(stop_price=round(stop_loss_price, 2))
+            logger.info("OTO: %s entry=$%.2f stop=$%.2f", symbol, price, stop_loss_price)
         return LimitOrderRequest(**limit_kwargs)
 
     elif order_type == OrderType.STOP:

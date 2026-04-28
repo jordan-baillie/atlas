@@ -280,6 +280,55 @@ def record_trade_entry(
         return None
 
 
+def update_trade_protective_orders(
+    *,
+    ticker: str,
+    universe: str,
+    stop_order_id: Optional[str] = None,
+    tp_order_id: Optional[str] = None,
+) -> int:
+    """Update stop_order_id and/or tp_order_id on the OPEN trade row for (ticker, universe).
+
+    Both args are optional — pass only what you want to update. None means leave
+    unchanged. Empty string ('') is treated as "set to empty" (clear the field).
+
+    Looks up by (ticker, universe, status='open'). The UNIQUE partial index
+    idx_trades_unique_open guarantees at most one match.
+
+    Returns:
+        Number of rows updated (0 or 1). Logs a WARNING when no match is found
+        — caller may wish to handle this (e.g., not-yet-recorded trade).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    sets = []
+    params: list = []
+    if stop_order_id is not None:
+        sets.append("stop_order_id = ?")
+        params.append(stop_order_id)
+    if tp_order_id is not None:
+        sets.append("tp_order_id = ?")
+        params.append(tp_order_id)
+    if not sets:
+        return 0
+    sets.append("updated_at = datetime('now')")
+    params.extend([ticker, universe])
+    sql = (
+        f"UPDATE trades SET {', '.join(sets)} "
+        f"WHERE ticker = ? AND universe = ? AND status = 'open'"
+    )
+    with get_db() as db:
+        cursor = db.execute(sql, params)
+        n = cursor.rowcount
+    if n == 0:
+        _log.warning(
+            "update_trade_protective_orders: no open trade for %s/%s "
+            "(stop_order_id=%s tp_order_id=%s)",
+            ticker, universe, stop_order_id, tp_order_id,
+        )
+    return n
+
+
 def _compute_and_fill_mae_mfe(ticker: str, strategy: str, *, db=None) -> None:
     """Compute and fill MAE/MFE for the most recently closed trade of (ticker, strategy).
 

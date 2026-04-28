@@ -518,6 +518,98 @@ def _pdt_should_skip(ticker: str, market_id: str, pdt_state: dict) -> bool:
     return f"{ticker}::{market_id}" in pdt_state
 
 
+
+# ═══════════════════════════════════════════════════════════════
+# DB consistency helper — persist new operative order IDs
+# ═══════════════════════════════════════════════════════════════
+
+# Actions from sync_all_protective_orders that place a NEW operative order.
+# Used by _apply_db_consistency to decide which tickers need a DB update.
+_DB_UPDATE_ACTIONS: frozenset[str] = frozenset({
+    "oco_placed", "tightened", "placed_pdt_fallback",
+    "placed_fallback", "trailing_upgraded",
+})
+
+
+def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
+    """Persist new operative stop/tp order IDs to trades table after a sync cycle.
+
+    Reads per_ticker from sync_result, fetches current open orders from broker
+    (OCO child legs already flattened by broker.get_open_orders), resolves the
+    operative SELL-stop and SELL-limit IDs per ticker, then writes them to
+    trades.stop_order_id / trades.tp_order_id for any ticker whose action
+    placed a NEW order (oco_placed, tightened, placed_pdt_fallback, …).
+
+    Skipped, pdt_deferred, dry_run, and error actions are no-ops.
+    Non-fatal — any exception is logged as WARNING and swallowed.
+    """
+    try:
+        from db.atlas_db import update_trade_protective_orders
+        from brokers.base import OrderSide
+
+        per_ticker: dict = sync_result.get("per_ticker") or {}
+        if not per_ticker:
+            return
+
+        # Fetch all open orders; broker.get_open_orders() already includes
+        # OCO child legs (stop leg that Alpaca marks HELD inside the parent).
+        open_orders = broker.get_open_orders()
+
+        # Build ticker → {stop: id, tp: id} by scanning all SELL orders.
+        # First match wins per slot so we don't overwrite with a second order.
+        ticker_ops: dict[str, dict[str, str]] = {}
+        for order in open_orders or []:
+            if order.side != OrderSide.SELL:
+                continue
+            otype = (order.raw or {}).get("order_type", "").lower()
+            ticker = order.ticker
+            if not ticker:
+                continue
+            slot = ticker_ops.setdefault(ticker, {"stop": "", "tp": ""})
+            if otype in ("stop", "stop_limit", "trailing_stop") and not slot["stop"]:
+                slot["stop"] = order.order_id
+            elif otype == "limit" and not slot["tp"]:
+                slot["tp"] = order.order_id
+
+        # Update DB for tickers that received a NEW operative order this cycle.
+        for ticker, tres in per_ticker.items():
+            sl_action = tres.get("sl_action") or ""
+            tp_action = tres.get("tp_action") or ""
+            if (sl_action not in _DB_UPDATE_ACTIONS
+                    and tp_action not in _DB_UPDATE_ACTIONS):
+                continue
+            ops = ticker_ops.get(ticker, {"stop": "", "tp": ""})
+            # None = leave field unchanged; empty string = no resolved ID (skip arg)
+            new_stop: str | None = ops["stop"] or None
+            new_tp: str | None = ops["tp"] or None
+            if not new_stop and not new_tp:
+                logger.debug(
+                    "sync_protective DB: no operative IDs resolved for %s/%s",
+                    ticker, market_id,
+                )
+                continue
+            try:
+                n = update_trade_protective_orders(
+                    ticker=ticker,
+                    universe=market_id,
+                    stop_order_id=new_stop,
+                    tp_order_id=new_tp,
+                )
+                logger.info(
+                    "sync_protective DB update: %s/%s stop=%s tp=%s rows=%d ",
+                    ticker, market_id,
+                    (new_stop or "")[:8], (new_tp or "")[:8], n,
+                )
+            except Exception as db_exc:
+                logger.warning(
+                    "sync_protective DB update failed for %s/%s (non-fatal): %s",
+                    ticker, market_id, db_exc,
+                )
+    except Exception as wrap_exc:
+        logger.warning(
+            "sync_protective DB consistency block failed (non-fatal): %s", wrap_exc,
+        )
+
 # ═══════════════════════════════════════════════════════════════
 # Per-market sync
 # ═══════════════════════════════════════════════════════════════
@@ -965,6 +1057,13 @@ def sync_market(
                     f"{ticker}: {' | '.join(parts)}" if parts else f"{ticker}: nothing to do"
                 )
             result["results"] = per_ticker
+
+            # ── DB consistency: persist new operative order IDs to trades ─────
+            # Write newly placed/replaced stop/tp order IDs to trades.stop_order_id
+            # / trades.tp_order_id so the SQLite column stays current.
+            # Non-fatal — sync succeeds even if the DB update fails.
+            if not dry_run:
+                _apply_db_consistency(broker, market_id, sync_result)
 
         else:
             result["error"] = f"Unsupported broker: {broker_name}"

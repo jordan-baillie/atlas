@@ -960,6 +960,8 @@ class LiveExecutor:
         strategy = entry.get("strategy", "")
         confidence = entry.get("confidence", 0)
         stop_price = entry.get("stop_price", 0)
+        take_profit = entry.get("take_profit", 0) or 0
+        take_profit = float(take_profit) if take_profit else 0
 
         # Get current regime for trade record enrichment
         try:
@@ -1109,6 +1111,8 @@ class LiveExecutor:
             price=_order_price,
             order_type=OrderType.LIMIT,
             remark=f"atlas_entry_{strategy}_{trade_date}"[:64],
+            stop_loss_price=stop_price if stop_price and stop_price > 0 else None,
+            take_profit_price=take_profit if take_profit and take_profit > 0 else None,
         )
 
         # Poll for fill — LIMIT orders submitted pre-market return
@@ -1182,6 +1186,16 @@ class LiveExecutor:
                 side_label, ticker, qty, price, order_result.order_id,
                 order_result.status.value,
             )
+            # Partial-fill guardrail: BRACKET legs auto-scale to filled_qty.
+            # Log a warning so operators know the protected qty is less than ordered.
+            if order_result.status == OrderStatus.FILLED:
+                _filled_qty = int(float(order_result.raw.get("filled_qty") or 0))
+                if _filled_qty < qty:
+                    logger.warning(
+                        "PARTIAL FILL: %s ordered=%d filled=%d — BRACKET child legs "
+                        "are sized to filled_qty only",
+                        ticker, qty, _filled_qty,
+                    )
             # Only record to TradeLedger when the order is actually FILLED.
             # A LIMIT order accepted by the exchange returns success=True but
             # status=SUBMITTED — recording it now would create phantom
@@ -1215,6 +1229,46 @@ class LiveExecutor:
                             _trade_id,
                             order_result.order_id, stop_price,
                         )
+                    # Populate trades.stop_order_id / tp_order_id from bracket child legs.
+                    # alpaca-py exposes child legs on the parent order via .raw["legs"] (a list
+                    # of dicts when using the SDK), each leg having id, side, order_type.
+                    if _trade_id is not None:
+                        try:
+                            _legs = order_result.raw.get("legs") or []
+                            _stop_id, _tp_id = "", ""
+                            for _leg in _legs:
+                                _leg_type = str(_leg.get("order_type", "")).lower()
+                                _leg_side = str(_leg.get("side", "")).lower()
+                                if _leg_side != "sell":
+                                    continue
+                                if _leg_type in ("stop", "stop_limit", "trailing_stop"):
+                                    _stop_id = str(_leg.get("id", ""))
+                                elif _leg_type == "limit":
+                                    _tp_id = str(_leg.get("id", ""))
+                            if _stop_id or _tp_id:
+                                from db.atlas_db import update_trade_protective_orders
+                                _n = update_trade_protective_orders(
+                                    ticker=ticker,
+                                    universe=self.config.get("market_id", "sp500"),
+                                    stop_order_id=_stop_id or None,
+                                    tp_order_id=_tp_id or None,
+                                )
+                                logger.info(
+                                    "BRACKET legs recorded: %s trade_id=%s stop_order_id=%s "
+                                    "tp_order_id=%s rows_updated=%d",
+                                    ticker, _trade_id, _stop_id, _tp_id, _n,
+                                )
+                            else:
+                                logger.warning(
+                                    "BRACKET fill recorded but no child legs found in order "
+                                    "%s for %s — sync_protective will need to repair",
+                                    order_result.order_id, ticker,
+                                )
+                        except Exception as _legs_exc:
+                            logger.warning(
+                                "Failed to record BRACKET child leg IDs for %s: %s",
+                                ticker, _legs_exc,
+                            )
                 except Exception as _ledger_exc:
                     logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
             else:
