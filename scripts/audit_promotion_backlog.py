@@ -68,7 +68,11 @@ def main() -> None:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
 
-    # ── Aggregate kept experiments by (strategy, universe) ───────────────────
+    # Aggregate kept experiments by (strategy, universe).
+    # FILTER: exclude description='baseline' and params_changed IS NULL — these
+    # are whole-portfolio regression-check baselines (gate 2 of auto_promote),
+    # NOT individual strategy parameter improvements. Mixing them creates
+    # apples-to-oranges deltas (#B3 canary RCA, 2026-04-28).
     rows = conn.execute(
         """
         SELECT
@@ -80,6 +84,8 @@ def main() -> None:
         FROM research_experiments
         WHERE status = 'kept'
           AND created_at >= '2026-04-13'
+          AND description != 'baseline'
+          AND params_changed IS NOT NULL
         GROUP BY strategy, universe
         ORDER BY strategy, universe
         """,
