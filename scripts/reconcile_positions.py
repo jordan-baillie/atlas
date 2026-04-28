@@ -203,8 +203,14 @@ def reconcile_positions(
         # market's state file. This catches tickers held by the market but outside
         # the universe definition (e.g. sector ETFs tracked in live_<market>.json).
         # BUT: exclude tickers actively managed by another market (avoids cross-market UNTRACKED noise).
+        # NOTE: other_market_tickers takes priority over state_tickers.
+        # Using (universe | state) - other_market prevents a double-claimed ticker
+        # from persisting in this market's state once it's removed from the other market's
+        # state. With the old "(universe - other) | state" formula, a ticker that was
+        # erroneously added to two markets' state files would always pass via state_tickers
+        # even when other_market_tickers excluded it via universe.
         if universe_tickers or state_tickers:
-            _allow = (universe_tickers - other_market_tickers) | state_tickers
+            _allow = (universe_tickers | state_tickers) - other_market_tickers
             broker_map = {p.ticker: p for p in broker_positions if p.ticker in _allow}
             _skipped = len(broker_positions) - len(broker_map)
             if _skipped:

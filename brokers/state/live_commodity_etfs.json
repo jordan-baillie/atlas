@@ -5,23 +5,34 @@
     {
       "ticker": "CCJ",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-24",
+      "entry_date": "2026-04-28",
       "entry_price": 126.47,
       "shares": 4,
-      "stop_price": 120.54,
+      "stop_price": 119.67,
       "order_id": "",
-      "stop_order_id": "88a8d94c-744e-4244-b74b-e2297ee828b7",
+      "stop_order_id": "76c42b12-9fda-43b6-878e-5c4d2e008cec",
       "tp_order_id": ""
     },
     {
       "ticker": "GLD",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-24",
+      "entry_date": "2026-04-28",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 418.105,
       "order_id": "",
       "stop_order_id": "70b8e824-e8c3-4092-81f6-47fcbabeb7ad",
+      "tp_order_id": ""
+    },
+    {
+      "ticker": "SLV",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-04-28",
+      "entry_price": 68.27,
+      "shares": 6,
+      "stop_price": 66.41,
+      "order_id": "",
+      "stop_order_id": "e40a3b01-2689-469b-abf5-3942eb67a064",
       "tp_order_id": ""
     }
   ],
@@ -433,10 +444,131 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-24",
+      "equity": 4962.86,
+      "cash": -4062.64,
+      "positions_value": 9025.5,
+      "num_positions": 5,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "CCJ",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 126.47,
+          "current_price": 122.15,
+          "unrealized_pnl": -17.28,
+          "mae": -3.42,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "FCX",
+          "strategy": "connors_rsi2",
+          "shares": 5,
+          "entry_price": 61.48,
+          "current_price": 61.065,
+          "unrealized_pnl": -2.07,
+          "mae": -0.68,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 433.25,
+          "unrealized_pnl": -19.1,
+          "mae": -2.16,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "connors_rsi2",
+          "shares": 6,
+          "entry_price": 68.27,
+          "current_price": 68.79,
+          "unrealized_pnl": 3.12,
+          "mae": 0.0,
+          "mfe": 0.76,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "connors_rsi2",
+          "shares": 60,
+          "entry_price": 10.34,
+          "current_price": 10.31,
+          "unrealized_pnl": -1.8,
+          "mae": -0.29,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-27",
+      "equity": 4956.55,
+      "cash": -2752.65,
+      "positions_value": 7709.2,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "CCJ",
+          "strategy": "momentum_breakout",
+          "shares": 4,
+          "entry_price": 126.47,
+          "current_price": 123.11,
+          "unrealized_pnl": -13.44,
+          "mae": -2.66,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "FCX",
+          "strategy": "connors_rsi2",
+          "shares": 5,
+          "entry_price": 61.48,
+          "current_price": 60.57,
+          "unrealized_pnl": -4.55,
+          "mae": -1.48,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 429.89,
+          "unrealized_pnl": -25.82,
+          "mae": -2.92,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "connors_rsi2",
+          "shares": 6,
+          "entry_price": 68.27,
+          "current_price": 68.33,
+          "unrealized_pnl": 0.36,
+          "mae": 0.0,
+          "mfe": 0.09,
+          "holding_days": -1
+        }
+      ]
     }
   ],
   "daily_high_water": 5036.06,
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-24T08:00:48.014889"
+  "last_saved": "2026-04-28T08:00:52.559471"
 }
