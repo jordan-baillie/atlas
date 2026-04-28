@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS trades (
     updated_at      TEXT    DEFAULT (datetime('now')),
     stop_order_id   TEXT    DEFAULT '',
     tp_order_id     TEXT    DEFAULT '',
+    superseded      INTEGER NOT NULL DEFAULT 0 CHECK (superseded IN (0,1)),
     CHECK (exit_date IS NULL OR exit_date >= entry_date),
     CHECK (
         stop_price IS NULL
@@ -147,9 +148,14 @@ CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
 CREATE INDEX IF NOT EXISTS idx_trades_strategy ON trades(strategy);
 CREATE INDEX IF NOT EXISTS idx_trades_dates ON trades(entry_date, exit_date);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_unique_open ON trades(ticker, universe) WHERE status='open';
-CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_no_dup_closed
-  ON trades(ticker, DATE(entry_date), DATE(exit_date))
-  WHERE status = 'closed';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trades_active_closed
+  ON trades(ticker, strategy, DATE(exit_date), ROUND(pnl, 2))
+  WHERE status = 'closed' AND superseded = 0;
+
+-- Convenience view: all non-superseded trades (used by P&L consumers)
+DROP VIEW IF EXISTS trades_active;
+CREATE VIEW IF NOT EXISTS trades_active AS
+  SELECT * FROM trades WHERE superseded = 0;
 
 CREATE TABLE IF NOT EXISTS plans (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,

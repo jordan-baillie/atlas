@@ -342,18 +342,31 @@ def record_trade_exit(
     exit_reason: str,
     regime_at_exit: Optional[str] = None,
 ) -> None:
-    """Close the most recent open trade for (ticker, strategy)."""
+    """Close the most recent open trade for (ticker, strategy).
+
+    Duplicate-close guard: before updating the row to status='closed',
+    this function checks whether a row with the same
+    (ticker, strategy, DATE(exit_date), ROUND(pnl,2), superseded=0)
+    already exists.  If so the trade is closed as superseded=1 instead
+    of superseded=0, and a WARN is emitted.  This prevents double-
+    counting in P&L aggregations.
+
+    The uq_trades_active_closed unique index enforces the same invariant
+    at the database level as a hard backstop.
+    """
     import logging
     _exit_log = logging.getLogger(__name__)
     now = datetime.now().isoformat()
     with get_db() as db:
         # ── Validation: reject ghost trades (exit before entry) ──
-        row = db.execute(
-            "SELECT entry_date FROM trades WHERE ticker = ? AND strategy = ? AND status = 'open' ORDER BY id DESC LIMIT 1",
+        open_row = db.execute(
+            "SELECT id, entry_date, entry_price, shares "
+            "FROM trades WHERE ticker = ? AND strategy = ? AND status = 'open' "
+            "ORDER BY id DESC LIMIT 1",
             (ticker, strategy),
         ).fetchone()
-        if row:
-            entry_date_str = str(row[0])[:10]
+        if open_row:
+            entry_date_str = str(open_row["entry_date"])[:10]
             exit_date_str = now[:10]
             if exit_date_str < entry_date_str:
                 _exit_log.warning(
@@ -362,26 +375,86 @@ def record_trade_exit(
                     ticker, strategy, exit_date_str, entry_date_str,
                 )
                 return
-        db.execute(
-            """
-            UPDATE trades
-            SET exit_date    = ?,
-                exit_price   = ?,
-                exit_reason  = ?,
-                status       = 'closed',
-                regime_at_exit = ?,
-                pnl          = (? - entry_price) * shares,
-                pnl_pct      = ((? - entry_price) / entry_price) * 100,
-                hold_days    = CAST(julianday(?) - julianday(entry_date) AS INTEGER),
-                updated_at   = datetime('now')
-            WHERE ticker = ? AND strategy = ? AND status = 'open'
-            """,
-            (
-                now, exit_price, exit_reason, regime_at_exit,
-                exit_price, exit_price, now,
-                ticker, strategy,
-            ),
+
+        # ── Duplicate-close guard ─────────────────────────────────────────
+        # Compute the would-be pnl before the UPDATE and check for an
+        # existing active-closed row with the same signature.
+        # Works only when the superseded column is present (post-migration).
+        _superseded_flag = 0  # default: this is a canonical close
+        _has_sup_col = any(
+            r[1] == "superseded"
+            for r in db.execute("PRAGMA table_info(trades)").fetchall()
         )
+        if _has_sup_col and open_row:
+            _entry_price = float(open_row["entry_price"] or 0)
+            _shares      = int(open_row["shares"] or 0)
+            _would_be_pnl = round(
+                (float(exit_price) - _entry_price) * _shares, 2
+            )
+            _dup = db.execute(
+                "SELECT id FROM trades "
+                "WHERE ticker=? AND strategy=? "
+                "AND DATE(exit_date)=DATE(?) "
+                "AND ROUND(pnl,2)=? "
+                "AND status='closed' AND superseded=0",
+                (ticker, strategy, now, _would_be_pnl),
+            ).fetchone()
+            if _dup:
+                _exit_log.warning(
+                    "trade dedup hit: skipping duplicate close for %s/%s, "
+                    "existing id=%d would-have-been entry_date=%s — "
+                    "marking this trade superseded=1",
+                    ticker, strategy, _dup["id"],
+                    str((open_row["entry_date"] or ""))[:10],
+                )
+                _superseded_flag = 1
+
+        # ── Apply the exit UPDATE ─────────────────────────────────────────
+        if _has_sup_col:
+            db.execute(
+                """
+                UPDATE trades
+                SET exit_date      = ?,
+                    exit_price     = ?,
+                    exit_reason    = ?,
+                    status         = 'closed',
+                    regime_at_exit = ?,
+                    pnl            = (? - entry_price) * shares,
+                    pnl_pct        = ((? - entry_price) / entry_price) * 100,
+                    hold_days      = CAST(julianday(?) - julianday(entry_date) AS INTEGER),
+                    superseded     = ?,
+                    updated_at     = datetime('now')
+                WHERE ticker = ? AND strategy = ? AND status = 'open'
+                """,
+                (
+                    now, exit_price, exit_reason, regime_at_exit,
+                    exit_price, exit_price, now,
+                    _superseded_flag,
+                    ticker, strategy,
+                ),
+            )
+        else:
+            # Fallback path: superseded column not yet present (pre-migration)
+            db.execute(
+                """
+                UPDATE trades
+                SET exit_date    = ?,
+                    exit_price   = ?,
+                    exit_reason  = ?,
+                    status       = 'closed',
+                    regime_at_exit = ?,
+                    pnl          = (? - entry_price) * shares,
+                    pnl_pct      = ((? - entry_price) / entry_price) * 100,
+                    hold_days    = CAST(julianday(?) - julianday(entry_date) AS INTEGER),
+                    updated_at   = datetime('now')
+                WHERE ticker = ? AND strategy = ? AND status = 'open'
+                """,
+                (
+                    now, exit_price, exit_reason, regime_at_exit,
+                    exit_price, exit_price, now,
+                    ticker, strategy,
+                ),
+            )
         # Compute and fill MAE/MFE in same transaction (non-fatal)
         _compute_and_fill_mae_mfe(ticker, strategy, db=db)
 
@@ -403,9 +476,18 @@ def get_closed_trades(
     universe: Optional[str] = None,
     limit: int = 10000,
 ) -> List[Dict]:
-    """Return closed trades with optional filters."""
+    """Return closed trades with optional filters.
+
+    Only returns non-superseded rows (superseded=0).  Superseded rows
+    are audit-only duplicates and must not be counted in P&L aggregations.
+    """
     with get_db() as db:
-        query = "SELECT * FROM trades WHERE status='closed'"
+        # Use superseded=0 filter when column is present (post-migration).
+        # The fallback (status='closed' only) preserves behaviour on fresh
+        # test DBs that init from a schema version without the column.
+        _cols = {r[1] for r in db.execute("PRAGMA table_info(trades)").fetchall()}
+        _sup_clause = " AND superseded=0" if "superseded" in _cols else ""
+        query = f"SELECT * FROM trades WHERE status='closed'{_sup_clause}"
         params: List[Any] = []
         if days:
             query += " AND exit_date >= date('now', ?)"

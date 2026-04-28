@@ -162,6 +162,7 @@ def build_report(db_path: Path, days: int) -> str:
         total_closed = conn.execute("""
             SELECT COUNT(*) FROM trades
             WHERE status = 'closed'
+              AND (superseded=0 OR superseded IS NULL)
               AND exit_date >= date('now', ?)
         """, (f"-{days} days",)).fetchone()[0]
 
@@ -183,6 +184,7 @@ def build_report(db_path: Path, days: int) -> str:
             LEFT JOIN regime_history rh
                 ON rh.date = DATE(t.entry_date)
             WHERE t.status = 'closed'
+              AND (t.superseded=0 OR t.superseded IS NULL)
               AND t.exit_date >= date('now', ?)
         """, (f"-{days} days",)).fetchall()
 

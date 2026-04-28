@@ -64,6 +64,8 @@ def main():
         trades = db.execute(
             "SELECT id, ticker, strategy, entry_date, exit_date, entry_price, "
             "mae, mfe, confidence, regime_at_entry, regime_at_exit, config_version, universe "
+            # Intentionally includes superseded rows — backfilling MAE/MFE for
+            # audit completeness.  Do NOT add superseded=0 filter here.
             "FROM trades WHERE status='closed' ORDER BY id"
         ).fetchall()
 
@@ -147,6 +149,7 @@ def main():
         print("-" * 120)
         trades_after = db.execute(
             "SELECT id, ticker, strategy, mae, mfe, confidence, regime_at_entry, regime_at_exit, config_version "
+            # Intentionally includes superseded rows — backfilling MAE/MFE for audit completeness.
             "FROM trades WHERE status='closed' ORDER BY id"
         ).fetchall()
         for t in trades_after:

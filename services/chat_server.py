@@ -565,6 +565,7 @@ def _build_dashboard_data() -> dict:
             "SELECT strategy, pnl, pnl_pct FROM trades"
             " WHERE exit_date IS NOT NULL"
             "   AND (status IS NULL OR status != 'error')"
+            "   AND (superseded=0 OR superseded IS NULL)"  -- exclude dup rows
             "   AND (exit_reason IS NULL"
             "        OR exit_reason NOT IN ('reconcile_phantom', 'reconcile_fill'))"
         ).fetchall()
@@ -584,6 +585,7 @@ def _build_dashboard_data() -> dict:
             "SELECT pnl FROM trades"
             " WHERE exit_date IS NOT NULL"
             "   AND (status IS NULL OR status != 'error')"
+            "   AND (superseded=0 OR superseded IS NULL)"  -- exclude dup rows
             "   AND (exit_reason IS NULL"
             "        OR exit_reason NOT IN ('reconcile_phantom', 'reconcile_fill'))"
         ).fetchall()

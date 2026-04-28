@@ -90,6 +90,10 @@ dashboard/data/
 data/atlas.db
 data/atlas.db-wal
 data/atlas.db-shm
+data/atlas.db.bak-*
+data/atlas.db.pre-*
+data/atlas_backup_*.db
+data/backups/
 data/chat.db
 data/chat/
 tests/screenshots/
