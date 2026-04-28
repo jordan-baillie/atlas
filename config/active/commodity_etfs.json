@@ -21,7 +21,9 @@
       "enabled": false,
       "activation_pct": 0.02,
       "atr_multiplier": 2.0
-    }
+    },
+    "max_position_pct_equity": 0.2,
+    "_max_position_cap_note": "2026-04-28 audit: applied same concentration cap as sector_etfs for consistency"
   },
   "trading": {
     "mode": "live",

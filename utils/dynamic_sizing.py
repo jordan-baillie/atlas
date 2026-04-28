@@ -65,6 +65,11 @@ class DynamicSizer:
         # Peak tracking for all-time drawdown calculation
         self._equity_peak: float = 0.0
 
+        # Per-position equity cap (W3, 2026-04-28)
+        self.max_position_pct_equity: Optional[float] = (
+            config.get("risk", {}).get("max_position_pct_equity", None)
+        )
+
     def _get_drawdown_scale(self, equity_history: List[float]) -> float:
         """Calculate position scale factor based on current drawdown.
 
@@ -211,6 +216,25 @@ class DynamicSizer:
             return 0
 
         shares = int(risk_amount / risk_per_share)
+
+        # Apply per-position equity cap if configured (W3, 2026-04-28)
+        if (
+            self.max_position_pct_equity is not None
+            and self.max_position_pct_equity > 0
+            and entry_price > 0
+        ):
+            max_shares_by_pct = int(
+                (equity * self.max_position_pct_equity) / entry_price
+            )
+            if shares > max_shares_by_pct:
+                logger.info(
+                    "position_cap: shares %d->%d "
+                    "(equity=$%.0f, entry=$%.2f, cap_pct=%.2f)",
+                    shares, max_shares_by_pct,
+                    equity, entry_price, self.max_position_pct_equity,
+                )
+                shares = max_shares_by_pct
+
         return max(0, shares)
 
 
@@ -268,3 +292,12 @@ def get_risk_pct_for_config(
         price=entry_price,
         equity_history=equity_history,
     )
+
+
+def get_max_position_pct_for_config(config: dict) -> Optional[float]:
+    """Return ``max_position_pct_equity`` from config risk block, or None.
+
+    None means no enforcement (backwards-compatible with configs that
+    pre-date W3 / 2026-04-28 and have no such key).
+    """
+    return config.get("risk", {}).get("max_position_pct_equity", None)

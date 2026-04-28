@@ -44,6 +44,7 @@ def _find_atlas_root() -> Path:
 _ATLAS_ROOT = _find_atlas_root()
 _BRAVE_NEWS_JS = _ATLAS_ROOT / "scripts" / "brave_news.js"
 _CEASEFIRE_JSON = _ATLAS_ROOT / "data" / "position_monitor" / "ceasefire_factors.json"
+_CEASEFIRE_MAX_AGE_DAYS = 7  # input is stale if last_updated/mtime older than this
 
 _BRAVE_TIMEOUT = 30  # seconds
 _MAX_HEADLINES = 10  # cap on headlines returned
@@ -128,6 +129,7 @@ def _fetch_geopolitical_risk() -> Optional[str]:
     Parse ceasefire_factors.json and return a formatted geopolitical risk block.
 
     Returns None if the file is missing or malformed.
+    Returns a stale-placeholder string if the input is older than _CEASEFIRE_MAX_AGE_DAYS.
     """
     if not _CEASEFIRE_JSON.exists():
         logger.info("news: ceasefire_factors.json not found — skipping geopolitical section")
@@ -140,11 +142,49 @@ def _fetch_geopolitical_risk() -> Optional[str]:
         logger.warning("news: failed to read ceasefire_factors.json — %s", exc)
         return None
 
+    # ── Freshness check (W5, 2026-04-28) ──
+    # Prefer author-stamped last_updated; fall back to file mtime.
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    last_updated_str = data.get("last_updated")
+    last_updated_dt = None
+    if last_updated_str:
+        try:
+            # Strip 'Z' suffix and tolerate naive ISO format
+            ts = last_updated_str.rstrip("Z")
+            last_updated_dt = datetime.fromisoformat(ts)
+            if last_updated_dt.tzinfo is None:
+                last_updated_dt = last_updated_dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            last_updated_dt = None
+
+    try:
+        mtime_dt = datetime.fromtimestamp(
+            _CEASEFIRE_JSON.stat().st_mtime, tz=timezone.utc
+        )
+    except OSError:
+        mtime_dt = None
+
+    candidates = [d for d in (last_updated_dt, mtime_dt) if d is not None]
+    most_recent = max(candidates) if candidates else None
+    age_days = (now - most_recent).days if most_recent else None
+
+    if age_days is not None and age_days > _CEASEFIRE_MAX_AGE_DAYS:
+        logger.warning(
+            "news: ceasefire_factors.json is STALE (age=%d days, threshold=%d, last_updated=%s) — using placeholder",
+            age_days, _CEASEFIRE_MAX_AGE_DAYS,
+            last_updated_str or "unknown",
+        )
+        return (
+            f"Geopolitical risk input STALE: last update {last_updated_str or 'unknown'} "
+            f"(~{age_days} days ago, threshold={_CEASEFIRE_MAX_AGE_DAYS}d) — treat as unavailable."
+        )
+
+    # ── Parse fresh data (existing logic) ──
     probability = data.get("probability")
     label = data.get("probability_label", "UNKNOWN")
     portfolio_action = data.get("portfolio_action", "")
 
-    # Summarise active factors (top escalation + top ceasefire).
     factors = data.get("factors", [])
     active_factors = [f for f in factors if f.get("active")]
 
@@ -178,8 +218,6 @@ def _fetch_geopolitical_risk() -> Optional[str]:
         lines.append(f"Suggested action: {portfolio_action}")
 
     return "\n".join(lines)
-
-
 def _probability_to_risk(probability: Optional[float]) -> str:
     """Map ceasefire probability to a portfolio risk label."""
     if probability is None:

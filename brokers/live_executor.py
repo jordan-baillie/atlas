@@ -874,7 +874,41 @@ class LiveExecutor:
             except Exception as e:
                 logger.warning(f"Kill-switch Telegram notification failed: {e}")
             return {"status": "halted", "reason": "kill_switch"}
+
         ticker = entry.get("ticker", "")
+
+        # Cross-universe position & buying-power guard (W6, 2026-04-28)
+        # ── Hard cap on simultaneous positions across ALL universes + cash gate.
+        # Risk-reducing orders (exits/stops/TPs) are NOT gated — only entries.
+        try:
+            from risk.cross_universe_guard import check_entry as _cug_check, telegram_alert as _cug_alert
+            _universe = entry.get("universe") or entry.get("market") or "unknown"
+            _qty = int(entry.get("position_size", 0) or 0)
+            _price = float(entry.get("entry_price", 0) or 0)
+            _decision = _cug_check(
+                ticker=ticker, universe=_universe, qty=_qty, price=_price,
+                broker=self._broker,
+            )
+            if not _decision.allowed:
+                logger.warning(
+                    "[cross_universe_guard] entry rejected ticker=%s universe=%s reason=%s",
+                    ticker, _universe, _decision.reason,
+                )
+                _cug_alert(ticker, _universe, _decision)
+                return {
+                    "ticker": ticker, "side": "buy", "qty": _qty, "price": _price,
+                    "success": False, "status": "rejected_by_guard",
+                    "reason": _decision.reason,
+                    "positions_count": _decision.positions_count,
+                    "positions_cap": _decision.positions_cap,
+                    "buying_power": _decision.buying_power,
+                }
+        except Exception as _cug_e:
+            # Fail-OPEN on guard error to avoid blocking trading via unrelated bug.
+            # Loud log + Telegram so operator notices the guard isn't working.
+            logger.error("[cross_universe_guard] guard check FAILED, allowing entry: %s",
+                         _cug_e, exc_info=True)
+
         # Price arbiter halt check (B5)
         from brokers.price_arbiter import is_ticker_halted
         if is_ticker_halted(ticker):
