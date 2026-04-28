@@ -2,7 +2,7 @@
   "version": "v1.0.1",
   "project": "Atlas",
   "market": "gold_etfs",
-  "description": "Gold ETFs v1.0 — connors RSI2 focus, paper mode",
+  "description": "Gold ETFs v1.0 \u2014 connors RSI2 focus, paper mode",
   "universe": {
     "method": "static",
     "benchmark_ticker": "GLD"
@@ -21,7 +21,9 @@
       "enabled": false,
       "activation_pct": 0.02,
       "atr_multiplier": 2.0
-    }
+    },
+    "max_gross_exposure_pct": 1.75,
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value."
   },
   "trading": {
     "mode": "passive",
@@ -52,7 +54,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },

@@ -909,6 +909,44 @@ class LiveExecutor:
             logger.error("[cross_universe_guard] guard check FAILED, allowing entry: %s",
                          _cug_e, exc_info=True)
 
+        # Gross exposure cap guard (B1, 2026-04-28)
+        # ── Proactive cap: reject entries that WOULD push global gross exposure
+        # above risk.max_gross_exposure_pct in the market config.
+        # ADDITIVE to W6 — neither replaces nor weakens the cross-universe guard.
+        # Only entries are gated; exits/stops/TPs never reach _execute_entry.
+        try:
+            from risk.gross_exposure_guard import (
+                check_gross_exposure as _geg_check,
+                telegram_alert_gross_exposure as _geg_alert,
+            )
+            _ge_ticker = ticker
+            _ge_universe = entry.get("universe") or entry.get("market") or "unknown"
+            _ge_qty = int(entry.get("position_size", 0) or 0)
+            _ge_price = float(entry.get("entry_price", 0) or 0)
+            _ge_notional = _ge_qty * _ge_price
+            _ge_ok, _ge_reason = _geg_check(
+                broker=self._broker,
+                prospective_order_notional=_ge_notional,
+                market_config=self.config,
+                market_id=self.config.get("market_id", "unknown"),
+            )
+            if not _ge_ok:
+                logger.warning(
+                    "[gross_exposure_guard] entry rejected ticker=%s universe=%s reason=%s",
+                    _ge_ticker, _ge_universe, _ge_reason,
+                )
+                _geg_alert(_ge_ticker, _ge_universe, _ge_reason)
+                return {
+                    "ticker": _ge_ticker, "side": "buy",
+                    "qty": _ge_qty, "price": _ge_price,
+                    "success": False, "status": "rejected_gross_exposure",
+                    "reason": _ge_reason,
+                }
+        except Exception as _geg_e:
+            # Fail-OPEN on guard error — never block trading on unrelated bugs.
+            logger.error("[gross_exposure_guard] guard check FAILED, allowing entry: %s",
+                         _geg_e, exc_info=True)
+
         # Price arbiter halt check (B5)
         from brokers.price_arbiter import is_ticker_halted
         if is_ticker_halted(ticker):
