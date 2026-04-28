@@ -2,7 +2,7 @@
   "version": "v1.0.2",
   "project": "Atlas",
   "market": "sector_etfs",
-  "description": "Sector ETFs v1.0 — SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
+  "description": "Sector ETFs v1.0 \u2014 SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
   "universe": {
     "method": "static",
     "benchmark_ticker": "SPY"
@@ -52,7 +52,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
@@ -176,7 +176,8 @@
     "enabled": false
   },
   "overlay": {
-    "enabled": false
+    "enabled": false,
+    "shadow_mode": true
   },
   "macro_regime": {
     "enabled": false

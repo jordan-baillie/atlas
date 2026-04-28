@@ -420,7 +420,8 @@
       "macro"
     ],
     "min_confidence": 0.5,
-    "max_sizing_reduction": 0.5
+    "max_sizing_reduction": 0.5,
+    "shadow_mode": true
   },
   "alt_data": {
     "enabled": true,

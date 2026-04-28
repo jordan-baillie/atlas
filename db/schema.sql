@@ -416,3 +416,33 @@ CREATE TABLE IF NOT EXISTS equity_history (
   PRIMARY KEY (market_id, date)
 );
 CREATE INDEX IF NOT EXISTS idx_equity_history_market_date ON equity_history(market_id, date);
+
+-- ═══════════════════════════════════════════════════════════
+-- OVERLAY SHADOW LOG (M3 — 2026-04-28)
+-- Dry-run record of what overlay WOULD have done to sizing.
+-- Plans are NEVER actually modified; this is observation only.
+-- ═══════════════════════════════════════════════════════════
+
+-- ── Shadow log — what overlay WOULD have done (M3 dry-run) ──
+CREATE TABLE IF NOT EXISTS overlay_shadow_log (
+    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id                     TEXT    NOT NULL,
+    ticker                      TEXT    NOT NULL,
+    market_id                   TEXT    NOT NULL,
+    created_at                  TEXT    NOT NULL DEFAULT (datetime('now')),
+    original_size               REAL    NOT NULL,
+    overlay_size                REAL    NOT NULL,
+    sizing_multiplier           REAL    NOT NULL,
+    would_be_dollar_diff        REAL,
+    overlay_decision_id         INTEGER,
+    overlay_action              TEXT,
+    overlay_reasoning           TEXT,
+    actual_outcome_pnl          REAL,
+    actual_outcome_evaluated    INTEGER NOT NULL DEFAULT 0,
+    evaluated_at                TEXT,
+    FOREIGN KEY (overlay_decision_id) REFERENCES overlay_decisions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_shadow_unevaluated
+    ON overlay_shadow_log(actual_outcome_evaluated, created_at);
+CREATE INDEX IF NOT EXISTS idx_shadow_plan
+    ON overlay_shadow_log(plan_id);

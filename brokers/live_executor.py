@@ -624,6 +624,79 @@ class LiveExecutor:
                         sorted(overlay_avoid),
                     )
 
+                # ── M3: Shared overlay sizing-multiplier RESOLUTION ──
+                # Resolution runs in BOTH shadow and enforce modes. Application is
+                # mode-gated below.
+                #
+                # Priority:
+                #   1. plan.overlay_context.sizing_override (overlay_sizing above)
+                #   2. JOIN: latest overlay_decisions row for trade_date with
+                #      non-null sizing_override (DESC LIMIT 1)
+                shadow_mode = self.config.get("overlay", {}).get("shadow_mode", True)
+                effective_multiplier: Optional[float] = None
+                overlay_decision_id: Optional[int] = None
+                overlay_action: Optional[str] = None
+                overlay_reasoning: Optional[str] = None
+
+                if overlay_sizing is not None:
+                    effective_multiplier = overlay_sizing
+                    # Enrich with DB metadata (best-effort)
+                    try:
+                        from db.atlas_db import get_db as _get_db
+                        with _get_db() as _db:
+                            _row = _db.execute(
+                                """
+                                SELECT id, action, reasoning
+                                FROM overlay_decisions
+                                WHERE date(timestamp) = ?
+                                  AND sizing_override IS NOT NULL
+                                ORDER BY timestamp DESC
+                                LIMIT 1
+                                """,
+                                (trade_date,),
+                            ).fetchone()
+                            if _row:
+                                overlay_decision_id = _row["id"]
+                                overlay_action = _row["action"]
+                                overlay_reasoning = _row["reasoning"]
+                    except Exception as _e:
+                        logger.warning("overlay_resolve: decision lookup failed: %s", _e)
+                else:
+                    # Fallback: look up latest overlay_decision for trade_date
+                    try:
+                        from db.atlas_db import get_db as _get_db
+                        with _get_db() as _db:
+                            _row = _db.execute(
+                                """
+                                SELECT id, action, reasoning, sizing_override
+                                FROM overlay_decisions
+                                WHERE date(timestamp) = ?
+                                  AND sizing_override IS NOT NULL
+                                ORDER BY timestamp DESC
+                                LIMIT 1
+                                """,
+                                (trade_date,),
+                            ).fetchone()
+                            if _row and _row["sizing_override"] is not None:
+                                effective_multiplier = float(_row["sizing_override"])
+                                overlay_decision_id = _row["id"]
+                                overlay_action = _row["action"]
+                                overlay_reasoning = _row["reasoning"]
+                    except Exception as _e:
+                        logger.warning("overlay_resolve: decision lookup failed: %s", _e)
+
+                if effective_multiplier is not None:
+                    logger.info(
+                        "overlay_resolve: mode=%s trade_date=%s market=%s "
+                        "multiplier=%.4f decision_id=%s action=%s",
+                        "shadow" if shadow_mode else "enforce",
+                        trade_date,
+                        self.config.get("market_id", "unknown"),
+                        effective_multiplier,
+                        overlay_decision_id,
+                        overlay_action,
+                    )
+
                 # Proceed with entries — apply size reduction if gate is in "reduce" mode
                 for entry_rec in plan.get("proposed_entries", []):
                     ticker = entry_rec.get("ticker", "")
@@ -661,35 +734,82 @@ class LiveExecutor:
                             vol_gate["message"],
                         )
 
-                    # ── Overlay: apply sizing_override multiplier ──────────
-                    if overlay_sizing is not None:
-                        original_qty = entry_rec.get("position_size", 0)
-                        new_qty = int(original_qty * overlay_sizing)
-                        if new_qty <= 0:
+                    # ── M3: Unified overlay sizing APPLICATION (mode-gated) ──
+                    if effective_multiplier is not None:
+                        _orig_size = float(entry_rec.get("position_size", 0) or 0)
+                        _entry_price = float(entry_rec.get("entry_price", 0) or 0)
+                        _overlay_size = _orig_size * effective_multiplier
+                        _diff_dollars = (_overlay_size - _orig_size) * _entry_price
+                        _plan_id = (
+                            f"{self.config.get('market_id', plan.get('market_id', 'unknown'))}"
+                            f"_{trade_date}"
+                        )
+
+                        if shadow_mode:
+                            # Shadow: log + insert row, do NOT mutate entry_rec
+                            logger.info(
+                                "[overlay-shadow] plan_id=%s ticker=%s original_size=%.2f "
+                                "overlay_size=%.2f multiplier=%.4f would_diff_$=%.2f "
+                                "(NOT APPLIED — shadow mode)",
+                                _plan_id, ticker, _orig_size, _overlay_size,
+                                effective_multiplier, _diff_dollars,
+                            )
+                            if effective_multiplier == 0.0:
+                                logger.warning(
+                                    "[overlay-shadow] FULL KILL would have suppressed "
+                                    "%s entirely — order STILL submitted at original size %.2f",
+                                    ticker, _orig_size,
+                                )
+                            try:
+                                from db.atlas_db import insert_overlay_shadow_event as _insert_shadow
+                                _insert_shadow(
+                                    plan_id=_plan_id,
+                                    ticker=ticker,
+                                    market_id=self.config.get(
+                                        "market_id", plan.get("market_id", "unknown")
+                                    ),
+                                    original_size=_orig_size,
+                                    overlay_size=_overlay_size,
+                                    sizing_multiplier=effective_multiplier,
+                                    would_be_dollar_diff=_diff_dollars,
+                                    overlay_decision_id=overlay_decision_id,
+                                    overlay_action=overlay_action,
+                                    overlay_reasoning=overlay_reasoning,
+                                )
+                            except Exception as _shadow_exc:
+                                logger.warning(
+                                    "overlay_shadow: log/insert failed for %s: %s",
+                                    ticker, _shadow_exc,
+                                )
+                        else:
+                            # Enforce: actually apply the multiplier (mutate entry_rec)
+                            original_qty = entry_rec.get("position_size", 0)
+                            new_qty = int(original_qty * effective_multiplier)
+                            if new_qty <= 0:
+                                logger.info(
+                                    "overlay_applied: ticker=%s sizing=%s "
+                                    "qty→0 — skipping avoided=%s",
+                                    ticker, effective_multiplier, sorted(overlay_avoid),
+                                )
+                                report["entries"].append({
+                                    "ticker": ticker,
+                                    "side": "BUY",
+                                    "qty": 0,
+                                    "price": entry_rec.get("entry_price", 0),
+                                    "success": False,
+                                    "blocked": True,
+                                    "reason": "overlay_sizing_zero",
+                                    "dry_run": self.is_dry_run,
+                                })
+                                continue
+                            entry_rec = dict(entry_rec)   # shallow copy — don't mutate plan
+                            entry_rec["position_size"] = new_qty
                             logger.info(
                                 "overlay_applied: ticker=%s sizing=%s "
-                                "qty→0 — skipping avoided=%s",
-                                ticker, overlay_sizing, sorted(overlay_avoid),
+                                "qty=%d→%d avoided=%s",
+                                ticker, effective_multiplier, original_qty, new_qty,
+                                sorted(overlay_avoid),
                             )
-                            report["entries"].append({
-                                "ticker": ticker,
-                                "side": "BUY",
-                                "qty": 0,
-                                "price": entry_rec.get("entry_price", 0),
-                                "success": False,
-                                "blocked": True,
-                                "reason": "overlay_sizing_zero",
-                                "dry_run": self.is_dry_run,
-                            })
-                            continue
-                        entry_rec = dict(entry_rec)   # shallow copy — don't mutate plan
-                        entry_rec["position_size"] = new_qty
-                        logger.info(
-                            "overlay_applied: ticker=%s sizing=%s "
-                            "qty=%d→%d avoided=%s",
-                            ticker, overlay_sizing, original_qty, new_qty,
-                            sorted(overlay_avoid),
-                        )
 
                     result = self._execute_entry(entry_rec, trade_date)
                     report["entries"].append(result)

@@ -177,7 +177,8 @@
     "enabled": false
   },
   "overlay": {
-    "enabled": false
+    "enabled": false,
+    "shadow_mode": true
   },
   "macro_regime": {
     "enabled": false

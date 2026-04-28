@@ -1412,6 +1412,101 @@ def update_overlay_outcome(
         )
 
 
+# ── Overlay shadow log (M3 shadow mode) ──────────────────────────────────────
+
+def insert_overlay_shadow_event(
+    plan_id: str,
+    ticker: str,
+    market_id: str,
+    original_size: float,
+    overlay_size: float,
+    sizing_multiplier: float,
+    would_be_dollar_diff: Optional[float] = None,
+    overlay_decision_id: Optional[int] = None,
+    overlay_action: Optional[str] = None,
+    overlay_reasoning: Optional[str] = None,
+) -> int:
+    """Insert a shadow event row. Returns row id. Non-fatal on failure (logs + returns -1)."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        with get_db() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO overlay_shadow_log
+                    (plan_id, ticker, market_id, original_size, overlay_size,
+                     sizing_multiplier, would_be_dollar_diff,
+                     overlay_decision_id, overlay_action, overlay_reasoning)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (plan_id, ticker, market_id, original_size, overlay_size,
+                 sizing_multiplier, would_be_dollar_diff,
+                 overlay_decision_id, overlay_action, overlay_reasoning),
+            )
+            return cursor.lastrowid
+    except Exception as exc:
+        _log.warning("overlay_shadow: insert failed for %s/%s: %s", market_id, ticker, exc)
+        return -1
+
+
+def get_unevaluated_shadow_events(limit: int = 1000) -> List[Dict]:
+    """Return all shadow events with actual_outcome_evaluated=0, oldest first."""
+    with get_db() as db:
+        rows = db.execute(
+            """
+            SELECT * FROM overlay_shadow_log
+            WHERE actual_outcome_evaluated = 0
+            ORDER BY created_at ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def update_shadow_outcome(
+    shadow_id: int,
+    actual_outcome_pnl: float,
+    evaluated_at: Optional[str] = None,
+) -> None:
+    """Mark a shadow event as evaluated."""
+    with get_db() as db:
+        db.execute(
+            """
+            UPDATE overlay_shadow_log
+            SET actual_outcome_pnl = ?,
+                actual_outcome_evaluated = 1,
+                evaluated_at = ?
+            WHERE id = ?
+            """,
+            (actual_outcome_pnl, evaluated_at or datetime.now().isoformat(), shadow_id),
+        )
+
+
+def get_shadow_events(
+    days: Optional[int] = None,
+    market_id: Optional[str] = None,
+    ticker: Optional[str] = None,
+) -> List[Dict]:
+    """Return shadow events, most recent first, with optional filters."""
+    with get_db() as db:
+        query = "SELECT * FROM overlay_shadow_log WHERE 1=1"
+        params: List[Any] = []
+        if days:
+            query += " AND created_at >= datetime('now', ?)"
+            params.append(f"-{days} days")
+        if market_id:
+            query += " AND market_id = ?"
+            params.append(market_id)
+        if ticker:
+            query += " AND ticker = ?"
+            params.append(ticker)
+        query += " ORDER BY created_at DESC"
+        rows = db.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+
 # ── Ceasefire ────────────────────────────────────────────────────────────────
 
 def upsert_ceasefire_factor(

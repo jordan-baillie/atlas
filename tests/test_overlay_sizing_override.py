@@ -47,6 +47,7 @@ def _make_dry_config():
         "market_id": "sp500",
         "fees": {},
         "strategies": {},
+        "overlay": {"shadow_mode": False},
     }
 
 

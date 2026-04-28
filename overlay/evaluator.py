@@ -345,12 +345,74 @@ def _format_stats(stats: dict) -> str:
     return "\n".join(lines)
 
 
+
+def evaluate_shadow_events(limit: int = 1000) -> dict:
+    """Match unevaluated overlay_shadow_log rows to closed trades and populate actual_outcome_pnl.
+
+    For each shadow row with actual_outcome_evaluated=0:
+      - Find the corresponding closed trade by ticker + DATE(entry_date) matching shadow row plan_id date
+      - If found, populate actual_outcome_pnl with the trade's realized pnl
+      - Mark evaluated
+
+    Returns stats dict: {evaluated, skipped, total}.
+    """
+    from db.atlas_db import get_db, get_unevaluated_shadow_events, update_shadow_outcome
+
+    pending = get_unevaluated_shadow_events(limit=limit)
+    evaluated = 0
+    skipped = 0
+
+    with get_db() as db:
+        for ev in pending:
+            shadow_id = ev["id"]
+            ticker = ev["ticker"]
+            # plan_id format: "{market_id}_{YYYY-MM-DD}" — extract trade_date
+            plan_id = ev.get("plan_id", "")
+            trade_date = plan_id.rsplit("_", 1)[-1] if "_" in plan_id else None
+            if not trade_date:
+                skipped += 1
+                continue
+            # Find the closed trade matching ticker + entry_date
+            row = db.execute(
+                """
+                SELECT id, pnl
+                FROM trades
+                WHERE ticker = ?
+                  AND DATE(entry_date) = ?
+                  AND status = 'closed'
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (ticker, trade_date),
+            ).fetchone()
+            if row is None or row["pnl"] is None:
+                skipped += 1
+                continue
+            update_shadow_outcome(shadow_id, float(row["pnl"]))
+            evaluated += 1
+
+    logger.info(
+        "overlay_shadow_eval: evaluated=%d skipped=%d total=%d",
+        evaluated, skipped, len(pending),
+    )
+    return {"evaluated": evaluated, "skipped": skipped, "total": len(pending)}
+
+
 def evaluate_and_report(days: int = 7) -> dict:
     """Convenience wrapper: evaluate decisions + send Telegram summary.
 
-    Returns the stats dict from evaluate_overlay_decisions().
+    Returns the stats dict from evaluate_overlay_decisions(), augmented with
+    a ``shadow`` key from evaluate_shadow_events().
     """
     stats = evaluate_overlay_decisions(days=days)
+
+    # M3: also evaluate shadow events (non-fatal)
+    try:
+        shadow_stats = evaluate_shadow_events()
+        stats["shadow"] = shadow_stats
+    except Exception as exc:
+        logger.warning("evaluator: shadow eval failed (non-fatal): %s", exc)
+        stats["shadow"] = {}
 
     try:
         from utils.telegram import send_message  # type: ignore
