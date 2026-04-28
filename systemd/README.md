@@ -10,8 +10,6 @@ Manages **12 enabled production timers** covering backup, discovery, heartbeat/s
 |------|------|---------|
 | `atlas-heartbeat-watchdog.service` | oneshot | Runs `scripts/heartbeat_watchdog.py` — flags stale service heartbeats. |
 | `atlas-heartbeat-watchdog.timer` | timer | Fires the watchdog every 15 minutes (with 5 min boot delay). |
-| `atlas-research-window.service` | oneshot | Legacy multi-phase sweep entry point (`scripts/research_cron.sh`). Currently unused in production — kept for reference / manual invocation. |
-| `atlas-research-window.timer` | timer | Legacy 5-windows-per-weekday + 4-per-weekend schedule for the above. **Disabled in production.** |
 | `atlas-research-window@.service` | template | Per-universe sweep (`scripts/research_window_universe.sh %i`). `TimeoutStartSec=6000` — covers worst-case sp500 instance (4200s sweep + 1500s LLM + 300s slack). |
 | `atlas-research-window@<universe>.timer` × 7 | timers | Nightly per-universe sweeps, staggered hourly 23:00–05:00 local. |
 | `atlas-director.service` | oneshot | Runs `scripts/director_cron.py` — weekly queue management + portfolio review digest. |
@@ -90,7 +88,7 @@ sudo /root/atlas/systemd/install.sh
 
 The script symlinks every `*.service`/`*.timer` in this directory into `/etc/systemd/system/`, runs `daemon-reload`, and enables+starts the production timer set (12 timers: heartbeat + silent-failure watchdogs, backup, discovery, weekly director, 7 per-universe research sweeps). It is idempotent — re-runs are silent no-ops.
 
-`atlas-research-window.timer` (legacy multi-phase) is intentionally left disabled. Enable manually with `systemctl enable --now atlas-research-window.timer` if you want the old 5-window-per-weekday schedule.
+The legacy `atlas-research-window.service` / `atlas-research-window.timer` (non-templated, multi-phase) were removed 2026-04-28. The templated `atlas-research-window@<universe>.timer` set is the only schedule.
 
 ## Timeout rationale
 

@@ -28,10 +28,8 @@ fi
 # Timers enabled+started by this script.
 # Matches current production state (as of 2026-04-20).
 #
-# NOTE: atlas-research-window.timer is intentionally NOT enabled here —
-# it is the legacy multi-phase timer, currently disabled in production;
-# the per-universe timers below replaced it. The file is still mirrored
-# for version-control completeness and can be enabled manually if needed.
+# NOTE: atlas-research-window.timer (legacy multi-phase) was removed 2026-04-28.
+# Use the per-universe atlas-research-window@<universe>.timer set below.
 #
 # NOTE: atlas-research-runner.service is intentionally NOT enabled by
 # this script. It is a queue-based research daemon currently disabled

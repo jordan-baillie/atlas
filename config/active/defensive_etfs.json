@@ -2,7 +2,7 @@
   "version": "v1.0.1",
   "project": "Atlas",
   "market": "defensive_etfs",
-  "description": "Defensive ETFs v1.0 — mean reversion focus, passive (negative Sharpe)",
+  "description": "Defensive ETFs v1.0 \u2014 mean reversion focus, passive (negative Sharpe)",
   "universe": {
     "method": "static",
     "benchmark_ticker": "SPY"
@@ -41,7 +41,7 @@
     }
   },
   "alpaca": {
-    "paper": true,
+    "paper": false,
     "data_feed": "iex",
     "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
   },
@@ -52,7 +52,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },

@@ -80,7 +80,7 @@ Fix every issue you can. Here are the SAFE fixes you are allowed to perform:
 
 ALLOWED (do these automatically):
 - Restart services: systemctl restart atlas-telegram-bot, systemctl restart atlas-dashboard
-- Restart research services: systemctl restart atlas-director, systemctl restart atlas-research-runner, systemctl restart atlas-research-window
+- Restart research services: systemctl restart atlas-director, systemctl restart atlas-research-runner
 - Truncate large logs: tail -1000 logs/atlas.log > logs/atlas.log.tmp && mv logs/atlas.log.tmp logs/atlas.log
 - Clean __pycache__: find /root/atlas -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
 - Run weekly maintenance: bash /root/atlas/scripts/weekly_maintenance.sh
