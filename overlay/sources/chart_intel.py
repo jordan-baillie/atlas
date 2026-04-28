@@ -9,11 +9,18 @@ falling back to a yfinance download with a 24-hour on-disk cache.
 Public API
 ----------
     get_chart_analysis(tickers=None) -> dict
+
+Enhanced indicators (off by default, opt-in via ATLAS_ENHANCED_CHART_INTEL=1):
+- OBV slope (20d regression)
+- Multi-month resistance anchor (60d high + recent touches)
+- Price-volume divergence (price up, volume down)
+- Distribution-suppression guard in _build_summary()
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -64,6 +71,10 @@ _MIN_ROWS = 60
 
 # 24-hour cache TTL for yfinance fallback downloads (seconds).
 _YF_CACHE_TTL = 86_400
+
+# ── Feature flag ─────────────────────────────────────────────────────────────
+# Set ATLAS_ENHANCED_CHART_INTEL=1 to enable distribution-top indicators.
+ENHANCED_CHART_INTEL_ENABLED = os.environ.get("ATLAS_ENHANCED_CHART_INTEL", "0") == "1"
 
 
 # ── Parquet helpers ──────────────────────────────────────────────────────────
@@ -231,6 +242,95 @@ def _momentum_20d(close: pd.Series) -> float:
     return float((current - past) / past)
 
 
+def _obv_slope(df: pd.DataFrame, window: int = 20) -> float:
+    """20-day OBV regression slope (normalized by mean OBV magnitude).
+
+    Returns 0 if insufficient data. Negative = distribution signal when price rising.
+    """
+    if len(df) < window + 1:
+        return 0.0
+    close_diff = df["close"].diff()
+    direction = np.sign(close_diff).fillna(0)
+    obv = (direction * df["volume"]).cumsum()
+    recent = obv.tail(window).values
+    if len(recent) < window or np.isnan(recent).any():
+        return 0.0
+    x = np.arange(len(recent), dtype=float)
+    # Linear regression slope
+    x_mean = x.mean()
+    y_mean = recent.mean()
+    num = ((x - x_mean) * (recent - y_mean)).sum()
+    den = ((x - x_mean) ** 2).sum()
+    if den == 0:
+        return 0.0
+    slope = num / den
+    # Normalize by mean magnitude so slope is comparable across tickers
+    norm = abs(y_mean) if abs(y_mean) > 1e-9 else 1.0
+    return float(slope / norm)
+
+
+def _resistance_anchor(df: pd.DataFrame, window: int = 60, touch_tolerance: float = 0.02) -> tuple[float, int]:
+    """Multi-month resistance: rolling 60d high + count of recent touches within tolerance.
+
+    Returns (resistance_price, touch_count).
+    A touch = day where high >= resistance * (1 - tolerance).
+    """
+    if len(df) < window:
+        recent = df
+    else:
+        recent = df.tail(window)
+    resistance = float(recent["high"].max())
+    if resistance <= 0:
+        return (0.0, 0)
+    threshold = resistance * (1 - touch_tolerance)
+    touches = int((recent["high"] >= threshold).sum())
+    return (resistance, touches)
+
+
+def _price_volume_divergence(df: pd.DataFrame, window: int = 20) -> bool:
+    """Detect price up + volume declining over the window.
+
+    Returns True if (price up >0% over window) AND (volume slope < 0 normalized).
+    """
+    if len(df) < window + 1:
+        return False
+    recent = df.tail(window)
+    price_change = (recent["close"].iloc[-1] - recent["close"].iloc[0]) / recent["close"].iloc[0]
+    if price_change <= 0:
+        return False
+    # Volume slope via linear regression
+    vols = recent["volume"].values.astype(float)
+    x = np.arange(len(vols), dtype=float)
+    if len(vols) < 2:
+        return False
+    x_mean = x.mean()
+    v_mean = vols.mean()
+    num = ((x - x_mean) * (vols - v_mean)).sum()
+    den = ((x - x_mean) ** 2).sum()
+    if den == 0 or v_mean == 0:
+        return False
+    norm_slope = (num / den) / v_mean
+    return bool(norm_slope < -0.005)  # >0.5% per-day decline
+
+
+def _at_resistance_low_volume(df: pd.DataFrame) -> bool:
+    """Suppression-guard predicate: at 60d resistance (within 2%) on low volume (<50% of 20d avg).
+
+    This is the distribution-top signature.
+    """
+    if len(df) < 60:
+        return False
+    resistance, _touches = _resistance_anchor(df, window=60)
+    last_close = float(df["close"].iloc[-1])
+    if resistance <= 0:
+        return False
+    distance_from_resistance = (resistance - last_close) / resistance
+    if distance_from_resistance > 0.02:
+        return False  # Not at resistance
+    vol_ratio = _volume_ratio(df, avg_window=20)
+    return vol_ratio < 0.5  # Low volume confirms distribution
+
+
 def _trend_label(close_last: float, sma20: float, sma50: float, sma200: float) -> str:
     """Classify trend as bullish / bearish / neutral."""
     above_50 = not np.isnan(sma50) and close_last > sma50
@@ -290,7 +390,7 @@ def _analyse_ticker(ticker: str) -> Optional[dict]:
     # ── Momentum ──
     mom_20d = _momentum_20d(close)
 
-    return {
+    result = {
         "trend": trend,
         "above_200sma": above_200sma,
         "above_50sma": above_50sma,
@@ -306,6 +406,21 @@ def _analyse_ticker(ticker: str) -> Optional[dict]:
         "resistance": round(resistance, 2),
         "last_close": round(last_close, 2),
     }
+
+    if ENHANCED_CHART_INTEL_ENABLED:
+        obv_slope = _obv_slope(df, window=20)
+        resistance_60d, touches = _resistance_anchor(df, window=60)
+        pv_divergence = _price_volume_divergence(df, window=20)
+        distribution_signal = _at_resistance_low_volume(df)
+        result.update({
+            "obv_slope_20d": round(obv_slope, 6),
+            "resistance_60d": round(resistance_60d, 2),
+            "resistance_60d_touches": touches,
+            "price_volume_divergence": pv_divergence,
+            "distribution_signal": distribution_signal,
+        })
+
+    return result
 
 
 # ── Summary narrative ────────────────────────────────────────────────────────
@@ -381,6 +496,11 @@ def _build_summary(results: dict) -> str:
         "neutral": "Mixed market",
     }
     prefix = prefix_map.get(spy_trend, "Mixed market")
+
+    # Enhanced: distribution-top suppression guard
+    if ENHANCED_CHART_INTEL_ENABLED and spy.get("distribution_signal"):
+        prefix = "At resistance on low volume — possible distribution"
+
     detail = ", ".join(parts)
     return f"{prefix} — {detail}" if detail else prefix
 
