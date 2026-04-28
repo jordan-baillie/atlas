@@ -75,6 +75,7 @@ class LivePortfolio:
         self.closed_trades: list[dict] = []
         self.equity_history: list[dict] = []
         self.daily_high_water: float = self.starting_equity
+        self.daily_high_water_date: Optional[str] = None
         self.halted: bool = False
         self.halt_reason: str = ""
 
@@ -101,6 +102,7 @@ class LivePortfolio:
                 self.closed_trades = state.get("closed_trades", [])
                 self.equity_history = state.get("equity_history", [])
                 self.daily_high_water = state.get("daily_high_water", self.starting_equity)
+                self.daily_high_water_date = state.get("daily_high_water_date", None)
                 self.halted = state.get("halted", False)
                 self.halt_reason = state.get("halt_reason", "")
                 logger.info("Loaded live state: %d closed trades, %d equity pts",
@@ -147,6 +149,7 @@ class LivePortfolio:
             "closed_trades": self.closed_trades,
             "equity_history": self.equity_history,
             "daily_high_water": self.daily_high_water,
+            "daily_high_water_date": self.daily_high_water_date,
             "halted": self.halted,
             "halt_reason": self.halt_reason,
             "last_saved": datetime.now().isoformat(),
@@ -182,7 +185,7 @@ class LivePortfolio:
                             datetime.now().isoformat() if self.halted else None,
                             "live",
                             self.daily_high_water,
-                            date.today().isoformat() if self.daily_high_water else None,
+                            self.daily_high_water_date,
                         ),
                     )
                     # Append latest equity_history entry (INSERT OR IGNORE for idempotence)
@@ -784,10 +787,65 @@ class LivePortfolio:
         return True, "All checks passed"
 
     def check_daily_drawdown(self, prices: dict[str, float] = None):
-        """Check if daily drawdown limit breached."""
-        current_eq = self.equity(prices)
-        self.daily_high_water = max(self.daily_high_water, current_eq)
-        dd = (self.daily_high_water - current_eq) / self.daily_high_water if self.daily_high_water > 0 else 0
+        """Check if daily drawdown limit breached.
+
+        Uses broker equity as the primary equity measure to avoid Atlas-internal
+        accounting holes when reconcile lags mid-session fills (e.g. a trailing
+        stop fills at the broker but Atlas hasn't reconciled yet → internal
+        equity() is stale low → phantom drawdown).  Falls back to internal
+        equity() with a WARNING if broker_equity() returns 0.
+
+        Resets daily_high_water at the start of each new calendar day so
+        yesterday's high-water mark cannot trigger a false HALT today.
+        """
+        today_str = datetime.now().strftime("%Y-%m-%d")
+
+        # Determine effective equity — prefer broker equity if non-zero
+        broker_eq = self.broker_equity()
+        if broker_eq > 0:
+            effective_eq = broker_eq
+        else:
+            effective_eq = self.equity(prices)
+            logger.warning(
+                "check_daily_drawdown: broker_equity() returned 0 — falling back "
+                "to internal equity() (broker_data_valid=%s). "
+                "Drawdown computed from potentially stale equity $%.2f.",
+                self.broker_data_valid, effective_eq,
+            )
+
+        # SESSION RESET: new calendar day → reset HWM to today's broker equity
+        if self.daily_high_water_date != today_str:
+            old_hwm = self.daily_high_water
+            old_date = self.daily_high_water_date
+            self.daily_high_water = effective_eq
+            self.daily_high_water_date = today_str
+            logger.info(
+                "Session HWM reset: $%.2f → $%.2f for %s (date %s → %s)",
+                old_hwm, effective_eq, self.market_id, old_date, today_str,
+            )
+            # Best-effort Telegram notification — never blocks or raises
+            try:
+                from utils.telegram import send_message as _tg_send
+                _tg_send(
+                    f"📊 HWM reset for {self.market_id}: "
+                    f"${old_hwm:.2f} → ${effective_eq:.2f} "
+                    f"(date {old_date} → {today_str})"
+                )
+            except Exception as _tg_exc:
+                logger.debug(
+                    "HWM reset Telegram notification failed (non-fatal): %s", _tg_exc
+                )
+        else:
+            # Same session — ratchet HWM up only if equity has grown
+            self.daily_high_water = max(self.daily_high_water, effective_eq)
+
+        # Compute drawdown against current session HWM
+        dd = (
+            (self.daily_high_water - effective_eq) / self.daily_high_water
+            if self.daily_high_water > 0
+            else 0.0
+        )
+
         if dd >= self.max_daily_dd:
             self.halted = True
             self.halt_reason = f"Daily drawdown {dd:.2%} >= {self.max_daily_dd:.2%}"
