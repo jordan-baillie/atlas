@@ -98,11 +98,23 @@ def test_derive_universe_never_defaults_to_sp500_for_commodity():
 
 
 def test_derive_universe_returns_none_for_unknown_ticker():
-    """Unknown ticker with no hint → None (so caller can leave NULL + log)."""
+    """Unknown ticker → None, with or without hint (Fix #275 invariant).
+
+    Pre-Fix #275: derive_universe('ZZZZ', hint='sector_etfs') returned
+    'sector_etfs' as a blind fallback — same bug class as the 2026-04-22
+    SLV/XLY/UNG mismatch where any ticker held in live_sp500.json got
+    universe='sp500' silently. The fix is to live-verify membership and
+    return None when verification fails, never the hint blindly.
+    """
     clear_cache()
+    # No hint → None
     assert derive_universe("ZZZZ_NOT_REAL") is None
-    # With hint, preserve hint rather than invent sp500
-    assert derive_universe("ZZZZ_NOT_REAL", "sector_etfs") == "sector_etfs"
+    # Hint that's a real universe but ticker not in it → None (live-verify rejects)
+    assert derive_universe("ZZZZ_NOT_REAL", "sector_etfs") is None
+    # Hint that's a real universe and ticker not dynamically a member → None
+    assert derive_universe("ZZZZ_NOT_REAL", "sp500") is None
+    # Hint that's nonsense → None
+    assert derive_universe("ZZZZ_NOT_REAL", "no_such_universe") is None
 
 
 def test_reconcile_ledger_would_NOT_write_sp500_for_commodity_etf(tmp_path, monkeypatch):
