@@ -92,7 +92,9 @@ def _load_research_best_all(db_path: Path) -> list[dict]:
     with sqlite3.connect(str(db_path)) as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.execute(
-            "SELECT strategy, universe, sharpe, trades, max_dd_pct, updated_at "
+            "SELECT strategy, universe, "
+            "COALESCE(solo_sharpe, sharpe) AS sharpe, "
+            "solo_sharpe, metric_type, trades, max_dd_pct, updated_at "
             "FROM research_best"
         )
         return [dict(r) for r in cursor.fetchall()]

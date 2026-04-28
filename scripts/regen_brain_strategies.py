@@ -53,27 +53,33 @@ def _load_research_best(
 
     For strategies present in multiple universes, prefers the sp500 row;
     if no sp500 row exists, uses the alphabetically-first universe.
+
+    M2 2026-04-28: uses COALESCE(solo_sharpe, sharpe) when M2 columns are
+    present; falls back to legacy ``sharpe`` column for pre-migration DBs.
     """
     with sqlite3.connect(str(db_path)) as conn:
         conn.row_factory = sqlite3.Row
+        # Detect whether M2 columns are present (safe for old test DBs)
+        _cols = {r[1] for r in conn.execute("PRAGMA table_info(research_best)").fetchall()}
+        _has_m2 = "solo_sharpe" in _cols
+
+        if _has_m2:
+            _sharpe_expr = "COALESCE(solo_sharpe, sharpe) AS sharpe, solo_sharpe, metric_type,"
+        else:
+            _sharpe_expr = "sharpe,"
+
+        _base_sel = (
+            f"SELECT strategy, universe, params, {_sharpe_expr} trades, max_dd_pct, updated_at "
+            f"FROM research_best"
+        )
+
         if strategy_filter:
             cursor = conn.execute(
-                """
-                SELECT strategy, universe, params, sharpe, trades, max_dd_pct, updated_at
-                FROM research_best
-                WHERE strategy = ?
-                ORDER BY strategy, universe
-                """,
+                f"{_base_sel} WHERE strategy = ? ORDER BY strategy, universe",
                 (strategy_filter,),
             )
         else:
-            cursor = conn.execute(
-                """
-                SELECT strategy, universe, params, sharpe, trades, max_dd_pct, updated_at
-                FROM research_best
-                ORDER BY strategy, universe
-                """
-            )
+            cursor = conn.execute(f"{_base_sel} ORDER BY strategy, universe")
         rows = [dict(r) for r in cursor.fetchall()]
 
     # Group by strategy — prefer sp500, else alphabetically first

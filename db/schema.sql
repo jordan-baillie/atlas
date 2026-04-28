@@ -297,13 +297,17 @@ CREATE INDEX IF NOT EXISTS idx_experiments_strategy ON research_experiments(stra
 CREATE INDEX IF NOT EXISTS idx_experiments_status ON research_experiments(status);
 
 CREATE TABLE IF NOT EXISTS research_best (
-    strategy    TEXT    NOT NULL,
-    universe    TEXT    NOT NULL,
-    params      TEXT    NOT NULL,  -- JSON: best known parameters
-    sharpe      REAL,
-    trades      INTEGER,
-    max_dd_pct  REAL,
-    updated_at  TEXT    DEFAULT (datetime('now')),
+    strategy         TEXT    NOT NULL,
+    universe         TEXT    NOT NULL,
+    params           TEXT    NOT NULL,  -- JSON: best known parameters
+    -- sharpe REAL,  -- DEPRECATED: whole-portfolio Sharpe; see solo_sharpe / portfolio_sharpe (M2 2026-04-28)
+    sharpe           REAL,
+    trades           INTEGER,
+    max_dd_pct       REAL,
+    updated_at       TEXT    DEFAULT (datetime('now')),
+    solo_sharpe      REAL,              -- strategy-standalone Sharpe (M2 2026-04-28)
+    portfolio_sharpe REAL,              -- whole-portfolio Sharpe with this strategy (M2 2026-04-28)
+    metric_type      TEXT    NOT NULL DEFAULT 'unknown',  -- 'solo','portfolio','both','legacy_portfolio','unknown'
     PRIMARY KEY (strategy, universe)
 );
 

@@ -2508,7 +2508,10 @@ def research_overview(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
             # Best per strategy per universe from research_best
             best_by_universe = {}
-            for r in db.execute("SELECT strategy, universe, sharpe, trades FROM research_best WHERE sharpe > 0 ORDER BY sharpe DESC").fetchall():
+            for r in db.execute(
+                "SELECT strategy, universe, COALESCE(solo_sharpe, sharpe) AS sharpe, trades "
+                "FROM research_best WHERE COALESCE(solo_sharpe, sharpe) > 0 ORDER BY sharpe DESC"
+            ).fetchall():
                 d = dict(r)
                 uni = d["universe"]
                 if uni not in best_by_universe:
@@ -2619,12 +2622,15 @@ def research_leaderboard(_auth: HTTPBasicCredentials = Depends(check_auth)):
         with get_db() as db:
             rows = []
             for r in db.execute("""
-                SELECT rb.strategy, rb.universe, rb.sharpe, rb.trades, rb.max_dd_pct, rb.updated_at,
+                SELECT rb.strategy, rb.universe,
+                       COALESCE(rb.solo_sharpe, rb.sharpe) AS sharpe,
+                       rb.solo_sharpe, rb.portfolio_sharpe, rb.metric_type,
+                       rb.trades, rb.max_dd_pct, rb.updated_at,
                        (SELECT COUNT(*) FROM research_experiments re
                         WHERE re.strategy = rb.strategy AND re.universe = rb.universe) as total_experiments
                 FROM research_best rb
-                WHERE rb.sharpe > 0
-                ORDER BY rb.sharpe DESC
+                WHERE COALESCE(rb.solo_sharpe, rb.sharpe) > 0
+                ORDER BY COALESCE(rb.solo_sharpe, rb.sharpe) DESC
             """).fetchall():
                 d = dict(r)
                 rows.append(d)
@@ -2944,7 +2950,9 @@ def research_coverage(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
         with get_db() as db:
             rows = [dict(r) for r in db.execute(
-                "SELECT strategy, universe, sharpe, trades, updated_at "
+                "SELECT strategy, universe, "
+                "COALESCE(solo_sharpe, sharpe) AS sharpe, "
+                "solo_sharpe, portfolio_sharpe, metric_type, trades, updated_at "
                 "FROM research_best ORDER BY strategy, universe"
             ).fetchall()]
 

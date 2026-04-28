@@ -1656,16 +1656,62 @@ def upsert_research_best(
     sharpe: Optional[float] = None,
     trades: Optional[int] = None,
     max_dd_pct: Optional[float] = None,
+    solo_sharpe: Optional[float] = None,
+    portfolio_sharpe: Optional[float] = None,
+    metric_type: Optional[str] = None,
 ) -> None:
-    """Insert or replace the best known parameters for (strategy, universe)."""
+    """Insert or replace the best known parameters for (strategy, universe).
+
+    New columns (M2 2026-04-28):
+        solo_sharpe      — strategy-standalone backtest Sharpe
+        portfolio_sharpe — whole-portfolio Sharpe with this strategy
+        metric_type      — 'solo', 'portfolio', 'both', 'legacy_portfolio', 'unknown'
+
+    The legacy ``sharpe`` column is preserved for backwards compat but is
+    DEPRECATED (use solo_sharpe / portfolio_sharpe).  A DEBUG log is emitted
+    when ``sharpe`` is written without the new fields.
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    # Compute metric_type if not supplied
+    if metric_type is None:
+        if solo_sharpe is not None and portfolio_sharpe is not None:
+            metric_type = "both"
+        elif solo_sharpe is not None:
+            metric_type = "solo"
+        elif portfolio_sharpe is not None:
+            metric_type = "portfolio"
+        # else leave None → will COALESCE to existing or default 'unknown'
+
+    if sharpe is not None and solo_sharpe is None and portfolio_sharpe is None:
+        _log.debug(
+            "research_best.sharpe is deprecated — use solo_sharpe / portfolio_sharpe "
+            "(strategy=%s universe=%s). Writing legacy-only row.",
+            strategy, universe,
+        )
+
     with get_db() as db:
         db.execute(
             """
-            INSERT OR REPLACE INTO research_best
-                (strategy, universe, params, sharpe, trades, max_dd_pct, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+            INSERT INTO research_best
+                (strategy, universe, params, sharpe, trades, max_dd_pct,
+                 solo_sharpe, portfolio_sharpe, metric_type, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, 'unknown'), datetime('now'))
+            ON CONFLICT(strategy, universe) DO UPDATE SET
+                params           = excluded.params,
+                sharpe           = excluded.sharpe,
+                trades           = excluded.trades,
+                max_dd_pct       = excluded.max_dd_pct,
+                solo_sharpe      = COALESCE(excluded.solo_sharpe, solo_sharpe),
+                portfolio_sharpe = COALESCE(excluded.portfolio_sharpe, portfolio_sharpe),
+                metric_type      = COALESCE(excluded.metric_type, metric_type, 'unknown'),
+                updated_at       = datetime('now')
             """,
-            (strategy, universe, json.dumps(params), sharpe, trades, max_dd_pct),
+            (
+                strategy, universe, json.dumps(params), sharpe, trades, max_dd_pct,
+                solo_sharpe, portfolio_sharpe, metric_type,
+            ),
         )
 
 

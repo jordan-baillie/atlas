@@ -81,7 +81,7 @@ def _make_good_oos_result() -> dict:
 
 
 class TestAuditTop3Candidates:
-    """Post-RCA assertions about audit_promotion_backlog.main() output.
+    """Post-RCA + post-M2 assertions about audit_promotion_backlog.main() output.
 
     The B3 canary (2026-04-28) ran on top-3 sp500 candidates:
     sector_rotation, opening_gap, mean_reversion. RCA revealed that the audit
@@ -90,13 +90,19 @@ class TestAuditTop3Candidates:
 
     - sector_rotation/sp500: ALL kept rows were baselines -> strategy absent
       from audit (was a 100% artifact, no real parameter improvements exist)
-    - opening_gap/sp500: still present but reclassified to fail client gate
-      (true delta < 0.05)
-    - mean_reversion/sp500: still YES with a genuine +0.7140 delta
+    - opening_gap/sp500: present but "already superseded" after M2 backfill
+      (solo_sharpe=0.2481 > best_kept=0.1162)
+    - mean_reversion/sp500: "already superseded" after M2 backfill
+      (solo_sharpe=1.014 > best_kept=0.9831 — genuine solo improvement but
+       current research_best already has best params)
+
+    M2 2026-04-28: The audit now uses COALESCE(solo_sharpe, sharpe) so
+    strategies with high solo_sharpe correctly show as "already superseded"
+    rather than falsely eligible due to low portfolio-baseline sharpe.
     """
 
     def test_audit_post_rca_strategy_classifications(self) -> None:
-        """Audit output reflects post-baseline-filter classifications."""
+        """Audit output reflects post-baseline-filter + post-M2 classifications."""
         from scripts.audit_promotion_backlog import main
 
         buf = io.StringIO()
@@ -104,7 +110,8 @@ class TestAuditTop3Candidates:
             main()
         output = buf.getvalue()
 
-        # mean_reversion/sp500 must still be in output and marked YES
+        # mean_reversion/sp500: after M2, solo_sharpe=1.014 > best_kept=0.9831
+        # → "already superseded" (correct: research_best already holds best params)
         mr_lines = [
             ln for ln in output.splitlines()
             if "mean_reversion" in ln and "sp500" in ln
@@ -113,9 +120,15 @@ class TestAuditTop3Candidates:
             f"Expected mean_reversion/sp500 row in audit output.\n"
             f"Full output:\n{output}"
         )
-        assert "YES" in mr_lines[0], (
-            f"mean_reversion/sp500 should still be promote-eligible "
-            f"(genuine +0.7140 delta after baseline filter). Got: {mr_lines[0]}"
+        # Post-M2: mean_reversion must NOT be YES (solo_sharpe=1.014 already supersedes experiments)
+        assert "YES" not in mr_lines[0], (
+            f"mean_reversion/sp500 after M2: solo_sharpe=1.014 > best_kept=0.9831 "
+            f"so it should be 'already superseded', not promote-eligible. Got: {mr_lines[0]}"
+        )
+        # And it should be marked as already superseded (not a false positive)
+        assert "superseded" in mr_lines[0], (
+            f"mean_reversion/sp500 should show 'already superseded' after M2. "
+            f"Got: {mr_lines[0]}"
         )
 
         # opening_gap/sp500 must still appear in output but NOT be YES
@@ -128,8 +141,8 @@ class TestAuditTop3Candidates:
             f"Full output:\n{output}"
         )
         assert "YES" not in og_lines[0], (
-            f"opening_gap/sp500 was a pre-RCA artifact — true delta is "
-            f"below the 0.05 client gate. Should NOT be promote-eligible. "
+            f"opening_gap/sp500 was a pre-RCA artifact — after M2 it should be "
+            f"'already superseded' (solo_sharpe=0.2481 > best_kept=0.1162). "
             f"Got: {og_lines[0]}"
         )
 

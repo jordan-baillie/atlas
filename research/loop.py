@@ -158,11 +158,18 @@ def save_best(
     params: dict,
     metrics: dict,
     description: str = "",
+    solo_sharpe: Optional[float] = None,
+    portfolio_sharpe: Optional[float] = None,
 ) -> None:
     """Save new best-known params for a strategy.
 
     Writes to both JSON file (keyed by strategy+universe) and SQLite
     research_best table.
+
+    Args:
+        solo_sharpe:      Strategy-standalone backtest Sharpe (M2 2026-04-28).
+        portfolio_sharpe: Whole-portfolio Sharpe with this strategy (M2 2026-04-28).
+                          When both are supplied, metric_type is stored as 'both'.
     """
     universe = market or "sp500"
 
@@ -204,6 +211,8 @@ def save_best(
                 sharpe=float(metrics.get("sharpe", 0) or 0),
                 trades=int(metrics.get("total_trades", 0) or 0),
                 max_dd_pct=float(metrics.get("max_drawdown_pct", 0) or 0),
+                solo_sharpe=solo_sharpe,
+                portfolio_sharpe=portfolio_sharpe,
             )
         except Exception as exc:
             logger.warning("Failed to write research_best to SQLite: %s", exc)
@@ -688,8 +697,16 @@ class ResearchSession:
             },
         }
 
-    def keep(self) -> str:
+    def keep(
+        self,
+        solo_sharpe: Optional[float] = None,
+        portfolio_sharpe: Optional[float] = None,
+    ) -> str:
         """Keep the last experiment. Updates best params, logs to TSV + journal.
+
+        Args:
+            solo_sharpe:      Strategy-standalone Sharpe for this experiment (M2 2026-04-28).
+            portfolio_sharpe: Whole-portfolio Sharpe after including this strategy (M2 2026-04-28).
 
         Returns confirmation string.
         """
@@ -707,6 +724,8 @@ class ResearchSession:
         save_best(
             self.strategy, self.market,
             self._best_params, exp["metrics"], exp["description"],
+            solo_sharpe=solo_sharpe,
+            portfolio_sharpe=portfolio_sharpe,
         )
 
         # Log

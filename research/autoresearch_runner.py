@@ -719,6 +719,7 @@ def run_session(
     solo_pass_combined_fail = 0
     consecutive_crashes = 0
     MAX_CONSECUTIVE_CRASHES = 5
+    _cur_solo_sharpe: Optional[float] = None  # solo screen Sharpe for current experiment (M2)
 
     # ── Main loop ─────────────────────────────────────────────────────────────
     for idx, (display_name, dotted_key, candidate_value) in enumerate(plan):
@@ -776,6 +777,7 @@ def run_session(
             consecutive_crashes = 0
 
             solo_sharpe = solo_metrics.get("sharpe", 0) or 0
+            _cur_solo_sharpe = solo_sharpe  # persist for session.keep() (M2)
             solo_decision = solo_verdict["decision"]
 
             if solo_decision == "discard":
@@ -806,7 +808,8 @@ def run_session(
             )
 
         else:
-            # No fast screen — go straight to combined
+            # No fast screen — go straight to combined (no solo_sharpe available)
+            _cur_solo_sharpe = None
             logger.info(
                 "[%d/%d] RUNNING (combined)  %s",
                 idx + 1, len(plan), display_name,
@@ -857,7 +860,11 @@ def run_session(
         rationale = result.get("rationale", "")
 
         if recommendation == "keep":
-            session.keep()
+            # Pass solo_sharpe (from fast_screen) and portfolio_sharpe (combined) — M2
+            session.keep(
+                solo_sharpe=_cur_solo_sharpe,
+                portfolio_sharpe=combined_sharpe,
+            )
             kept += 1
             current_sharpe = combined_sharpe
             logger.info(
@@ -1149,8 +1156,19 @@ def _promote_session_result(
                 if isinstance(raw_params, str)
                 else (raw_params or {})
             )
-            if row.get("sharpe") is not None:
-                best_sharpe = float(row["sharpe"])
+            # M2 2026-04-28: prefer solo_sharpe (strategy-standalone) over legacy
+            # portfolio sharpe for the "good in isolation" promotion gate.
+            _db_solo = row.get("solo_sharpe")
+            _db_sharpe = row.get("sharpe")
+            if _db_solo is not None:
+                best_sharpe = float(_db_solo)
+            elif _db_sharpe is not None:
+                logger.warning(
+                    "[promo] %s/%s: research_best has no solo_sharpe — "
+                    "falling back to legacy portfolio sharpe (run M2 migration to fix)",
+                    strategy, universe,
+                )
+                best_sharpe = float(_db_sharpe)
     except Exception as exc:
         logger.warning(
             "[promo] SQLite read failed for %s/%s: %s — falling back to JSON",
