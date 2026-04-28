@@ -72,7 +72,12 @@
       "atr_period": 18,
       "trend_ma_period": 27,
       "profit_target_atr_mult": 6.0,
-      "breakout_period": 10
+      "breakout_period": 10,
+      "earnings_blackout": {
+        "enabled": true,
+        "days_before": 5,
+        "days_after": 1
+      }
     },
     "mean_reversion": {
       "enabled": true,
