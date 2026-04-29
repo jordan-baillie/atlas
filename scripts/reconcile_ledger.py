@@ -214,11 +214,25 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
 
             try:
                 fill = buy_fills.get(ticker)
-                entry_price = (
-                    fill.fill_price
-                    if fill and fill.fill_price and fill.fill_price > 0
-                    else bp.entry_price
-                )
+                # Priority 1: broker_orders local cache (source-of-truth fill price)
+                # This eliminates phantom-price inference bugs (CHTR pattern).
+                _cached_fill = atlas_db.get_broker_fill_price(ticker, side="buy")
+                if _cached_fill and _cached_fill > 0:
+                    entry_price = _cached_fill
+                    log.info(
+                        "reconcile_ledger: used broker_orders fill price for %s: $%.4f "
+                        "(vs inferred $%.4f)",
+                        ticker, _cached_fill,
+                        (fill.fill_price if fill and fill.fill_price else bp.entry_price),
+                    )
+                else:
+                    # Priority 2: live order history fill (from this session's fetch)
+                    # Priority 3: broker position avg_entry_price (inference fallback)
+                    entry_price = (
+                        fill.fill_price
+                        if fill and fill.fill_price and fill.fill_price > 0
+                        else bp.entry_price
+                    )
                 shares = (
                     int(fill.raw.get("filled_qty", bp.shares))
                     if (fill and hasattr(fill, "raw") and fill.raw.get("filled_qty"))
@@ -368,12 +382,24 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
 
             try:
                 fill = sell_fills.get(ticker)
-                exit_price = (
-                    fill.fill_price
-                    if fill and fill.fill_price and fill.fill_price > 0
-                    else float(trade.get("entry_price", 0) or 0)
-                )
-                exit_reason = "reconcile_fill" if fill else "reconcile_phantom"
+                # Priority 1: broker_orders local cache (source-of-truth fill price)
+                _cached_sell = atlas_db.get_broker_fill_price(ticker, side="sell")
+                if _cached_sell and _cached_sell > 0:
+                    exit_price = _cached_sell
+                    log.info(
+                        "reconcile_ledger: used broker_orders sell fill for %s: $%.4f",
+                        ticker, _cached_sell,
+                    )
+                    exit_reason = "reconcile_fill_cached"
+                else:
+                    # Priority 2: live order history fill
+                    # Priority 3: entry price as last resort (inference fallback)
+                    exit_price = (
+                        fill.fill_price
+                        if fill and fill.fill_price and fill.fill_price > 0
+                        else float(trade.get("entry_price", 0) or 0)
+                    )
+                    exit_reason = "reconcile_fill" if fill else "reconcile_phantom"
 
                 atlas_db.record_trade_exit(
                     ticker=ticker,
