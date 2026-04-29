@@ -344,6 +344,10 @@ def _handle_held_stops(
 
     # Identify stop SELL orders with raw status == "held"
     # Capture the full raw dict per ticker so we can inspect reject_reason.
+    # CRITICAL: skip OCO/bracket/OTO child legs — Alpaca OCO stop legs are
+    # PERMANENTLY status=HELD by design (the stop only activates if the TP
+    # limit doesn't fill). Treating these as "stuck" causes cancel+resubmit
+    # loops every 15-min cycle. See commit 35d2286a (OCO migration) + fix commit.
     currently_held: dict[str, dict] = {}   # ticker → {"order_id": str, "raw": dict, "status": str}
     for order in open_orders:
         raw = getattr(order, "raw", {}) or {}
@@ -351,6 +355,10 @@ def _handle_held_stops(
         order_type = raw.get("order_type", "")
         side = raw.get("side", "")
         ticker = getattr(order, "ticker", "") or ""
+        order_class = (raw.get("order_class") or "").lower()
+        # Skip OCO / bracket / OTO child legs — HELD is normal for these.
+        if order_class in ("oco", "bracket", "oto"):
+            continue
         if (
             order_status == "held"
             and order_type in ("stop", "stop_limit", "trailing_stop")

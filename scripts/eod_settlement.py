@@ -851,13 +851,56 @@ def main():
     portfolio.disconnect()
 
 
+# State file for per-day Telegram dedup: prevents all 3 market EOD
+# invocations (sp500 / commodity_etfs / sector_etfs at 08:00 UTC) from
+# sending the same position-alert Telegram three times.  evaluate_all
+# is market-agnostic — it checks ALL open positions — so once is enough.
+_EOD_MONITOR_STATE_FILE = PROJECT / "data" / "eod_position_monitor_state.json"
+
+
+def _eod_monitor_already_sent_today() -> bool:
+    """Return True if a position-monitor Telegram was already sent today."""
+    try:
+        if _EOD_MONITOR_STATE_FILE.exists():
+            data = json.loads(_EOD_MONITOR_STATE_FILE.read_text())
+            from datetime import date
+            return data.get("last_sent_date") == str(date.today())
+    except Exception:
+        pass
+    return False
+
+
+def _eod_monitor_mark_sent() -> None:
+    """Record that the position-monitor Telegram was sent today."""
+    try:
+        from datetime import date
+        _EOD_MONITOR_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _EOD_MONITOR_STATE_FILE.write_text(
+            json.dumps({"last_sent_date": str(date.today())}),
+        )
+    except Exception as exc:
+        log.warning("_eod_monitor_mark_sent: state write failed (non-fatal): %s", exc)
+
+
 def run_position_monitor():
-    """Evaluate manual position conditions after EOD settlement."""
+    """Evaluate manual position conditions after EOD settlement.
+
+    Deduplication: evaluate_all checks ALL positions regardless of which
+    market triggered this EOD run.  The 3 concurrent market cron entries
+    (sp500 / commodity_etfs / sector_etfs) all call this function at 08:00
+    UTC.  We use a daily cooldown so only the first run sends Telegram — the
+    others still evaluate (for logging) but suppress the send.
+    """
     try:
         from monitor.evaluator import evaluate_all
-        result = evaluate_all(send_telegram=True)
+        already_sent = _eod_monitor_already_sent_today()
+        if already_sent:
+            log.info("Position monitor: Telegram already sent today — running evaluate_all silent")
+        result = evaluate_all(send_telegram=(not already_sent))
+        if not already_sent and result.get("alerts", 0) > 0:
+            _eod_monitor_mark_sent()
         log.info(f"Position monitor: evaluated {result['evaluated']} positions, "
-                 f"{result['alerts']} alerts fired")
+                 f"{result['alerts']} alerts fired (telegram={'suppressed' if already_sent else 'enabled'})")
     except Exception as e:
         log.error(f"Position monitor evaluation failed: {e}")
 

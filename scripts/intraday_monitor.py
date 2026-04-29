@@ -46,6 +46,13 @@ log = setup_logging("intraday_monitor", extra_log_file="intraday_monitor")
 STOP_PROXIMITY_PCT = 0.03      # alert when price within 3% of stop
 PORTFOLIO_DD_PCT = 0.03        # alert when portfolio DD exceeds 3%
 
+# 2026-04-29: commits e58c8557 + b50636c6 changed equity attribution from
+# global broker equity (~$5189) to per-market equity (~$1233 for sp500).
+# equity_history entries BEFORE this date used the old denominator and produce
+# false-positive drawdown alerts (e.g. "78% drawdown") when compared against
+# current per-market equity.  Filter them out when computing the peak.
+_ATTRIBUTION_RESET_DATE = "2026-04-29"
+
 
 # ── Alert dedup ───────────────────────────────────────────────
 
@@ -252,16 +259,29 @@ def check_positions(portfolio, prices: dict, fired: dict) -> list[dict]:
 
 
 def check_portfolio_drawdown(portfolio, prices: dict, fired: dict) -> list[dict]:
-    """Check portfolio-level drawdown against peak equity."""
+    """Check portfolio-level drawdown against peak equity.
+
+    Only considers equity_history entries dated >= _ATTRIBUTION_RESET_DATE.
+    Earlier entries used global broker equity as the denominator; the
+    2026-04-29 attribution refactor switched to per-market equity (~4× smaller).
+    Comparing current per-market equity against those old global peaks produces
+    false-positive drawdown alerts (e.g. "78% drawdown" when actually up 27%).
+    Falls back to starting_equity if no post-reset history exists yet.
+    """
     alerts = []
 
     price_map = {t: p["close"] for t, p in prices.items()}
     equity = portfolio.equity(price_map)
     starting = portfolio.starting_equity
 
-    # Use equity history peak if available, else starting equity
+    # Use equity history peak — but only from post-attribution-reset entries.
+    # Pre-reset entries reflect global broker equity and are incomparable to
+    # per-market equity values produced after the 2026-04-29 refactor.
     peak = starting
     for snap in portfolio.equity_history:
+        snap_date = snap.get("date", "")
+        if snap_date and snap_date < _ATTRIBUTION_RESET_DATE:
+            continue  # skip pre-attribution-fix history
         eq = snap.get("equity", 0)
         if eq > peak:
             peak = eq
