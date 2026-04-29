@@ -429,7 +429,8 @@
     ],
     "min_confidence": 0.5,
     "max_sizing_reduction": 0.5,
-    "shadow_mode": true
+    "shadow_mode": false,
+    "overlay_enforce_validated": true
   },
   "alt_data": {
     "enabled": true,

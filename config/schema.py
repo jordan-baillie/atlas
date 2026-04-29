@@ -264,6 +264,27 @@ def validate_config(config: dict) -> List[str]:
                         f"[RANGE] {key_path}: {value!r} is above maximum {hi}"
                     )
 
+    # ── Cross-field: overlay enforce-mode gate ────────────────────────────────
+    # Any market that disables shadow_mode (shadow_mode=false) MUST have
+    # overlay.overlay_enforce_validated=true, proving the Phase 3A backtest gate
+    # passed.  This prevents accidental enforce-mode flips without data backing.
+    #
+    # How to satisfy the gate:
+    #   1. Run:  python3 scripts/backtest_overlay_phase3a.py
+    #   2. Verify FLIP decision (cumulative_delta >= $0.01 OR median >= $0.00)
+    #   3. Set overlay.overlay_enforce_validated = true in the config
+    #   4. Set overlay.shadow_mode = false in the config
+    _shadow_mode = _get_nested(config, "overlay.shadow_mode")
+    if _shadow_mode is False:  # explicit False — True and absent both pass
+        _validated = _get_nested(config, "overlay.overlay_enforce_validated")
+        if _validated is not True:
+            errors.append(
+                "[OVERLAY_ENFORCE] overlay.shadow_mode=false requires "
+                "overlay.overlay_enforce_validated=true — run "
+                "scripts/backtest_overlay_phase3a.py, verify FLIP decision, "
+                "then set overlay.overlay_enforce_validated=true"
+            )
+
     return errors
 
 
