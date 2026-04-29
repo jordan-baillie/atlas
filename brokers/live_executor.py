@@ -98,6 +98,44 @@ def _protective_ledger_enabled() -> bool:
 # Pre-flight safety checks
 # ═══════════════════════════════════════════════════════════════
 
+def _is_already_protected(broker, ticker: str) -> bool:
+    """Return True if the position already has a SELL stop order live at the broker.
+
+    RCA latent #7: Avoids double-placement when the entry order was an instant-fill
+    bracket order (native OCO from order_class='bracket').  In that case, Alpaca
+    already attached both stop-loss and take-profit legs atomically, so calling
+    place_stops_for_plan afterwards would add a SECOND stop that races with the
+    existing one.
+
+    Args:
+        broker: Connected broker instance (needs ``get_open_orders``).
+        ticker: Atlas-format ticker symbol (AAPL, MSFT, ...).
+
+    Returns:
+        True  — a SELL stop/stop_limit/trailing_stop order is already open.
+        False — no existing protective stop (safe to place).  Also returns False
+                on any exception (conservative: let placement attempt).
+    """
+    try:
+        open_orders = broker.get_open_orders()
+    except Exception:
+        return False  # Be conservative — let placement attempt
+
+    for o in open_orders:
+        if getattr(o, "ticker", "") != ticker:
+            continue
+        # Side: OrderResult.side is an OrderSide enum
+        side_val = getattr(o, "side", None)
+        side_str = (side_val.value if hasattr(side_val, "value") else str(side_val)).lower()
+        # Order type is in o.raw["order_type"] (set by _order_to_result)
+        raw = getattr(o, "raw", {}) or {}
+        order_type_str = raw.get("order_type", "").lower()
+        if side_str == "sell" and order_type_str in ("stop", "stop_limit", "trailing_stop"):
+            return True
+
+    return False
+
+
 class PreflightError(Exception):
     """Raised when a pre-flight safety check fails."""
     pass
@@ -1958,6 +1996,18 @@ class LiveExecutor:
                     "Skipping immediate protective orders for %s (order status=%s) — "
                     "sync_protective_orders will place after fill.",
                     ticker, entry_status,
+                )
+                continue
+
+            # RCA latent #7 guard: skip if the position already has bracket/stop protection.
+            # This fires when the entry was an instant-fill bracket order (native OCO):
+            # Alpaca attached stop+TP legs atomically, so placing stops here again would
+            # add a SECOND stop that races with the existing bracket leg.
+            if self._broker and _is_already_protected(self._broker, ticker):
+                logger.info(
+                    "place_stops_for_plan: %s already has bracket/stop protection "
+                    "at broker — skipping to avoid double-placement (RCA #7)",
+                    ticker,
                 )
                 continue
 
