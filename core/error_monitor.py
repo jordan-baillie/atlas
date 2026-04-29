@@ -141,74 +141,142 @@ def update_classification(conn, error_id: int, result, dry_run: bool) -> None:
     )
 
 
-def run_once(
-    *,
-    db_path: Optional[str] = None,
-    batch_size: int = 50,
-    dry_run: bool = True,
-) -> dict:
-    """Single classifier sweep.
+def run_once(*, db_path: Optional[str] = None, batch_size: int = 50, dry_run: bool = True) -> dict:
+    """One classifier sweep. Returns metrics dict.
 
-    Returns a metrics dict:
-      halted, halt_reason, processed, by_class, errors, dry_run,
-      and optionally import_error.
+    Phase 1 (dry_run=True): only classifies + writes audit. No fix dispatch.
+    Phase 2 (dry_run=False): for ASSIST classifications, dispatches fix_worker →
+    reviewer → merger pipeline. Budget + kill-switch checked before each dispatch.
     """
     halt = find_halt_reason()
     if halt:
         logger.warning("Halted by %s — no classification this cycle", halt)
-        return {
-            "halted": True,
-            "halt_reason": halt,
-            "processed": 0,
-            "by_class": {},
-            "errors": 0,
-        }
+        return {"halted": True, "halt_reason": halt, "processed": 0,
+                "by_class": {}, "errors": 0, "fixes_attempted": 0,
+                "fixes_succeeded": 0, "fixes_failed": 0}
 
-    # Lazy import — avoids circular imports if triage uses logging.
+    # Lazy import — avoids circular imports
     try:
         from core.triage import TriageClassifier
-    except Exception as exc:
-        logger.error("core.triage not importable: %s", exc)
-        return {
-            "halted": False,
-            "halt_reason": None,
-            "processed": 0,
-            "by_class": {},
-            "errors": 1,
-            "import_error": str(exc),
-        }
+    except Exception as e:
+        logger.error("core.triage not importable: %s", e)
+        return {"halted": False, "halt_reason": None, "processed": 0,
+                "by_class": {}, "errors": 1, "import_error": str(e),
+                "fixes_attempted": 0, "fixes_succeeded": 0, "fixes_failed": 0}
 
     classifier = TriageClassifier()
 
-    metrics: dict = {
-        "halted": False,
-        "halt_reason": None,
-        "processed": 0,
-        "by_class": {},
-        "errors": 0,
-        "dry_run": dry_run,
-    }
+    metrics = {"halted": False, "halt_reason": None, "processed": 0,
+               "by_class": {}, "errors": 0, "dry_run": dry_run,
+               "fixes_attempted": 0, "fixes_succeeded": 0, "fixes_failed": 0,
+               "fixes_skipped_budget": 0, "fixes_blocked_kill_switch": 0}
 
     with atlas_db.get_db(db_path) as conn:
         rows = fetch_unclassified(conn, limit=batch_size)
-        logger.info(
-            "Fetched %d UNCLASSIFIED errors (batch_size=%d)", len(rows), batch_size
-        )
+        logger.info("Fetched %d UNCLASSIFIED errors (batch_size=%d)", len(rows), batch_size)
         for row in rows:
             try:
                 result = classifier.classify(row)
                 update_classification(conn, row["id"], result, dry_run=dry_run)
                 metrics["processed"] += 1
-                cls = result.classification
-                metrics["by_class"][cls] = metrics["by_class"].get(cls, 0) + 1
-            except Exception as exc:
-                logger.exception(
-                    "Classifier crash on error_id=%s: %s", row.get("id"), exc
-                )
+                metrics["by_class"][result.classification] = metrics["by_class"].get(result.classification, 0) + 1
+            except Exception as e:
+                logger.exception("Classifier crash on error_id=%s: %s", row["id"], e)
                 metrics["errors"] += 1
+                continue
+
+            # ── Phase 2 dispatch — only when dry_run=False AND classification=ASSIST ──
+            if dry_run:
+                continue
+            if result.classification not in ("ASSIST", "AUTO_FIX"):
+                continue
+            # AUTO_FIX must be additionally gated by phase_3_enabled — Phase 2 only ASSIST
+            if result.classification == "AUTO_FIX":
+                # Phase 3 not yet enabled; downgrade to ASSIST for safety
+                logger.info("AUTO_FIX classified but Phase 3 disabled — treating as ASSIST")
+                result_classification = "ASSIST"
+            else:
+                result_classification = result.classification
+
+            # Budget check — refuse to dispatch if at cap or rate-halt
+            try:
+                from core.budget import enforce_budget
+                bd = enforce_budget(db_path=db_path, send_alert=True)
+                if bd.action == "HALT":
+                    metrics["fixes_skipped_budget"] += 1
+                    logger.warning("Budget HALT — skipping dispatch for error %s", row["id"])
+                    continue
+            except Exception as e:
+                logger.warning("Budget check crashed (failing closed): %s", e)
+                continue
+
+            # Kill-switch — re-check (something might have happened mid-cycle)
+            try:
+                from core.remediation_kill_switch import check_all_layers
+                blk = check_all_layers(db_path=db_path)
+                if blk:
+                    metrics["fixes_blocked_kill_switch"] += 1
+                    logger.warning("Kill-switch %s — skipping dispatch for error %s", blk.layer, row["id"])
+                    continue
+            except Exception as e:
+                logger.warning("Kill-switch check crashed (failing closed): %s", e)
+                continue
+
+            # Dispatch fix_worker
+            metrics["fixes_attempted"] += 1
+            try:
+                from core import fix_worker, reviewer, merger
+                fx = fix_worker.run_fix(dict(row), classification=result_classification)
+                if not fx.success:
+                    metrics["fixes_failed"] += 1
+                    _audit_dispatch_outcome(conn, row["id"], "fix_worker_failed", fx)
+                    continue
+
+                # Reviewer (separate process, adversarial)
+                rv = reviewer.review_fix(dict(row), fx.diff or "",
+                                         test_output="", diagnosis=fx.diagnosis or "")
+
+                # Merger — Phase 2 path: branch only, no auto-merge to main
+                # We pass the FixOutcome + ReviewOutcome to merger.merge_fix
+                fix_outcome_for_merger = type("FXO", (), {
+                    "attempt_id": -1,  # not yet persisted
+                    "error_id": row["id"],
+                    "fingerprint": row["fingerprint"],
+                    "branch": fx.branch,
+                    "worktree": fx.worktree_path,
+                    "success": fx.success,
+                    "diff": fx.diff,
+                    "diff_lines": fx.diff_lines,
+                    "classification": result_classification,
+                })()
+
+                mg = merger.merge_fix(fix_outcome_for_merger, rv, db_path=db_path)
+                if mg.success:
+                    metrics["fixes_succeeded"] += 1
+                else:
+                    metrics["fixes_failed"] += 1
+            except Exception as e:
+                logger.exception("Phase 2 dispatch crashed for error %s: %s", row["id"], e)
+                metrics["fixes_failed"] += 1
 
     logger.info("Cycle complete: %s", metrics)
     return metrics
+
+
+def _audit_dispatch_outcome(conn, error_id: int, outcome_label: str, fx) -> None:
+    """Write an audit row noting why a fix attempt skipped or failed."""
+    try:
+        conn.execute(
+            """INSERT INTO fix_audit_log (error_id, ts, phase, actor, decision, reasoning, payload_json, result_status)
+               VALUES (?, ?, 'fix', 'fix_worker', ?, ?, ?, 'error')""",
+            (error_id,
+             datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+             outcome_label,
+             (fx.error or "")[:500],
+             json.dumps({"branch": fx.branch, "diff_lines": fx.diff_lines, "duration": fx.duration_seconds})),
+        )
+    except Exception as e:
+        logger.warning("Audit write failed: %s", e)
 
 
 def main(argv: Optional[list[str]] = None) -> int:

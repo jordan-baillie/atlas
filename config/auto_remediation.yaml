@@ -72,7 +72,7 @@ defaults_applied:
 
 # === Operational settings (engineering defaults, not user-locked) ===
 phase:
-  current: 1                           # Phase 1 = capture+classify+monitor (NO auto-fix)
+  current: 2                           # Phase 2 = ASSIST dispatch active (fix_worker → reviewer → merger)
   phase_3_enabled: false               # Hard feature flag for AUTO_FIX go-live
 
 monitor:
