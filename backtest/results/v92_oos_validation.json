@@ -1,12 +1,12 @@
 {
   "validation_type": "v9.2_oos_validation",
-  "timestamp": "2026-04-19T20:00:09.457052",
+  "timestamp": "2026-04-26T20:00:08.375246",
   "config_version": "unknown",
   "config_path": "/root/atlas/config/active/sp500.json",
   "output_path": "/root/atlas/backtest/results/v92_oos_validation.json",
   "market": "sp500",
-  "split_date": "2024-11-21",
-  "warmup_date": "2024-08-23",
+  "split_date": "2024-11-26",
+  "warmup_date": "2024-08-28",
   "n_perturbation_trials": 10,
   "perturbation_range": [
     0.8,
@@ -14,97 +14,97 @@
   ],
   "test1_time_period_split": {
     "in_sample": {
-      "total_trades": 210,
-      "cagr_pct": 9.3837,
-      "sharpe": 0.4564,
-      "profit_factor": 1.4215,
-      "max_drawdown_pct": 9.5392,
-      "win_rate_pct": 55.71,
-      "total_pnl": 2558.03,
-      "sortino": 0.6349,
-      "avg_trade": 12.18,
-      "final_equity": 7558.08
+      "total_trades": 225,
+      "cagr_pct": 10.1143,
+      "sharpe": 0.5199,
+      "profit_factor": 1.4645,
+      "max_drawdown_pct": 10.0193,
+      "win_rate_pct": 56.44,
+      "total_pnl": 2930.42,
+      "sortino": 0.7263,
+      "avg_trade": 13.02,
+      "final_equity": 7792.12
     },
     "out_of_sample": {
-      "total_trades": 39,
-      "cagr_pct": -11.7721,
-      "sharpe": -2.0647,
-      "profit_factor": 0.7851,
-      "max_drawdown_pct": 8.5209,
-      "win_rate_pct": 48.72,
-      "total_pnl": -221.6,
-      "sortino": -2.6098,
-      "avg_trade": -5.68,
-      "final_equity": 4660.38
+      "total_trades": 34,
+      "cagr_pct": -2.8101,
+      "sharpe": -0.7204,
+      "profit_factor": 0.983,
+      "max_drawdown_pct": 5.7601,
+      "win_rate_pct": 50.0,
+      "total_pnl": -17.41,
+      "sortino": -1.0711,
+      "avg_trade": -0.51,
+      "final_equity": 4929.94
     },
     "degradation_pct": {
-      "cagr_pct": -225.45,
-      "sharpe": -552.39,
-      "profit_factor": -44.77,
-      "win_rate_pct": -12.55
+      "cagr_pct": -127.78,
+      "sharpe": -238.57,
+      "profit_factor": -32.88,
+      "win_rate_pct": -11.41
     },
     "full_metrics": {
-      "total_trades": 293,
-      "cagr_pct": 5.7718,
-      "sharpe": 0.1247,
-      "profit_factor": 1.2417,
-      "max_drawdown_pct": 12.8101,
-      "win_rate_pct": 54.27,
-      "total_pnl": 2089.34,
-      "sortino": 0.1551,
-      "avg_trade": 7.13,
-      "final_equity": 6989.48
+      "total_trades": 312,
+      "cagr_pct": 6.6942,
+      "sharpe": 0.2111,
+      "profit_factor": 1.2667,
+      "max_drawdown_pct": 12.7593,
+      "win_rate_pct": 55.45,
+      "total_pnl": 2440.11,
+      "sortino": 0.2597,
+      "avg_trade": 7.82,
+      "final_equity": 7400.49
     },
-    "runtime_s": 294.2
+    "runtime_s": 357.4
   },
   "test2_perturbation": {
     "summary": {
       "cagr_pct": {
-        "mean": 3.8976,
-        "std": 2.2081,
-        "min": 0.4447,
-        "max": 8.3604
+        "mean": 4.5766,
+        "std": 2.1313,
+        "min": -0.241,
+        "max": 7.6679
       },
       "sharpe": {
-        "mean": -0.0847,
-        "std": 0.2517,
-        "min": -0.5333,
-        "max": 0.3871
+        "mean": -0.0157,
+        "std": 0.2513,
+        "min": -0.6308,
+        "max": 0.3191
       },
       "profit_factor": {
-        "mean": 1.1977,
-        "std": 0.1185,
-        "min": 1.0321,
-        "max": 1.4488
+        "mean": 1.2007,
+        "std": 0.097,
+        "min": 0.993,
+        "max": 1.388
       },
       "max_drawdown_pct": {
-        "mean": 13.5674,
-        "std": 2.8921,
-        "min": 10.0857,
-        "max": 20.218
+        "mean": 14.0909,
+        "std": 2.6645,
+        "min": 11.2213,
+        "max": 20.51
       },
       "total_trades": {
-        "mean": 286.3,
-        "std": 53.6583,
-        "min": 219.0,
-        "max": 431.0
+        "mean": 304.7,
+        "std": 58.0707,
+        "min": 231.0,
+        "max": 460.0
       }
     },
     "trials": [
       {
-        "total_trades": 311,
-        "cagr_pct": 3.2777,
-        "sharpe": -0.1237,
-        "profit_factor": 1.1489,
-        "max_drawdown_pct": 14.5464,
-        "win_rate_pct": 49.2,
-        "total_pnl": 1263.89,
-        "sortino": -0.1663,
-        "avg_trade": 4.06,
-        "final_equity": 6067.57,
+        "total_trades": 333,
+        "cagr_pct": 5.5962,
+        "sharpe": 0.1083,
+        "profit_factor": 1.1993,
+        "max_drawdown_pct": 15.7892,
+        "win_rate_pct": 50.75,
+        "total_pnl": 2024.44,
+        "sortino": 0.1496,
+        "avg_trade": 6.08,
+        "final_equity": 6954.07,
         "trial": 1,
         "seed": 42,
-        "runtime_s": 167.6,
+        "runtime_s": 196.6,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -190,9 +190,9 @@
               "perturbed": 0.7126
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 0.8882,
-              "perturbed": 0.2665
+              "perturbed": 0.0869
             }
           },
           "opening_gap": {
@@ -249,9 +249,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8387,
-              "perturbed": 0.1258
+              "perturbed": 0.2097
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -329,19 +329,19 @@
         }
       },
       {
-        "total_trades": 219,
-        "cagr_pct": 4.9868,
-        "sharpe": 0.0417,
-        "profit_factor": 1.3371,
-        "max_drawdown_pct": 12.2215,
-        "win_rate_pct": 53.42,
-        "total_pnl": 1848.55,
-        "sortino": 0.0556,
-        "avg_trade": 8.44,
-        "final_equity": 6687.55,
+        "total_trades": 231,
+        "cagr_pct": 4.7523,
+        "sharpe": 0.0156,
+        "profit_factor": 1.2703,
+        "max_drawdown_pct": 12.7278,
+        "win_rate_pct": 53.25,
+        "total_pnl": 1614.6,
+        "sortino": 0.0206,
+        "avg_trade": 6.99,
+        "final_equity": 6626.39,
         "trial": 2,
         "seed": 43,
-        "runtime_s": 161.2,
+        "runtime_s": 190.1,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -427,9 +427,9 @@
               "perturbed": 0.6093
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 1.1404,
-              "perturbed": 0.3421
+              "perturbed": 0.1115
             }
           },
           "opening_gap": {
@@ -486,9 +486,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8196,
-              "perturbed": 0.1229
+              "perturbed": 0.2049
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -566,19 +566,19 @@
         }
       },
       {
-        "total_trades": 256,
-        "cagr_pct": 1.6778,
-        "sharpe": -0.3325,
-        "profit_factor": 1.1032,
-        "max_drawdown_pct": 15.3739,
-        "win_rate_pct": 51.95,
-        "total_pnl": 624.76,
-        "sortino": -0.3912,
-        "avg_trade": 2.44,
-        "final_equity": 5531.28,
+        "total_trades": 269,
+        "cagr_pct": 4.4512,
+        "sharpe": -0.0145,
+        "profit_factor": 1.2183,
+        "max_drawdown_pct": 14.0952,
+        "win_rate_pct": 53.16,
+        "total_pnl": 1507.48,
+        "sortino": -0.0171,
+        "avg_trade": 5.6,
+        "final_equity": 6512.66,
         "trial": 3,
         "seed": 44,
-        "runtime_s": 163.0,
+        "runtime_s": 193.8,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -664,9 +664,9 @@
               "perturbed": 0.6513
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 0.8294,
-              "perturbed": 0.2488
+              "perturbed": 0.0811
             }
           },
           "opening_gap": {
@@ -723,9 +723,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.9544,
-              "perturbed": 0.1432
+              "perturbed": 0.2386
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -803,19 +803,19 @@
         }
       },
       {
-        "total_trades": 270,
-        "cagr_pct": 2.3479,
-        "sharpe": -0.2237,
-        "profit_factor": 1.1013,
-        "max_drawdown_pct": 20.218,
-        "win_rate_pct": 46.67,
-        "total_pnl": 824.94,
-        "sortino": -0.3101,
-        "avg_trade": 3.06,
-        "final_equity": 5750.9,
+        "total_trades": 284,
+        "cagr_pct": 2.6734,
+        "sharpe": -0.1889,
+        "profit_factor": 1.1015,
+        "max_drawdown_pct": 20.51,
+        "win_rate_pct": 46.48,
+        "total_pnl": 875.06,
+        "sortino": -0.2647,
+        "avg_trade": 3.08,
+        "final_equity": 5873.73,
         "trial": 4,
         "seed": 45,
-        "runtime_s": 164.9,
+        "runtime_s": 201.1,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -901,9 +901,9 @@
               "perturbed": 0.6191
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 1.1392,
-              "perturbed": 0.3418
+              "perturbed": 0.1114
             }
           },
           "opening_gap": {
@@ -960,9 +960,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8359,
-              "perturbed": 0.1254
+              "perturbed": 0.209
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -1040,19 +1040,19 @@
         }
       },
       {
-        "total_trades": 431,
-        "cagr_pct": 4.7881,
-        "sharpe": 0.0263,
-        "profit_factor": 1.1767,
-        "max_drawdown_pct": 11.5159,
-        "win_rate_pct": 58.7,
-        "total_pnl": 1700.47,
-        "sortino": 0.0341,
-        "avg_trade": 3.95,
-        "final_equity": 6612.9,
+        "total_trades": 460,
+        "cagr_pct": 6.5676,
+        "sharpe": 0.2056,
+        "profit_factor": 1.2231,
+        "max_drawdown_pct": 12.0528,
+        "win_rate_pct": 59.35,
+        "total_pnl": 2311.92,
+        "sortino": 0.2661,
+        "avg_trade": 5.03,
+        "final_equity": 7347.85,
         "trial": 5,
         "seed": 46,
-        "runtime_s": 154.9,
+        "runtime_s": 187.0,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -1138,9 +1138,9 @@
               "perturbed": 0.7078
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 1.1872,
-              "perturbed": 0.3561
+              "perturbed": 0.1161
             }
           },
           "opening_gap": {
@@ -1197,9 +1197,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8905,
-              "perturbed": 0.1336
+              "perturbed": 0.2226
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -1277,19 +1277,19 @@
         }
       },
       {
-        "total_trades": 270,
-        "cagr_pct": 0.4447,
-        "sharpe": -0.5333,
-        "profit_factor": 1.0321,
-        "max_drawdown_pct": 16.0699,
-        "win_rate_pct": 51.85,
-        "total_pnl": 175.43,
-        "sortino": -0.6951,
-        "avg_trade": 0.65,
-        "final_equity": 5145.36,
+        "total_trades": 283,
+        "cagr_pct": -0.241,
+        "sharpe": -0.6308,
+        "profit_factor": 0.993,
+        "max_drawdown_pct": 16.2235,
+        "win_rate_pct": 51.59,
+        "total_pnl": -39.39,
+        "sortino": -0.7988,
+        "avg_trade": -0.14,
+        "final_equity": 4939.58,
         "trial": 6,
         "seed": 47,
-        "runtime_s": 157.0,
+        "runtime_s": 184.5,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -1375,9 +1375,9 @@
               "perturbed": 0.8116
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 1.027,
-              "perturbed": 0.3081
+              "perturbed": 0.1004
             }
           },
           "opening_gap": {
@@ -1434,9 +1434,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8954,
-              "perturbed": 0.1343
+              "perturbed": 0.2239
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -1514,19 +1514,19 @@
         }
       },
       {
-        "total_trades": 284,
-        "cagr_pct": 4.7799,
-        "sharpe": 0.032,
-        "profit_factor": 1.1985,
-        "max_drawdown_pct": 10.7563,
-        "win_rate_pct": 53.17,
-        "total_pnl": 1769.07,
-        "sortino": 0.044,
-        "avg_trade": 6.23,
-        "final_equity": 6609.82,
+        "total_trades": 311,
+        "cagr_pct": 6.3235,
+        "sharpe": 0.1738,
+        "profit_factor": 1.2203,
+        "max_drawdown_pct": 11.4527,
+        "win_rate_pct": 53.38,
+        "total_pnl": 2301.06,
+        "sortino": 0.2436,
+        "avg_trade": 7.4,
+        "final_equity": 7247.19,
         "trial": 7,
         "seed": 48,
-        "runtime_s": 169.6,
+        "runtime_s": 201.2,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -1612,9 +1612,9 @@
               "perturbed": 0.6034
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 0.8868,
-              "perturbed": 0.2661
+              "perturbed": 0.0867
             }
           },
           "opening_gap": {
@@ -1671,9 +1671,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.9088,
-              "perturbed": 0.1363
+              "perturbed": 0.2272
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -1751,19 +1751,19 @@
         }
       },
       {
-        "total_trades": 272,
-        "cagr_pct": 2.3796,
-        "sharpe": -0.2658,
-        "profit_factor": 1.149,
-        "max_drawdown_pct": 12.0214,
-        "win_rate_pct": 52.21,
-        "total_pnl": 870.64,
-        "sortino": -0.3549,
-        "avg_trade": 3.2,
-        "final_equity": 5761.45,
+        "total_trades": 284,
+        "cagr_pct": 3.6408,
+        "sharpe": -0.1127,
+        "profit_factor": 1.1975,
+        "max_drawdown_pct": 13.0665,
+        "win_rate_pct": 53.17,
+        "total_pnl": 1263.74,
+        "sortino": -0.1493,
+        "avg_trade": 4.45,
+        "final_equity": 6214.59,
         "trial": 8,
         "seed": 49,
-        "runtime_s": 152.5,
+        "runtime_s": 187.3,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -1849,9 +1849,9 @@
               "perturbed": 0.672
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 0.8995,
-              "perturbed": 0.2698
+              "perturbed": 0.088
             }
           },
           "opening_gap": {
@@ -1908,9 +1908,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 1.164,
-              "perturbed": 0.1746
+              "perturbed": 0.291
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -1988,19 +1988,19 @@
         }
       },
       {
-        "total_trades": 295,
-        "cagr_pct": 5.933,
-        "sharpe": 0.1446,
-        "profit_factor": 1.2817,
-        "max_drawdown_pct": 10.0857,
-        "win_rate_pct": 55.59,
-        "total_pnl": 2131.65,
-        "sortino": 0.1952,
-        "avg_trade": 7.23,
-        "final_equity": 7052.84,
+        "total_trades": 313,
+        "cagr_pct": 4.3337,
+        "sharpe": -0.032,
+        "profit_factor": 1.1956,
+        "max_drawdown_pct": 11.2213,
+        "win_rate_pct": 54.31,
+        "total_pnl": 1435.77,
+        "sortino": -0.044,
+        "avg_trade": 4.59,
+        "final_equity": 6468.7,
         "trial": 9,
         "seed": 50,
-        "runtime_s": 166.8,
+        "runtime_s": 200.6,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -2086,9 +2086,9 @@
               "perturbed": 0.8323
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 0.9316,
-              "perturbed": 0.2795
+              "perturbed": 0.0911
             }
           },
           "opening_gap": {
@@ -2145,9 +2145,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 0.8909,
-              "perturbed": 0.1336
+              "perturbed": 0.2227
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -2225,19 +2225,19 @@
         }
       },
       {
-        "total_trades": 255,
-        "cagr_pct": 8.3604,
-        "sharpe": 0.3871,
-        "profit_factor": 1.4488,
-        "max_drawdown_pct": 12.8645,
-        "win_rate_pct": 54.12,
-        "total_pnl": 3089.35,
-        "sortino": 0.5772,
-        "avg_trade": 12.12,
-        "final_equity": 8066.51,
+        "total_trades": 279,
+        "cagr_pct": 7.6679,
+        "sharpe": 0.3191,
+        "profit_factor": 1.388,
+        "max_drawdown_pct": 13.7701,
+        "win_rate_pct": 53.41,
+        "total_pnl": 2891.66,
+        "sortino": 0.4571,
+        "avg_trade": 10.36,
+        "final_equity": 7816.17,
         "trial": 10,
         "seed": 51,
-        "runtime_s": 164.8,
+        "runtime_s": 194.4,
         "perturbation_log": {
           "momentum_breakout": {
             "weight": {
@@ -2323,9 +2323,9 @@
               "perturbed": 0.6731
             },
             "weight": {
-              "original": 0.3,
+              "original": 0.0978,
               "factor": 1.1935,
-              "perturbed": 0.3581
+              "perturbed": 0.1167
             }
           },
           "opening_gap": {
@@ -2382,9 +2382,9 @@
           },
           "sector_rotation": {
             "weight": {
-              "original": 0.15,
+              "original": 0.25,
               "factor": 1.1048,
-              "perturbed": 0.1657
+              "perturbed": 0.2762
             },
             "atr_stop_mult": {
               "original": 2.0,
@@ -2462,737 +2462,747 @@
         }
       }
     ],
-    "collapse_count": 0,
+    "collapse_count": 1,
     "robust": true
   },
   "test3_walkforward_consistency": {
     "full_metrics": {
-      "total_trades": 293,
-      "cagr_pct": 5.7718,
-      "sharpe": 0.1247,
-      "profit_factor": 1.2417,
-      "max_drawdown_pct": 12.8101,
-      "win_rate_pct": 54.27,
-      "total_pnl": 2089.34,
-      "sortino": 0.1551,
-      "avg_trade": 7.13,
-      "final_equity": 6989.48
+      "total_trades": 312,
+      "cagr_pct": 6.6942,
+      "sharpe": 0.2111,
+      "profit_factor": 1.2667,
+      "max_drawdown_pct": 12.7593,
+      "win_rate_pct": 55.45,
+      "total_pnl": 2440.11,
+      "sortino": 0.2597,
+      "avg_trade": 7.82,
+      "final_equity": 7400.49
     },
     "window_analysis": {
-      "n_windows": 69,
-      "n_positive_windows": 40,
-      "n_negative_windows": 29,
-      "win_rate_windows_pct": 58.0,
-      "mean_window_return_pct": 0.5234,
-      "std_window_return_pct": 2.8763,
-      "min_window_return_pct": -9.6762,
-      "max_window_return_pct": 8.1706,
-      "median_window_return_pct": 0.5662,
-      "mean_window_pnl": 28.56,
-      "std_window_pnl": 196.25,
-      "mean_trades_per_window": 4.2,
-      "total_trades_across_windows": 291,
+      "n_windows": 70,
+      "n_positive_windows": 45,
+      "n_negative_windows": 25,
+      "win_rate_windows_pct": 64.3,
+      "mean_window_return_pct": 0.6041,
+      "std_window_return_pct": 2.8054,
+      "min_window_return_pct": -9.9672,
+      "max_window_return_pct": 8.0845,
+      "median_window_return_pct": 0.7863,
+      "mean_window_pnl": 34.58,
+      "std_window_pnl": 197.41,
+      "mean_trades_per_window": 4.4,
+      "total_trades_across_windows": 310,
       "per_window_detail": [
         {
           "window": 1,
           "test_start": "2020-04-15",
           "test_end": "2020-07-14",
-          "trades": 0,
-          "pnl": 0,
-          "return_pct": 0.0,
+          "trades": 4,
+          "pnl": 203.99,
+          "return_pct": 4.0702,
           "equity_start": 5011.79,
-          "equity_end": 5011.79
+          "equity_end": 5215.78
         },
         {
           "window": 2,
           "test_start": "2020-05-14",
           "test_end": "2020-08-12",
-          "trades": 0,
-          "pnl": 0,
-          "return_pct": 0.0,
-          "equity_start": 5011.79,
-          "equity_end": 5011.79
+          "trades": 1,
+          "pnl": 76.64,
+          "return_pct": 1.4694,
+          "equity_start": 5215.78,
+          "equity_end": 5292.42
         },
         {
           "window": 3,
           "test_start": "2020-06-15",
           "test_end": "2020-09-11",
-          "trades": 0,
-          "pnl": 0,
-          "return_pct": 0.0,
-          "equity_start": 5011.79,
-          "equity_end": 5011.79
+          "trades": 6,
+          "pnl": -31.29,
+          "return_pct": -0.5912,
+          "equity_start": 5292.42,
+          "equity_end": 5261.13
         },
         {
           "window": 4,
           "test_start": "2020-07-15",
           "test_end": "2020-10-12",
-          "trades": 0,
-          "pnl": 0,
-          "return_pct": 0.0,
-          "equity_start": 5011.79,
-          "equity_end": 5011.79
+          "trades": 3,
+          "pnl": 66.56,
+          "return_pct": 1.2651,
+          "equity_start": 5261.13,
+          "equity_end": 5327.69
         },
         {
           "window": 5,
           "test_start": "2020-08-13",
           "test_end": "2020-11-10",
-          "trades": 6,
-          "pnl": 160.25,
-          "return_pct": 3.1975,
-          "equity_start": 5011.79,
-          "equity_end": 5172.04
+          "trades": 7,
+          "pnl": 97.23,
+          "return_pct": 1.825,
+          "equity_start": 5327.69,
+          "equity_end": 5424.92
         },
         {
           "window": 6,
           "test_start": "2020-09-14",
           "test_end": "2020-12-10",
           "trades": 3,
-          "pnl": -36.18,
-          "return_pct": -0.6995,
-          "equity_start": 5172.04,
-          "equity_end": 5135.86
+          "pnl": -39.9,
+          "return_pct": -0.7355,
+          "equity_start": 5424.92,
+          "equity_end": 5385.02
         },
         {
           "window": 7,
           "test_start": "2020-10-13",
           "test_end": "2021-01-12",
           "trades": 3,
-          "pnl": 98.81,
-          "return_pct": 1.9239,
-          "equity_start": 5135.86,
-          "equity_end": 5234.67
+          "pnl": 104.2,
+          "return_pct": 1.935,
+          "equity_start": 5385.02,
+          "equity_end": 5489.22
         },
         {
           "window": 8,
           "test_start": "2020-11-11",
           "test_end": "2021-02-11",
-          "trades": 3,
-          "pnl": -89.46,
-          "return_pct": -1.709,
-          "equity_start": 5234.67,
-          "equity_end": 5145.21
+          "trades": 2,
+          "pnl": -84.31,
+          "return_pct": -1.5359,
+          "equity_start": 5489.22,
+          "equity_end": 5404.91
         },
         {
           "window": 9,
           "test_start": "2020-12-11",
           "test_end": "2021-03-15",
-          "trades": 3,
-          "pnl": -87.84,
-          "return_pct": -1.7072,
-          "equity_start": 5145.21,
-          "equity_end": 5057.37
+          "trades": 4,
+          "pnl": -119.07,
+          "return_pct": -2.203,
+          "equity_start": 5404.91,
+          "equity_end": 5285.84
         },
         {
           "window": 10,
           "test_start": "2021-01-13",
           "test_end": "2021-04-14",
           "trades": 2,
-          "pnl": 58.18,
-          "return_pct": 1.1504,
-          "equity_start": 5057.37,
-          "equity_end": 5115.55
+          "pnl": 73.19,
+          "return_pct": 1.3846,
+          "equity_start": 5285.84,
+          "equity_end": 5359.03
         },
         {
           "window": 11,
           "test_start": "2021-02-12",
           "test_end": "2021-05-13",
           "trades": 3,
-          "pnl": 211.0,
-          "return_pct": 4.1247,
-          "equity_start": 5115.55,
-          "equity_end": 5326.55
+          "pnl": 220.21,
+          "return_pct": 4.1091,
+          "equity_start": 5359.03,
+          "equity_end": 5579.24
         },
         {
           "window": 12,
           "test_start": "2021-03-16",
           "test_end": "2021-06-14",
           "trades": 2,
-          "pnl": 141.05,
-          "return_pct": 2.6481,
-          "equity_start": 5326.55,
-          "equity_end": 5467.6
+          "pnl": 141.03,
+          "return_pct": 2.5278,
+          "equity_start": 5579.24,
+          "equity_end": 5720.27
         },
         {
           "window": 13,
           "test_start": "2021-04-15",
           "test_end": "2021-07-14",
           "trades": 4,
-          "pnl": 289.88,
-          "return_pct": 5.3018,
-          "equity_start": 5467.6,
-          "equity_end": 5757.48
+          "pnl": 300.77,
+          "return_pct": 5.258,
+          "equity_start": 5720.27,
+          "equity_end": 6021.04
         },
         {
           "window": 14,
           "test_start": "2021-05-14",
           "test_end": "2021-08-12",
           "trades": 7,
-          "pnl": 65.12,
-          "return_pct": 1.1311,
-          "equity_start": 5757.48,
-          "equity_end": 5822.6
+          "pnl": 82.15,
+          "return_pct": 1.3644,
+          "equity_start": 6021.04,
+          "equity_end": 6103.19
         },
         {
           "window": 15,
           "test_start": "2021-06-15",
           "test_end": "2021-09-13",
           "trades": 4,
-          "pnl": 327.98,
-          "return_pct": 5.6329,
-          "equity_start": 5822.6,
-          "equity_end": 6150.58
+          "pnl": 343.01,
+          "return_pct": 5.6202,
+          "equity_start": 6103.19,
+          "equity_end": 6446.2
         },
         {
           "window": 16,
           "test_start": "2021-07-15",
           "test_end": "2021-10-12",
           "trades": 6,
-          "pnl": -278.84,
-          "return_pct": -4.5336,
-          "equity_start": 6150.58,
-          "equity_end": 5871.74
+          "pnl": -294.11,
+          "return_pct": -4.5625,
+          "equity_start": 6446.2,
+          "equity_end": 6152.09
         },
         {
           "window": 17,
           "test_start": "2021-08-13",
           "test_end": "2021-11-10",
           "trades": 5,
-          "pnl": 88.65,
-          "return_pct": 1.5098,
-          "equity_start": 5871.74,
-          "equity_end": 5960.39
+          "pnl": 89.24,
+          "return_pct": 1.4506,
+          "equity_start": 6152.09,
+          "equity_end": 6241.33
         },
         {
           "window": 18,
           "test_start": "2021-09-14",
           "test_end": "2021-12-10",
           "trades": 5,
-          "pnl": 33.75,
-          "return_pct": 0.5662,
-          "equity_start": 5960.39,
-          "equity_end": 5994.14
+          "pnl": 36.75,
+          "return_pct": 0.5888,
+          "equity_start": 6241.33,
+          "equity_end": 6278.08
         },
         {
           "window": 19,
           "test_start": "2021-10-13",
           "test_end": "2022-01-11",
           "trades": 5,
-          "pnl": 489.76,
-          "return_pct": 8.1706,
-          "equity_start": 5994.14,
-          "equity_end": 6483.9
+          "pnl": 507.55,
+          "return_pct": 8.0845,
+          "equity_start": 6278.08,
+          "equity_end": 6785.63
         },
         {
           "window": 20,
           "test_start": "2021-11-11",
           "test_end": "2022-02-10",
           "trades": 5,
-          "pnl": -184.05,
-          "return_pct": -2.8386,
-          "equity_start": 6483.9,
-          "equity_end": 6299.85
+          "pnl": -188.99,
+          "return_pct": -2.7852,
+          "equity_start": 6785.63,
+          "equity_end": 6596.64
         },
         {
           "window": 21,
           "test_start": "2021-12-13",
           "test_end": "2022-03-14",
           "trades": 6,
-          "pnl": -217.56,
-          "return_pct": -3.4534,
-          "equity_start": 6299.85,
-          "equity_end": 6082.29
+          "pnl": -229.8,
+          "return_pct": -3.4836,
+          "equity_start": 6596.64,
+          "equity_end": 6366.84
         },
         {
           "window": 22,
           "test_start": "2022-01-12",
           "test_end": "2022-04-12",
           "trades": 6,
-          "pnl": 45.16,
-          "return_pct": 0.7425,
-          "equity_start": 6082.29,
-          "equity_end": 6127.45
+          "pnl": 42.97,
+          "return_pct": 0.6749,
+          "equity_start": 6366.84,
+          "equity_end": 6409.81
         },
         {
           "window": 23,
           "test_start": "2022-02-11",
           "test_end": "2022-05-12",
           "trades": 2,
-          "pnl": -54.79,
-          "return_pct": -0.8942,
-          "equity_start": 6127.45,
-          "equity_end": 6072.66
+          "pnl": -54.87,
+          "return_pct": -0.856,
+          "equity_start": 6409.81,
+          "equity_end": 6354.94
         },
         {
           "window": 24,
           "test_start": "2022-03-15",
           "test_end": "2022-06-13",
           "trades": 4,
-          "pnl": 47.08,
-          "return_pct": 0.7753,
-          "equity_start": 6072.66,
-          "equity_end": 6119.74
+          "pnl": 32.35,
+          "return_pct": 0.5091,
+          "equity_start": 6354.94,
+          "equity_end": 6387.29
         },
         {
           "window": 25,
           "test_start": "2022-04-13",
           "test_end": "2022-07-14",
           "trades": 6,
-          "pnl": 22.1,
-          "return_pct": 0.3611,
-          "equity_start": 6119.74,
-          "equity_end": 6141.84
+          "pnl": 7.45,
+          "return_pct": 0.1166,
+          "equity_start": 6387.29,
+          "equity_end": 6394.74
         },
         {
           "window": 26,
           "test_start": "2022-05-13",
           "test_end": "2022-08-12",
           "trades": 5,
-          "pnl": 151.37,
-          "return_pct": 2.4646,
-          "equity_start": 6141.84,
-          "equity_end": 6293.21
+          "pnl": 129.04,
+          "return_pct": 2.0179,
+          "equity_start": 6394.74,
+          "equity_end": 6523.78
         },
         {
           "window": 27,
           "test_start": "2022-06-14",
           "test_end": "2022-09-13",
           "trades": 2,
-          "pnl": 129.38,
-          "return_pct": 2.0559,
-          "equity_start": 6293.21,
-          "equity_end": 6422.59
+          "pnl": 135.79,
+          "return_pct": 2.0815,
+          "equity_start": 6523.78,
+          "equity_end": 6659.57
         },
         {
           "window": 28,
           "test_start": "2022-07-15",
           "test_end": "2022-10-12",
           "trades": 4,
-          "pnl": -199.53,
-          "return_pct": -3.1067,
-          "equity_start": 6422.59,
-          "equity_end": 6223.06
+          "pnl": -172.17,
+          "return_pct": -2.5853,
+          "equity_start": 6659.57,
+          "equity_end": 6487.4
         },
         {
           "window": 29,
           "test_start": "2022-08-15",
           "test_end": "2022-11-10",
-          "trades": 5,
-          "pnl": 23.37,
-          "return_pct": 0.3755,
-          "equity_start": 6223.06,
-          "equity_end": 6246.43
+          "trades": 4,
+          "pnl": 93.34,
+          "return_pct": 1.4388,
+          "equity_start": 6487.4,
+          "equity_end": 6580.74
         },
         {
           "window": 30,
           "test_start": "2022-09-14",
           "test_end": "2022-12-12",
-          "trades": 3,
-          "pnl": 91.67,
-          "return_pct": 1.4676,
-          "equity_start": 6246.43,
-          "equity_end": 6338.1
+          "trades": 2,
+          "pnl": 47.83,
+          "return_pct": 0.7268,
+          "equity_start": 6580.74,
+          "equity_end": 6628.57
         },
         {
           "window": 31,
           "test_start": "2022-10-13",
           "test_end": "2023-01-12",
           "trades": 3,
-          "pnl": 148.33,
-          "return_pct": 2.3403,
-          "equity_start": 6338.1,
-          "equity_end": 6486.43
+          "pnl": 123.91,
+          "return_pct": 1.8693,
+          "equity_start": 6628.57,
+          "equity_end": 6752.48
         },
         {
           "window": 32,
           "test_start": "2022-11-11",
           "test_end": "2023-02-13",
-          "trades": 4,
-          "pnl": 317.16,
-          "return_pct": 4.8896,
-          "equity_start": 6486.43,
-          "equity_end": 6803.59
+          "trades": 5,
+          "pnl": 259.91,
+          "return_pct": 3.8491,
+          "equity_start": 6752.48,
+          "equity_end": 7012.39
         },
         {
           "window": 33,
           "test_start": "2022-12-13",
           "test_end": "2023-03-15",
           "trades": 2,
-          "pnl": -75.24,
-          "return_pct": -1.1059,
-          "equity_start": 6803.59,
-          "equity_end": 6728.35
+          "pnl": -75.16,
+          "return_pct": -1.0718,
+          "equity_start": 7012.39,
+          "equity_end": 6937.23
         },
         {
           "window": 34,
           "test_start": "2023-01-13",
           "test_end": "2023-04-14",
           "trades": 5,
-          "pnl": 274.59,
-          "return_pct": 4.0811,
-          "equity_start": 6728.35,
-          "equity_end": 7002.94
+          "pnl": 270.0,
+          "return_pct": 3.892,
+          "equity_start": 6937.23,
+          "equity_end": 7207.23
         },
         {
           "window": 35,
           "test_start": "2023-02-14",
           "test_end": "2023-05-15",
           "trades": 5,
-          "pnl": 59.5,
-          "return_pct": 0.8496,
-          "equity_start": 7002.94,
-          "equity_end": 7062.44
+          "pnl": 85.15,
+          "return_pct": 1.1815,
+          "equity_start": 7207.23,
+          "equity_end": 7292.38
         },
         {
           "window": 36,
           "test_start": "2023-03-16",
           "test_end": "2023-06-14",
           "trades": 3,
-          "pnl": -237.01,
-          "return_pct": -3.3559,
-          "equity_start": 7062.44,
-          "equity_end": 6825.43
+          "pnl": -245.65,
+          "return_pct": -3.3686,
+          "equity_start": 7292.38,
+          "equity_end": 7046.73
         },
         {
           "window": 37,
           "test_start": "2023-04-17",
           "test_end": "2023-07-17",
           "trades": 4,
-          "pnl": 221.33,
-          "return_pct": 3.2427,
-          "equity_start": 6825.43,
-          "equity_end": 7046.76
+          "pnl": 231.79,
+          "return_pct": 3.2893,
+          "equity_start": 7046.73,
+          "equity_end": 7278.52
         },
         {
           "window": 38,
           "test_start": "2023-05-16",
           "test_end": "2023-08-15",
           "trades": 5,
-          "pnl": 140.19,
-          "return_pct": 1.9894,
-          "equity_start": 7046.76,
-          "equity_end": 7186.95
+          "pnl": 132.54,
+          "return_pct": 1.821,
+          "equity_start": 7278.52,
+          "equity_end": 7411.06
         },
         {
           "window": 39,
           "test_start": "2023-06-15",
           "test_end": "2023-09-14",
           "trades": 3,
-          "pnl": -46.22,
-          "return_pct": -0.6431,
-          "equity_start": 7186.95,
-          "equity_end": 7140.73
+          "pnl": -41.17,
+          "return_pct": -0.5555,
+          "equity_start": 7411.06,
+          "equity_end": 7369.89
         },
         {
           "window": 40,
           "test_start": "2023-07-18",
           "test_end": "2023-10-13",
           "trades": 6,
-          "pnl": -173.87,
-          "return_pct": -2.4349,
-          "equity_start": 7140.73,
-          "equity_end": 6966.86
+          "pnl": -178.11,
+          "return_pct": -2.4167,
+          "equity_start": 7369.89,
+          "equity_end": 7191.78
         },
         {
           "window": 41,
           "test_start": "2023-08-16",
           "test_end": "2023-11-13",
           "trades": 4,
-          "pnl": 231.74,
-          "return_pct": 3.3263,
-          "equity_start": 6966.86,
-          "equity_end": 7198.6
+          "pnl": 234.66,
+          "return_pct": 3.2629,
+          "equity_start": 7191.78,
+          "equity_end": 7426.44
         },
         {
           "window": 42,
           "test_start": "2023-09-15",
           "test_end": "2023-12-13",
           "trades": 5,
-          "pnl": 206.67,
-          "return_pct": 2.871,
-          "equity_start": 7198.6,
-          "equity_end": 7405.27
+          "pnl": 244.13,
+          "return_pct": 3.2873,
+          "equity_start": 7426.44,
+          "equity_end": 7670.57
         },
         {
           "window": 43,
           "test_start": "2023-10-16",
           "test_end": "2024-01-16",
           "trades": 4,
-          "pnl": 273.07,
-          "return_pct": 3.6875,
-          "equity_start": 7405.27,
-          "equity_end": 7678.34
+          "pnl": 264.29,
+          "return_pct": 3.4455,
+          "equity_start": 7670.57,
+          "equity_end": 7934.86
         },
         {
           "window": 44,
           "test_start": "2023-11-14",
           "test_end": "2024-02-14",
           "trades": 4,
-          "pnl": -13.38,
-          "return_pct": -0.1743,
-          "equity_start": 7678.34,
-          "equity_end": 7664.96
+          "pnl": -20.64,
+          "return_pct": -0.2601,
+          "equity_start": 7934.86,
+          "equity_end": 7914.22
         },
         {
           "window": 45,
           "test_start": "2023-12-14",
           "test_end": "2024-03-15",
           "trades": 6,
-          "pnl": 40.05,
-          "return_pct": 0.5225,
-          "equity_start": 7664.96,
-          "equity_end": 7705.01
+          "pnl": 42.71,
+          "return_pct": 0.5397,
+          "equity_start": 7914.22,
+          "equity_end": 7956.93
         },
         {
           "window": 46,
           "test_start": "2024-01-17",
           "test_end": "2024-04-16",
           "trades": 5,
-          "pnl": -234.2,
-          "return_pct": -3.0396,
-          "equity_start": 7705.01,
-          "equity_end": 7470.81
+          "pnl": -243.77,
+          "return_pct": -3.0636,
+          "equity_start": 7956.93,
+          "equity_end": 7713.16
         },
         {
           "window": 47,
           "test_start": "2024-02-15",
           "test_end": "2024-05-15",
           "trades": 3,
-          "pnl": -239.91,
-          "return_pct": -3.2113,
-          "equity_start": 7470.81,
-          "equity_end": 7230.9
+          "pnl": -242.14,
+          "return_pct": -3.1393,
+          "equity_start": 7713.16,
+          "equity_end": 7471.02
         },
         {
           "window": 48,
           "test_start": "2024-03-18",
           "test_end": "2024-06-14",
-          "trades": 6,
-          "pnl": 253.13,
-          "return_pct": 3.5007,
-          "equity_start": 7230.9,
-          "equity_end": 7484.03
+          "trades": 7,
+          "pnl": 184.23,
+          "return_pct": 2.4659,
+          "equity_start": 7471.02,
+          "equity_end": 7655.25
         },
         {
           "window": 49,
           "test_start": "2024-04-17",
           "test_end": "2024-07-17",
           "trades": 4,
-          "pnl": 355.04,
-          "return_pct": 4.744,
-          "equity_start": 7484.03,
-          "equity_end": 7839.07
+          "pnl": 362.91,
+          "return_pct": 4.7407,
+          "equity_start": 7655.25,
+          "equity_end": 8018.16
         },
         {
           "window": 50,
           "test_start": "2024-05-16",
           "test_end": "2024-08-15",
           "trades": 6,
-          "pnl": -494.36,
-          "return_pct": -6.3064,
-          "equity_start": 7839.07,
-          "equity_end": 7344.71
+          "pnl": -470.37,
+          "return_pct": -5.8663,
+          "equity_start": 8018.16,
+          "equity_end": 7547.79
         },
         {
           "window": 51,
           "test_start": "2024-06-17",
           "test_end": "2024-09-16",
           "trades": 3,
-          "pnl": -10.4,
-          "return_pct": -0.1416,
-          "equity_start": 7344.71,
-          "equity_end": 7334.31
+          "pnl": 6.58,
+          "return_pct": 0.0872,
+          "equity_start": 7547.79,
+          "equity_end": 7554.37
         },
         {
           "window": 52,
           "test_start": "2024-07-18",
           "test_end": "2024-10-15",
           "trades": 6,
-          "pnl": 222.04,
-          "return_pct": 3.0274,
-          "equity_start": 7334.31,
-          "equity_end": 7556.35
+          "pnl": 222.05,
+          "return_pct": 2.9394,
+          "equity_start": 7554.37,
+          "equity_end": 7776.42
         },
         {
           "window": 53,
           "test_start": "2024-08-16",
           "test_end": "2024-11-13",
           "trades": 3,
-          "pnl": 95.73,
-          "return_pct": 1.2669,
-          "equity_start": 7556.35,
-          "equity_end": 7652.08
+          "pnl": 93.67,
+          "return_pct": 1.2045,
+          "equity_start": 7776.42,
+          "equity_end": 7870.09
         },
         {
           "window": 54,
           "test_start": "2024-09-17",
           "test_end": "2024-12-13",
           "trades": 5,
-          "pnl": 98.83,
-          "return_pct": 1.2915,
-          "equity_start": 7652.08,
-          "equity_end": 7750.91
+          "pnl": 127.04,
+          "return_pct": 1.6142,
+          "equity_start": 7870.09,
+          "equity_end": 7997.13
         },
         {
           "window": 55,
           "test_start": "2024-10-16",
           "test_end": "2025-01-16",
           "trades": 4,
-          "pnl": -749.99,
-          "return_pct": -9.6762,
-          "equity_start": 7750.91,
-          "equity_end": 7000.92
+          "pnl": -797.09,
+          "return_pct": -9.9672,
+          "equity_start": 7997.13,
+          "equity_end": 7200.04
         },
         {
           "window": 56,
           "test_start": "2024-11-14",
           "test_end": "2025-02-18",
           "trades": 6,
-          "pnl": 262.76,
-          "return_pct": 3.7532,
-          "equity_start": 7000.92,
-          "equity_end": 7263.68
+          "pnl": 268.01,
+          "return_pct": 3.7223,
+          "equity_start": 7200.04,
+          "equity_end": 7468.05
         },
         {
           "window": 57,
           "test_start": "2024-12-16",
           "test_end": "2025-03-19",
           "trades": 4,
-          "pnl": -1.24,
-          "return_pct": -0.0171,
-          "equity_start": 7263.68,
-          "equity_end": 7262.44
+          "pnl": -6.21,
+          "return_pct": -0.0832,
+          "equity_start": 7468.05,
+          "equity_end": 7461.84
         },
         {
           "window": 58,
           "test_start": "2025-01-17",
           "test_end": "2025-04-17",
           "trades": 6,
-          "pnl": -227.49,
-          "return_pct": -3.1324,
-          "equity_start": 7262.44,
-          "equity_end": 7034.95
+          "pnl": -229.01,
+          "return_pct": -3.0691,
+          "equity_start": 7461.84,
+          "equity_end": 7232.83
         },
         {
           "window": 59,
           "test_start": "2025-02-19",
           "test_end": "2025-05-19",
           "trades": 6,
-          "pnl": -10.73,
-          "return_pct": -0.1525,
-          "equity_start": 7034.95,
-          "equity_end": 7024.22
+          "pnl": -10.65,
+          "return_pct": -0.1472,
+          "equity_start": 7232.83,
+          "equity_end": 7222.18
         },
         {
           "window": 60,
           "test_start": "2025-03-20",
           "test_end": "2025-06-18",
           "trades": 2,
-          "pnl": 70.96,
-          "return_pct": 1.0102,
-          "equity_start": 7024.22,
-          "equity_end": 7095.18
+          "pnl": 81.13,
+          "return_pct": 1.1233,
+          "equity_start": 7222.18,
+          "equity_end": 7303.31
         },
         {
           "window": 61,
           "test_start": "2025-04-21",
           "test_end": "2025-07-21",
           "trades": 6,
-          "pnl": 13.24,
-          "return_pct": 0.1866,
-          "equity_start": 7095.18,
-          "equity_end": 7108.42
+          "pnl": 4.45,
+          "return_pct": 0.0609,
+          "equity_start": 7303.31,
+          "equity_end": 7307.76
         },
         {
           "window": 62,
           "test_start": "2025-05-20",
           "test_end": "2025-08-19",
           "trades": 6,
-          "pnl": 106.81,
-          "return_pct": 1.5026,
-          "equity_start": 7108.42,
-          "equity_end": 7215.23
+          "pnl": 108.71,
+          "return_pct": 1.4876,
+          "equity_start": 7307.76,
+          "equity_end": 7416.47
         },
         {
           "window": 63,
           "test_start": "2025-06-20",
           "test_end": "2025-09-18",
-          "trades": 6,
-          "pnl": -147.09,
-          "return_pct": -2.0386,
-          "equity_start": 7215.23,
-          "equity_end": 7068.14
+          "trades": 5,
+          "pnl": -102.7,
+          "return_pct": -1.3848,
+          "equity_start": 7416.47,
+          "equity_end": 7313.77
         },
         {
           "window": 64,
           "test_start": "2025-07-22",
           "test_end": "2025-10-17",
           "trades": 6,
-          "pnl": -113.8,
-          "return_pct": -1.61,
-          "equity_start": 7068.14,
-          "equity_end": 6954.34
+          "pnl": 42.65,
+          "return_pct": 0.5831,
+          "equity_start": 7313.77,
+          "equity_end": 7356.42
         },
         {
           "window": 65,
           "test_start": "2025-08-20",
           "test_end": "2025-11-17",
           "trades": 5,
-          "pnl": 50.87,
-          "return_pct": 0.7315,
-          "equity_start": 6954.34,
-          "equity_end": 7005.21
+          "pnl": 62.22,
+          "return_pct": 0.8458,
+          "equity_start": 7356.42,
+          "equity_end": 7418.64
         },
         {
           "window": 66,
           "test_start": "2025-09-19",
           "test_end": "2025-12-17",
           "trades": 6,
-          "pnl": -41.94,
-          "return_pct": -0.5987,
-          "equity_start": 7005.21,
-          "equity_end": 6963.27
+          "pnl": -44.3,
+          "return_pct": -0.5971,
+          "equity_start": 7418.64,
+          "equity_end": 7374.34
         },
         {
           "window": 67,
           "test_start": "2025-10-20",
           "test_end": "2026-01-20",
           "trades": 3,
-          "pnl": -26.22,
-          "return_pct": -0.3765,
-          "equity_start": 6963.27,
-          "equity_end": 6937.05
+          "pnl": -25.57,
+          "return_pct": -0.3467,
+          "equity_start": 7374.34,
+          "equity_end": 7348.77
         },
         {
           "window": 68,
           "test_start": "2025-11-18",
           "test_end": "2026-02-19",
           "trades": 8,
-          "pnl": 40.36,
-          "return_pct": 0.5818,
-          "equity_start": 6937.05,
-          "equity_end": 6977.41
+          "pnl": 33.73,
+          "return_pct": 0.459,
+          "equity_start": 7348.77,
+          "equity_end": 7382.5
         },
         {
           "window": 69,
           "test_start": "2025-12-18",
           "test_end": "2026-03-20",
           "trades": 4,
-          "pnl": 5.17,
-          "return_pct": 0.0741,
-          "equity_start": 6977.41,
-          "equity_end": 6982.58
+          "pnl": -20.74,
+          "return_pct": -0.2809,
+          "equity_start": 7382.5,
+          "equity_end": 7361.76
+        },
+        {
+          "window": 70,
+          "test_start": "2026-01-21",
+          "test_end": "2026-04-21",
+          "trades": 5,
+          "pnl": 70.42,
+          "return_pct": 0.9566,
+          "equity_start": 7361.76,
+          "equity_end": 7432.18
         }
       ]
     },
-    "runtime_s": 157.8
+    "runtime_s": 193.5
   },
   "summary": {
     "test1_verdict": "FAIL - significant OOS degradation",
     "test2_verdict": "PASS",
     "test3_verdict": "PASS - majority profitable",
     "overall_verdict": "MIXED - review individual tests",
-    "total_runtime_s": 1919.4,
-    "total_runtime_min": 32.0
+    "total_runtime_s": 2296.8,
+    "total_runtime_min": 38.3
   }
 }

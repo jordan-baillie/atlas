@@ -31,8 +31,14 @@
       "passed": true,
       "details": "6/6 pass",
       "source": "manual"
+    },
+    {
+      "date": "2026-04-29",
+      "passed": true,
+      "details": "6/6 pass",
+      "source": "cron"
     }
   ],
-  "consecutive_passes": 0,
+  "consecutive_passes": 1,
   "gate_target": 5
 }

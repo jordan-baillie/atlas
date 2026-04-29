@@ -2,96 +2,94 @@
   "strategy": "momentum_breakout",
   "market": "sp500",
   "params": {
-    "atr_stop_mult": 1.0,
+    "atr_stop_mult": 0.61,
     "max_hold_days": 15,
-    "lookback_days": 15,
-    "atr_period": 20,
-    "trend_ma_period": 20,
+    "lookback_days": 14,
+    "atr_period": 18,
+    "trend_ma_period": 27,
     "breakout_period": 10
   },
   "metrics": {
-    "total_trades": 1036,
-    "cagr_pct": 24.1174,
-    "cagr_full_period_pct": 20.0565,
-    "sharpe": 0.8199,
-    "sortino": 1.1054,
-    "max_drawdown_pct": 34.5646,
-    "win_rate_pct": 40.64,
-    "profit_factor": 1.2797,
-    "total_pnl": 12996.43,
-    "avg_trade": 12.54,
-    "final_equity": 18037.68,
-    "expectancy_r": 0.2213,
-    "avg_r": 0.2213,
-    "r_count": 1036,
-    "edge_p_value": 0.000183,
+    "total_trades": 1145,
+    "cagr_pct": 21.1272,
+    "cagr_full_period_pct": 17.8342,
+    "sharpe": 0.6505,
+    "sortino": 0.8326,
+    "max_drawdown_pct": 28.2125,
+    "win_rate_pct": 38.08,
+    "profit_factor": 1.2388,
+    "total_pnl": 11685.55,
+    "avg_trade": 10.21,
+    "final_equity": 15874.39,
+    "expectancy_r": 0.1986,
+    "avg_r": 0.1986,
+    "r_count": 1145,
+    "edge_p_value": 0.007387,
     "edge_significant": true,
-    "var_95_pct": 2.344,
-    "cvar_95_pct": 3.568,
-    "calmar": 0.6977,
-    "mc_p95_drawdown_pct": 46.94,
+    "var_95_pct": 2.85,
+    "cvar_95_pct": 4.258,
+    "calmar": 0.7489,
+    "mc_p95_drawdown_pct": 53.41,
     "mc_fragile": false,
+    "windows_configured": 70,
+    "windows_used": 70,
+    "window_coverage_pct": 100.0,
     "strategy_breakdown": {
       "momentum_breakout": {
-        "trades": 128,
-        "total_pnl": 4337.38,
-        "win_rate_pct": 29.7
-      },
-      "sector_rotation": {
-        "trades": 878,
-        "total_pnl": 7915.17,
-        "win_rate_pct": 41.2
+        "trades": 197,
+        "total_pnl": 7458.39,
+        "win_rate_pct": 23.9
       },
       "connors_rsi2": {
-        "trades": 5,
-        "total_pnl": 125.74,
-        "win_rate_pct": 80.0
+        "trades": 1,
+        "total_pnl": 5.98,
+        "win_rate_pct": 100.0
+      },
+      "sector_rotation": {
+        "trades": 926,
+        "total_pnl": 4428.62,
+        "win_rate_pct": 40.7
       },
       "mean_reversion": {
-        "trades": 24,
-        "total_pnl": 848.77,
-        "win_rate_pct": 70.8
-      },
-      "opening_gap": {
-        "trades": 1,
-        "total_pnl": -230.63,
-        "win_rate_pct": 0.0
+        "trades": 21,
+        "total_pnl": -207.44,
+        "win_rate_pct": 52.4
       }
     },
     "regime_metrics": {
       "bear": {
-        "trades": 15,
-        "win_rate_pct": 53.3,
-        "avg_trade": 8.19,
-        "total_pnl": 122.91,
-        "profit_factor": 1.4575,
-        "sharpe_approx": 0.1265,
-        "avg_r": 0.6331
+        "trades": 28,
+        "win_rate_pct": 46.4,
+        "avg_trade": 9.21,
+        "total_pnl": 257.97,
+        "profit_factor": 1.3117,
+        "sharpe_approx": 0.0659,
+        "avg_r": 0.2171
       },
       "bull": {
-        "trades": 335,
-        "win_rate_pct": 41.5,
-        "avg_trade": 23.5,
-        "total_pnl": 7874.14,
-        "profit_factor": 1.4273,
-        "sharpe_approx": 0.1338,
-        "avg_r": 0.2711
+        "trades": 365,
+        "win_rate_pct": 37.8,
+        "avg_trade": 15.37,
+        "total_pnl": 5611.33,
+        "profit_factor": 1.2978,
+        "sharpe_approx": 0.0852,
+        "avg_r": 0.1846
       },
       "neutral": {
-        "trades": 686,
-        "win_rate_pct": 39.9,
-        "avg_trade": 7.29,
-        "total_pnl": 4999.38,
-        "profit_factor": 1.1801,
-        "sharpe_approx": 0.0575,
-        "avg_r": 0.188
+        "trades": 752,
+        "win_rate_pct": 37.9,
+        "avg_trade": 7.73,
+        "total_pnl": 5816.25,
+        "profit_factor": 1.1988,
+        "sharpe_approx": 0.057,
+        "avg_r": 0.2046
       }
     },
-    "solo_sharpe": 0.3202,
-    "runtime_s": 117.4
+    "solo_sharpe": 0.1956,
+    "runtime_s": 486.0
   },
-  "description": "atr_stop_mult=1.0: testing stop distance",
-  "experiments_run": 196,
-  "experiments_kept": 13,
-  "updated_at": "2026-04-19T14:34:45.559814+00:00"
+  "description": "lookback_days: 16 \u2192 14",
+  "experiments_run": 275,
+  "experiments_kept": 24,
+  "updated_at": "2026-04-27T13:29:28.276139+00:00"
 }

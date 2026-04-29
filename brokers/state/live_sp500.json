@@ -3,48 +3,13 @@
   "mode": "live",
   "positions": [
     {
-      "ticker": "ADI",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-28",
-      "entry_price": 403.88,
-      "shares": 2,
-      "stop_price": 383.7699,
-      "order_id": "",
-      "stop_order_id": "af9f454c-0ead-4b27-93a4-bc1173abfea8",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "AVGO",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-28",
-      "entry_price": 422.57,
-      "shares": 1,
-      "stop_price": 407.66,
-      "order_id": "",
-      "stop_order_id": "324230c5-843d-4cbf-837e-ca0eef6bb48f",
-      "tp_order_id": ""
-    },
-    {
       "ticker": "CAT",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-28",
+      "entry_date": "2026-04-29",
       "entry_price": 835.24,
       "shares": 1,
       "stop_price": 799.47,
-      "order_id": "",
-      "stop_order_id": "d77ffda9-24de-4ebc-a7df-4a5d31cf1c8d",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "FCX",
-      "strategy": "connors_rsi2",
-      "entry_date": "2026-04-28",
-      "entry_price": 61.48,
-      "shares": 5,
-      "stop_price": 58.34,
-      "order_id": "",
-      "stop_order_id": "fc1d7117-fa54-4ad7-9432-e338ccb0184d",
-      "tp_order_id": ""
+      "order_id": ""
     }
   ],
   "closed_trades": [
@@ -2028,11 +1993,33 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-28",
+      "equity": 5287.88,
+      "cash": 818.34,
+      "positions_value": 4469.54,
+      "num_positions": 1,
+      "total_realized_pnl": 293.46,
+      "total_closed_trades": 28,
+      "positions": [
+        {
+          "ticker": "CAT",
+          "strategy": "momentum_breakout",
+          "shares": 1,
+          "entry_price": 835.24,
+          "current_price": 817.87,
+          "unrealized_pnl": -17.37,
+          "mae": -2.08,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 5228.42,
+  "daily_high_water": 5189.06,
+  "daily_high_water_date": "2026-04-29",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-28T08:00:51.894004",
-  "daily_high_water_date": "2026-04-28"
+  "last_saved": "2026-04-29T10:01:56.496154"
 }

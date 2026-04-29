@@ -39,12 +39,22 @@ def _make_order(ticker: str, order_id: str, status: str = "held",
 
 def _make_broker(orders: list) -> MagicMock:
     """Build a mock broker that returns *orders* from get_open_orders."""
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from brokers.base import OrderResult, OrderStatus
+
     b = MagicMock()
     b.get_open_orders.return_value = orders
     cancel_ok = MagicMock()
     cancel_ok.success = True
     cancel_ok.message = "cancelled"
     b.cancel_order.return_value = cancel_ok
+    # Phase 2B: mock get_order_status to return CANCELLED immediately so
+    # _wait_for_cancel_confirm confirms on the first poll (no real timeout).
+    b.get_order_status.return_value = OrderResult(
+        success=True, order_id="", status=OrderStatus.CANCELLED
+    )
     return b
 
 

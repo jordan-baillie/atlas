@@ -1,22 +1,22 @@
 # connors_rsi2
 
-> **Status:** active | **Best Sharpe:** 0.2987 | **Trades:** 859
-> **Updated:** 2026-04-02 06:06
+> **Status:** active | **Best Sharpe:** 0.7120 | **Trades:** 1144
+> **Updated:** 2026-04-28 04:10
 
 ## Current Best Params
 
 | Parameter | Value |
 |-----------|-------|
 | atr_period | 14 |
-| atr_stop_mult | 1.0 |
+| atr_stop_mult | 0.9 |
 | exit_mode | sma |
 | ibs_filter_enabled | False |
 | ibs_max | 0.5 |
-| max_hold_days | 5 |
+| max_hold_days | 10 |
 | min_consecutive_down | 1 |
 | rsi_entry | 40 |
 | rsi_exit | 65 |
-| rsi_period | 3 |
+| rsi_period | 4 |
 | sma200_filter | False |
 | sma_exit_period | 5 |
 | sma_trend_period | 150 |
@@ -25,19 +25,17 @@
 
 | Metric | Value |
 |--------|-------|
-| Sharpe | 0.2987 |
-| CAGR | 9.2% |
-| Profit Factor | 1.29 |
-| Max Drawdown | 13.6% |
-| Total Trades | 859 |
-| Win Rate | 60.3% |
+| Sharpe | 0.7120 |
+| CAGR | 23.3% |
+| Profit Factor | 1.26 |
+| Max Drawdown | 26.9% |
+| Total Trades | 1144 |
+| Win Rate | 38.4% |
 
 ## History
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
-| Date | Sharpe | Trades | PF | CAGR | Change |
-| Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
 | Date | Sharpe | Trades | PF | CAGR | Change |
@@ -66,3 +64,5 @@
 | 2026-04-02 06:02 | 0.2411 | 765 | 1.31 | 7.7% | rsi_period=3 |
 | 2026-04-02 06:06 | 0.2840 | 820 | 1.28 | 8.9% | atr_stop_mult=1.0 |
 | 2026-04-02 06:06 | 0.2987 | 859 | 1.29 | 9.2% | max_hold_days=5 |
+| 2026-04-28 04:10 | 0.7120 | 1144 | 1.26 | 23.3% | atr_stop_mult: 1.2 → 0.9 |
+| 2026-04-28 04:10 | 0.7120 | 1144 | 1.26 | 23.3% | autoresearch_runner keep: atr_stop_mult=0.9 |

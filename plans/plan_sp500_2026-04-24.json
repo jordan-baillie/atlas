@@ -1,0 +1,45 @@
+{
+  "trade_date": "2026-04-24",
+  "generated_at": "2026-04-29T10:01:33.167028",
+  "market_id": "sp500",
+  "config_version": "test",
+  "status": "PENDING_APPROVAL",
+  "portfolio_snapshot": {
+    "equity": 5000.0,
+    "cash": 5000.0,
+    "open_positions": 0,
+    "total_pnl": 0.0,
+    "total_pnl_pct": 0.0
+  },
+  "proposed_entries": [
+    {
+      "ticker": "AAPL",
+      "strategy": "momentum_breakout",
+      "entry_price": 100.0,
+      "stop_price": 95.0,
+      "take_profit": 115.0,
+      "position_size": 5,
+      "position_value": 500.0,
+      "risk_amount": 25.0,
+      "confidence": 0.9,
+      "rationale": "test",
+      "features": {},
+      "sector": "Technology",
+      "market_id": "sp500"
+    }
+  ],
+  "rejected_entries": [],
+  "proposed_exits": [],
+  "total_signals_generated": 1,
+  "risk_summary": {
+    "total_proposed_cost": 500.0,
+    "total_proposed_risk": 25.0,
+    "risk_pct_of_equity": 0.5,
+    "positions_after": 1,
+    "cash_after_entries": 4500.0,
+    "portfolio_exposure_pct": 10.0
+  },
+  "open_positions": [],
+  "allocation_summary": {},
+  "vol_scale_applied": 1.0
+}

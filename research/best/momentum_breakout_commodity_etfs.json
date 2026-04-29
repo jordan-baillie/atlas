@@ -2,86 +2,89 @@
   "strategy": "momentum_breakout",
   "market": "commodity_etfs",
   "params": {
-    "atr_stop_mult": 0.8,
+    "atr_stop_mult": 0.72,
     "max_hold_days": 15,
-    "lookback_days": 25,
+    "lookback_days": 22,
     "atr_period": 20,
-    "trend_ma_period": 30,
+    "trend_ma_period": 27,
     "breakout_period": 10
   },
   "metrics": {
-    "total_trades": 500,
-    "cagr_pct": 18.3363,
-    "cagr_full_period_pct": 15.3533,
-    "sharpe": 1.0923,
-    "sortino": 1.5798,
-    "max_drawdown_pct": 19.5126,
-    "win_rate_pct": 42.0,
-    "profit_factor": 1.6479,
-    "total_pnl": 8434.89,
-    "avg_trade": 16.87,
-    "final_equity": 13563.56,
-    "expectancy_r": 0.5373,
-    "avg_r": 0.5373,
-    "r_count": 500,
-    "edge_p_value": 0.000344,
+    "total_trades": 519,
+    "cagr_pct": 22.3623,
+    "cagr_full_period_pct": 18.6864,
+    "sharpe": 1.2393,
+    "sortino": 1.7577,
+    "max_drawdown_pct": 16.6656,
+    "win_rate_pct": 42.97,
+    "profit_factor": 1.764,
+    "total_pnl": 11393.09,
+    "avg_trade": 21.95,
+    "final_equity": 16565.98,
+    "expectancy_r": 0.6315,
+    "avg_r": 0.6315,
+    "r_count": 519,
+    "edge_p_value": 0.000133,
     "edge_significant": true,
-    "var_95_pct": 1.078,
-    "cvar_95_pct": 1.617,
-    "calmar": 0.9397,
-    "mc_p95_drawdown_pct": 21.38,
+    "var_95_pct": 1.192,
+    "cvar_95_pct": 1.854,
+    "calmar": 1.3418,
+    "mc_p95_drawdown_pct": 21.95,
     "mc_fragile": false,
+    "windows_configured": 69,
+    "windows_used": 69,
+    "window_coverage_pct": 100.0,
     "strategy_breakdown": {
       "connors_rsi2": {
-        "trades": 210,
-        "total_pnl": -492.61,
-        "win_rate_pct": 51.4
+        "trades": 215,
+        "total_pnl": -204.4,
+        "win_rate_pct": 53.5
       },
       "momentum_breakout": {
-        "trades": 229,
-        "total_pnl": 8034.42,
-        "win_rate_pct": 27.5
+        "trades": 240,
+        "total_pnl": 10798.24,
+        "win_rate_pct": 28.3
       },
       "mean_reversion": {
-        "trades": 61,
-        "total_pnl": 893.08,
-        "win_rate_pct": 63.9
+        "trades": 64,
+        "total_pnl": 799.25,
+        "win_rate_pct": 62.5
       }
     },
     "regime_metrics": {
       "bear": {
-        "trades": 30,
-        "win_rate_pct": 50.0,
-        "avg_trade": 19.35,
-        "total_pnl": 580.47,
-        "profit_factor": 2.0125,
-        "sharpe_approx": 0.2353,
-        "avg_r": 0.6697
+        "trades": 32,
+        "win_rate_pct": 56.2,
+        "avg_trade": -5.5,
+        "total_pnl": -176.11,
+        "profit_factor": 0.7968,
+        "sharpe_approx": -0.0854,
+        "avg_r": -0.2329
       },
       "bull": {
-        "trades": 102,
-        "win_rate_pct": 41.2,
-        "avg_trade": 27.74,
-        "total_pnl": 2829.4,
-        "profit_factor": 1.9498,
-        "sharpe_approx": 0.193,
-        "avg_r": 0.8684
+        "trades": 84,
+        "win_rate_pct": 45.2,
+        "avg_trade": 82.45,
+        "total_pnl": 6925.49,
+        "profit_factor": 3.2468,
+        "sharpe_approx": 0.3621,
+        "avg_r": 2.0153
       },
       "neutral": {
-        "trades": 368,
-        "win_rate_pct": 41.6,
-        "avg_trade": 13.65,
-        "total_pnl": 5025.02,
-        "profit_factor": 1.5308,
-        "sharpe_approx": 0.1277,
-        "avg_r": 0.4348
+        "trades": 403,
+        "win_rate_pct": 41.4,
+        "avg_trade": 11.52,
+        "total_pnl": 4643.71,
+        "profit_factor": 1.4236,
+        "sharpe_approx": 0.1072,
+        "avg_r": 0.4117
       }
     },
-    "solo_sharpe": 0.6881,
-    "runtime_s": 19.7
+    "solo_sharpe": 1.1499,
+    "runtime_s": 27.1
   },
-  "description": "trend_ma=30 on optimized base",
+  "description": "atr_stop_mult: 0.8 \u2192 0.72",
   "experiments_run": 0,
-  "experiments_kept": 13,
-  "updated_at": "2026-04-17T14:43:58.335609+00:00"
+  "experiments_kept": 18,
+  "updated_at": "2026-04-27T14:02:03.557866+00:00"
 }

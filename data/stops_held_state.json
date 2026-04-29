@@ -1,1 +1,34 @@
-{}
+{
+  "CAT::sp500": {
+    "first_seen": "2026-04-25T00:01:04.530086",
+    "order_id": "5bcbbb23-82e8-4b19-b17d-139e5a448dea",
+    "retry_count": 4,
+    "last_alerted_date": "2026-04-29",
+    "permanently_skipped": true,
+    "skip_reason": "max_retries_4"
+  },
+  "GLD::commodity_etfs": {
+    "first_seen": "2026-04-29T09:55:08.837203",
+    "order_id": "1ba45d16-4443-46b4-b3bd-bde720c77c46",
+    "retry_count": 0,
+    "last_alerted_date": "",
+    "permanently_skipped": false,
+    "skip_reason": ""
+  },
+  "XLY::sector_etfs": {
+    "first_seen": "2026-04-29T09:55:15.951121",
+    "order_id": "45a288c3-2a27-44eb-8307-deaded0b9b0c",
+    "retry_count": 0,
+    "last_alerted_date": "",
+    "permanently_skipped": false,
+    "skip_reason": ""
+  },
+  "XLI::sector_etfs": {
+    "first_seen": "2026-04-29T09:55:15.951121",
+    "order_id": "d0813b83-2604-4eac-9c4d-20d43d083f1b",
+    "retry_count": 0,
+    "last_alerted_date": "",
+    "permanently_skipped": false,
+    "skip_reason": ""
+  }
+}

@@ -2,14 +2,14 @@
   "strategy": "mean_reversion",
   "market": "sp500",
   "params": {
-    "rsi_period": 14,
-    "rsi_oversold": 52,
-    "zscore_lookback": 38,
-    "zscore_entry": -1.8,
+    "rsi_period": 10,
+    "rsi_oversold": 35,
+    "zscore_lookback": 20,
+    "zscore_entry": -0.9,
     "atr_period": 20,
     "atr_stop_mult": 1.35,
     "profit_target_atr_mult": 2.5,
-    "max_hold_days": 20,
+    "max_hold_days": 25,
     "sma200_filter": false,
     "ibs_max": 0.7,
     "volume": {
@@ -40,83 +40,86 @@
     }
   },
   "metrics": {
-    "total_trades": 617,
-    "cagr_pct": 11.5805,
-    "cagr_full_period_pct": 9.7417,
-    "sharpe": 0.4725,
-    "sortino": 0.6029,
-    "max_drawdown_pct": 21.3179,
-    "win_rate_pct": 39.55,
-    "profit_factor": 1.2861,
-    "total_pnl": 4734.11,
-    "avg_trade": 7.67,
-    "final_equity": 9595.54,
-    "expectancy_r": 0.1875,
-    "avg_r": 0.1875,
-    "r_count": 617,
-    "edge_p_value": 0.006248,
+    "total_trades": 1142,
+    "cagr_pct": 33.4163,
+    "cagr_full_period_pct": 27.9489,
+    "sharpe": 1.0215,
+    "sortino": 1.3764,
+    "max_drawdown_pct": 37.2144,
+    "win_rate_pct": 39.75,
+    "profit_factor": 1.3296,
+    "total_pnl": 24543.35,
+    "avg_trade": 21.49,
+    "final_equity": 28387.83,
+    "expectancy_r": 0.3044,
+    "avg_r": 0.3044,
+    "r_count": 1142,
+    "edge_p_value": 8.9e-05,
     "edge_significant": true,
-    "var_95_pct": 1.506,
-    "cvar_95_pct": 2.383,
-    "calmar": 0.5432,
-    "mc_p95_drawdown_pct": 26.36,
+    "var_95_pct": 2.539,
+    "cvar_95_pct": 3.961,
+    "calmar": 0.8979,
+    "mc_p95_drawdown_pct": 59.58,
     "mc_fragile": false,
+    "windows_configured": 70,
+    "windows_used": 70,
+    "window_coverage_pct": 100.0,
     "strategy_breakdown": {
       "momentum_breakout": {
-        "trades": 102,
-        "total_pnl": 2694.72,
-        "win_rate_pct": 36.3
-      },
-      "sector_rotation": {
-        "trades": 506,
-        "total_pnl": 1884.71,
-        "win_rate_pct": 39.7
+        "trades": 206,
+        "total_pnl": 14091.35,
+        "win_rate_pct": 27.2
       },
       "connors_rsi2": {
-        "trades": 1,
-        "total_pnl": 28.27,
-        "win_rate_pct": 100.0
+        "trades": 3,
+        "total_pnl": -96.19,
+        "win_rate_pct": 66.7
+      },
+      "sector_rotation": {
+        "trades": 881,
+        "total_pnl": 9165.12,
+        "win_rate_pct": 41.4
       },
       "mean_reversion": {
-        "trades": 8,
-        "total_pnl": 126.41,
-        "win_rate_pct": 62.5
+        "trades": 52,
+        "total_pnl": 1383.07,
+        "win_rate_pct": 59.6
       }
     },
     "regime_metrics": {
       "bear": {
-        "trades": 17,
-        "win_rate_pct": 41.2,
-        "avg_trade": 14.52,
-        "total_pnl": 246.92,
-        "profit_factor": 1.892,
-        "sharpe_approx": 0.2167,
-        "avg_r": 0.4289
+        "trades": 14,
+        "win_rate_pct": 57.1,
+        "avg_trade": 30.36,
+        "total_pnl": 425.09,
+        "profit_factor": 2.0907,
+        "sharpe_approx": 0.2061,
+        "avg_r": 0.9337
       },
       "bull": {
-        "trades": 201,
-        "win_rate_pct": 37.8,
-        "avg_trade": 9.97,
-        "total_pnl": 2004.87,
-        "profit_factor": 1.4117,
-        "sharpe_approx": 0.1274,
-        "avg_r": 0.2224
+        "trades": 376,
+        "win_rate_pct": 39.6,
+        "avg_trade": 33.68,
+        "total_pnl": 12664.47,
+        "profit_factor": 1.4006,
+        "sharpe_approx": 0.1253,
+        "avg_r": 0.266
       },
       "neutral": {
-        "trades": 399,
-        "win_rate_pct": 40.4,
-        "avg_trade": 6.22,
-        "total_pnl": 2482.32,
-        "profit_factor": 1.2177,
-        "sharpe_approx": 0.0728,
-        "avg_r": 0.1596
+        "trades": 752,
+        "win_rate_pct": 39.5,
+        "avg_trade": 15.23,
+        "total_pnl": 11453.79,
+        "profit_factor": 1.2697,
+        "sharpe_approx": 0.0729,
+        "avg_r": 0.3119
       }
     },
-    "solo_sharpe": 0.4652,
-    "runtime_s": 515.1
+    "solo_sharpe": 0.0703,
+    "runtime_s": 137.9
   },
-  "description": "atr_stop_mult: 1.5 \u2192 1.35",
-  "experiments_run": 590,
-  "experiments_kept": 29,
-  "updated_at": "2026-04-13T11:03:27.735168+00:00"
+  "description": "rsi_oversold: 39 \u2192 35 (less selective entry)",
+  "experiments_run": 672,
+  "experiments_kept": 37,
+  "updated_at": "2026-04-28T14:40:31.851863+00:00"
 }

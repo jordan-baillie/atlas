@@ -878,6 +878,67 @@
 
     .image-thumb:hover .thumb-remove { opacity: 1; }
 
+    /* ── Document attachment chip (xlsx/csv/txt) ── */
+    .doc-chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 28px 0 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface-2, var(--surface));
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-1);
+      max-width: 220px;
+      flex-shrink: 0;
+      animation: msg-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .doc-chip .doc-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    .doc-chip .doc-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .doc-chip .thumb-remove {
+      position: absolute;
+      top: 50%;
+      right: 4px;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .doc-chip:hover .thumb-remove { opacity: 1; }
+
+    /* ── Document chip in user message ── */
+    .msg-docs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .msg-docs .doc-chip {
+      cursor: default;
+      opacity: 0.95;
+    }
+
     /* ── Drop zone overlay ── */
     .drop-overlay {
       position: absolute;
@@ -1376,8 +1437,8 @@
 <!-- ── Input bar ── -->
 <div class="agent-input-bar">
   <div class="input-row">
-    <input type="file" id="agent-file-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple style="display:none">
-    <button id="agent-attach" type="button" title="Attach image (paste or drag &amp; drop also works)">&#128206;</button>
+    <input type="file" id="agent-file-input" accept="image/png,image/jpeg,image/gif,image/webp,.xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.md,.json" multiple style="display:none">
+    <button id="agent-attach" type="button" title="Attach image or spreadsheet (paste / drag &amp; drop also works)">&#128206;</button>
     <textarea
       id="agent-input"
       placeholder="Message Homerbot&#8230; (Enter to send, Shift+Enter for newline, paste/drop images)"
@@ -1463,6 +1524,23 @@
   var pendingImages = [];
   var MAX_IMAGES = 5;
   var MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+  // Pending docs (xlsx/csv/txt): [{name, data: base64, mime, size}, ...]
+  var pendingDocs = [];
+  var MAX_DOCS = 5;
+  var MAX_DOC_SIZE = 25 * 1024 * 1024; // 25MB
+  var DOC_EXT_RE = /\.(xlsx|xlsm|xlsb|xls|ods|csv|tsv|txt|md|json|log)$/i;
+  function isDocFile(file) {
+    if (!file) return false;
+    if (file.type && file.type.indexOf('image/') === 0) return false;
+    return DOC_EXT_RE.test(file.name || '');
+  }
+  function docIcon(name) {
+    if (/\.(xlsx|xlsm|xlsb|xls|ods)$/i.test(name)) return '\uD83D\uDCC8'; // chart
+    if (/\.(csv|tsv)$/i.test(name)) return '\uD83D\uDCCA'; // bar chart
+    if (/\.(json)$/i.test(name)) return '{\u2026}';
+    return '\uD83D\uDCC4'; // page
+  }
 
   /* ── DOM refs ─────────────────────────────────────────────────────────── */
   var messagesEl      = document.getElementById('agent-messages');
@@ -1599,10 +1677,43 @@
     renderImagePreviews();
   }
 
+  function addDocFromFile(file) {
+    if (pendingDocs.length >= MAX_DOCS) {
+      alert('Max ' + MAX_DOCS + ' documents per message');
+      return;
+    }
+    if (file.size > MAX_DOC_SIZE) {
+      alert('File too large (max 25MB): ' + file.name);
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var dataUrl = e.target.result;
+      var base64 = dataUrl.split(',')[1] || '';
+      pendingDocs.push({
+        name: file.name,
+        data: base64,
+        mime: file.type || 'application/octet-stream',
+        size: file.size
+      });
+      renderImagePreviews();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeDoc(idx) {
+    pendingDocs.splice(idx, 1);
+    renderImagePreviews();
+  }
+
+  function clearPendingDocs() {
+    pendingDocs = [];
+  }
+
   function renderImagePreviews() {
     if (!previewStrip) return;
     previewStrip.innerHTML = '';
-    if (pendingImages.length === 0) {
+    if (pendingImages.length === 0 && pendingDocs.length === 0) {
       previewStrip.classList.remove('has-images');
       return;
     }
@@ -1626,11 +1737,35 @@
       thumb.appendChild(removeBtn);
       previewStrip.appendChild(thumb);
     });
+    pendingDocs.forEach(function (doc, idx) {
+      var chip = document.createElement('div');
+      chip.className = 'doc-chip';
+      chip.title = doc.name + ' (' + Math.round(doc.size / 1024) + ' KB)';
+      var icon = document.createElement('span');
+      icon.className = 'doc-icon';
+      icon.textContent = docIcon(doc.name);
+      var nameEl = document.createElement('span');
+      nameEl.className = 'doc-name';
+      nameEl.textContent = doc.name;
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'thumb-remove';
+      removeBtn.textContent = '\u00D7';
+      removeBtn.title = 'Remove';
+      var capturedIdx = idx;
+      removeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        removeDoc(capturedIdx);
+      });
+      chip.appendChild(icon);
+      chip.appendChild(nameEl);
+      chip.appendChild(removeBtn);
+      previewStrip.appendChild(chip);
+    });
   }
 
   function send(content) {
     content = (content || '').trim();
-    if (!content && pendingImages.length === 0) return;
+    if (!content && pendingImages.length === 0 && pendingDocs.length === 0) return;
     if (isGenerating) return;
 
     if (!ws || ws.readyState !== 1) {
@@ -1643,17 +1778,23 @@
 
     lastUserMessage = content;
     clearEmpty();
-    appendUserMessage(content, pendingImages.slice());
+    appendUserMessage(content, pendingImages.slice(), pendingDocs.slice());
 
-    // Build WebSocket payload with images
+    // Build WebSocket payload with images / attachments
     var payload = { type: 'send', content: content, session_id: currentSessionId, use_teams: useTeams };
     if (pendingImages.length > 0) {
       payload.images = pendingImages.map(function (img) {
         return { data: img.data, mime: img.mime };
       });
     }
+    if (pendingDocs.length > 0) {
+      payload.attachments = pendingDocs.map(function (doc) {
+        return { name: doc.name, data: doc.data, mime: doc.mime };
+      });
+    }
     ws.send(JSON.stringify(payload));
     clearPendingImages();
+    clearPendingDocs();
 
     isGenerating = true;
     setConnStatus('thinking');
@@ -1841,7 +1982,7 @@
     return ts;
   }
 
-  function appendUserMessage(content, images) {
+  function appendUserMessage(content, images, docs) {
     var div = document.createElement('div');
     div.className = 'agent-msg agent-msg-user';
     var bubble = document.createElement('div');
@@ -1859,6 +2000,26 @@
         imgsDiv.appendChild(imgEl);
       });
       bubble.appendChild(imgsDiv);
+    }
+    // Show attached documents in the message
+    if (docs && docs.length > 0) {
+      var docsDiv = document.createElement('div');
+      docsDiv.className = 'msg-docs';
+      docs.forEach(function (doc) {
+        var chip = document.createElement('div');
+        chip.className = 'doc-chip';
+        chip.title = doc.name + ' (' + Math.round((doc.size || 0) / 1024) + ' KB)';
+        var icon = document.createElement('span');
+        icon.className = 'doc-icon';
+        icon.textContent = docIcon(doc.name);
+        var nameEl = document.createElement('span');
+        nameEl.className = 'doc-name';
+        nameEl.textContent = doc.name;
+        chip.appendChild(icon);
+        chip.appendChild(nameEl);
+        docsDiv.appendChild(chip);
+      });
+      bubble.appendChild(docsDiv);
     }
     // Edit button — puts text back in input for editing
     var editBtn = document.createElement('button');
@@ -2884,7 +3045,17 @@
     attachBtn.addEventListener('click', function () { fileInput.click(); });
     fileInput.addEventListener('change', function () {
       var files = fileInput.files;
-      for (var i = 0; i < files.length; i++) { addImageFromFile(files[i]); }
+      for (var i = 0; i < files.length; i++) {
+        var f = files[i];
+        if (f.type && f.type.indexOf('image/') === 0) {
+          addImageFromFile(f);
+        } else if (isDocFile(f)) {
+          addDocFromFile(f);
+        } else {
+          // Best-effort: still attach as a doc so unusual extensions work
+          addDocFromFile(f);
+        }
+      }
       fileInput.value = ''; // reset so same file can be re-selected
       inputEl.focus();
     });
@@ -2929,7 +3100,9 @@
       dropOverlay.classList.remove('visible');
       var files = e.dataTransfer.files || [];
       for (var i = 0; i < files.length; i++) {
-        if (files[i].type.startsWith('image/')) addImageFromFile(files[i]);
+        var f = files[i];
+        if (f.type && f.type.indexOf('image/') === 0) addImageFromFile(f);
+        else if (isDocFile(f)) addDocFromFile(f);
       }
       inputEl.focus();
     });

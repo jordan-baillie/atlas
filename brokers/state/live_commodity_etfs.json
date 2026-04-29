@@ -3,36 +3,14 @@
   "mode": "live",
   "positions": [
     {
-      "ticker": "CCJ",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-28",
-      "entry_price": 126.47,
-      "shares": 4,
-      "stop_price": 119.67,
-      "order_id": "",
-      "stop_order_id": "76c42b12-9fda-43b6-878e-5c4d2e008cec",
-      "tp_order_id": ""
-    },
-    {
       "ticker": "GLD",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-04-28",
+      "entry_date": "2026-04-29",
       "entry_price": 442.8,
       "shares": 2,
       "stop_price": 418.105,
       "order_id": "",
       "stop_order_id": "70b8e824-e8c3-4092-81f6-47fcbabeb7ad",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "SLV",
-      "strategy": "connors_rsi2",
-      "entry_date": "2026-04-28",
-      "entry_price": 68.27,
-      "shares": 6,
-      "stop_price": 66.41,
-      "order_id": "",
-      "stop_order_id": "e40a3b01-2689-469b-abf5-3942eb67a064",
       "tp_order_id": ""
     }
   ],
@@ -565,10 +543,33 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-04-28",
+      "equity": 4958.22,
+      "cash": 818.34,
+      "positions_value": 4139.88,
+      "num_positions": 1,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 421.91,
+          "unrealized_pnl": -41.78,
+          "mae": -4.72,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 5036.06,
+  "daily_high_water": 5189.06,
+  "daily_high_water_date": "2026-04-29",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-28T08:00:52.559471"
+  "last_saved": "2026-04-29T08:01:07.660591"
 }

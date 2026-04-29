@@ -7,7 +7,7 @@
 | adx_trend_pullback | active | 0.4423 | 274 | 2026-03-16 00:51 |
 | bb_squeeze | promising | 0.4859 | 331 | 2026-03-12 02:55 |
 | connors_rsi2 | active | 0.2987 | 859 | 2026-04-02 06:06 |
-| consecutive_down_days | promising | 0.5775 | 1388 | 2026-03-12 02:55 |
+| consecutive_down_days | active | 0.6986 | 234 | 2026-04-25 14:29 |
 | demark_sequential | active | 0.1246 | 145 | 2026-03-15 06:24 |
 | dividend_capture | failed | -3.9152 | 23 | 2026-03-12 02:55 |
 | donchian_breakout | active | 0.3440 | 136 | 2026-03-16 06:11 |
@@ -17,10 +17,10 @@
 | keltner_reversion | active | 0.0408 | 129 | 2026-03-16 07:37 |
 | lower_band_reversion | active | 0.3934 | 393 | 2026-03-15 11:10 |
 | macd_divergence | untested | 0.0000 | 0 | 2026-03-12 02:55 |
-| mean_reversion | active | 0.4097 | 142 | 2026-03-12 02:55 |
-| momentum_breakout | active | 0.8275 | 148 | 2026-04-02 05:06 |
+| mean_reversion | active | 1.0748 | 495 | 2026-04-27 14:05 |
+| momentum_breakout | active | 1.2393 | 519 | 2026-04-27 14:02 |
 | monthly_rotation | untested | 0.0000 | 0 | 2026-03-12 02:55 |
-| opening_gap | active | 0.3396 | 257 | 2026-03-12 02:55 |
+| opening_gap | active | 0.0989 | 1071 | 2026-04-27 13:17 |
 | overnight_return | untested | 0.0000 | 0 | 2026-03-12 02:55 |
 | pead_earnings_drift | untested | 0.0000 | 0 | 2026-03-12 02:55 |
 | put_call_vix_proxy | untested | 0.0000 | 0 | 2026-03-12 02:55 |
