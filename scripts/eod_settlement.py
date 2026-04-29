@@ -776,6 +776,50 @@ def main():
     except Exception as _e:
         log.warning(f"SQLite EOD write failed (non-fatal): {_e}")
 
+    # RCA #4D: per-market virtual equity attribution
+    try:
+        from portfolio.market_equity_attribution import attribute_equity_pro_rata
+        from universe.membership import derive_universe
+        from db.atlas_db import get_db
+        from datetime import timezone
+
+        _positions_by_market: dict[str, list[dict]] = {}
+        for _bp in portfolio._broker.get_positions():
+            _m = derive_universe(_bp.ticker)
+            if _m is None:
+                continue
+            _positions_by_market.setdefault(_m, []).append({
+                "ticker": _bp.ticker,
+                "market_value": _bp.market_value,
+            })
+
+        _broker_eq = portfolio.broker_equity()
+        _broker_cash = portfolio.cash
+        _attribution = attribute_equity_pro_rata(
+            broker_equity=_broker_eq,
+            broker_cash=_broker_cash,
+            positions_by_market=_positions_by_market,
+        )
+
+        _today = trade_date
+        _snap_iso = datetime.now(timezone.utc).isoformat()
+        with get_db() as _conn:
+            for _mid, _vals in _attribution.items():
+                _conn.execute(
+                    """INSERT OR REPLACE INTO market_equity_history
+                       (date, market_id, allocated_equity, position_mv, cash_attributed,
+                        broker_equity, broker_cash, snapshot_time)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        _today, _mid, _vals["allocated_equity"], _vals["position_mv"],
+                        _vals["cash_attributed"], _broker_eq, _broker_cash, _snap_iso,
+                    ),
+                )
+            _conn.commit()
+        log.info("Market equity attribution: %s", _attribution)
+    except Exception as _eq_exc:
+        log.warning("Per-market equity attribution failed (non-fatal): %s", _eq_exc)
+
     _health_log("info", "EOD settlement completed", {
         "market": market_id,
         "trade_date": trade_date,

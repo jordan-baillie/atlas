@@ -945,6 +945,36 @@ def equity_curve(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── GET /api/market_equity_history ───────────────────────────────────────────
+
+@app.get("/api/market_equity_history")
+def market_equity_history(
+    days: int = 90,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """GET /api/market_equity_history?days=90 — per-market virtual equity history.
+
+    Returns markets list and history rows oldest-first, suitable for charting.
+    """
+    try:
+        from db.atlas_db import get_db
+        _KNOWN_MARKETS = ["sp500", "commodity_etfs", "sector_etfs"]
+        with get_db() as conn:
+            rows = conn.execute(
+                """SELECT date, market_id, allocated_equity, position_mv, cash_attributed,
+                          broker_equity, broker_cash, snapshot_time
+                   FROM market_equity_history
+                   WHERE date >= DATE('now', ? || ' days')
+                   ORDER BY date ASC, market_id ASC""",
+                (f"-{days}",),
+            ).fetchall()
+        history = [dict(r) for r in rows]
+        markets_seen = sorted({r["market_id"] for r in history}) or _KNOWN_MARKETS
+        return JSONResponse({"markets": markets_seen, "history": history})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── GET /api/regime/history ───────────────────────────────────────────────────
 
 @app.get("/api/regime/history")
