@@ -18,6 +18,8 @@ import type {
   RegimeForecast,
   SignalEVResponse,
   UniverseInfo,
+  PnlFilterOptions,
+  PnlTrade,
 } from './types'
 
 const REFETCH_60S = 60_000
@@ -301,5 +303,40 @@ export function useUniversesHealth() {
     queryFn: () => get<UniverseInfo[]>('/api/system/health/universes'),
     staleTime: STALE_1HR,
     refetchOnWindowFocus: false,
+  })
+}
+
+// ---------------------------------------------------------------------------
+// P&L Slicer — filter options + filtered trades
+// ---------------------------------------------------------------------------
+
+export interface PnlFilters {
+  market_id: string
+  strategy: string
+  sector: string
+}
+
+export function usePnlFilterOptions() {
+  return useQuery({
+    queryKey: qk.pnl.filterOptions(),
+    queryFn: () => get<PnlFilterOptions>('/api/pnl_filter_options'),
+    placeholderData: keepPreviousData,
+    staleTime: STALE_5MIN,
+  })
+}
+
+export function usePnlTrades(filters: PnlFilters) {
+  return useQuery({
+    queryKey: qk.pnl.trades(filters as unknown as Record<string, string>),
+    queryFn: () => {
+      const params = new URLSearchParams()
+      if (filters.market_id) params.set('market_id', filters.market_id)
+      if (filters.strategy) params.set('strategy', filters.strategy)
+      if (filters.sector) params.set('sector', filters.sector)
+      const qs = params.toString()
+      return get<PnlTrade[]>(`/api/trades${qs ? '?' + qs : ''}`)
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   })
 }

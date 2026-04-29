@@ -5,6 +5,7 @@ import { Skeleton } from '../layout/Skeleton'
 import { SectionBoundary } from '../layout/SectionBoundary'
 import { SummaryStrip } from './SummaryStrip'
 import { EquityChart } from './EquityChart'
+import { PnlSlicedSection } from './PnlSlicedSection'
 import { PerformanceSection } from './PerformanceSection'
 import { PositionsGrid } from './PositionsGrid'
 import { RiskSection } from './RiskSection'
@@ -149,6 +150,12 @@ export function PortfolioTab() {
           {portfolio.data?.account
             ? <SummaryStrip account={portfolio.data.account} todayPnl={portfolio.data.summary?.today_pnl} positionsCount={portfolio.data.positions?.length ?? 0} />
             : <Skeleton className="h-28" />}
+        </SectionBoundary>
+      </div>
+
+      <div className="animate-in">
+        <SectionBoundary title="P&L Breakdown">
+          <PnlSlicedSection />
         </SectionBoundary>
       </div>
 

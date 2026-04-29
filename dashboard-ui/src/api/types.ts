@@ -674,3 +674,25 @@ export interface UniverseInfo {
   currency?: string
   region?: string
 }
+
+// ============================================================================
+// /api/pnl_filter_options — P&L slicer dropdown options
+// ============================================================================
+
+export interface PnlFilterOptions {
+  markets: string[]
+  strategies: string[]
+  sectors: string[]
+}
+
+// Trade entry returned by /api/trades?market_id=X&strategy=Y&sector=Z
+export interface PnlTrade {
+  date?: string
+  ticker?: string
+  strategy?: string
+  sector?: string
+  market_id?: string
+  pnl?: number
+  realized_pnl?: number
+  side?: 'buy' | 'sell'
+}
