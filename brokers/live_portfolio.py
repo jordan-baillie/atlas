@@ -796,24 +796,110 @@ class LivePortfolio:
             return False, "; ".join(reasons)
         return True, "All checks passed"
 
+    # ── Per-market equity attribution ─────────────────────────────────────────
+
+    def _get_per_market_equity(self, current_broker_eq: float) -> float | None:
+        """Return this market's estimated allocated equity scaled to current broker equity.
+
+        Reads the most recent ``market_equity_history`` row for ``self.market_id``
+        and scales ``allocated_equity`` by the ratio of current broker equity to
+        the snapshot broker equity.  This gives an up-to-date per-market equity
+        estimate without requiring a full re-attribution (which would need
+        all markets' positions simultaneously).
+
+        Returns ``None`` on DB failure, missing table, or if the snapshot is
+        older than 24 hours (stale) — callers should fall back to global
+        broker equity.
+        """
+        try:
+            from db.atlas_db import get_db
+            with get_db() as db:
+                row = db.execute(
+                    """
+                    SELECT allocated_equity, broker_equity, date
+                    FROM market_equity_history
+                    WHERE market_id = ?
+                    ORDER BY date DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (self.market_id,),
+                ).fetchone()
+        except Exception as exc:
+            logger.debug("_get_per_market_equity DB read failed: %s", exc)
+            return None
+
+        if row is None:
+            logger.debug(
+                "_get_per_market_equity: no market_equity_history row for %s",
+                self.market_id,
+            )
+            return None
+
+        snap_alloc: float = row["allocated_equity"] or 0.0
+        snap_broker: float = row["broker_equity"] or 0.0
+        snap_date: str = row["date"] or ""
+
+        # Reject stale snapshot (>2 trading days old)
+        try:
+            from datetime import date as _date
+            snap_days_old = (_date.today() - _date.fromisoformat(snap_date)).days
+            if snap_days_old > 3:
+                logger.debug(
+                    "_get_per_market_equity: snapshot for %s is %d days old — too stale, "
+                    "falling back to global broker equity",
+                    self.market_id, snap_days_old,
+                )
+                return None
+        except (ValueError, TypeError):
+            pass  # Malformed date — just proceed with the scale
+
+        if snap_broker <= 0 or current_broker_eq <= 0:
+            return None
+
+        # Scale: per_market_eq = snap_alloc × (current_total / snap_total)
+        per_market_eq = snap_alloc * (current_broker_eq / snap_broker)
+        logger.debug(
+            "_get_per_market_equity %s: snap_alloc=$%.2f snap_broker=$%.2f "
+            "current_broker=$%.2f → per_market=$%.2f",
+            self.market_id, snap_alloc, snap_broker, current_broker_eq, per_market_eq,
+        )
+        return per_market_eq
+
     def check_daily_drawdown(self, prices: dict[str, float] = None):
         """Check if daily drawdown limit breached.
 
-        Uses broker equity as the primary equity measure to avoid Atlas-internal
-        accounting holes when reconcile lags mid-session fills (e.g. a trailing
-        stop fills at the broker but Atlas hasn't reconciled yet → internal
-        equity() is stale low → phantom drawdown).  Falls back to internal
-        equity() with a WARNING if broker_equity() returns 0.
+        Uses per-market allocated equity (from ``market_equity_history``) as the
+        primary equity measure so each market has an independent drawdown HWM.
+        Falls back to global broker equity if attribution data is unavailable,
+        then to internal equity() if broker returns 0.
+
+        Per-market equity is scaled to the current total broker equity to stay
+        current between EOD attribution snapshots.
 
         Resets daily_high_water at the start of each new calendar day so
         yesterday's high-water mark cannot trigger a false HALT today.
         """
         today_str = datetime.now().strftime("%Y-%m-%d")
 
-        # Determine effective equity — prefer broker equity if non-zero
+        # Determine effective equity — prefer per-market attributed equity
         broker_eq = self.broker_equity()
         if broker_eq > 0:
-            effective_eq = broker_eq
+            per_market_eq = self._get_per_market_equity(broker_eq)
+            if per_market_eq is not None:
+                effective_eq = per_market_eq
+                logger.debug(
+                    "check_daily_drawdown %s: using per-market equity $%.2f "
+                    "(global broker $%.2f)",
+                    self.market_id, effective_eq, broker_eq,
+                )
+            else:
+                # No per-market data → fall back to global broker equity
+                effective_eq = broker_eq
+                logger.debug(
+                    "check_daily_drawdown %s: per-market equity unavailable, "
+                    "using global broker equity $%.2f",
+                    self.market_id, broker_eq,
+                )
         else:
             effective_eq = self.equity(prices)
             logger.warning(
