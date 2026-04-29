@@ -763,6 +763,11 @@ class LivePortfolio:
         sector_count = sum(1 for p in self.positions if p.sector == sector)
         if sector_count >= self.max_sector_conc:
             reasons.append(f"Max sector concentration ({self.max_sector_conc}) for {sector}")
+            logger.warning(
+                "SECTOR_CAP REJECTED: ticker=%s sector=%s current_count=%d cap=%d "
+                "(existing positions path)",
+                getattr(signal, "ticker", "?"), sector, sector_count, self.max_sector_conc,
+            )
 
         if any(p.ticker == signal.ticker for p in self.positions):
             reasons.append(f"Already holding {signal.ticker}")

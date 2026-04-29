@@ -83,9 +83,66 @@ class TradePlanGenerator:
                             strat_name, original, override,
                         )
 
+        # ── Sector concentration cap pre-pass (RCA #2C) ────────────────────
+        # check_risk_limits only checks existing broker positions — it's blind
+        # to other candidates being accepted in the same plan cycle. This
+        # pre-pass sorts candidates by confidence DESC and caps per sector,
+        # counting existing positions + already-accepted candidates together.
+        rejected_entries_pre_list: list[dict] = []
+        try:
+            from risk.sector_cap import apply_sector_cap
+            _sector_cap_limit = self.config.get("risk", {}).get("max_sector_concentration", 999)
+            _existing_pos_dicts = [
+                {"sector": getattr(p, "sector", "Unknown") or "Unknown"}
+                for p in self.portfolio.positions
+            ]
+            _signal_candidates = [
+                {
+                    "ticker": s.ticker,
+                    "sector": getattr(s, "sector", "Unknown") or "Unknown",
+                    "confidence": getattr(s, "confidence", 0.0),
+                }
+                for s in signals
+            ]
+            _accepted_tickers = {
+                c["ticker"]
+                for c in apply_sector_cap(_signal_candidates, _existing_pos_dicts, _sector_cap_limit)
+            }
+            _sector_rejected = [s for s in signals if s.ticker not in _accepted_tickers]
+            for _s in _sector_rejected:
+                rejected_entries_pre = {
+                    "ticker": _s.ticker,
+                    "strategy": _s.strategy,
+                    "entry_price": _s.entry_price,
+                    "stop_price": _s.stop_price,
+                    "take_profit": _s.take_profit,
+                    "position_size": _s.position_size,
+                    "position_value": round(_s.entry_price * _s.position_size, 2),
+                    "risk_amount": round(abs(_s.entry_price - _s.stop_price) * _s.position_size, 2),
+                    "confidence": _s.confidence,
+                    "rationale": getattr(_s, "rationale", ""),
+                    "features": getattr(_s, "features", {}),
+                    "sector": getattr(_s, "sector", "Unknown"),
+                    "market_id": getattr(_s, "market_id", self.config.get("market", "")),
+                    "rejection_reason": (
+                        f"Sector concentration cap ({_sector_cap_limit}) for "
+                        f"sector={getattr(_s, 'sector', 'Unknown') or 'Unknown'}"
+                    ),
+                }
+                rejected_entries_pre_list.append(rejected_entries_pre)
+            signals = [s for s in signals if s.ticker in _accepted_tickers]
+            if _sector_rejected:
+                logger.info(
+                    "Sector cap pre-pass: %d signals rejected (%d accepted), cap=%d",
+                    len(_sector_rejected), len(signals), _sector_cap_limit,
+                )
+        except Exception as _exc:
+            logger.warning("Sector cap pre-pass failed (non-fatal, skipping): %s", _exc)
+        # ──────────────────────────────────────────────────────────────────
+
         # Risk check each signal
         proposed_entries = []
-        rejected_entries = []
+        rejected_entries = list(rejected_entries_pre_list)
         min_confidence = self.config.get("risk", {}).get("min_confidence", 0.0)
         max_positions = self.config.get("risk", {}).get("max_open_positions", 5)
         available_slots = max_positions - len(self.portfolio.positions)
