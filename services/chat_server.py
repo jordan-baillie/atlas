@@ -889,16 +889,88 @@ def db_trades(
     days: int = 0,
     strategy: str | None = None,
     universe: str | None = None,
+    market_id: str | None = None,
+    sector: str | None = None,
+    limit: int = 100,
     _auth: HTTPBasicCredentials = Depends(check_auth),
 ):
-    """GET /api/trades?days=30&strategy=mean_reversion&universe=sp500"""
+    """GET /api/trades — closed trades with optional P&L slicers (RCA #4E).
+
+    Query params:
+      days       — lookback window in days (0 = all time)
+      strategy   — filter by strategy name
+      universe   — filter by market universe (alias: market_id)
+      market_id  — alias for universe
+      sector     — filter by sector via JOIN against signals table
+      limit      — max rows returned (default 100)
+    """
     try:
-        from db import atlas_db
-        days_or_none = days if days > 0 else None
-        trades = atlas_db.get_closed_trades(
-            days=days_or_none, strategy=strategy, universe=universe
-        )
+        from db.atlas_db import get_db
+        # market_id is a frontend-friendly alias for universe
+        effective_universe = universe or market_id
+        with get_db() as db:
+            _cols = {r[1] for r in db.execute("PRAGMA table_info(trades)").fetchall()}
+            _sup_clause = " AND superseded=0" if "superseded" in _cols else ""
+            sql = f"SELECT * FROM trades WHERE status='closed'{_sup_clause}"
+            params: list = []
+            if days > 0:
+                sql += " AND exit_date >= date('now', ?)"
+                params.append(f"-{days} days")
+            if strategy:
+                sql += " AND strategy = ?"
+                params.append(strategy)
+            if effective_universe:
+                sql += " AND universe = ?"
+                params.append(effective_universe)
+            if sector:
+                sql += (
+                    " AND ticker IN"
+                    " (SELECT DISTINCT ticker FROM signals WHERE sector = ?)"
+                )
+                params.append(sector)
+            sql += " ORDER BY exit_date DESC LIMIT ?"
+            params.append(int(limit))
+            trades = [dict(r) for r in db.execute(sql, params).fetchall()]
         return JSONResponse({"trades": trades, "count": len(trades)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── GET /api/pnl_filter_options ───────────────────────────────────────────────
+
+@app.get("/api/pnl_filter_options")
+def pnl_filter_options(
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """GET /api/pnl_filter_options — distinct dropdown values for P&L slicers (RCA #4E).
+
+    Returns:
+      markets    — distinct universe values from closed trades
+      strategies — distinct strategy values from closed trades
+      sectors    — distinct sector values from signals table
+    """
+    try:
+        from db.atlas_db import get_db
+        with get_db() as db:
+            markets = [
+                r[0] for r in db.execute(
+                    "SELECT DISTINCT universe FROM trades"
+                    " WHERE status='closed' AND universe IS NOT NULL ORDER BY universe"
+                ).fetchall()
+            ]
+            strategies = [
+                r[0] for r in db.execute(
+                    "SELECT DISTINCT strategy FROM trades"
+                    " WHERE status='closed' AND strategy IS NOT NULL ORDER BY strategy"
+                ).fetchall()
+            ]
+            sectors = [
+                r[0] for r in db.execute(
+                    "SELECT DISTINCT sector FROM signals"
+                    " WHERE sector IS NOT NULL ORDER BY sector"
+                ).fetchall()
+            ]
+        return JSONResponse({"markets": markets, "strategies": strategies, "sectors": sectors})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
