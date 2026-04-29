@@ -793,8 +793,10 @@ async def add_security_headers(request: Request, call_next):
 # ── Sub-package routers (Phase 1 extraction — docs/phase-c-god-file-decomposition.md) ──
 from services.api.finance import router as _finance_router  # noqa: E402
 from services.api.regime import router as _regime_router   # noqa: E402
+from services.api.error_remediation import router as _error_remediation_router  # noqa: E402
 app.include_router(_finance_router)
 app.include_router(_regime_router)
+app.include_router(_error_remediation_router)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # GET routes  (defined in the same priority order as dashboard_server.py do_GET)

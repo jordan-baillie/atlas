@@ -1,6 +1,6 @@
-import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab } from '../../App'
+import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab } from '../../App'
 
-type TabId = 'portfolio' | 'finance' | 'research'
+type TabId = 'portfolio' | 'finance' | 'research' | 'remediation'
 
 interface TabBarProps {
   activeTab: TabId
@@ -11,6 +11,7 @@ const preloaders: Record<string, () => void> = {
   portfolio: preloadPortfolioTab,
   finance: preloadFinanceTab,
   research: preloadResearchTab,
+  remediation: preloadRemediationTab,
 }
 
 export function TabBar({ activeTab, onChange }: TabBarProps) {
@@ -18,6 +19,7 @@ export function TabBar({ activeTab, onChange }: TabBarProps) {
     { id: 'portfolio', label: 'Portfolio' },
     { id: 'finance', label: 'Finance' },
     { id: 'research', label: 'Research' },
+    { id: 'remediation', label: 'Remediation' },
   ]
   return (
     <div className="flex gap-1 border-b border-[var(--color-border)]">

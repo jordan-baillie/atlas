@@ -22,6 +22,10 @@ const ResearchTab = lazy(() =>
   import('./components/research/ResearchTab').then((m) => ({ default: m.ResearchTab })),
 )
 export const preloadResearchTab = () => import('./components/research/ResearchTab')
+const RemediationTab = lazy(() =>
+  import('./components/error_remediation/RemediationTab').then((m) => ({ default: m.RemediationTab })),
+)
+export const preloadRemediationTab = () => import('./components/error_remediation/RemediationTab')
 
 // Skeleton matching the tab content shape — prevents layout shift during
 // code-split load (async-suspense-boundaries rule).
@@ -36,7 +40,7 @@ function TabFallback() {
 
 export default function App() {
   useTheme()
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'research'>('portfolio')
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'research' | 'remediation'>('portfolio')
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
@@ -47,7 +51,7 @@ export default function App() {
           <ErrorBoundary>
             <Suspense fallback={<TabFallback />}>
               <div key={activeTab} className="animate-in">
-                {activeTab === 'portfolio' ? <PortfolioTab /> : activeTab === 'finance' ? <FinanceTab /> : <ResearchTab />}
+                {activeTab === 'portfolio' ? <PortfolioTab /> : activeTab === 'finance' ? <FinanceTab /> : activeTab === 'research' ? <ResearchTab /> : <RemediationTab />}
               </div>
             </Suspense>
           </ErrorBoundary>

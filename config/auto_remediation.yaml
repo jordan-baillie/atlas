@@ -1,0 +1,113 @@
+# config/auto_remediation.yaml
+# Atlas Autonomous Error Remediation — User-Ratified Configuration
+# Source-of-truth specs: reports/auto-error-remediation-{planning,engineering,validation}-2026-04-29.md
+# All settings reflect user decisions on 2026-04-29.
+
+budget:
+  max_commits_per_day: 10              # AGGRESSIVE
+  reverts_to_halt: 2                   # 2 reverts in any 24h → auto-halt
+  revert_rate_alert_pct: 15            # 15% revert rate / 24h → Telegram alert
+  revert_rate_halt_pct: 25             # 25% revert rate / 24h → auto-halt
+
+day1_auto_fix_whitelist:               # Phase 3 starter classes (6)
+  - test_import_error
+  - stale_fixture_datetime
+  - lint_non_trading_files             # tests/, docs/, dashboard-ui/, scripts/healthz*
+  - markdown_typos
+  - dashboard_react_build_errors
+  - healthz_section_logic              # non-trading paths only
+
+telegram:
+  on_success: never                    # SILENT on every success (digest AND per-fix)
+  on_failure: immediate                # Alert when something breaks
+  daily_digest: false                  # No daily digest either — failure-only
+
+graduation:
+  assist_to_auto_fix:                  # When can ASSIST class graduate to AUTO_FIX?
+    days_of_clean_assist: 14           # LENIENT
+    min_merged_assist_fixes: 5         # ≥5 human-merged fixes
+  auto_fix_to_permanent_assist:        # When does AUTO_FIX revert permanently?
+    scope_violations_threshold: 5      # >5 scope-guard violations in...
+    scope_violations_window_days: 60   # ...60 days → permanent revert to ASSIST
+
+permanent_assist:                      # BROADER list — never auto-merge
+  paths:
+    - services/**                      # API contracts
+    - research/**                      # strategy parameters
+    - monitor/**                       # alerting logic
+    - systemd/**                       # service definitions
+    - cron/**                          # cron schedules
+    - "**/*.cron"
+    - "config/**"                      # any config file change
+    - db/migrations/**                 # any schema change
+    - "**/*.sql"
+  patterns:
+    - any_api_endpoint_change          # additions, removals, signature changes
+    - any_cron_schedule_change
+    - any_systemd_unit_change
+
+never_fix:                             # Permanent ESCALATE — never even ASSIST
+  paths:
+    - brokers/**
+    - risk/**
+    - regime/**
+    - signals/**
+    - portfolio/**
+    - overlay/**
+    - strategies/**
+    - core/reconcile.py
+    - "**/kill_switch*.py"
+    - "**/live_executor*.py"
+    - "**/plan*.py"
+    - "**/approve*.py"
+    - "**/halt*.py"
+  patterns:
+    - any_secrets_credentials
+    - any_oauth_or_api_keys
+    - any_broker_order_path
+
+defaults_applied:
+  scope: atlas_only                    # Phases 0-3 atlas/ only, never cross-project
+  causal_chain_rule: true              # If root cause traces through trading code → ESCALATE even if patch is in safe file
+
+# === Operational settings (engineering defaults, not user-locked) ===
+phase:
+  current: 1                           # Phase 1 = capture+classify+monitor (NO auto-fix)
+  phase_3_enabled: false               # Hard feature flag for AUTO_FIX go-live
+
+monitor:
+  rth_interval_minutes: 5              # During US RTH (09:30–16:00 ET), poll every 5 min
+  off_hours_interval_minutes: 15       # Outside RTH, every 15 min
+  dry_run: true                        # Phase 1: log decisions, take NO action
+  batch_size: 50                       # Errors processed per cycle
+  market_hours_skip_classifier: false  # Phase 1: classify but don't act
+  promotion_window_pause: true         # Pause during research/promoter.py runs
+
+verify:
+  diff_max_lines: 30                   # Hard cap (validation report's strict default)
+  monitor_window_minutes: 30           # Post-merge observation window
+  monitor_window_extended_paths:       # Extended 2h window for these path patterns
+    - services/**
+    - scripts/**
+    - data/**
+    - monitor/**
+
+review:
+  model: claude-sonnet-4-6             # Adversarial reviewer
+  default_verdict: REJECT
+  approval_threshold_confidence: 0.75
+  rejection_rate_alert_pct: 40         # Warn humans at 40%
+  rejection_rate_halt_pct: 50          # Auto-halt at 50%
+
+audit_log:
+  retention_days: 365                  # 1 year forensic trail
+  retention_critical_days: 365
+  retention_error_days: 180
+  retention_warning_days: 30
+
+ignore_patterns:                       # Always-IGNORE (Engineering report §2.2 + Validation §2.3)
+  - "Circuit breaker tripped"
+  - "Execution blocked: Plan status is"
+  - "Execution blocked: HALTED"
+  - "Execution blocked: Not connected"
+  - "Execution blocked: Pending preflight"
