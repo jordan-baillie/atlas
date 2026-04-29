@@ -591,21 +591,31 @@ def record_regime(
     reasoning: str = "",
     enabled_strategies: Optional[List[str]] = None,
     model_version: str = "v1",
+    pending_state: Optional[str] = None,
 ) -> None:
-    """Insert or replace a regime classification for a date."""
+    """Insert or replace a regime classification for a date.
+
+    Parameters
+    ----------
+    pending_state : str or None
+        The raw (unconfirmed) regime state when the N-day confirmation gate
+        is active and the change has not yet been confirmed.  NULL when the
+        confirmed regime matches the raw classification.
+    """
     with get_db() as db:
         db.execute(
             """
             INSERT OR REPLACE INTO regime_history
                 (date, regime_state, trend_score, risk_score, active_universes,
-                 sizing_multiplier, enabled_strategies, reasoning, model_version)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 sizing_multiplier, enabled_strategies, reasoning, model_version,
+                 pending_state)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 date, state, trend_score, risk_score,
                 json.dumps(active_universes), sizing_multiplier,
                 json.dumps(enabled_strategies) if enabled_strategies is not None else None,
-                reasoning, model_version,
+                reasoning, model_version, pending_state,
             ),
         )
 
@@ -2509,3 +2519,91 @@ def get_cached_portfolio_risk(max_age_hours: int = 24) -> Optional[Dict]:
     except Exception as exc:
         _logging.getLogger(__name__).warning("get_cached_portfolio_risk failed: %s", exc)
         return None
+
+
+# ── Broker Orders Cache ───────────────────────────────────────────────────────
+
+def get_broker_fill_price(
+    symbol: str,
+    side: str = "buy",
+    after: Optional[str] = None,
+    order_id: Optional[str] = None,
+) -> Optional[float]:
+    """Return the most recent fill price from broker_orders for *symbol*.
+
+    Query priority:
+      1. If order_id provided: match exactly on order_id
+      2. Otherwise: most recent FILLED order for symbol+side, optionally
+         constrained to orders submitted after *after* (ISO timestamp).
+
+    Returns None if no matching filled order found or if broker_orders
+    table does not exist (graceful degradation).
+
+    Used by reconcile_ledger.py to get source-of-truth fill prices before
+    falling back to inference.
+    """
+    try:
+        with get_db() as db:
+            if order_id:
+                row = db.execute(
+                    "SELECT fill_price FROM broker_orders "
+                    "WHERE order_id=? AND fill_price IS NOT NULL AND fill_price > 0",
+                    (order_id,),
+                ).fetchone()
+            elif after:
+                row = db.execute(
+                    "SELECT fill_price FROM broker_orders "
+                    "WHERE symbol=? AND side=? AND status='filled' "
+                    "AND fill_price IS NOT NULL AND fill_price > 0 "
+                    "AND submitted_at >= ? "
+                    "ORDER BY filled_at DESC NULLS LAST, submitted_at DESC LIMIT 1",
+                    (symbol, side.lower(), after),
+                ).fetchone()
+            else:
+                row = db.execute(
+                    "SELECT fill_price FROM broker_orders "
+                    "WHERE symbol=? AND side=? AND status='filled' "
+                    "AND fill_price IS NOT NULL AND fill_price > 0 "
+                    "ORDER BY filled_at DESC NULLS LAST, submitted_at DESC LIMIT 1",
+                    (symbol, side.lower()),
+                ).fetchone()
+            return float(row[0]) if row and row[0] is not None else None
+    except Exception as exc:
+        _logging.getLogger(__name__).debug(
+            "get_broker_fill_price(%s, %s): %s (non-fatal)", symbol, side, exc
+        )
+        return None
+
+
+def get_broker_orders(
+    symbol: Optional[str] = None,
+    side: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100,
+) -> List[Dict]:
+    """Return broker_orders rows, optionally filtered.
+
+    Returns empty list if table does not exist (graceful degradation).
+    """
+    try:
+        with get_db() as db:
+            query = "SELECT * FROM broker_orders WHERE 1=1"
+            params: List[Any] = []
+            if symbol:
+                query += " AND symbol=?"
+                params.append(symbol)
+            if side:
+                query += " AND side=?"
+                params.append(side.lower())
+            if status:
+                query += " AND status=?"
+                params.append(status.lower())
+            query += " ORDER BY submitted_at DESC LIMIT ?"
+            params.append(limit)
+            rows = db.execute(query, params).fetchall()
+            return [dict(r) for r in rows]
+    except Exception as exc:
+        _logging.getLogger(__name__).debug(
+            "get_broker_orders failed: %s (non-fatal)", exc
+        )
+        return []

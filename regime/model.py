@@ -24,12 +24,15 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 from regime.indicators import compute_all_scores
 from regime.states import REGIME_CONFIGS, RegimeState
+
+logger = logging.getLogger(__name__)
 
 # Default config path, relative to the atlas project root.
 _DEFAULT_CONFIG = Path(__file__).resolve().parents[1] / "config" / "active" / "regime.json"
@@ -53,6 +56,7 @@ class RegimeClassification:
     reasoning: str
     model_version: str
     date: str = ""
+    pending_state: Optional[str] = None  # raw unconfirmed regime during N-day gate
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -166,6 +170,13 @@ class RegimeModel:
         """
         Classify and write the result to the ``regime_history`` table.
 
+        When ``regime_confirmation_days`` in the config is >= 2, the regime
+        state is only flipped after N consecutive same-state raw classifications.
+        While pending, ``regime_history.pending_state`` carries the raw state
+        and ``regime_history.regime_state`` retains the previously confirmed
+        state.  ``RegimeClassification.pending_state`` mirrors this on the
+        return value.
+
         Parameters
         ----------
         date : str, optional
@@ -179,15 +190,27 @@ class RegimeModel:
 
         if date is None:
             result = self.classify_current()
-            # Retrieve date from the classification (set by classify_current).
             effective_date = result.date
         else:
             result = self.classify_date(date)
             effective_date = date
 
+        # ── Confirmation gate ──────────────────────────────────────────────
+        confirmation_days = int(self._config.get("regime_confirmation_days", 1))
+        if confirmation_days >= 2:
+            confirmed_state, pending_state_str = self._apply_confirmation_gate(
+                raw=result,
+                effective_date=effective_date,
+                confirmation_days=confirmation_days,
+            )
+        else:
+            # Default path — instant flip, no confirmation (default OFF).
+            confirmed_state = result.state
+            pending_state_str = None
+
         record_regime(
             date=effective_date,
-            state=result.state.value,
+            state=confirmed_state.value,
             trend_score=result.scores["trend"],
             risk_score=result.scores["risk"],
             active_universes=result.active_universes,
@@ -195,7 +218,12 @@ class RegimeModel:
             reasoning=result.reasoning,
             enabled_strategies=result.enabled_strategies,
             model_version=result.model_version,
+            pending_state=pending_state_str,
         )
+
+        # Reflect the (possibly gated) outcome back to the caller.
+        result.state = confirmed_state
+        result.pending_state = pending_state_str
         return result
 
     # ── Classification rules ──────────────────────────────────────────────────
@@ -353,6 +381,109 @@ class RegimeModel:
             f"{state.value}: {trend_desc}, {risk_desc}, {credit_desc}, "
             f"{yc_desc}. Composite: {composite:+.2f}"
         )
+
+    # ── Confirmation gate ─────────────────────────────────────────────────────
+
+    def _apply_confirmation_gate(
+        self,
+        raw: "RegimeClassification",
+        effective_date: str,
+        confirmation_days: int,
+    ) -> tuple:
+        """
+        Apply the N-day consecutive confirmation gate.
+
+        A regime change is only applied after *confirmation_days* consecutive
+        daily raw classifications agree on the new state.  While the streak is
+        still building, the DB row records:
+          - ``regime_state``  = currently confirmed (stable) state
+          - ``pending_state`` = the incoming raw state (not yet confirmed)
+
+        Parameters
+        ----------
+        raw : RegimeClassification
+            Today's instant (unconfirmed) classification.
+        effective_date : str
+            ISO date for today's record (used as upper bound for history query).
+        confirmation_days : int
+            Number of consecutive same-state raw classifications required (>= 2).
+
+        Returns
+        -------
+        (confirmed_state: RegimeState, pending_state_str: str | None)
+            confirmed_state  — the state to persist as ``regime_state``.
+            pending_state_str — the raw state string to store in ``pending_state``
+                                (None when no change is pending).
+        """
+        from db.atlas_db import get_db
+
+        # ── Step 1: current confirmed regime from most recent DB row ──────
+        try:
+            with get_db() as conn:
+                row = conn.execute(
+                    "SELECT regime_state FROM regime_history "
+                    "WHERE date < ? ORDER BY date DESC LIMIT 1",
+                    (effective_date,),
+                ).fetchone()
+        except Exception:
+            row = None
+
+        if row is None:
+            # No prior history — accept raw immediately (first-ever record).
+            return raw.state, None
+
+        try:
+            confirmed_state = RegimeState(row["regime_state"])
+        except ValueError:
+            return raw.state, None
+
+        # ── Step 2: no change — raw already equals confirmed ──────────────
+        if raw.state == confirmed_state:
+            return raw.state, None
+
+        # ── Step 3: load (N-1) most recent historical raw states ──────────
+        # A historical day's "raw" classification = pending_state if set,
+        # else regime_state (meaning raw matched confirmed that day).
+        needed = confirmation_days - 1
+        try:
+            with get_db() as conn:
+                hist_rows = conn.execute(
+                    "SELECT regime_state, pending_state FROM regime_history "
+                    "WHERE date < ? ORDER BY date DESC LIMIT ?",
+                    (effective_date, needed),
+                ).fetchall()
+        except Exception:
+            hist_rows = []
+
+        historical_raw: list[str] = [
+            (r["pending_state"] if r["pending_state"] else r["regime_state"])
+            for r in hist_rows
+        ]
+
+        # ── Step 4: confirm or hold ───────────────────────────────────────
+        all_agree = (
+            len(historical_raw) >= needed
+            and all(s == raw.state.value for s in historical_raw)
+        )
+
+        if all_agree:
+            logger.info(
+                "REGIME_CONFIRMED: %s (after %d consecutive days)",
+                raw.state.value,
+                confirmation_days,
+            )
+            return raw.state, None
+        else:
+            logger.info(
+                "REGIME_PENDING: raw=%s confirmed=%s "
+                "(need %d consecutive, have %d/%d)",
+                raw.state.value,
+                confirmed_state.value,
+                confirmation_days,
+                len(historical_raw) + 1,
+                confirmation_days,
+            )
+            return confirmed_state, raw.state.value
 
     # ── History helpers ───────────────────────────────────────────────────────
 

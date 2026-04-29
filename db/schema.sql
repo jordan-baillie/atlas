@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS regime_history (
     sizing_multiplier   REAL    DEFAULT 1.0,
     enabled_strategies  TEXT,              -- JSON array
     reasoning           TEXT,
-    model_version       TEXT
+    model_version       TEXT,
+    pending_state       TEXT    DEFAULT NULL  -- raw regime awaiting N-day confirmation
 );
 CREATE INDEX IF NOT EXISTS idx_regime_state ON regime_history(regime_state);
 
@@ -446,3 +447,30 @@ CREATE INDEX IF NOT EXISTS idx_shadow_unevaluated
     ON overlay_shadow_log(actual_outcome_evaluated, created_at);
 CREATE INDEX IF NOT EXISTS idx_shadow_plan
     ON overlay_shadow_log(plan_id);
+
+-- ═══════════════════════════════════════════════════════════
+-- BROKER ORDERS CACHE (RCA #4A — 2026-04-29)
+-- Local cache of Alpaca order/fill history for source-of-truth
+-- reconciliation. Eliminates phantom-price inference bugs
+-- (CHTR pattern). Populated by scripts/sync_broker_orders.py.
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS broker_orders (
+    order_id           TEXT PRIMARY KEY,           -- Alpaca order UUID
+    symbol             TEXT NOT NULL,              -- ticker (Atlas format)
+    side               TEXT NOT NULL,              -- buy | sell
+    qty                REAL NOT NULL,              -- requested qty
+    filled_qty         REAL,                       -- actually filled (NULL if not filled)
+    fill_price         REAL,                       -- avg fill price (NULL if not filled)
+    status             TEXT NOT NULL,              -- accepted | filled | canceled | rejected | etc
+    submitted_at       TEXT NOT NULL,              -- ISO timestamp
+    filled_at          TEXT,                       -- ISO timestamp (NULL if not filled)
+    order_class        TEXT,                       -- simple | bracket | oco | oto
+    parent_id          TEXT,                       -- parent order ID for bracket children
+    raw_alpaca_json    TEXT NOT NULL,              -- full Alpaca order JSON for forensic
+    last_synced_at     TEXT NOT NULL               -- when this row was last upserted
+);
+CREATE INDEX IF NOT EXISTS idx_broker_orders_symbol ON broker_orders(symbol);
+CREATE INDEX IF NOT EXISTS idx_broker_orders_status ON broker_orders(status);
+CREATE INDEX IF NOT EXISTS idx_broker_orders_submitted_at ON broker_orders(submitted_at);
+CREATE INDEX IF NOT EXISTS idx_broker_orders_parent_id ON broker_orders(parent_id);
