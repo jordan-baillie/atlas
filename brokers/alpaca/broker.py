@@ -202,6 +202,7 @@ def _order_to_result(order, atlas_ticker: str, side: OrderSide) -> OrderResult:
             "trail_percent": str(getattr(order, "trail_percent", "") or ""),
             "qty": str(requested_qty_raw or ""),
             "side": str(getattr(getattr(order, "side", None), "value", "")).lower(),
+            "order_class": str(getattr(getattr(order, "order_class", None), "value", "") or "").lower(),
         },
     )
 
