@@ -1,7 +1,7 @@
 {
   "version": "v1.0.1-passive",
   "project": "Atlas",
-  "description": "ASX market — no active trading. Cross-broker positions from Moomoo shown as manual holdings.",
+  "description": "ASX market \u2014 no active trading. Cross-broker positions from Moomoo shown as manual holdings.",
   "market": "asx",
   "universe": {
     "benchmark_ticker": "IOZ.AX"
@@ -12,7 +12,8 @@
     "max_risk_per_trade_pct": 0.02,
     "max_sector_concentration": 5,
     "max_daily_drawdown_pct": 0.1,
-    "_note": "Monitoring only — no new trades. Equity = full Moomoo AU account balance."
+    "_note": "Monitoring only \u2014 no new trades. Equity = full Moomoo AU account balance.",
+    "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
     "mode": "passive",

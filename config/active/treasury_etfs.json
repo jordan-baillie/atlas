@@ -8,7 +8,7 @@
     "benchmark_ticker": "AGG"
   },
   "risk": {
-    "starting_equity": 5000,
+    "starting_equity": 0,
     "leverage": 1.0,
     "max_risk_per_trade_pct": 0.005,
     "max_open_positions": 3,
@@ -23,7 +23,8 @@
       "atr_multiplier": 2.0
     },
     "max_gross_exposure_pct": 1.75,
-    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value."
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+    "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
     "mode": "passive",

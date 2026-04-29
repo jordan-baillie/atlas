@@ -277,6 +277,131 @@ def main(argv: list | None = None) -> int:
 
 
 
+# ── Equity-sum config guard ────────────────────────────────────────────────
+#
+# KEEP-LOUD ALERT: Σ(active_configs.starting_equity) ≤ broker.equity × 1.05
+# A violation means config drift — per-market equity claims exceed real capital.
+# This guard must fail LOUD (Telegram alert) so operators can recalibrate.
+
+def check_equity_config_sum(
+    config_dir: Path | None = None,
+    db_path: Path | None = None,
+    tolerance: float = 0.05,
+    dry_run: bool = False,
+) -> tuple[bool, dict]:
+    """Assert Σ(live market starting_equity) ≤ broker.equity × (1 + tolerance).
+
+    Reads ``market_equity_history`` for the latest broker equity snapshot
+    (avoids a live broker connection).  Active markets are those with
+    ``trading.live_enabled = true``.
+
+    Parameters
+    ----------
+    config_dir:  Defaults to ``<project_root>/config/active``.
+    db_path:     Defaults to ``<project_root>/data/atlas.db``.
+    tolerance:   Fractional overage allowed (default 0.05 = 5%).
+    dry_run:     Print alert text instead of sending Telegram.
+
+    Returns
+    -------
+    (ok, info_dict)
+        ok=True if constraint satisfied, False if violated.
+    """
+    import glob
+    import sqlite3
+
+    config_dir = config_dir or (PROJECT_ROOT / 'config' / 'active')
+    db_path = db_path or (PROJECT_ROOT / 'data' / 'atlas.db')
+
+    # ── Step 1: sum starting_equity for all live-enabled configs ─────────────
+    active_equities: dict[str, float] = {}
+    for cfg_path in sorted(Path(config_dir).glob('*.json')):
+        try:
+            with open(cfg_path) as fh:
+                cfg = json.load(fh)
+        except Exception:
+            continue
+
+        trading = cfg.get('trading', {})
+        live_enabled = trading.get('live_enabled')
+        if live_enabled is not True:
+            continue  # skip inactive/passive configs
+
+        market = cfg.get('market_id') or cfg_path.stem
+        se = cfg.get('risk', {}).get('starting_equity', 0)
+        if se and se > 0:
+            active_equities[market] = float(se)
+
+    equity_sum = sum(active_equities.values())
+
+    # ── Step 2: read latest broker equity from market_equity_history ─────────
+    broker_equity: float | None = None
+    try:
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            """
+            SELECT broker_equity, date
+            FROM market_equity_history
+            ORDER BY date DESC, created_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        conn.close()
+        if row:
+            broker_equity = float(row['broker_equity'])
+    except Exception as exc:
+        print(f"WARNING: check_equity_config_sum DB read failed: {exc}", file=sys.stderr)
+
+    info = {
+        'equity_sum': round(equity_sum, 2),
+        'broker_equity': broker_equity,
+        'tolerance': tolerance,
+        'active_markets': active_equities,
+    }
+
+    if broker_equity is None:
+        # Cannot assess — no snapshot available; treat as OK to avoid false positives
+        info['status'] = 'UNKNOWN'
+        info['reason'] = 'market_equity_history table empty or unreadable'
+        return True, info
+
+    limit = broker_equity * (1.0 + tolerance)
+    ok = equity_sum <= limit
+    info['limit'] = round(limit, 2)
+    info['status'] = 'OK' if ok else 'VIOLATION'
+    info['violated_by'] = round(equity_sum - limit, 2) if not ok else 0.0
+
+    if not ok:
+        alert_lines = [
+            f"🚨 <b>Equity Config Drift — RCA #6 Guard</b>",
+            f"Σ(starting_equity) = ${equity_sum:,.2f} exceeds broker equity × {1+tolerance:.0%} (${limit:,.2f})",
+            f"Broker equity (last snapshot): ${broker_equity:,.2f}",
+            f"Excess: ${equity_sum - limit:,.2f}",
+            "",
+            "Active markets:",
+        ]
+        for m, v in sorted(active_equities.items()):
+            alert_lines.append(f"  • {m}: ${v:,.2f}")
+        alert_lines.append("")
+        alert_lines.append(
+            "Fix: run <code>scripts/recalibrate_starting_equity.py --apply</code> "
+            "or manually update <code>risk.starting_equity</code> in config/active/*.json"
+        )
+        alert_text = "\n".join(alert_lines)
+
+        if dry_run:
+            print(f"[DRY-RUN] Would send Telegram: {alert_text}")
+        else:
+            try:
+                from utils.telegram import send_message
+                send_message(alert_text)
+            except Exception as tg_exc:
+                print(f"WARNING: Telegram alert failed (non-fatal): {tg_exc}", file=sys.stderr)
+
+    return ok, info
+
+
 # ── Overlay evaluator backlog check ──────────────────────────────────────────
 
 def _check_overlay_backlog(threshold: int = 5, dry_run: bool = False) -> bool:

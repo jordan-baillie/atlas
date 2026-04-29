@@ -279,6 +279,29 @@ Reconciled against git log since 2026-04-17. Major work:
 - [ ] **#260 — Caddy basicauth credential rotation** — needs user coordination
       for credential rotation. Deferred. Documented in Wave 1 hardening.
 
+
+### RCA latent #6 — Per-market equity attribution + drawdown HWM wiring [CLOSED 2026-04-29]
+- [x] **Fix 1 — starting_equity recalibration** (commit: RCA latent #6 fix 1)
+  - sp500: 5011.79 → 971 (real allocated equity from market_equity_history 2026-04-29)
+  - commodity_etfs: 5000 → 1001
+  - sector_etfs: 5000 → 3216
+  - Inactive markets (crypto, defensive_etfs, gold_etfs, treasury_etfs): 5000/5011 → 0
+  - `last_recalibrated_at` ISO timestamp added to all `risk` blocks
+- [x] **Fix 2 — per-market drawdown HWM wiring** (commit: RCA latent #6 fix 2)
+  - `_get_per_market_equity(current_broker_eq)` added to `LivePortfolio`
+  - Reads `market_equity_history` table; scales to current broker equity
+  - Fallback to global broker equity if no snapshot (<3 days old required)
+  - `check_daily_drawdown()` now uses per-market equity as primary source
+  - Markets now halt independently: sp500 at 15% dd halts only sp500, not commodity_etfs/sector_etfs
+- [x] **Equity-sum config guard** (keep-loud alert)
+  - `check_equity_config_sum()` added to `scripts/health_check.py`
+  - Standalone: `scripts/check_equity_config_sum.py`
+  - Asserts Σ(active starting_equity) ≤ broker.equity × 1.05; Telegram alert on violation
+- [x] **Tests** — 19 new tests in `tests/test_per_market_drawdown.py` (all passing)
+  - `TestGetPerMarketEquity` (7 tests): DB read, scaling, staleness, DB failure
+  - `TestPerMarketDrawdownIsolation` (6 tests): independent halt scenarios from spec
+  - `TestCheckEquityConfigSum` (6 tests): guard correctness, inactive market exclusion, dry-run
+
 ---
 
 ## Phase C — Architectural simplification (planned 2026-04-29; ship after Phase B cutover)
