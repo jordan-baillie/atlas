@@ -57,6 +57,11 @@ def _make_live_portfolio(
     lp.closed_trades = []
     lp.positions = []
     lp.daily_high_water = starting_equity
+    # Set date to today so check_daily_drawdown() doesn't trigger a session-reset.
+    # (Previously this was populated by _load_local_state reading production state —
+    # that was accidental coupling fixed by the state-file isolation fixture.)
+    from datetime import date as _date
+    lp.daily_high_water_date = _date.today().isoformat()
     lp.halted = False
     lp.halt_reason = ""
     return lp

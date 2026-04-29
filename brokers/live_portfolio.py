@@ -33,6 +33,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# Module-level constant for state directory — patchable in tests to prevent
+# production state file pollution (see tests/conftest.py _isolate_state_files).
+_STATE_DIR: Path = PROJECT_ROOT / "brokers" / "state"
+
 
 class LivePortfolio:
     """Broker-backed portfolio for live position and cash tracking.
@@ -95,7 +99,9 @@ class LivePortfolio:
     def _state_path(self) -> Path:
         # IMPORTANT: always use the "live_" prefix.  Legacy files like
         # brokers/state/sp500.json (no prefix) are stale and must NOT be read.
-        return PROJECT_ROOT / "brokers" / "state" / f"live_{self.market_id}.json"
+        # Uses module-level _STATE_DIR so tests can redirect via monkeypatch
+        # without touching production brokers/state/ files.
+        return _STATE_DIR / f"live_{self.market_id}.json"
 
     def _load_local_state(self):
         # Only reads from live_{market_id}.json via _state_path() — never the

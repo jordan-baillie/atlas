@@ -590,3 +590,112 @@ def _isolate_state_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     state_tmp.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(_adb, "_state_dir_override", str(state_tmp))
     yield
+
+# ---------------------------------------------------------------------------
+# LivePortfolio state-file isolation
+# Prevents ANY test from writing to brokers/state/live_*.json (real broker state).
+# Root cause 2026-04-29: pytest run emptied live_sp500.json positions (CAT lost).
+# Same pattern as _isolate_halt_file — session-scope + function-scope layers.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_live_portfolio_state_session(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> None:
+    """Session-scope: redirect brokers.live_portfolio._STATE_DIR to tmp from session start.
+
+    Session-scope fires before module-scope fixtures, ensuring that even
+    LivePortfolio instances created at module-import time (e.g. in module-level
+    fixtures) write to tmp instead of production.
+
+    See: tests/test_state_file_isolation.py for self-tests.
+    Root cause: test calls to record_equity()/record_closed_trade()/save_state()
+    on a LivePortfolio with broker_data_valid=True + no path redirect wrote
+    positions=[] to brokers/state/live_sp500.json.
+    """
+    try:
+        import brokers.live_portfolio as _lp
+    except Exception:
+        yield
+        return
+
+    from _pytest.monkeypatch import MonkeyPatch
+    mp = MonkeyPatch()
+    session_state_dir = tmp_path_factory.mktemp("live_portfolio_state_session")
+    mp.setattr(_lp, "_STATE_DIR", session_state_dir)
+    yield
+    mp.undo()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_live_portfolio_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Function-scope: each test gets a fresh LivePortfolio state directory.
+
+    Layered on top of _isolate_live_portfolio_state_session — the per-test
+    fixture wins, giving each test an isolated empty state dir.  Tests that
+    need to seed a state file create it at `tmp_path / "lp_state" / "live_{mkt}.json"`.
+
+    Covers:
+    - LivePortfolio.save_state() writes  
+    - LivePortfolio.record_equity() writes (calls save_state)
+    - LivePortfolio.record_closed_trade() writes (calls save_state)
+    - LivePortfolio._update_state_positions() reads+writes
+    - LivePortfolio._load_local_state() reads (returns empty if file not present)
+    """
+    try:
+        import brokers.live_portfolio as _lp
+    except Exception:
+        yield
+        return
+
+    state_dir = tmp_path / "lp_state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(_lp, "_STATE_DIR", state_dir)
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _zz_verify_no_state_file_pollution() -> None:
+    """Session-end: assert brokers/state/live_*.json files were NOT modified.
+
+    Named _zz_ so teardown runs first (after all tests complete), verifying
+    production state files are intact.  Fails loudly with mtime+size details
+    if any production state file was touched.
+
+    See: tests/test_state_file_isolation.py for self-tests.
+    """
+    import os as _os
+
+    state_files = [
+        "/root/atlas/brokers/state/live_sp500.json",
+        "/root/atlas/brokers/state/live_commodity_etfs.json",
+        "/root/atlas/brokers/state/live_sector_etfs.json",
+    ]
+    pre_state: dict[str, tuple[float, int]] = {}
+    for f in state_files:
+        if _os.path.exists(f):
+            pre_state[f] = (_os.path.getmtime(f), _os.path.getsize(f))
+
+    yield
+
+    leaks: list[str] = []
+    for f, (pre_mtime, pre_size) in pre_state.items():
+        if _os.path.exists(f):
+            cur_mtime = _os.path.getmtime(f)
+            cur_size = _os.path.getsize(f)
+            if cur_mtime != pre_mtime:
+                leaks.append(
+                    f"{f}: mtime changed {pre_mtime:.3f} → {cur_mtime:.3f}"
+                )
+            elif cur_size != pre_size:
+                leaks.append(
+                    f"{f}: size changed {pre_size} → {cur_size} bytes"
+                )
+
+    if leaks:
+        pytest.fail(
+            "Production state file pollution detected — a test wrote to "
+            "brokers/state/live_*.json:\n" + "\n".join(leaks)
+        )
