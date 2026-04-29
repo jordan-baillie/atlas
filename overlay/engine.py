@@ -772,7 +772,8 @@ def _load_alt_data() -> str:
     try:
         from utils.config import load_config
         cfg = load_config()
-    except Exception:
+    except (ImportError, FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+        log.warning("Could not load config in _load_alt_data: %s — skipping alt data", exc)
         return ""
     alt_cfg = cfg.get("alt_data", {})
     if not alt_cfg.get("enabled", False):
@@ -786,7 +787,8 @@ def _load_alt_data() -> str:
                 from brokers.live_portfolio import LivePortfolio
                 pf = LivePortfolio(cfg, market_id=cfg.get("market", "sp500"))
                 tickers = [p.ticker for p in pf.positions if hasattr(p, "ticker")]
-            except Exception:
+            except (ImportError, AttributeError, OSError, RuntimeError) as exc:
+                log.debug("Could not load live positions for alt-data ticker lookup: %s", exc)
                 tickers = []
         if not tickers:
             return ""
@@ -988,7 +990,8 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
     try:
         from utils.config import load_config
         cfg_vision = load_config().get("overlay_vision", {"enabled": False})
-    except Exception:
+    except (ImportError, FileNotFoundError, json.JSONDecodeError, OSError) as exc:
+        log.debug("Could not load overlay_vision config: %s — vision disabled", exc)
         cfg_vision = {"enabled": False}
 
     if cfg_vision.get("enabled", False):
@@ -1000,7 +1003,8 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
             # Best-effort: read universe name for A/B log
             try:
                 _vision_universe = load_config().get("market", "unknown")
-            except Exception:
+            except (AttributeError, OSError, KeyError) as exc:
+                log.debug("Could not read market name for vision A/B log: %s", exc)
                 _vision_universe = "unknown"
             # Best-effort: read held positions for personalised charts
             try:
@@ -1009,7 +1013,8 @@ def run_overlay(mode: str = "log_only") -> OverlayDecision:
                     [p.ticker for p in live_portfolio.get_open_positions()]
                     if live_portfolio else []
                 )
-            except Exception:
+            except (ImportError, AttributeError, OSError, RuntimeError) as exc:
+                log.debug("Could not load open positions for vision charts: %s", exc)
                 positions = []
             max_imgs = int(cfg_vision.get("max_images", 10))
             images = render_reference_set(positions, max_images=max_imgs)

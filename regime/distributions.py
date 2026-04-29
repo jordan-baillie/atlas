@@ -14,6 +14,7 @@ Cache: in-memory dict, refreshed if > 7 days old.
 from __future__ import annotations
 
 import logging
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -115,7 +116,7 @@ class RegimeDistributions:
         # Optional: persist stats to DB (best-effort, ignore if table missing)
         try:
             self._persist_stats()
-        except Exception as e:
+        except (sqlite3.Error, OSError, AttributeError) as e:
             logger.debug("Could not persist regime_distributions: %s", e)
 
         return self

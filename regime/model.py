@@ -23,6 +23,7 @@ Usage
 from __future__ import annotations
 
 import datetime
+import sqlite3
 import json
 import logging
 from dataclasses import dataclass, field
@@ -425,7 +426,10 @@ class RegimeModel:
                     "WHERE date < ? ORDER BY date DESC LIMIT 1",
                     (effective_date,),
                 ).fetchone()
-        except Exception:
+        except (sqlite3.Error, OSError) as exc:
+            logger.warning(
+                "DB unavailable reading confirmed regime (treating as no history): %s", exc
+            )
             row = None
 
         if row is None:
@@ -452,7 +456,10 @@ class RegimeModel:
                     "WHERE date < ? ORDER BY date DESC LIMIT ?",
                     (effective_date, needed),
                 ).fetchall()
-        except Exception:
+        except (sqlite3.Error, OSError) as exc:
+            logger.warning(
+                "DB unavailable reading regime history (treating as no consecutive history): %s", exc
+            )
             hist_rows = []
 
         historical_raw: list[str] = [
@@ -545,6 +552,7 @@ class RegimeModel:
             }
             # Empty history: DB accessible, no bear period — return False.
             return any(row["regime_state"] in bear_states for row in rows)
-        except Exception:
+        except (sqlite3.Error, OSError) as exc:
             # DB unavailable — fall back to no-history heuristic.
+            logger.debug("DB unavailable in _check_recent_bear: %s — using no-history heuristic", exc)
             return None

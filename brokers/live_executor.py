@@ -118,7 +118,11 @@ def _is_already_protected(broker, ticker: str) -> bool:
     """
     try:
         open_orders = broker.get_open_orders()
-    except Exception:
+    except (OSError, ConnectionError, TimeoutError, AttributeError, RuntimeError) as _exc:
+        logger.debug(
+            "_is_already_protected(%s): get_open_orders error (%s) — returning False (conservative)",
+            ticker, _exc,
+        )
         return False  # Be conservative — let placement attempt
 
     for o in open_orders:

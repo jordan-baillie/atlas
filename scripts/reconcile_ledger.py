@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import sqlite3
 import json
 import logging
 import sys
@@ -59,10 +60,11 @@ def _lookup_strategy(ticker: str, market_id: str, state_positions: dict) -> str:
                 for entry in plan.get("proposed_entries", []) or []:
                     if entry.get("ticker") == ticker and entry.get("strategy"):
                         return entry["strategy"]
-            except Exception:
+            except (json.JSONDecodeError, OSError, KeyError, ValueError) as _plan_exc:
+                log.debug("Skipping plan file %s: %s", path, _plan_exc)
                 continue
-    except Exception:
-        pass
+    except (ImportError, OSError, AttributeError) as _glob_exc:
+        log.debug("Plan glob failed for %s/%s: %s", ticker, market_id, _glob_exc)
 
     # 3. Fallback — flagged so audits can find them
     log.warning("Strategy lookup for %s/%s fell through to 'reconciled' — audit this",
@@ -108,11 +110,13 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
         try:
             from universe.builder import get_universe_tickers as _builder_tickers
             universe_tickers = set(_builder_tickers(market_id))
-        except Exception:
+        except (ImportError, ModuleNotFoundError, AttributeError, RuntimeError, OSError) as _ub_exc:
+            log.debug("universe.builder unavailable (%s), trying definitions fallback", _ub_exc)
             try:
                 from universe.definitions import get_universe_tickers as _def_tickers
                 universe_tickers = set(_def_tickers(market_id))
-            except Exception:
+            except (ImportError, ModuleNotFoundError, AttributeError, RuntimeError, OSError) as _ud_exc:
+                log.debug("universe.definitions also unavailable: %s", _ud_exc)
                 universe_tickers = None
 
         # Load state-file tickers for this market — broker JSON is ground truth for
@@ -257,8 +261,8 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                                 f"🚨 [fill-price P3] reconcile_ledger: {ticker} has no fill "
                                 f"price. Run sync_broker_orders.py to populate broker_orders."
                             )
-                        except Exception:
-                            pass
+                        except (ImportError, OSError, ConnectionError, RuntimeError) as _tg_exc:
+                            log.debug("Telegram P3 fill-price alert failed: %s", _tg_exc)
                         stats["errors"].append(f"{ticker}: no fill price (P3 skip)")
                         continue
                 shares = (
@@ -460,8 +464,8 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                                 f"🚨 [fill-price P3] reconcile_ledger: {ticker} has no exit "
                                 f"price. Phantom stays open — run sync_broker_orders.py."
                             )
-                        except Exception:
-                            pass
+                        except (ImportError, OSError, ConnectionError, RuntimeError) as _tg_exc:
+                            log.debug("Telegram P3 exit-price alert failed: %s", _tg_exc)
                         stats["errors"].append(f"{ticker}: no exit price (P3 skip, stays open)")
                         continue
 
@@ -479,7 +483,7 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                     exit_price,
                     exit_reason,
                 )
-            except Exception as exc:
+            except (sqlite3.Error, OSError, AttributeError, ValueError, RuntimeError) as exc:
                 log.error("Failed to close phantom %s: %s", ticker, exc)
                 stats["errors"].append(f"{ticker}: {exc}")
 
@@ -513,8 +517,8 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
         if own_broker:
             try:
                 broker.disconnect()
-            except Exception:
-                pass
+            except (OSError, ConnectionError, AttributeError, RuntimeError) as _disc_exc:
+                log.debug("Broker disconnect error (non-fatal): %s", _disc_exc)
 
     return stats
 
