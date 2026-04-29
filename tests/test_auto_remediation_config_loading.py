@@ -290,8 +290,8 @@ class TestPhaseSettings:
     def _phase(self, cfg):
         self.phase = cfg.get("phase") or {}
 
-    def test_current_phase_is_1(self):
-        assert self.phase.get("current") == 1
+    def test_current_phase_is_2(self):
+        assert self.phase.get("current") == 2
 
     def test_phase_3_enabled_is_false(self):
         assert self.phase.get("phase_3_enabled") is False

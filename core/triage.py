@@ -245,15 +245,22 @@ class TriageClassifier:
         return None
 
     def _check_auto_fix_whitelist(self, error: dict) -> Optional[TriageResult]:
-        """Layer 5: AUTO_FIX whitelist — only active when phase_3_enabled=true.
-
-        Phase 1 stub: returns None always (phase_3_enabled is false).
-        Real whitelist matching ships in Phase 3.
-        """
+        """Phase 3: match error against config/auto_fix_classes.yaml whitelist."""
         if not self._phase_3_enabled:
             return None
-        # Phase 3+ implementation placeholder
-        return None
+        try:
+            from core.auto_merger import match_auto_fix_class
+        except Exception:
+            return None
+        cls = match_auto_fix_class(error)
+        if cls is None:
+            return None
+        return TriageResult(
+            "AUTO_FIX",
+            f"Whitelist match: {cls['name']}",
+            f"auto_fix_class:{cls['name']}",
+            tier=2,
+        )
 
     # ── Public API ─────────────────────────────────────────────────────
 

@@ -1,0 +1,81 @@
+# config/auto_fix_classes.yaml
+# Phase 3 AUTO_FIX whitelist — narrow, hand-curated, user-ratified.
+# Each entry MUST include: name, message_regex, file_path_globs, max_diff_lines,
+# requires_test_file_added.
+#
+# Activation: phase.phase_3_enabled in config/auto_remediation.yaml must also
+# be true. ANY entry mismatch → classifier returns ASSIST, not AUTO_FIX.
+#
+# Updated: 2026-04-29 (initial — never auto-modified; only operator edits)
+
+classes:
+  - name: test_import_error
+    message_regex: '(ImportError|ModuleNotFoundError):\s+'
+    exc_type_regex: '^(ImportError|ModuleNotFoundError)$'
+    file_path_globs:
+      - tests/**
+    max_diff_lines: 30
+    requires_test_file_added: false  # fix may just be a clean import
+    notes: "Test files referencing modules that moved or were renamed"
+
+  - name: stale_fixture_datetime
+    message_regex: '(stale|outdated|expired).*(date|fixture|timestamp)'
+    file_path_globs:
+      - tests/fixtures/**
+      - tests/data/**
+    max_diff_lines: 30
+    requires_test_file_added: false
+    notes: "Fixture data with hardcoded dates that need refresh"
+
+  - name: lint_non_trading_files
+    message_regex: '(SyntaxError|IndentationError|ruff|black|flake8)'
+    file_path_globs:
+      - tests/**
+      - docs/**
+      - dashboard-ui/**
+      - scripts/healthz_*.sh
+      - tasks/**
+    max_diff_lines: 30
+    requires_test_file_added: false
+    notes: "Lint failures in non-trading code paths"
+
+  - name: markdown_typos
+    message_regex: '(broken[- ]link|markdown|typo|spell)'
+    file_path_globs:
+      - docs/**
+      - "**/*.md"
+      - tasks/**
+      - tests/**
+    max_diff_lines: 30
+    requires_test_file_added: false
+    notes: "Doc and markdown errors — no runtime impact"
+
+  - name: dashboard_react_build_errors
+    message_regex: '(TS\d{4}|tsc|vite|rollup|recharts)'
+    file_path_globs:
+      - dashboard-ui/src/**
+      - dashboard-ui/**/*.ts
+      - dashboard-ui/**/*.tsx
+    max_diff_lines: 30
+    requires_test_file_added: false
+    notes: "TypeScript / Vite / Rollup build errors — frontend only"
+
+  - name: healthz_section_logic
+    message_regex: '(healthz|healthcheck)\s.*(failed|threshold|stale)'
+    file_path_globs:
+      - scripts/healthz_*.sh
+      - pi-package/**/skills/**/*.md
+    max_diff_lines: 30
+    requires_test_file_added: false
+    file_path_block_globs:    # exclude trading-path healthchecks
+      - scripts/healthz_*broker*
+      - scripts/healthz_*risk*
+      - scripts/healthz_*reconcile*
+      - scripts/healthz_*kill*
+    notes: "Non-trading healthcheck thresholds and section logic only"
+
+# Hard cap — entire whitelist
+defaults:
+  max_diff_lines: 30
+  reviewer_confidence_threshold: 0.75
+  post_merge_monitor_minutes: 30

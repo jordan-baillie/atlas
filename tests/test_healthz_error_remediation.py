@@ -269,12 +269,12 @@ def test_check_revert_rate_fails_at_halt_threshold():
 
 
 def test_check_phase_state_reads_config():
-    """Reads real config/auto_remediation.yaml; expects phase=1, phase_3_enabled=False."""
+    """Reads real config/auto_remediation.yaml; expects phase=2, phase_3_enabled=False."""
     import db.atlas_db as adb
     with adb.get_db() as conn:
         ok, detail = healthz.check_phase_state(conn)
     assert ok is True
-    assert detail["phase"] == 1
+    assert detail["phase"] == 2
     assert detail["phase_3_enabled"] is False
 
 
