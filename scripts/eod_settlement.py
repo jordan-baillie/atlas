@@ -572,35 +572,7 @@ def main():
     log.info("Updating position excursions (MAE/MFE)...")
     portfolio.update_positions(prices)
 
-    # Reconcile protective orders on broker (SL/TP)
-    # Ensures all positions have broker-side stops even after restarts/missed syncs
-    # Protective orders are broker-specific
-    broker_type = type(portfolio._broker).__name__ if portfolio._broker else ""
-    if False:  # IBKR removed — protective orders handled per-broker
-        log.info("Reconciling protective orders on broker...")
-        try:
-            plan_path = PROJECT / "plans" / f"plan_{market_id}_{trade_date}.json"
-            plan_entries = []
-            if plan_path.exists():
-                with open(plan_path) as f:
-                    plan_entries = json.load(f).get("proposed_entries", [])
-            # Also include enriched position data as fallback entries
-            for pos in portfolio.positions:
-                if pos.stop_price > 0 and not any(e.get("ticker") == pos.ticker for e in plan_entries):
-                    plan_entries.append({
-                        "ticker": pos.ticker,
-                        "stop_price": pos.stop_price,
-                        "take_profit": pos.take_profit,
-                    })
-            if hasattr(portfolio._broker, "sync_all_protective_orders"):
-                sync_result = portfolio._broker.sync_all_protective_orders(plan_entries)
-                counts = sync_result if "sl_placed" in sync_result else sync_result.get("counts", {})
-                log.info("Protective order sync: SL placed=%d, TP placed=%d, already_protected=%d",
-                         counts.get("sl_placed", counts.get("orders_placed", 0)),
-                         counts.get("tp_placed", 0),
-                         counts.get("already_protected", counts.get("sl_already_exists", 0)))
-        except Exception as e:
-            log.warning(f"Protective order sync failed (non-fatal): {e}")
+    # Protective order sync removed: IBKR removed — per-broker sync handled by sync_protective_orders.py cron
 
     # ── Ledger-broker reconciliation ─────────────────────────
     # Catches LIMIT fills that happened after order submission but before

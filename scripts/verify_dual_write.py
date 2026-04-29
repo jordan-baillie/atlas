@@ -960,6 +960,26 @@ def _save_history(history: dict, passed: bool, detail: str, *, source: str = "ma
 # ═════════════════════════════════════════════════════════════════════════════
 # Entry point
 # ═════════════════════════════════════════════════════════════════════════════
+
+def _alert_telegram_on_fail(results: Dict[str, bool], source: str) -> None:
+    """Send a Telegram alert summarising which dual-write checks failed."""
+    try:
+        from utils.telegram import send_message
+        failed = [name for name, passed in results.items() if not passed]
+        lines = [
+            "🚨 DUAL-WRITE VERIFY FAILED",
+            f"Source: {source}",
+        ]
+        for name in failed:
+            lines.append(f"Field: {name}")
+        send_message("\n".join(lines))
+    except Exception as exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Failed to send dual-write fail alert: %s", exc
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Atlas dual-write consistency checker"
@@ -1038,6 +1058,8 @@ def main() -> None:
     print(_hr())
     print()
 
+    if not all_passed:
+        _alert_telegram_on_fail(results, args.source)
     sys.exit(0 if all_passed else 1)
 
 

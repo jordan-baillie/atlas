@@ -79,6 +79,9 @@ class LivePortfolio:
         self.halted: bool = False
         self.halt_reason: str = ""
 
+        # Throttle: save_state warning fires only once per instance (not 30+ times)
+        self._save_state_warned: bool = False
+
         self._broker = None
         self._connected = False
 
@@ -117,10 +120,12 @@ class LivePortfolio:
         corrupting state with zeroed broker data.
         """
         if not self.broker_data_valid:
-            logger.warning(
-                "save_state() skipped — broker_data_valid is False "
-                "(would corrupt %s)", self._state_path().name
-            )
+            if not self._save_state_warned:
+                logger.warning(
+                    "save_state() skipped — broker_data_valid is False "
+                    "(would corrupt live_%s.json)", self.market_id
+                )
+                self._save_state_warned = True
             return
 
         path = self._state_path()

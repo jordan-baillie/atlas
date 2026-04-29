@@ -194,6 +194,61 @@ def _assert_state_file_parity(
             ticker, universe, _state_path.name,
         )
 
+        # ── Telegram alert (1-hour cooldown) ──────────────────────────────
+        try:
+            import time as _time
+            # Cooldown file lives beside the state file (or in data/ if no override)
+            if _state_dir_override is not None:
+                _cooldown_path = Path(_state_dir_override) / "parity_alert_cooldown.json"
+            else:
+                _cooldown_path = _PROJECT / "data" / "parity_alert_cooldown.json"
+            _now_ts = _time.time()
+            _cooldown_state: dict = {}
+            try:
+                if _cooldown_path.exists():
+                    _cooldown_state = json.loads(_cooldown_path.read_text())
+            except Exception:
+                pass
+            _last_alert = float(_cooldown_state.get(universe, 0))
+            if _now_ts - _last_alert >= 3600:
+                # Build alert content
+                try:
+                    with get_db() as _alert_db:
+                        _sqlite_rows = _alert_db.execute(
+                            "SELECT ticker FROM trades WHERE universe=? AND status='open'",
+                            (universe,),
+                        ).fetchall()
+                    _sqlite_tickers = sorted(r["ticker"] for r in _sqlite_rows)
+                except Exception:
+                    _sqlite_tickers = [ticker]
+                _sqlite_count = len(_sqlite_tickers)
+                _json_tickers_sorted = sorted(_tickers_in_state)
+                _json_count = len(_json_tickers_sorted)
+                _missing_set = sorted({ticker} - _tickers_in_state)
+                _extra_set = sorted(_tickers_in_state - set(_sqlite_tickers))
+                from utils.telegram import send_message as _tg_send
+                _msg = (
+                    "🚨 STATE PARITY MISMATCH" + "\n"
+                    + f"Market: {universe}" + "\n"
+                    + f"SQLite open: {_sqlite_count} positions"
+                    + f" ({', '.join(_sqlite_tickers) or 'none'})" + "\n"
+                    + f"JSON state: {_json_count} positions"
+                    + f" ({', '.join(_json_tickers_sorted) or 'none'})" + "\n"
+                    + f"Missing from JSON: {', '.join(_missing_set) or 'none'}" + "\n"
+                    + f"Extra in JSON: {', '.join(_extra_set) or 'none'}"
+                )
+                _tg_send(_msg)
+                # Record cooldown timestamp
+                _cooldown_state[universe] = _now_ts
+                try:
+                    _cooldown_path.write_text(json.dumps(_cooldown_state))
+                except Exception:
+                    pass
+        except Exception as _tg_exc:
+            _log.warning(
+                "STATE PARITY: failed to send Telegram alert (non-fatal): %s", _tg_exc
+            )
+
         # Self-heal: append a minimal position entry
         _new_entry = {
             "ticker": ticker,
