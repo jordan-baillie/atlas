@@ -131,6 +131,136 @@ class TelegramErrorCollector(logging.Handler):
         send_message("\n".join(lines))
 
 
+
+
+# ═══════════════════════════════════════════════════════════════
+# SQLite error writer — persists every ERROR+ to data/atlas.db:errors
+# ═══════════════════════════════════════════════════════════════
+
+class SQLiteErrorWriter(logging.Handler):
+    """Persist every ERROR+ log record to data/atlas.db:errors.
+
+    Writes synchronously on each emit() call.  Thread-safe via instance lock.
+    Fails-open: if SQLite is unavailable the record is silently dropped — this
+    handler must never crash the calling process.
+
+    yfinance.* records are filtered identically to TelegramErrorCollector.
+
+    Dedup: if a fingerprint already exists in errors, bumps occurrence_count
+    instead of inserting a new row (true occurrence count for severity
+    prioritisation).
+
+    Args:
+        script_name: Used as the ``service`` column value.
+        db_path: Override the database path — for tests only.  Production code
+            leaves this None which respects the ``db.atlas_db._db_path_override``
+            pattern (and falls back to the production DB_PATH).
+    """
+
+    DEDUP_WINDOW_SEC = 300  # 5 min — Engineering report §1.4
+
+    def __init__(self, script_name: str = "", db_path: str | None = None) -> None:
+        super().__init__(level=logging.ERROR)
+        self.script_name = script_name
+        self._db_path = db_path
+        self._lock = threading.Lock()
+        self._hostname = self._safe_hostname()
+        self._pid = os.getpid()
+
+    @staticmethod
+    def _safe_hostname() -> str | None:
+        try:
+            import socket
+            return socket.gethostname()
+        except Exception:
+            return None
+
+    def emit(self, record: logging.LogRecord) -> None:
+        # Filter yfinance noise — mirrors TelegramErrorCollector
+        if record.name.startswith("yfinance"):
+            return
+        try:
+            self._write_record(record)
+        except Exception:
+            # Never crash the calling process due to a logging-handler failure.
+            # Silently drop — we can't even safely log the error.
+            pass
+
+    def _write_record(self, record: logging.LogRecord) -> None:
+        from utils.error_fingerprint import compute_fingerprint  # avoids circular import
+        from db import atlas_db  # local import
+
+        exc_type: str | None = None
+        exc_msg: str | None = None
+        tb: str | None = None
+        if record.exc_info and record.exc_info[1] is not None:
+            exc_type = type(record.exc_info[1]).__name__
+            exc_msg = str(record.exc_info[1])[:1000]
+            try:
+                import traceback as _tb
+                tb = "".join(_tb.format_exception(*record.exc_info))[:8000]
+            except Exception:
+                tb = None
+
+        fp = compute_fingerprint(
+            exc_type=exc_type,
+            message=record.getMessage(),
+            file_path=getattr(record, "pathname", None),
+            line_number=getattr(record, "lineno", None),
+        )
+        ts = datetime.utcfromtimestamp(record.created).strftime("%Y-%m-%dT%H:%M:%S")
+
+        with self._lock:
+            with atlas_db.get_db(self._db_path) as conn:
+                row = conn.execute(
+                    "SELECT id, occurrence_count FROM errors WHERE fingerprint = ?",
+                    (fp,),
+                ).fetchone()
+                if row is not None:
+                    # Bump count — we want a true occurrence count regardless of
+                    # the 5-min dedup window (window is for re-evaluation cadence)
+                    conn.execute(
+                        "UPDATE errors"
+                        " SET occurrence_count = occurrence_count + 1,"
+                        "     last_seen_ts = ?,"
+                        "     ts = ?"
+                        " WHERE id = ?",
+                        (ts, ts, row["id"]),
+                    )
+                    return
+                # New fingerprint — full insert
+                conn.execute(
+                    """INSERT INTO errors (
+                        fingerprint, first_seen_ts, last_seen_ts, occurrence_count, ts,
+                        source, service, level, logger_name, message,
+                        exc_type, exc_message, traceback,
+                        file_path, line_number, function_name, pid, hostname,
+                        classification, tier, remediation_status
+                    ) VALUES (
+                        ?, ?, ?, 1, ?,
+                        'python_logger', ?, ?, ?, ?,
+                        ?, ?, ?,
+                        ?, ?, ?, ?, ?,
+                        'UNCLASSIFIED', 99, 'NEW'
+                    )""",
+                    (
+                        fp, ts, ts, ts,
+                        self.script_name or None,
+                        record.levelname,
+                        record.name,
+                        record.getMessage()[:8000],
+                        exc_type,
+                        exc_msg,
+                        tb,
+                        getattr(record, "pathname", None),
+                        getattr(record, "lineno", None),
+                        getattr(record, "funcName", None),
+                        self._pid,
+                        self._hostname,
+                    ),
+                )
+
+
 def _classify_errors(records: list[logging.LogRecord]) -> list[str]:
     """Classify errors into actionable categories for the alert."""
     hints = []
@@ -229,6 +359,16 @@ def setup_logging(
         _collector = TelegramErrorCollector(script_name=script_name)
         root.addHandler(_collector)
         atexit.register(_collector.flush_to_telegram)
+
+    # SQLite error writer — persists every ERROR+ to data/atlas.db:errors.
+    # Gated by _in_pytest (same rule as Telegram) AND the env-var kill-switch.
+    if not _in_pytest and os.environ.get("ATLAS_SQLITE_ERROR_WRITER", "1") != "0":
+        try:
+            _sqlite_writer = SQLiteErrorWriter(script_name=script_name)
+            root.addHandler(_sqlite_writer)
+        except Exception:
+            # Never let logging setup fail because SQLite is unavailable.
+            pass
 
     # Suppress noisy third-party loggers
     for noisy in ["urllib3", "peewee", "httpx", "httpcore"]:
