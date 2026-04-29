@@ -696,14 +696,33 @@ def main() -> int:
 
     # ── Telegram notification ──────────────────────────────────
     # Only send if there are discrepancies or errors (skip clean results in quiet mode)
+    # 4h cooldown per market: persistent discrepancies (e.g. CAT UNTRACKED) should not
+    # fire every daily run — operator already knows once they've been notified.
     should_notify = (has_discrepancies or has_error) and not args.no_telegram
-    
     if should_notify:
-        ok = send_telegram_summary(result, result["fixed"])
-        if ok:
-            logger.info("Telegram notification sent")
-        else:
-            logger.warning("Telegram notification failed (non-fatal)")
+        from pathlib import Path as _Path
+        import time as _time
+        _cooldown_dir = _Path(__file__).parent.parent / "logs" / "healthz-cooldowns"
+        _cooldown_dir.mkdir(parents=True, exist_ok=True)
+        _market_slug = getattr(args, "market", "all")
+        _notify_key = f"reconcile_{_market_slug}"
+        _cooldown_file = _cooldown_dir / _notify_key
+        _now = _time.time()
+        _cooldown_ok = True
+        if _cooldown_file.exists():
+            _age_h = (_now - _cooldown_file.stat().st_mtime) / 3600
+            if _age_h < 4:
+                _cooldown_ok = False
+                logger.info(
+                    "Reconcile Telegram suppressed (%.1fh cooldown, key=%s)", _age_h, _notify_key
+                )
+        if _cooldown_ok:
+            _cooldown_file.touch()
+            ok = send_telegram_summary(result, result["fixed"])
+            if ok:
+                logger.info("Telegram notification sent")
+            else:
+                logger.warning("Telegram notification failed (non-fatal)")
 
     logger.info("=== reconcile_positions done (discrepancies=%s) ===", has_discrepancies)
     return 1 if has_discrepancies or has_error else 0

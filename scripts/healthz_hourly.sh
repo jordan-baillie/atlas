@@ -89,16 +89,31 @@ fi
 if [ -n "$RECONCILE_OUT" ]; then
     DRIFT_LINES=$(echo "$RECONCILE_OUT" | grep -E "PHANTOM|UNTRACKED|MISMATCH|DRIFT" | head -10 || true)
     if [ -n "$DRIFT_LINES" ]; then
+        # 4h cooldown: same drift signature won't re-alert within 4 hours
+        DRIFT_HASH=$(echo "$DRIFT_LINES" | sed 's/[0-9]*\.[0-9]*/N/g; s/[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}/DATE/g' | md5sum | cut -c1-12)
+        DRIFT_COOLDOWN_FILE="$COOLDOWN_DIR/drift_$DRIFT_HASH"
+        DRIFT_SHOULD_ALERT=1
+        if [ -f "$DRIFT_COOLDOWN_FILE" ]; then
+            DRIFT_AGE_HRS=$(( ($(date +%s) - $(stat -c %Y "$DRIFT_COOLDOWN_FILE")) / 3600 ))
+            if [ "$DRIFT_AGE_HRS" -lt "$COOLDOWN_HOURS" ]; then
+                DRIFT_SHOULD_ALERT=0
+                log "Drift alert in cooldown (${DRIFT_AGE_HRS}h old) — skipping Telegram for hash=$DRIFT_HASH"
+            fi
+        fi
+
         DRIFT_COUNT=$(echo "$DRIFT_LINES" | grep -c . || true)
-        log "CRITICAL: ledger/broker drift detected (${DRIFT_COUNT} line(s)) — sending immediate alert"
-        DRIFT_ESCAPED=$(echo "$DRIFT_LINES" | head -600 | python3 -c "
+        log "CRITICAL: ledger/broker drift detected (${DRIFT_COUNT} line(s))"
+
+        if [ "$DRIFT_SHOULD_ALERT" -eq 1 ]; then
+            touch "$DRIFT_COOLDOWN_FILE"
+            log "Sending drift alert (hash=$DRIFT_HASH)"
+            DRIFT_ESCAPED=$(echo "$DRIFT_LINES" | head -600 | python3 -c "
 import sys
 data = sys.stdin.read()
-# Escape characters that would break the Python string argument
 data = data.replace('\\\\', '\\\\\\\\').replace(\"'\", \"\\\\'\")[:500]
 print(data)
 " 2>/dev/null || echo "(see reconcile log)")
-        python3 -c "
+            python3 -c "
 import sys
 sys.path.insert(0, '$PROJECT')
 from utils.telegram import send_message
@@ -110,6 +125,7 @@ send_message(
     'and confirm strategy attribution is correct.</i>'
 )
 " 2>/dev/null || true
+        fi
     fi
 fi
 
@@ -232,14 +248,8 @@ try_bash_fixes() {
         esac
     done <<< "$issues"
 
-    # Send Telegram if we fixed things
-    if [ -n "$fixed" ]; then
-        python3 -c "
-import sys; sys.path.insert(0, '$PROJECT')
-from utils.telegram import send_message
-send_message('🔧 <b>Watchdog auto-fixed:</b>\n$(echo -e "$fixed" | head -5)')
-" 2>/dev/null || true
-    fi
+    # NOTE: pycache cleanup and log rotation are logged above — no Telegram needed.
+    # Telegram only for things that wake the operator (see Step 2b / Step 5).
 
     # Return remaining unfixed issues (or empty)
     echo -e "$remaining"
@@ -291,15 +301,24 @@ NOT ALLOWED (never do these):
 After fixing, run the healthcheck again:
   cd /root/atlas && python3 pi-package/atlas-ops/skills/atlas-healthz/scripts/healthz.py --market sp500
 
-TELEGRAM: Only send a notification if you actually FIXED something:
-  python3 -c \"import sys; sys.path.insert(0,'/root/atlas'); from utils.telegram import send_message; send_message('''YOUR_MSG''')\"
+TELEGRAM: Send a notification ONLY in these specific cases:
+  1. A SERVICE RESTART succeeded after being DOWN (not just running 'restart')
+  2. A repair you CANNOT complete that requires the operator (specific manual step needed)
+  3. A new ERROR class never seen before that may indicate a real bug
 
-Rules:
-- Send Telegram if you applied a fix (restarted a service, cleaned logs, refreshed data, etc.)
-- Send Telegram if there are issues you CANNOT fix (needs manual intervention)
-- Do NOT send Telegram for warnings that are informational only (weekend gaps, expected states)
-- Keep it under 10 lines, use HTML (<b>, <code>)
-- Be concise — this runs every hour, nobody wants a novel"
+Do NOT Telegram for:
+  - Routine maintenance (pycache, log rotation, refresh)
+  - Reconcile auto-fixes (UNTRACKED → fixed is routine, drift Telegram already sent)
+  - Restarting a service that was already running (that is a no-op)
+  - Confirming "all checks passed"
+  - Reporting what you did when nothing was broken
+
+If in doubt: SILENT. The Telegram channel is for things that wake the operator.
+
+Use:
+  python3 -c \"import sys; sys.path.insert(0,'/root/atlas'); from utils.telegram import send_message; send_message(\'\'\'YOUR_MSG\'\'\')\"
+
+Keep messages under 8 lines, use HTML (<b>, <code>)."
 
 SKILLS_ROOT="$PROJECT/pi-package/atlas-ops/skills"
 
@@ -471,9 +490,21 @@ fi
 # P1-E (2026-04-24): healthz.py's cron_dashboard check reports "NOT scheduled"
 # because the refresh moved to a systemd timer (atlas-dashboard-refresh.timer).
 # The old cron check is ignored above; we do a direct systemctl check instead.
+# 6h cooldown: avoid alerting every hour if the timer is transiently inactive.
 if ! systemctl is-active --quiet atlas-dashboard-refresh.timer 2>/dev/null; then
     log "WARN: atlas-dashboard-refresh.timer is not active (dashboard rebuild may not run hourly)"
-    python3 -c "
+    TIMER_COOLDOWN_FILE="$COOLDOWN_DIR/dashboard_timer_inactive"
+    TIMER_SHOULD_ALERT=1
+    if [ -f "$TIMER_COOLDOWN_FILE" ]; then
+        TIMER_AGE_HRS=$(( ($(date +%s) - $(stat -c %Y "$TIMER_COOLDOWN_FILE")) / 3600 ))
+        if [ "$TIMER_AGE_HRS" -lt 6 ]; then
+            TIMER_SHOULD_ALERT=0
+            log "Dashboard timer alert in cooldown (${TIMER_AGE_HRS}h) — skipping Telegram"
+        fi
+    fi
+    if [ "$TIMER_SHOULD_ALERT" -eq 1 ]; then
+        touch "$TIMER_COOLDOWN_FILE"
+        python3 -c "
 import sys
 sys.path.insert(0, '$PROJECT')
 from utils.telegram import send_message
@@ -483,18 +514,19 @@ send_message(
     'Check: <code>systemctl status atlas-dashboard-refresh.timer</code>'
 )
 " 2>/dev/null || true
+    fi
 else
     log "Dashboard refresh timer OK: atlas-dashboard-refresh.timer active"
 fi
 
 # ── Dashboard dist staleness check ──────────────────────────
-# Alert if the React SPA dist/ hasn't been rebuilt in > 6 hours.
-# The atlas-dashboard-refresh.timer should rebuild hourly.
+# Silent rebuild at >6h (expected — hourly timer may lag).
+# Only alert if dist is >24h stale (timer may be broken).
 DASHBOARD_DIST="$PROJECT/dashboard-ui/dist/index.html"
 if [ -f "$DASHBOARD_DIST" ]; then
     DIST_AGE_H=$(( ($(date +%s) - $(stat -c %Y "$DASHBOARD_DIST")) / 3600 ))
-    if [ "$DIST_AGE_H" -gt 6 ]; then
-        log "WARNING: dashboard dist is ${DIST_AGE_H}h old (>6h threshold)"
+    if [ "$DIST_AGE_H" -gt 24 ]; then
+        log "WARNING: dashboard dist is ${DIST_AGE_H}h old (>24h — possible timer failure)"
         systemctl start atlas-dashboard-refresh.service 2>/dev/null || true
         python3 -c "
 import sys
@@ -507,6 +539,9 @@ send_message(
     'Triggered manual rebuild.'.format(age)
 )
 " 2>/dev/null || true
+    elif [ "$DIST_AGE_H" -gt 6 ]; then
+        log "Dashboard dist ${DIST_AGE_H}h old — triggering silent rebuild"
+        systemctl start atlas-dashboard-refresh.service 2>/dev/null || true
     else
         log "Dashboard dist OK: ${DIST_AGE_H}h old"
     fi
