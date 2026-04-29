@@ -82,38 +82,77 @@ def check_l3_trading_halt() -> Optional[BlockReason]:
 
 
 def check_l4_drawdown(
-    *, db_path: Optional[str] = None, threshold_pct: float = DRAWDOWN_HALT_PCT
+    *, db_path: Optional[str] = None, threshold_pct: float = DRAWDOWN_HALT_PCT,
+    window_days: int = 30,
 ) -> Optional[BlockReason]:
-    """Read latest portfolio snapshot; if daily drawdown > threshold, halt."""
+    """Compute drawdown-from-peak using equity_history over the last window_days.
+
+    Cutover note (2026-04-30, Task #289):
+        The original implementation queried portfolio_snapshots.daily_pnl_pct.
+        That column DOES NOT EXIST in the production schema, so every call raised
+        sqlite3.OperationalError which was swallowed by a bare `except` and returned
+        False (fail-open).  This silently disabled the L4 layer in production.
+
+        The fix derives drawdown from sequential equity values in equity_history:
+            drawdown_pct = (peak_equity - latest_equity) / peak_equity * 100
+
+        equity_history schema: (market_id TEXT, date TEXT, equity REAL, pnl REAL)
+
+    Fail behaviour:
+        - Schema / DB errors → log ERROR + return None (fail-open, but LOUD)
+        - Empty table → log DEBUG + return None (graceful no-data path)
+    """
+    import sqlite3 as _sqlite3
+
+    path = db_path or str(PROJECT_ROOT / "data" / "atlas.db")
+    cutoff_date = (
+        datetime.now(timezone.utc) - timedelta(days=window_days)
+    ).strftime("%Y-%m-%d")
+
     try:
-        import sqlite3
-        path = db_path or str(PROJECT_ROOT / "data" / "atlas.db")
-        with sqlite3.connect(path, timeout=10) as conn:
-            conn.row_factory = sqlite3.Row
-            # Look up the most recent portfolio_snapshot for sp500 (the primary book)
-            row = conn.execute(
-                """SELECT timestamp, equity, daily_pnl_pct
-                   FROM portfolio_snapshots
+        with _sqlite3.connect(path, timeout=10) as conn:
+            conn.row_factory = _sqlite3.Row
+            rows = conn.execute(
+                """SELECT date, equity
+                   FROM equity_history
                    WHERE market_id = 'sp500'
-                   ORDER BY timestamp DESC LIMIT 1"""
-            ).fetchone()
-            if row is None:
-                return None  # No data yet — fail-open
-            dd_pct = -float(row["daily_pnl_pct"] or 0)  # negative pnl → positive drawdown
-            if dd_pct > threshold_pct:
-                return BlockReason(
-                    "L4", f"Daily drawdown {dd_pct:.2f}% > {threshold_pct}%",
-                    {
-                        "timestamp": row["timestamp"],
-                        "equity": row["equity"],
-                        "daily_pnl_pct": row["daily_pnl_pct"],
-                        "threshold_pct": threshold_pct,
-                    },
-                )
-    except Exception as e:
-        # Fail-open: if we can't read the DB, don't halt remediation on this layer.
-        # L1-L3 are hard-blocking; L4 is conditional on data availability.
-        logger.warning("L4 drawdown check failed (fail-open): %s", e)
+                     AND date >= ?
+                   ORDER BY date ASC""",
+                (cutoff_date,),
+            ).fetchall()
+    except (_sqlite3.OperationalError, _sqlite3.DatabaseError) as e:
+        # Explicit, loud log — not the silent bare-except from before.
+        logger.error("L4 drawdown check unavailable (fail-open): %s", e)
+        return None
+
+    if not rows:
+        logger.debug("L4: no equity_history rows for sp500 in last %d days (fail-open)", window_days)
+        return None
+
+    equities = [float(r["equity"]) for r in rows]
+    peak_equity = max(equities)
+    latest_equity = equities[-1]
+    latest_date = str(rows[-1]["date"])
+
+    if peak_equity <= 0:
+        logger.warning("L4: peak_equity <= 0 (%s) — skipping drawdown check", peak_equity)
+        return None
+
+    drawdown_pct = (peak_equity - latest_equity) / peak_equity * 100.0
+
+    if drawdown_pct >= threshold_pct:
+        return BlockReason(
+            "L4",
+            f"Drawdown from peak {drawdown_pct:.2f}% >= {threshold_pct}%",
+            {
+                "latest_date": latest_date,
+                "latest_equity": latest_equity,
+                "peak_equity": peak_equity,
+                "drawdown_pct": round(drawdown_pct, 4),
+                "threshold_pct": threshold_pct,
+                "window_days": window_days,
+            },
+        )
     return None
 
 

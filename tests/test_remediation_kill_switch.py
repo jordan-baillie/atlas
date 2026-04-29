@@ -40,13 +40,20 @@ def _make_full_db(tmp_path: Path) -> str:
 
     All tables are empty — so every check returns None (all-clear state).
     Uses CREATE TABLE IF NOT EXISTS for idempotency within a single test.
+
+    NOTE (2026-04-30, Task #289): L4 now queries equity_history (not the
+    legacy portfolio_snapshots.daily_pnl_pct column which never existed in
+    the production schema).
     """
     db = tmp_path / "full.db"
     conn = sqlite3.connect(str(db))
     conn.executescript("""
-        CREATE TABLE IF NOT EXISTS portfolio_snapshots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT, market_id TEXT, equity REAL, daily_pnl_pct REAL
+        CREATE TABLE IF NOT EXISTS equity_history (
+            market_id  TEXT NOT NULL,
+            date       TEXT NOT NULL,
+            equity     REAL NOT NULL,
+            pnl        REAL,
+            PRIMARY KEY (market_id, date)
         );
         CREATE TABLE IF NOT EXISTS errors (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -170,63 +177,105 @@ class TestL3TradingHalt:
 # ===========================================================================
 
 class TestL4Drawdown:
-    """Tests 11-14: L4 portfolio drawdown check."""
+    """Tests 11-14: L4 portfolio drawdown check (equity_history-based).
+
+    Task #289 (2026-04-30): L4 was previously fail-open in production because it
+    queried portfolio_snapshots.daily_pnl_pct — a column that never existed in the
+    production schema. The bare except swallowed the OperationalError silently.
+    These tests verify the corrected equity_history-based computation.
+    """
 
     def _make_db(self, tmp_path: Path, rows: list | None = None) -> str:
-        """Create a tmp DB with portfolio_snapshots table for L4 testing."""
-        db = tmp_path / "snap.db"
+        """Create a tmp DB with equity_history table for L4 testing.
+
+        rows: list of (date_str, market_id, equity, pnl) tuples.
+        """
+        db = tmp_path / "equity.db"
         conn = sqlite3.connect(str(db))
-        conn.execute("""CREATE TABLE portfolio_snapshots (
-            id INTEGER PRIMARY KEY,
-            timestamp TEXT,
-            market_id TEXT,
-            equity REAL,
-            daily_pnl_pct REAL
+        conn.execute("""CREATE TABLE equity_history (
+            market_id  TEXT NOT NULL,
+            date       TEXT NOT NULL,
+            equity     REAL NOT NULL,
+            pnl        REAL,
+            PRIMARY KEY (market_id, date)
         )""")
         if rows:
             conn.executemany(
-                """INSERT INTO portfolio_snapshots
-                   (timestamp, market_id, equity, daily_pnl_pct) VALUES (?,?,?,?)""",
+                "INSERT INTO equity_history (market_id, date, equity, pnl) VALUES (?,?,?,?)",
                 rows,
             )
         conn.commit()
         conn.close()
         return str(db)
 
-    def test_none_when_no_snapshots(self, tmp_path: Path) -> None:
-        """Test 11: returns None when portfolio_snapshots table is empty."""
-        db = self._make_db(tmp_path)
-        assert ks.check_l4_drawdown(db_path=db) is None
+    def _recent_date(self, days_ago: int = 0) -> str:
+        """Return a date string N days ago (within the default window_days=30)."""
+        from datetime import datetime, timezone, timedelta
+        return (datetime.now(timezone.utc) - timedelta(days=days_ago)).strftime("%Y-%m-%d")
 
-    def test_none_when_drawdown_below_threshold(self, tmp_path: Path) -> None:
-        """Test 12: returns None when daily_pnl_pct = -2% (DD 2% < 5%)."""
-        db = self._make_db(
-            tmp_path, rows=[(_now_iso(), "sp500", 10_000.0, -2.0)]
-        )
-        assert ks.check_l4_drawdown(db_path=db) is None
+    def test_l4_fires_at_5pct_drawdown(self, tmp_path: Path) -> None:
+        """Test 11: 5 rows below threshold → no breach; add row crossing 5% → breach.
 
-    def test_blocks_when_drawdown_exceeds_threshold(self, tmp_path: Path) -> None:
-        """Test 13: returns BlockReason L4 when daily_pnl_pct = -7.5% (DD 7.5% > 5%)."""
-        db = self._make_db(
-            tmp_path, rows=[(_now_iso(), "sp500", 10_000.0, -7.5)]
-        )
+        Equity path: 1000 → 1010 → 1015 → 1020 → 980 (peak=1020, DD=3.9% → no breach)
+        Then row at 945 → DD = (1020-945)/1020 = 7.35% → breach.
+        """
+        # Phase A: 5 rows, peak=$1020, latest=$980 → drawdown 3.9% → no breach
+        rows_a = [
+            ("sp500", self._recent_date(9), 1000.0, None),
+            ("sp500", self._recent_date(7), 1010.0, None),
+            ("sp500", self._recent_date(5), 1015.0, None),
+            ("sp500", self._recent_date(3), 1020.0, None),
+            ("sp500", self._recent_date(1), 980.0, None),
+        ]
+        db_a = self._make_db(tmp_path, rows_a)
+        assert ks.check_l4_drawdown(db_path=db_a) is None
+
+        # Phase B: add $945 row → drawdown (1020-945)/1020 = 7.35% → breach
+        rows_b = rows_a + [("sp500", self._recent_date(0), 945.0, None)]
+        # Use a different tmp_path sub-dir to avoid sqlite3 PRIMARY KEY conflict
+        import tempfile, os
+        tmp_b = Path(tempfile.mkdtemp())
+        db_b = self._make_db(tmp_b, rows_b)
+        result = ks.check_l4_drawdown(db_path=db_b)
+        assert result is not None
+        assert result.layer == "L4"
+        assert result.detail["peak_equity"] == pytest.approx(1020.0)
+        assert result.detail["drawdown_pct"] == pytest.approx(7.3529, abs=0.01)
+
+    def test_l4_fires_at_10pct_drawdown(self, tmp_path: Path) -> None:
+        """Test 12: peak $5000 → current $4500 = -10% drawdown → breach."""
+        rows = [
+            ("sp500", self._recent_date(5), 5000.0, None),
+            ("sp500", self._recent_date(0), 4500.0, None),
+        ]
+        db = self._make_db(tmp_path, rows)
         result = ks.check_l4_drawdown(db_path=db)
         assert result is not None
         assert result.layer == "L4"
-        assert result.detail["threshold_pct"] == ks.DRAWDOWN_HALT_PCT
+        assert result.detail["peak_equity"] == pytest.approx(5000.0)
+        assert result.detail["latest_equity"] == pytest.approx(4500.0)
+        assert result.detail["drawdown_pct"] == pytest.approx(10.0, abs=0.01)
 
-    def test_fail_open_on_db_error(self, tmp_path: Path, caplog) -> None:
-        """Test 14: returns None (fail-open) when DB has no portfolio_snapshots table."""
+    def test_l4_handles_minus_3pct_no_breach(self, tmp_path: Path) -> None:
+        """Test 13: peak $5000 → current $4850 = -3% drawdown → no breach (< 5%)."""
+        rows = [
+            ("sp500", self._recent_date(5), 5000.0, None),
+            ("sp500", self._recent_date(0), 4850.0, None),
+        ]
+        db = self._make_db(tmp_path, rows)
+        result = ks.check_l4_drawdown(db_path=db)
+        assert result is None
+
+    def test_l4_handles_empty_history(self, tmp_path: Path, caplog) -> None:
+        """Test 14: empty equity_history → returns None (fail-open) with log message, no crash."""
         import logging
 
-        # Empty DB — no tables at all → query will raise OperationalError
-        empty_db = tmp_path / "empty.db"
-        sqlite3.connect(str(empty_db)).close()
-
-        with caplog.at_level(logging.WARNING, logger="core.remediation_kill_switch"):
-            result = ks.check_l4_drawdown(db_path=str(empty_db))
+        db = self._make_db(tmp_path)  # table exists, no rows
+        with caplog.at_level(logging.DEBUG, logger="core.remediation_kill_switch"):
+            result = ks.check_l4_drawdown(db_path=db)
 
         assert result is None
+        # Must log something (not silently swallow)
         assert any("L4" in r.message for r in caplog.records)
 
 
