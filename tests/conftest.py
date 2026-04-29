@@ -179,6 +179,102 @@ def _isolate_prod_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: p
     yield
     # monkeypatch auto-restores _db_path_override on fixture teardown.
 
+# ---------------------------------------------------------------------------
+# HALT file isolation — prevent ANY test from writing to production data/HALT
+#
+# Root cause (2026-04-29): tests calling check_daily_drawdown() without
+# patching kill_switch.halt → write real /root/atlas/data/HALT → blocks
+# live trading.  Same class of bug as the prod-DB leak fixed 2026-04-20.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_halt_file_session(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Session-scope: redirect kill_switch._HALT_FILE to a tmp dir from the
+    very start of the run.
+
+    Session-scope ensures this fires before module-scope fixtures that might
+    call check_daily_drawdown().  The function-scope layer below gives each
+    individual test a fresh HALT path so tests don't bleed halt state into
+    each other.
+
+    See lessons learned 2026-04-29 — pytest run wrote real HALT file at
+    /root/atlas/data/HALT, blocking pre-market execute_approved.
+    """
+    try:
+        import brokers.kill_switch as _ks
+    except Exception:
+        yield
+        return
+
+    from _pytest.monkeypatch import MonkeyPatch
+    mp = MonkeyPatch()
+    session_halt_dir = tmp_path_factory.mktemp("halt_session")
+    session_halt_file = session_halt_dir / "HALT"
+    mp.setattr(_ks, "_HALT_FILE", session_halt_file)
+    yield
+    mp.undo()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_halt_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Function-scope: each test gets a fresh HALT file location.
+
+    Layered on top of _isolate_halt_file_session — the function-scope
+    fixture wins for individual tests, giving them a per-test HALT path.
+    This prevents halt state written by one test from affecting the next.
+    """
+    try:
+        import brokers.kill_switch as _ks
+    except Exception:
+        yield
+        return
+
+    fn_halt_file = tmp_path / "HALT"
+    monkeypatch.setattr(_ks, "_HALT_FILE", fn_halt_file)
+    yield
+    # monkeypatch auto-restores _HALT_FILE on fixture teardown.
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _zz_verify_no_halt_pollution() -> None:
+    """Session-end assertion: production /root/atlas/data/HALT was not touched.
+
+    Named _zz_... so it runs AFTER all _isolate_... fixtures in lexical order,
+    meaning its post-yield (teardown) runs first — verifies the production
+    path while isolation is still active.
+
+    If this fixture fails, a test leaked past the isolation layer — investigate
+    kill_switch usage in the failing test and add explicit patching.
+    """
+    import os as _os
+    halt_path = "/root/atlas/data/HALT"
+    pre_exists = _os.path.exists(halt_path)
+    pre_mtime = _os.path.getmtime(halt_path) if pre_exists else None
+
+    yield
+
+    post_exists = _os.path.exists(halt_path)
+    post_mtime = _os.path.getmtime(halt_path) if post_exists else None
+
+    if not pre_exists and post_exists:
+        # Clean up so live trading isn't blocked, then fail loudly
+        try:
+            _os.remove(halt_path)
+        except Exception:
+            pass
+        pytest.fail(
+            f"Test session created /root/atlas/data/HALT (mtime={post_mtime}) — "
+            f"kill_switch isolation broken.  A test wrote to the production HALT "
+            f"path.  Check which test calls kill_switch.halt() without patching "
+            f"_HALT_FILE or mocking the halt() function."
+        )
+    if pre_exists and post_exists and pre_mtime != post_mtime:
+        pytest.fail(
+            f"Test session modified /root/atlas/data/HALT "
+            f"(mtime {pre_mtime} → {post_mtime}) — kill_switch isolation broken."
+        )
+
+
 
 # ---------------------------------------------------------------------------
 # Minimal config that satisfies all strategy constructors (no network calls)
