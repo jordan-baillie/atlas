@@ -12,14 +12,14 @@ export function Header() {
   const clockString = useMarketClock(portfolioData?.market_clock)
   const { showAll, setShowAll } = useShowAllUniverses()
 
-  const regimeState = regimeData?.label || regimeData?.state || '—'
+  const regimeState = regimeData?.label || regimeData?.state || '\u2014'
   const regimeColor = getRegimeColor(regimeData?.state)
 
   return (
     <header className="sticky top-0 z-40 h-14 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] shadow-sm">
       <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center gap-3 md:gap-4">
-        {/* Logo */}
-        <div className="font-semibold text-lg tracking-tight">▲ Atlas</div>
+        {/* Logo — mono + tight tracking for a terminal-native feel */}
+        <div className="font-mono font-semibold text-base tracking-tight select-none">\u25b2 Atlas</div>
 
         {/* Regime Badge */}
         {regimeLoading ? (
@@ -53,7 +53,7 @@ export function Header() {
         {/* Data Freshness Chip */}
         <DataFreshnessChip />
 
-        {/* Show All Markets toggle (P4.2) */}
+        {/* Show All Markets toggle */}
         <label className="hidden md:flex items-center gap-1.5 cursor-pointer select-none" title="Show all configured markets (including passive)">
           <span className="text-[11px] text-[var(--color-text-muted)] font-mono whitespace-nowrap">All markets</span>
           <button
@@ -80,7 +80,7 @@ export function Header() {
           href="/homerbot"
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors inline-flex items-center gap-1.5 min-h-[44px]"
         >
-          ◈ <span className="hidden md:inline">Homerbot</span>
+          \u25c8 <span className="hidden md:inline">Homerbot</span>
         </a>
 
         {/* Theme Toggle */}
@@ -89,7 +89,7 @@ export function Header() {
           className="text-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-alt)]"
           aria-label="Toggle theme"
         >
-          ◑
+          \u25d1
         </button>
       </div>
     </header>

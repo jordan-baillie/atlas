@@ -36,7 +36,7 @@ function EquityReturnBadge({ portfolioReturnPct, alphaVsSpy }: EquityReturnBadge
 }
 
 // ---------------------------------------------------------------------------
-// PeriodSelector — pill buttons for time range
+// PeriodSelector — compact ghost-style pill buttons
 // ---------------------------------------------------------------------------
 function PeriodSelector({ active, onChange }: { active: PeriodKey; onChange: (k: PeriodKey) => void }) {
   return (
@@ -45,10 +45,10 @@ function PeriodSelector({ active, onChange }: { active: PeriodKey; onChange: (k:
         <button
           key={key}
           onClick={() => onChange(key)}
-          className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-medium tracking-wide transition-colors ${
+          className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium tracking-wide transition-colors border ${
             active === key
-              ? 'bg-[var(--color-accent)] text-white'
-              : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border-[var(--color-accent)]/30'
+              : 'bg-transparent border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
           }`}
         >
           {key}
@@ -101,7 +101,7 @@ export function EquityChart() {
   }
 
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 dash-card">
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">Equity Curve</h3>
@@ -112,7 +112,7 @@ export function EquityChart() {
           alphaVsSpy={query.data.alphaVsSpy}
         />
       </div>
-      <ChartGate className="h-[220px] md:h-[260px] lg:h-[300px]">
+      <ChartGate className="h-[280px] md:h-[360px]">
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <ComposedChart data={filteredData}>
             <defs>

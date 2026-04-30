@@ -2,9 +2,9 @@
 
 @theme {
   --color-bg: #09090b;
-  --color-surface: #18181b;
+  --color-surface: #161618;
   --color-surface-alt: #27272a;
-  --color-border: #3f3f46;
+  --color-border: #2a2a2e;
   --color-text: #fafafa;
   --color-text-muted: #a1a1aa;
   --color-accent: #6366f1;
@@ -13,12 +13,12 @@
   --color-amber: #f59e0b;
   --color-series-portfolio: #22c55e;
   --color-series-benchmark: #a1a1aa;
-  --color-series-grid: #3f3f46;
+  --color-series-grid: #2a2a2e;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.12);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.2);
-  --shadow-lg: 0 8px 25px rgba(0,0,0,0.3);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.28);
+  --shadow-lg: 0 8px 25px rgba(0,0,0,0.38);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -31,6 +31,12 @@
   --color-spending: #f59e0b;
   --color-investment: #3b82f6;
   --color-muted: #a1a1aa;
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
 }
 
 /* Light-mode overrides applied when <html> has class "light" */
@@ -44,9 +50,9 @@ html.light {
   --color-series-portfolio: #16a34a;
   --color-series-benchmark: #71717a;
   --color-series-grid: #e4e4e7;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 25px rgba(0,0,0,0.09);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 25px rgba(0,0,0,0.12);
   --color-positive: #16a34a;
   --color-negative: #dc2626;
   --color-muted: #52525b;
@@ -65,18 +71,35 @@ body {
   margin: 0;
 }
 
-/* Card base */
+/* Heading letter-spacing tightening */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.01em;
+}
+
+/* Card base — tighter padding, no layout-jitter hover transform */
 .dash-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 1.25rem;
+  padding: 1rem;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+  transition: box-shadow var(--transition-normal);
 }
 .dash-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+}
+
+/* Compact variant for stat-grid items */
+.dash-card-tight {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal);
+}
+.dash-card-tight:hover {
+  box-shadow: var(--shadow-md);
 }
 
 /* Animations */
@@ -84,13 +107,21 @@ body {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Spec-required tab transition keyframe */
+@keyframes dash-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
+/* Tab content enter animation — 200ms, snappy */
 .animate-in {
-  animation: fadeSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: dash-fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Stagger delays for children */
@@ -107,8 +138,14 @@ body {
 .stagger > :nth-child(11) { animation-delay: 500ms; }
 .stagger > :nth-child(12) { animation-delay: 550ms; }
 
+/* Shimmer skeleton — surface-alt base, border as moving highlight */
 .skeleton {
-  background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-border) 50%, var(--color-surface) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-alt) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-alt) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-sm);
@@ -149,7 +186,7 @@ body {
     transition-duration: 0.01ms !important;
   }
   .animate-in, .skeleton { animation: none !important; }
-  .dash-card { transition: none !important; }
+  .dash-card, .dash-card-tight { transition: none !important; }
 }
 
 @layer base {

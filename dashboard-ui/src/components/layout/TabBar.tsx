@@ -22,7 +22,7 @@ export function TabBar({ activeTab, onChange }: TabBarProps) {
     { id: 'remediation', label: 'Remediation' },
   ]
   return (
-    <div className="flex gap-1 border-b border-[var(--color-border)]">
+    <div className="flex gap-0.5 border-b border-[var(--color-border)]">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         const preload = preloaders[tab.id]
@@ -32,9 +32,9 @@ export function TabBar({ activeTab, onChange }: TabBarProps) {
             onClick={() => onChange(tab.id)}
             onMouseEnter={preload}
             onFocus={preload}
-            className={`py-3 px-6 min-h-[44px] inline-flex items-center font-medium text-sm transition-colors ${
+            className={`py-2 px-4 min-h-[40px] inline-flex items-center font-medium text-xs tracking-wide transition-colors relative ${
               isActive
-                ? 'border-b-2 border-[var(--color-accent)] text-[var(--color-text)]'
+                ? 'text-[var(--color-text)] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[var(--color-accent)] after:rounded-t'
                 : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
             }`}
           >
