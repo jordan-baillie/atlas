@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
         try:
             init_chat_db()
             print("Chat DB initialised", flush=True)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — startup hook; DB/FS failure must not crash server
             print(f"⚠️  Chat DB init failed: {e}", flush=True)
 
     # P4.1: Create targets.json stub to suppress up_sync.py WARN on every /api/finance call.
@@ -370,7 +370,7 @@ async def chat_create_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
         logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name")
@@ -405,7 +405,7 @@ async def chat_rename_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
         logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name", "").strip()
@@ -490,7 +490,7 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
                 user_ok = secrets.compare_digest(uname.encode(), exp_user.encode())
                 pass_ok = secrets.compare_digest(pw.encode(), exp_pass.encode())
                 authed = user_ok and pass_ok
-            except Exception as e:
+            except (ValueError, UnicodeDecodeError, OSError, KeyError) as e:  # base64/split/credentials errors
                 logger.debug("WebSocket auth decode failed: %s", e)
 
     if not authed:
@@ -640,11 +640,11 @@ async def websocket_chat(ws: WebSocket) -> None:  # noqa: C901
 
     except WebSocketDisconnect:
         pass  # Normal: client closed tab / navigated away
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — WebSocket handler; any exception must be reported to client
         logger.exception("WebSocket chat error: %s", exc)
         try:
             await ws.send_json({"type": "error", "message": str(exc)})
-        except Exception as e:
+        except (RuntimeError, WebSocketDisconnect, OSError) as e:  # WS already closed or disconnected
             logger.debug("Could not send error to WebSocket client: %s", e)
 
 

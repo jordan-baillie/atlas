@@ -91,7 +91,7 @@ def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
                 "daily_pnl": daily_pnl,
             }
             result["total_pnl"] += daily_pnl
-        except Exception as e:
+        except (ValueError, TypeError, KeyError, IndexError) as e:  # float/index errors in PnL calc
             logger.debug("per-position PnL calc failed for %s: %s", ticker, e)
             continue
 
@@ -139,7 +139,7 @@ def _build_dashboard_data() -> dict:
                 account["margin_usage_pct"] = (
                     round(initial_margin / equity_val * 100, 2) if equity_val > 0 else 0
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — broker RPC can raise any SDK exception
                 logger.debug("Margin usage calculation failed: %s", e)
                 account["margin_usage_pct"] = 0
 
@@ -227,7 +227,7 @@ def _build_dashboard_data() -> dict:
                         p["lastday_price"] = round(
                             float(getattr(rp, "lastday_price", 0) or 0), 4
                         )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — broker call + attr access can raise any exception
                 logger.warning("Intraday enrichment failed: %s", e)
 
             # 1c. Override stop_price with broker's authoritative open-order value
@@ -258,7 +258,7 @@ def _build_dashboard_data() -> dict:
                         p["stop_source"] = "broker"
                     else:
                         p.setdefault("stop_source", "ledger")
-            except Exception as _stop_err:
+            except Exception as _stop_err:  # noqa: BLE001 — broker.get_open_orders() can raise any exception
                 logger.warning("Broker stop_price override failed: %s", _stop_err)
 
             result["account"] = account
@@ -270,7 +270,7 @@ def _build_dashboard_data() -> dict:
                 "total_pnl_pct": account.get("total_pnl_pct", 0),
                 "open_positions": len(positions),
             }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — full broker init+connect can raise any SDK exception
         logger.warning("Alpaca account data fetch failed: %s", e)
         result["account"] = {}
         result["positions"] = []
@@ -289,7 +289,7 @@ def _build_dashboard_data() -> dict:
                 "next_close": str(clock.next_close),
                 "timestamp": str(clock.timestamp),
             }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — broker clock call can raise any SDK exception
         logger.warning("Market clock fetch failed: %s", e)
         result["market_clock"] = {"is_open": False}
 
@@ -547,11 +547,11 @@ def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 persist_strategy_ev(results)
                 ev_stats = get_latest_ev_stats()
             data["ev_stats"] = ev_stats
-        except Exception as e:
-            logger.warning("EV stats failed: %s", e)
+        except Exception as e:  # noqa: BLE001 — optional stats injection must not crash dashboard
+            logger.warning("EV stats failed: %s", e, exc_info=True)
             data["ev_stats"] = {}
         body = json.dumps(data, default=str)
         return Response(content=body, media_type="application/json")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — HTTP handler catch-all; converts unknown exceptions to 500
         logger.exception("Failed to build dashboard data")
         raise HTTPException(status_code=500, detail=str(e))
