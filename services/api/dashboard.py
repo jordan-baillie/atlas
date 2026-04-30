@@ -23,6 +23,10 @@ logger = logging.getLogger("chat_server.dashboard")
 
 _PROJECT_ROOT = Path("/root/atlas")
 
+# ── Dashboard response cache (30-second TTL) ──────────────────────────────────
+_DASHBOARD_CACHE: dict = {"ts": 0.0, "data": None}
+_DASHBOARD_CACHE_TTL = 30.0  # seconds
+
 
 # ── PnL helpers ───────────────────────────────────────────────────────────────
 
@@ -99,6 +103,54 @@ def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
     return result
 
 
+# ── Portfolio history helper ──────────────────────────────────────────────────
+
+def _get_portfolio_history(broker) -> list:
+    """Fetch Alpaca portfolio history (1 year, daily) as a list of dicts.
+
+    Returns [] on any error so the caller can fall back to the SQLite
+    equity_curve SUM aggregate.
+    """
+    try:
+        from alpaca.trading.requests import GetPortfolioHistoryRequest
+        from datetime import datetime as _dt_ph, timezone as _tz_ph
+
+        _ph_req = GetPortfolioHistoryRequest(period="1A", timeframe="1D")
+        _ph_resp = broker._broker_call(
+            broker._trade_client.get_portfolio_history, _ph_req
+        )
+        _ts_list = list(getattr(_ph_resp, "timestamp", []) or [])
+        _eq_list = list(getattr(_ph_resp, "equity", []) or [])
+        _pl_list = list(getattr(_ph_resp, "profit_loss", []) or [])
+        rows: list = []
+        for _i, (_ts, _eq) in enumerate(zip(_ts_list, _eq_list)):
+            if _eq is None or _eq <= 0:
+                continue  # skip pre-funding zero days
+            _date_str = _dt_ph.fromtimestamp(int(_ts), tz=_tz_ph.utc).strftime(
+                "%Y-%m-%d"
+            )
+            _day_pnl = (
+                float(_pl_list[_i])
+                if _i < len(_pl_list) and _pl_list[_i] is not None
+                else 0.0
+            )
+            rows.append(
+                {
+                    "date": _date_str,
+                    "equity": round(float(_eq), 2),
+                    "value": round(float(_eq), 2),
+                    "day_pnl": round(_day_pnl, 2),
+                }
+            )
+        return rows
+    except Exception as _ph_err:  # noqa: BLE001
+        logger.warning(
+            "Alpaca portfolio_history fetch failed, will use SQLite fallback: %s",
+            _ph_err,
+        )
+        return []
+
+
 # ── Dashboard data builder ────────────────────────────────────────────────────
 
 def _build_dashboard_data() -> dict:
@@ -108,6 +160,16 @@ def _build_dashboard_data() -> dict:
     dashboard_server.py).  Returns a dict that is serialised with
     json.dumps(..., default=str) to handle enum/datetime values.
     """
+    import time as _time
+
+    # ── 30-second in-process cache ────────────────────────────────────────────
+    _now = _time.monotonic()
+    if (
+        _DASHBOARD_CACHE["data"] is not None
+        and (_now - _DASHBOARD_CACHE["ts"]) < _DASHBOARD_CACHE_TTL
+    ):
+        return _DASHBOARD_CACHE["data"]  # type: ignore[return-value]
+
     import dataclasses
     from db.atlas_db import get_db
 
@@ -121,21 +183,67 @@ def _build_dashboard_data() -> dict:
 
     # ── 1. Portfolio summary from live broker ─────────────────────────────────
     positions: list = []
+    broker = None
+    clock = None
+    portfolio_history_raw: list = []
     try:
         from brokers.registry import get_live_broker
         broker = get_live_broker(config)
         if broker and broker.connect():
-            account_info = broker.get_account_info()
-            positions_info = broker.get_positions()
-            orders_info = broker.get_history_orders(days=7)
+            # ── Parallelize all independent broker RPCs ───────────────────────
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=8) as _exec:
+                _f_account = _exec.submit(broker.get_account_info)
+                _f_positions = _exec.submit(broker.get_positions)
+                _f_orders = _exec.submit(broker.get_history_orders, 7)
+                _f_raw_acct = _exec.submit(
+                    broker._broker_call, broker._trade_client.get_account
+                )
+                _f_raw_pos = _exec.submit(
+                    broker._broker_call, broker._trade_client.get_all_positions
+                )
+                _f_open = _exec.submit(broker.get_open_orders)
+                _f_clock = _exec.submit(
+                    broker._broker_call, broker._trade_client.get_clock
+                )
+                _f_phist = _exec.submit(_get_portfolio_history, broker)
+
+                # Required — propagate failure to outer try/except
+                account_info = _f_account.result()
+                positions_info = _f_positions.result()
+                orders_info = _f_orders.result()
+
+                # Optional — individual fallbacks
+                try:
+                    raw_acct_result = _f_raw_acct.result()
+                except Exception as _e:  # noqa: BLE001
+                    raw_acct_result = None
+                    logger.debug("raw account fetch failed: %s", _e)
+                try:
+                    raw_positions_result = _f_raw_pos.result()
+                except Exception as _e:  # noqa: BLE001
+                    raw_positions_result = None
+                    logger.debug("raw positions fetch failed: %s", _e)
+                try:
+                    open_orders_result = _f_open.result()
+                except Exception as _e:  # noqa: BLE001
+                    open_orders_result = []
+                    logger.debug("open orders fetch failed: %s", _e)
+                try:
+                    clock = _f_clock.result()
+                except Exception as _e:  # noqa: BLE001
+                    clock = None
+                    logger.debug("clock fetch failed: %s", _e)
+                portfolio_history_raw = _f_phist.result()  # always returns list
 
             account = dataclasses.asdict(account_info)
 
-            # 1a. Margin usage from raw Alpaca account
+            # 1a. Margin usage from raw Alpaca account (already fetched in parallel)
             try:
-                raw_acct = broker._broker_call(broker._trade_client.get_account)
-                initial_margin = float(getattr(raw_acct, "initial_margin", 0) or 0)
-                equity_val = float(getattr(raw_acct, "equity", 0) or 0)
+                initial_margin = float(
+                    getattr(raw_acct_result, "initial_margin", 0) or 0
+                )
+                equity_val = float(getattr(raw_acct_result, "equity", 0) or 0)
                 account["margin_usage_pct"] = (
                     round(initial_margin / equity_val * 100, 2) if equity_val > 0 else 0
                 )
@@ -201,13 +309,10 @@ def _build_dashboard_data() -> dict:
                     if not p.get("stop_price") and meta.get("stop_price"):
                         p["stop_price"] = meta["stop_price"]
 
-            # 1b. Enrich with Alpaca intraday fields
+            # 1b. Enrich with Alpaca intraday fields (already fetched in parallel)
             try:
-                raw_positions = broker._broker_call(
-                    broker._trade_client.get_all_positions
-                )
                 alpaca_by_symbol: dict = {}
-                for rp in raw_positions or []:
+                for rp in raw_positions_result or []:
                     sym = str(getattr(rp, "symbol", ""))
                     alpaca_by_symbol[sym] = rp
 
@@ -232,10 +337,8 @@ def _build_dashboard_data() -> dict:
 
             # 1c. Override stop_price with broker's authoritative open-order value
             try:
-                open_orders = broker.get_open_orders()
-                # Build map: atlas_ticker → list of stop prices from SELL stop/trailing_stop orders
                 _stop_map: dict[str, list[float]] = {}
-                for od in open_orders:
+                for od in open_orders_result:
                     od_d = od.asdict() if hasattr(od, "asdict") else vars(od)
                     # Flatten: use raw dict if present
                     raw = dict(od_d.pop("raw", None) or {})
@@ -258,8 +361,34 @@ def _build_dashboard_data() -> dict:
                         p["stop_source"] = "broker"
                     else:
                         p.setdefault("stop_source", "ledger")
-            except Exception as _stop_err:  # noqa: BLE001 — broker.get_open_orders() can raise any exception
+            except Exception as _stop_err:  # noqa: BLE001 — get_open_orders() can raise any exception
                 logger.warning("Broker stop_price override failed: %s", _stop_err)
+
+            # ── Bug 1 fix: Aggregate starting_equity across ALL enabled markets ─
+            # Alpaca is a single account; starting_equity is per-market in config.
+            import glob as _glob
+            _total_starting = 0.0
+            for _f in sorted(
+                _glob.glob(str(_PROJECT_ROOT / "config" / "active" / "*.json"))
+            ):
+                try:
+                    with open(_f) as _fh:
+                        _cfg = json.load(_fh)
+                    _se = float(_cfg.get("risk", {}).get("starting_equity", 0) or 0)
+                    if _se > 0:
+                        _total_starting += _se
+                except (OSError, json.JSONDecodeError, ValueError) as _e:
+                    logger.debug(
+                        "Could not read starting_equity from %s: %s", _f, _e
+                    )
+                    continue
+            _equity = float(account.get("equity", 0) or 0)
+            if _total_starting > 0:
+                account["total_pnl"] = round(_equity - _total_starting, 2)
+                account["total_pnl_pct"] = round(
+                    (_equity - _total_starting) / _total_starting * 100, 2
+                )
+            account["starting_equity_total"] = round(_total_starting, 2)
 
             result["account"] = account
             result["positions"] = positions
@@ -277,67 +406,91 @@ def _build_dashboard_data() -> dict:
         result["recent_orders"] = []
         result["summary"] = {}
 
-    # ── 2. Market clock ───────────────────────────────────────────────────────
+    # ── 2. Market clock — reuse existing broker (no second AlpacaBroker) ──────
     try:
-        from brokers.alpaca.broker import AlpacaBroker
-        ab = AlpacaBroker(config)
-        if ab.connect():
-            clock = ab._trade_client.get_clock()
+        if broker is not None and clock is not None:
             result["market_clock"] = {
                 "is_open": clock.is_open,
                 "next_open": str(clock.next_open),
                 "next_close": str(clock.next_close),
                 "timestamp": str(clock.timestamp),
             }
+        elif broker is not None:
+            # broker connected but clock was not fetched in parallel — retry once
+            _retry_clock = broker._broker_call(broker._trade_client.get_clock)
+            result["market_clock"] = {
+                "is_open": _retry_clock.is_open,
+                "next_open": str(_retry_clock.next_open),
+                "next_close": str(_retry_clock.next_close),
+                "timestamp": str(_retry_clock.timestamp),
+            }
+        else:
+            result["market_clock"] = {"is_open": False}
     except Exception as e:  # noqa: BLE001 — broker clock call can raise any SDK exception
         logger.warning("Market clock fetch failed: %s", e)
         result["market_clock"] = {"is_open": False}
 
-    # ── Equity curve + strategy performance from SQLite ───────────────────────
-    with get_db() as db:
-        equity_rows = db.execute(
-            "SELECT date, equity, day_pnl FROM equity_curve "
-            "WHERE market_id = ? ORDER BY date",
-            (market_id,),
-        ).fetchall()
-        portfolio_history = [{**dict(r), "value": r["equity"]} for r in equity_rows]
+    # ── Equity curve: Alpaca portfolio_history (single-account source of truth) ─
+    # The per-market equity_curve table has discontinuities from the 2026-04-29
+    # per-market attribution refactor. Alpaca's portfolio_history is the single
+    # source of truth for the WHOLE account equity over time.
+    portfolio_history: list = portfolio_history_raw  # from parallel fetch above
+    if not portfolio_history:
+        # Fallback: SUM across markets per date (better than single market_id slice)
+        try:
+            with get_db() as db:
+                _eq_rows = db.execute(
+                    "SELECT date, SUM(equity) AS equity, SUM(day_pnl) AS day_pnl "
+                    "FROM equity_curve GROUP BY date ORDER BY date"
+                ).fetchall()
+                portfolio_history = [
+                    {
+                        "date": r["date"],
+                        "equity": r["equity"],
+                        "value": r["equity"],
+                        "day_pnl": r["day_pnl"] or 0,
+                    }
+                    for r in _eq_rows
+                ]
+        except Exception as _fb_err:  # noqa: BLE001
+            logger.warning("Equity curve SQLite fallback failed: %s", _fb_err)
+            portfolio_history = []
 
-        # Fix 1: Update today's row with live broker equity (authoritative)
-        # account.equity already reflects all positions including unrealised P&L.
-        live_equity = round(float((result.get("account") or {}).get("equity", 0) or 0), 2)
-        if portfolio_history and live_equity:
-            from datetime import datetime as _dt
-            today_str = _dt.now().strftime("%Y-%m-%d")
-            last_row = portfolio_history[-1]
-            if last_row.get("date") == today_str:
-                # Today's row exists — update it with live equity
-                if abs((last_row.get("equity") or 0) - live_equity) > 0.01:
-                    last_row["equity"] = round(live_equity, 2)
-                    last_row["value"] = round(live_equity, 2)
-                last_row["day_pnl"] = (result.get("summary") or {}).get("today_pnl", 0)
-            else:
-                # Check if market is open — only append a new date row
-                # on trading days to avoid weekend/holiday jumps
-                market_clock = result.get("market_clock") or {}
-                is_trading_day = market_clock.get("is_open", False)
-                # Also check weekday as fallback
-                if not is_trading_day:
-                    is_trading_day = _dt.now().weekday() < 5
-                if is_trading_day:
-                    _eq_val = round(live_equity, 2)
-                    portfolio_history.append({
+    # Append/update today's live equity if not already in the series
+    live_equity = round(
+        float((result.get("account") or {}).get("equity", 0) or 0), 2
+    )
+    if portfolio_history and live_equity:
+        from datetime import datetime as _dt
+        today_str = _dt.now().strftime("%Y-%m-%d")
+        last_row = portfolio_history[-1]
+        if last_row.get("date") == today_str:
+            # Today's row exists — update it with live equity
+            if abs((last_row.get("equity") or 0) - live_equity) > 0.01:
+                last_row["equity"] = live_equity
+                last_row["value"] = live_equity
+            last_row["day_pnl"] = (result.get("summary") or {}).get("today_pnl", 0)
+        else:
+            market_clock = result.get("market_clock") or {}
+            is_trading_day = (
+                market_clock.get("is_open", False) or _dt.now().weekday() < 5
+            )
+            if is_trading_day:
+                portfolio_history.append(
+                    {
                         "date": today_str,
-                        "equity": _eq_val,
-                        "value": _eq_val,
+                        "equity": live_equity,
+                        "value": live_equity,
                         "day_pnl": (result.get("summary") or {}).get("today_pnl", 0),
-                    })
-                else:
-                    # Weekend/holiday: update the last row to reflect
-                    # current (most accurate) equity
-                    last_row["equity"] = round(live_equity, 2)
-                    last_row["value"] = round(live_equity, 2)
-        result["portfolio_history"] = portfolio_history
+                    }
+                )
+            else:
+                last_row["equity"] = live_equity
+                last_row["value"] = live_equity
+    result["portfolio_history"] = portfolio_history
 
+    # ── Strategy performance, benchmark (SQLite) ──────────────────────────────
+    with get_db() as db:
         # Strategy performance aggregated from closed trades (exclude phantoms/errors)
         trades_rows = db.execute(
             "SELECT strategy, pnl, pnl_pct FROM trades"
@@ -520,6 +673,11 @@ def _build_dashboard_data() -> dict:
             )
 
     result["timestamp"] = datetime.now().isoformat()
+
+    # ── Write result to 30-second cache ───────────────────────────────────────
+    _DASHBOARD_CACHE["data"] = result
+    _DASHBOARD_CACHE["ts"] = _time.monotonic()
+
     return result
 
 
