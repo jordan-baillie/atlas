@@ -1,5 +1,5 @@
 [Unit]
-Description=Atlas autonomous error remediation — classifier cycle (Phase 2: ASSIST mode)
+Description=Atlas autonomous error remediation — classifier cycle (Phase 3: AUTO_FIX active)
 After=network-online.target
 ConditionPathExists=!/root/atlas/data/HALT
 ConditionPathExists=!/root/atlas/.live_halt
