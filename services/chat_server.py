@@ -201,6 +201,8 @@ from services.api.research import router as _research_router   # noqa: E402
 from services.api.promotions import router as _promotions_router  # noqa: E402
 from services.api.dashboard import router as _dashboard_router  # noqa: E402
 from services.api.approvals import router as _approvals_router  # noqa: E402
+from services.api.chat_sessions import router as _chat_sessions_router  # noqa: E402
+from services.api.monitor_legacy import router as _monitor_legacy_router  # noqa: E402
 
 # ── Re-export shims (backward-compat for tests importing from chat_server) ────
 from services.api.dashboard import (  # noqa: F401
@@ -214,6 +216,12 @@ from services.api.approvals import (  # noqa: F401
     _reject_plan,
     PlanRequest,
 )
+# Import shared WS token state from chat_sessions (issued by REST, validated by WS handler)
+from services.api.chat_sessions import (  # noqa: E402
+    _ws_tokens,
+    _WS_TOKEN_TTL,
+    _MAX_WS_TOKENS,
+)
 app.include_router(_finance_router)
 app.include_router(_regime_router)
 app.include_router(_error_remediation_router)
@@ -224,223 +232,21 @@ app.include_router(_research_router)
 app.include_router(_promotions_router)
 app.include_router(_dashboard_router)
 app.include_router(_approvals_router)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# GET routes  (defined in the same priority order as dashboard_server.py do_GET)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# ── GET /api/monitor* — 410 Gone (monitor tab removed) ───────────────────────
-
-@app.get("/api/monitor")
-@app.get("/api/monitor/{monitor_path:path}")
-def monitor_get_gone(
-    monitor_path: str = "",
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-):
-    """GET /api/monitor — monitor tab removed, returns 410."""
-    return JSONResponse({"error": "Monitor tab removed"}, status_code=410)
-
-
-# ── Portfolio, trades, and equity routes moved to services/api/portfolio.py ──
-
-# ── System health and macro routes moved to services/api/health.py ─────────
-
-# ── Risk and signals routes moved to services/api/risk.py ──────────────────
-
-# ── /api/regime/transitions — moved to services/api/regime.py ──────────────
-
-
-# ── POST /api/monitor* — 410 Gone ────────────────────────────────────────────
-
-@app.post("/api/monitor")
-@app.post("/api/monitor/{monitor_path:path}")
-def monitor_post_gone(
-    monitor_path: str = "",
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-):
-    """POST /api/monitor* — monitor tab removed, returns 410."""
-    return JSONResponse({"error": "Monitor tab removed"}, status_code=410)
+app.include_router(_chat_sessions_router)
+app.include_router(_monitor_legacy_router)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DELETE routes
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# ── DELETE /api/monitor/positions/{id} ───────────────────────────────────────
-
-@app.delete("/api/monitor/positions/{pos_id}")
-def delete_position(
-    pos_id: str,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-):
-    """DELETE /api/monitor/positions/{id} — delete a monitor position."""
-    from monitor.models import PositionStore
-    store = PositionStore()
-    ok = store.delete_position(pos_id)
-    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
-
-
-# ── DELETE /api/monitor/templates/{id} ───────────────────────────────────────
-
-@app.delete("/api/monitor/templates/{tmpl_id}")
-def delete_template(
-    tmpl_id: str,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-):
-    """DELETE /api/monitor/templates/{id} — delete a monitor template."""
-    from monitor.models import PositionStore
-    store = PositionStore()
-    ok = store.delete_template(tmpl_id)
-    return JSONResponse({"ok": ok}, status_code=200 if ok else 404)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Phase 2: Chat REST + WebSocket endpoints
+# Phase 2: Chat REST endpoints moved to services/api/chat_sessions.py
+#          Monitor stubs moved to services/api/monitor_legacy.py
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # In-process cache of PiSessionManager instances (one per chat session).
-# These survive for the lifetime of the server process; each manager
-# maintains the pi_session_path on disk so the conversation can be resumed
-# after a server restart.
+# Owned by WS handler — managed entirely within /ws/chat; REST endpoints
+# use DB sessions, not PiSessionManager instances.
 _pi_sessions: dict[str, "PiSessionManager"] = {}
 
-# Short-lived WebSocket auth tokens: token_str -> (expires_epoch, username)
-_ws_tokens: dict[str, tuple[float, str]] = {}
-_WS_TOKEN_TTL = 300  # seconds (5 minutes)
-_MAX_WS_TOKENS = 1000
-
-
-def _require_chat() -> None:
-    """Raise 503 if chat modules failed to import."""
-    if not _CHAT_AVAILABLE:
-        raise HTTPException(status_code=503, detail="Chat modules unavailable")
-
-
-# ── Token endpoint (HTTP Basic → short-lived WS token) ────────────────────
-
-@app.get("/api/chat/token")
-def chat_get_token(
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """GET /api/chat/token — exchange HTTP Basic Auth for a short-lived WS token.
-
-    The browser calls this once (via XMLHttpRequest with cached Basic Auth
-    credentials) and stores the returned token in sessionStorage.  The
-    WebSocket upgrade then passes it as ``?token=<value>``.
-    """
-    _require_chat()
-    # Purge expired tokens first (Finding F-07)
-    now = time.time()
-    stale = [k for k, (exp, _) in _ws_tokens.items() if exp < now]
-    for k in stale:
-        _ws_tokens.pop(k, None)
-    # Reject if still over capacity
-    if len(_ws_tokens) >= _MAX_WS_TOKENS:
-        return JSONResponse(
-            status_code=429,
-            content={"error": "Too many active tokens"},
-        )
-    token = secrets.token_urlsafe(32)
-    expires = now + _WS_TOKEN_TTL
-    _ws_tokens[token] = (expires, _auth.username)
-    return JSONResponse({"token": token, "expires_in": _WS_TOKEN_TTL})
-
-
-# ── Chat session REST endpoints ────────────────────────────────────────────
-
-@app.get("/api/chat/sessions")
-def chat_list_sessions(
-    limit: int = 20,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """GET /api/chat/sessions — list active sessions, newest first."""
-    _require_chat()
-    return JSONResponse(_chat_list_sessions(limit))
-
-
-@app.post("/api/chat/sessions")
-async def chat_create_session_endpoint(
-    request: Request,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """POST /api/chat/sessions — create a new chat session.
-
-    Body (JSON): {"name": "optional name", "model": "claude-sonnet-4-6"}
-    """
-    _require_chat()
-    try:
-        body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
-        logger.debug("Could not parse request body: %s", e)
-        body = {}
-    name = body.get("name")
-    model = body.get("model", "claude-opus-4-7")
-    session = _chat_create_session(name=name, model=model)
-    return JSONResponse(session)
-
-
-@app.get("/api/chat/sessions/{session_id}")
-def chat_get_session_endpoint(
-    session_id: str,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """GET /api/chat/sessions/{id} — get single session details."""
-    _require_chat()
-    session = _chat_get_session(session_id)
-    if session is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return JSONResponse(session)
-
-
-@app.put("/api/chat/sessions/{session_id}")
-async def chat_rename_session_endpoint(
-    session_id: str,
-    request: Request,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """PUT /api/chat/sessions/{id} — rename a chat session.
-
-    Body: {"name": "new session name"}
-    """
-    _require_chat()
-    try:
-        body = await request.json()
-    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
-        logger.debug("Could not parse request body: %s", e)
-        body = {}
-    name = body.get("name", "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="name is required")
-    ok = _chat_rename_session(session_id, name)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return JSONResponse({"ok": True, "id": session_id, "name": name})
-
-
-@app.delete("/api/chat/sessions/{session_id}")
-def chat_delete_session_endpoint(
-    session_id: str,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """DELETE /api/chat/sessions/{id} — soft-delete a chat session."""
-    _require_chat()
-    ok = _chat_delete_session(session_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return JSONResponse({"ok": True, "id": session_id})
-
-
-@app.get("/api/chat/sessions/{session_id}/messages")
-def chat_get_messages_endpoint(
-    session_id: str,
-    limit: int = 50,
-    before_id: int = None,
-    _auth: HTTPBasicCredentials = Depends(check_auth),
-) -> JSONResponse:
-    """GET /api/chat/sessions/{id}/messages — paginated message history."""
-    _require_chat()
-    msgs = _chat_get_messages(session_id, limit=limit, before_id=before_id)
-    return JSONResponse(msgs)
+# _ws_tokens, _WS_TOKEN_TTL, _MAX_WS_TOKENS imported from chat_sessions (above)
 
 
 # ── WebSocket chat endpoint ──────────────────────────────────────────────────
