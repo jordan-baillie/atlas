@@ -100,7 +100,7 @@ def db_trades(
             sql += " ORDER BY exit_date DESC LIMIT ?"
             params.append(int(limit))
             trades = [dict(r) for r in db.execute(sql, params).fetchall()]
-        return JSONResponse({"trades": trades, "count": len(trades)})
+        return JSONResponse(trades)  # flat array — matches PnlTrade[] in frontend usePnlTrades
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
