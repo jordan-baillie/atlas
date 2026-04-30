@@ -68,15 +68,21 @@ class TestStaticNoBareExcept:
         assert bad == [], f"Unbound bare excepts at lines: {bad}"
 
     def test_chat_server_json_decode_narrowed(self):
-        """Body-parse handlers must catch (json.JSONDecodeError, ...) not bare Exception."""
-        src = (PROJECT / "services" / "chat_server.py").read_text()
+        """Body-parse handlers must catch (json.JSONDecodeError, ...) not bare Exception.
+        After Phase 9 extraction, body-parse handlers live in services/api/chat_sessions.py.
+        """
+        # Check the extracted module where body-parse now lives
+        src = (PROJECT / "services" / "api" / "chat_sessions.py").read_text()
         assert "except (json.JSONDecodeError, UnicodeDecodeError, ValueError)" in src, (
             "chat_create_session body parse should use narrowed exception type"
         )
 
     def test_ws_auth_narrowed(self):
-        """WebSocket auth decode must use narrowed exception type."""
-        src = (PROJECT / "services" / "chat_server.py").read_text()
+        """WebSocket auth decode must use narrowed exception type.
+        After Phase 10 extraction, WS handler lives in services/ws/chat.py.
+        """
+        # Check the extracted module where WS handler now lives
+        src = (PROJECT / "services" / "ws" / "chat.py").read_text()
         assert "except (ValueError, UnicodeDecodeError, OSError, KeyError)" in src, (
             "WS auth decode should use narrowed exception type"
         )

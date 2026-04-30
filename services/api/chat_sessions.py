@@ -19,6 +19,7 @@ Shared state exported for WebSocket handler:
 """
 from __future__ import annotations
 
+import json
 import logging
 import secrets
 import time
@@ -118,7 +119,7 @@ async def chat_create_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:  # HTTP request body parse
         logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name")
@@ -153,7 +154,7 @@ async def chat_rename_session_endpoint(
     _require_chat()
     try:
         body = await request.json()
-    except Exception as e:
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:  # HTTP request body parse
         logger.debug("Could not parse request body: %s", e)
         body = {}
     name = body.get("name", "").strip()
