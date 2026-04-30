@@ -77,7 +77,8 @@ def _load_fired(market_id: str) -> dict:
     if p.exists():
         try:
             return json.loads(p.read_text())
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError) as _load_err:
+            log.debug("Could not parse alert state file %s: %s", p, _load_err)
             return {}
     return {}
 
@@ -128,8 +129,8 @@ def fetch_live_prices(tickers: list[str]) -> dict:
                 }
         if alpaca_raw:
             log.info(f"Alpaca: got {len(alpaca_raw)}/{len(tickers)} prices")
-    except Exception as e:
-        log.debug(f"Alpaca snapshot fetch failed: {e}")
+    except Exception as e:  # noqa: BLE001 — Alpaca broker call can raise any SDK exception
+        log.debug("Alpaca snapshot fetch failed: %s", e)
 
     # Determine which tickers still need prices
     missing = [t for t in tickers if t not in prices]
@@ -164,15 +165,15 @@ def fetch_live_prices(tickers: list[str]) -> dict:
                             "low": low,
                             "high": high,
                         }
-                except Exception as e:
-                    log.debug(f"  {ticker}: yfinance parse error: {e}")
+                except (ValueError, TypeError, KeyError, IndexError) as e:  # float/dict parse errors
+                    log.debug("  %s: yfinance parse error: %s", ticker, e)
         else:
             log.warning("yfinance returned empty data for fallback tickers")
 
     except ImportError:
         log.warning("yfinance not installed — no fallback available for missing tickers")
-    except Exception as e:
-        log.error(f"yfinance batch download failed: {e}")
+    except (ConnectionError, OSError, RuntimeError) as e:  # network/IO errors in yfinance download
+        log.error("yfinance batch download failed: %s", e)
 
     log.info(f"Got prices for {len(prices)}/{len(tickers)} tickers")
     return prices
@@ -407,8 +408,8 @@ def main():
                 sp = p.get("stop_price", 0)
                 if t and sp:
                     _state_stops[t] = sp
-    except Exception as e:
-        log.warning(f"Failed to load stop prices from plan/state: {e}")
+    except (json.JSONDecodeError, OSError, KeyError, AttributeError) as e:  # JSON/file/key errors
+        log.warning("Failed to load stop prices from plan/state: %s", e)
 
     enriched = 0
     for pos in portfolio.positions:
