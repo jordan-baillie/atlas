@@ -97,7 +97,7 @@ verify:
     - monitor/**
 
 review:
-  model: claude-sonnet-4-6             # Adversarial reviewer
+  model: claude-opus-4-7                # Adversarial reviewer (was sonnet 4.6 — upgraded 2026-04-30 for parity with Fix Worker; decorrelation now via fresh-process + adversarial prompt + default-REJECT)
   default_verdict: REJECT
   approval_threshold_confidence: 0.75
   rejection_rate_alert_pct: 40         # Warn humans at 40%

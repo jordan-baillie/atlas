@@ -375,7 +375,10 @@ class TestInvokeReviewerViaPiTeam:
 
         assert "ANTHROPIC_API_KEY" not in captured_env
 
-    def test_uses_sonnet_model(self):
+    def test_uses_opus_model(self):
+        """Reviewer must invoke Opus 4.7 (upgraded 2026-04-30 from Sonnet 4.6
+        for parity with Fix Worker; decorrelation property now provided by
+        separate process + adversarial prompt + default-REJECT, not model diff)."""
         captured_cmd = []
 
         def fake_run(cmd, **kwargs):
@@ -387,4 +390,4 @@ class TestInvokeReviewerViaPiTeam:
 
         assert "--model" in captured_cmd
         model_idx = captured_cmd.index("--model")
-        assert "sonnet" in captured_cmd[model_idx + 1]
+        assert captured_cmd[model_idx + 1] == "claude-opus-4-7"

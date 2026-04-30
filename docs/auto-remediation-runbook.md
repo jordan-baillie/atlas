@@ -1,5 +1,13 @@
 # Atlas Auto-Error-Remediation Runbook
 
+> **Model selection note (2026-04-30):** Both Fix Worker and Reviewer now run
+> on Claude Opus 4.7. Earlier design used Sonnet 4.6 for the Reviewer to
+> achieve cross-model decorrelation. With both on Opus, decorrelation is
+> enforced via: (1) Reviewer runs in a separate `pi -p` subprocess with
+> `--no-session`, (2) Reviewer prompt is hardened to call out same-model risk
+> and require concrete failure paths, (3) default verdict remains REJECT with
+> 8 explicit APPROVE conditions, (4) confidence threshold ≥0.75 to APPROVE.
+
 **Audience:** Atlas operator (the human who runs/owns the trading system).  
 **Purpose:** Day-to-day operations and incident response for the auto-remediation pipeline.  
 **Date:** 2026-04-29  
@@ -727,7 +735,7 @@ Common gate blockers:
 |---|---|---|
 | `no_never_list_touched` | Diff touched a deny-listed path | Reclassify error as ESCALATE; add pattern to deny |
 | `diff_size_cap` | Fix >30 lines | Break error into smaller parts; or ESCALATE |
-| `reviewer_approved` | Sonnet 4.6 returned REJECT | Inspect `review_reason`; if risky, this is correct |
+| `reviewer_approved` | Opus 4.7 returned REJECT | Inspect `review_reason`; if risky, this is correct |
 | `regression_test_present` | No new `def test_` added | Fix worker didn't add a test; manual ASSIST |
 | `targeted_tests` | Test failure | Fix is broken; manual repair or discard |
 
@@ -1183,7 +1191,7 @@ Every action by every actor — human or agent — appends a row to `fix_audit_l
 | `diagnose` | `fix_worker` | (Phase 2) Diagnosis recorded with root-cause narrative |
 | `fix` | `fix_worker` | Fix attempt resolved (branch + diff produced, or failed) |
 | `verify` | `fix_worker` | Tests run on the fix branch; results recorded |
-| `review` | `reviewer` | Adversarial reviewer (Sonnet 4.6) returns APPROVE or REJECT |
+| `review` | `reviewer` | Adversarial reviewer (Opus 4.7) returns APPROVE or REJECT |
 | `gate_check` | `merger` | All 15 merge gates evaluated; results in `gates_passed_json` / `gates_failed_json` |
 | `merge` | `merger` / `auto_merger` | Branch merged to `auto-fix-staging` (Phase 2) or promoted to `main` (Phase 3) |
 | `monitor` | `promote_auto_fix_staging` / `merger` | 30-min monitor outcome: clean or revert |
@@ -1212,7 +1220,7 @@ All 15 gates must pass for Phase 3 AUTO_FIX merge. Phase 2 ASSIST runs all gates
 | 7 | `diff_size_cap` | YES | Total diff <=30 lines added+removed |
 | 8 | `no_never_list_touched` | YES | No file in `auto_fix_deny.yaml#file_globs` was modified |
 | 9 | `no_safety_critical_function_modified` | YES | AST: no function in `safety_critical_functions.txt` changed |
-| 10 | `reviewer_approved` | YES | Adversarial reviewer (Sonnet 4.6) returned APPROVE, confidence >=0.75 |
+| 10 | `reviewer_approved` | YES | Adversarial reviewer (Opus 4.7) returned APPROVE, confidence >=0.75 |
 | 11 | `no_healthcheck_regression` | YES | No CRITICAL healthcheck in 30-min post-merge window |
 | 12 | `no_fingerprint_recurrence` | YES | Same fingerprint not seen during 30-min monitor window |
 | 13 | `no_warning_demotion` | WARNING | No new `logger.warning()` calls referencing "error" |
