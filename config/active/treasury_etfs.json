@@ -2,7 +2,7 @@
   "version": "v1.0.1",
   "project": "Atlas",
   "market": "treasury_etfs",
-  "description": "Treasury ETFs v1.0 \u2014 mean reversion focus, passive (negative Sharpe)",
+  "description": "Treasury ETFs v1.0 — mean reversion focus, passive (negative Sharpe)",
   "universe": {
     "method": "static",
     "benchmark_ticker": "AGG"
@@ -23,7 +23,7 @@
       "atr_multiplier": 2.0
     },
     "max_gross_exposure_pct": 1.75,
-    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py — rejects new entries if account-wide gross would exceed this value.",
     "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
@@ -55,14 +55,14 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
   "strategies": {
     "mean_reversion": {
-      "enabled": true,
-      "weight": 0.5,
+      "enabled": false,
+      "weight": 0,
       "rsi_period": 14,
       "rsi_oversold": 35,
       "zscore_lookback": 30,
@@ -90,8 +90,8 @@
       }
     },
     "connors_rsi2": {
-      "enabled": true,
-      "weight": 0.5,
+      "enabled": false,
+      "weight": 0,
       "rsi_period": 3,
       "rsi_entry": 40,
       "sma_trend_period": 150,
@@ -238,5 +238,24 @@
     "min_weight": 0.05,
     "max_weight": 0.4,
     "cluster_threshold": 0.7
+  },
+  "_audit_2026_05_01_disable_all_strategies": {
+    "updated_at": "2026-05-01T00:00:00+00:00",
+    "rationale": "Validated-strategies audit. Both strategies fail quality gates: connors_rsi2 solo Sharpe -1.80 (p=2e-6 negative), mean_reversion research_best row contaminated by P1.1 cross-universe bug (2026-04-21). Combined-portfolio Sharpe is -2.01. No validated strategy currently fits this universe. Disable both pending re-research.",
+    "disabled": [
+      {
+        "strategy": "connors_rsi2",
+        "old_weight": 0.5,
+        "new_weight": 0,
+        "reason": "Solo Sharpe -1.80 on TLT/IEF/SHY/TIP/BND — strategy structurally unsuited to slow-trending bond ETFs. Statistically significant negative edge."
+      },
+      {
+        "strategy": "mean_reversion",
+        "old_weight": 0.5,
+        "new_weight": 0,
+        "reason": "research_best row sh=0.91 from 2026-04-21 is P1.1 cross-universe contamination (identical metrics across 4 universes confirms the bug signature). No clean baseline."
+      }
+    ],
+    "follow_up": "Market is now inert (mode=passive, live_enabled=false, all strategies disabled). To revive: (1) fix starting_equity which is currently 0, (2) fix the snapshot bug in research/loop.py for non-sp500, (3) run a fresh sweep on this universe. Or retire the universe if no strategy proves edge."
   }
 }

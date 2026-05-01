@@ -2,7 +2,7 @@
   "version": "v1.0",
   "project": "Atlas",
   "market": "crypto",
-  "description": "Crypto v1.0 \u2014 initial backtest configuration for top 8 crypto pairs",
+  "description": "Crypto v1.0 — initial backtest configuration for top 8 crypto pairs",
   "universe": {
     "method": "static",
     "tickers": [
@@ -62,7 +62,7 @@
   },
   "strategies": {
     "momentum_breakout": {
-      "enabled": true
+      "enabled": false
     },
     "connors_rsi2": {
       "enabled": false
@@ -81,5 +81,18 @@
     "sector_concentration": {
       "enabled": false
     }
+  },
+  "_audit_2026_05_01_disable_momentum_breakout": {
+    "updated_at": "2026-05-01T00:00:00+00:00",
+    "rationale": "Validated-strategies audit. crypto/momentum_breakout research_best Sharpe -0.008 / 26 trades (2026-04-21 row). No edge. Mode is paper, no live impact. Re-research with crypto-appropriate strategies (vol-aware, regime-aware) before re-enabling.",
+    "disabled": [
+      {
+        "strategy": "momentum_breakout",
+        "old_weight": null,
+        "new_weight": null,
+        "reason": "Sharpe -0.008 on 8-pair crypto universe (BTC/ETH/SOL/LINK/AVAX/DOGE/XRP/DOT). Strategy designed for equities, not 24/7-trading volatile assets."
+      }
+    ],
+    "follow_up": "All 4 strategies in crypto.json are now disabled. Mode is paper so no live impact. Consider crypto-specific strategy R&D as a separate project."
   }
 }

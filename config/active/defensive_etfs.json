@@ -2,7 +2,7 @@
   "version": "v1.0.1",
   "project": "Atlas",
   "market": "defensive_etfs",
-  "description": "Defensive ETFs v1.0 \u2014 mean reversion focus, passive (negative Sharpe)",
+  "description": "Defensive ETFs v1.0 — mean reversion focus, passive (negative Sharpe)",
   "universe": {
     "method": "static",
     "benchmark_ticker": "SPY"
@@ -23,7 +23,7 @@
       "atr_multiplier": 2.0
     },
     "max_gross_exposure_pct": 1.75,
-    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py — rejects new entries if account-wide gross would exceed this value.",
     "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
@@ -55,14 +55,14 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
   "strategies": {
     "mean_reversion": {
-      "enabled": true,
-      "weight": 0.5,
+      "enabled": false,
+      "weight": 0,
       "rsi_period": 14,
       "rsi_oversold": 35,
       "zscore_lookback": 30,
@@ -90,8 +90,8 @@
       }
     },
     "connors_rsi2": {
-      "enabled": true,
-      "weight": 0.5,
+      "enabled": false,
+      "weight": 0,
       "rsi_period": 3,
       "rsi_entry": 40,
       "sma_trend_period": 150,
@@ -238,5 +238,24 @@
     "min_weight": 0.05,
     "max_weight": 0.4,
     "cluster_threshold": 0.7
+  },
+  "_audit_2026_05_01_disable_all_strategies": {
+    "updated_at": "2026-05-01T00:00:00+00:00",
+    "rationale": "Validated-strategies audit. connors_rsi2 solo Sharpe -0.34 (no edge, profit factor 1.02). mean_reversion research_best row from 2026-04-21 is P1.1 cross-universe contaminated. Conceptual mismatch with inverse ETFs PSQ/SH — long-only mean-reversion buys the dip on inverse ETFs (i.e. buys when market rallies — wrong direction for hedging intent). Disable both pending re-research with regime-aware logic.",
+    "disabled": [
+      {
+        "strategy": "connors_rsi2",
+        "old_weight": 0.5,
+        "new_weight": 0,
+        "reason": "Solo Sharpe -0.34, edge p=1.0 (no statistical signal). 720 trades over 7 yr → confidently zero edge."
+      },
+      {
+        "strategy": "mean_reversion",
+        "old_weight": 0.5,
+        "new_weight": 0,
+        "reason": "research_best row sh=1.005 from 2026-04-21 is P1.1 contamination signature (identical metrics across 4 universes)."
+      }
+    ],
+    "follow_up": "Same as treasury_etfs: fix starting_equity (=0), fix research snapshot bug, re-sweep, or retire."
   }
 }

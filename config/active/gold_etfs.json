@@ -2,7 +2,7 @@
   "version": "v1.0.1",
   "project": "Atlas",
   "market": "gold_etfs",
-  "description": "Gold ETFs v1.0 \u2014 connors RSI2 focus, paper mode",
+  "description": "Gold ETFs v1.0 — connors RSI2 focus, paper mode",
   "universe": {
     "method": "static",
     "benchmark_ticker": "GLD"
@@ -23,7 +23,7 @@
       "atr_multiplier": 2.0
     },
     "max_gross_exposure_pct": 1.75,
-    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py — rejects new entries if account-wide gross would exceed this value.",
     "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
@@ -55,14 +55,14 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
   "strategies": {
     "connors_rsi2": {
       "enabled": true,
-      "weight": 0.6,
+      "weight": 1.0,
       "rsi_period": 3,
       "rsi_entry": 40,
       "sma_trend_period": 150,
@@ -136,8 +136,8 @@
       "weight": 0
     },
     "short_term_mr": {
-      "enabled": true,
-      "weight": 0.4
+      "enabled": false,
+      "weight": 0
     },
     "bb_squeeze": {
       "enabled": false,
@@ -238,5 +238,26 @@
     "min_weight": 0.05,
     "max_weight": 0.4,
     "cluster_threshold": 0.7
+  },
+  "_audit_2026_05_01_disable_short_term_mr": {
+    "updated_at": "2026-05-01T00:00:00+00:00",
+    "rationale": "Validated-strategies audit. short_term_mr produced 0 trades in fresh backtest because risk.starting_equity=0 in this config breaks position sizing (utils/helpers.py:350 raises ValueError). Cannot validate the strategy until starting_equity is set to a real value. Disable until that bug is fixed and re-test confirms positive Sharpe.",
+    "disabled": [
+      {
+        "strategy": "short_term_mr",
+        "old_weight": 0.4,
+        "new_weight": 0,
+        "reason": "0 trades from config bug starting_equity=0 — cannot validate. Mode is passive so no live impact."
+      }
+    ],
+    "renormalized": [
+      {
+        "strategy": "connors_rsi2",
+        "old_weight": 0.6,
+        "new_weight": 1.0,
+        "rationale": "Sole remaining strategy after disable; research_best Sharpe 0.5735 (2026-04-02, pre-contamination era) clears 0.4 passive-market threshold."
+      }
+    ],
+    "follow_up": "Fix starting_equity in this file (currently 0). Same bug exists in defensive_etfs.json + treasury_etfs.json. Re-run scripts/strategy_evaluator.py --strategy short_term_mr --market gold_etfs --combined after fix to determine real performance."
   }
 }
