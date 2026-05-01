@@ -49,6 +49,10 @@ TZ=Australia/Brisbane
 0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket commodity_etfs
 0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket sector_etfs
 
+# ── Pre-market rollup 19:45 AEST Mon–Fri — one Telegram message for all 3 markets ─
+# Runs after all 3 premarket pi-agents have had time to finish (~10-25 min each).
+45 19 * * 1-5 /root/atlas/scripts/pi-cron.sh notify-rollup
+
 # ── Post-close 08:00 AEST Tue–Sat (= 22:00 UTC Mon–Fri) ─────────────────────
 0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose sp500
 0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose commodity_etfs

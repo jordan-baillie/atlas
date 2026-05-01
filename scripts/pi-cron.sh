@@ -496,8 +496,16 @@ LOCKEOF
             >> "$LOG_DIR/pi-cron.log" 2>&1
         exit $?
         ;;
+    notify-rollup)
+        # Send ONE consolidated daily plan rollup message after all 3 premarket runs.
+        # Cron: 45 19 * * 1-5 (19:45 AEST Mon-Fri)
+        hb "notify-rollup" "started"
+        notify premarket-rollup 2>/dev/null || true
+        hb "notify-rollup" "completed"
+        exit 0
+        ;;
     *)
-        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals} [market] [agent-id]"
+        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals|notify-rollup} [market] [agent-id]"
         exit 1
         ;;
 esac
