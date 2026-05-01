@@ -42,13 +42,20 @@ if str(ATLAS_ROOT) not in sys.path:
 
 from research.db import log_session, end_session
 
-# Top-5 enabled strategies by portfolio weight
+# Strategies covered by the nightly autoresearch sweep.
+# Includes everything in scripts/strategy_evaluator.STRATEGY_REGISTRY that has
+# active live use OR is enabled in any config/active/*.json, OR has a
+# research_best row. (bb_squeeze: research_best sp500 sharpe=0.49;
+# mtf_momentum: disabled everywhere + no research_best — intentionally excluded)
 DEFAULT_STRATEGIES = [
-    "mean_reversion",      # 17%
-    "trend_following",     # 21%
-    "opening_gap",         # 22%
-    "momentum_breakout",   # 9%
-    "sector_rotation",     # 24%
+    "mean_reversion",
+    "trend_following",
+    "opening_gap",
+    "momentum_breakout",
+    "sector_rotation",
+    "connors_rsi2",
+    "short_term_mr",
+    "bb_squeeze",
 ]
 
 RUNNER_SCRIPT = ATLAS_ROOT / "research" / "autoresearch_runner.py"
