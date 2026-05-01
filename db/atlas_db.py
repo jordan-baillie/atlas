@@ -2548,8 +2548,10 @@ def set_cached_ruin_probability(
 def get_cached_portfolio_risk(max_age_hours: int = 24) -> Optional[Dict]:
     """Return the latest portfolio_risk row if it is fresh.
 
-    Staleness is based on ``as_of`` date vs now (same semantics as
-    ``get_cached_ruin_probability``).
+    Staleness is based on ``created_at`` full timestamp vs now.  Using
+    ``as_of`` (a date-only column treated as midnight by julianday) caused
+    an off-by-day false-stale bug: a row written at 11 pm would appear ~23 h
+    old instead of 0 h old on the following day.
 
     Returns ``None`` when no fresh row exists.
     """
@@ -2559,7 +2561,7 @@ def get_cached_portfolio_risk(max_age_hours: int = 24) -> Optional[Dict]:
             row = conn.execute("""
                 SELECT *
                 FROM   portfolio_risk
-                WHERE  (julianday('now') - julianday(as_of)) * 24.0 <= ?
+                WHERE  (julianday('now') - julianday(created_at)) * 24.0 <= ?
                 ORDER  BY as_of DESC, created_at DESC
                 LIMIT  1
             """, (max_age_hours,)).fetchone()
