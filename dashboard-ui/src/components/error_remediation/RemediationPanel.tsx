@@ -26,6 +26,7 @@ interface Health {
   audit_writes_24h: number
   halt_active: boolean
   halt_files_present: string[]
+  halt_reasons: Array<{ path: string; name: string; reason: string }>
   phase: number
   phase_3_enabled: boolean
   ok: boolean
@@ -81,7 +82,17 @@ export function RemediationPanel() {
             <div className="text-xs text-[var(--color-text-muted)]">errors / 24h</div>
           </div>
         </div>
-        {health.halt_active && (
+        {health.halt_active && health.halt_reasons && health.halt_reasons.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {health.halt_reasons.map((h) => (
+              <div key={h.path} className="text-xs">
+                <div className="text-red-400 font-mono">⚠ {h.name}</div>
+                <div className="text-[var(--color-text-muted)] ml-4 mt-0.5 break-words">{h.reason}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {health.halt_active && (!health.halt_reasons || health.halt_reasons.length === 0) && (
           <div className="mt-3 text-xs text-red-400">
             Halt files: <code>{health.halt_files_present.join(', ')}</code>
           </div>

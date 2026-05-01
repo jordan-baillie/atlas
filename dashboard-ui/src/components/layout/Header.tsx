@@ -19,7 +19,7 @@ export function Header() {
     <header className="sticky top-0 z-40 h-14 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] shadow-sm">
       <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center gap-3 md:gap-4">
         {/* Logo — mono + tight tracking for a terminal-native feel */}
-        <div className="font-mono font-semibold text-base tracking-tight select-none">\u25b2 Atlas</div>
+        <div className="font-mono font-semibold text-base tracking-tight select-none">▲ Atlas</div>
 
         {/* Regime Badge */}
         {regimeLoading ? (
@@ -80,7 +80,7 @@ export function Header() {
           href="/homerbot"
           className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors inline-flex items-center gap-1.5 min-h-[44px]"
         >
-          \u25c8 <span className="hidden md:inline">Homerbot</span>
+          ◈ <span className="hidden md:inline">Homerbot</span>
         </a>
 
         {/* Theme Toggle */}
@@ -89,7 +89,7 @@ export function Header() {
           className="text-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-[var(--color-surface-alt)]"
           aria-label="Toggle theme"
         >
-          \u25d1
+          ◑
         </button>
       </div>
     </header>
