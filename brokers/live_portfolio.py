@@ -899,9 +899,14 @@ class LivePortfolio:
             from datetime import date as _date
             snap_days_old = (_date.today() - _date.fromisoformat(snap_date)).days
             if snap_days_old > 3:
-                logger.debug(
-                    "_get_per_market_equity: snapshot for %s is %d days old — too stale, "
-                    "falling back to global broker equity",
+                # Mark degraded: a snapshot DID exist but is now too stale to trust.
+                # check_daily_drawdown will suppress HALT below 20% (cross-market
+                # equity movements must not trigger per-market false HALTs).
+                # [FIX-PMEQ-AUDIT-002]
+                self._per_market_equity_degraded = True
+                logger.warning(
+                    "_get_per_market_equity: snapshot for %s is %d days old — "
+                    "STALE, degraded mode active (HALT suppressed below 20%%)",
                     self.market_id, snap_days_old,
                 )
                 return None
@@ -1018,6 +1023,12 @@ class LivePortfolio:
         """
         today_str = datetime.now().strftime("%Y-%m-%d")
 
+        # Reset degraded flag at the start of each drawdown check so a stale True
+        # from a previous degraded call does not persist into a healthy one.
+        # _get_per_market_equity and the fallback else-branches set it as needed.
+        # [FIX-PMEQ-AUDIT-002]
+        self._per_market_equity_degraded = False
+
         # Determine effective equity — prefer per-market attributed equity
         broker_eq = self.broker_equity()
         if broker_eq > 0:
@@ -1030,15 +1041,29 @@ class LivePortfolio:
                     self.market_id, effective_eq, broker_eq,
                 )
             else:
-                # No per-market data → fall back to global broker equity
+                # No per-market data → fall back to global broker equity.
+                # NOTE: _per_market_equity_degraded is set by _get_per_market_equity
+                # only when a snapshot EXISTS but is stale (>3 days).
+                # When no snapshot has ever existed (new instance, test), it is left
+                # False so the HALT fires normally against global broker equity.
+                # [FIX-PMEQ-AUDIT-002]
                 effective_eq = broker_eq
                 logger.debug(
                     "check_daily_drawdown %s: per-market equity unavailable, "
-                    "using global broker equity $%.2f",
-                    self.market_id, broker_eq,
+                    "using global broker equity $%.2f (degraded=%s)",
+                    self.market_id, broker_eq, self._per_market_equity_degraded,
                 )
+                if self._per_market_equity_degraded:
+                    logger.warning(
+                        "check_daily_drawdown %s: stale snapshot in DEGRADED mode — "
+                        "using global broker equity $%.2f; HALT suppressed below 20%%",
+                        self.market_id, broker_eq,
+                    )
         else:
             effective_eq = self.equity(prices)
+            # Note: _per_market_equity_degraded is NOT set here.
+            # broker_eq=0 falls back to internal equity() which is the true
+            # fallback anchor — HALT should still fire normally against it.
             logger.warning(
                 "check_daily_drawdown: broker_equity() returned 0 — falling back "
                 "to internal equity() (broker_data_valid=%s). "
