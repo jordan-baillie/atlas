@@ -34,31 +34,40 @@ def test_send_plan_for_approval_suppresses_empty(tmp_path: Path):
 
 
 def test_send_plan_for_approval_sends_when_entries(tmp_path: Path):
-    """Plan with entries must still send."""
+    """Plan with entries: buffer file written, NO Telegram HTTP request sent.
+
+    Phase 4 refactor: send_plan_for_approval no longer sends Telegram directly.
+    It only writes a buffer file for later consolidation via send_plan_rollup().
+    """
     from services.telegram_bot import send_plan_for_approval
 
     plan = {
         "trade_date": "2026-04-27",
         "proposed_entries": [
-            {"ticker": "SPY", "entry_price": 500, "position_size": 10, "strategy": "momentum"}
+            {"ticker": "SPY", "entry_price": 500, "position_size": 10,
+             "stop_price": 490, "strategy": "momentum"}
         ],
         "proposed_exits": [],
-        "risk_summary": {},
+        "risk_summary": {"total_proposed_cost": 5000, "risk_pct_of_equity": 1.0,
+                         "portfolio_exposure_pct": 80.0},
     }
     plan_path = tmp_path / "plan_sp500_2026-04-27.json"
     plan_path.write_text(json.dumps(plan))
+    buf_dir = tmp_path / "buf"
 
-    mock_response = MagicMock()
-    mock_response.read.return_value = b'{"ok": true}'
-    mock_response.__enter__ = lambda self: self
-    mock_response.__exit__ = lambda *a: None
-
-    with patch("services.telegram_bot._load_credentials", return_value=("token", "chat")), \
-         patch("urllib.request.urlopen", return_value=mock_response) as mock_urlopen, \
+    with patch("services.telegram_bot._BUFFER_DIR", buf_dir), \
+         patch("urllib.request.urlopen") as mock_urlopen, \
          patch("utils.config.get_active_config", return_value={"trading": {"auto_approve": False}}):
         result = send_plan_for_approval(str(plan_path), "sp500")
-        # Must have made an HTTP request
-        assert mock_urlopen.called
+
+    assert result is True
+    # Phase 4: NO HTTP request — Telegram is deferred to send_plan_rollup()
+    mock_urlopen.assert_not_called()
+    # Buffer file must have been written
+    buf_file = buf_dir / "sp500_2026-04-27.json"
+    assert buf_file.exists(), "Buffer file must be created for non-empty plan"
+    buf = json.loads(buf_file.read_text())
+    assert buf["n_entries"] == 1
 
 
 def test_send_postclose_summary_suppresses_empty(tmp_path, monkeypatch):

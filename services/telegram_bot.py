@@ -1091,6 +1091,104 @@ async def handle_sweep_promotion_callback(update: Update, ctx: ContextTypes.DEFA
 
 
 # ═══════════════════════════════════════════════════════════════
+# Plan notification buffer — collects per-market summaries for rollup
+# ═══════════════════════════════════════════════════════════════
+
+#: Directory where per-market JSON buffers are written before the daily rollup.
+_BUFFER_DIR = PROJECT_ROOT / "data" / "plan_notifications_buffer"
+
+#: All active markets expected in the rollup (used for display ordering).
+_ROLLUP_MARKETS = ("sp500", "sector_etfs", "commodity_etfs")
+
+
+def _write_plan_buffer(market_id: str, trade_date: str, data: dict) -> None:
+    """Atomically write a per-market plan buffer file.
+
+    Uses a .tmp + os.replace pattern so partial writes are never visible to
+    a concurrently-running rollup.
+    """
+    _BUFFER_DIR.mkdir(parents=True, exist_ok=True)
+    buf_path = _BUFFER_DIR / f"{market_id}_{trade_date}.json"
+    tmp_path = buf_path.with_suffix(".json.tmp")
+    try:
+        tmp_path.write_text(json.dumps(data, indent=2))
+        os.replace(str(tmp_path), str(buf_path))
+        logger.info("Plan buffer written: %s (status=%s)", buf_path.name, data.get("plan_status"))
+    except Exception as e:
+        logger.error("Failed to write plan buffer %s: %s", buf_path, e)
+        tmp_path.unlink(missing_ok=True)
+
+
+def _check_market_halt(market_id: str) -> tuple[bool, str]:
+    """Return (halted, reason) for market_id.
+
+    Checks (in order): global HALT files, then per-market DB state.
+    """
+    # Global halt files
+    for halt_file in (PROJECT_ROOT / "data" / "HALT", PROJECT_ROOT / ".live_halt"):
+        if halt_file.exists():
+            reason = halt_file.read_text().strip() or "manual halt"
+            return True, reason
+
+    # Per-market halt from market_state table
+    try:
+        from db.atlas_db import get_db as _get_db
+        with _get_db() as _db:
+            _row = _db.execute(
+                "SELECT halted, halt_reason FROM market_state WHERE market_id = ?",
+                (market_id,),
+            ).fetchone()
+        if _row and int(_row[0]) == 1:
+            return True, _row[1] or "market halted"
+    except Exception as _e:
+        logger.debug("Could not check halt state for %s: %s", market_id, _e)
+
+    return False, ""
+
+
+def _maybe_write_halt_buffer(market_id: str, trade_date: str | None = None) -> None:
+    """Write a HALTED buffer file if the market is currently halted.
+
+    Called when the plan file is missing — lets the rollup report HALTED
+    rather than silently omitting the market.
+    """
+    today = trade_date or datetime.now().strftime("%Y-%m-%d")
+    halted, halt_reason = _check_market_halt(market_id)
+    if not halted:
+        return
+    _write_plan_buffer(market_id, today, {
+        "market_id": market_id,
+        "trade_date": today,
+        "plan_status": "HALTED",
+        "halt_reason": halt_reason,
+        "n_entries": 0,
+        "n_approved": 0,
+        "n_exits": 0,
+        "total_risk_pct": 0.0,
+        "total_position_value": 0.0,
+        "leverage_pct": 0.0,
+        "summary_lines": [],
+        "rejection_reason": None,
+        "written_at": datetime.now(timezone.utc).isoformat(),
+    })
+    logger.info("HALTED buffer written for %s: %s", market_id, halt_reason)
+
+
+def _cleanup_old_buffers(days: int = 7) -> None:
+    """Delete buffer files and sentinel files older than *days* days."""
+    if not _BUFFER_DIR.exists():
+        return
+    cutoff = datetime.now().timestamp() - (days * 86_400)
+    for fp in list(_BUFFER_DIR.iterdir()):
+        if fp.is_file() and fp.stat().st_mtime < cutoff:
+            try:
+                fp.unlink()
+                logger.debug("Cleaned up old buffer: %s", fp.name)
+            except Exception as _e:
+                logger.warning("Could not clean buffer %s: %s", fp.name, _e)
+
+
+# ═══════════════════════════════════════════════════════════════
 # External API — called by cron/scripts to send plan for approval
 # ═══════════════════════════════════════════════════════════════
 
@@ -1098,21 +1196,19 @@ def send_plan_for_approval(
     plan_path: Optional[str] = None,
     market_id: str = "sp500",
 ) -> bool:
-    """Send a plan summary with Approve/Reject buttons.
+    """Buffer plan summary for later rollup; auto-approve if configured.
 
-    Called from pi-cron.sh or scripts. Uses raw HTTP API (no bot instance
-    needed — just sends a one-shot message with inline keyboard).
+    **No longer sends a Telegram message directly.** The Telegram notification
+    is deferred to ``send_plan_rollup()``, which consolidates all 3 markets
+    into one daily message (called at 19:45 AEST by cron).
+
+    The **auto-approval side-effect is preserved**: if ``auto_approve=True`` in
+    the active config, the plan is approved here so ``execute_approved.py`` can
+    pick it up at 23:15 AEST.
+
+    Writes ``data/plan_notifications_buffer/<market>_<date>.json``.
     """
-    import urllib.request
-    import urllib.error
-
-    try:
-        token, chat_id = _load_credentials()
-    except ValueError as e:
-        logger.error("Cannot send approval: %s", e)
-        return False
-
-    # Load plan
+    # Resolve plan path
     if plan_path is None:
         today = datetime.now().strftime("%Y-%m-%d")
         plan_path = str(PROJECT_ROOT / f"plans/plan_{market_id}_{today}.json")
@@ -1120,66 +1216,232 @@ def send_plan_for_approval(
     plan_file = Path(plan_path)
     if not plan_file.exists():
         logger.error("Plan file not found: %s", plan_path)
+        # Best-effort: write a HALTED buffer if market is actually halted
+        _maybe_write_halt_buffer(market_id)
         return False
 
-    with open(plan_file) as f:
-        plan = json.load(f)
+    with open(plan_file) as _f:
+        plan = json.load(_f)
 
     trade_date = plan.get("trade_date", datetime.now().strftime("%Y-%m-%d"))
-    msg_text = format_plan_message(plan, market_id)
-
     entries = plan.get("proposed_entries", [])
     exits = plan.get("proposed_exits", [])
 
-    # Suppress notification entirely when there's nothing to act on.
-    # User asked for ONE message per real event; empty plans for 2 of 3
-    # markets daily was the dominant spam source.
+    # ── Empty plan — write EMPTY buffer, no Telegram ─────────────────────────
     if not entries and not exits:
         logger.info(
-            "send_plan_for_approval: %s plan empty (0 entries, 0 exits) — suppressing Telegram",
+            "send_plan_for_approval: %s plan empty (0 entries, 0 exits) — writing EMPTY buffer",
             market_id,
         )
-        return True  # Treat as success — nothing to send is the correct outcome
+        _write_plan_buffer(market_id, trade_date, {
+            "market_id": market_id,
+            "trade_date": trade_date,
+            "plan_status": "EMPTY",
+            "halt_reason": None,
+            "n_entries": 0,
+            "n_approved": 0,
+            "n_exits": 0,
+            "total_risk_pct": 0.0,
+            "total_position_value": 0.0,
+            "leverage_pct": 0.0,
+            "summary_lines": [],
+            "rejection_reason": None,
+            "written_at": datetime.now(timezone.utc).isoformat(),
+        })
+        return True  # success — nothing to send is the correct outcome
 
-    # Load config to check auto_approve
-    from utils.config import get_active_config
+    # ── Auto-approve if configured (CRITICAL side-effect) ────────────────────
     config = get_active_config(market_id)
     auto_approve = config.get("trading", {}).get("auto_approve", False)
 
     if auto_approve:
-        # Auto-approve: change plan status and send info-only (no buttons)
-        from brokers.plan import TradePlanGenerator
         plan_gen = TradePlanGenerator(None, config)
         approved = plan_gen.approve_plan(trade_date, market_id=market_id)
         if approved:
             logger.info("Auto-approved plan for %s (%s)", trade_date, market_id)
-            msg_text += "\n\n🤖 <b>Auto-approved</b> — execution at market open."
+            # Re-read so plan_status reflects the freshly-written APPROVED status
+            with open(plan_file) as _f:
+                plan = json.load(_f)
         else:
-            logger.warning("Auto-approve failed for %s — sending with buttons", trade_date)
-            msg_text += "\n\n⚠️ Auto-approve failed — manual approval required."
-        keyboard = None if approved else {
-            "inline_keyboard": [[
-                {"text": "✅ Approve", "callback_data": f"plan:{trade_date}:approve:{market_id}"},
-                {"text": "❌ Reject", "callback_data": f"plan:{trade_date}:reject:{market_id}"},
-            ]]
-        }
-    else:
-        keyboard = {
-            "inline_keyboard": [[
-                {"text": "✅ Approve", "callback_data": f"plan:{trade_date}:approve:{market_id}"},
-                {"text": "❌ Reject", "callback_data": f"plan:{trade_date}:reject:{market_id}"},
-            ]]
-        }
+            logger.warning("Auto-approve failed for %s — plan remains PENDING", trade_date)
 
+    # ── Build buffer payload ──────────────────────────────────────────────────
+    plan_status = plan.get("status", "PENDING")
+    if plan_status not in ("APPROVED", "REJECTED", "PENDING"):
+        plan_status = "PENDING"
+
+    n_entries = len(entries)
+    n_exits = len(exits)
+    n_approved = n_entries if plan_status == "APPROVED" else 0
+
+    risk = plan.get("risk_summary", {})
+    snap = plan.get("portfolio_snapshot", {})
+
+    # Build human-readable per-entry summary lines
+    summary_lines: list[str] = []
+    for _e in entries[:8]:
+        _ticker = _e.get("ticker", "?")
+        _size = _e.get("position_size", 0)
+        _price = _e.get("entry_price", 0)
+        _stop = _e.get("stop_price")
+        if _stop:
+            summary_lines.append(f"{_ticker} × {_size} @ ${_price:.2f} → stop ${_stop:.2f}")
+        else:
+            summary_lines.append(f"{_ticker} × {_size} @ ${_price:.2f}")
+
+    rejection_reason: Optional[str] = (
+        plan.get("rejection_reason") if plan_status == "REJECTED" else None
+    )
+
+    _write_plan_buffer(market_id, trade_date, {
+        "market_id": market_id,
+        "trade_date": trade_date,
+        "plan_status": plan_status,
+        "halt_reason": None,
+        "n_entries": n_entries,
+        "n_approved": n_approved,
+        "n_exits": n_exits,
+        "total_risk_pct": float(risk.get("risk_pct_of_equity") or 0),
+        "total_position_value": float(risk.get("total_proposed_cost") or 0),
+        "leverage_pct": float(risk.get("portfolio_exposure_pct") or 0),
+        "summary_lines": summary_lines,
+        "rejection_reason": rejection_reason,
+        "written_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return True
+
+
+def send_plan_rollup() -> bool:
+    """Send ONE consolidated Telegram message summarising today's plans.
+
+    Reads all ``data/plan_notifications_buffer/*_<today>.json`` files written
+    by ``send_plan_for_approval()`` and sends a single HTML message.
+
+    Idempotent: skips (returns True) if a rollup was already sent today.
+    Cleans up buffer files older than 7 days on each successful send.
+    """
+    import urllib.request
+    import urllib.error
+
+    try:
+        token, chat_id = _load_credentials()
+    except ValueError as _e:
+        logger.error("Cannot send rollup: %s", _e)
+        return False
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # ── Idempotency guard ─────────────────────────────────────────────────────
+    _BUFFER_DIR.mkdir(parents=True, exist_ok=True)
+    sentinel = _BUFFER_DIR / f"rollup_sent_{today}.txt"
+    if sentinel.exists():
+        logger.info("Plan rollup already sent today (%s) — skipping", today)
+        return True
+
+    # ── Collect today's buffer files ──────────────────────────────────────────
+    buffers_by_market: dict[str, dict] = {}
+    for buf_path in _BUFFER_DIR.glob(f"*_{today}.json"):
+        try:
+            with open(buf_path) as _f:
+                buf = json.load(_f)
+            market = buf.get("market_id") or buf_path.stem.rsplit("_", 3)[0]
+            buffers_by_market[market] = buf
+        except Exception as _e:
+            logger.warning("Could not read buffer %s: %s", buf_path, _e)
+
+    # ── Build message ─────────────────────────────────────────────────────────
+    market_lines: list[str] = []
+    n_approved_plans = 0
+    total_risk_pct = 0.0
+
+    # Display in canonical market order; append any extra markets at the end
+    ordered = list(_ROLLUP_MARKETS) + [m for m in sorted(buffers_by_market) if m not in _ROLLUP_MARKETS]
+    for market in ordered:
+        if market not in buffers_by_market:
+            continue
+        buf = buffers_by_market[market]
+
+        status = buf.get("plan_status", "UNKNOWN")
+        n_entries: int = buf.get("n_entries", 0)
+        n_exits: int = buf.get("n_exits", 0)
+        leverage: float = buf.get("leverage_pct", 0)
+        halt_reason: str = buf.get("halt_reason") or ""
+        rejection_reason: str = buf.get("rejection_reason") or ""
+        summary_lines: list[str] = buf.get("summary_lines", [])
+        risk_pct: float = buf.get("total_risk_pct", 0)
+
+        mkt_esc = _esc(market)
+
+        if status == "EMPTY":
+            market_lines.append(f"<b>{mkt_esc}</b>: no signals")
+
+        elif status == "HALTED":
+            halt_short = (halt_reason[:60] + "…") if len(halt_reason) > 60 else halt_reason
+            market_lines.append(f"<b>{mkt_esc}</b>: 🛑 HALTED — {_esc(halt_short)}")
+
+        elif status == "APPROVED":
+            n_approved_plans += 1
+            total_risk_pct += risk_pct
+            if n_entries == 1 and summary_lines:
+                market_lines.append(
+                    f"<b>{mkt_esc}</b>: {n_entries} entry — {_esc(summary_lines[0])} ✅"
+                )
+            else:
+                parts: list[str] = []
+                if n_entries:
+                    parts.append(f"{n_entries} {'entry' if n_entries == 1 else 'entries'}")
+                if n_exits:
+                    parts.append(f"{n_exits} exit{'s' if n_exits > 1 else ''}")
+                if leverage:
+                    parts.append(f"lvg {leverage:.0f}%")
+                market_lines.append(
+                    f"<b>{mkt_esc}</b>: {', '.join(parts)} ✅ APPROVED"
+                )
+
+        elif status == "REJECTED":
+            rej_trunc = (rejection_reason[:60] + "…") if len(rejection_reason) > 60 else rejection_reason
+            rej_suffix = f" — {_esc(rej_trunc)}" if rej_trunc else ""
+            entry_str = f"{n_entries} {'entry' if n_entries == 1 else 'entries'}"
+            extra = f", lvg {leverage:.0f}%" if leverage else ""
+            market_lines.append(
+                f"<b>{mkt_esc}</b>: {entry_str}{extra}, 0 approved ❌ REJECTED{rej_suffix}"
+            )
+
+        else:  # PENDING — awaiting manual approval
+            parts = []
+            if n_entries:
+                parts.append(f"{n_entries} {'entry' if n_entries == 1 else 'entries'}")
+            if n_exits:
+                parts.append(f"{n_exits} exit{'s' if n_exits > 1 else ''}")
+            market_lines.append(
+                f"<b>{mkt_esc}</b>: {', '.join(parts) or 'no signals'} ⏳ PENDING"
+            )
+
+    if not market_lines:
+        market_lines.append("No plans generated today.")
+
+    lines = [f"📋 <b>Daily Plans — {_esc(today)}</b>", ""]
+    lines.extend(market_lines)
+    lines.append("")
+
+    if n_approved_plans > 0:
+        risk_str = f", {total_risk_pct:.2f}% equity" if total_risk_pct else ""
+        lines.append(
+            f"<b>Total approved:</b> {n_approved_plans} "
+            f"plan{'s' if n_approved_plans > 1 else ''}{risk_str}"
+        )
+    else:
+        lines.append("<b>Total approved:</b> 0 plans today")
+
+    msg_text = "\n".join(lines)
+
+    # ── Send via raw HTTP (no bot instance needed) ────────────────────────────
     payload = {
         "chat_id": chat_id,
         "text": msg_text,
         "parse_mode": "HTML",
         "disable_web_page_preview": True,
     }
-    if keyboard:
-        payload["reply_markup"] = json.dumps(keyboard)
-
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     req = urllib.request.Request(
         url,
@@ -1191,17 +1453,25 @@ def send_plan_for_approval(
         with urllib.request.urlopen(req, timeout=15) as resp:
             body = json.loads(resp.read())
             if body.get("ok"):
-                logger.info("Plan sent for approval (trade_date=%s)", trade_date)
+                logger.info(
+                    "Plan rollup sent for %s (%d markets)", today, len(buffers_by_market)
+                )
+                sentinel.write_text(
+                    f"sent at {datetime.now(timezone.utc).isoformat()}\n"
+                    f"markets: {list(buffers_by_market.keys())}\n"
+                )
+                _cleanup_old_buffers(days=7)
                 return True
             logger.warning("Telegram API returned ok=false: %s", body)
             return False
-    except urllib.error.HTTPError as e:
-        body = e.read().decode(errors="replace")
-        logger.error("Telegram HTTP %d: %s", e.code, body)
+    except urllib.error.HTTPError as _e:
+        body = _e.read().decode(errors="replace")
+        logger.error("Telegram HTTP %d: %s", _e.code, body)
         return False
-    except Exception as e:
-        logger.error("Failed to send plan: %s", e)
+    except Exception as _e:
+        logger.error("Failed to send rollup: %s", _e)
         return False
+
 
 
 # ═══════════════════════════════════════════════════════════════

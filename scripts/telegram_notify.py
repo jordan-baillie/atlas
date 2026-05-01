@@ -42,11 +42,18 @@ def main():
         ok = send_premarket_summary(plan_path=plan_path, market_id=market_id)
 
     elif cmd == "premarket-approve":
-        # Send plan with Approve/Reject inline buttons (requires bot to be running)
+        # Buffer the plan summary for the daily rollup; auto-approve if configured.
+        # No longer sends Telegram directly — use premarket-rollup for the message.
         from services.telegram_bot import send_plan_for_approval
         plan_path = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] else None
         market_id = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] else "sp500"
         ok = send_plan_for_approval(plan_path=plan_path, market_id=market_id)
+
+    elif cmd == "premarket-rollup":
+        # Send ONE consolidated Telegram message for all markets' plans.
+        # Called by the 19:45 AEST cron after all 3 premarket runs complete.
+        from services.telegram_bot import send_plan_rollup
+        ok = send_plan_rollup()
 
     elif cmd == "postclose-ok":
         market_id = sys.argv[2] if len(sys.argv) > 2 else "sp500"
