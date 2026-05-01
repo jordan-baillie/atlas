@@ -34,6 +34,11 @@ os.chdir(PROJECT)
 from utils.logging_config import setup_logging
 log = setup_logging("eod_settlement", extra_log_file="eod_settlement")
 
+# FIX-PMEQ-AUDIT-004: all 3 tracked markets must get a market_equity_history row
+# each EOD, even if some have zero positions. Prevents next-day HWM inflation to
+# global broker equity when all positions in a market closed the same day.
+_TRACKED_MARKETS_FOR_ATTRIBUTION: tuple[str, ...] = ("sp500", "sector_etfs", "commodity_etfs")
+
 
 def _health_log(level, message, detail=None):
     """Write to system_log table. Non-fatal."""
@@ -795,13 +800,25 @@ def main():
         log.warning("SQLite EOD write failed (non-fatal): %s", _e)
 
     # RCA #4D: per-market virtual equity attribution
+    # FIX-PMEQ-AUDIT-004: pre-populate ALL tracked markets so zero-position markets
+    # still get a row in market_equity_history each EOD. Without this, the next
+    # morning _get_per_market_equity returns None → falls back to global broker
+    # equity for HWM comparison → a small global drawdown could trip a per-market
+    # HALT (false positive).
     try:
         from portfolio.market_equity_attribution import attribute_equity_pro_rata
+        from portfolio.per_market_cash_flow import compute_realized_cash_flow_since
         from universe.membership import derive_universe
         from db.atlas_db import get_db
         from datetime import timezone
 
-        _positions_by_market: dict[str, list[dict]] = {}
+        # Pre-populate so every tracked market is a key (empty list = zero positions).
+        # attribute_equity_pro_rata will produce a row with position_mv=0 /
+        # cash_attributed=0 for zero-position markets; the carry-forward block below
+        # then overwrites that row with the correct cash baseline.
+        _positions_by_market: dict[str, list[dict]] = {
+            m: [] for m in _TRACKED_MARKETS_FOR_ATTRIBUTION
+        }
         for _bp in portfolio._broker.get_positions():
             _m = derive_universe(_bp.ticker)
             if _m is None:
@@ -818,6 +835,85 @@ def main():
             broker_cash=_broker_cash,
             positions_by_market=_positions_by_market,
         )
+
+        # ── Carry-forward for zero-position markets ───────────────────────────
+        # When a market has no positions, attribute_equity_pro_rata gives it
+        # allocated_equity=0 (pro-rata share = 0/total_mv = 0).  But _get_per_market_equity
+        # uses the snapshot's cash_attributed as the cash baseline.  If cash_attributed=0,
+        # the per-market equity formula returns 0 → HWM comparison is meaningless →
+        # false HALT risk.  Fix: carry forward the previous snapshot's cash_attributed
+        # plus any realized cash flows since that snapshot (from exits today).
+        _zero_position_markets = [
+            m for m in _TRACKED_MARKETS_FOR_ATTRIBUTION
+            if not _positions_by_market.get(m)
+        ]
+        if _zero_position_markets:
+            log.info(
+                "FIX-PMEQ-AUDIT-004: zero-position markets detected: %s — "
+                "carrying forward cash_attributed from previous snapshot",
+                _zero_position_markets,
+            )
+            with get_db() as _db_carry:
+                for _zm in _zero_position_markets:
+                    _prev = _db_carry.execute(
+                        "SELECT cash_attributed, snapshot_time "
+                        "FROM market_equity_history "
+                        "WHERE market_id = ? ORDER BY date DESC, created_at DESC LIMIT 1",
+                        (_zm,),
+                    ).fetchone()
+                    if _prev is None:
+                        # No prior snapshot — give equal share of broker_cash
+                        # (rare: only on very first EOD run for this market).
+                        _carry = round(_broker_cash / max(1, len(_TRACKED_MARKETS_FOR_ATTRIBUTION)), 2)
+                        log.warning(
+                            "FIX-PMEQ-AUDIT-004: no prior snapshot for %s — "
+                            "using equal cash share $%.2f",
+                            _zm, _carry,
+                        )
+                    else:
+                        _prev_cash = float(_prev["cash_attributed"] or 0.0)
+                        _prev_snap_time_str = _prev["snapshot_time"]
+                        _flow = 0.0
+                        try:
+                            if _prev_snap_time_str:
+                                _ts = _prev_snap_time_str.replace("Z", "+00:00")
+                                _prev_snap_time = datetime.fromisoformat(_ts)
+                                if _prev_snap_time.tzinfo is None:
+                                    _prev_snap_time = _prev_snap_time.replace(
+                                        tzinfo=timezone.utc
+                                    )
+                                _market_symbols = {
+                                    m: set() for m in _TRACKED_MARKETS_FOR_ATTRIBUTION
+                                }
+                                _flows, _degraded = compute_realized_cash_flow_since(
+                                    portfolio._broker, _prev_snap_time, _market_symbols
+                                )
+                                if _degraded:
+                                    log.warning(
+                                        "FIX-PMEQ-AUDIT-004: activities API degraded "
+                                        "for %s carry-forward — using prev cash only",
+                                        _zm,
+                                    )
+                                else:
+                                    _flow = _flows.get(_zm, 0.0)
+                        except Exception as _cf_exc:
+                            log.warning(
+                                "FIX-PMEQ-AUDIT-004: carry-forward flow lookup "
+                                "failed for %s: %s",
+                                _zm, _cf_exc,
+                            )
+                        _carry = round(_prev_cash + _flow, 2)
+                        log.info(
+                            "FIX-PMEQ-AUDIT-004: carry-forward for %s: "
+                            "prev_cash=$%.2f + flow=$%.2f → cash_attributed=$%.2f",
+                            _zm, _prev_cash, _flow, _carry,
+                        )
+                    # Override the zero row with the correct cash baseline.
+                    _attribution[_zm] = {
+                        "position_mv": 0.0,
+                        "cash_attributed": _carry,
+                        "allocated_equity": _carry,
+                    }
 
         _today = trade_date
         _snap_iso = datetime.now(timezone.utc).isoformat()
