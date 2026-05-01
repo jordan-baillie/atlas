@@ -256,6 +256,8 @@ class LiveExecutor:
         # Circuit breaker state (A4)
         self._circuit_breaker_tripped = False
         self._daily_start_equity: float = 0.0
+        # Per-execute_plan account info cache (avoids repeated broker RPCs)
+        self._account_info_cache = None
 
     @property
     def is_live_enabled(self) -> bool:
@@ -293,6 +295,27 @@ class LiveExecutor:
             self._circuit_breaker_tripped = False
             self._daily_start_equity = 0.0
 
+    def _get_cached_account_info(self):
+        """Get account_info, using a per-execute_plan cache to avoid repeated broker RPCs.
+
+        The cache is reset to None at the start of each execute_plan() call, so
+        every plan gets exactly one fresh fetch.  Subsequent calls within the same
+        plan execution (circuit breaker check, leverage gate, etc.) reuse the
+        cached value.
+
+        Returns None when the broker is unavailable or on any error (fail-soft).
+        """
+        if self._account_info_cache is not None:
+            return self._account_info_cache
+        if not self._broker:
+            return None
+        try:
+            info = self._broker.get_account_info()
+            self._account_info_cache = info
+            return info
+        except Exception:
+            return None
+
     def _capture_start_equity(self) -> None:
         """Capture the portfolio equity at the start of execution.
 
@@ -305,7 +328,7 @@ class LiveExecutor:
         if not self._broker:
             return
         try:
-            account = self._broker.get_account_info()
+            account = self._get_cached_account_info()
             if account and account.equity > 0:
                 self._daily_start_equity = account.equity
                 logger.info(
@@ -352,7 +375,7 @@ class LiveExecutor:
             return False
 
         try:
-            account = self._broker.get_account_info()
+            account = self._get_cached_account_info()
         except Exception as e:
             logger.warning(
                 "Circuit breaker P&L check failed (non-blocking): %s", e
@@ -577,6 +600,9 @@ class LiveExecutor:
             if not mkt_check["is_tradeable"]:
                 logger.warning("Market state check: %s", mkt_check["message"])
                 # Don't block — just warn (AU state unavailable)
+
+        # Reset per-plan account info cache (ensures fresh fetch for every plan)
+        self._account_info_cache = None
 
         # Reset daily counter and circuit breaker if new day
         if trade_date != self._daily_date:
@@ -1094,7 +1120,7 @@ class LiveExecutor:
         # transient API error.
         try:
             _lever_cap = self.config.get("risk", {}).get("leverage", 1.0)
-            _lev_acct = self._broker.get_account_info()
+            _lev_acct = self._get_cached_account_info()
             if _lev_acct and _lev_acct.equity > 0:
                 _lev_positions = self._broker.get_positions()
                 _cur_mv = sum(
