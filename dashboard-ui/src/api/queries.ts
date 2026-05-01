@@ -23,6 +23,7 @@ import type {
 } from './types'
 
 const REFETCH_60S = 60_000
+const REFETCH_5MIN = 5 * 60_000
 const STALE_5MIN = 5 * 60_000
 const REFETCH_DAILY = 24 * 60 * 60_000  // 1 day
 const STALE_1HR = 60 * 60_000
@@ -184,9 +185,9 @@ export function useSystemHealth() {
     queryKey: qk.system.health(),
     queryFn: () =>
       get<Record<string, unknown>>('/api/system/health').then(normalizeSystemHealth),
-    refetchInterval: REFETCH_60S,
+    refetchInterval: REFETCH_5MIN,
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
   })
 }
 
@@ -214,9 +215,9 @@ export function useRegimeTransitions() {
   return useQuery({
     queryKey: qk.regime.transitions(),
     queryFn: () => get<RegimeTransitions>('/api/regime/transitions'),
-    refetchInterval: REFETCH_60S,
+    refetchInterval: REFETCH_5MIN,
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
   })
 }
 
