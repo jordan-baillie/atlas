@@ -344,9 +344,18 @@ class TestPerMarketDrawdownIsolation:
         assert dd_per_market == pytest.approx(0.15, rel=1e-3)
 
     def test_fallback_to_broker_eq_when_no_attribution(self, tmp_path, monkeypatch):
-        """No per-market data → falls back to global broker equity (original behavior)."""
+        """No per-market data (no rows ever) → falls back to global broker equity + HALT fires.
+
+        When there has NEVER been a market_equity_history row (new instance, fresh setup),
+        degraded mode is NOT engaged — the HALT fires based on global broker equity.
+
+        This is distinct from the stale-snapshot case (>3 days old) where FIX-PMEQ-AUDIT-002
+        engages degraded mode to prevent cross-market false HALTs. The distinction:
+        - No rows ever:  use global broker equity, HALT normally (old behavior preserved)
+        - Stale snapshot: use global broker equity, HALT suppressed below 20% (FIX-PMEQ-AUDIT-002)
+        """
         db = tmp_path / "atlas.db"
-        _seed_market_equity_history(db, [])  # empty — no data
+        _seed_market_equity_history(db, [])  # empty — no rows ever
         monkeypatch.setattr("db.atlas_db._db_path_override", str(db))
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
@@ -357,8 +366,30 @@ class TestPerMarketDrawdownIsolation:
 
         halted, dd = lp.check_daily_drawdown()
 
-        assert halted is True, f"Global 12% dd should halt without per-market data"
+        assert halted is True, (
+            "Global 12% dd should HALT when no attribution rows exist "
+            "(new instance — degraded mode not engaged, no prior snapshot to be stale)"
+        )
+        assert lp._per_market_equity_degraded is False, "no stale snapshot → not degraded"
         assert dd == pytest.approx(0.12, rel=1e-3)
+
+    def test_fallback_catastrophic_still_halts_when_no_attribution(self, tmp_path, monkeypatch):
+        """25%+ global drop HALTS even in degraded mode (catastrophic override)."""
+        db = tmp_path / "atlas.db"
+        _seed_market_equity_history(db, [])  # empty — no attribution data
+        monkeypatch.setattr("db.atlas_db._db_path_override", str(db))
+
+        lp = _make_portfolio("sp500", max_daily_dd=0.10)
+        lp.daily_high_water = 5000.0
+        import datetime as _dt
+        lp.daily_high_water_date = _dt.date.today().isoformat()  # today — no session reset
+        lp._broker_equity = 3500.0  # 30% global drawdown — catastrophic
+
+        with patch("brokers.kill_switch.halt"):
+            halted, dd = lp.check_daily_drawdown()
+
+        assert halted is True, "30% global drawdown must HALT even in degraded mode (20% override)"
+        assert dd == pytest.approx(0.30, rel=1e-3)
 
     def test_hwm_resets_to_per_market_eq_on_new_day(self, tmp_path, monkeypatch):
         """On new calendar day, HWM resets to per-market equity, not global."""
