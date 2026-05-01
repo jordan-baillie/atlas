@@ -245,18 +245,21 @@ class TestPerMarketDrawdownIsolation:
 
     def _setup(self, tmp_path: Path, monkeypatch) -> tuple:
         """Seed DB, create two portfolios with different per-market equity."""
+        import datetime as _dt
+        _today = _dt.date.today().isoformat()
+
         db = tmp_path / "atlas.db"
 
         # Snapshot: market_a=$1000 + market_b=$1000 = global broker $2000
         _seed_market_equity_history(db, [
             {
-                "date": "2026-04-29",
+                "date": _today,
                 "market_id": "market_a",
                 "allocated_equity": 1000.0,
                 "broker_equity": 2000.0,
             },
             {
-                "date": "2026-04-29",
+                "date": _today,
                 "market_id": "market_b",
                 "allocated_equity": 1000.0,
                 "broker_equity": 2000.0,
@@ -268,11 +271,12 @@ class TestPerMarketDrawdownIsolation:
         lp_a = _make_portfolio("market_a", starting_equity=1000.0, max_daily_dd=0.10)
         lp_b = _make_portfolio("market_b", starting_equity=1000.0, max_daily_dd=0.10)
 
-        # Pre-set HWM to $1000 for both (simulating start of session)
+        # Pre-set HWM to $1000 for both (simulating start of session).
+        # Use today's date so no session HWM reset fires during the test.
         lp_a.daily_high_water = 1000.0
-        lp_a.daily_high_water_date = "2026-04-29"
+        lp_a.daily_high_water_date = _today
         lp_b.daily_high_water = 1000.0
-        lp_b.daily_high_water_date = "2026-04-29"
+        lp_b.daily_high_water_date = _today
 
         return lp_a, lp_b
 
@@ -327,8 +331,9 @@ class TestPerMarketDrawdownIsolation:
         )
 
         # Reset HWM for the per-market test
+        import datetime as _dt
         lp_a.daily_high_water = 1000.0
-        lp_a.daily_high_water_date = "2026-04-29"
+        lp_a.daily_high_water_date = _dt.date.today().isoformat()  # today — no session reset
 
         # Now: per-market path at $850 should halt
         with patch.object(lp_a, "_get_per_market_equity", return_value=850.0):
@@ -346,7 +351,8 @@ class TestPerMarketDrawdownIsolation:
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
         lp.daily_high_water = 5000.0
-        lp.daily_high_water_date = "2026-04-29"
+        import datetime as _dt
+        lp.daily_high_water_date = _dt.date.today().isoformat()  # today — no session reset
         lp._broker_equity = 4400.0  # 12% global drawdown
 
         halted, dd = lp.check_daily_drawdown()
@@ -387,8 +393,10 @@ class TestPerMarketDrawdownIsolation:
 
     def test_markets_independent_halts_full_scenario(self, tmp_path, monkeypatch):
         """Full integration: market_a halts, market_b continues — independent."""
+        import datetime as _dt
+        today = _dt.date.today().isoformat()  # use today's date — no session HWM reset
+
         db = tmp_path / "atlas.db"
-        today = "2026-04-29"
         _seed_market_equity_history(db, [
             {
                 "date": today,

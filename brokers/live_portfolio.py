@@ -37,6 +37,11 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # production state file pollution (see tests/conftest.py _isolate_state_files).
 _STATE_DIR: Path = PROJECT_ROOT / "brokers" / "state"
 
+# Traded markets tracked for per-market cash flow attribution (FIX-PMEQ-001).
+# Must match the markets for which market_equity_history rows are written
+# by eod_settlement.py + portfolio/market_equity_attribution.py.
+_ALL_TRADED_MARKETS: tuple[str, ...] = ("sp500", "sector_etfs", "commodity_etfs")
+
 
 class LivePortfolio:
     """Broker-backed portfolio for live position and cash tracking.
@@ -85,6 +90,11 @@ class LivePortfolio:
         # Cooldown: HWM reset timestamp — suppresses marginal false-positive halts
         # within 1h of a session reset (see check_daily_drawdown)
         self._hwm_reset_at: Optional[datetime] = None
+
+        # True when last _get_per_market_equity call could not reconcile activities
+        # (Alpaca activities API down/unavailable).  In degraded mode, kill switch
+        # is suppressed for non-catastrophic drawdowns (see check_daily_drawdown).
+        self._per_market_equity_degraded: bool = False
 
         # Throttle: save_state warning fires only once per instance (not 30+ times)
         self._save_state_warned: bool = False
@@ -828,20 +838,27 @@ class LivePortfolio:
         current_broker_eq: float,
         prices: dict[str, float] | None = None,
     ) -> float | None:
-        """Return this market's estimated allocated equity.
+        """Return this market's estimated allocated equity using live cash attribution.
 
         Uses a two-component formula:
         - **Position MV**: sum of this market's current positions × current prices
           (from ``prices`` dict, falling back to ``entry_price``).
-        - **Scaled cash share**: snapshot cash share × (current_broker / snap_broker).
+        - **Live cash share**: snapshot cash_attributed + realized cash flows on this
+          market's symbols (FILL + DIV activities) since the snapshot_time.
 
-        This avoids the false-positive where the old proportional-scaling formula
-        amplified a small broker-equity change into a large apparent per-market drop
-        (because positions have independent price movement that shouldn't be conflated
-        with cash-scale drift).
+        This replaces the stale-snap_cash proportional scaling formula which caused
+        phantom drawdowns when positions exited intraday: the exit proceeds moved from
+        position_mv → broker cash but snap_cash was locked to yesterday's value.
+        (#FIX-PMEQ-001, 2026-05-01)
+
+        Degraded mode: if the Alpaca activities API is unavailable, falls back to
+        ``live_cash = snap_cash`` (frozen, no scaling).  ``self._per_market_equity_degraded``
+        is set to True so ``check_daily_drawdown`` can suppress the kill switch below the
+        catastrophic 20% threshold.
 
         Legacy fallback: if the snapshot row lacks ``position_mv`` / ``cash_attributed``
         columns (both zero), falls back to proportional scaling of ``allocated_equity``.
+        Maintains backwards-compat with rows written before these columns existed.
 
         Returns ``None`` on DB failure, missing table, or stale snapshot (>3 days).
         """
@@ -851,7 +868,7 @@ class LivePortfolio:
                 row = db.execute(
                     """
                     SELECT allocated_equity, broker_equity, date,
-                           position_mv, cash_attributed
+                           position_mv, cash_attributed, snapshot_time
                     FROM market_equity_history
                     WHERE market_id = ?
                     ORDER BY date DESC, created_at DESC
@@ -875,6 +892,7 @@ class LivePortfolio:
         snap_pos_mv: float = row["position_mv"] or 0.0
         snap_cash: float = row["cash_attributed"] or 0.0
         snap_date: str = row["date"] or ""
+        snap_time_str: str = row["snapshot_time"] or ""
 
         # Reject stale snapshot (>3 trading days old)
         try:
@@ -893,9 +911,9 @@ class LivePortfolio:
         if snap_broker <= 0 or current_broker_eq <= 0:
             return None
 
-        cash_scale = current_broker_eq / snap_broker
+        cash_scale = current_broker_eq / snap_broker  # kept for legacy path only
 
-        # ── New formula: separate position MV from cash-share scaling ──────────
+        # ── New formula: position MV + live cash attribution ──────────────────
         if snap_pos_mv > 0 or snap_cash > 0:
             # Position MV: sum current prices × shares for this market's positions
             if self.positions:
@@ -906,21 +924,76 @@ class LivePortfolio:
             else:
                 current_pos_mv = 0.0
 
-            # Cash share: scales with broker equity (proportional to portfolio cash)
-            scaled_cash = snap_cash * cash_scale
-            per_market_eq = current_pos_mv + scaled_cash
+            # ── Live cash attribution ─────────────────────────────────────────
+            # Parse snapshot_time so we can fetch activities since that moment.
+            snap_time: datetime | None = None
+            if snap_time_str:
+                try:
+                    _ts_str = snap_time_str.replace("Z", "+00:00")
+                    snap_time = datetime.fromisoformat(_ts_str)
+                    if snap_time.tzinfo is None:
+                        snap_time = snap_time.replace(tzinfo=timezone.utc)
+                except (ValueError, TypeError):
+                    pass  # Malformed snapshot_time — will degrade gracefully below
+
+            if snap_time is not None and self._broker is not None:
+                # Live path: fetch realized cash flows since the snapshot
+                from portfolio.per_market_cash_flow import compute_realized_cash_flow_since
+                # market_symbols keys define which markets we track;
+                # values (ticker sets) are not used internally — derive_universe routes.
+                market_symbols: dict[str, set[str]] = {
+                    m: set() for m in _ALL_TRADED_MARKETS
+                }
+                cash_flows, degraded = compute_realized_cash_flow_since(
+                    self._broker, snap_time, market_symbols
+                )
+                if degraded:
+                    live_cash = snap_cash  # frozen: best we can do without activities
+                    self._per_market_equity_degraded = True
+                    logger.warning(
+                        "_get_per_market_equity %s: activities API DEGRADED — "
+                        "using frozen snap_cash=$%.2f (since=%s)",
+                        self.market_id, snap_cash, snap_time_str,
+                    )
+                else:
+                    live_cash = snap_cash + cash_flows.get(self.market_id, 0.0)
+                    self._per_market_equity_degraded = False
+                    logger.debug(
+                        "_get_per_market_equity %s: snap_cash=$%.2f "
+                        "+ cash_flow=$%.2f → live_cash=$%.2f",
+                        self.market_id, snap_cash,
+                        cash_flows.get(self.market_id, 0.0), live_cash,
+                    )
+            else:
+                # No broker connection or no valid snapshot_time.
+                # Use snap_cash as-is; mark degraded so kill switch is suppressed.
+                live_cash = snap_cash
+                self._per_market_equity_degraded = True
+                logger.debug(
+                    "_get_per_market_equity %s: no broker or no snap_time "
+                    "(broker=%s snap_time=%s) — using frozen snap_cash=$%.2f",
+                    self.market_id,
+                    "connected" if self._broker is not None else "None",
+                    snap_time_str or "missing",
+                    snap_cash,
+                )
+
+            per_market_eq = current_pos_mv + live_cash
             logger.debug(
-                "_get_per_market_equity %s (position+cash formula): "
-                "pos_mv=$%.2f + scaled_cash=$%.2f (snap_cash=$%.2f × scale=%.4f) "
-                "→ per_market=$%.2f",
-                self.market_id, current_pos_mv, scaled_cash,
-                snap_cash, cash_scale, per_market_eq,
+                "_get_per_market_equity %s (live-cash formula): "
+                "pos_mv=$%.2f + live_cash=$%.2f (snap_cash=$%.2f + flow=$%.2f) "
+                "→ per_market=$%.2f | degraded=%s",
+                self.market_id, current_pos_mv, live_cash,
+                snap_cash, live_cash - snap_cash, per_market_eq,
+                self._per_market_equity_degraded,
             )
+
         else:
             # ── Legacy fallback: no position/cash breakdown in snapshot ───────
             # Proportional scaling of full allocated equity — less accurate but
             # safe for rows written before position_mv/cash_attributed columns existed.
             per_market_eq = snap_alloc * cash_scale
+            self._per_market_equity_degraded = False
             logger.debug(
                 "_get_per_market_equity %s (legacy proportional): "
                 "snap_alloc=$%.2f snap_broker=$%.2f current_broker=$%.2f → per_market=$%.2f",
@@ -1024,6 +1097,21 @@ class LivePortfolio:
                     "HALT suppressed — within 1h of HWM reset "
                     "(would have halted at %.2f%% drawdown on %s)",
                     dd * 100, self.market_id,
+                )
+                return False, dd
+
+            # Degraded-mode guard: if per-market cash flow could not be reconciled
+            # (Alpaca activities API unavailable), do NOT trip the kill switch on a
+            # stale snap_cash estimate.  The catastrophic 20% override still fires.
+            if (
+                getattr(self, "_per_market_equity_degraded", False)
+                and dd < _HALT_COOLDOWN_OVERRIDE_DD
+            ):
+                logger.warning(
+                    "HALT suppressed for %s — per-market cash flow attribution DEGRADED "
+                    "(activities API unavailable). Drawdown=%.2f%% but cannot trust "
+                    "snap_cash. Catastrophic override (20%%) still active.",
+                    self.market_id, dd * 100,
                 )
                 return False, dd
 

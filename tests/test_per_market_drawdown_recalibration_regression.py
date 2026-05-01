@@ -127,7 +127,7 @@ class TestRecalibrationFalsePositive:
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
         lp.daily_high_water = 971.0
-        lp.daily_high_water_date = "2026-04-29"  # already on today's date
+        lp.daily_high_water_date = "2026-05-01"  # today — no session HWM reset
         lp._broker_equity = 5184.0
         # Simulate HWM reset 5 minutes ago (within cooldown window)
         lp._hwm_reset_at = datetime.now() - timedelta(minutes=5)
@@ -163,7 +163,7 @@ class TestRecalibrationFalsePositive:
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
         lp.daily_high_water = 971.0
-        lp.daily_high_water_date = "2026-04-29"
+        lp.daily_high_water_date = "2026-05-01"  # use today — no session HWM reset
         lp._broker_equity = 5184.0
         # Simulate HWM reset 65 minutes ago (cooldown expired)
         lp._hwm_reset_at = datetime.now() - timedelta(minutes=65)
@@ -192,7 +192,7 @@ class TestRecalibrationFalsePositive:
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
         lp.daily_high_water = 971.0
-        lp.daily_high_water_date = "2026-04-29"
+        lp.daily_high_water_date = "2026-05-01"  # use today — no session HWM reset
         lp._broker_equity = 5184.0
         lp._hwm_reset_at = None  # no reset this session
 
@@ -218,7 +218,7 @@ class TestRecalibrationFalsePositive:
 
         lp = _make_portfolio("sp500", max_daily_dd=0.10)
         lp.daily_high_water = 971.0
-        lp.daily_high_water_date = "2026-04-29"
+        lp.daily_high_water_date = "2026-05-01"  # use today — no session HWM reset
         lp._broker_equity = 5184.0
         # Well within cooldown: only 10 minutes since reset
         lp._hwm_reset_at = datetime.now() - timedelta(minutes=10)
@@ -275,12 +275,14 @@ class TestRecalibrationFalsePositive:
 class TestNewPerMarketEquityFormula:
     """Fix E: verify the position+cash formula produces accurate results."""
 
-    def test_position_mv_plus_scaled_cash(self, tmp_path, monkeypatch):
+    def test_position_mv_plus_live_cash(self, tmp_path, monkeypatch):
         """Snapshot: sp500=$971 = $817.87 positions + $153.14 cash.
         Broker drops from $5213.4 → $5184 (−0.56%).
-        With 1 CAT share now at $818 (unchanged from snapshot):
-          effective_eq = $818 + $153.14 × (5184/5213.4) = $818 + $152.28 = $970.28
-        This is ~0.07% down from $971, NOT 12%. No halt.
+        With 1 CAT share now at $818 (unchanged from snapshot), no fills since snap:
+          effective_eq = $818 + $153.14 (snap_cash, no scaling) = $971.14
+        NEW formula: cash is NOT scaled by broker equity ratio.  Instead it reflects
+        actual realized cash flows since the snapshot.  With no fills, live_cash = snap_cash.
+        No broker connected in test → degraded mode → live_cash = snap_cash (frozen).
         """
         db = tmp_path / "atlas.db"
         _seed_db(db, [{
@@ -304,16 +306,20 @@ class TestNewPerMarketEquityFormula:
 
         result = lp._get_per_market_equity(5184.0, prices={"CAT": 818.0})
 
-        # expected: 818.0 + 153.14 × (5184/5213.4)
-        scaled_cash = 153.14 * (5184.0 / 5213.4)
-        expected = 818.0 + scaled_cash
+        # NEW formula: no broker → degraded mode → live_cash = snap_cash (no scale).
+        # Result = pos_mv + snap_cash = 818.0 + 153.14 = 971.14
+        expected = 818.0 + 153.14
         assert result == pytest.approx(expected, rel=1e-4), (
-            f"Expected ${expected:.2f}, got ${result:.2f}"
+            f"Expected ${expected:.2f} (pos_mv + snap_cash, no scaling), got ${result:.2f}"
         )
 
-    def test_broker_growth_scales_only_cash(self, tmp_path, monkeypatch):
+    def test_broker_growth_does_not_scale_cash(self, tmp_path, monkeypatch):
         """Snapshot: $1000 = $700 positions + $300 cash. Broker +10% ($5000→$5500).
-        Positions held at $700 (no price change). Expected: $700 + $300×1.1 = $1030.
+        Positions held at $700 (no price change). No fills since snapshot.
+        NEW formula: broker growth does NOT scale per-market cash.  Cash attribution
+        is based on actual realized flows (FILL/DIV), not broker-wide equity ratio.
+        No broker connected in test → degraded mode → live_cash = snap_cash = $300.
+        Result: $700 + $300 = $1000 (NOT $1030 from the old scaled formula).
         """
         db = tmp_path / "atlas.db"
         _seed_db(db, [{
@@ -337,9 +343,12 @@ class TestNewPerMarketEquityFormula:
         # Pass prices matching snapshot MV (no change)
         result = lp._get_per_market_equity(5500.0, prices={"XYZ": 100.0})
 
-        expected = 700.0 + 300.0 * (5500.0 / 5000.0)  # $1030
+        # NEW formula: no broker → degraded → live_cash = snap_cash = $300 (no scaling).
+        # Broker equity growth does NOT automatically grow per-market cash.
+        # Only actual FILL/DIV flows change the per-market cash estimate.
+        expected = 700.0 + 300.0  # pos_mv + snap_cash = $1000
         assert result == pytest.approx(expected, rel=1e-4), (
-            f"Broker +10% should grow cash share from $300→$330 (total $1030), got ${result:.2f}"
+            f"With no fills, per-market eq = pos_mv + snap_cash = $1000, got ${result:.2f}"
         )
 
     def test_position_price_drop_without_broker_change(self, tmp_path, monkeypatch):
@@ -399,8 +408,11 @@ class TestNewPerMarketEquityFormula:
 
         result = lp._get_per_market_equity(5500.0)
 
-        expected = 0.0 + 500.0 * (5500.0 / 5000.0)  # $550
-        assert result == pytest.approx(expected, rel=1e-4)
+        # NEW formula: no broker → degraded → live_cash = snap_cash = $500 (no scaling).
+        expected = 0.0 + 500.0  # pos_mv=0 + snap_cash=$500
+        assert result == pytest.approx(expected, rel=1e-4), (
+            f"No-position case: result should be snap_cash=$500, got ${result:.2f}"
+        )
 
     def test_legacy_fallback_when_no_position_or_cash_data(self, tmp_path, monkeypatch):
         """Snapshot row with position_mv=0 and cash_attributed=0 → legacy proportional scaling."""
@@ -449,9 +461,9 @@ class TestNewPerMarketEquityFormula:
         # No prices dict passed
         result = lp._get_per_market_equity(5184.0, prices=None)
 
-        # Should use entry_price=835.24 for position MV
-        scaled_cash = 153.14 * (5184.0 / 5213.4)
-        expected = 835.24 + scaled_cash
+        # Should use entry_price=835.24 for position MV.
+        # NEW formula: no broker → degraded → live_cash = snap_cash = 153.14 (no scaling).
+        expected = 835.24 + 153.14  # entry_price + snap_cash
         assert result == pytest.approx(expected, rel=1e-4), (
-            f"Expected ${expected:.2f} (entry price fallback), got ${result:.2f}"
+            f"Expected ${expected:.2f} (entry price + snap_cash, no scaling), got ${result:.2f}"
         )
