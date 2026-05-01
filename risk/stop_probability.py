@@ -75,6 +75,38 @@ def _fetch_vol_from_cones(ticker: str) -> Optional[float]:
     return None
 
 
+def _fetch_vols_from_cones_batch(tickers: list[str]) -> dict[str, "Optional[float]"]:
+    """Batch version: returns {ticker: vol or None} for all input tickers in ONE query.
+
+    Uses a correlated sub-query to retrieve only the most-recent as_of row
+    per ticker instead of doing N separate round-trips.
+    """
+    if not tickers:
+        return {}
+    out: dict[str, "Optional[float]"] = {t: None for t in tickers}
+    placeholders = ",".join("?" * len(tickers))
+    sql = f"""
+        SELECT ticker, current_vol
+        FROM vol_cones
+        WHERE ticker IN ({placeholders}) AND horizon = 20
+          AND (ticker, as_of) IN (
+              SELECT ticker, MAX(as_of) FROM vol_cones
+              WHERE ticker IN ({placeholders}) AND horizon = 20
+              GROUP BY ticker
+          )
+    """
+    try:
+        with get_db() as db:
+            rows = db.execute(sql, list(tickers) + list(tickers)).fetchall()
+            for r in rows:
+                out[r["ticker"]] = (
+                    float(r["current_vol"]) if r["current_vol"] is not None else None
+                )
+    except Exception as e:
+        logger.warning("batch vol_cones fetch failed: %s", e)
+    return out
+
+
 def analyze_position_stop(
     ticker: str,
     spot: float,
@@ -122,6 +154,10 @@ def analyze_all_open_positions(horizons: tuple = (1, 5, 10, 20)) -> list:
         ).fetchall()
         positions = [dict(r) for r in rows]
 
+    # Batch-fetch all vols in one query instead of N per-ticker queries
+    all_tickers = [pos["ticker"] for pos in positions]
+    vol_map = _fetch_vols_from_cones_batch(all_tickers)
+
     results = []
     for p in positions:
         try:
@@ -136,6 +172,7 @@ def analyze_all_open_positions(horizons: tuple = (1, 5, 10, 20)) -> list:
                 stop=stop,
                 direction="long",
                 horizons=horizons,
+                vol_annual=vol_map.get(p["ticker"]),  # pre-fetched, avoids per-ticker query
             )
             analysis["shares"] = int(p["shares"] or 0)
             analysis["strategy"] = p["strategy"]

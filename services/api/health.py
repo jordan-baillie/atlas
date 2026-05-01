@@ -85,27 +85,46 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     "status": hb.get("status"),
                 }
 
-        # P4.2 — universe health surface
+        # P4.2 — universe health surface (batch DB query to avoid N+1 connections)
         universes_data = []
         try:
             import json as _uj
             from db.atlas_db import get_db as _ugh_db, get_latest_equity as _ugh_eq
+
+            # Read all universe configs first (file I/O only, no DB yet)
+            _universe_cfgs: list = []
             for _cfg_path in sorted(Path("config/active").glob("*.json")):
                 if _cfg_path.stem == "regime":
                     continue
                 try:
                     _cfg = _uj.loads(_cfg_path.read_text())
+                    _universe_cfgs.append((_cfg_path, _cfg))
+                except Exception as _ue:
+                    logger.debug("universes: error reading %s: %s", _cfg_path.name, _ue)
+
+            _market_ids = [_c.get("market", _cp.stem) for _cp, _c in _universe_cfgs]
+
+            # ONE connection, batch query for open-position counts across all universes
+            _open_pos_by_market: dict = {}
+            if _market_ids:
+                _ph = ",".join("?" * len(_market_ids))
+                with _ugh_db() as _db:
+                    _op_rows = _db.execute(
+                        f"SELECT universe, COUNT(*) AS n FROM trades "
+                        f"WHERE exit_date IS NULL AND universe IN ({_ph}) "
+                        f"GROUP BY universe",
+                        _market_ids,
+                    ).fetchall()
+                    for _r in _op_rows:
+                        _open_pos_by_market[_r["universe"]] = _r["n"]
+
+            for _cfg_path, _cfg in _universe_cfgs:
+                try:
                     _mid = _cfg.get("market", _cfg_path.stem)
                     _mode = _cfg.get("trading", {}).get("mode", "unknown")
                     _approval = bool(_cfg.get("trading", {}).get("live_enabled", False))
                     _starting_eq = _cfg.get("risk", {}).get("starting_equity")
-                    with _ugh_db() as _db:
-                        _op = _db.execute(
-                            "SELECT COUNT(*) AS n FROM trades "
-                            "WHERE exit_date IS NULL AND (universe=? OR universe IS NULL)",
-                            (_mid,),
-                        ).fetchone()
-                    _open_pos = _op["n"] if _op else 0
+                    _open_pos = _open_pos_by_market.get(_mid, 0)
                     _eq_row = _ugh_eq(market_id=_mid)
                     _eq_val = (_eq_row or {}).get("equity")
                     universes_data.append({
@@ -245,27 +264,52 @@ def macro_gauges(_auth: HTTPBasicCredentials = Depends(check_auth)):
 # ── GET /api/system/health/universes ─────────────────────────────────────────
 
 def _build_universes_list() -> list:
-    """Build the universe health list from config/active/*.json + SQLite."""
+    """Build the universe health list from config/active/*.json + SQLite.
+
+    Uses a single batched COUNT query across all universes instead of
+    opening one DB connection per universe (eliminates N+1 pattern).
+    """
     import json as _uj
     from db.atlas_db import get_db as _udb, get_latest_equity as _ueq
 
-    universes = []
+    # Read all configs (file I/O only)
+    universe_cfgs: list = []
     for cfg_path in sorted(Path("config/active").glob("*.json")):
         if cfg_path.stem == "regime":
             continue
         try:
             cfg = _uj.loads(cfg_path.read_text())
+            universe_cfgs.append((cfg_path, cfg))
+        except Exception as ue:
+            logger.debug("universes: error reading %s: %s", cfg_path.name, ue)
+
+    market_ids = [cfg.get("market", p.stem) for p, cfg in universe_cfgs]
+
+    # ONE connection for all open-position counts
+    open_pos_by_market: dict = {}
+    if market_ids:
+        ph = ",".join("?" * len(market_ids))
+        try:
+            with _udb() as db:
+                rows = db.execute(
+                    f"SELECT universe, COUNT(*) AS n FROM trades "
+                    f"WHERE exit_date IS NULL AND universe IN ({ph}) "
+                    f"GROUP BY universe",
+                    market_ids,
+                ).fetchall()
+                for r in rows:
+                    open_pos_by_market[r["universe"]] = r["n"]
+        except Exception as db_exc:
+            logger.debug("universes batch open-pos query failed: %s", db_exc)
+
+    universes = []
+    for cfg_path, cfg in universe_cfgs:
+        try:
             market_id = cfg.get("market", cfg_path.stem)
             mode = cfg.get("trading", {}).get("mode", "unknown")
             approval = bool(cfg.get("trading", {}).get("live_enabled", False))
             starting_equity = cfg.get("risk", {}).get("starting_equity")
-            with _udb() as db:
-                op_row = db.execute(
-                    "SELECT COUNT(*) AS n FROM trades "
-                    "WHERE exit_date IS NULL AND (universe=? OR universe IS NULL)",
-                    (market_id,),
-                ).fetchone()
-            open_positions = op_row["n"] if op_row else 0
+            open_positions = open_pos_by_market.get(market_id, 0)
             eq_row = _ueq(market_id=market_id)
             equity = (eq_row or {}).get("equity")
             universes.append({
