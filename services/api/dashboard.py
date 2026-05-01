@@ -106,24 +106,24 @@ def _calc_tiingo_daily_pnl(positions: list, market_id: str = "sp500") -> dict:
 # ── Portfolio history helper ──────────────────────────────────────────────────
 
 def _get_portfolio_history(broker) -> list:
-    """Fetch Alpaca portfolio history (1 year, daily) as a list of dicts.
+    """Fetch Alpaca portfolio history (1 year, daily) and normalize to remove
+    cash-flow events (deposits/withdrawals).
 
-    Returns rows with `equity` normalized to remove cash-flow events
-    (deposits/withdrawals). The normalized curve represents pure trading
-    performance: equity[i] = baseline + cumulative_profit_loss[i], where
-    baseline = current_live_equity - total_cumulative_profit_loss. The last
-    row always equals current live equity; earlier rows show what equity
-    WOULD have been if all deposits had occurred at t=0 with no subsequent
-    cash flows. This eliminates the visual "funding spike" that distorts
-    the chart's Y-axis when a deposit lands in the middle of the curve.
+    Normalization formula (per-date):
+        normalized_equity[i] = raw_equity[i] - cum_deposits_at_date[i] + total_deposits_ever
+
+    This eliminates the visual "funding spike" that distorts the Y-axis
+    when a deposit lands mid-curve. The last point still equals current
+    live equity (because cum_deposits[last] == total_deposits_ever).
 
     Returns [] on any error so the caller can fall back to the SQLite
     equity_curve SUM aggregate.
     """
     try:
         from alpaca.trading.requests import GetPortfolioHistoryRequest
-        from datetime import datetime as _dt_ph, timezone as _tz_ph
+        from datetime import datetime as _dt_ph, timedelta as _td_ph, timezone as _tz_ph
 
+        # ── 1. Portfolio history ──────────────────────────────────────────────
         _ph_req = GetPortfolioHistoryRequest(period="1A", timeframe="1D")
         _ph_resp = broker._broker_call(
             broker._trade_client.get_portfolio_history, _ph_req
@@ -132,68 +132,147 @@ def _get_portfolio_history(broker) -> list:
         _eq_list = list(getattr(_ph_resp, "equity", []) or [])
         _pl_list = list(getattr(_ph_resp, "profit_loss", []) or [])
 
-        # Pass 1: collect non-zero days with raw equity + per-day P&L
-        # (profit_loss is the per-day market P&L EXCLUDING cash flows)
         raw_rows: list = []
         for _i, (_ts, _eq) in enumerate(zip(_ts_list, _eq_list)):
             if _eq is None or _eq <= 0:
-                continue  # skip pre-funding zero days
-            _date_str = _dt_ph.fromtimestamp(int(_ts), tz=_tz_ph.utc).strftime(
-                "%Y-%m-%d"
-            )
+                continue
+            _date_str = _dt_ph.fromtimestamp(int(_ts), tz=_tz_ph.utc).strftime("%Y-%m-%d")
             _day_pnl = (
                 float(_pl_list[_i])
                 if _i < len(_pl_list) and _pl_list[_i] is not None
                 else 0.0
             )
-            raw_rows.append(
-                {
-                    "date": _date_str,
-                    "raw_equity": round(float(_eq), 2),
-                    "day_pnl": round(_day_pnl, 2),
-                }
-            )
+            raw_rows.append({
+                "date": _date_str,
+                "raw_equity": round(float(_eq), 2),
+                "day_pnl": round(_day_pnl, 2),
+            })
 
         if not raw_rows:
             return []
 
-        # Pass 2: compute cumulative P&L and baseline (net deposits)
-        cum_pnl = 0.0
-        for r in raw_rows:
-            cum_pnl += r["day_pnl"]
-            r["cum_pnl"] = round(cum_pnl, 2)
-        total_cum_pnl = raw_rows[-1]["cum_pnl"]
-        # baseline = current account equity minus total trading P&L = net deposits
-        # (current equity = baseline + total_pnl, so baseline = equity - total_pnl)
-        current_equity = raw_rows[-1]["raw_equity"]
-        baseline = round(current_equity - total_cum_pnl, 2)
+        # ── 2. Account activities (cash flows) ───────────────────────────────
+        # Fetch deposits/withdrawals over the curve window. Build a per-date
+        # NET cash-flow map so we can compute cumulative deposits.
+        #
+        # SDK note: GetAccountActivitiesRequest lives in alpaca.broker.requests
+        # (NOT alpaca.trading.requests). TradingClient doesn't expose
+        # get_account_activities, so we call the /account/activities HTTP
+        # endpoint directly via TradingClient.get().
+        #
+        # On any failure here, log and fall through to identity normalization
+        # (raw_equity unchanged) — never break the curve entirely.
+        cash_flow_by_date: dict = {}
+        try:
+            from alpaca.broker.requests import GetAccountActivitiesRequest
+            from alpaca.trading.enums import ActivityType
 
-        # Pass 3: emit normalized equity curve
-        rows: list = []
-        for r in raw_rows:
-            normalized_eq = round(baseline + r["cum_pnl"], 2)
-            rows.append(
-                {
-                    "date": r["date"],
-                    "equity": normalized_eq,
-                    "value": normalized_eq,
-                    "day_pnl": r["day_pnl"],
-                    # Keep the raw_equity around for diagnostic/debugging if needed
-                    # (not displayed by frontend, but useful in logs)
-                    "raw_equity": r["raw_equity"],
-                }
+            _act_types = [ActivityType.CSD, ActivityType.CSW, ActivityType.JNLC]
+            _since = _dt_ph.now(tz=_tz_ph.utc) - _td_ph(days=400)
+            _act_req = GetAccountActivitiesRequest(
+                activity_types=_act_types,
+                after=_since,
             )
-        logger.info(
-            "Equity curve normalized: %d days, baseline=$%.2f, total_pnl=$%.2f, "
-            "raw_range=[$%.2f, $%.2f], normalized_range=[$%.2f, $%.2f]",
-            len(rows),
-            baseline,
-            total_cum_pnl,
-            min(r["raw_equity"] for r in rows),
-            max(r["raw_equity"] for r in rows),
-            min(r["equity"] for r in rows),
-            max(r["equity"] for r in rows),
-        )
+
+            # TradingClient has no get_account_activities method; wrap the raw
+            # HTTP call so _broker_call's retry logic still applies.
+            def _do_fetch_activities(req):
+                fields = req.to_request_fields()
+                return broker._trade_client.get("/account/activities", fields) or []
+
+            _activities = broker._broker_call(_do_fetch_activities, _act_req) or []
+
+            for _act in _activities:
+                # Handle both plain dict (real Alpaca JSON) and
+                # SimpleNamespace / SDK model objects (tests/SDK versions)
+                if isinstance(_act, dict):
+                    _adate = _act.get("date")
+                    _net = _act.get("net_amount")
+                else:
+                    _adate = getattr(_act, "date", None)
+                    _net = getattr(_act, "net_amount", None)
+                if _adate is None or _net is None:
+                    continue
+                if hasattr(_adate, "strftime"):
+                    _adate_str = _adate.strftime("%Y-%m-%d")
+                else:
+                    _adate_str = str(_adate)[:10]
+                try:
+                    _net_f = float(_net)
+                except (TypeError, ValueError):
+                    continue
+                cash_flow_by_date[_adate_str] = (
+                    cash_flow_by_date.get(_adate_str, 0.0) + _net_f
+                )
+        except Exception as _act_err:  # noqa: BLE001 — broker SDK can raise anything
+            logger.warning(
+                "Alpaca account_activities fetch failed; equity curve will not "
+                "be normalized for cash flows: %s",
+                _act_err,
+            )
+            cash_flow_by_date = {}
+
+        # ── 3. Compute cumulative deposits up to and including each curve date ──
+        # Walk the rows in date order; at each row, sum all cash flows with
+        # date <= curve_date. Then total_deposits_ever = cum_deposits at the
+        # final curve row (effectively the maximum since rows are sorted).
+        # Note: rows from Alpaca portfolio_history are already in date order.
+        if cash_flow_by_date:
+            sorted_cf_dates = sorted(cash_flow_by_date.keys())
+            cum_dep_per_row: list = []
+            running = 0.0
+            cf_idx = 0
+            for r in raw_rows:
+                # Advance cf_idx through any cash-flow dates <= this row's date
+                while (
+                    cf_idx < len(sorted_cf_dates)
+                    and sorted_cf_dates[cf_idx] <= r["date"]
+                ):
+                    running += cash_flow_by_date[sorted_cf_dates[cf_idx]]
+                    cf_idx += 1
+                cum_dep_per_row.append(running)
+            # Include any cash-flow dates AFTER the last curve row in total
+            # (shouldn't normally happen, but defensive)
+            total_deposits_ever = running
+            while cf_idx < len(sorted_cf_dates):
+                total_deposits_ever += cash_flow_by_date[sorted_cf_dates[cf_idx]]
+                cf_idx += 1
+        else:
+            cum_dep_per_row = [0.0] * len(raw_rows)
+            total_deposits_ever = 0.0
+
+        # ── 4. Emit normalized rows ──────────────────────────────────────────
+        # normalized_equity[i] = raw_equity[i] - cum_deposits[i] + total_deposits_ever
+        # Last row: cum_deposits[last] == total_deposits_ever → normalized == raw (continuity)
+        # Deposit days: raw jumps by D, cum_deposits jumps by D → normalized unchanged (no spike)
+        rows: list = []
+        for i, r in enumerate(raw_rows):
+            adjustment = total_deposits_ever - cum_dep_per_row[i]
+            normalized_eq = round(r["raw_equity"] + adjustment, 2)
+            rows.append({
+                "date": r["date"],
+                "equity": normalized_eq,
+                "value": normalized_eq,
+                "day_pnl": r["day_pnl"],
+                "raw_equity": r["raw_equity"],  # diagnostic
+            })
+
+        # ── 5. Diagnostic log ───────────────────────────────────────────────
+        if rows:
+            raw_min = min(r["raw_equity"] for r in rows)
+            raw_max = max(r["raw_equity"] for r in rows)
+            norm_min = min(r["equity"] for r in rows)
+            norm_max = max(r["equity"] for r in rows)
+            logger.info(
+                "Equity curve: %d days, %d cash-flow events, total_deposits=$%.2f, "
+                "raw_range=[$%.2f, $%.2f] (spread $%.2f), "
+                "normalized_range=[$%.2f, $%.2f] (spread $%.2f)",
+                len(rows),
+                len(cash_flow_by_date),
+                total_deposits_ever,
+                raw_min, raw_max, raw_max - raw_min,
+                norm_min, norm_max, norm_max - norm_min,
+            )
         return rows
     except Exception as _ph_err:  # noqa: BLE001
         logger.warning(
