@@ -351,3 +351,61 @@ Status: PLANNED. Each task has a design doc; implementation deferred until pre-r
 - [ ] OCO bracket migration for existing positions: CAT/GLD/XLI/XLY have INDEPENDENT stop+TP orders, not OCO-linked. Phase B atomic-bracket-by-default applies to NEW entries; existing 4 positions need a controlled cancel+place to migrate. Risky pre-market work; recommend user-approved one-off.
 - [ ] FCX universe-disjointness: still in BOTH markets/etf_markets.py and markets/sp500.py. Recommend startup-time disjointness check.
 - [ ] reconcile_sqlite_to_broker.py missing inverted-stop and no-zero-stop guards (validation Quick Win 7).
+
+## Follow-ups from 2026-04-30 sector_etfs HALT forensic investigation (2026-05-01)
+
+### #FIX-PMEQ-001 — Per-market equity formula has phantom-drawdown bug on intraday position exits (P0, BUG)
+
+**Symptom**: sector_etfs tripped L3 kill switch at 13.69% daily drawdown on 2026-04-30 19:03 UTC despite real broker equity GROWING $5,134.19 → $5,164.50 (+0.59%) over the same window. Real sector_etfs PnL on Apr 30 was +$2.73 (XLY exit small profit). The 13.69% number is a calculation artifact, not a real loss.
+
+**Root cause**: `brokers/live_portfolio.py::_get_per_market_equity` computes `per_market_eq = current_pos_mv + (snap_cash * cash_scale)`. When a position EXITS during the day, its value moves from position_mv → broker cash. But `scaled_cash = snap_cash * cash_scale` does NOT track this — `snap_cash` is locked to yesterday's snapshot value (here $220.40 from Apr 29 22:01 snapshot for sector_etfs). Result: the per-market estimate falls when a position exits, even though the real account total is unchanged or higher.
+
+**Concrete arithmetic on Apr 30**:
+- Snapshot at Apr 29 22:01 UTC: sector_etfs pos_mv=$1,529.37, cash_attributed=$220.40 (XLY was prematurely marked closed in trades table at Apr 29 22:00:34 — 1.5 min before snapshot — so XLY's $1,168 value was excluded from sector_etfs attribution despite still being held at broker)
+- HWM reset 08:00:50 (post XLY broker exit at 08:00:34): formula output $2,028.87 → became the day's HWM
+- 19:03:51 trip: positions=[XLI 9 shares], current_pos_mv ≈ $1,530, scaled_cash ≈ $221.70, per_market_eq ≈ $1,752 → drawdown (2028.87 − 1752) / 2028.87 = 13.6% ✓
+
+**Fix design**: replace the stale-snapshot scaled_cash component with a LIVE per-market cash estimate that tracks intraday exits. Options:
+1. Track per-market realized cash flow since snapshot (sum of exit proceeds − entry costs since snap_date) and add to scaled_cash.
+2. Reconcile per-market cash by querying broker for cash AND attributing the delta-since-snapshot proportionally to each market by snap-share.
+3. Stop using per-market HWM entirely and revert to global broker-equity HWM (simpler, fewer false halts, less granular).
+
+Option 1 is cleanest. Option 3 is safest if we don't trust the attribution model.
+
+**Other affected markets**: same formula bug applies to sp500 and commodity_etfs. They didn't trip Apr 30 because their position_mv stayed close to snap_pos_mv (no exits). They are equally exposed if any of their positions exit intraday before tomorrow's 22:01 UTC snapshot.
+
+**Acceptance criteria**:
+- Add regression test in `tests/test_live_portfolio_drawdown.py`: simulate sector_etfs sequence (snapshot with XLI+XLY ≈ but XLY excluded, then XLY exits at 08:00, broker_eq grows by $30) — assert per_market_eq DOES NOT drop more than 2%, no HALT fires.
+- Add regression test for the sp500 case: 3 positions in snap, one exits intraday, broker_eq stable → no HALT.
+- Update mental model entry on 2026-04-29 (the original RCA #6 fix) noting the residual gap.
+
+---
+
+### #FIX-PMEQ-002 — Premature trade-closure timing creates wrong-day attribution (P1, DATA)
+
+**Symptom**: XLY trade row id=167 has updated_at=`2026-04-29 22:00:34` and exit_date=`2026-04-30T08:00:34`. The trade was marked status=closed in SQLite ~10 hours BEFORE the broker actually filled the exit. The Apr 29 22:01 attribution snapshot then excluded XLY from sector_etfs's pos_mv even though the broker still held the position. This contributed to the under-attribution that caused #FIX-PMEQ-001.
+
+**Investigation required**: trace what code path closes the trade row at 22:00:34 with a future-dated exit_date. Likely candidate: `core/reconcile.py` or one of the EOD settlement paths writing exit_date from a market-close timestamp without verifying broker fill is actually settled.
+
+**Acceptance criteria**:
+- Identify the writer.
+- Either (a) defer SQLite close until broker fill confirmation, or (b) ensure attribution snapshots use broker-held positions, not SQLite trade status.
+
+---
+
+### #FIX-PMEQ-003 — sector_etfs JSON state file `entry_date` for XLI shows 2026-04-30, SQLite shows 2026-04-24 (P2, DATA)
+
+`brokers/state/live_sector_etfs.json` has XLI entry_date "2026-04-30" but trades table id=185 has entry_date "2026-04-24T23:30:06". Same broker position (9 shares @ $173.97). One source got rewritten incorrectly. Find the writer and fix consistency. Likely: stop_order_id was created/replaced 2026-04-30, and a code path overwrote entry_date with stop creation date.
+
+---
+
+### #OPS-HALT-CLEAR-001 — Manual HALT clear procedure for false-positive trips (P1, DOCS)
+
+`/root/atlas/data/HALT` from this incident is still in place. Once #FIX-PMEQ-001 lands, document the standard procedure:
+1. Verify root cause (forensic check confirms artifact, not real loss).
+2. Confirm broker equity matches expectation (`broker.get_account().equity`).
+3. Reset all 3 markets' `daily_high_water` in JSON state files to current per-market equity (or starting_equity if formula is being revisited).
+4. `rm /root/atlas/data/HALT`.
+5. Verify auto-remediation un-halts via dashboard or log check.
+
+Currently no runbook covers this; operators have to reverse-engineer from RCA #6 commits.
