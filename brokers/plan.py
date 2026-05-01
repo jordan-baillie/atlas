@@ -32,6 +32,17 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).parent.parent
 
 
+class PlanAlreadyRejectedError(Exception):
+    """Raised when approve_plan() is called on a plan that is already REJECTED.
+
+    Re-approving a rejected plan is a configuration error — an explicit
+    rejection must not be silently overridden.  Caller must explicitly
+    reset status (via reject→re-generate→approve flow) if intent is to
+    approve.
+    """
+    pass
+
+
 class TradePlanGenerator:
     """Generates daily trade plans for approval."""
 
@@ -877,9 +888,21 @@ class TradePlanGenerator:
             market_id:  Market identifier (e.g. 'sp500', 'commodity_etfs').
             auto:       When True, annotates the plan as auto-approved by config.
             approver:   Who approved — 'human' (default) or 'auto'.
+
+        Raises:
+            PlanAlreadyRejectedError: If the plan's current status is REJECTED.
+                Re-approving a rejected plan would silently override an explicit
+                rejection — caller must regenerate or explicitly reset status first.
         """
         plan = self.load_plan(trade_date, market_id=market_id)
         if plan:
+            current_status = str(plan.get("status", "")).upper()
+            if current_status == "REJECTED":
+                raise PlanAlreadyRejectedError(
+                    f"Plan for {trade_date} (market={market_id or 'default'}) is "
+                    f"already REJECTED — refusing to approve. Regenerate the plan "
+                    f"or reset its status explicitly if you intend to approve."
+                )
             plan["status"] = "APPROVED"
             plan["approved_at"] = datetime.now().isoformat()
             plan["approver"] = approver
