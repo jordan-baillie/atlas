@@ -65,4 +65,16 @@ print(f'  Trimmed decision_journal: {len(j)} -> 500 entries')
     fi
 fi
 
+# ── Cleanup atlas.db backup files: keep 2 newest only ──
+echo "Pruning atlas.db backup files (keeping 2 newest)..."
+ls -1t "$PROJECT"/data/atlas.db.bak* "$PROJECT"/data/atlas.db.backup* 2>/dev/null | tail -n +3 | while read -r old; do
+    rm -v "$old"
+done
+echo "  Backup pruning complete"
+
+# ── ANALYZE atlas.db for query planner stats ──
+echo "Running SQLite ANALYZE..."
+sqlite3 "$PROJECT/data/atlas.db" "PRAGMA analysis_limit=1000; ANALYZE;"
+echo "  ANALYZE complete"
+
 echo "$(date -Iseconds) Weekly maintenance complete"
