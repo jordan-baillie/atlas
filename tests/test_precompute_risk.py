@@ -290,11 +290,14 @@ class TestPortfolioRiskCacheFresh:
                     UNIQUE(as_of, method)
                 )
             """)
+            # created_at must also be old — the fix uses julianday(created_at)
+            from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+            old_created_at = (_dt.now(_tz.utc) - _td(hours=49)).strftime("%Y-%m-%d %H:%M:%S")
             db.execute("""
                 INSERT INTO portfolio_risk
-                    (as_of, equity, positions_value, positions_count, tickers)
-                VALUES (?, 5000.0, 4800.0, 3, '["AAPL"]')
-            """, (old_date,))
+                    (as_of, equity, positions_value, positions_count, tickers, created_at)
+                VALUES (?, 5000.0, 4800.0, 3, '["AAPL"]', ?)
+            """, (old_date, old_created_at))
 
         result = get_cached_portfolio_risk(max_age_hours=24)
         assert result is None, f"Expected None for stale row, got {result}"
