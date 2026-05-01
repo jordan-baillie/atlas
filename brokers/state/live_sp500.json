@@ -4,30 +4,36 @@
   "positions": [
     {
       "ticker": "CAT",
-      "strategy": "unknown",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-30",
       "entry_price": 835.24,
       "shares": 1,
-      "stop_price": 793.478,
-      "order_id": ""
+      "stop_price": 799.47,
+      "order_id": "",
+      "stop_order_id": "d77ffda9-24de-4ebc-a7df-4a5d31cf1c8d",
+      "tp_order_id": ""
     },
     {
       "ticker": "FCX",
-      "strategy": "unknown",
+      "strategy": "connors_rsi2",
       "entry_date": "2026-04-30",
       "entry_price": 57.59,
       "shares": 5,
-      "stop_price": 54.7105,
-      "order_id": ""
+      "stop_price": 54.48,
+      "order_id": "",
+      "stop_order_id": "cd1225ee-7730-4a34-ae84-356057a28882",
+      "tp_order_id": ""
     },
     {
       "ticker": "MU",
-      "strategy": "unknown",
+      "strategy": "momentum_breakout",
       "entry_date": "2026-04-30",
       "entry_price": 524.56,
       "shares": 2,
-      "stop_price": 498.33199999999994,
-      "order_id": ""
+      "stop_price": 508.78,
+      "order_id": "",
+      "stop_order_id": "40a9af45-083a-4699-9a9e-3ef32bd8cf70",
+      "tp_order_id": ""
     }
   ],
   "closed_trades": [
@@ -2079,8 +2085,8 @@
       ]
     }
   ],
-  "daily_high_water": 2282.4332613265815,
-  "daily_high_water_date": "2026-04-30",
+  "daily_high_water": 2173.832,
+  "daily_high_water_date": "2026-05-01",
   "halted": false,
   "halt_reason": "",
   "last_saved": "2026-04-30T09:41:29.554461"
