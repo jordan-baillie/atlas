@@ -1,0 +1,18 @@
+[Unit]
+Description=Atlas Fix 5 — mean_reversion/sp500 sweep targeting Sharpe>=0.5
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/atlas
+EnvironmentFile=-/etc/atlas/atlas.conf
+ExecStart=/bin/bash /root/atlas/scripts/fix5_mr_sp500_sweep.sh
+TimeoutStartSec=21600
+StandardOutput=journal
+StandardError=journal
+KillSignal=SIGTERM
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
