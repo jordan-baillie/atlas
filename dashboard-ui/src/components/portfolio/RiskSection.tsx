@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { PositionRisk, PortfolioRiskMetrics } from '../../api/types'
 import { StatCard } from '../shared/StatCard'
 import { RiskTable } from './RiskTable'
@@ -136,6 +136,7 @@ function RuinStalenessSection() {
 }
 
 export function RiskSection({ data }: Props) {
+  const positions = useMemo(() => data.positions ?? [], [data.positions])
   const s = data.summary
   const unprotected = s?.positions_without_stops ?? 0
   const pr = data.portfolio_risk
@@ -156,7 +157,7 @@ export function RiskSection({ data }: Props) {
         </div>
       </div>
       {pr && <PortfolioTailRisk pr={pr} />}
-      <RiskTable positions={data.positions ?? []} stop_probability={data.stop_probability} />
+      <RiskTable positions={positions} stop_probability={data.stop_probability} />
     </div>
   )
 }

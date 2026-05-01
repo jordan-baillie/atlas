@@ -1,10 +1,11 @@
+import { memo } from 'react'
 import type { Position } from '../../api/types'
 import { PositionCard } from './PositionCard'
 import { EmptyState } from '../shared/EmptyState'
 
 interface Props { positions: Position[] }
 
-export function PositionsGrid({ positions }: Props) {
+function PositionsGridInner({ positions }: Props) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
@@ -24,3 +25,5 @@ export function PositionsGrid({ positions }: Props) {
     </div>
   )
 }
+
+export const PositionsGrid = memo(PositionsGridInner)

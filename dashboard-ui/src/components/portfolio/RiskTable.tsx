@@ -3,7 +3,7 @@ import { DataTable } from '../shared/DataTable'
 import type { Column } from '../shared/DataTable'
 import { fmtCcy, fmtPct, pnlClass } from '../../lib/format'
 import { getStrategyColor } from '../../lib/colors'
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 
 interface Props {
   positions: PositionRiskRow[]
@@ -140,7 +140,9 @@ function makeColumns(stop_probability?: Record<string, StopProbabilityEntry>): C
   ]
 }
 
-export function RiskTable({ positions, stop_probability }: Props) {
+function RiskTableInner({ positions, stop_probability }: Props) {
   const columns = makeColumns(stop_probability)
   return <DataTable columns={columns} data={positions} emptyMessage="No positions" />
 }
+
+export const RiskTable = memo(RiskTableInner)

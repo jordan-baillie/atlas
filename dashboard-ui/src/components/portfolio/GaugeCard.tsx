@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import type { MacroDimension } from '../../api/types'
 import { Sparkline } from '../shared/Sparkline'
 
 interface Props { dimension: MacroDimension }
 
-export function GaugeCard({ dimension }: Props) {
+function GaugeCardInner({ dimension }: Props) {
   const score = dimension.score ?? 0
   const weight = dimension.weight ?? 0
   const positive = score >= 0
@@ -59,3 +60,5 @@ export function GaugeCard({ dimension }: Props) {
     </div>
   )
 }
+
+export const GaugeCard = memo(GaugeCardInner)

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { MacroGaugeData } from '../../api/types'
 import { GaugeCard } from './GaugeCard'
 
@@ -11,7 +12,7 @@ function compositeColor(v: number | null | undefined): string {
   return 'var(--color-red)'
 }
 
-export function MacroGauges({ data }: Props) {
+function MacroGaugesInner({ data }: Props) {
   const composite = data.composite
   return (
     <details className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card" open>
@@ -33,3 +34,5 @@ export function MacroGauges({ data }: Props) {
     </details>
   )
 }
+
+export const MacroGauges = memo(MacroGaugesInner)

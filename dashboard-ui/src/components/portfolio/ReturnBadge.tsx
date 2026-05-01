@@ -1,9 +1,10 @@
+import { memo } from 'react'
 import type { DashboardData } from '../../api/types'
 import { fmtSignedPct } from '../../lib/format'
 
 interface Props { data: DashboardData }
 
-export function ReturnBadge({ data }: Props) {
+function ReturnBadgeInner({ data }: Props) {
   const portfolioReturn = data.summary?.total_pnl_pct ?? 0
   const spyReturn = data.benchmark?.return_pct ?? 0
   const alpha = portfolioReturn - spyReturn
@@ -15,3 +16,5 @@ export function ReturnBadge({ data }: Props) {
     </div>
   )
 }
+
+export const ReturnBadge = memo(ReturnBadgeInner)

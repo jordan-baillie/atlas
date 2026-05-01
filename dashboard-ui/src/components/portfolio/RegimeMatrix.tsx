@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { RegimeTransitions } from '../../api/types'
 import { getRegimeColor } from '../../lib/colors'
 
@@ -13,7 +14,7 @@ function cellText(value: number): string {
   return value > 50 ? 'rgba(255,255,255,0.95)' : ''
 }
 
-export function RegimeMatrix({ transitions }: Props) {
+function RegimeMatrixInner({ transitions }: Props) {
   const states = transitions.states ?? []
   const matrix = transitions.matrix ?? {}
   const durations = transitions.durations ?? {}
@@ -124,3 +125,5 @@ export function RegimeMatrix({ transitions }: Props) {
     </div>
   )
 }
+
+export const RegimeMatrix = memo(RegimeMatrixInner)

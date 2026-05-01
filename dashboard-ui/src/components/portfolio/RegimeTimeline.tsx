@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { RegimeHistoryDay } from '../../api/types'
 import { getRegimeColor, CANONICAL_REGIME_NAMES } from '../../lib/colors'
 
@@ -28,7 +29,7 @@ function buildSegments(days: RegimeHistoryDay[]): Segment[] {
   return segments
 }
 
-export function RegimeTimeline({ history }: Props) {
+function RegimeTimelineInner({ history }: Props) {
   const last90 = history.slice(-90)
   const states = Array.from(new Set(last90.map((d) => d.state).filter((s): s is string => s != null)))
   const segments = buildSegments(last90)
@@ -108,3 +109,5 @@ export function RegimeTimeline({ history }: Props) {
     </div>
   )
 }
+
+export const RegimeTimeline = memo(RegimeTimelineInner)
