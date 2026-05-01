@@ -17,7 +17,75 @@
       "expected_cron": "0 23 * * 5",
       "threshold_hours": 24,
       "description": "Weekly strategy health check — runs Fridays 23:00 UTC (09:00 AEST Saturday)"
+    },
+    "sync_broker_orders": {
+      "expected_cron": "0 4 * * *",
+      "threshold_hours": 26,
+      "description": "Daily broker order sync — runs 04:00 UTC (14:00 AEST)"
+    },
+    "sync_protective_orders": {
+      "expected_cron": "*/15 * * * *",
+      "threshold_hours": 1,
+      "description": "Protective order sync (sp500/commodity/sector) — every 15 min; 1h threshold allows network retry margin"
+    },
+    "execute_approved": {
+      "expected_cron": "15 13 * * 1-5",
+      "threshold_hours": 26,
+      "description": "Execute approved trade plans — 13:15 UTC Mon-Fri (23:15 AEST Mon-Fri, 15 min before US open)"
+    },
+    "intraday_monitor": {
+      "expected_cron": "30 15-21 * * *",
+      "threshold_hours": 4,
+      "description": "Intraday risk monitor — every 30 min 15:30-21:30 UTC (01:30-07:30 AEST, US RTH overlap)"
+    },
+    "compute_daily_risk": {
+      "expected_cron": "0 13 * * *",
+      "threshold_hours": 26,
+      "description": "Daily VaR, vol cones, regime distributions — 13:00 UTC (23:00 AEST)"
+    },
+    "verify_dual_write": {
+      "expected_cron": "0 0 * * 2-6",
+      "threshold_hours": 26,
+      "description": "Dual-write consistency verifier — 00:00 UTC Tue-Sat (10:00 AEST Tue-Sat). NOTE: ignored by watchdog due to 'verify' prefix in ignored_prefixes — monitored via postclose log instead"
+    },
+    "atlas-research-window@sp500": {
+      "expected_cron": "0 13 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (sp500) — systemd timer, 13:00 UTC (23:00 AEST)"
+    },
+    "atlas-research-window@commodity_etfs": {
+      "expected_cron": "0 14 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (commodity_etfs) — systemd timer, 14:00 UTC (00:00 AEST)"
+    },
+    "atlas-research-window@sector_etfs": {
+      "expected_cron": "0 15 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (sector_etfs) — systemd timer, 15:00 UTC (01:00 AEST)"
+    },
+    "atlas-research-window@gold_etfs": {
+      "expected_cron": "0 16 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (gold_etfs) — systemd timer, 16:00 UTC (02:00 AEST)"
+    },
+    "atlas-research-window@treasury_etfs": {
+      "expected_cron": "0 17 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (treasury_etfs) — systemd timer, 17:00 UTC (03:00 AEST)"
+    },
+    "atlas-research-window@defensive_etfs": {
+      "expected_cron": "0 18 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (defensive_etfs) — systemd timer, 18:00 UTC (04:00 AEST). NEEDS VERIFICATION: timer OnCalendar not confirmed."
+    },
+    "atlas-research-window@crypto": {
+      "expected_cron": "0 19 * * *",
+      "threshold_hours": 26,
+      "description": "Nightly research window sweep (crypto) — systemd timer, 19:00 UTC (05:00 AEST)"
     }
   },
-  "ignored_prefixes": ["test", "verify"]
+  "ignored_prefixes": [
+    "test",
+    "verify"
+  ]
 }
