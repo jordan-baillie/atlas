@@ -24,4 +24,13 @@ after=$(find "$LOCKS_DIR" -maxdepth 1 -type f -name '*.json' 2>/dev/null | wc -l
 
 removed=$((before - after))
 echo "$(date -Iseconds) research_locks: removed=$removed, remaining=$after (was $before)" >> "$LOG_FILE"
+# ── Cleanup research papers older than 180 days ──
+PAPERS_DIR="$PROJECT/research/discovery/papers"
+if [ -d "$PAPERS_DIR" ]; then
+    before=$(find "$PAPERS_DIR" -maxdepth 1 -type f \( -name '*.pdf' -o -name '*.json' \) 2>/dev/null | wc -l)
+    find "$PAPERS_DIR" -maxdepth 1 -type f \( -name '*.pdf' -o -name '*.json' \) -mtime +180 -delete 2>/dev/null || true
+    after=$(find "$PAPERS_DIR" -maxdepth 1 -type f \( -name '*.pdf' -o -name '*.json' \) 2>/dev/null | wc -l)
+    echo "$(date -Iseconds) papers_cleanup: removed=$((before - after)), remaining=$after (was $before)" >> "$LOG_FILE"
+fi
+
 exit 0
