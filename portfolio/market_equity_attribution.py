@@ -26,7 +26,17 @@ def attribute_equity_pro_rata(
 
     Returns:
         {market_id: {allocated_equity, position_mv, cash_attributed}}
-        Sum of allocated_equity across markets equals broker_equity within rounding tolerance.
+
+    NOTE on ``allocated_equity`` vs ``position_mv + cash_attributed``:
+    ``allocated_equity`` is computed as ``broker_equity * (mv / total_mv)``
+    so that SUM(allocated_equity) == broker_equity exactly (within rounding).
+    This is the value used in the **legacy** proportional-scaling fallback path
+    inside ``_get_per_market_equity``.
+
+    ``cash_attributed`` is computed as ``broker_cash * (mv / total_mv)`` and
+    is used by the **live cash attribution formula** (new path).  It is NOT
+    scaled to broker_equity because broker_equity may include unsettled items
+    not reflected in broker_cash.  [FIX-PMEQ-AUDIT-003]
     """
     market_ids = list(positions_by_market.keys())
     market_mv: dict[str, float] = {
@@ -37,14 +47,17 @@ def attribute_equity_pro_rata(
 
     out: dict[str, dict[str, float]] = {}
     if total_mv > 0:
-        # Cash split pro-rata to MV
+        # allocated_equity: pro-rata share of broker_equity (so sum == broker_equity)
+        # cash_attributed:  pro-rata share of broker_cash  (for live intraday formula)
         for m in market_ids:
             mv = market_mv[m]
-            cash_share = broker_cash * (mv / total_mv)
+            weight = mv / total_mv
+            allocated = broker_equity * weight          # sums to broker_equity
+            cash_share = broker_cash * weight           # sums to broker_cash
             out[m] = {
                 "position_mv": round(mv, 2),
                 "cash_attributed": round(cash_share, 2),
-                "allocated_equity": round(mv + cash_share, 2),
+                "allocated_equity": round(allocated, 2),
             }
     else:
         # No positions anywhere — split cash equally
@@ -54,6 +67,6 @@ def attribute_equity_pro_rata(
             out[m] = {
                 "position_mv": 0.0,
                 "cash_attributed": round(cash_share, 2),
-                "allocated_equity": round(cash_share, 2),
+                "allocated_equity": round(cash_share, 2),  # broker_cash/n ≈ broker_equity/n
             }
     return out
