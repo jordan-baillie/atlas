@@ -1018,6 +1018,30 @@ class AlpacaBroker(BrokerAdapter):
                     )
                     has_tp = False
 
+                # ── Honor broker's existing TP when plan lacks one ───
+                # If the plan has no TP but the broker still has an active TP limit
+                # (typically the live half of a prior OCO), use the broker's TP
+                # price as the source of truth.  This prevents Path B from canceling
+                # the broker's stop leg and accidentally dropping the TP leg via
+                # Alpaca's OCO one-cancels-other behaviour.  See FIX-OCO-TPDROP-001.
+                if not has_tp and ticker in tickers_with_tp:
+                    broker_tp_price = float(tickers_with_tp[ticker].get("price") or 0)
+                    if broker_tp_price > 0 and pos.current_price < broker_tp_price * 1.005:
+                        take_profit = broker_tp_price
+                        has_tp = True
+                        logger.info(
+                            "sync_protective: %s plan lacks TP but broker has active "
+                            "limit @ $%.2f — honoring broker TP to preserve OCO bracket",
+                            ticker, broker_tp_price,
+                        )
+                    elif broker_tp_price > 0:
+                        # Broker's TP is already past current price → stale, leave to Path B
+                        logger.info(
+                            "sync_protective: %s broker TP $%.2f is stale "
+                            "(current $%.2f past it) — falling through to Path B",
+                            ticker, broker_tp_price, pos.current_price,
+                        )
+
                 has_existing_stop = ticker in tickers_with_stop
 
                 if has_tp:
