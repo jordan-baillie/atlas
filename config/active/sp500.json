@@ -67,7 +67,7 @@
   "strategies": {
     "momentum_breakout": {
       "enabled": true,
-      "weight": 0.3,
+      "weight": 0.5,
       "atr_stop_mult": 0.61,
       "max_hold_days": 15,
       "lookback_days": 14,
@@ -82,7 +82,7 @@
       }
     },
     "mean_reversion": {
-      "enabled": true,
+      "enabled": false,
       "rsi_period": 14,
       "rsi_oversold": 35,
       "zscore_lookback": 30,
@@ -119,7 +119,7 @@
       "cointegration_filter": {
         "enabled": false
       },
-      "weight": 0.0978
+      "weight": 0
     },
     "trend_following": {
       "enabled": false,
@@ -158,7 +158,7 @@
       "profit_target_atr_mult": 3.5
     },
     "opening_gap": {
-      "enabled": true,
+      "enabled": false,
       "gap_threshold": -0.008,
       "ibs_confirm": 0.7,
       "rsi14_max": 35,
@@ -174,11 +174,11 @@
         "days_before": 5,
         "days_after": 1
       },
-      "weight": 0.05
+      "weight": 0
     },
     "sector_rotation": {
-      "enabled": true,
-      "weight": 0.05,
+      "enabled": false,
+      "weight": 0,
       "atr_stop_mult": 2.0,
       "trailing_stop_atr_mult": 3.0,
       "profit_target_atr_mult": 3.5
@@ -220,7 +220,7 @@
       "max_hold_days": 5,
       "atr_period": 14,
       "atr_stop_mult": 1.0,
-      "weight": 0.3
+      "weight": 0.5
     }
   },
   "moomoo": {
@@ -730,5 +730,20 @@
     },
     "monitor_after_n_trades": 10,
     "monitor_action": "revisit if win rate drops below 40% \u2014 tighter ATR stops increase whipsaw risk"
+  },
+  "_audit_2026_05_01_disable_unvalidated": {
+    "updated_at": "2026-05-01T00:00:00+00:00",
+    "rationale": "User mandate: only best validated strategies active. Disabled 3 strategies failing quality thresholds (Sharpe ≥ 0.5, MaxDD ≤ 25%, ≥ 200 trades for live markets).",
+    "disabled": [
+      {"strategy": "mean_reversion", "old_weight": 0.0978, "new_weight": 0, "reason": "Live params solo Sharpe = -0.33 (full sp500 universe, 198 tickers, live cache 5.75yr). Was previously thought to be 1.15 — that was a top-50-subset autoresearch artifact. research_best params (rsi=10, oversold=52, entry=-0.68) only achieve solo Sharpe +0.28 on 7yr snapshot, still sub-gate. Re-enable after sweep finds params with full-universe solo Sharpe ≥ 0.5."},
+      {"strategy": "opening_gap", "old_weight": 0.05, "new_weight": 0, "reason": "research_best Sharpe 0.60 OK but MaxDD 29.94% breaches 25% threshold. Re-enable if a tighter ATR stop reduces DD."},
+      {"strategy": "sector_rotation", "old_weight": 0.05, "new_weight": 0, "reason": "research_best Sharpe 0.0442 — essentially no edge. The strategy is structurally unsuited to single-ETF-per-sector universes (proven by sector_etfs result: 0 trades when min_sector_stocks=3 vs 1 ETF/sector). For sp500 it produced 647 trades but no risk-adjusted edge."}
+    ],
+    "renormalized": [
+      {"strategy": "momentum_breakout", "old_weight": 0.3, "new_weight": 0.5, "rationale": "research_best Sharpe 0.99 solo / 0.75 portfolio, dd 22.93%, 829 trades. Best-validated sp500 strategy."},
+      {"strategy": "connors_rsi2", "old_weight": 0.3, "new_weight": 0.5, "rationale": "research_best portfolio Sharpe 0.71, 1144 trades, dd 26.95% (just above gate but trades count and signal quality high)."}
+    ],
+    "weights_sum_check": 1.0,
+    "open_positions_at_change": ["CAT/momentum_breakout", "FCX/connors_rsi2", "MU/momentum_breakout"]
   }
 }
