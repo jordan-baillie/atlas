@@ -449,3 +449,351 @@ class TestRunCheck:
         assert exit_code == 0, "Under threshold — first observation"
         state = _load_state(state_file)
         assert "sp500:XLF" in state["first_missing_at"], "Should be tracked as missing"
+
+
+# ── FIX-HC-TPLESS-001 Tests ────────────────────────────────────────────────────
+
+class TestTPLessStrategyExemption:
+    """FIX-HC-TPLESS-001: TP-less strategies exempt from TP coverage alerts."""
+
+    def test_connors_rsi2_with_stop_only_passes(self, tmp_path, monkeypatch):
+        """connors_rsi2 (TP-less) with stop only → no alert, is_tp_less=True."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        # Setup state file with FCX/connors_rsi2 in commodity_etfs
+        monkeypatch.setattr(hc, "_ATLAS_ROOT", tmp_path)
+        state_dir = tmp_path / "brokers" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "live_commodity_etfs.json").write_text(
+            json.dumps({"positions": [{"ticker": "FCX", "strategy": "connors_rsi2"}]})
+        )
+
+        # Stub config — uses nested form to exercise that code path
+        def _fake_config(market_id):
+            return {"strategies": {"strategies": {
+                "connors_rsi2": {"profit_target_atr_mult": 0, "atr_stop_mult": 1.0},
+                "momentum_breakout": {"profit_target_atr_mult": 6.0},
+            }}}
+
+        import utils.config
+        monkeypatch.setattr(utils.config, "get_active_config", _fake_config)
+
+        class _Pos:
+            def __init__(self, ticker, strategy=""):
+                self.ticker = ticker
+                self.strategy = strategy
+
+        class _Order:
+            def __init__(self, ticker, side, order_type, status="held", order_class=None):
+                self.ticker = ticker
+                from enum import Enum
+                class _S(Enum):
+                    SELL = "SELL"
+                self.side = _S.SELL if side == "SELL" else None
+                self.raw = {
+                    "order_type": order_type,
+                    "status": status,
+                    "order_class": order_class or "",
+                }
+
+        class _StubBroker:
+            def connect(self):
+                return True
+            def get_positions(self):
+                return [_Pos("FCX", "connors_rsi2")]
+            def get_open_orders(self):
+                return [_Order("FCX", "SELL", "stop")]
+
+        from brokers import registry
+        monkeypatch.setattr(registry, "get_live_broker", lambda cfg: _StubBroker())
+
+        # Clear cache to ensure fresh config read
+        hc._TP_LESS_CACHE.clear()
+
+        results, error = hc.check_market("commodity_etfs")
+
+        assert error is None
+        assert len(results) == 1
+        r = results[0]
+        assert r["ticker"] == "FCX"
+        assert r["has_stop"] is True
+        assert r["has_tp"] is False
+        assert r["is_tp_less"] is True, "connors_rsi2 (profit_target_atr_mult=0) should be TP-less"
+        assert r["strategy"] == "connors_rsi2"
+
+    def test_momentum_breakout_with_stop_only_still_flagged(self, tmp_path, monkeypatch):
+        """momentum_breakout (uses TP) with stop only → is_tp_less=False (still alerts)."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        monkeypatch.setattr(hc, "_ATLAS_ROOT", tmp_path)
+        state_dir = tmp_path / "brokers" / "state"
+        state_dir.mkdir(parents=True)
+        # State file: GLD on momentum_breakout (a TP-using strategy)
+        (state_dir / "live_commodity_etfs.json").write_text(
+            json.dumps({"positions": [{"ticker": "GLD", "strategy": "momentum_breakout"}]})
+        )
+
+        def _fake_config(market_id):
+            return {"strategies": {"strategies": {
+                "connors_rsi2": {"profit_target_atr_mult": 0, "atr_stop_mult": 1.0},
+                "momentum_breakout": {"profit_target_atr_mult": 6.0},
+            }}}
+
+        import utils.config
+        monkeypatch.setattr(utils.config, "get_active_config", _fake_config)
+
+        class _Pos:
+            def __init__(self, ticker, strategy=""):
+                self.ticker = ticker
+                self.strategy = strategy
+
+        class _Order:
+            def __init__(self, ticker, side, order_type, status="accepted", order_class=None):
+                self.ticker = ticker
+                from enum import Enum
+                class _S(Enum):
+                    SELL = "SELL"
+                self.side = _S.SELL if side == "SELL" else None
+                self.raw = {
+                    "order_type": order_type,
+                    "status": status,
+                    "order_class": order_class or "",
+                }
+
+        class _StubBroker:
+            def connect(self):
+                return True
+            def get_positions(self):
+                return [_Pos("GLD", "momentum_breakout")]
+            def get_open_orders(self):
+                # Only a stop order — no TP
+                return [_Order("GLD", "SELL", "stop")]
+
+        from brokers import registry
+        monkeypatch.setattr(registry, "get_live_broker", lambda cfg: _StubBroker())
+
+        hc._TP_LESS_CACHE.clear()
+
+        results, error = hc.check_market("commodity_etfs")
+
+        assert error is None
+        assert len(results) == 1
+        r = results[0]
+        assert r["ticker"] == "GLD"
+        assert r["has_stop"] is True
+        assert r["has_tp"] is False
+        assert r["is_tp_less"] is False, "momentum_breakout (profit_target_atr_mult=6.0) uses TP — should NOT be exempt"
+        assert r["strategy"] == "momentum_breakout"
+
+    def test_is_strategy_tp_less_helper(self, monkeypatch):
+        """Direct test of the _is_strategy_tp_less helper for all relevant cases."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        def _fake_config(market_id):
+            return {"strategies": {"strategies": {
+                "connors_rsi2": {"profit_target_atr_mult": 0, "atr_stop_mult": 1.0},
+                "momentum_breakout": {"profit_target_atr_mult": 6.0},
+                "trend_following": {"profit_target_atr_mult": 3.5},
+                "tp_disabled_explicit": {"uses_tp": False, "profit_target_atr_mult": 5.0},
+                "tp_enabled_explicit": {"uses_tp": True, "profit_target_atr_mult": 0.0},
+                "tp_pct_strategy": {"tp_pct": 2.5, "profit_target_atr_mult": 0},
+                "zero_pct_strategy": {"tp_pct": 0, "profit_target_atr_mult": 0},
+            }}}
+
+        import utils.config
+        monkeypatch.setattr(utils.config, "get_active_config", _fake_config)
+        hc._TP_LESS_CACHE.clear()
+
+        # TP-less: profit_target_atr_mult=0 (absent defaults to 0 too)
+        assert hc._is_strategy_tp_less("sp500", "connors_rsi2") is True
+
+        # TP-using: profit_target_atr_mult=6.0
+        assert hc._is_strategy_tp_less("sp500", "momentum_breakout") is False
+
+        # TP-using: profit_target_atr_mult=3.5
+        assert hc._is_strategy_tp_less("sp500", "trend_following") is False
+
+        # TP-less: uses_tp=False (overrides even non-zero multiplier)
+        assert hc._is_strategy_tp_less("sp500", "tp_disabled_explicit") is True
+
+        # TP-using: uses_tp=True forces TP-using even with zero multiplier
+        assert hc._is_strategy_tp_less("sp500", "tp_enabled_explicit") is False
+
+        # TP-using: tp_pct=2.5 (non-zero tp_pct counts as TP-using)
+        assert hc._is_strategy_tp_less("sp500", "tp_pct_strategy") is False
+
+        # TP-less: both tp_pct=0 and profit_target_atr_mult=0
+        assert hc._is_strategy_tp_less("sp500", "zero_pct_strategy") is True
+
+        # Unknown strategy → fail-safe: assume TP-using (will alert if TP missing)
+        assert hc._is_strategy_tp_less("sp500", "unknown_strategy") is False
+
+        # Empty strategy name → always False
+        assert hc._is_strategy_tp_less("sp500", "") is False
+
+    def test_tpless_position_missing_stop_alerts(self, tmp_path, monkeypatch):
+        """Even TP-less strategies must have a stop — missing stop triggers alert."""
+        alert_calls = []
+        monkeypatch.setattr("utils.telegram.send_message", lambda *a, **kw: alert_calls.append(a))
+
+        # Pre-seed state: FCX/commodity_etfs was first seen missing 6 min ago
+        six_min_ago = (datetime.now(tz=timezone.utc) - timedelta(minutes=6)).isoformat()
+        state_file = tmp_path / "state.json"
+        _save_state(
+            {"first_missing_at": {"commodity_etfs:FCX": six_min_ago}, "last_run_at": None},
+            state_file,
+        )
+
+        # Patch check_market to return FCX with is_tp_less=True but NO stop
+        def _mock_check_market(market_id):
+            if market_id == "commodity_etfs":
+                return [
+                    {
+                        "ticker": "FCX",
+                        "market": "commodity_etfs",
+                        "has_stop": False,
+                        "has_tp": False,
+                        "strategy": "connors_rsi2",
+                        "is_tp_less": True,
+                    }
+                ], None
+            return [], None
+
+        monkeypatch.setattr(
+            "scripts.healthcheck_tp_coverage.check_market",
+            _mock_check_market,
+        )
+
+        exit_code = run_check(no_alert=False, state_path=state_file)
+
+        assert exit_code == 1, "Should exit 1 when TP-less position is missing its required stop"
+        assert len(alert_calls) == 1, "Exactly one Telegram alert should fire"
+        alert_text = alert_calls[0][0]
+        assert "FCX" in alert_text
+        assert "MISSING STOP" in alert_text
+        assert "connors_rsi2" in alert_text, "Alert should identify the TP-less strategy"
+
+    def test_tpless_position_with_stop_clears_state(self, tmp_path, monkeypatch):
+        """TP-less position that recovers (gains stop) → cleared from state."""
+        monkeypatch.setattr("utils.telegram.send_message", lambda *a, **kw: None)
+
+        # Pre-seed state: FCX was previously flagged
+        four_min_ago = (datetime.now(tz=timezone.utc) - timedelta(minutes=4)).isoformat()
+        state_file = tmp_path / "state.json"
+        _save_state(
+            {"first_missing_at": {"commodity_etfs:FCX": four_min_ago}, "last_run_at": None},
+            state_file,
+        )
+
+        # Now FCX has a stop (recovered)
+        def _mock_check_market(market_id):
+            if market_id == "commodity_etfs":
+                return [
+                    {
+                        "ticker": "FCX",
+                        "market": "commodity_etfs",
+                        "has_stop": True,
+                        "has_tp": False,
+                        "strategy": "connors_rsi2",
+                        "is_tp_less": True,
+                    }
+                ], None
+            return [], None
+
+        monkeypatch.setattr(
+            "scripts.healthcheck_tp_coverage.check_market",
+            _mock_check_market,
+        )
+
+        exit_code = run_check(no_alert=True, state_path=state_file)
+
+        assert exit_code == 0, "TP-less position with stop should be fully covered"
+        state = _load_state(state_file)
+        assert "commodity_etfs:FCX" not in state["first_missing_at"], \
+            "Recovered TP-less ticker should be cleared from state"
+
+    def test_is_strategy_tp_less_config_error_returns_false(self, monkeypatch):
+        """Config load failure → fail-safe returns False (treat as TP-using)."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        import utils.config
+        monkeypatch.setattr(
+            utils.config,
+            "get_active_config",
+            lambda market_id: (_ for _ in ()).throw(FileNotFoundError("no config")),
+        )
+        hc._TP_LESS_CACHE.clear()
+
+        result = hc._is_strategy_tp_less("nonexistent_market", "connors_rsi2")
+        assert result is False, "Config load error should fail safe (return False, not True)"
+
+    def test_lookup_strategy_from_state_returns_empty_on_missing_file(self, tmp_path, monkeypatch):
+        """_lookup_strategy_from_state returns '' when state file does not exist."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        monkeypatch.setattr(hc, "_ATLAS_ROOT", tmp_path)
+        # No state file created in tmp_path
+
+        result = hc._lookup_strategy_from_state("sp500", "AAPL")
+        assert result == "", "Should return empty string when state file is missing"
+
+    def test_lookup_strategy_from_state_finds_strategy(self, tmp_path, monkeypatch):
+        """_lookup_strategy_from_state returns correct strategy for known ticker."""
+        from scripts import healthcheck_tp_coverage as hc
+
+        monkeypatch.setattr(hc, "_ATLAS_ROOT", tmp_path)
+        state_dir = tmp_path / "brokers" / "state"
+        state_dir.mkdir(parents=True)
+        (state_dir / "live_sp500.json").write_text(json.dumps({
+            "positions": [
+                {"ticker": "CAT", "strategy": "momentum_breakout"},
+                {"ticker": "NVDA", "strategy": "trend_following"},
+            ]
+        }))
+
+        assert hc._lookup_strategy_from_state("sp500", "CAT") == "momentum_breakout"
+        assert hc._lookup_strategy_from_state("sp500", "NVDA") == "trend_following"
+        assert hc._lookup_strategy_from_state("sp500", "UNKNOWN") == ""
+
+    def test_summary_log_counts_tp_less_correctly(self, tmp_path, monkeypatch, caplog):
+        """Summary log correctly counts TP-less positions."""
+        import logging
+        monkeypatch.setattr("utils.telegram.send_message", lambda *a, **kw: None)
+
+        def _mock_check_market(market_id):
+            if market_id == "sp500":
+                return [
+                    {
+                        "ticker": "CAT",
+                        "market": "sp500",
+                        "has_stop": True,
+                        "has_tp": True,
+                        "strategy": "momentum_breakout",
+                        "is_tp_less": False,
+                    },
+                    {
+                        "ticker": "FCX",
+                        "market": "sp500",
+                        "has_stop": True,
+                        "has_tp": False,
+                        "strategy": "connors_rsi2",
+                        "is_tp_less": True,
+                    },
+                ], None
+            return [], None
+
+        monkeypatch.setattr(
+            "scripts.healthcheck_tp_coverage.check_market",
+            _mock_check_market,
+        )
+
+        state_file = tmp_path / "state.json"
+        with caplog.at_level(logging.INFO, logger="scripts.healthcheck_tp_coverage"):
+            exit_code = run_check(no_alert=True, state_path=state_file)
+
+        assert exit_code == 0, "Both positions are covered (CAT fully, FCX TP-less with stop)"
+        # Check summary line mentions 1 TP-less position
+        summary_lines = [r.message for r in caplog.records if "Summary:" in r.message]
+        assert len(summary_lines) == 1
+        assert "1 TP-less" in summary_lines[0], f"Expected '1 TP-less' in summary: {summary_lines[0]}"
+        assert "2/2" in summary_lines[0], f"Expected 2/2 covered in summary: {summary_lines[0]}"

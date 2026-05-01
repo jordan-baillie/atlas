@@ -5,9 +5,12 @@ TP-coverage healthcheck. Runs every 15 min during RTH.
 For each open broker position across sp500, commodity_etfs, sector_etfs:
   - Query open orders for that ticker
   - Assert at least one SELL stop order exists (stop coverage)
-  - Assert at least one SELL limit order exists (TP coverage)
+  - Assert at least one SELL limit order exists (TP coverage, unless TP-less strategy)
   - If either is missing AND last_check showed missing too AND >5 min elapsed since first missing:
     fire CRITICAL Telegram alert with full context
+
+TP-less strategies (profit_target_atr_mult=0 / tp_pct=0 / uses_tp=false in active config)
+are exempted from TP-coverage alerts.  They still MUST have a stop order.
 
 Idempotent. State persistence via data/healthcheck_tp_coverage_state.json
 (timestamps of first-missed-time per ticker).
@@ -64,6 +67,11 @@ _TP_ORDER_TYPES = frozenset({"limit"})
 #: OCO/bracket order classes satisfy BOTH stop and TP
 _BRACKET_ORDER_CLASSES = frozenset({"oco", "bracket"})
 
+# ── TP-less strategy cache ─────────────────────────────────────────────────────
+#: Module-level cache to avoid re-loading configs every call.
+#: Keyed by (market_id, strategy_name) → bool.
+_TP_LESS_CACHE: dict[tuple[str, str], bool] = {}
+
 
 # ── State helpers ──────────────────────────────────────────────────────────────
 
@@ -93,6 +101,112 @@ def _save_state(state: dict[str, Any], path: Path = STATE_FILE) -> None:
         tmp.replace(path)
     except OSError as exc:
         logger.error("Failed to save state file %s: %s", path, exc)
+
+
+# ── Strategy TP-less detection ─────────────────────────────────────────────────
+
+def _lookup_strategy_from_state(market_id: str, ticker: str) -> str:
+    """Read strategy for ticker from the broker state file. Empty string if not found."""
+    try:
+        state_path = _ATLAS_ROOT / "brokers" / "state" / f"live_{market_id}.json"
+        if not state_path.exists():
+            return ""
+        data = json.loads(state_path.read_text())
+        for p in data.get("positions", []):
+            if p.get("ticker") == ticker:
+                return p.get("strategy") or ""
+    except Exception as exc:
+        logger.debug("Could not load strategy for %s/%s: %s", market_id, ticker, exc)
+    return ""
+
+
+def _is_strategy_tp_less(market_id: str, strategy: str) -> bool:
+    """Return True if the strategy is configured WITHOUT a take-profit.
+
+    A strategy is TP-less when ANY of these is true in active config:
+      - profit_target_atr_mult == 0 (or absent — default is 0)
+      - tp_pct == 0
+      - uses_tp is explicitly False
+
+    Cached per (market_id, strategy) tuple.  The healthcheck runs every 15 min;
+    a long-lived process would benefit from cache invalidation, but each
+    invocation is one-shot so this is fine.
+
+    Returns False on any config-load error (fail-safe: alert rather than miss).
+    Unknown strategies (not in config) also return False — they are treated as
+    TP-using so an alert fires if TP is missing, surfacing the misconfiguration.
+    """
+    if not strategy:
+        return False
+    key = (market_id, strategy)
+    if key in _TP_LESS_CACHE:
+        return _TP_LESS_CACHE[key]
+
+    try:
+        from utils.config import get_active_config
+        cfg = get_active_config(market_id)
+    except Exception as exc:
+        logger.warning(
+            "Could not load config for %s — assuming strategy %s uses TP: %s",
+            market_id, strategy, exc,
+        )
+        _TP_LESS_CACHE[key] = False
+        return False
+
+    strategies_root = (cfg or {}).get("strategies", {})
+    # Active config schema can be either:
+    #   {strategies: {strategies: {NAME: {...}}}}   (nested — some test fixtures)
+    #   {strategies: {NAME: {...}}}                  (flat — production)
+    if (
+        isinstance(strategies_root, dict)
+        and "strategies" in strategies_root
+        and isinstance(strategies_root["strategies"], dict)
+    ):
+        per_strategy = strategies_root["strategies"]
+    elif isinstance(strategies_root, dict):
+        per_strategy = strategies_root
+    else:
+        per_strategy = {}
+
+    params = per_strategy.get(strategy, None)
+    if params is None:
+        # Strategy not in config — fail-safe: assume TP-using (will alert if TP missing).
+        # An unknown strategy is a sign of misconfiguration; the operator should know.
+        _TP_LESS_CACHE[key] = False
+        return False
+
+    if not isinstance(params, dict):
+        _TP_LESS_CACHE[key] = False
+        return False
+
+    # Check explicit uses_tp=False override
+    if params.get("uses_tp") is False:
+        _TP_LESS_CACHE[key] = True
+        return True
+
+    # If uses_tp is explicitly True, honour it regardless of multipliers
+    if params.get("uses_tp") is True:
+        _TP_LESS_CACHE[key] = False
+        return False
+
+    # Check profit_target_atr_mult
+    ptm = params.get("profit_target_atr_mult", 0)
+    try:
+        ptm_val = float(ptm) if ptm is not None else 0.0
+    except (ValueError, TypeError):
+        ptm_val = 0.0
+
+    # Check tp_pct
+    tp_pct = params.get("tp_pct", 0)
+    try:
+        tp_pct_val = float(tp_pct) if tp_pct is not None else 0.0
+    except (ValueError, TypeError):
+        tp_pct_val = 0.0
+
+    # TP-less when BOTH multipliers are zero AND no uses_tp override
+    is_tp_less = ptm_val == 0.0 and tp_pct_val == 0.0
+    _TP_LESS_CACHE[key] = is_tp_less
+    return is_tp_less
 
 
 # ── Coverage classification ────────────────────────────────────────────────────
@@ -159,7 +273,7 @@ def _build_alert_message(missing_items: list[dict[str, Any]]) -> str:
 
     Args:
         missing_items: List of dicts with keys: ticker, market, has_stop, has_tp,
-                       first_missing_at (ISO string).
+                       is_tp_less, strategy, first_missing_at (ISO string).
     """
     lines = ["🚨 <b>TP-COVERAGE ALERT</b>", "", "Position lacking protection &gt;5 min:"]
 
@@ -168,8 +282,13 @@ def _build_alert_message(missing_items: list[dict[str, Any]]) -> str:
         market = item["market"]
         has_stop = item["has_stop"]
         has_tp = item["has_tp"]
+        is_tp_less = item.get("is_tp_less", False)
+        strategy = item.get("strategy", "")
 
-        if not has_stop and not has_tp:
+        if is_tp_less:
+            # Only fires when !has_stop (TP not required for this strategy)
+            detail = f"MISSING STOP (TP-less strategy: {strategy})"
+        elif not has_stop and not has_tp:
             detail = "MISSING STOP and TP"
         elif not has_stop:
             detail = "MISSING STOP (TP ok)"
@@ -210,7 +329,8 @@ def check_market(
 
     Returns:
         (results, error_message)
-        results: list of dicts with keys ticker, market, has_stop, has_tp
+        results: list of dicts with keys ticker, market, has_stop, has_tp,
+                 strategy, is_tp_less
         error_message: non-None on connection failure
     """
     try:
@@ -255,17 +375,34 @@ def check_market(
     results = []
     for pos in positions:
         has_stop, has_tp = classify_orders(orders, pos.ticker)
+
+        # Resolve strategy: PositionInfo.strategy if populated, else state-file fallback
+        strategy = getattr(pos, "strategy", "") or _lookup_strategy_from_state(market_id, pos.ticker)
+        is_tp_less = _is_strategy_tp_less(market_id, strategy)
+
         results.append({
             "ticker": pos.ticker,
             "market": market_id,
             "has_stop": has_stop,
             "has_tp": has_tp,
+            "strategy": strategy,
+            "is_tp_less": is_tp_less,
         })
+
+        if is_tp_less and has_stop:
+            coverage_status = "✓✓ (TP-less, only stop required)"
+        elif is_tp_less and not has_stop:
+            coverage_status = "✗ MISSING STOP (TP-less, stop still required)"
+        else:
+            tp_label = "✓" if has_tp else "✗"
+            coverage_status = (
+                f"stop={'✓' if has_stop else '✗'} "
+                f"tp={tp_label}"
+            )
+
         logger.info(
-            "  %s (%s): stop=%s tp=%s",
-            pos.ticker, market_id,
-            "✓" if has_stop else "✗",
-            "✓" if has_tp else "✗",
+            "  %s (%s, %s): %s",
+            pos.ticker, market_id, strategy or "?", coverage_status,
         )
 
     return results, None
@@ -315,12 +452,11 @@ def run_check(
         return 2
 
     # ── Classify coverage gaps ─────────────────────────────────────────────────
-    state_key_prefix = {r["ticker"]: r["market"] for r in all_results}
 
     # Mark positions that are now covered (remove from state)
     covered_keys = set()
     for r in all_results:
-        if r["has_stop"] and r["has_tp"]:
+        if (r.get("is_tp_less") and r["has_stop"]) or (r["has_stop"] and r["has_tp"]):
             key = f"{r['market']}:{r['ticker']}"
             covered_keys.add(key)
 
@@ -332,7 +468,13 @@ def run_check(
     # Find currently missing positions
     missing_now: list[dict[str, Any]] = []
     for r in all_results:
-        if r["has_stop"] and r["has_tp"]:
+        # TP-less strategies: only require stop
+        if r.get("is_tp_less"):
+            if r["has_stop"]:
+                # Stop covered — fully OK for this strategy
+                continue
+            # No stop — fall through to debounce/alert logic below
+        elif r["has_stop"] and r["has_tp"]:
             continue  # fully covered
 
         key = f"{r['market']}:{r['ticker']}"
@@ -375,11 +517,15 @@ def run_check(
 
     # ── Log summary ───────────────────────────────────────────────────────────
     total_positions = len(all_results)
-    fully_covered = sum(1 for r in all_results if r["has_stop"] and r["has_tp"])
+    fully_covered = sum(
+        1 for r in all_results
+        if (r.get("is_tp_less") and r["has_stop"]) or (r["has_stop"] and r["has_tp"])
+    )
+    tp_less_count = sum(1 for r in all_results if r.get("is_tp_less"))
 
     logger.info(
-        "Summary: %d/%d positions fully covered; %d alerting",
-        fully_covered, total_positions, len(missing_now),
+        "Summary: %d/%d positions fully covered (%d TP-less); %d alerting",
+        fully_covered, total_positions, tp_less_count, len(missing_now),
     )
 
     if not missing_now:
