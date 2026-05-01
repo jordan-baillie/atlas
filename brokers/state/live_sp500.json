@@ -8,32 +8,10 @@
       "entry_date": "2026-04-30",
       "entry_price": 835.24,
       "shares": 1,
-      "stop_price": 799.47,
+      "stop_price": 861.21,
       "order_id": "",
-      "stop_order_id": "d77ffda9-24de-4ebc-a7df-4a5d31cf1c8d",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "FCX",
-      "strategy": "connors_rsi2",
-      "entry_date": "2026-04-30",
-      "entry_price": 57.59,
-      "shares": 5,
-      "stop_price": 54.48,
-      "order_id": "",
-      "stop_order_id": "cd1225ee-7730-4a34-ae84-356057a28882",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "MU",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-04-30",
-      "entry_price": 524.56,
-      "shares": 2,
-      "stop_price": 508.78,
-      "order_id": "",
-      "stop_order_id": "40a9af45-083a-4699-9a9e-3ef32bd8cf70",
-      "tp_order_id": ""
+      "stop_order_id": "3d035b5f-3926-4d2d-9506-0c588e691fcb",
+      "tp_order_id": "3d035b5f-3926-4d2d-9506-0c588e691fcb"
     }
   ],
   "closed_trades": [

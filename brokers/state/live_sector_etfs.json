@@ -8,10 +8,10 @@
       "entry_date": "2026-04-30",
       "entry_price": 173.97,
       "shares": 9,
-      "stop_price": 166.97,
+      "stop_price": 170.075,
       "order_id": "",
-      "stop_order_id": "3c2105c9-d760-4dbf-b1a4-4e7495ed0d2d",
-      "tp_order_id": ""
+      "stop_order_id": "f5e9b55c-a9ec-4ccd-862b-bd999eaa9bba",
+      "tp_order_id": "f5e9b55c-a9ec-4ccd-862b-bd999eaa9bba"
     }
   ],
   "closed_trades": [],
