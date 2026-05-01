@@ -138,6 +138,48 @@ def send_message(text: str, parse_mode: str = "HTML", silent: bool = False,
         return False
 
 
+
+
+# ---------------------------------------------------------------------------
+# Simple notify() — canonical convenience wrapper for scripts and health checks
+# ---------------------------------------------------------------------------
+
+def notify(
+    message: str,
+    *,
+    level: str | None = None,
+    category: str = "general",
+    parse_mode: str = "HTML",
+) -> bool:
+    """Send a Telegram notification with optional level prefix.
+
+    Convenience wrapper around send_message() that:
+      - Prepends a level emoji (CRITICAL=🚨, WARNING=⚠️, INFO=ℹ️) if level provided
+      - Logs failures via the module logger (does NOT raise)
+      - Returns True on success, False on any failure
+
+    Args:
+        message: Body of the Telegram message (HTML or plain text per parse_mode)
+        level: Optional severity — one of 'CRITICAL', 'WARNING', 'INFO', or None
+        category: Optional category tag for log lines (e.g. 'health', 'research')
+        parse_mode: Telegram parse_mode (default 'HTML'; pass '' for plain text)
+
+    Returns:
+        True if the Telegram API accepted the message, False otherwise.
+    """
+    _LEVEL_PREFIX = {
+        "CRITICAL": "🚨 ",
+        "WARNING": "⚠️ ",
+        "INFO": "ℹ️ ",
+    }
+    prefix = _LEVEL_PREFIX.get(level or "", "")
+    body = f"{prefix}{message}" if prefix else message
+    try:
+        return send_message(body, parse_mode=parse_mode)
+    except Exception as e:
+        logger.warning("telegram.notify failed (category=%s level=%s): %s", category, level, e)
+        return False
+
 # ---------------------------------------------------------------------------
 # Formatted alerts
 # ---------------------------------------------------------------------------
@@ -1291,9 +1333,9 @@ def send_charts(charts: list, caption: str = "", silent: bool = True) -> bool:
 #   SILENT    — suppressed (log only)
 #
 # Usage:
-#   from utils.telegram import notify, flush_digest, CRITICAL, IMPORTANT, INFO
-#   notify("Engine started", level=IMPORTANT, category="session")
-#   notify("Strategy improved", level=INFO, category="improvement")
+#   from utils.telegram import smart_notify, flush_digest, CRITICAL, IMPORTANT, INFO
+#   smart_notify("Engine started", level=IMPORTANT, category="session")
+#   smart_notify("Strategy improved", level=INFO, category="improvement")
 #   flush_digest()  # send accumulated INFO messages as one digest
 # ---------------------------------------------------------------------------
 
@@ -1330,7 +1372,7 @@ def _save_notify_state(state: dict) -> None:
         logger.warning("Failed to save notify state: %s", e)
 
 
-def notify(text: str, level: int = INFO, category: str = "general",
+def smart_notify(text: str, level: int = INFO, category: str = "general",
            silent: bool = False) -> bool:
     """Smart notification with rate limiting and batching.
 
