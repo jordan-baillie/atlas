@@ -6,7 +6,9 @@ the sp500 broker but belonging to a different universe per definitions).
 """
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -141,6 +143,81 @@ def derive_universe(ticker: str, hint: Optional[str] = None) -> Optional[str]:
         ticker,
     )
     return None
+
+
+def check_state_file_universes(
+    state_dir: Path | None = None,
+) -> list[dict[str, str]]:
+    """Scan all live_*.json state files and report cross-market positions.
+
+    A position is "cross-market" when the ticker's canonical universe
+    (from ``derive_universe()``) differs from the market_id of the state
+    file it is listed in.
+
+    Args:
+        state_dir: Path to directory containing live_*.json files.
+                   Defaults to <project_root>/brokers/state/.
+
+    Returns:
+        List of dicts, one per cross-market position found:
+            {
+                "file":         "live_sp500.json",
+                "market_id":    "sp500",
+                "ticker":       "FCX",
+                "canonical_universe": "commodity_etfs",
+            }
+        Empty list means all positions are in their canonical universe state file.
+    """
+    if state_dir is None:
+        # Resolve project root relative to this file
+        _project_root = Path(__file__).resolve().parent.parent
+        state_dir = _project_root / "brokers" / "state"
+
+    violations: list[dict[str, str]] = []
+
+    for json_path in sorted(state_dir.glob("live_*.json")):
+        try:
+            with open(json_path) as fh:
+                state = json.load(fh)
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("check_state_file_universes: failed to read %s: %s", json_path.name, exc)
+            continue
+
+        market_id: str = state.get("market_id", "")
+        if not market_id:
+            # Try to derive from filename: live_sp500.json → sp500
+            stem = json_path.stem  # "live_sp500"
+            if stem.startswith("live_"):
+                market_id = stem[5:]  # "sp500"
+
+        positions: list[dict] = state.get("positions", [])
+        for pos in positions:
+            ticker = pos.get("ticker", "")
+            if not ticker:
+                continue
+            canonical = derive_universe(ticker)
+            if canonical is None:
+                # Unknown ticker — skip silently (new tickers may not be in cache yet)
+                logger.debug(
+                    "check_state_file_universes: unknown ticker %s in %s — skipping",
+                    ticker, json_path.name,
+                )
+                continue
+            if canonical != market_id:
+                violations.append(
+                    {
+                        "file": json_path.name,
+                        "market_id": market_id,
+                        "ticker": ticker,
+                        "canonical_universe": canonical,
+                    }
+                )
+                logger.warning(
+                    "Cross-market position: %s is in %s (file: %s) but belongs to %s",
+                    ticker, market_id, json_path.name, canonical,
+                )
+
+    return violations
 
 
 def clear_cache() -> None:

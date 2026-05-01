@@ -1,8 +1,8 @@
 """Regression test: no NEW ticker appears in more than one market universe.
 
 Pre-existing intentional overlaps are documented in KNOWN_OVERLAPS below.
-The test fails if a NEW overlap is introduced (e.g., FCX in both commodity_etfs
-and sp500), guarding against state-pollution bugs in reconciliation and
+The test fails if a NEW overlap is introduced (e.g., duplicate ADDED without reason), guarding against state-pollution
+bug-class "CROSS-MARKET HWM INCOMPATIBILITY" (see 2026-05-01 incident).
 protective-order sync.
 
 Run with: python -m pytest tests/test_universe_disjointness.py -v
@@ -27,13 +27,22 @@ from markets.registry import MarketRegistry  # noqa: E402
 # Format: frozenset({market_a, market_b}) → frozenset({ticker, ...})
 # ---------------------------------------------------------------------------
 # These overlaps are INTENTIONAL:
-#   asx ∩ sp500      — cross-listed companies (CCL, DOW, PRU, RMD, ALL)
+#   asx ∩ sp500           — cross-listed companies (CCL, DOW, PRU, RMD, ALL)
 #   commodity_etfs ∩ gold_etfs  — GLD is both a commodity and a gold ETF
 #   defensive_etfs ∩ sector_etfs — XLP/XLU sit in both sector and defensive buckets
+#   commodity_etfs ∩ sp500  — FCX (Freeport-McMoRan) is an S&P 500 constituent AND a
+#     commodity equity proxy for copper exposure (universe/definitions.py commodity_etfs).
+#     The FIX-PMEQ-001 per-market equity formula requires FCX to appear in
+#     markets/etf_markets.py CommodityETFsMarket so that _refresh_from_broker() loads
+#     it into LivePortfolio.positions for commodity_etfs — consistent with how
+#     market_equity_history snapshots attribute FCX via derive_universe().
+#     (Prior Task #282 removed FCX from commodity_etfs causing a phantom HALT on
+#     2026-05-01 when the snapshot-HWM included FCX but the live formula did not.)
 KNOWN_OVERLAPS: dict[FrozenSet[str], FrozenSet[str]] = {
     frozenset({"asx", "sp500"}): frozenset({"ALL", "CCL", "DOW", "PRU", "RMD"}),
     frozenset({"commodity_etfs", "gold_etfs"}): frozenset({"GLD"}),
     frozenset({"defensive_etfs", "sector_etfs"}): frozenset({"XLP", "XLU"}),
+    frozenset({"commodity_etfs", "sp500"}): frozenset({"FCX"}),
 }
 
 
@@ -85,24 +94,42 @@ class TestUniverseDisjointness:
                 "KNOWN_OVERLAPS in tests/test_universe_disjointness.py with a comment."
             )
 
-    def test_no_fcx_in_commodity_etfs(self) -> None:
-        """Explicit regression: FCX belongs to sp500 (connors_rsi2), not commodity_etfs."""
+    def test_fcx_is_in_commodity_etfs(self) -> None:
+        """Regression: FCX must be in commodity_etfs (copper equity proxy).
+
+        FCX (Freeport-McMoRan) is listed in universe/definitions.py under commodity_etfs
+        because it's a copper/commodity proxy.  It is also an S&P 500 constituent (sp500),
+        making it an intentional overlap documented in KNOWN_OVERLAPS.
+
+        HISTORY: Task #282 (2026-04-29) removed FCX from commodity_etfs, believing
+        "sp500 owns it".  This caused a phantom HALT on 2026-05-01 because
+        market_equity_history snapshots attributed FCX MV to commodity_etfs via
+        derive_universe() but _refresh_from_broker() did not load FCX for commodity_etfs.
+        The fix (2026-05-01) restored FCX to CommodityETFsMarket.get_universe_tickers()
+        so the live formula is consistent with the snapshot attribution.
+        """
         commodity_etfs = MarketRegistry.get("commodity_etfs")
         tickers = set(commodity_etfs.get_universe_tickers())
-        assert "FCX" not in tickers, (
-            "FCX was re-added to commodity_etfs — it belongs to sp500 (connors_rsi2 strategy). "
-            "See Task #282."
+        assert "FCX" in tickers, (
+            "FCX must be in CommodityETFsMarket.get_universe_tickers() — it is a commodity "
+            "equity proxy listed in universe/definitions.py and the FIX-PMEQ-001 formula "
+            "requires this for snapshot-live consistency.  See incident 2026-05-01."
         )
 
-    def test_no_fcx_in_both_sp500_and_commodity_etfs(self) -> None:
-        """FCX must not appear simultaneously in sp500 AND commodity_etfs."""
+    def test_fcx_commodity_etfs_overlap_is_documented(self) -> None:
+        """FCX appearing in both sp500 and commodity_etfs must be in KNOWN_OVERLAPS."""
         sp500 = set(MarketRegistry.get("sp500").get_universe_tickers())
         commodity = set(MarketRegistry.get("commodity_etfs").get_universe_tickers())
         overlap = sp500 & commodity
-        assert "FCX" not in overlap, (
-            "FCX found in both sp500 and commodity_etfs — cross-market duplicate causes "
-            "state-pollution in reconciliation and protective-order sync."
-        )
+        key = frozenset({"commodity_etfs", "sp500"})
+        if "FCX" in overlap:
+            assert key in KNOWN_OVERLAPS, (
+                "FCX found in both sp500 and commodity_etfs but not in KNOWN_OVERLAPS. "
+                "Add it with rationale or remove the duplicate."
+            )
+            assert "FCX" in KNOWN_OVERLAPS[key], (
+                "FCX in commodity_etfs∩sp500 but not listed in KNOWN_OVERLAPS entry."
+            )
 
     def test_registered_markets_are_non_empty(self) -> None:
         """Sanity: every market must have at least one ticker."""
