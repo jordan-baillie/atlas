@@ -356,6 +356,8 @@ Status: PLANNED. Each task has a design doc; implementation deferred until pre-r
 
 ### #FIX-PMEQ-001 — Per-market equity formula has phantom-drawdown bug on intraday position exits (P0, BUG)
 
+**STATUS**: ✅ Resolved 2026-05-01 in commits 9d7c5662 (formula fix + tests), 9adc0086 (HWM reset script + live recalibration).
+
 **Symptom**: sector_etfs tripped L3 kill switch at 13.69% daily drawdown on 2026-04-30 19:03 UTC despite real broker equity GROWING $5,134.19 → $5,164.50 (+0.59%) over the same window. Real sector_etfs PnL on Apr 30 was +$2.73 (XLY exit small profit). The 13.69% number is a calculation artifact, not a real loss.
 
 **Root cause**: `brokers/live_portfolio.py::_get_per_market_equity` computes `per_market_eq = current_pos_mv + (snap_cash * cash_scale)`. When a position EXITS during the day, its value moves from position_mv → broker cash. But `scaled_cash = snap_cash * cash_scale` does NOT track this — `snap_cash` is locked to yesterday's snapshot value (here $220.40 from Apr 29 22:01 snapshot for sector_etfs). Result: the per-market estimate falls when a position exits, even though the real account total is unchanged or higher.
@@ -401,11 +403,41 @@ Option 1 is cleanest. Option 3 is safest if we don't trust the attribution model
 
 ### #OPS-HALT-CLEAR-001 — Manual HALT clear procedure for false-positive trips (P1, DOCS)
 
-`/root/atlas/data/HALT` from this incident is still in place. Once #FIX-PMEQ-001 lands, document the standard procedure:
-1. Verify root cause (forensic check confirms artifact, not real loss).
-2. Confirm broker equity matches expectation (`broker.get_account().equity`).
-3. Reset all 3 markets' `daily_high_water` in JSON state files to current per-market equity (or starting_equity if formula is being revisited).
-4. `rm /root/atlas/data/HALT`.
-5. Verify auto-remediation un-halts via dashboard or log check.
+**STATUS**: ✅ Resolved 2026-05-01 in commit 9adc0086 (HALT cleared) and this runbook.
 
-Currently no runbook covers this; operators have to reverse-engineer from RCA #6 commits.
+**HALT cleared**: `rm /root/atlas/data/HALT` on 2026-05-01 12:02 AEST.
+atlas-error-remediation.service next cycle (12:05:15 AEST) ran successfully (status=0).
+
+---
+
+#### Runbook: Clearing a false-positive HALT (standard procedure)
+
+**When to use**: Kill switch fired at `data/HALT` due to a phantom drawdown (formula
+artefact, not real loss). Confirmed by: broker equity stable/growing, real PnL minimal.
+
+**Steps**:
+1. **Diagnose** — confirm it's a formula artefact, not a real loss:
+   - `python3 scripts/reset_per_market_hwm.py` (dry-run, check degraded=False and sane values)
+   - Compare broker_equity now vs snapshot_time in `market_equity_history`
+   - If broker_equity grew and per_market_eq dropped → formula artefact
+2. **Fix formula** (if new bug): see FIX-PMEQ-001 pattern
+3. **Reset HWMs** to correct values:
+   ```bash
+   python3 scripts/reset_per_market_hwm.py --apply
+   ```
+   This writes new HWM to both JSON state files and `market_state` SQLite table.
+4. **Clear HALT file**:
+   ```bash
+   rm /root/atlas/data/HALT
+   ls /root/atlas/data/HALT 2>&1  # confirm gone
+   ```
+5. **Verify auto-remediation activates** (timer fires every 5 min):
+   ```bash
+   systemctl status atlas-error-remediation.service --no-pager
+   # Look for: Active: inactive (dead) since ... (no "unmet condition" in recent logs)
+   systemctl list-timers atlas-error-remediation.timer
+   ```
+6. **Monitor** — next `check_daily_drawdown` cycle should show dd≈0 not 13%+
+
+**Warning**: only clear HALT after confirming formula fix is in place.
+Clearing HALT without the fix just restarts the false-positive cycle.
