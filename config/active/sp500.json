@@ -17,6 +17,7 @@
   },
   "risk": {
     "starting_equity": 971,
+    "_starting_equity_note": "Recalibrated 2026-04-29 (commit e58c8557) from per-market broker equity slice ($971 sp500 + $3216 sector_etfs + $1001 commodity_etfs = $5188 real broker total, vs $15,011 phantom pre-recalibration). This is the BASELINE for risk sizing (0.5% × $971 = $4.86/trade), NOT the current equity. Current per-market equity slice tracked separately in brokers/state/live_sp500.json equity_history. Re-recalibrate via scripts/recalibrate_starting_equity.py (see health_check.py line 408) when allocation changes.",
     "leverage": 2.0,
     "max_risk_per_trade_pct": 0.005,
     "max_open_positions": 10,
