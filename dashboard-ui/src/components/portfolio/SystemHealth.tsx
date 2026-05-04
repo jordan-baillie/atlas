@@ -27,7 +27,7 @@ function statusDot(status?: string) {
   const s = (status ?? '').toLowerCase()
   let color: string
   let isActive = false
-  if (s === 'active' || s === 'ok' || s === 'healthy' || s === 'running') {
+  if (s === 'active' || s === 'ok' || s === 'healthy' || s === 'running' || s === 'oneshot-success') {
     color = 'var(--color-green)'
     isActive = true
   } else if (s === 'degraded' || s === 'warning') {

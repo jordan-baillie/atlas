@@ -22,6 +22,58 @@ from services.auth import check_auth
 router = APIRouter(tags=["health"])
 logger = logging.getLogger(__name__)
 
+
+def _systemctl_status(svc: str) -> dict:
+    """Return normalised systemd status for *svc*.
+
+    Runs ``systemctl show`` to retrieve Type, Result, and ActiveState.
+    The ``status`` key in the returned dict is the normalised string:
+
+    * ``"active"``          — simple/notify/forking unit running normally
+    * ``"oneshot-success"`` — Type=oneshot, last run succeeded, now inactive
+    * ``"failed"``          — Result=failed or ActiveState=failed
+    * ``"activating"``      — unit is starting up
+    * ``"unknown"``         — anything else or subprocess error
+
+    The full dict also exposes ``type``, ``result``, and ``active_state`` for
+    callers that want to render richer output.
+    """
+    try:
+        proc = subprocess.run(
+            [
+                "systemctl", "show", svc,
+                "--property=Type,Result,ActiveState",
+                "--no-pager", "--value",
+            ],
+            capture_output=True, text=True, timeout=5,
+        )
+        # ``--value`` emits each requested property on its own line, in order:
+        # line 0 → Type, line 1 → Result, line 2 → ActiveState
+        lines = [ln.strip() for ln in proc.stdout.strip().splitlines()]
+        if len(lines) < 3:
+            return {"status": "unknown", "type": "?", "result": "?", "active_state": "?"}
+        unit_type, result, active_state = lines[0], lines[1], lines[2]
+        if result == "failed" or active_state == "failed":
+            status = "failed"
+        elif active_state == "active" and result == "success":
+            status = "active"
+        elif unit_type == "oneshot" and active_state == "inactive" and result == "success":
+            status = "oneshot-success"
+        elif active_state == "activating":
+            status = "activating"
+        else:
+            status = "unknown"
+        return {
+            "status": status,
+            "type": unit_type,
+            "result": result,
+            "active_state": active_state,
+        }
+    except Exception as e:
+        logger.debug("systemctl show %s failed: %s", svc, e)
+        return {"status": "unknown", "type": "?", "result": "?", "active_state": "?"}
+
+
 _PROJECT_ROOT = Path("/root/atlas")
 
 
@@ -36,18 +88,15 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
         heartbeats = get_heartbeats()
 
-        # Service status via systemd
-        services = {}
-        for svc in ("atlas-dashboard", "atlas-telegram-bot"):
-            try:
-                result = subprocess.run(
-                    ["systemctl", "is-active", svc],
-                    capture_output=True, text=True, timeout=5,
-                )
-                services[svc] = result.stdout.strip()
-            except Exception as e:
-                logger.debug("systemctl is-active %s failed: %s", svc, e)
-                services[svc] = "unknown"
+        # Service status via systemd — oneshot-aware (see _systemctl_status helper)
+        services: dict = {}
+        for svc in (
+            "atlas-dashboard",
+            "atlas-telegram-bot",
+            "atlas-dashboard-refresh",
+        ):
+            info = _systemctl_status(svc)
+            services[svc] = info["status"]  # string for API backward-compat
 
         # Data freshness from SQLite
         data_freshness = {}
