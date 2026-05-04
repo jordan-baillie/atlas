@@ -3,6 +3,11 @@
   "rth_threshold_hours": 2,
   "min_alert_gap_hours": 4,
   "services": {
+    "notify-rollup": {
+      "expected_cron": "45 9 * * 1-5",
+      "threshold_hours": 26,
+      "description": "Consolidated premarket Telegram rollup — runs 09:45 UTC Mon-Fri (19:45 AEST)"
+    },
     "postclose": {
       "expected_cron": "0 22 * * 1-5",
       "threshold_hours": 6,
