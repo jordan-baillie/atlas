@@ -345,7 +345,7 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
     return exits, _fill_fallback_count
 
 
-def generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits):
+def generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits, market: str = "asx"):
     """Generate formatted EOD report."""
     summary = portfolio.portfolio_summary(prices)
     eq = summary["equity"]
@@ -360,7 +360,7 @@ def generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits):
 
     lines = []
     lines.append("=" * 55)
-    lines.append(f"  ATLAS-ASX END-OF-DAY REPORT -- {trade_date}")
+    lines.append(f"  ATLAS-{market.upper()} END-OF-DAY REPORT -- {trade_date}")
     lines.append("=" * 55)
     lines.append("")
 
@@ -667,7 +667,7 @@ def main():
     portfolio.save_state()
 
     # Generate EOD report
-    report = generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits)
+    report = generate_eod_report(portfolio, prices, trade_date, stop_exits, tp_exits, market=market_id)
     report_path = save_eod_report(report, trade_date)
 
     # Update dashboard
