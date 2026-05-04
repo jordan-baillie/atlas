@@ -316,18 +316,61 @@ def reconcile_positions(
             # Build corrected positions list from in-scope broker positions only.
             # Use broker_map (already filtered by universe∪state) to avoid pulling
             # cross-market positions (e.g. commodity ETFs) into this market's state.
+
+            # Load canonical protective-order data from SQLite (source of truth,
+            # synced from broker by sync_protective_orders). This is the primary
+            # source for stop_order_id, tp_order_id, and stop_price.  Without this
+            # lookup, every --fix run silently drops live broker order linkage because
+            # the broker's get_positions() response has no knowledge of order ids.
+            _po_lookup: dict[str, dict] = {}
+            try:
+                from db import atlas_db as _atlas_db_po
+                with _atlas_db_po.get_db() as _po_db:
+                    for _po_row in _po_db.execute(
+                        "SELECT ticker, stop_order_id, stop_price, tp_order_id, tp_price "
+                        "FROM position_protective_orders "
+                        "WHERE market_id = ? AND status = 'active'",
+                        (market_id,),
+                    ).fetchall():
+                        _po_lookup[_po_row["ticker"]] = dict(_po_row)
+                logger.info(
+                    "reconcile_positions: loaded %d active protective-order rows for %s",
+                    len(_po_lookup), market_id,
+                )
+            except Exception as _po_exc:
+                logger.error(
+                    "reconcile_positions: protective-order lookup failed for %s: %s — "
+                    "stop_order_id/tp_order_id may not be preserved",
+                    market_id, _po_exc, exc_info=True,
+                )
+
             corrected_positions = []
             for bp in broker_map.values():
-                # Preserve strategy/entry_date/stop_price from internal if available
+                # Preserve strategy/entry_date from internal state if available.
+                # For stop_price and order ids, use PO table as primary source.
                 internal_pos = internal_map.get(bp.ticker, {})
+                _po = _po_lookup.get(bp.ticker, {})
+
+                # Resolve stop_price: PO table > internal state > 5% fallback
+                _stop_price_resolved = (
+                    _po.get("stop_price")
+                    or internal_pos.get("stop_price")
+                    or bp.entry_price * 0.95
+                )
+                # Resolve order ids: PO table > internal state > empty string
+                _stop_oid = _po.get("stop_order_id") or internal_pos.get("stop_order_id", "")
+                _tp_oid = _po.get("tp_order_id") or internal_pos.get("tp_order_id", "")
+
                 corrected_positions.append({
                     "ticker": bp.ticker,
                     "strategy": internal_pos.get("strategy", "unknown"),
                     "entry_date": internal_pos.get("entry_date", datetime.now().strftime("%Y-%m-%d")),
                     "entry_price": bp.entry_price,
                     "shares": bp.shares,
-                    "stop_price": internal_pos.get("stop_price", bp.entry_price * 0.95),
+                    "stop_price": _stop_price_resolved,
                     "order_id": internal_pos.get("order_id", ""),
+                    "stop_order_id": _stop_oid,
+                    "tp_order_id": _tp_oid,
                 })
             
             internal_state["positions"] = corrected_positions
