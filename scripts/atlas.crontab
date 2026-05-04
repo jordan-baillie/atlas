@@ -12,6 +12,19 @@
 # NOTE: reconcile_shadow is managed by atlas-reconcile-shadow.timer (systemd).
 #   DO NOT add a cron entry — would cause duplicate runs.
 
+# ── Universe coverage policy (audit 2026-05-04) ───────────────────────────────
+# LIVE markets (full cron coverage below): sp500, sector_etfs, commodity_etfs
+#   — config has trading.mode="live" AND trading.live_enabled=true
+# RESEARCH-ONLY markets (NO live cron — sweep populates SQLite via systemd timers):
+#   - crypto         (mode=paper,    live_enabled=false)
+#   - gold_etfs      (mode=passive,  live_enabled=false)
+#   - treasury_etfs  (mode=passive,  live_enabled=false)
+#   - defensive_etfs (mode=passive,  live_enabled=false)
+# To promote a research-only market to live: set live_enabled=true in its config
+# AND add full cron set (intraday_monitor, sync_protective_orders, execute_approved,
+# reconcile_positions, premarket, postclose, reconcile_ledger). DO NOT add cron
+# without flipping live_enabled first — kill switch will fire.
+
 MAILTO=""
 SHELL=/bin/bash
 TZ=Australia/Brisbane
