@@ -94,3 +94,8 @@ TZ=Australia/Brisbane
 0 6 * * * cd /root/atlas && /usr/bin/python3 research/discovery/run.py >> /root/atlas/research/discovery/logs/cron.log 2>&1
 # macro freshness check: 09:30 AEST daily
 30 9 * * * python3 /root/atlas/scripts/check_macro_freshness.py >> /root/atlas/logs/check_macro_freshness.log 2>&1
+
+# ── Weekly ops ─────────────────────────────────────────────────────────────────
+# Saturday 09:00 AEST (Fri 23:00 UTC) — weekly strategy health check (sp500)
+# NOTE: heartbeat.json expected_cron="0 23 * * 5" is in UTC; this line is in AEST.
+0 9 * * 6 /root/atlas/scripts/pi-cron.sh health-check sp500
