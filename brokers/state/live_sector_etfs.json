@@ -3,14 +3,25 @@
   "mode": "live",
   "positions": [
     {
+      "ticker": "XLE",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-05-01",
+      "entry_price": 59.06,
+      "shares": 8,
+      "stop_price": 57.56,
+      "order_id": "",
+      "stop_order_id": "a52b73c2-2a71-44f6-825f-aa3d6c095cf4",
+      "tp_order_id": "1e28b0e9-c22f-4133-99e1-d4e9c1863741"
+    },
+    {
       "ticker": "XLI",
       "strategy": "momentum_breakout",
       "entry_date": "2026-04-30",
       "entry_price": 173.97,
       "shares": 9,
-      "stop_price": 170.075,
+      "stop_price": 170.07,
       "order_id": "",
-      "stop_order_id": "f5e9b55c-a9ec-4ccd-862b-bd999eaa9bba",
+      "stop_order_id": "5d4cc2c2-4115-4e1e-b480-c145f6f29e3f",
       "tp_order_id": "f5e9b55c-a9ec-4ccd-862b-bd999eaa9bba"
     }
   ],
@@ -164,5 +175,5 @@
   "daily_high_water_date": "2026-05-01",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-04-30T08:01:05.808623"
+  "last_saved": "2026-05-04T11:06:25.749331"
 }
