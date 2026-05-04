@@ -152,6 +152,7 @@ def _save_cache(ticker: str, df: pd.DataFrame, market_id: Optional[str] = None) 
     path = _cache_path(ticker, market_id)
     try:
         # Audit H8: atomic write to prevent corruption from concurrent reads
+        path.parent.mkdir(parents=True, exist_ok=True)  # Fix 5: ensure per-market subdir exists
         tmp_path = path.with_suffix('.parquet.tmp')
         df.to_parquet(tmp_path, engine="pyarrow")
         import os
