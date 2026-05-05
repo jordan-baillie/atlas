@@ -1127,3 +1127,63 @@ The passive Moomoo portfolio stays manually managed. Over time:
 - If Atlas proves itself on commodity ETFs, some Moomoo positions could migrate
 
 Not a near-term priority — don't fix what's working.
+
+---
+
+## Multi-Universe Consolidation — 2026-05-04 (PAUSED)
+
+**Status**: PAUSED  
+**Paused at**: 2026-05-04 (US market closed; configs flipped same evening)  
+**Decision-maker**: User (operator), engineering executed end-to-end.
+
+### Markets paused
+
+| Market | Pre-pause status | Open positions at pause | Pause action |
+|---|---|---|---|
+| `commodity_etfs` | Live (v1.2) | GLD/momentum_breakout — 2 shares @ $442.80 | Mode flipped `live` → `passive`; OCO bracket maintained until close script runs |
+| `sector_etfs` | Live (v1.0.2) | XLE/momentum_breakout (8 shares @ $59.06), XLI/momentum_breakout (9 shares @ $173.97) | Mode flipped `live` → `passive`; OCO brackets maintained until close script runs |
+
+### Markets remaining live
+
+- `sp500` (v3.2.1) — UNCHANGED. Active live trading universe.
+
+### What "passive" means here
+
+The configs use `trading.mode = "passive"` while keeping `trading.live_enabled = true`. This unusual combination is INTENTIONAL:
+
+- `execute_approved.py:71-73` checks `mode != "live"` → skips when mode=passive → **no new entries**
+- `sync_protective_orders.py`, `intraday_monitor.py`, `eod_settlement.py` check `live_enabled` → continue running → **OCO brackets keep being maintained on remaining open positions**
+
+This is the safe in-between state for "pause new entries, keep protecting open positions" until the closure script runs. After positions close, Phase 3 will flip `live_enabled: false` and remove the per-market cron entries.
+
+### Closure plan
+
+`scripts/consolidation_close_positions.py` (added same commit window) is a manually-triggered operator script that:
+
+1. Cancels OCO bracket orders at Alpaca for the 3 target tickers
+2. Submits MARKET SELL orders for the position quantities
+3. Updates `trades`, state files, `position_protective_orders` via `LivePortfolio.execute_exit`
+
+Default mode is `--dry-run`. Operator runs `--live` during US RTH. Hard universe guard prevents the script from ever touching `sp500`.
+
+### Re-enable criteria
+
+A future operator decision to redeploy capital to these markets requires ALL of:
+
+1. sp500 live performance shows sustained edge over 30+ trading days post-consolidation
+2. `sector_etfs` and/or `commodity_etfs` `research_best` Sharpe ≥ 0.5 with passing OOS gates 1–4
+3. Operator explicit decision to multi-universe again
+
+### Reversibility
+
+To re-enable a paused market:
+
+1. Edit `config/active/<market>.json`: set `trading.mode = "live"`, `trading.auto_approve = true`, bump version to e.g. `vN.M.K-relive`
+2. Restore the cron entries (see `git log --grep=consolidation -- scripts/atlas.crontab` for the removed lines)
+3. Re-add the heartbeat watchdog entry in `config/heartbeat.json`
+4. Apply: `sudo crontab /root/atlas/scripts/atlas.crontab`
+5. Smoke-test: pre-market plan should generate within 24h, then operator manually approves first plan to validate the path
+
+### Research-only mode
+
+Note: even after pausing live, the **research sweep** for these markets continues (`atlas-research-window@<market>.timer`). `research_priorities.json` already tags them — keep this in mind during re-enable: research_best params will likely be more current than the saved live config.
