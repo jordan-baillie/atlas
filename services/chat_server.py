@@ -169,6 +169,7 @@ from services.api.approvals import router as _approvals_router  # noqa: E402
 from services.api.chat_sessions import router as _chat_sessions_router  # noqa: E402
 from services.api.monitor_legacy import router as _monitor_legacy_router  # noqa: E402
 from services.ws.chat import router as _ws_chat_router  # noqa: E402
+from services.api.admin import router as _admin_router  # noqa: E402
 from services.api.static_serve import router as _static_serve_router  # noqa: E402
 
 # ── Re-export shims (backward-compat for tests importing from chat_server) ────
@@ -198,6 +199,7 @@ app.include_router(_approvals_router)
 app.include_router(_chat_sessions_router)
 app.include_router(_monitor_legacy_router)
 app.include_router(_ws_chat_router)
+app.include_router(_admin_router)
 # IMPORTANT: static_serve router must be LAST — contains /{path:path} catch-all
 app.include_router(_static_serve_router)
 
