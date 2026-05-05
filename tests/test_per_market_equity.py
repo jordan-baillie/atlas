@@ -686,16 +686,18 @@ class TestHWMResetPath:
             with patch.object(lp, "_get_per_market_equity", return_value=2956.67):
                 halted, dd = lp.check_daily_drawdown()
 
-        # HWM should reset to per-market equity (2956.67 from the mock)
+        # HWM should reset to SNAPSHOT anchor ($1749.77), NOT effective_eq ($2956.67)
+        # Updated 2026-05-06: old assertion tested the phantom-HWM bug.
+        # Fix A anchors session reset to _latest_snapshot_allocated_equity() = $1749.77.
         assert halted is False, "Day 1 reset should not halt"
-        assert lp.daily_high_water == pytest.approx(2956.67, rel=1e-3), (
-            f"HWM should reset to per-market equity $2956.67, got ${lp.daily_high_water:.2f}"
+        assert lp.daily_high_water == pytest.approx(1749.77, rel=1e-3), (
+            "HWM should reset to snapshot anchor $1749.77, got ${:.2f}".format(lp.daily_high_water)
         )
 
         # Day 2: equity drops slightly → no halt (within limit)
-        day2_eq = 2956.67 * 0.99  # -1% → well within 2% limit
+        day2_eq = 1749.77 * 0.99  # -1% → well within 2% limit
         lp.daily_high_water_date = "2026-04-30"  # already on this date
-        lp.daily_high_water = 2956.67
+        lp.daily_high_water = 1749.77
 
         with (
             patch.object(lp, "_get_per_market_equity", return_value=day2_eq),

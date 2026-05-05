@@ -30,16 +30,28 @@ def portfolio(tmp_path, monkeypatch):
 
 
 def test_hwm_resets_when_date_changes(portfolio):
-    """HWM must reset to today's broker equity when session date advances."""
+    """HWM must reset to snapshot anchor (not broker equity) when session date advances.
+
+    Updated 2026-05-06: Old assertion checked HWM==broker_eq — that WAS the bug.
+    Fix A anchors HWM to _latest_snapshot_allocated_equity() which returns None
+    in this test (no market_equity_history table in isolated test DB), so the
+    fallback is starting_equity=5000.  effective_eq=broker_eq=5200 > HWM=5000
+    → dd is negative (portfolio up) → no halt.
+    """
     portfolio.daily_high_water = 5500.0
     portfolio.daily_high_water_date = (date.today() - timedelta(days=1)).isoformat()
     portfolio._broker_equity = 5200.0  # broker eq today
 
     halted, dd = portfolio.check_daily_drawdown()
 
-    assert portfolio.daily_high_water == 5200.0, "HWM should reset to today's broker equity"
+    # HWM anchors to starting_equity (5000.0) when no snapshot available —
+    # NOT to broker_eq (5200.0) which is the phantom-HWM bug.
+    assert portfolio.daily_high_water == portfolio.starting_equity, (
+        "HWM should reset to starting_equity when no snapshot available"
+    )
     assert portfolio.daily_high_water_date == date.today().isoformat()
-    assert dd == 0.0, "After reset dd must be 0"
+    # effective_eq (5200) > HWM (5000) → dd is negative — portfolio grew, no halt
+    assert dd <= 0.0, f"After reset with broker_eq > HWM, dd should be non-positive, got {dd:.4f}"
     assert halted is False
 
 

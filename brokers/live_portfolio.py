@@ -127,17 +127,21 @@ class LivePortfolio:
                 self.daily_high_water_date = state.get("daily_high_water_date", None)
                 self.halted = state.get("halted", False)
                 self.halt_reason = state.get("halt_reason", "")
-                # Guard: HWM > 5× starting_equity means it was written when
-                # check_daily_drawdown used global broker equity, before per-market
-                # attribution existed.  Reset to starting_equity so the new
-                # per-market path has a sensible baseline.
+                # Guard: HWM > 1.5× starting_equity is implausibly high for a
+                # single market — likely set from GLOBAL broker equity by the
+                # phantom-HWM bug class (2026-05-06 sector_etfs 49.78% HALT).
+                # Tightened from 5× → 1.5× to catch per-market-vs-global mismatches
+                # which land in the 1.5–2× range (5× was sized for the older
+                # global-vs-per-market refactor where ratios were 3-5×).
+                # NOTE: any market that legitimately doubles starting_equity will
+                # trip this guard — flag accepted by user 2026-05-06.
                 if (
                     self.starting_equity > 0
-                    and self.daily_high_water > self.starting_equity * 5
+                    and self.daily_high_water > self.starting_equity * 1.5
                 ):
                     logger.warning(
-                        "_load_local_state %s: HWM=$%.2f is >5× starting_equity=$%.2f — "
-                        "likely set from global broker equity before per-market attribution. "
+                        "_load_local_state %s: HWM=$%.2f is >1.5× starting_equity=$%.2f — "
+                        "likely set from global broker equity (phantom-HWM bug class). "
                         "Resetting HWM to starting_equity for correct per-market drawdown.",
                         self.market_id, self.daily_high_water, self.starting_equity,
                     )
@@ -767,7 +771,7 @@ class LivePortfolio:
         # Infer cash: starting capital minus what is currently deployed,
         # plus realized P&L from closed trades.
         atlas_entry_cost = sum(p.entry_value for p in atlas_pos)
-        total_realized_pnl = sum(t.get("pnl", 0) for t in self.closed_trades)
+        total_realized_pnl = sum((t.get("pnl") or 0) for t in self.closed_trades)
         atlas_cash = self.starting_equity - atlas_entry_cost + total_realized_pnl
         return round(atlas_cash + atlas_pos_value, 2)
 
@@ -832,6 +836,40 @@ class LivePortfolio:
         return True, "All checks passed"
 
     # ── Per-market equity attribution ─────────────────────────────────────────
+
+    def _latest_snapshot_allocated_equity(self) -> float | None:
+        """Return the most recent attributed allocated_equity for this market.
+
+        Reads from market_equity_history. Used as the session-reset HWM anchor
+        so that a transient ``_get_per_market_equity`` failure cannot allow
+        GLOBAL broker equity to be written as this market's per-market HWM
+        (the 2026-05-06 phantom-HALT bug class).
+
+        Returns None on DB failure, missing table, or no row for this market.
+        Caller is responsible for the fallback to ``starting_equity``.
+        """
+        try:
+            from db.atlas_db import get_db
+            with get_db() as db:
+                row = db.execute(
+                    """
+                    SELECT allocated_equity
+                    FROM market_equity_history
+                    WHERE market_id = ?
+                    ORDER BY date DESC, created_at DESC
+                    LIMIT 1
+                    """,
+                    (self.market_id,),
+                ).fetchone()
+        except Exception as exc:
+            logger.debug("_latest_snapshot_allocated_equity DB read failed: %s", exc)
+            return None
+        if row is None:
+            return None
+        val = row["allocated_equity"]
+        if val is None or val <= 0:
+            return None
+        return float(val)
 
     def _get_per_market_equity(
         self,
@@ -1071,24 +1109,38 @@ class LivePortfolio:
                 self.broker_data_valid, effective_eq,
             )
 
-        # SESSION RESET: new calendar day → reset HWM to today's broker equity
+        # SESSION RESET: new calendar day → anchor HWM to most recent attributed
+        # snapshot, NEVER to effective_eq.  effective_eq may be GLOBAL broker
+        # equity if _get_per_market_equity returned None transiently — writing
+        # that as a per-market HWM produces phantom drawdowns when the formula
+        # later resolves correctly (the 2026-05-06 sector_etfs 49.78% HALT bug).
         if self.daily_high_water_date != today_str:
             old_hwm = self.daily_high_water
             old_date = self.daily_high_water_date
-            self.daily_high_water = effective_eq
+            snap_anchor = self._latest_snapshot_allocated_equity()
+            if snap_anchor is not None and snap_anchor > 0:
+                new_hwm = snap_anchor
+                anchor_source = "snapshot"
+            else:
+                # No snapshot row at all (brand-new market, fresh DB) →
+                # fall back to starting_equity from config, NEVER to broker_eq.
+                new_hwm = self.starting_equity
+                anchor_source = "starting_equity"
+            self.daily_high_water = new_hwm
             self.daily_high_water_date = today_str
             self._hwm_reset_at = datetime.now()  # start 1h cooldown (see HALT guard below)
             logger.info(
-                "Session HWM reset: $%.2f → $%.2f for %s (date %s → %s)",
-                old_hwm, effective_eq, self.market_id, old_date, today_str,
+                "Session HWM reset: $%.2f → $%.2f for %s (date %s → %s, anchor=%s, broker_eq=$%.2f, effective_eq=$%.2f)",
+                old_hwm, new_hwm, self.market_id, old_date, today_str,
+                anchor_source, broker_eq, effective_eq,
             )
             # Best-effort Telegram notification — never blocks or raises
             try:
                 from utils.telegram import send_message as _tg_send
                 _tg_send(
                     f"📊 HWM reset for {self.market_id}: "
-                    f"${old_hwm:.2f} → ${effective_eq:.2f} "
-                    f"(date {old_date} → {today_str})"
+                    f"${old_hwm:.2f} → ${new_hwm:.2f} "
+                    f"(date {old_date} → {today_str}, anchor={anchor_source})"
                 )
             except Exception as _tg_exc:
                 logger.debug(

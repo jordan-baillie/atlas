@@ -425,6 +425,14 @@ class TestHWMDateNoneTriggersSafeReset:
     """daily_high_water_date=None must trigger a HWM reset on the first drawdown check."""
 
     def test_none_date_resets_hwm_to_effective_eq(self, tmp_path: Path) -> None:
+        """Updated 2026-05-06: old assertion checked HWM == effective_eq ($1280) -- that was the BUG.
+
+        Fix A anchors HWM to _latest_snapshot_allocated_equity() on session reset.
+        No market_equity_history table in isolated test DB -> returns None ->
+        fallback is starting_equity=1000.  The stale HWM $1297.55 from JSON is
+        preserved by _load_local_state (1297.55 < 1.5 * 1000 = 1500, guard does
+        not fire), but is then overwritten to starting_equity=1000 at session reset.
+        """
         from brokers.live_portfolio import LivePortfolio
 
         cfg = {"risk": {"starting_equity": 1000, "max_daily_drawdown_pct": 0.02,
@@ -453,8 +461,12 @@ class TestHWMDateNoneTriggersSafeReset:
             lp.check_daily_drawdown(prices={})
 
         assert lp.daily_high_water_date == today_str, "HWM date must be set to today after None-date reset"
-        assert lp.daily_high_water == pytest.approx(1280.0, abs=0.01), (
-            "HWM must be reset to effective_eq (not the stale 1297.55)"
+        # NEW behavior: HWM anchors to starting_equity (1000) when no snapshot available,
+        # NOT to effective_eq ($1280) which could be global broker equity (phantom-HWM bug).
+        assert lp.daily_high_water == pytest.approx(1000.0, abs=0.01), (
+            "HWM must be reset to starting_equity=$1000 when no snapshot available "
+            "(not to effective_eq=$1280 which is the phantom-HWM bug class). "
+            "Got: {:.2f}".format(lp.daily_high_water)
         )
 
     def test_none_date_does_not_false_halt(self, tmp_path: Path) -> None:
