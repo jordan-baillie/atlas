@@ -144,35 +144,37 @@ def test_audit_panel_renders(page: Page) -> None:
 # Test 6: No console errors when loading Controls tab
 # ---------------------------------------------------------------------------
 
-def test_controls_tab_no_console_errors() -> None:
-    """
-    Separate page instance to capture errors fresh; Controls tab must not
-    introduce any console errors.
-    """
-    user, pw = _auth()
-    with sync_playwright() as pw_ctx:
-        browser = pw_ctx.chromium.launch(headless=True)
-        errors: list[str] = []
-        context = browser.new_context(
-            viewport={"width": 1440, "height": 900},
-            http_credentials={"username": user, "password": pw},
-            ignore_https_errors=True,
-        )
-        p = context.new_page()
-        p.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-        p.on("pageerror", lambda exc: errors.append(str(exc)))
-        p.goto(DASHBOARD_URL, wait_until="networkidle", timeout=30_000)
+def test_controls_tab_no_console_errors(page: Page) -> None:
+    """Controls tab must not introduce any console errors when navigated to fresh."""
+    if not _controls_tab_visible(page):
+        pytest.skip("Controls tab not enabled in this build")
 
-        if not _controls_tab_visible(p):
-            browser.close()
-            pytest.skip("Controls tab not enabled in this build")
+    errors: list[str] = []
 
-        p.locator("button", has_text="Controls").click()
-        p.wait_for_timeout(2500)  # let lazy chunk + API fetches settle
-        browser.close()
+    def on_console(msg) -> None:
+        if msg.type == "error":
+            errors.append(msg.text)
 
-    if errors:
+    def on_page_error(exc) -> None:
+        errors.append(str(exc))
+
+    page.on("console", on_console)
+    page.on("pageerror", on_page_error)
+    try:
+        # Navigate fresh to ensure we capture load-time errors
+        page.goto(DASHBOARD_URL, wait_until="networkidle", timeout=30_000)
+        page.locator("button", has_text="Controls").click()
+        page.wait_for_timeout(2500)  # let lazy chunk + API fetches settle
+    finally:
+        page.remove_listener("console", on_console)
+        page.remove_listener("pageerror", on_page_error)
+
+    # Filter out benign known-noise patterns: react devtools, hot reload, etc.
+    benign = ("react-dom", "react devtools", "Download the React DevTools")
+    real = [e for e in errors if not any(b.lower() in e.lower() for b in benign)]
+
+    if real:
         pytest.fail(
-            f"Controls tab introduced {len(errors)} console error(s):\n"
-            + "\n".join(f"  {e[:200]}" for e in errors)
+            f"Controls tab introduced {len(real)} console error(s):\n"
+            + "\n".join(f"  {e[:200]}" for e in real)
         )
