@@ -140,13 +140,19 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
             import json as _uj
             from db.atlas_db import get_db as _ugh_db, get_latest_equity as _ugh_eq
 
-            # Read all universe configs first (file I/O only, no DB yet)
+            # Discover market IDs via glob; load effective config via canonical loader
             _universe_cfgs: list = []
+            from utils.config import get_active_config as _ghac
             for _cfg_path in sorted(Path("config/active").glob("*.json")):
                 if _cfg_path.stem == "regime":
                     continue
                 try:
-                    _cfg = _uj.loads(_cfg_path.read_text())
+                    _stem = _cfg_path.stem
+                    try:
+                        _cfg = _ghac(_stem)
+                    except Exception:
+                        # Fallback to raw JSON if canonical loader fails (e.g. validate_config)
+                        _cfg = _uj.loads(_cfg_path.read_text())
                     _universe_cfgs.append((_cfg_path, _cfg))
                 except Exception as _ue:
                     logger.debug("universes: error reading %s: %s", _cfg_path.name, _ue)
@@ -321,13 +327,19 @@ def _build_universes_list() -> list:
     import json as _uj
     from db.atlas_db import get_db as _udb, get_latest_equity as _ueq
 
-    # Read all configs (file I/O only)
+    # Discover market IDs via glob; load effective config via canonical loader
     universe_cfgs: list = []
+    from utils.config import get_active_config as _bac
     for cfg_path in sorted(Path("config/active").glob("*.json")):
         if cfg_path.stem == "regime":
             continue
         try:
-            cfg = _uj.loads(cfg_path.read_text())
+            stem = cfg_path.stem
+            try:
+                cfg = _bac(stem)
+            except Exception:
+                # Fallback to raw JSON if canonical loader fails (e.g. validate_config)
+                cfg = _uj.loads(cfg_path.read_text())
             universe_cfgs.append((cfg_path, cfg))
         except Exception as ue:
             logger.debug("universes: error reading %s: %s", cfg_path.name, ue)

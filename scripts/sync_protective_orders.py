@@ -99,15 +99,20 @@ _PDT_RETRY_BEFORE_UTC_HOUR = 14
 # ═══════════════════════════════════════════════════════════════
 
 def load_config(market_id: str, config_path: str = "") -> dict:
-    """Load Atlas config for the given market."""
+    """Load Atlas config for the given market.
+
+    If config_path is provided, reads that exact file (raw JSON, no overrides) —
+    used by tests and CLI overrides. Otherwise consults canonical loader with
+    overrides applied.
+    """
     if config_path:
         path = Path(config_path)
-    else:
-        path = PROJECT / "config" / "active" / f"{market_id}.json"
-    if not path.exists():
-        raise FileNotFoundError(f"Config not found: {path}")
-    with open(path) as f:
-        return json.load(f)
+        if not path.exists():
+            raise FileNotFoundError(f"Config not found: {path}")
+        with open(path) as f:
+            return json.load(f)
+    from utils.config import get_active_config
+    return get_active_config(market_id)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -849,6 +854,11 @@ def sync_market(
     if not live_enabled:
         result["error"] = f"live_enabled=False in config — skipping {market_id}"
         logger.info("Skipping %s: live trading not enabled", market_id)
+        try:
+            from monitor.health_writer import heartbeat as _hb
+            _hb("sync_protective", "skipped", {"market": market_id, "reason": "market_disabled"})
+        except Exception:
+            pass
         return result
 
     logger.info(

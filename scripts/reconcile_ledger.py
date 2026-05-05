@@ -26,12 +26,9 @@ log = setup_logging("reconcile_ledger", extra_log_file="reconcile_ledger")
 
 
 def load_config(market_id: str) -> dict:
-    """Load active config for the given market."""
-    path = PROJECT / "config" / "active" / f"{market_id}.json"
-    if not path.exists():
-        raise FileNotFoundError(f"Config not found: {path}")
-    with open(path) as f:
-        return json.load(f)
+    """Load active config for the given market (consults overrides)."""
+    from utils.config import get_active_config
+    return get_active_config(market_id)
 
 
 

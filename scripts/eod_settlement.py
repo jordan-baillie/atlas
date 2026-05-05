@@ -50,10 +50,10 @@ def _health_log(level, message, detail=None):
         log.warning("Health-log write failed (non-fatal): %s", e)
 
 
-def load_config(market_id="asx"):
-    config_path = PROJECT / "config" / "active" / f"{market_id}.json"
-    with open(config_path) as f:
-        return json.load(f)
+def load_config(market_id: str = "sp500") -> dict:
+    """Load active config for the given market (consults overrides)."""
+    from utils.config import get_active_config
+    return get_active_config(market_id)
 
 
 def fetch_closing_prices(tickers, market_id=None):
@@ -534,13 +534,14 @@ def main():
         return
 
     # Load config and portfolio from live broker
-    config = load_config(market_id=market_id) if 'market_id' in load_config.__code__.co_varnames else load_config()
+    config = load_config(market_id)
 
     # Skip non-live markets — they don't have broker connections
     live_enabled = config.get("trading", {}).get("live_enabled", False)
     if not live_enabled:
         log.info("Market %s is not live-enabled (live_enabled=False). Skipping EOD settlement.", market_id)
         print(f"Market {market_id} is not live-enabled. Skipping settlement.")
+        _health_log("info", "EOD settlement skipped: market not live-enabled", {"market": market_id, "reason": "market_disabled"})
         return
 
     from brokers.live_portfolio import LivePortfolio

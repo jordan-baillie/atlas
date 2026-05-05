@@ -49,6 +49,11 @@ def main() -> None:
 
         if not cfg.get("trading", {}).get("live_enabled"):
             logger.info("market=%s live_enabled=false — skipping", market)
+            try:
+                from monitor.health_writer import heartbeat as _hb
+                _hb("regen_stops", "skipped", {"market": market, "reason": "market_disabled"})
+            except Exception:
+                pass
             continue
 
         try:

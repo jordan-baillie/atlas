@@ -367,6 +367,11 @@ def main():
     # Skip markets that aren't live-enabled (avoids ERROR-level Telegram spam)
     if not config.get("trading", {}).get("live_enabled", False):
         log.info("Market %s has live_enabled=False — skipping monitor", market_id)
+        try:
+            from monitor.health_writer import heartbeat as _hb
+            _hb("intraday_monitor", "skipped", {"market": market_id, "reason": "market_disabled"})
+        except Exception:
+            pass
         return
 
     portfolio = LivePortfolio(config, market_id=market_id)
