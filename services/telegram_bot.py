@@ -274,6 +274,8 @@ def format_plan_message(plan: dict, market_id: str = "sp500") -> str:
 
     if not broker or broker not in ("alpaca",):
         mode_str = "📝 PAPER"
+    elif mode == "passive":
+        mode_str = "⏸ PASSIVE"
     elif dry_run:
         mode_str = "🔶 LIVE (DRY RUN)"
     else:
