@@ -1,8 +1,8 @@
 {
-  "version": "v1.0.2",
+  "version": "v1.0.3-consolidation-passive",
   "project": "Atlas",
   "market": "sector_etfs",
-  "description": "Sector ETFs v1.0 — SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
+  "description": "Sector ETFs — PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (XLE, XLI) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
   "universe": {
     "method": "static",
     "benchmark_ticker": "SPY"
@@ -29,14 +29,14 @@
     "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
-    "mode": "live",
+    "mode": "passive",
     "broker": "alpaca",
     "live_enabled": true,
     "holding_period_min": 2,
     "holding_period_max": 20,
     "data_frequency": "daily",
     "order_type": "market_on_open",
-    "auto_approve": true,
+    "auto_approve": false,
     "live_safety": {
       "require_double_approval": false,
       "max_order_value": 5000,
@@ -266,5 +266,20 @@
       }
     ],
     "follow_up": "research_best for sector_etfs/mean_reversion and sector_etfs/momentum_breakout are stale (2026-04-21, P1.1 contamination era). Re-run sweeps after fixing the snapshot-required bug in research/loop.py:556 and DEFAULT_STRATEGIES in research/autoresearch_nightly.py."
+  },
+  "_consolidation_note": {
+    "paused_at": "2026-05-04T22:30:00+00:00",
+    "decision": "User-approved consolidation. Pause sector_etfs+commodity_etfs live trading; sp500 remains live. Mode=passive blocks new entries while protective infra keeps maintaining OCO brackets on remaining open positions until closure script runs.",
+    "open_positions_at_pause": [
+      "XLE/momentum_breakout (8 shares @ $59.06, stop $57.56, OCO live at broker)",
+      "XLI/momentum_breakout (9 shares @ $173.97, stop $170.07, OCO live at broker)"
+    ],
+    "closure_plan": "scripts/consolidation_close_positions.py executes manual market-sell at next US open (2026-05-05 13:30 UTC) or operator-chosen RTH window. Cancels OCO + market sell + DB/state update.",
+    "reenable_criteria": [
+      "(1) sp500 live performance shows sustained edge over 30+ trading days",
+      "(2) sector_etfs/commodity_etfs research_best Sharpe >= 0.5 with passing OOS gates 1-4",
+      "(3) Operator decision to redeploy capital across multiple universes"
+    ],
+    "reversibility": "Set trading.mode='live', restore cron entries (see git log around 2026-05-04 for removed lines), bump version. Heartbeat config entries preserved — re-enable services if removed."
   }
 }
