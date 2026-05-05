@@ -1148,16 +1148,132 @@ def _check_market_halt(market_id: str) -> tuple[bool, str]:
     return False, ""
 
 
+def _get_halt_diagnostics(market_id: str) -> dict:
+    """Pull drawdown/snapshot diagnostics for a halted market.
+
+    Reads:
+    - ``brokers/state/live_<market>.json`` for HWM + equity_history
+    - ``market_equity_history`` table in atlas.db for snapshot columns
+    - ``config/active/<market>.json`` for dd_limit_pct + trading_mode
+
+    All accesses are wrapped in try/except; any missing data → None.
+    """
+    diag: dict = {
+        "hwm": None,
+        "hwm_date": None,
+        "current_eq_estimate": None,
+        "dd_pct": None,
+        "dd_limit_pct": None,
+        "snap_allocated_equity": None,
+        "snap_position_mv": None,
+        "snap_cash_attributed": None,
+        "snap_broker_equity": None,
+        "snap_date": None,
+    }
+
+    # ── Live state file ────────────────────────────────────────────────────
+    try:
+        state_path = PROJECT_ROOT / "brokers" / "state" / f"live_{market_id}.json"
+        if state_path.exists():
+            state = json.loads(state_path.read_text())
+            diag["hwm"] = state.get("daily_high_water")
+            diag["hwm_date"] = state.get("daily_high_water_date")
+            eq_hist = state.get("equity_history") or []
+            if eq_hist:
+                last = eq_hist[-1]
+                diag["current_eq_estimate"] = (
+                    float(last.get("equity") or 0) or None
+                )
+    except Exception as _e:
+        logger.debug("_get_halt_diagnostics: state file error for %s: %s", market_id, _e)
+
+    # ── market_equity_history (DB snapshot) ────────────────────────────────
+    try:
+        from db.atlas_db import get_db as _get_db
+        with _get_db() as _db:
+            _row = _db.execute(
+                """SELECT allocated_equity, position_mv, cash_attributed,
+                          broker_equity, date
+                   FROM market_equity_history
+                   WHERE market_id = ?
+                   ORDER BY date DESC, id DESC LIMIT 1""",
+                (market_id,),
+            ).fetchone()
+        if _row:
+            diag["snap_allocated_equity"] = _row[0]
+            diag["snap_position_mv"] = _row[1]
+            diag["snap_cash_attributed"] = _row[2]
+            diag["snap_broker_equity"] = _row[3]
+            diag["snap_date"] = _row[4]
+    except Exception as _e:
+        logger.debug("_get_halt_diagnostics: DB error for %s: %s", market_id, _e)
+
+    # ── Config: dd_limit_pct + trading_mode ───────────────────────────────
+    try:
+        _cfg = get_active_config(market_id)
+        _risk = _cfg.get("risk", {}) or {}
+        _dd = _risk.get("max_daily_drawdown_pct")
+        if _dd is not None:
+            diag["dd_limit_pct"] = float(_dd) * 100
+        diag["trading_mode"] = (_cfg.get("trading", {}) or {}).get("mode", "")
+    except Exception as _e:
+        logger.debug("_get_halt_diagnostics: config error for %s: %s", market_id, _e)
+
+    # ── Parse dd_pct from halt_reason if available ────────────────────────
+    # e.g. "daily_drawdown 49.78% on sector_etfs"
+    try:
+        halted, halt_reason_str = _check_market_halt(market_id)
+        if halt_reason_str:
+            import re as _re
+            _m = _re.search(r"([\d.]+)%", halt_reason_str)
+            if _m:
+                diag["dd_pct"] = float(_m.group(1))
+    except Exception as _e:
+        logger.debug("_get_halt_diagnostics: halt_reason parse error for %s: %s", market_id, _e)
+
+    return diag
+
+
 def _maybe_write_halt_buffer(market_id: str, trade_date: str | None = None) -> None:
     """Write a HALTED buffer file if the market is currently halted.
 
     Called when the plan file is missing — lets the rollup report HALTED
-    rather than silently omitting the market.
+    rather than silently omitting the market. Includes halt diagnostics
+    and open positions from the live state file.
     """
     today = trade_date or datetime.now().strftime("%Y-%m-%d")
     halted, halt_reason = _check_market_halt(market_id)
     if not halted:
         return
+
+    # Collect diagnostics (non-fatal)
+    halt_diagnostics = _get_halt_diagnostics(market_id)
+    trading_mode = halt_diagnostics.pop("trading_mode", "")
+
+    # Collect open positions from live state file (non-fatal)
+    open_positions_full: list[dict] = []
+    try:
+        state_path = PROJECT_ROOT / "brokers" / "state" / f"live_{market_id}.json"
+        if state_path.exists():
+            _state = json.loads(state_path.read_text())
+            eq_hist = _state.get("equity_history") or []
+            if eq_hist:
+                last_entry = eq_hist[-1]
+                for _p in last_entry.get("positions") or []:
+                    open_positions_full.append({
+                        "ticker": _p.get("ticker", "?"),
+                        "shares": int(_p.get("shares", 0)),
+                        "entry_price": float(_p.get("entry_price") or 0.0),
+                        "current_price": float(_p.get("current_price") or 0.0),
+                        "unrealized_pnl": float(_p.get("unrealized_pnl") or 0.0),
+                        "unrealized_pnl_pct": float(_p.get("unrealized_pnl_pct") or 0.0),
+                        "stop_price": None,
+                        "take_profit": None,
+                        "strategy": _p.get("strategy", "?"),
+                    })
+    except Exception as _e:
+        logger.debug("_maybe_write_halt_buffer: open_positions error for %s: %s", market_id, _e)
+
     _write_plan_buffer(market_id, today, {
         "market_id": market_id,
         "trade_date": today,
@@ -1171,6 +1287,9 @@ def _maybe_write_halt_buffer(market_id: str, trade_date: str | None = None) -> N
         "leverage_pct": 0.0,
         "summary_lines": [],
         "rejection_reason": None,
+        "halt_diagnostics": halt_diagnostics,      # NEW
+        "trading_mode": trading_mode,              # NEW
+        "open_positions_full": open_positions_full, # NEW
         "written_at": datetime.now(timezone.utc).isoformat(),
     })
     logger.info("HALTED buffer written for %s: %s", market_id, halt_reason)
@@ -1279,7 +1398,7 @@ def send_plan_for_approval(
     risk = plan.get("risk_summary", {})
     snap = plan.get("portfolio_snapshot", {})
 
-    # Build human-readable per-entry summary lines
+    # ─── Existing summary_lines (kept for backwards compat) ────────────────
     summary_lines: list[str] = []
     for _e in entries[:8]:
         _ticker = _e.get("ticker", "?")
@@ -1290,6 +1409,59 @@ def send_plan_for_approval(
             summary_lines.append(f"{_ticker} × {_size} @ ${_price:.2f} → stop ${_stop:.2f}")
         else:
             summary_lines.append(f"{_ticker} × {_size} @ ${_price:.2f}")
+
+    # ─── NEW: full entry detail for rich rollup ────────────────────────────
+    entries_full: list[dict] = []
+    for _e in entries:
+        entries_full.append({
+            "ticker": _e.get("ticker", "?"),
+            "side": "BUY",  # entries are always buys; shorts not supported
+            "qty": int(_e.get("position_size", 0)),
+            "entry_price": float(_e.get("entry_price") or 0.0),
+            "stop_price": (float(_e["stop_price"]) if _e.get("stop_price") is not None else None),
+            "take_profit": (float(_e["take_profit"]) if _e.get("take_profit") is not None else None),
+            "risk_amount": float(_e.get("risk_amount") or 0.0),
+            "position_value": float(_e.get("position_value") or 0.0),
+            "strategy": _e.get("strategy", "?"),
+            "sector": _e.get("sector", ""),
+            "confidence": float(_e.get("confidence") or 0.0),
+        })
+
+    exits_full: list[dict] = []
+    for _x in exits:
+        exits_full.append({
+            "ticker": _x.get("ticker", "?"),
+            "side": "SELL",
+            "exit_price": float(_x.get("exit_price") or 0.0),
+            "reason": _x.get("exit_reason") or _x.get("reason", ""),
+            "current_pnl": float(_x.get("current_pnl") or _x.get("unrealized_pnl") or 0.0),
+            "shares": int(_x.get("shares", 0)),
+            "strategy": _x.get("strategy", "?"),
+        })
+
+    open_positions_full: list[dict] = []
+    for _p in plan.get("open_positions", []):
+        open_positions_full.append({
+            "ticker": _p.get("ticker", "?"),
+            "shares": int(_p.get("shares", 0)),
+            "entry_price": float(_p.get("entry_price") or 0.0),
+            "current_price": float(_p.get("current_price") or 0.0),
+            "unrealized_pnl": float(_p.get("unrealized_pnl") or 0.0),
+            "unrealized_pnl_pct": float(_p.get("unrealized_pnl_pct") or 0.0),
+            "stop_price": (float(_p["stop_price"]) if _p.get("stop_price") is not None else None),
+            "take_profit": (float(_p["take_profit"]) if _p.get("take_profit") is not None else None),
+            "strategy": _p.get("strategy", "?"),
+        })
+
+    snap = plan.get("portfolio_snapshot", {}) or {}
+    equity_snapshot = {
+        "equity": float(snap.get("equity") or 0.0),
+        "cash": float(snap.get("cash") or 0.0),
+        "total_pnl": float(snap.get("total_pnl") or 0.0),
+        "total_pnl_pct": float(snap.get("total_pnl_pct") or 0.0),
+    }
+
+    trading_mode = (config.get("trading", {}) or {}).get("mode", "")
 
     rejection_reason: Optional[str] = (
         plan.get("rejection_reason") if plan_status == "REJECTED" else None
@@ -1307,10 +1479,65 @@ def send_plan_for_approval(
         "total_position_value": float(risk.get("total_proposed_cost") or 0),
         "leverage_pct": float(risk.get("portfolio_exposure_pct") or 0),
         "summary_lines": summary_lines,
+        "entries_full": entries_full,                # NEW
+        "exits_full": exits_full,                    # NEW
+        "open_positions_full": open_positions_full,  # NEW
+        "equity_snapshot": equity_snapshot,          # NEW
+        "trading_mode": trading_mode,                # NEW
         "rejection_reason": rejection_reason,
         "written_at": datetime.now(timezone.utc).isoformat(),
     })
     return True
+
+
+def _fmt_entry_line(e: dict) -> str:
+    """Format one entry dict as a fixed-width detail line for Telegram HTML."""
+    ticker = _esc(e.get("ticker", "?"))
+    side = _esc(e.get("side", "BUY"))
+    qty = e.get("qty", 0)
+    entry = e.get("entry_price", 0.0)
+    stop = e.get("stop_price")
+    tp = e.get("take_profit")
+    risk = e.get("risk_amount", 0.0)
+    strategy = _esc(e.get("strategy", "?"))
+
+    stop_str = "no stop"
+    if stop is not None and entry:
+        stop_pct = (stop - entry) / entry * 100
+        stop_str = f"stop ${stop:.2f} ({stop_pct:+.1f}%)"
+
+    tp_str = "no target"
+    if tp is not None and entry:
+        tp_pct = (tp - entry) / entry * 100
+        tp_str = f"target ${tp:.2f} ({tp_pct:+.1f}%)"
+
+    return (
+        f"  {ticker:<6} {side}  {qty:>3} @ ${entry:<10.2f}"
+        f"{stop_str:<26}{tp_str:<26}  risk ${risk:.2f}   {strategy}"
+    )
+
+
+def _fmt_exit_line(x: dict) -> str:
+    """Format one planned exit dict as a detail line."""
+    ticker = _esc(x.get("ticker", "?"))
+    shares = x.get("shares", 0)
+    price = x.get("exit_price", 0.0)
+    reason = _esc(x.get("reason", ""))
+    pnl = x.get("current_pnl", 0.0)
+    pnl_str = f"PnL {pnl:+.2f}" if pnl else ""
+    return f"  {ticker} SELL {shares}sh @ ${price:.2f}  {reason}  {pnl_str}".rstrip()
+
+
+def _fmt_open_position_line(p: dict) -> str:
+    """Format one open position as a compact summary."""
+    ticker = _esc(p.get("ticker", "?"))
+    shares = p.get("shares", 0)
+    pnl = p.get("unrealized_pnl", 0.0)
+    pnl_pct = p.get("unrealized_pnl_pct", 0.0)
+    stop = p.get("stop_price")
+    pnl_str = f"{pnl:+.2f} {pnl_pct:+.2f}%"
+    stop_str = f", stop ${stop:.2f}" if stop is not None else ""
+    return f"{ticker} {shares}sh, {pnl_str}{stop_str}"
 
 
 def send_plan_rollup() -> bool:
@@ -1321,6 +1548,10 @@ def send_plan_rollup() -> bool:
 
     Idempotent: skips (returns True) if a rollup was already sent today.
     Cleans up buffer files older than 7 days on each successful send.
+
+    Format: rich per-entry detail with halt diagnostics + passive-mode warning.
+    Falls back to summary_lines style if buffer lacks entries_full.
+    Truncates at 4000 chars (Telegram cap is 4096).
     """
     import urllib.request
     import urllib.error
@@ -1351,93 +1582,335 @@ def send_plan_rollup() -> bool:
         except Exception as _e:
             logger.warning("Could not read buffer %s: %s", buf_path, _e)
 
-    # ── Build message ─────────────────────────────────────────────────────────
-    market_lines: list[str] = []
-    n_approved_plans = 0
-    total_risk_pct = 0.0
+    # ── Build rich message ────────────────────────────────────────────────────
+    def _render_markets(max_entries_per_market: int | None = None) -> tuple[str, int, float]:
+        """Render all market blocks. Returns (body_lines_text, n_approved, total_risk)."""
+        n_approved_plans = 0
+        total_risk_pct = 0.0
+        sections: list[str] = []
 
-    # Display in canonical market order; append any extra markets at the end
-    ordered = list(_ROLLUP_MARKETS) + [m for m in sorted(buffers_by_market) if m not in _ROLLUP_MARKETS]
-    for market in ordered:
-        if market not in buffers_by_market:
-            continue
-        buf = buffers_by_market[market]
+        ordered = list(_ROLLUP_MARKETS) + [
+            m for m in sorted(buffers_by_market) if m not in _ROLLUP_MARKETS
+        ]
+        for market in ordered:
+            if market not in buffers_by_market:
+                continue
+            buf = buffers_by_market[market]
 
-        status = buf.get("plan_status", "UNKNOWN")
-        n_entries: int = buf.get("n_entries", 0)
-        n_exits: int = buf.get("n_exits", 0)
-        leverage: float = buf.get("leverage_pct", 0)
-        halt_reason: str = buf.get("halt_reason") or ""
-        rejection_reason: str = buf.get("rejection_reason") or ""
-        summary_lines: list[str] = buf.get("summary_lines", [])
-        risk_pct: float = buf.get("total_risk_pct", 0)
+            status = buf.get("plan_status", "UNKNOWN")
+            n_entries: int = buf.get("n_entries", 0)
+            n_exits: int = buf.get("n_exits", 0)
+            leverage: float = buf.get("leverage_pct", 0)
+            halt_reason: str = buf.get("halt_reason") or ""
+            rejection_reason: str = buf.get("rejection_reason") or ""
+            summary_lines: list[str] = buf.get("summary_lines", [])
+            risk_pct: float = buf.get("total_risk_pct", 0)
+            entries_full: list[dict] = buf.get("entries_full", [])
+            exits_full: list[dict] = buf.get("exits_full", [])
+            open_positions_full: list[dict] = buf.get("open_positions_full", [])
+            equity_snap: dict = buf.get("equity_snapshot", {}) or {}
+            trading_mode: str = buf.get("trading_mode", "")
+            halt_diag: dict = buf.get("halt_diagnostics", {}) or {}
 
-        mkt_esc = _esc(market)
+            mkt_esc = _esc(market)
+            block: list[str] = ["──────"]
 
-        if status == "EMPTY":
-            market_lines.append(f"<b>{mkt_esc}</b>: no signals")
+            # ── Status header line ───────────────────────────────────────
+            if status == "EMPTY":
+                block.append(f"📋 <b>{mkt_esc}</b> — no signals today")
 
-        elif status == "HALTED":
-            halt_short = (halt_reason[:60] + "…") if len(halt_reason) > 60 else halt_reason
-            market_lines.append(f"<b>{mkt_esc}</b>: 🛑 HALTED — {_esc(halt_short)}")
+            elif status == "HALTED":
+                halt_short = _esc((halt_reason[:80] + "…") if len(halt_reason) > 80 else halt_reason)
+                block.append(f"🛑 <b>{mkt_esc}</b> — HALTED · {halt_short}")
+                block.append("")
 
-        elif status == "APPROVED":
-            n_approved_plans += 1
-            total_risk_pct += risk_pct
-            if n_entries == 1 and summary_lines:
-                market_lines.append(
-                    f"<b>{mkt_esc}</b>: {n_entries} entry — {_esc(summary_lines[0])} ✅"
+                # Halt diagnostics block
+                block.append(f"  Halt reason: {_esc(halt_reason)}")
+
+                dd_limit = halt_diag.get("dd_limit_pct")
+                if dd_limit is not None:
+                    block.append(f"  Configured limit: {dd_limit:.2f}% daily drawdown")
+
+                hwm = halt_diag.get("hwm")
+                hwm_date = halt_diag.get("hwm_date")
+                if hwm is not None:
+                    hwm_date_str = f" (set {_esc(hwm_date)})" if hwm_date else ""
+                    block.append(f"  HWM today: ${hwm:,.2f}{hwm_date_str}")
+
+                cur_eq = halt_diag.get("current_eq_estimate")
+                snap_eq = halt_diag.get("snap_allocated_equity")
+                snap_date = halt_diag.get("snap_date")
+                if cur_eq is not None or snap_eq is not None:
+                    parts_eq: list[str] = []
+                    if cur_eq is not None:
+                        parts_eq.append(f"${cur_eq:,.2f} (live state)")
+                    if snap_eq is not None:
+                        snap_date_str = f" {_esc(snap_date)}" if snap_date else ""
+                        parts_eq.append(f"${snap_eq:,.2f} (DB snapshot{snap_date_str})")
+                    block.append(f"  Current equity estimate: {' / '.join(parts_eq)}")
+
+                # ⚠️ Stale HWM warning: HWM > 1.5× starting_equity
+                try:
+                    _cfg_halted = get_active_config(market)
+                    _starting = (
+                        (_cfg_halted.get("risk", {}) or {}).get("starting_equity")
+                        or _cfg_halted.get("starting_equity")
+                    )
+                    if _starting and hwm is not None and hwm > float(_starting) * 1.5:
+                        ratio = hwm / float(_starting)
+                        block.append(
+                            f"  ⚠️ HWM looks stale — {mkt_esc} starting_equity is"
+                            f" ${float(_starting):,.0f} but HWM is ${hwm:,.2f}"
+                            f" ({ratio:.1f}× starting)"
+                        )
+                except Exception:
+                    pass
+
+                if trading_mode:
+                    block.append(
+                        f"  Trading mode: {_esc(trading_mode)}"
+                        + (" (would not execute even if unhalted)" if trading_mode == "passive" else "")
+                    )
+
+                # Open positions from halt buffer
+                if open_positions_full:
+                    pos_strs = ", ".join(
+                        f"{_esc(p.get('ticker','?'))} {p.get('shares',0)}sh"
+                        for p in open_positions_full
+                    )
+                    block.append(f"  Open positions: {pos_strs}")
+
+            elif status == "APPROVED":
+                n_approved_plans += 1
+                total_risk_pct += risk_pct
+                lev_str = f" · {leverage:.0f}% leverage" if leverage else ""
+                risk_str = f" · {risk_pct:.2f}% equity at risk" if risk_pct else ""
+                block.append(
+                    f"📋 <b>{mkt_esc}</b> — APPROVED · {n_entries} {'entry' if n_entries == 1 else 'entries'}{lev_str}{risk_str}"
                 )
-            else:
-                parts: list[str] = []
-                if n_entries:
-                    parts.append(f"{n_entries} {'entry' if n_entries == 1 else 'entries'}")
-                if n_exits:
-                    parts.append(f"{n_exits} exit{'s' if n_exits > 1 else ''}")
-                if leverage:
-                    parts.append(f"lvg {leverage:.0f}%")
-                market_lines.append(
-                    f"<b>{mkt_esc}</b>: {', '.join(parts)} ✅ APPROVED"
+                # Equity snapshot
+                if equity_snap.get("equity"):
+                    eq = equity_snap["equity"]
+                    cash = equity_snap.get("cash", 0)
+                    tpnl = equity_snap.get("total_pnl", 0)
+                    tpnl_pct = equity_snap.get("total_pnl_pct", 0)
+                    pnl_sign = "+" if tpnl >= 0 else ""
+                    block.append(
+                        f"Equity ${eq:,.2f} · Cash ${cash:,.2f} · PnL {pnl_sign}${tpnl:.2f} ({pnl_sign}{tpnl_pct:.2f}%)"
+                    )
+                block.append("")
+
+                if entries_full:
+                    block.append(f"ENTRIES ({n_entries}):")
+                    shown = entries_full if max_entries_per_market is None else entries_full[:max_entries_per_market]
+                    for _e in shown:
+                        block.append(_fmt_entry_line(_e))
+                    if max_entries_per_market and len(entries_full) > max_entries_per_market:
+                        block.append(f"  ... +{len(entries_full) - max_entries_per_market} more")
+                elif summary_lines:
+                    # Backwards compat: no entries_full
+                    block.append(f"ENTRIES ({n_entries}):")
+                    for sl in (summary_lines[:max_entries_per_market] if max_entries_per_market else summary_lines):
+                        block.append(f"  {_esc(sl)}")
+                    if max_entries_per_market and len(summary_lines) > max_entries_per_market:
+                        block.append(f"  ... +{len(summary_lines) - max_entries_per_market} more")
+
+                # Exits
+                if exits_full:
+                    block.append("")
+                    block.append(f"EXITS ({n_exits}):")
+                    for _x in exits_full:
+                        block.append(_fmt_exit_line(_x))
+                else:
+                    block.append("EXITS: none — riding existing protective stops")
+
+                # Open positions
+                if open_positions_full:
+                    pos_strs = ", ".join(_fmt_open_position_line(p) for p in open_positions_full)
+                    block.append(f"OPEN: {pos_strs}")
+
+            elif status == "REJECTED":
+                rej_trunc = (rejection_reason[:60] + "…") if len(rejection_reason) > 60 else rejection_reason
+                rej_suffix = f" — {_esc(rej_trunc)}" if rej_trunc else ""
+                entry_str = f"{n_entries} {'entry' if n_entries == 1 else 'entries'}"
+                extra = f" · lvg {leverage:.0f}%" if leverage else ""
+                block.append(
+                    f"❌ <b>{mkt_esc}</b> — REJECTED · {entry_str}{extra}{rej_suffix}"
                 )
 
-        elif status == "REJECTED":
-            rej_trunc = (rejection_reason[:60] + "…") if len(rejection_reason) > 60 else rejection_reason
-            rej_suffix = f" — {_esc(rej_trunc)}" if rej_trunc else ""
-            entry_str = f"{n_entries} {'entry' if n_entries == 1 else 'entries'}"
-            extra = f", lvg {leverage:.0f}%" if leverage else ""
-            market_lines.append(
-                f"<b>{mkt_esc}</b>: {entry_str}{extra}, 0 approved ❌ REJECTED{rej_suffix}"
-            )
+            else:  # PENDING — awaiting manual approval
+                lev_str = f" · {leverage:.0f}% leverage" if leverage else ""
+                entry_str = f"{n_entries} {'entry' if n_entries == 1 else 'entries'}" if n_entries else "no signals"
+                block.append(
+                    f"⏳ <b>{mkt_esc}</b> — PENDING · {entry_str}{lev_str}"
+                )
+                if equity_snap.get("equity"):
+                    eq = equity_snap["equity"]
+                    cash = equity_snap.get("cash", 0)
+                    tpnl = equity_snap.get("total_pnl", 0)
+                    tpnl_pct = equity_snap.get("total_pnl_pct", 0)
+                    pnl_sign = "+" if tpnl >= 0 else ""
+                    block.append(
+                        f"Equity ${eq:,.2f} · Cash ${cash:,.2f} · PnL {pnl_sign}${tpnl:.2f} ({pnl_sign}{tpnl_pct:.2f}%)"
+                    )
+                block.append("")
 
-        else:  # PENDING — awaiting manual approval
-            parts = []
-            if n_entries:
-                parts.append(f"{n_entries} {'entry' if n_entries == 1 else 'entries'}")
-            if n_exits:
-                parts.append(f"{n_exits} exit{'s' if n_exits > 1 else ''}")
-            market_lines.append(
-                f"<b>{mkt_esc}</b>: {', '.join(parts) or 'no signals'} ⏳ PENDING"
-            )
+                if entries_full:
+                    shown = entries_full if max_entries_per_market is None else entries_full[:max_entries_per_market]
+                    for _e in shown:
+                        block.append(_fmt_entry_line(_e))
+                    if max_entries_per_market and len(entries_full) > max_entries_per_market:
+                        block.append(f"  ... +{len(entries_full) - max_entries_per_market} more")
+                elif summary_lines:
+                    for sl in (summary_lines[:max_entries_per_market] if max_entries_per_market else summary_lines):
+                        block.append(f"  {_esc(sl)}")
+                    if max_entries_per_market and len(summary_lines) > max_entries_per_market:
+                        block.append(f"  ... +{len(summary_lines) - max_entries_per_market} more")
 
-    if not market_lines:
-        market_lines.append("No plans generated today.")
+                if trading_mode == "passive":
+                    block.append("")
+                    block.append(
+                        f"  ⚠️ Trading mode is 'passive' — these will NOT execute."
+                        f" execute_approved.py will skip."
+                    )
+
+                # Open positions
+                if open_positions_full:
+                    pos_strs = ", ".join(_fmt_open_position_line(p) for p in open_positions_full)
+                    block.append(f"  Open positions: {pos_strs}")
+
+            sections.append("\n".join(block))
+
+        return "\n".join(sections), n_approved_plans, total_risk_pct
+
+    # ── First render attempt (full detail) ────────────────────────────────────
+    body, n_approved_plans, total_risk_pct = _render_markets()
+
+    if not body:
+        body = "No plans generated today."
+
+    # Summary line
+    n_halted = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "HALTED")
+    n_pending = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "PENDING")
+    n_empty = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "EMPTY")
+    n_rejected = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "REJECTED")
+
+    summary_parts: list[str] = []
+    if n_approved_plans:
+        summary_parts.append(f"{n_approved_plans} approved")
+    if n_pending:
+        summary_parts.append(f"{n_pending} pending")
+    if n_halted:
+        summary_parts.append(f"{n_halted} halted")
+    if n_empty:
+        summary_parts.append(f"{n_empty} empty")
+    if n_rejected:
+        summary_parts.append(f"{n_rejected} rejected")
+    if not summary_parts:
+        summary_parts.append("0 plans")
+
+    risk_str = f" · total approved risk {total_risk_pct:.2f}% equity" if total_risk_pct else ""
+    summary_line = f"<b>Summary:</b> {', '.join(summary_parts)}{risk_str}"
 
     lines = [f"📋 <b>Daily Plans — {_esc(today)}</b>", ""]
-    lines.extend(market_lines)
+    lines.append(body)
     lines.append("")
-
-    if n_approved_plans > 0:
-        risk_str = f", {total_risk_pct:.2f}% equity" if total_risk_pct else ""
-        lines.append(
-            f"<b>Total approved:</b> {n_approved_plans} "
-            f"plan{'s' if n_approved_plans > 1 else ''}{risk_str}"
-        )
-    else:
-        lines.append("<b>Total approved:</b> 0 plans today")
-
+    lines.append(summary_line)
     msg_text = "\n".join(lines)
 
-    # ── Send via raw HTTP (no bot instance needed) ────────────────────────────
+    # ── 4000-char cap: truncate to 4 entries/market if needed ─────────────────
+    if len(msg_text) > 4000:
+        logger.warning(
+            "Plan rollup message too long (%d chars) — truncating to 4 entries/market",
+            len(msg_text),
+        )
+        body2, n_approved_plans, total_risk_pct = _render_markets(max_entries_per_market=4)
+        n_halted = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "HALTED")
+        n_pending = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "PENDING")
+        n_empty = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "EMPTY")
+        n_rejected = sum(1 for b in buffers_by_market.values() if b.get("plan_status") == "REJECTED")
+        summary_parts2: list[str] = []
+        if n_approved_plans:
+            summary_parts2.append(f"{n_approved_plans} approved")
+        if n_pending:
+            summary_parts2.append(f"{n_pending} pending")
+        if n_halted:
+            summary_parts2.append(f"{n_halted} halted")
+        if n_empty:
+            summary_parts2.append(f"{n_empty} empty")
+        if n_rejected:
+            summary_parts2.append(f"{n_rejected} rejected")
+        if not summary_parts2:
+            summary_parts2.append("0 plans")
+        risk_str2 = f" · total approved risk {total_risk_pct:.2f}% equity" if total_risk_pct else ""
+        summary_line2 = f"<b>Summary:</b> {', '.join(summary_parts2)}{risk_str2}"
+        lines2 = [f"📋 <b>Daily Plans — {_esc(today)}</b>", ""]
+        lines2.append(body2 or "No plans generated today.")
+        lines2.append("")
+        lines2.append(summary_line2)
+        msg_text = "\n".join(lines2)
+
+    # ── Final fallback: summary_lines only ────────────────────────────────────
+    if len(msg_text) > 4000:
+        logger.error(
+            "Plan rollup still too long after truncation (%d chars) — falling back to summary_lines",
+            len(msg_text),
+        )
+        fb_lines: list[str] = [f"📋 <b>Daily Plans — {_esc(today)}</b>", ""]
+        n_approved_fb = 0
+        total_risk_fb = 0.0
+        ordered_fb = list(_ROLLUP_MARKETS) + [
+            m for m in sorted(buffers_by_market) if m not in _ROLLUP_MARKETS
+        ]
+        for market in ordered_fb:
+            if market not in buffers_by_market:
+                continue
+            buf = buffers_by_market[market]
+            status = buf.get("plan_status", "UNKNOWN")
+            n_ent: int = buf.get("n_entries", 0)
+            lev: float = buf.get("leverage_pct", 0)
+            hr: str = buf.get("halt_reason") or ""
+            rr: str = buf.get("rejection_reason") or ""
+            sl: list[str] = buf.get("summary_lines", [])
+            rp: float = buf.get("total_risk_pct", 0)
+            mkt_e = _esc(market)
+            if status == "EMPTY":
+                fb_lines.append(f"<b>{mkt_e}</b>: no signals")
+            elif status == "HALTED":
+                hr_s = (hr[:60] + "…") if len(hr) > 60 else hr
+                fb_lines.append(f"<b>{mkt_e}</b>: 🛑 HALTED — {_esc(hr_s)}")
+            elif status == "APPROVED":
+                n_approved_fb += 1
+                total_risk_fb += rp
+                if n_ent == 1 and sl:
+                    fb_lines.append(f"<b>{mkt_e}</b>: {n_ent} entry — {_esc(sl[0])} ✅")
+                else:
+                    parts_fb = []
+                    if n_ent:
+                        parts_fb.append(f"{n_ent} {'entry' if n_ent == 1 else 'entries'}")
+                    if lev:
+                        parts_fb.append(f"lvg {lev:.0f}%")
+                    fb_lines.append(f"<b>{mkt_e}</b>: {', '.join(parts_fb)} ✅ APPROVED")
+            elif status == "REJECTED":
+                rr_t = (rr[:60] + "…") if len(rr) > 60 else rr
+                rr_sfx = f" — {_esc(rr_t)}" if rr_t else ""
+                e_s = f"{n_ent} {'entry' if n_ent == 1 else 'entries'}"
+                ex = f", lvg {lev:.0f}%" if lev else ""
+                fb_lines.append(f"<b>{mkt_e}</b>: {e_s}{ex}, 0 approved ❌ REJECTED{rr_sfx}")
+            else:
+                parts_fb = []
+                if n_ent:
+                    parts_fb.append(f"{n_ent} {'entry' if n_ent == 1 else 'entries'}")
+                fb_lines.append(f"<b>{mkt_e}</b>: {', '.join(parts_fb) or 'no signals'} ⏳ PENDING")
+        fb_lines.append("")
+        if n_approved_fb:
+            r_str = f", {total_risk_fb:.2f}% equity" if total_risk_fb else ""
+            fb_lines.append(f"<b>Total approved:</b> {n_approved_fb} plan{'s' if n_approved_fb > 1 else ''}{r_str}")
+        else:
+            fb_lines.append("<b>Total approved:</b> 0 plans today")
+        msg_text = "\n".join(fb_lines)
+
+    # ── Send via raw HTTP ─────────────────────────────────────────────────────
     payload = {
         "chat_id": chat_id,
         "text": msg_text,
@@ -1453,8 +1926,8 @@ def send_plan_rollup() -> bool:
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            body = json.loads(resp.read())
-            if body.get("ok"):
+            body_resp = json.loads(resp.read())
+            if body_resp.get("ok"):
                 logger.info(
                     "Plan rollup sent for %s (%d markets)", today, len(buffers_by_market)
                 )
@@ -1464,16 +1937,15 @@ def send_plan_rollup() -> bool:
                 )
                 _cleanup_old_buffers(days=7)
                 return True
-            logger.warning("Telegram API returned ok=false: %s", body)
+            logger.warning("Telegram API returned ok=false: %s", body_resp)
             return False
     except urllib.error.HTTPError as _e:
-        body = _e.read().decode(errors="replace")
-        logger.error("Telegram HTTP %d: %s", _e.code, body)
+        body_resp = _e.read().decode(errors="replace")
+        logger.error("Telegram HTTP %d: %s", _e.code, body_resp)
         return False
     except Exception as _e:
         logger.error("Failed to send rollup: %s", _e)
         return False
-
 
 
 # ═══════════════════════════════════════════════════════════════
