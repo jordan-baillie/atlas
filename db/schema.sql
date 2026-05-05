@@ -496,3 +496,73 @@ CREATE TABLE IF NOT EXISTS position_protective_orders (
 );
 CREATE INDEX IF NOT EXISTS idx_protective_status   ON position_protective_orders(status);
 CREATE INDEX IF NOT EXISTS idx_protective_trade_id ON position_protective_orders(trade_id);
+
+-- ═══════════════════════════════════════════════════════════
+-- CONFIG OVERRIDES (dashboard universe/strategy toggles — 2026-05-05)
+-- DB-resident override layer on top of config/active/*.json.
+-- Enables operators to toggle universe and strategy state from
+-- the dashboard with a full audit trail.
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS config_overrides (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  scope        TEXT    NOT NULL CHECK(scope IN ('universe','strategy')),
+  -- universe: market_id (e.g. 'sp500')
+  -- strategy: 'market_id.strategy_name' (e.g. 'commodity_etfs.connors_rsi2')
+  key          TEXT    NOT NULL,
+  -- For scope='universe': 'live' | 'passive' | 'disabled'
+  -- For scope='strategy': 'enabled' | 'disabled'
+  state        TEXT    NOT NULL,
+  reason       TEXT,                           -- mandatory at API layer; nullable at DB
+  created_by   TEXT    NOT NULL,               -- 'human:<username>' | 'system' | 'telegram'
+  created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+  -- Optional auto-expiry. NULL = never expires.
+  expires_at   TEXT,
+  -- Effective state immediately before this override was applied.
+  prev_state   TEXT,
+  -- Lifecycle: 1=active (consulted by readers), 0=superseded/reverted/expired.
+  active       INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)),
+  ended_at     TEXT,
+  ended_reason TEXT CHECK(ended_reason IN ('reverted','expired','superseded') OR ended_reason IS NULL)
+);
+
+-- Only one ACTIVE override per (scope, key). Historical rows are unconstrained.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_config_overrides_active
+  ON config_overrides(scope, key) WHERE active = 1;
+
+-- Sweep job index (find rows due for expiry).
+CREATE INDEX IF NOT EXISTS idx_config_overrides_expires
+  ON config_overrides(expires_at) WHERE active = 1 AND expires_at IS NOT NULL;
+
+-- Lookup index for read-side resolution.
+CREATE INDEX IF NOT EXISTS idx_config_overrides_lookup
+  ON config_overrides(scope, key, active);
+
+
+CREATE TABLE IF NOT EXISTS config_override_audit (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts           TEXT NOT NULL DEFAULT (datetime('now')),
+  override_id  INTEGER REFERENCES config_overrides(id),
+  scope        TEXT NOT NULL,
+  key          TEXT NOT NULL,
+  action       TEXT NOT NULL CHECK(action IN ('create','revert','expire','supersede')),
+  from_state   TEXT,
+  to_state     TEXT,
+  reason       TEXT,
+  actor        TEXT NOT NULL,
+  source       TEXT NOT NULL CHECK(source IN ('dashboard','cli','telegram','sweep')),
+  remote_ip    TEXT,
+  payload_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_override_audit_ts ON config_override_audit(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_config_override_audit_key ON config_override_audit(scope, key, ts DESC);
+
+-- Immutability — model copied verbatim from fix_audit_log.
+CREATE TRIGGER IF NOT EXISTS config_override_audit_no_update
+  BEFORE UPDATE ON config_override_audit
+  BEGIN SELECT RAISE(ABORT, 'config_override_audit is immutable (append-only)'); END;
+
+CREATE TRIGGER IF NOT EXISTS config_override_audit_no_delete
+  BEFORE DELETE ON config_override_audit
+  BEGIN SELECT RAISE(ABORT, 'config_override_audit is immutable (append-only)'); END;
