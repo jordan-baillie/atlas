@@ -1,6 +1,7 @@
-import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab } from '../../App'
+import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab, preloadControlsTab } from '../../App'
+import { FEATURE_CONTROLS_TAB } from '../../lib/featureFlags'
 
-type TabId = 'portfolio' | 'finance' | 'research' | 'remediation'
+type TabId = 'portfolio' | 'finance' | 'research' | 'remediation' | 'controls'
 
 interface TabBarProps {
   activeTab: TabId
@@ -12,6 +13,7 @@ const preloaders: Record<string, () => void> = {
   finance: preloadFinanceTab,
   research: preloadResearchTab,
   remediation: preloadRemediationTab,
+  controls: preloadControlsTab,
 }
 
 export function TabBar({ activeTab, onChange }: TabBarProps) {
@@ -20,6 +22,7 @@ export function TabBar({ activeTab, onChange }: TabBarProps) {
     { id: 'finance', label: 'Finance' },
     { id: 'research', label: 'Research' },
     { id: 'remediation', label: 'Remediation' },
+    ...(FEATURE_CONTROLS_TAB ? [{ id: 'controls' as const, label: 'Controls' }] : []),
   ]
   return (
     <div className="flex gap-0.5 border-b border-[var(--color-border)]">
