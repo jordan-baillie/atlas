@@ -127,25 +127,36 @@ class LivePortfolio:
                 self.daily_high_water_date = state.get("daily_high_water_date", None)
                 self.halted = state.get("halted", False)
                 self.halt_reason = state.get("halt_reason", "")
-                # Guard: HWM > 1.5× starting_equity is implausibly high for a
-                # single market — likely set from GLOBAL broker equity by the
-                # phantom-HWM bug class (2026-05-06 sector_etfs 49.78% HALT).
-                # Tightened from 5× → 1.5× to catch per-market-vs-global mismatches
-                # which land in the 1.5–2× range (5× was sized for the older
-                # global-vs-per-market refactor where ratios were 3-5×).
-                # NOTE: any market that legitimately doubles starting_equity will
-                # trip this guard — flag accepted by user 2026-05-06.
+                # Guard: HWM > 1.5× of the latest snapshot allocated_equity is
+                # implausibly high for a single market — likely set from GLOBAL
+                # broker equity by the phantom-HWM bug class (2026-05-06
+                # sector_etfs 49.78% HALT). Anchor the guard against snapshot
+                # rather than static starting_equity so legitimate growth above
+                # 1.5× starting_equity (e.g. sp500 1.478× on 2026-05-06)
+                # doesn't false-trip. Falls back to starting_equity only if
+                # no snapshot exists (brand-new market, fresh DB).
+                snap_anchor = self._latest_snapshot_allocated_equity()
+                guard_baseline = (
+                    snap_anchor
+                    if snap_anchor is not None and snap_anchor > 0
+                    else self.starting_equity
+                )
+                anchor_label = (
+                    "snapshot" if snap_anchor is not None and snap_anchor > 0
+                    else "starting_equity"
+                )
                 if (
-                    self.starting_equity > 0
-                    and self.daily_high_water > self.starting_equity * 1.5
+                    guard_baseline > 0
+                    and self.daily_high_water > guard_baseline * 1.5
                 ):
                     logger.warning(
-                        "_load_local_state %s: HWM=$%.2f is >1.5× starting_equity=$%.2f — "
+                        "_load_local_state %s: HWM=$%.2f is >1.5× %s=$%.2f — "
                         "likely set from global broker equity (phantom-HWM bug class). "
-                        "Resetting HWM to starting_equity for correct per-market drawdown.",
-                        self.market_id, self.daily_high_water, self.starting_equity,
+                        "Resetting HWM to %s for correct per-market drawdown.",
+                        self.market_id, self.daily_high_water,
+                        anchor_label, guard_baseline, anchor_label,
                     )
-                    self.daily_high_water = self.starting_equity
+                    self.daily_high_water = guard_baseline
                     self.daily_high_water_date = None  # force date-reset on first drawdown check
                 logger.info("Loaded live state: %d closed trades, %d equity pts",
                             len(self.closed_trades), len(self.equity_history))
@@ -1067,12 +1078,16 @@ class LivePortfolio:
         # [FIX-PMEQ-AUDIT-002]
         self._per_market_equity_degraded = False
 
-        # Determine effective equity — prefer per-market attributed equity
+        # Determine effective equity — prefer per-market attributed equity.
+        # Track the source so the intra-day HWM ratchet path can refuse to
+        # ratchet against a global/internal fallback (which would re-introduce
+        # the 2026-05-06 phantom-HWM bug class through a different code path).
         broker_eq = self.broker_equity()
         if broker_eq > 0:
             per_market_eq = self._get_per_market_equity(broker_eq, prices)
             if per_market_eq is not None:
                 effective_eq = per_market_eq
+                effective_eq_source = "per_market"
                 logger.debug(
                     "check_daily_drawdown %s: using per-market equity $%.2f "
                     "(global broker $%.2f)",
@@ -1086,6 +1101,7 @@ class LivePortfolio:
                 # False so the HALT fires normally against global broker equity.
                 # [FIX-PMEQ-AUDIT-002]
                 effective_eq = broker_eq
+                effective_eq_source = "broker_eq_fallback"
                 logger.debug(
                     "check_daily_drawdown %s: per-market equity unavailable, "
                     "using global broker equity $%.2f (degraded=%s)",
@@ -1099,6 +1115,7 @@ class LivePortfolio:
                     )
         else:
             effective_eq = self.equity(prices)
+            effective_eq_source = "internal_equity_fallback"
             # Note: _per_market_equity_degraded is NOT set here.
             # broker_eq=0 falls back to internal equity() which is the true
             # fallback anchor — HALT should still fire normally against it.
@@ -1147,8 +1164,23 @@ class LivePortfolio:
                     "HWM reset Telegram notification failed (non-fatal): %s", _tg_exc
                 )
         else:
-            # Same session — ratchet HWM up only if equity has grown
-            self.daily_high_water = max(self.daily_high_water, effective_eq)
+            # Same session — ratchet HWM up only if equity came from the
+            # per-market path. broker_eq_fallback / internal_equity_fallback
+            # write GLOBAL or non-attributed equity which would poison the
+            # per-market HWM (same bug class as session-reset, different path).
+            # When the fallback fires, skip the ratchet this cycle and wait
+            # for the next call — the per-market path usually self-heals
+            # within minutes.
+            if effective_eq_source == "per_market":
+                self.daily_high_water = max(self.daily_high_water, effective_eq)
+            else:
+                logger.warning(
+                    "check_daily_drawdown %s: ratchet SKIPPED — effective_eq=$%.2f "
+                    "came from %s (would poison per-market HWM=$%.2f). "
+                    "Will retry next cycle.",
+                    self.market_id, effective_eq, effective_eq_source,
+                    self.daily_high_water,
+                )
 
         # Compute drawdown against current session HWM
         dd = (
