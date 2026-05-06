@@ -131,6 +131,11 @@ def compute_divergences(
 
         gap = research_sharpe - live_sharpe
 
+        logger.info(
+            "reading: universe=%s strategy=%s research_sharpe=%.4f live_sharpe=%.4f gap=%+.4f n_trades=%d",
+            universe, strategy, research_sharpe, live_sharpe, gap, n,
+        )
+
         # Trust score: live / research, clamped [0, 2].
         # Undefined when research_sharpe <= 0 (would invert or divide-by-zero).
         if research_sharpe > 0:
@@ -538,6 +543,7 @@ def run_divergence_check(
     dry_run_telegram: bool = False,
     no_telegram: bool = False,
     today: Optional[str] = None,
+    force_rerun: bool = False,
 ) -> int:
     """Full divergence check cycle. Factored out of main() for testability.
 
@@ -549,12 +555,25 @@ def run_divergence_check(
     state = _load_state(state_file)
 
     # Idempotency: exit early if script already ran today
-    if state.get("_last_run_date") == today_str:
+    if state.get("_last_run_date") == today_str and not force_rerun:
         logger.info("Already checked today (%s) — skipping", today_str)
         return 0
 
     # ── Compute divergences (original logic, unchanged) ───────────────────────
     divergences = compute_divergences(window_days, gap_threshold)
+
+    # Summary log — one line per run (always, regardless of Telegram send).
+    n_breaches = sum(1 for d in divergences if d["severity"] != "🟢")
+    try:
+        n_total = len(_fetch_research_best_rows())
+    except Exception:
+        n_total = len(divergences)
+    n_skipped = max(0, n_total - len(divergences))
+    logger.info(
+        "summary: %d strategies checked, %d breaches (gap > %.2f), %d no-trades-in-window",
+        len(divergences), n_breaches, gap_threshold, n_skipped,
+    )
+
     msg = format_telegram(divergences, gap_threshold)
 
     print(msg)
@@ -652,12 +671,31 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Disable auto-rollback even on breach (useful for staging)",
     )
+    parser.add_argument(
+        "--force-rerun",
+        action="store_true",
+        help="Bypass the once-per-day idempotency gate (for manual verification)",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s %(message)s",
     )
+
+    # Ensure the named logger always writes to the dedicated log file,
+    # even when the script is invoked directly (not via the cron redirect).
+    # propagate=False prevents duplicate entries when cron also redirects stderr.
+    if not logger.handlers:
+        _log_file = ATLAS_ROOT / "logs" / "live_research_divergence.log"
+        _log_file.parent.mkdir(exist_ok=True)
+        _fh = logging.FileHandler(str(_log_file))
+        _fh.setFormatter(
+            logging.Formatter("%(asctime)s [%(name)s] %(levelname)s %(message)s")
+        )
+        logger.addHandler(_fh)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False  # avoid double-write when cron redirects stderr
 
     return run_divergence_check(
         window_days=args.window_days,
@@ -666,6 +704,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         no_rollback=args.no_rollback,
         dry_run_telegram=args.dry_run_telegram,
         no_telegram=args.no_telegram,
+        force_rerun=args.force_rerun,
     )
 
 
