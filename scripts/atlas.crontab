@@ -93,8 +93,8 @@ TZ=Australia/Brisbane
 0 17 * * * python3 /root/atlas/scripts/cleanup_stale_plans.py >> /root/atlas/logs/cleanup_stale_plans.log 2>&1
 # up-bank sync: 06:30 AEST daily
 30 6 * * * /usr/bin/python3 /root/up-bank/up_sync.py --full-resync >> /root/up-bank/logs/up_sync.log 2>&1
-# discovery run: 06:00 AEST daily
-0 6 * * * cd /root/atlas && /usr/bin/python3 research/discovery/run.py >> /root/atlas/research/discovery/logs/cron.log 2>&1
+# discovery run: DISABLED 2026-05-06 (audit: 26 runs, 0 specs, 0 adopted — see docs/audits/research-system-audit-2026-05-06.md)
+# 0 6 * * * cd /root/atlas && /usr/bin/python3 research/discovery/run.py >> /root/atlas/research/discovery/logs/cron.log 2>&1
 # macro freshness check: 09:30 AEST daily
 30 9 * * * python3 /root/atlas/scripts/check_macro_freshness.py >> /root/atlas/logs/check_macro_freshness.log 2>&1
 
