@@ -2619,6 +2619,30 @@ class LiveExecutor:
             logger.error("reconcile_entry_fills: cannot fetch orders: %s", e)
             return []
 
+        # Build mapping of ticker→latest FILLED SELL timestamp.
+        # Used below to detect bracket exits that already closed the position
+        # at the broker.  Without this guard, a BUY fill in the 7-day lookback
+        # window causes a zombie 'open' trade row even though the bracket SELL
+        # also filled within the same window.  Root cause of EBAY id=206 zombie
+        # (2026-05-06): BUY filled 13:30 UTC, bracket STOP SELL filled 13:30:37
+        # UTC — both visible in CLOSED orders scan; guard prevents re-opening.
+        filled_sells_by_ticker: dict[str, datetime] = {}
+        for _o in orders:
+            try:
+                _side_v = _o.side.value.lower() if hasattr(_o.side, "value") else str(_o.side).lower()
+                _status_v = _o.status.value.lower() if hasattr(_o.status, "value") else str(_o.status).lower()
+            except Exception:
+                continue
+            if _side_v != "sell" or _status_v != "filled":
+                continue
+            _sym = str(_o.symbol)
+            _filled_at = getattr(_o, "filled_at", None)
+            if _filled_at is None:
+                continue
+            _prev = filled_sells_by_ticker.get(_sym)
+            if _prev is None or _filled_at > _prev:
+                filled_sells_by_ticker[_sym] = _filled_at
+
         reconciled = []
         for order in orders:
             order_id = str(order.id)
@@ -2630,6 +2654,21 @@ class LiveExecutor:
                 continue
             status_val = order.status.value.lower() if hasattr(order.status, 'value') else str(order.status).lower()
             if status_val != "filled":
+                continue
+
+            # Guard: skip BUY whose bracket SELL has also filled — position
+            # already closed at broker.  sell_filled_at >= buy_filled_at means
+            # the SELL belongs to the same (or a later) trade lifecycle.
+            # Using >= instead of > to handle sub-second atomic bracket fills
+            # where SELL timestamp == BUY timestamp.
+            _buy_filled_at = getattr(order, "filled_at", None)
+            _sell_filled_at = filled_sells_by_ticker.get(str(order.symbol))
+            if _sell_filled_at is not None and _buy_filled_at is not None and _sell_filled_at >= _buy_filled_at:
+                logger.info(
+                    "reconcile_entry_fills: skipping %s — bracket SELL already filled at %s "
+                    "(BUY filled at %s); position closed at broker, no row to create",
+                    order.symbol, _sell_filled_at, _buy_filled_at,
+                )
                 continue
 
             # Skip protective orders — only reconcile entry fills.
