@@ -117,6 +117,21 @@ class HealthReport:
 
 # ── Core monitor ───────────────────────────────────────────────────────────────
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _safe_current_regime() -> Optional[str]:
+    """Return the current regime state string, or None if unavailable.
+
+    Calls get_current_regime_state() (atlas_db) which queries regime_history.
+    Returns None on any error or if the table is empty.
+    """
+    try:
+        from db.atlas_db import get_current_regime_state
+        return get_current_regime_state()
+    except Exception:
+        return None
+
+
 class StrategyHealthMonitor:
     """Monitors live trading performance vs backtest expectations.
 
@@ -366,17 +381,52 @@ class StrategyHealthMonitor:
     # ── Backtest comparison ────────────────────────────────────────────────────
 
     def _load_backtest_metrics(self, strategy: str) -> Optional[dict]:
-        """Load expected backtest metrics from research/best/{strategy}.json."""
+        """Load expected backtest metrics for a strategy from research_best (SOT).
+
+        Per Item 3 (audit 2026-05-06 follow-up): research_best SQLite is the
+        canonical source. The legacy JSON file at research/best/{strategy}.json is
+        a derived/dual-write artifact and may be stale or cross-regime when we
+        want regime-conditioned comparison.
+
+        Reads regime-conditioned row when current regime is known, falls back to
+        cross-regime row, then falls back to legacy JSON file.
+        """
+        universe = self.market_id  # 'sp500', 'sector_etfs', etc.
+        current_regime = _safe_current_regime()
+
+        try:
+            from research.loop import load_best
+            best = load_best(strategy, universe, regime_state=current_regime)
+            if best and best.get("metrics"):
+                metrics = best.get("metrics", {})
+                logger.debug(
+                    "Loaded backtest_sharpe=%.4f from research_best "
+                    "(regime=%s, strategy=%s, universe=%s)",
+                    metrics.get("sharpe") or 0.0,
+                    current_regime or "cross-regime",
+                    strategy,
+                    universe,
+                )
+                return metrics
+        except Exception as exc:
+            logger.warning(
+                "Failed to load research_best for %s/%s: %s", strategy, universe, exc
+            )
+
+        # Last-resort fallback to legacy JSON path (preserves backward compat)
         best_path = PROJECT / "research" / "best" / f"{strategy}.json"
         if not best_path.exists():
-            logger.debug("No best-results file for strategy %s", strategy)
+            logger.debug("No best-results data for strategy %s", strategy)
             return None
         try:
             with open(best_path) as fh:
                 data = json.load(fh)
+            logger.debug(
+                "Loaded backtest metrics from JSON fallback for strategy %s", strategy
+            )
             return data.get("metrics", {})
         except Exception as exc:
-            logger.warning("Failed to load backtest metrics for %s: %s", strategy, exc)
+            logger.warning("Failed to load fallback metrics for %s: %s", strategy, exc)
             return None
 
     def compare_to_backtest(self, strategy: str) -> HealthAssessment:
