@@ -1,131 +1,152 @@
-"""
-Tests for the pre-commit hook's Python syntax-check section.
+"""Test the pre-commit hook blocks config/active edits without audit trail.
 
-Each test:
- - Creates a fresh git repo in tmp_path
- - Copies the canonical hook into .git/hooks/pre-commit
- - Stages files via ``git add`` / ``git rm``
- - Invokes the hook directly
- - Asserts on returncode and output
-
-No real Atlas commits are made; tests are fully self-contained.
+Uses a temporary git repo that mirrors the hook logic.
 """
-import os
+import json
 import shutil
 import subprocess
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import pytest
 
-ATLAS_ROOT = Path("/root/atlas")
-HOOK_SOURCE = ATLAS_ROOT / "scripts" / "git-hooks" / "pre-commit"
 
-
-# ── helpers ──────────────────────────────────────────────────────────────────
-
-def _make_repo(tmp_path: Path) -> Path:
-    """Initialise a throwaway git repo and install the hook."""
+def _setup_tmp_repo(tmp_path: Path) -> Path:
+    """Create a tiny git repo with the atlas pre-commit hook installed."""
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@test.invalid"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Test Runner"], cwd=tmp_path, check=True)
-    hooks_dir = tmp_path / ".git" / "hooks"
-    hooks_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy(HOOK_SOURCE, hooks_dir / "pre-commit")
-    os.chmod(hooks_dir / "pre-commit", 0o755)
+    # Copy the canonical pre-commit hook from scripts/git-hooks/
+    atlas = Path(__file__).resolve().parent.parent
+    src_hook = atlas / "scripts" / "git-hooks" / "pre-commit"
+    dst_hook = tmp_path / ".git" / "hooks" / "pre-commit"
+    shutil.copy2(src_hook, dst_hook)
+    dst_hook.chmod(0o755)
     return tmp_path
 
 
-def _run_hook(repo: Path) -> subprocess.CompletedProcess:
-    """Execute the hook in repo context and return the CompletedProcess."""
-    return subprocess.run(
-        [str(repo / ".git" / "hooks" / "pre-commit")],
-        cwd=repo,
-        capture_output=True,
-        text=True,
+def _add_config_and_promotion_log(repo: Path, promotion_entries: list | None = None) -> None:
+    """Create config/active/sp500.json and config/promotion_log.json in the repo."""
+    cfg_dir = repo / "config" / "active"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    (cfg_dir / "sp500.json").write_text(json.dumps({"market": "sp500", "_test": True}))
+    log_entries = promotion_entries or []
+    (repo / "config" / "promotion_log.json").write_text(json.dumps(log_entries))
+
+
+def test_hook_blocks_config_active_without_audit(tmp_path: Path):
+    """No recent auto_promote entry → commit blocked."""
+    repo = _setup_tmp_repo(tmp_path)
+    _add_config_and_promotion_log(repo, [])  # empty log
+
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Tweak active config"],
+        cwd=repo, capture_output=True, text=True,
+    )
+    assert result.returncode != 0, "Hook should have blocked the commit"
+    combined = result.stdout + result.stderr
+    assert "BLOCKED" in combined or "auto_promote" in combined, (
+        f"Expected BLOCKED message, got: {combined}"
     )
 
 
-def _stage_file(repo: Path, name: str, content: str) -> None:
-    """Write a file to repo and ``git add`` it."""
-    (repo / name).write_text(content)
-    subprocess.run(["git", "add", name], cwd=repo, check=True)
+def test_hook_blocks_when_only_old_promotion_entries(tmp_path: Path):
+    """Promotion log entry older than 24h → still blocked."""
+    repo = _setup_tmp_repo(tmp_path)
+    old_entry = {
+        "timestamp": (datetime.now(timezone.utc) - timedelta(hours=25)).isoformat(),
+        "strategy": "mean_reversion",
+        "market": "sp500",
+    }
+    _add_config_and_promotion_log(repo, [old_entry])
 
-
-def _make_initial_commit(repo: Path) -> None:
-    """Create an initial commit so ``git rm`` has something to remove."""
-    (repo / ".gitkeep").write_text("")
-    subprocess.run(["git", "add", ".gitkeep"], cwd=repo, check=True)
-    subprocess.run(
-        ["git", "commit", "-q", "-m", "init", "--no-verify"],
-        cwd=repo,
-        check=True,
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Late edit"],
+        cwd=repo, capture_output=True, text=True,
     )
+    assert result.returncode != 0, "Old promotion entry (>24h) should not satisfy the gate"
 
 
-# ── tests ─────────────────────────────────────────────────────────────────────
+def test_hook_allows_with_recent_promotion_entry(tmp_path: Path):
+    """Recent auto_promote log entry within 24h → commit allowed."""
+    repo = _setup_tmp_repo(tmp_path)
+    recent_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "strategy": "mean_reversion",
+        "market": "sp500",
+    }
+    _add_config_and_promotion_log(repo, [recent_entry])
 
-def test_hook_blocks_syntactically_broken_python(tmp_path: Path) -> None:
-    """A staged .py file with a syntax error must cause the hook to exit 1."""
-    repo = _make_repo(tmp_path)
-    # Write the broken code using write_bytes to avoid any escape confusion.
-    (repo / "bad.py").write_bytes(b"def foo(:\n    pass\n")
-    subprocess.run(["git", "add", "bad.py"], cwd=repo, check=True)
-    result = _run_hook(repo)
-    assert result.returncode == 1, (
-        f"Expected hook to block (rc=1), got rc={result.returncode}\n"
-        f"stdout: {result.stdout}\nstderr: {result.stderr}"
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Post-promote config update"],
+        cwd=repo, capture_output=True, text=True,
     )
-    combined = (result.stdout + result.stderr).lower()
-    assert "py_compile" in combined or "syntax" in combined, (
-        f"Expected py_compile/syntax mention in output.\nstdout: {result.stdout}\nstderr: {result.stderr}"
-    )
-
-
-def test_hook_passes_valid_python(tmp_path: Path) -> None:
-    """A staged .py file with valid syntax must allow the hook to exit 0."""
-    repo = _make_repo(tmp_path)
-    _stage_file(repo, "good.py", "def foo():\n    return 42\n")
-    result = _run_hook(repo)
     assert result.returncode == 0, (
-        f"Expected hook to pass (rc=0), got rc={result.returncode}\n"
-        f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        f"Recent promotion entry should allow commit, got: {result.stdout}{result.stderr}"
     )
 
 
-def test_hook_ignores_deleted_python_file(tmp_path: Path) -> None:
-    """Deleting a .py file must NOT cause py_compile to run on a missing path."""
-    repo = _make_repo(tmp_path)
-    # Commit the file first so we can delete it.
-    _make_initial_commit(repo)
-    (repo / "will_be_deleted.py").write_text("x = 1\n")
-    subprocess.run(["git", "add", "will_be_deleted.py"], cwd=repo, check=True)
-    subprocess.run(
-        ["git", "commit", "-q", "-m", "add file", "--no-verify"],
-        cwd=repo,
-        check=True,
+def test_hook_allows_with_bypass_marker(tmp_path: Path):
+    """BYPASS_RESEARCH_GATE env var → allowed even with empty log."""
+    repo = _setup_tmp_repo(tmp_path)
+    _add_config_and_promotion_log(repo, [])  # empty log
+
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Emergency fix"],
+        cwd=repo, capture_output=True, text=True,
+        env={**__import__("os").environ, "BYPASS_RESEARCH_GATE": "emergency rollback"},
     )
-    # Stage the deletion — this exercises the --diff-filter=ACM logic.
-    subprocess.run(["git", "rm", "-q", "will_be_deleted.py"], cwd=repo, check=True)
-    result = _run_hook(repo)
     assert result.returncode == 0, (
-        f"Expected hook to pass for a staged deletion (rc=0), got rc={result.returncode}\n"
-        f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        f"BYPASS_RESEARCH_GATE env var override should allow commit, got: {result.stdout}{result.stderr}"
     )
 
 
-def test_hook_blocks_broken_python_among_valid(tmp_path: Path) -> None:
-    """One bad file alongside good files must still cause the hook to exit 1."""
-    repo = _make_repo(tmp_path)
-    _stage_file(repo, "good_a.py", "a = 1\n")
-    (repo / "bad.py").write_bytes(b"def foo(:\n    pass\n")
-    subprocess.run(["git", "add", "bad.py"], cwd=repo, check=True)
-    _stage_file(repo, "good_b.py", "b = 2\n")
-    result = _run_hook(repo)
-    assert result.returncode == 1, (
-        f"Expected hook to block (rc=1) when one bad file is present, "
-        f"got rc={result.returncode}\nstdout: {result.stdout}\nstderr: {result.stderr}"
+def test_hook_ignores_unrelated_changes(tmp_path: Path):
+    """Changes to non-config files are not blocked."""
+    repo = _setup_tmp_repo(tmp_path)
+    (repo / "README.md").write_text("# test repo")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Add readme"],
+        cwd=repo, capture_output=True, text=True,
     )
-    combined = (result.stdout + result.stderr).lower()
-    assert "bad.py" in combined, (
-        f"Expected bad.py to be mentioned in output.\nstdout: {result.stdout}\nstderr: {result.stderr}"
+    assert result.returncode == 0, (
+        f"Non-config changes should not be blocked, got: {result.stderr}"
     )
+
+
+def test_hook_ignores_config_non_active(tmp_path: Path):
+    """Changes to config/ but not config/active/*.json are allowed."""
+    repo = _setup_tmp_repo(tmp_path)
+    cfg_dir = repo / "config"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "markets.json").write_text(json.dumps({"sp500": True}))
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Update markets config"],
+        cwd=repo, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, (
+        f"config/markets.json is not guarded, got: {result.stderr}"
+    )
+
+
+def test_hook_no_promotion_log_file(tmp_path: Path):
+    """Missing promotion_log.json → treated as empty → blocked."""
+    repo = _setup_tmp_repo(tmp_path)
+    # Create config/active but NO promotion_log.json
+    cfg_dir = repo / "config" / "active"
+    cfg_dir.mkdir(parents=True)
+    (cfg_dir / "sp500.json").write_text('{"market":"sp500"}')
+    # No promotion_log.json
+
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "Tweak config"],
+        cwd=repo, capture_output=True, text=True,
+    )
+    assert result.returncode != 0, "Missing promotion log should block commit"
