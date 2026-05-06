@@ -140,13 +140,55 @@ def _best_path(strategy: str, universe: str = "sp500") -> Path:
     return BEST_DIR / f"{strategy}.json"
 
 
-def load_best(strategy: str, universe: str = "sp500") -> Optional[dict]:
-    """Load the current best-known params for a strategy (optionally per-universe)."""
-    path = _best_path(strategy, universe)
-    if not path.exists():
+def load_best(strategy: str, universe: str = "sp500",
+              regime_state: Optional[str] = None) -> Optional[dict]:
+    """Load the current best-known params for a strategy (optionally per-universe).
+
+    Per Rec 5 (2026-05-06):
+        regime_state — when set, prefers the regime-specific row from SQLite
+                       research_best (via get_research_best with fallback).
+                       Falls back to the cross-regime JSON file if no SQLite row
+                       is found. When None (default), preserves prior behavior
+                       exactly: reads the JSON file from research/best/.
+    """
+    # Regime-aware path: prefer SQLite regime row, fall back to JSON cross-regime.
+    if regime_state is not None:
+        try:
+            from db.atlas_db import get_research_best
+            rows = get_research_best(strategy=strategy, universe=universe,
+                                     regime_state=regime_state,
+                                     fallback_to_cross_regime=True)
+            if rows:
+                row = rows[0]
+                params = row.get("params")
+                if isinstance(params, str):
+                    try:
+                        params = json.loads(params)
+                    except (json.JSONDecodeError, TypeError):
+                        params = {}
+                return {
+                    "strategy": strategy,
+                    "market": universe,
+                    "params": params,
+                    "metrics": {
+                        "sharpe": row.get("sharpe"),
+                        "total_trades": row.get("trades"),
+                        "max_drawdown_pct": row.get("max_dd_pct"),
+                    },
+                    "updated_at": row.get("updated_at"),
+                    "regime_state": row.get("regime_state"),
+                }
+        except Exception as exc:
+            logger.debug(
+                "load_best: SQLite regime read failed, falling back to JSON: %s", exc
+            )
+
+    # Cross-regime path (legacy) — read JSON file from research/best/.
+    fpath = _best_path(strategy, universe)
+    if not fpath.exists():
         return None
     try:
-        with open(path) as f:
+        with open(fpath) as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return None
