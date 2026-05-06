@@ -322,8 +322,12 @@ def _append_journal(
 # ─── Keep/Discard Logic ─────────────────────────────────────────────────────
 
 
-def _get_dsr_stats(market: str = "sp500") -> dict:
-    """Pull experiment count and sharpe variance from SQLite for DSR calculation.
+def _get_dsr_stats(strategy: str, market: str = "sp500") -> dict:
+    """Pull experiment count and per-strategy sharpe variance from SQLite for DSR.
+
+    Per audit 2026-05-06 Rec 1.1 — variance was previously cross-strategy,
+    inflating the expected-max-Sharpe past the sanity cap. Now per-strategy
+    so the gate is non-trivially active for well-explored strategies.
 
     Reads from the production atlas.db via db.atlas_db.get_db() so we
     respect any _db_path_override that tests use.
@@ -336,9 +340,9 @@ def _get_dsr_stats(market: str = "sp500") -> dict:
                 "COALESCE(AVG((sharpe - sub.avg_s) * (sharpe - sub.avg_s)), 0) as var_s "
                 "FROM research_experiments, "
                 "(SELECT AVG(sharpe) as avg_s FROM research_experiments "
-                " WHERE sharpe IS NOT NULL) sub "
-                "WHERE sharpe IS NOT NULL AND universe = ?",
-                (market,),
+                " WHERE sharpe IS NOT NULL AND strategy = ? AND universe = ?) sub "
+                "WHERE sharpe IS NOT NULL AND strategy = ? AND universe = ?",
+                (strategy, market, strategy, market),
             ).fetchone()
         if row:
             cnt = row[0] if isinstance(row, tuple) else (row["cnt"] if hasattr(row, "keys") else row[0])
@@ -356,6 +360,8 @@ def keep_or_discard(
     baseline: dict,
     experiment: dict,
     params_added: int = 0,
+    strategy: str = "unknown",
+    market: str = "sp500",
 ) -> dict:
     """Binary keep/discard decision.
 
@@ -401,8 +407,8 @@ def keep_or_discard(
             f"Sharpe +{delta_sharpe:.4f} below threshold +{min_improvement:.3f}"
         )
 
-    # Gate 2: Trades can't collapse
-    min_trades = max(10, int(b_trades * 0.7)) if b_trades > 0 else 10
+    # Gate 2: Trades can't collapse (floor raised 10→30 per audit 2026-05-06 Rec 1.3)
+    min_trades = max(30, int(b_trades * 0.7)) if b_trades > 0 else 30
     if e_trades < min_trades:
         reasons.append(
             f"Trades collapsed: {e_trades} < {min_trades} (70% of {b_trades})"
@@ -418,7 +424,9 @@ def keep_or_discard(
     # Gate 4: Deflated Sharpe Ratio (multiple testing correction)
     if not reasons and e_sharpe > 0:
         try:
-            dsr_stats = _get_dsr_stats()
+            strategy_name = experiment.get("strategy") or experiment.get("strategy_name") or strategy or "unknown"
+            universe_name = experiment.get("universe") or experiment.get("market") or market or "sp500"
+            dsr_stats = _get_dsr_stats(strategy=strategy_name, market=universe_name)
             if dsr_stats["num_experiments"] >= 5:
                 # We need returns to compute skewness/kurtosis but don't have them here.
                 # Use the experiment sharpe and stats to compute a lightweight DSR check.
@@ -734,7 +742,8 @@ class ResearchSession:
         _increment_run_count(self.strategy)
 
         # Decide
-        verdict = keep_or_discard(self._baseline_metrics, metrics, params_added)
+        verdict = keep_or_discard(self._baseline_metrics, metrics, params_added,
+                               strategy=self.strategy, market=self.market)
 
         # Store for keep/discard call
         self._last_experiment = {

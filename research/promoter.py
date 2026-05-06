@@ -143,14 +143,20 @@ def _run_oos_validation(candidate_config: dict, market: str) -> dict:
 
         cagr_degradation = ((is_cagr - oos_cagr) / abs(is_cagr) * 100) if is_cagr != 0 else 0
 
-        # Apply gates
+        # Apply gates (updated per audit 2026-05-06 Rec 1.2-1.4)
         failures = []
-        if oos_sharpe <= 0:
-            failures.append(f"OOS Sharpe {oos_sharpe:.4f} ≤ 0")
+        if oos_sharpe < 0.3:  # was: ≤ 0 — raised per Rec 1.2
+            failures.append(f"OOS Sharpe {oos_sharpe:.4f} < 0.3 floor (audit 2026-05-06)")
         if oos_pf <= 1.0:
             failures.append(f"OOS profit factor {oos_pf:.2f} ≤ 1.0")
-        if cagr_degradation > 50:
-            failures.append(f"CAGR degradation {cagr_degradation:.1f}% > 50%")
+        # Rec 1.4: replaced cagr_degradation > 50% gate with absolute OOS CAGR floor
+        # cagr_degradation is kept for diagnostic logging (see cagr_degradation_pct in result)
+        if oos_cagr < 5.0:  # was: cagr_degradation > 50% — broken for low-CAGR universes
+            failures.append(f"OOS CAGR {oos_cagr:.2f}% < 5% absolute floor (audit 2026-05-06)")
+        # Rec 1.3: OOS trade-count floor raised to 30
+        oos_trades = int(t1_oos.get("total_trades", t1_oos.get("num_trades", 0)) or 0)
+        if oos_trades < 30:
+            failures.append(f"OOS trades {oos_trades} < 30 floor (audit 2026-05-06)")
         if perturbation_rate < 0.70:
             failures.append(f"Perturbation pass rate {perturbation_rate:.0%} < 70%")
 
@@ -320,7 +326,7 @@ def auto_promote(
     dsr_info = {}
     try:
         from research.loop import _get_dsr_stats
-        dsr_stats = _get_dsr_stats()
+        dsr_stats = _get_dsr_stats(strategy=strategy, market=market)
         if dsr_stats["num_experiments"] >= 5 and dsr_stats["variance_of_sharpes"] > 0:
             import numpy as np
             from scipy import stats as sp_stats
@@ -533,8 +539,8 @@ def _sanity_check(metrics: dict) -> dict:
     cagr = float(metrics.get("cagr_pct") or 0)
     trades = int(metrics.get("total_trades") or metrics.get("num_trades") or 0)
 
-    if sharpe <= 0:
-        return {"pass": False, "reason": f"Sharpe {sharpe:.4f} ≤ 0"}
+    if sharpe < 0.5:  # raised from ≤ 0 per audit 2026-05-06 Rec 1.2
+        return {"pass": False, "reason": f"IS Sharpe {sharpe:.4f} < 0.5 floor (audit 2026-05-06)"}
     if cagr <= 0:
         return {"pass": False, "reason": f"CAGR {cagr:.2f}% ≤ 0%"}
     if trades < 20:
