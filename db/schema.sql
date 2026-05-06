@@ -613,3 +613,80 @@ CREATE TABLE IF NOT EXISTS strategy_lifecycle_history (
 
 CREATE INDEX IF NOT EXISTS idx_lifecycle_history_strategy
     ON strategy_lifecycle_history(strategy, universe, transitioned_at);
+
+-- ═══════════════════════════════════════════════════════════
+-- PAPER TRADING TABLES
+-- Exact mirrors of `trades` and `position_protective_orders`
+-- for strategy paper-trading runs.  Schema added 2026-05-06.
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS paper_trades (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticker          TEXT    NOT NULL,
+    strategy        TEXT    NOT NULL,
+    universe        TEXT,
+    direction       TEXT    DEFAULT 'long',
+    entry_date      TEXT    NOT NULL,
+    entry_price     REAL    NOT NULL,
+    shares          INTEGER NOT NULL,
+    stop_price      REAL,
+    take_profit     REAL,
+    exit_date       TEXT,
+    exit_price      REAL,
+    exit_reason     TEXT,
+    pnl             REAL,
+    pnl_pct         REAL,
+    mae             REAL,              -- Max adverse excursion
+    mfe             REAL,              -- Max favourable excursion
+    hold_days       INTEGER,
+    confidence      REAL,
+    regime_at_entry TEXT,
+    regime_at_exit  TEXT,
+    status          TEXT    DEFAULT 'open',  -- 'open', 'closed'
+    config_version  TEXT,
+    created_at      TEXT    DEFAULT (datetime('now')),
+    updated_at      TEXT    DEFAULT (datetime('now')),
+    stop_order_id   TEXT    DEFAULT '',
+    tp_order_id     TEXT    DEFAULT '',
+    superseded      INTEGER NOT NULL DEFAULT 0 CHECK (superseded IN (0,1)),
+    paper_account_id TEXT,             -- Alpaca paper account number (e.g. "PA3TTBLZM6M7")
+    CHECK (exit_date IS NULL OR exit_date >= entry_date),
+    CHECK (
+        stop_price IS NULL
+        OR (direction = 'long'  AND stop_price < entry_price)
+        OR (direction = 'short' AND stop_price > entry_price)
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_paper_trades_status   ON paper_trades(status);
+CREATE INDEX IF NOT EXISTS idx_paper_trades_strategy ON paper_trades(strategy);
+CREATE INDEX IF NOT EXISTS idx_paper_trades_dates    ON paper_trades(entry_date, exit_date);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_paper_trades_unique_open
+    ON paper_trades(ticker, universe) WHERE status='open';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_paper_trades_active_closed
+    ON paper_trades(ticker, strategy, DATE(exit_date), ROUND(pnl, 2))
+    WHERE status = 'closed' AND superseded = 0;
+
+-- Convenience view: non-superseded paper trades (mirrors trades_active)
+DROP VIEW IF EXISTS paper_trades_active;
+CREATE VIEW IF NOT EXISTS paper_trades_active AS
+  SELECT * FROM paper_trades WHERE superseded = 0;
+
+CREATE TABLE IF NOT EXISTS paper_position_protective_orders (
+    market_id       TEXT NOT NULL,
+    ticker          TEXT NOT NULL,
+    trade_id        INTEGER,               -- FK to paper_trades.id (nullable for legacy)
+    position_qty    REAL NOT NULL,
+    stop_order_id   TEXT,                  -- Alpaca order_id of stop
+    stop_price      REAL,                  -- The stop trigger price
+    tp_order_id     TEXT,                  -- Alpaca order_id of TP limit
+    tp_price        REAL,                  -- The TP limit price
+    oco_class       TEXT,                  -- 'oco' | 'bracket' | NULL (independent)
+    last_synced_at  TEXT NOT NULL,         -- ISO timestamp of last sync from broker truth
+    status          TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'closed' | 'detached'
+    created_at      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (market_id, ticker)
+);
+CREATE INDEX IF NOT EXISTS idx_paper_protective_status
+    ON paper_position_protective_orders(status);
+CREATE INDEX IF NOT EXISTS idx_paper_protective_trade_id
+    ON paper_position_protective_orders(trade_id);

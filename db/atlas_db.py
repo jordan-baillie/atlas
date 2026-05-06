@@ -3088,3 +3088,415 @@ def list_lifecycle_states(state: Optional[str] = None) -> List[Dict]:
     except Exception as exc:
         _lifecycle_log.warning("list_lifecycle_states(state=%s) failed: %s", state, exc)
         return []
+
+
+# ── Paper-trade helpers ──────────────────────────────────────────────────────
+# Exact mirrors of the live-trade helpers above, operating on paper_trades
+# and paper_position_protective_orders instead of the production tables.
+#
+# Naming convention:  <live_helper>  →  <paper_variant>
+#   record_trade_entry                → record_paper_trade_entry
+#   update_trade_protective_orders    → update_paper_trade_protective_orders
+#   record_trade_exit                 → record_paper_trade_exit
+#   get_open_positions                → get_open_paper_trades
+#   get_closed_trades                 → get_closed_paper_trades
+#   (implied) get_trades_for_universe → get_paper_trades_for_universe
+#   get_protective_record             → get_paper_protective_record
+#   upsert_protective_record          → upsert_paper_protective_record
+#   close_protective_record           → close_paper_protective_record
+#   list_active_protective_records    → list_active_paper_protective_records
+# ──────────────────────────────────────────────────────────────────────────────
+
+import logging as _paper_logging
+_paper_log = _paper_logging.getLogger(__name__)
+
+
+def record_paper_trade_entry(
+    ticker: str,
+    strategy: str,
+    universe: str,
+    entry_price: float,
+    shares: int,
+    stop_price: float,
+    take_profit: Optional[float],
+    confidence: float,
+    regime_state: Optional[str],
+    direction: str = "long",
+    config_version: Optional[str] = None,
+    paper_account_id: Optional[str] = None,
+    **kwargs,
+) -> Optional[int]:
+    """Insert a new open paper trade into `paper_trades`.
+
+    Mirrors :func:`record_trade_entry` exactly.  Accepts an additional
+    *paper_account_id* kwarg (default None) for Alpaca paper-account
+    traceability.
+
+    Returns the new row id on success, or None on duplicate UNIQUE violation
+    (same (ticker, universe) already open).
+    """
+    try:
+        with get_db() as db:
+            cursor = db.execute(
+                """
+                INSERT INTO paper_trades
+                    (ticker, strategy, universe, direction, entry_date, entry_price,
+                     shares, stop_price, take_profit, confidence, regime_at_entry,
+                     status, config_version, paper_account_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)
+                """,
+                (
+                    ticker, strategy, universe, direction,
+                    datetime.now().isoformat(), entry_price,
+                    shares, stop_price, take_profit, confidence, regime_state,
+                    config_version, paper_account_id,
+                ),
+            )
+            return cursor.lastrowid
+    except sqlite3.IntegrityError as exc:
+        _paper_log.warning(
+            "record_paper_trade_entry: duplicate open paper trade blocked for %s/%s "
+            "(UNIQUE constraint on idx_paper_trades_unique_open): %s",
+            ticker, universe, exc,
+        )
+        return None
+
+
+def update_paper_trade_protective_orders(
+    *,
+    ticker: str,
+    universe: str,
+    stop_order_id: Optional[str] = None,
+    tp_order_id: Optional[str] = None,
+) -> int:
+    """Update stop_order_id and/or tp_order_id on the OPEN paper trade row for
+    (ticker, universe).
+
+    Mirrors :func:`update_trade_protective_orders`.
+
+    Returns:
+        Number of rows updated (0 or 1).
+    """
+    sets: list[str] = []
+    params: list = []
+    if stop_order_id is not None:
+        sets.append("stop_order_id = ?")
+        params.append(stop_order_id)
+    if tp_order_id is not None:
+        sets.append("tp_order_id = ?")
+        params.append(tp_order_id)
+    if not sets:
+        return 0
+    sets.append("updated_at = datetime('now')")
+    params.extend([ticker, universe])
+    sql = (
+        f"UPDATE paper_trades SET {', '.join(sets)} "
+        f"WHERE ticker = ? AND universe = ? AND status = 'open'"
+    )
+    with get_db() as db:
+        cursor = db.execute(sql, params)
+        n = cursor.rowcount
+    if n == 0:
+        _paper_log.warning(
+            "update_paper_trade_protective_orders: no open paper trade for %s/%s "
+            "(stop_order_id=%s tp_order_id=%s)",
+            ticker, universe, stop_order_id, tp_order_id,
+        )
+    return n
+
+
+def record_paper_trade_exit(
+    ticker: str,
+    strategy: str,
+    exit_price: float,
+    exit_reason: str,
+    regime_at_exit: Optional[str] = None,
+) -> None:
+    """Close the most recent open paper trade for (ticker, strategy).
+
+    Mirrors :func:`record_trade_exit`.  Applies the same ghost-trade guard,
+    duplicate-close guard (via superseded flag), and MAE/MFE computation —
+    all against the `paper_trades` table.
+    """
+    now = datetime.now().isoformat()
+    with get_db() as db:
+        # ── Ghost-trade guard ─────────────────────────────────────────────
+        open_row = db.execute(
+            "SELECT id, entry_date, entry_price, shares "
+            "FROM paper_trades WHERE ticker = ? AND strategy = ? AND status = 'open' "
+            "ORDER BY id DESC LIMIT 1",
+            (ticker, strategy),
+        ).fetchone()
+        if open_row:
+            entry_date_str = str(open_row["entry_date"])[:10]
+            exit_date_str = now[:10]
+            if exit_date_str < entry_date_str:
+                _paper_log.warning(
+                    "record_paper_trade_exit: REJECTED ghost trade for %s/%s — "
+                    "exit_date %s is before entry_date %s",
+                    ticker, strategy, exit_date_str, entry_date_str,
+                )
+                return
+
+        # ── Duplicate-close guard ─────────────────────────────────────────
+        _superseded_flag = 0
+        _has_sup_col = any(
+            r[1] == "superseded"
+            for r in db.execute("PRAGMA table_info(paper_trades)").fetchall()
+        )
+        if _has_sup_col and open_row:
+            _entry_price = float(open_row["entry_price"] or 0)
+            _shares = int(open_row["shares"] or 0)
+            _would_be_pnl = round(
+                (float(exit_price) - _entry_price) * _shares, 2
+            )
+            _dup = db.execute(
+                "SELECT id FROM paper_trades "
+                "WHERE ticker=? AND strategy=? "
+                "AND DATE(exit_date)=DATE(?) "
+                "AND ROUND(pnl,2)=? "
+                "AND status='closed' AND superseded=0",
+                (ticker, strategy, now, _would_be_pnl),
+            ).fetchone()
+            if _dup:
+                _paper_log.warning(
+                    "paper trade dedup hit: skipping duplicate close for %s/%s, "
+                    "existing id=%d — marking this trade superseded=1",
+                    ticker, strategy, _dup["id"],
+                )
+                _superseded_flag = 1
+
+        # ── Apply the exit UPDATE ─────────────────────────────────────────
+        if _has_sup_col:
+            db.execute(
+                """
+                UPDATE paper_trades
+                SET exit_date      = ?,
+                    exit_price     = ?,
+                    exit_reason    = ?,
+                    status         = 'closed',
+                    regime_at_exit = ?,
+                    pnl            = (? - entry_price) * shares,
+                    pnl_pct        = ((? - entry_price) / entry_price) * 100,
+                    hold_days      = CAST(julianday(?) - julianday(entry_date) AS INTEGER),
+                    superseded     = ?,
+                    updated_at     = datetime('now')
+                WHERE ticker = ? AND strategy = ? AND status = 'open'
+                """,
+                (
+                    now, exit_price, exit_reason, regime_at_exit,
+                    exit_price, exit_price, now,
+                    _superseded_flag,
+                    ticker, strategy,
+                ),
+            )
+        else:
+            db.execute(
+                """
+                UPDATE paper_trades
+                SET exit_date      = ?,
+                    exit_price     = ?,
+                    exit_reason    = ?,
+                    status         = 'closed',
+                    regime_at_exit = ?,
+                    pnl            = (? - entry_price) * shares,
+                    pnl_pct        = ((? - entry_price) / entry_price) * 100,
+                    hold_days      = CAST(julianday(?) - julianday(entry_date) AS INTEGER),
+                    updated_at     = datetime('now')
+                WHERE ticker = ? AND strategy = ? AND status = 'open'
+                """,
+                (
+                    now, exit_price, exit_reason, regime_at_exit,
+                    exit_price, exit_price, now,
+                    ticker, strategy,
+                ),
+            )
+
+
+def get_open_paper_trades() -> list[dict]:
+    """Return all open paper trades, oldest first.
+
+    Mirrors :func:`get_open_positions` for `paper_trades`.
+    """
+    with get_db() as db:
+        return [
+            dict(r)
+            for r in db.execute(
+                "SELECT * FROM paper_trades WHERE status='open' ORDER BY entry_date"
+            ).fetchall()
+        ]
+
+
+def get_closed_paper_trades(
+    days: Optional[int] = None,
+    strategy: Optional[str] = None,
+    universe: Optional[str] = None,
+    limit: int = 10000,
+) -> list[dict]:
+    """Return closed paper trades with optional filters.
+
+    Mirrors :func:`get_closed_trades` for `paper_trades`.
+    Only returns non-superseded rows (superseded=0).
+    """
+    with get_db() as db:
+        _cols = {r[1] for r in db.execute("PRAGMA table_info(paper_trades)").fetchall()}
+        _sup_clause = " AND superseded=0" if "superseded" in _cols else ""
+        query = f"SELECT * FROM paper_trades WHERE status='closed'{_sup_clause}"
+        params: list[Any] = []
+        if days:
+            query += " AND exit_date >= date('now', ?)"
+            params.append(f"-{days} days")
+        if strategy:
+            query += " AND strategy=?"
+            params.append(strategy)
+        if universe:
+            query += " AND universe=?"
+            params.append(universe)
+        query += f" ORDER BY exit_date DESC LIMIT {int(limit)}"
+        return [dict(r) for r in db.execute(query, params).fetchall()]
+
+
+def get_paper_trades_for_universe(
+    universe: str,
+    status: Optional[str] = None,
+) -> list[dict]:
+    """Return paper trades for a given universe, optionally filtered by status.
+
+    Convenience helper: callers that work per-universe (e.g. portfolio modules)
+    can call this instead of building the filter manually.
+
+    Args:
+        universe: Universe/market id (e.g. 'sp500', 'asx200').
+        status: 'open', 'closed', or None for all.  Only non-superseded rows
+                are returned for 'closed'.
+    """
+    with get_db() as db:
+        _cols = {r[1] for r in db.execute("PRAGMA table_info(paper_trades)").fetchall()}
+        _sup_clause = " AND superseded=0" if "superseded" in _cols else ""
+        params: list[Any] = [universe]
+        if status == "closed":
+            query = f"SELECT * FROM paper_trades WHERE universe=? AND status='closed'{_sup_clause} ORDER BY entry_date"
+        elif status == "open":
+            query = "SELECT * FROM paper_trades WHERE universe=? AND status='open' ORDER BY entry_date"
+        else:
+            query = "SELECT * FROM paper_trades WHERE universe=? ORDER BY entry_date"
+        return [dict(r) for r in db.execute(query, params).fetchall()]
+
+
+# ── Paper protective-order helpers ───────────────────────────────────────────
+
+
+def get_paper_protective_record(market_id: str, ticker: str) -> Optional[dict]:
+    """Fetch the active protective record for a paper position.
+
+    Mirrors :func:`get_protective_record` for `paper_position_protective_orders`.
+    """
+    try:
+        with get_db() as db:
+            row = db.execute(
+                "SELECT * FROM paper_position_protective_orders "
+                "WHERE market_id=? AND ticker=? AND status='active'",
+                (market_id, ticker),
+            ).fetchone()
+            return dict(row) if row else None
+    except Exception as exc:
+        _paper_log.warning(
+            "get_paper_protective_record(%s, %s) failed: %s", market_id, ticker, exc
+        )
+        return None
+
+
+def upsert_paper_protective_record(
+    market_id: str,
+    ticker: str,
+    trade_id: Optional[int],
+    position_qty: float,
+    stop_order_id: Optional[str] = None,
+    stop_price: Optional[float] = None,
+    tp_order_id: Optional[str] = None,
+    tp_price: Optional[float] = None,
+    oco_class: Optional[str] = None,
+) -> None:
+    """Insert or update a paper protective record.
+
+    Mirrors :func:`upsert_protective_record` for `paper_position_protective_orders`.
+    Uses INSERT OR REPLACE keyed on (market_id, ticker).
+    """
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with get_db() as db:
+        db.execute(
+            """
+            INSERT INTO paper_position_protective_orders
+                (market_id, ticker, trade_id, position_qty,
+                 stop_order_id, stop_price,
+                 tp_order_id, tp_price,
+                 oco_class, last_synced_at, status)
+            VALUES (?,?,?,?,?,?,?,?,?,?,'active')
+            ON CONFLICT(market_id, ticker) DO UPDATE SET
+                trade_id       = excluded.trade_id,
+                position_qty   = excluded.position_qty,
+                stop_order_id  = excluded.stop_order_id,
+                stop_price     = excluded.stop_price,
+                tp_order_id    = excluded.tp_order_id,
+                tp_price       = excluded.tp_price,
+                oco_class      = excluded.oco_class,
+                last_synced_at = excluded.last_synced_at,
+                status         = 'active'
+            """,
+            (
+                market_id, ticker, trade_id, float(position_qty),
+                stop_order_id, float(stop_price) if stop_price is not None else None,
+                tp_order_id, float(tp_price) if tp_price is not None else None,
+                oco_class, now,
+            ),
+        )
+
+
+def close_paper_protective_record(market_id: str, ticker: str) -> None:
+    """Mark a paper protective record as 'closed'.
+
+    Mirrors :func:`close_protective_record`.  Idempotent.
+    """
+    try:
+        with get_db() as db:
+            db.execute(
+                "UPDATE paper_position_protective_orders "
+                "SET status='closed', last_synced_at=? "
+                "WHERE market_id=? AND ticker=?",
+                (datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"), market_id, ticker),
+            )
+    except Exception as exc:
+        _paper_log.warning(
+            "close_paper_protective_record(%s, %s) failed: %s", market_id, ticker, exc
+        )
+
+
+def list_active_paper_protective_records(
+    market_id: Optional[str] = None,
+) -> list[dict]:
+    """List all status='active' paper protective records.
+
+    Mirrors :func:`list_active_protective_records` for
+    `paper_position_protective_orders`.
+    """
+    try:
+        with get_db() as db:
+            if market_id:
+                rows = db.execute(
+                    "SELECT * FROM paper_position_protective_orders "
+                    "WHERE status='active' AND market_id=? "
+                    "ORDER BY market_id, ticker",
+                    (market_id,),
+                ).fetchall()
+            else:
+                rows = db.execute(
+                    "SELECT * FROM paper_position_protective_orders "
+                    "WHERE status='active' "
+                    "ORDER BY market_id, ticker",
+                ).fetchall()
+            return [dict(r) for r in rows]
+    except Exception as exc:
+        _paper_log.warning(
+            "list_active_paper_protective_records failed: %s", exc
+        )
+        return []
