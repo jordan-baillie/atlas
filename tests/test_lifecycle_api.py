@@ -402,8 +402,9 @@ class TestPostPromotePaper:
         # Seed research_best with Sharpe ≈ 0.65 (close to paper Sharpe → Gate D passes)
         conn.execute(
             "INSERT OR REPLACE INTO research_best "
-            "(strategy, universe, regime_state, params, sharpe, trades, max_dd_pct, metric_type) "
-            "VALUES ('clean_strategy', 'sp500', NULL, '{}', 0.65, 50, 5.0, 'sharpe')",
+            "(strategy, universe, regime_state, params, sharpe, trades, max_dd_pct, metric_type, "
+            " oos_sharpe, oos_trades, oos_cagr, oos_max_dd) "
+            "VALUES ('clean_strategy', 'sp500', NULL, '{}', 0.65, 50, 5.0, 'sharpe', 0.5, 40, 8.0, 4.0)",
         )
         conn.commit()
         conn.close()
