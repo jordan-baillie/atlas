@@ -375,3 +375,24 @@ All tightenings preserve the values present in the highest-Sharpe `research_best
 | triple_rsi | `{}` sharpe=0.966 | ✓ no params; secondary has rsi_entry=35,decline_days=2 (both preserved) |
 | williams_percent_r | `{}` sharpe=0.977 | ✓ no params; secondary has wr_entry=-85 which stays |
 
+
+---
+
+## Commit Audit Trail Note
+
+**Added 2026-05-06 (post-session audit)**
+
+The param grid changes documented in this audit (`research/sweep.py` tightening,
+`tests/test_dsr_param_grids.py`) landed in commit `e42d04c9` — which carries the
+commit message `"docs(lifecycle): architecture doc + runbook + deferred spec"`.
+
+This is a mislabeled commit: Worker A's DSR param changes were staged concurrently
+with Worker C's lifecycle documentation during a multi-worker sweep, and both sets
+of changes were committed together under Worker C's message. The code changes are
+real and present — the audit-trail concern is cosmetic (wrong commit message), not
+substantive (no changes were lost).
+
+Files from this audit in `e42d04c9`:
+- `research/sweep.py` (+34/-18 lines — param grid tightening)
+- `tests/test_dsr_param_grids.py` (+606 lines — grid validation tests)
+- `docs/audits/dsr_cap_audit_2026-05-06.md` (+377 lines — this document)
