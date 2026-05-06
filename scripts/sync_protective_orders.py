@@ -90,6 +90,23 @@ def _protective_ledger_enabled() -> bool:
     """
     val = os.environ.get("PROTECTIVE_LEDGER_WRITE_ENABLED", "true").lower()
     return val not in ("false", "0", "no")
+
+
+def _has_open_paper_trades_for_universe(universe: str) -> bool:
+    """Return True if there is at least one open paper trade for *universe*.
+
+    Used to decide whether to run the PAPER pass in dual-pass routing.
+    Non-fatal on DB error (returns False = skip paper pass safely).
+    """
+    try:
+        from db.atlas_db import get_open_paper_trades
+        rows = get_open_paper_trades()
+        return any(r.get("universe") == universe for r in rows)
+    except Exception as _e:
+        logger.debug("_has_open_paper_trades_for_universe failed (non-fatal): %s", _e)
+        return False
+
+
 # 00:00–13:59 UTC ≈ before US market open — same-day restriction has cleared overnight.
 _PDT_RETRY_BEFORE_UTC_HOUR = 14
 
@@ -655,8 +672,12 @@ _DB_UPDATE_ACTIONS: frozenset[str] = frozenset({
 })
 
 
-def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
-    """Persist new operative stop/tp order IDs to trades table after a sync cycle.
+def _apply_db_consistency(broker, market_id: str, sync_result: dict, pass_label: str = "live") -> None:
+    """Persist new operative stop/tp order IDs to trades/paper_trades table after a sync cycle.
+
+    Args:
+        pass_label: "live" (default) writes to trades + position_protective_orders;
+                    "paper" writes to paper_trades + paper_position_protective_orders.
 
     Reads per_ticker from sync_result, fetches current open orders from broker
     (OCO child legs already flattened by broker.get_open_orders), resolves the
@@ -713,15 +734,24 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
                 )
                 continue
             try:
-                n = update_trade_protective_orders(
-                    ticker=ticker,
-                    universe=market_id,
-                    stop_order_id=new_stop,
-                    tp_order_id=new_tp,
-                )
+                if pass_label == "paper":
+                    from db.atlas_db import update_paper_trade_protective_orders as _uptp
+                    n = _uptp(
+                        ticker=ticker,
+                        universe=market_id,
+                        stop_order_id=new_stop,
+                        tp_order_id=new_tp,
+                    )
+                else:
+                    n = update_trade_protective_orders(
+                        ticker=ticker,
+                        universe=market_id,
+                        stop_order_id=new_stop,
+                        tp_order_id=new_tp,
+                    )
                 logger.info(
-                    "sync_protective DB update: %s/%s stop=%s tp=%s rows=%d ",
-                    ticker, market_id,
+                    "sync_protective DB update [%s]: %s/%s stop=%s tp=%s rows=%d ",
+                    pass_label, ticker, market_id,
                     (new_stop or "")[:8], (new_tp or "")[:8], n,
                 )
             except sqlite3.Error as db_exc:  # DB update; only sqlite3 errors escape atlas_db
@@ -733,7 +763,10 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
             # Phase B.0 (c): also upsert position_protective_orders with same IDs
             if _protective_ledger_enabled():
                 try:
-                    from db.atlas_db import upsert_protective_record as _upr_dbc
+                    if pass_label == "paper":
+                        from db.atlas_db import upsert_paper_protective_record as _upr_dbc
+                    else:
+                        from db.atlas_db import upsert_protective_record as _upr_dbc
                     _tres = per_ticker[ticker]
                     _qty = int(_tres.get("qty", 0) or 0)
                     _sp = _tres.get("stop_price")
@@ -767,7 +800,10 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
         # This updates last_synced_at on every sync cycle so freshness is trackable.
         if _protective_ledger_enabled():
             try:
-                from db.atlas_db import upsert_protective_record as _upr_all
+                if pass_label == "paper":
+                    from db.atlas_db import upsert_paper_protective_record as _upr_all
+                else:
+                    from db.atlas_db import upsert_protective_record as _upr_all
                 for _all_ticker, _all_tres in per_ticker.items():
                     _all_ops = ticker_ops.get(_all_ticker, {"stop": "", "tp": ""})
                     _all_stop = _all_ops["stop"] or None
@@ -810,6 +846,183 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict) -> None:
         logger.warning(
             "sync_protective DB consistency block failed (non-fatal): %s", wrap_exc,
         )
+
+# ═══════════════════════════════════════════════════════════════
+# Paper-pass sync helper (dual-pass routing)
+# ═══════════════════════════════════════════════════════════════
+
+
+def _run_paper_sync_pass(
+    market_id: str,
+    trade_date: str,
+    *,
+    dry_run: bool = False,
+    config_path: str = "",
+    base_config: dict | None = None,
+) -> dict:
+    """Run a protective-order sync pass for PAPER positions.
+
+    Uses the paper Alpaca account (mode="paper") and reads positions from
+    ``brokers/state/paper_{market_id}.json`` (or ``paper_trades`` table if
+    the state file is absent). Writes protective records to
+    ``paper_position_protective_orders`` and order IDs to ``paper_trades``.
+
+    Called by :func:`sync_market` when there is at least one open paper trade
+    for *market_id*. Non-fatal: any exception is logged and an error dict is
+    returned so the live pass result is not affected.
+
+    Args:
+        market_id:   Universe / market identifier (e.g. ``"sp500"``).
+        trade_date:  YYYY-MM-DD string.
+        dry_run:     If True, no orders are placed.
+        config_path: Override config file path (used in tests).
+        base_config: Pre-loaded base config (avoids re-reading config file).
+
+    Returns:
+        Result dict compatible with the *per-market* result shape.
+    """
+    result: dict = {
+        "market_id": market_id,
+        "pass_label": "paper",
+        "trade_date": trade_date,
+        "dry_run": dry_run,
+        "counts": {},
+        "results": {},
+        "error": "",
+    }
+
+    try:
+        # ── Build paper config ────────────────────────────────
+        if base_config is None:
+            base_config = load_config(market_id, config_path)
+        paper_config: dict = {
+            **base_config,
+            "trading": {**base_config.get("trading", {}), "mode": "paper"},
+        }
+
+        logger.info("[PAPER] Syncing protective orders for %s (dry_run=%s)", market_id, dry_run)
+
+        # ── Load paper plan (same plan file — stop prices are strategy-level) ──
+        paper_plan = load_plan(market_id, trade_date)
+
+        # ── Get state-file tickers for paper positions ───────────────────
+        paper_state_path = PROJECT / "brokers" / "state" / f"paper_{market_id}.json"
+        paper_state_tickers: set[str] = set()
+
+        if paper_state_path.exists():
+            try:
+                import json as _json
+                with open(paper_state_path) as _psf:
+                    _ps = _json.load(_psf)
+                paper_state_tickers = {
+                    _pp.get("ticker", "") for _pp in _ps.get("positions", [])
+                    if _pp.get("ticker")
+                }
+                # Merge state-file stops into plan
+                _state_stops = {
+                    _pp.get("ticker"): _pp.get("stop_price", 0)
+                    for _pp in _ps.get("positions", [])
+                    if _pp.get("ticker") and _pp.get("stop_price", 0)
+                }
+                if _state_stops:
+                    if paper_plan is None:
+                        paper_plan = {"proposed_entries": []}
+                    entries = paper_plan.get("proposed_entries", [])
+                    plan_tickers = {e.get("ticker") for e in entries}
+                    for _t, _sp in _state_stops.items():
+                        if _t not in plan_tickers:
+                            entries.append({"ticker": _t, "stop_price": _sp})
+                    paper_plan["proposed_entries"] = entries
+            except Exception as _ps_err:
+                logger.warning("[PAPER] Could not read paper state file: %s", _ps_err)
+        else:
+            # Fall back to paper_trades DB to discover paper tickers
+            try:
+                from db.atlas_db import get_open_paper_trades
+                paper_rows = get_open_paper_trades()
+                paper_state_tickers = {
+                    r.get("ticker", "") for r in paper_rows
+                    if r.get("universe") == market_id and r.get("ticker")
+                }
+                # Build minimal plan entries from paper_trades stop prices
+                if paper_state_tickers:
+                    if paper_plan is None:
+                        paper_plan = {"proposed_entries": []}
+                    entries = paper_plan.get("proposed_entries", [])
+                    plan_tickers = {e.get("ticker") for e in entries}
+                    for row in paper_rows:
+                        t = row.get("ticker", "")
+                        sp = row.get("stop_price")
+                        if t and sp and t not in plan_tickers:
+                            entries.append({"ticker": t, "stop_price": sp})
+                    paper_plan["proposed_entries"] = entries
+            except Exception as _pt_err:
+                logger.warning("[PAPER] Could not read paper_trades: %s", _pt_err)
+
+        if not paper_state_tickers:
+            logger.info("[PAPER] No paper positions found for %s — skipping paper pass", market_id)
+            result["counts"] = {"positions_checked": 0}
+            return result
+
+        # ── Connect to paper broker ───────────────────────────
+        from brokers.registry import get_live_broker
+        paper_broker = get_live_broker(paper_config)
+        if not paper_broker:
+            result["error"] = "No paper broker available"
+            logger.error("[PAPER] get_live_broker returned None for paper config")
+            return result
+
+        if not paper_broker.connect():
+            result["error"] = "Paper broker connect failed"
+            logger.error("[PAPER] Paper broker connect failed for %s", market_id)
+            return result
+
+        try:
+            # ── Get paper broker positions filtered to paper state ────────
+            all_paper_positions = paper_broker.get_positions()
+            paper_positions = [p for p in all_paper_positions if p.ticker in paper_state_tickers]
+            logger.info(
+                "[PAPER] %s: %d paper state tickers, %d matching paper broker positions",
+                market_id.upper(), len(paper_state_tickers), len(paper_positions),
+            )
+
+            if not paper_positions:
+                logger.info("[PAPER] No paper broker positions for %s — skipping sync", market_id)
+                result["counts"] = {"positions_checked": 0}
+                return result
+
+            paper_sync_result = paper_broker.sync_all_protective_orders(
+                positions=paper_positions,
+                plan=paper_plan,
+                trade_date=trade_date,
+                dry_run=dry_run,
+            )
+
+            result["counts"] = {
+                "positions_checked": len(paper_positions),
+                "sl_placed": paper_sync_result.get("sl_placed", 0),
+                "sl_already_exists": paper_sync_result.get("sl_already_exists", 0),
+                "tp_placed": paper_sync_result.get("tp_placed", 0),
+                "tp_already_exists": paper_sync_result.get("tp_already_exists", 0),
+                "errors": paper_sync_result.get("errors", 0),
+            }
+            result["results"] = paper_sync_result.get("per_ticker", {})
+
+            if not dry_run:
+                _apply_db_consistency(paper_broker, market_id, paper_sync_result, pass_label="paper")
+
+        finally:
+            try:
+                paper_broker.disconnect()
+            except Exception as _disc_exc:
+                logger.debug("[PAPER] Broker disconnect error (non-fatal): %s", _disc_exc)
+
+    except Exception as _outer_exc:
+        result["error"] = str(_outer_exc)
+        logger.error("[PAPER] Paper sync pass failed for %s: %s", market_id, _outer_exc, exc_info=True)
+
+    return result
+
 
 # ═══════════════════════════════════════════════════════════════
 # Per-market sync
@@ -1319,6 +1532,33 @@ def sync_market(
                 broker.disconnect()
             except (RuntimeError, OSError, AttributeError) as e:  # disconnect can fail if connection dropped
                 logger.warning("Broker disconnect error during sync-protective cleanup: %s", e)
+
+    # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
+    # Runs AFTER the live pass (and its broker is disconnected).  Only if
+    # there is at least one open paper trade for this universe.
+    if _has_open_paper_trades_for_universe(market_id):
+        logger.info("[PAPER] Open paper trades detected for %s — running paper sync pass", market_id)
+        try:
+            _paper_result = _run_paper_sync_pass(
+                market_id=market_id,
+                trade_date=trade_date,
+                dry_run=dry_run,
+                config_path=config_path,
+                base_config=config if 'config' in dir() else None,
+            )
+            # Merge paper pass counts and results into the main result dict
+            result.setdefault("paper_pass", {})
+            result["paper_pass"] = _paper_result
+            _paper_counts = _paper_result.get("counts", {})
+            _live_counts = result.get("counts", {})
+            result["counts"] = {k: _live_counts.get(k, 0) + _paper_counts.get(k, 0)
+                                 for k in set(_live_counts) | set(_paper_counts)}
+            if _paper_result.get("error"):
+                logger.warning("[PAPER] Paper pass error: %s", _paper_result["error"])
+        except Exception as _pp_exc:  # noqa: BLE001 — paper pass is non-fatal to live pass result
+            logger.error("[PAPER] Paper pass crashed (non-fatal to live result): %s", _pp_exc)
+    else:
+        logger.debug("[PAPER] No open paper trades for %s — skipping paper pass", market_id)
 
     return result
 

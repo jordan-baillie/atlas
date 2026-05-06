@@ -69,15 +69,18 @@ def _lookup_strategy(ticker: str, market_id: str, state_positions: dict) -> str:
     return "reconciled"
 
 
-def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict:
+def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None, mode_override: str | None = None) -> dict:
     """Main reconciliation logic. Returns dict with stats.
 
     Args:
-        market_id: Market identifier (e.g. 'sp500').
-        dry_run:   If True, log what would change without writing anything.
-        broker:    Optional pre-connected broker instance.  When provided the
-                   caller is responsible for its lifecycle (connect/disconnect).
-                   When None, this function creates and owns its own connection.
+        market_id:     Market identifier (e.g. 'sp500').
+        dry_run:       If True, log what would change without writing anything.
+        broker:        Optional pre-connected broker instance.  When provided the
+                       caller is responsible for its lifecycle (connect/disconnect).
+                       When None, this function creates and owns its own connection.
+        mode_override: When set to 'live' or 'paper', overrides the trading.mode
+                       value from config for this call.  Used by main() for
+                       dual-pass routing: call once with 'live', once with 'paper'.
     """
     from db import atlas_db
     from brokers.registry import get_live_broker
@@ -91,13 +94,19 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
 
     # ── Mode detection ────────────────────────────────────────
     _rl_config = load_config(market_id)
-    _rl_mode = _rl_config.get("trading", {}).get("mode", "live")
+    _rl_mode_from_config = _rl_config.get("trading", {}).get("mode", "live")
+    _rl_mode = mode_override if mode_override is not None else _rl_mode_from_config
     _rl_mode_label = f"[{_rl_mode.upper()}]"
 
     # ── Broker connection ─────────────────────────────────────
     own_broker = False
     if broker is None:
-        config = _rl_config
+        # When mode_override is set, apply it to the config so get_live_broker
+        # returns the appropriate broker (live vs paper account).
+        if mode_override is not None:
+            config = {**_rl_config, "trading": {**_rl_config.get("trading", {}), "mode": mode_override}}
+        else:
+            config = _rl_config
         broker = get_live_broker(config)
         if not broker or not broker.connect():
             log.error("Cannot connect to broker")
@@ -592,13 +601,43 @@ def main() -> int:
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE")
     log.info("=" * 50)
 
-    result = reconcile_ledger(args.market, dry_run=args.dry_run)
-
-    if "error" in result:
-        log.error("Reconciliation failed: %s", result["error"])
+    # ── LIVE pass ─────────────────────────────────────────────
+    result_live = reconcile_ledger(args.market, dry_run=args.dry_run, mode_override="live")
+    if "error" in result_live:
+        log.error("LIVE reconciliation failed: %s", result_live["error"])
         return 1
+    log.info("LIVE pass complete: backfilled=%d closed=%d matched=%d",
+             len(result_live.get("backfilled", [])),
+             len(result_live.get("closed_phantom", [])),
+             result_live.get("matched", 0))
 
-    print(json.dumps(result, indent=2, default=str))
+    # ── PAPER pass (only if open paper trades exist) ───────────────
+    result_paper: dict = {}
+    try:
+        from db.atlas_db import get_open_paper_trades as _gopt
+        _paper_open = [r for r in _gopt() if r.get("universe") == args.market]
+    except Exception as _e:
+        log.debug("Paper trades check failed (non-fatal): %s", _e)
+        _paper_open = []
+
+    if _paper_open:
+        log.info("Paper trades detected (%d) for %s — running PAPER reconcile pass",
+                 len(_paper_open), args.market)
+        result_paper = reconcile_ledger(args.market, dry_run=args.dry_run, mode_override="paper")
+        if "error" in result_paper:
+            log.error("PAPER reconciliation failed: %s", result_paper["error"])
+        else:
+            log.info("PAPER pass complete: backfilled=%d closed=%d matched=%d",
+                     len(result_paper.get("backfilled", [])),
+                     len(result_paper.get("closed_phantom", [])),
+                     result_paper.get("matched", 0))
+    else:
+        log.debug("No open paper trades for %s — skipping PAPER reconcile pass", args.market)
+
+    combined = {"live": result_live}
+    if result_paper:
+        combined["paper"] = result_paper
+    print(json.dumps(combined, indent=2, default=str))
     return 0
 
 

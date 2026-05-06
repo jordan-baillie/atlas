@@ -345,6 +345,18 @@ def build_status_line(portfolio, prices: dict, market_id: str) -> str:
 
 # ── Main ──────────────────────────────────────────────────────
 
+
+def _has_open_paper_trades_for_universe(universe: str) -> bool:
+    """Return True if there is at least one open paper trade for *universe*."""
+    try:
+        from db.atlas_db import get_open_paper_trades
+        rows = get_open_paper_trades()
+        return any(r.get("universe") == universe for r in rows)
+    except Exception as _e:
+        log.debug("_has_open_paper_trades_for_universe failed (non-fatal): %s", _e)
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Atlas Intraday Monitor")
     parser.add_argument("--market", "-m", default="asx", help="Market ID (default: asx)")
@@ -389,7 +401,9 @@ def main():
 
     if not portfolio.positions:
         log.info("No open positions — nothing to monitor.")
-        return
+        # Don't return early if paper trades exist — paper pass still needs to run
+        if not _has_open_paper_trades_for_universe(market_id):
+            return
 
     # ── Enrich positions with stop prices from plan/state ──────
     # IBKR doesn't return stop_price — read from today's plan file
@@ -430,15 +444,18 @@ def main():
     if enriched:
         log.info(f"Enriched {enriched} positions with stop prices from plan/state files")
 
-    tickers = [p.ticker for p in portfolio.positions]
-    log.info(f"Monitoring {len(tickers)} positions: {tickers}")
+    if portfolio.positions:
+        tickers = [p.ticker for p in portfolio.positions]
+        log.info(f"Monitoring {len(tickers)} positions: {tickers}")
+    else:
+        tickers = []
 
     # ── Load alert state (dedup) ──────────────────────────────
     fired = _load_fired(market_id)
 
     # ── Fetch prices ──────────────────────────────────────────
     prices = fetch_live_prices(tickers)
-    if not prices:
+    if not prices and tickers:
         log.error("No prices fetched — cannot monitor")
         # Alert about data failure
         key = "price_fetch_failed"
@@ -452,19 +469,23 @@ def main():
                     f"Failed to fetch live prices for {len(tickers)} tickers.\n"
                     f"Position monitoring unavailable this cycle."
                 )
-        return
+        # Don't return if paper trades exist — paper pass still runs
+        if not _has_open_paper_trades_for_universe(market_id):
+            return
 
     # ── Run checks ────────────────────────────────────────────
     all_alerts = []
-    all_alerts.extend(check_positions(portfolio, prices, fired))
-    all_alerts.extend(check_portfolio_drawdown(portfolio, prices, fired))
+    if prices:
+        all_alerts.extend(check_positions(portfolio, prices, fired))
+        all_alerts.extend(check_portfolio_drawdown(portfolio, prices, fired))
 
     # ── Save dedup state ──────────────────────────────────────
     _save_fired(market_id, fired)
 
-    # ── Log status (always) ───────────────────────────────────
-    status = build_status_line(portfolio, prices, market_id)
-    log.info(status)
+    # ── Log status (only when prices available) ─────────────
+    if prices:
+        status = build_status_line(portfolio, prices, market_id)
+        log.info(status)
 
     # Log per-position distance to stop
     for pos in portfolio.positions:
@@ -497,6 +518,43 @@ def main():
         log.info("All positions within normal range — no alerts")
 
     log.info("Monitor cycle complete")
+
+    # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
+    if _has_open_paper_trades_for_universe(market_id):
+        log.info("[PAPER] Open paper trades detected for %s — running paper monitor pass", market_id)
+        try:
+            paper_config = {**config, "trading": {**config.get("trading", {}), "mode": "paper"}}
+            paper_portfolio = LivePortfolio(paper_config, market_id=market_id)
+            if paper_portfolio.connect() and paper_portfolio.broker_data_valid and paper_portfolio.positions:
+                _paper_key = f"{market_id}_paper"
+                paper_fired = _load_fired(_paper_key)
+                paper_tickers = [p.ticker for p in paper_portfolio.positions]
+                paper_prices = fetch_live_prices(paper_tickers)
+                paper_alerts: list[dict] = []
+                if paper_prices:
+                    paper_alerts.extend(check_positions(paper_portfolio, paper_prices, paper_fired))
+                    paper_alerts.extend(check_portfolio_drawdown(paper_portfolio, paper_prices, paper_fired))
+                _save_fired(_paper_key, paper_fired)
+                if paper_alerts:
+                    log.info("[PAPER] %d alert(s) from paper pass", len(paper_alerts))
+                    if args.dry_run:
+                        print(f"\n--- [PAPER] DRY RUN: {len(paper_alerts)} paper alerts ---")
+                        for a in paper_alerts:
+                            print(f"  {a['severity']} [paper/{a['type']}] {a['ticker']}")
+                    else:
+                        from utils.telegram import send_message
+                        _tz_now = datetime.now(tz).strftime("%H:%M %Z")
+                        _paper_lines = [f"\U0001f535 <b>Atlas Intraday [PAPER/{market_id.upper()}]</b>  <i>{_tz_now}</i>\n"]
+                        for _a in paper_alerts:
+                            _paper_lines.append(f"{_a['severity']} {_a['message']}")
+                            _paper_lines.append("")
+                        send_message("\n".join(_paper_lines).strip())
+                else:
+                    log.info("[PAPER] All paper positions within normal range")
+        except Exception as _pp_exc:  # noqa: BLE001 — paper pass is non-fatal
+            log.error("[PAPER] Paper monitor pass failed (non-fatal): %s", _pp_exc)
+    else:
+        log.debug("[PAPER] No open paper trades for %s — skipping paper monitor pass", market_id)
 
 
 if __name__ == "__main__":

@@ -948,6 +948,14 @@ def main():
         "tp_exits": len(tp_exits),
     })
 
+    # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
+    if _has_open_paper_trades_for_universe(market_id):
+        log.info("[PAPER] Open paper trades detected for %s — running paper EOD pass", market_id)
+        _paper_config_eod = {**config, "trading": {**config.get("trading", {}), "mode": "paper"}}
+        _settle_paper_pass(_paper_config_eod, market_id, trade_date, args.dry_run)
+    else:
+        log.debug("[PAPER] No open paper trades for %s — skipping paper EOD pass", market_id)
+
     # Disconnect broker to free clientId for position monitor
     portfolio.disconnect()
 
@@ -981,6 +989,91 @@ def _eod_monitor_mark_sent() -> None:
         )
     except (OSError, json.JSONDecodeError) as exc:  # state file write
         log.warning("_eod_monitor_mark_sent: state write failed (non-fatal): %s", exc)
+
+
+
+def _has_open_paper_trades_for_universe(universe: str) -> bool:
+    """Return True if there is at least one open paper trade for *universe*."""
+    try:
+        from db.atlas_db import get_open_paper_trades
+        rows = get_open_paper_trades()
+        return any(r.get("universe") == universe for r in rows)
+    except Exception as _e:
+        log.debug("_has_open_paper_trades_for_universe (non-fatal): %s", _e)
+        return False
+
+
+def _settle_paper_pass(paper_config: dict, market_id: str, trade_date: str, dry_run: bool) -> None:
+    """Run EOD settlement for PAPER positions.
+
+    Checks stop-losses and take-profits for paper_trades positions via the
+    paper Alpaca account. Writes exits to paper_trades via record_paper_trade_exit.
+    Non-fatal — any failure is logged but does not affect the live settlement result.
+
+    Args:
+        paper_config: Config dict with trading.mode="paper".
+        market_id:    Universe / market identifier.
+        trade_date:   YYYY-MM-DD string.
+        dry_run:      If True, log only, no broker orders.
+    """
+    log.info("[PAPER] Starting paper EOD settlement for %s (dry_run=%s)", market_id, dry_run)
+    try:
+        from brokers.live_portfolio import LivePortfolio
+        paper_portfolio = LivePortfolio(paper_config, market_id=market_id)
+        if not paper_portfolio.connect():
+            log.error("[PAPER] Paper broker connect failed — aborting paper EOD pass")
+            return
+        if not paper_portfolio.broker_data_valid:
+            log.warning("[PAPER] Paper broker returned zeroed data — skipping paper EOD pass")
+            return
+
+        held_tickers = [p.ticker for p in paper_portfolio.positions]
+        if not held_tickers:
+            log.info("[PAPER] No open paper positions for %s — nothing to settle", market_id)
+            paper_portfolio.disconnect()
+            return
+
+        prices, lows, highs = fetch_closing_prices(held_tickers, market_id=market_id)
+        if not prices:
+            log.warning("[PAPER] No closing prices for paper positions — skipping paper EOD pass")
+            paper_portfolio.disconnect()
+            return
+
+        # Check stops and TPs — identical logic to live but uses paper portfolio
+        stop_exits, _ = check_stop_losses(paper_portfolio, prices, lows, trade_date, dry_run)
+        tp_exits, _ = check_take_profits(paper_portfolio, prices, highs, trade_date, dry_run)
+
+        # Write paper exits to paper_trades table
+        if not dry_run:
+            try:
+                from db import atlas_db as _adb
+                import sqlite3
+                for _exit in stop_exits + tp_exits:
+                    _ticker = _exit.get("ticker", "")
+                    _price = _exit.get("exit_price", 0)
+                    _reason = _exit.get("type", "stop_loss")
+                    if _ticker and _price:
+                        try:
+                            _adb.record_paper_trade_exit(
+                                ticker=_ticker,
+                                strategy=_exit.get("strategy", ""),
+                                exit_price=float(_price),
+                                exit_reason=_reason,
+                                regime_at_exit=None,
+                            )
+                        except (AttributeError, sqlite3.OperationalError, sqlite3.DatabaseError) as _pe:
+                            log.warning("[PAPER] paper_trade_exit write failed for %s: %s", _ticker, _pe)
+            except Exception as _dbe:
+                log.warning("[PAPER] Paper EOD DB write failed (non-fatal): %s", _dbe)
+
+        log.info(
+            "[PAPER] Paper EOD settlement complete: stop_exits=%d tp_exits=%d",
+            len(stop_exits), len(tp_exits),
+        )
+        paper_portfolio.disconnect()
+
+    except Exception as _exc:  # noqa: BLE001 — paper pass is non-fatal
+        log.error("[PAPER] Paper EOD settlement failed (non-fatal): %s", _exc, exc_info=True)
 
 
 def run_position_monitor():

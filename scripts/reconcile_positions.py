@@ -77,6 +77,11 @@ def _state_path(market_id: str) -> Path:
     return _STATE_DIR / f"live_{market_id}.json"
 
 
+def _paper_state_path(market_id: str) -> Path:
+    """Return path to the paper state file for a market."""
+    return _STATE_DIR / f"paper_{market_id}.json"
+
+
 # ═══════════════════════════════════════════════════════════════
 # Config / State Loading
 # ═══════════════════════════════════════════════════════════════
@@ -733,12 +738,56 @@ def main() -> int:
     if args.dry_run:
         logger.info("DRY RUN MODE — no state changes will be written")
 
-    # ── Run reconciliation ─────────────────────────────────────
+    # ── LIVE pass reconciliation ──────────────────────────────
+    # The existing reconcile_positions() is the live pass (it reads
+    # live_{market}.json and connects the live broker).
     result = reconcile_positions(
         market_id=market_id,
         fix=args.fix,
         dry_run=args.dry_run,
     )
+
+    # ── PAPER pass reconciliation (if open paper trades exist) ───
+    try:
+        from db.atlas_db import get_open_paper_trades as _gopt
+        _paper_open_rp = [r for r in _gopt() if r.get("universe") == market_id]
+    except Exception as _e:
+        logger.debug("Paper trades check failed (non-fatal): %s", _e)
+        _paper_open_rp = []
+
+    _paper_result_rp: dict | None = None
+    if _paper_open_rp:
+        logger.info("Paper trades detected (%d) for %s — running PAPER reconcile-positions pass",
+                    len(_paper_open_rp), market_id)
+        # Load internal paper state (paper_{market}.json) as separate source of truth
+        paper_internal_count = 0
+        paper_state_path_rp = _paper_state_path(market_id)
+        if paper_state_path_rp.exists():
+            try:
+                import json as _rp_json
+                _paper_state_rp = _rp_json.loads(paper_state_path_rp.read_text())
+                paper_internal_count = len(_paper_state_rp.get("positions", []))
+            except Exception as _pse:
+                logger.warning("Could not read paper state file: %s", _pse)
+        logger.info(
+            "[PAPER] paper state file: %s (%d positions)",
+            paper_state_path_rp, paper_internal_count,
+        )
+        # For reconcile_positions, the paper pass is report-only (no --fix for paper state).
+        # The live reconcile_positions signature doesn't accept mode_override; paper state
+        # reconciliation is a future extension. Log the counts and continue.
+        _paper_result_rp = {
+            "market_id": market_id,
+            "pass_label": "paper",
+            "paper_open_trades": len(_paper_open_rp),
+            "paper_state_positions": paper_internal_count,
+        }
+        logger.info(
+            "[PAPER] paper_trades.open=%d paper_state.positions=%d",
+            len(_paper_open_rp), paper_internal_count,
+        )
+    else:
+        logger.debug("[PAPER] No open paper trades for %s — skipping paper reconcile-positions pass", market_id)
 
     # ── Summary to stdout ──────────────────────────────────────
     has_discrepancies = bool(result["discrepancies"])

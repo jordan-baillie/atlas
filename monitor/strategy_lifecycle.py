@@ -162,3 +162,35 @@ def list_state(state: PromotionState) -> List[Dict]:
     auto_promotion_id, notes.
     """
     return list_lifecycle_states(state.value)
+
+
+def split_trades_by_lifecycle(trades: list, universe: str) -> tuple[list, list]:
+    """Split trades into (live_trades, paper_trades) by lifecycle state.
+
+    Trades for strategies in PAPER lifecycle state route to paper executor / paper broker /
+    paper_trades / paper_position_protective_orders.  All other trades (LIVE, RESEARCH,
+    RETIRED, unknown/missing strategy) route to live broker / live tables.
+
+    RESEARCH/RETIRED with an open position is an anomaly — caller should log a warning.
+    This helper does NOT distinguish RESEARCH/RETIRED from LIVE; it returns them in
+    live_trades for safe routing (live broker has the position, so live broker handles it).
+
+    Args:
+        trades: List of trade dicts (with 'strategy' key) or position objects (with .strategy attr).
+        universe: Universe / market_id string (e.g. "sp500").
+
+    Returns:
+        Tuple (live_trades, paper_trades).
+    """
+    live: list = []
+    paper: list = []
+    for t in trades:
+        if isinstance(t, dict):
+            strategy = t.get("strategy", "")
+        else:
+            strategy = getattr(t, "strategy", "") or ""
+        if strategy and is_paper(strategy, universe):
+            paper.append(t)
+        else:
+            live.append(t)
+    return live, paper
