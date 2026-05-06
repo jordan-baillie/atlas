@@ -572,3 +572,44 @@ CREATE TRIGGER IF NOT EXISTS config_override_audit_no_update
 CREATE TRIGGER IF NOT EXISTS config_override_audit_no_delete
   BEFORE DELETE ON config_override_audit
   BEGIN SELECT RAISE(ABORT, 'config_override_audit is immutable (append-only)'); END;
+
+-- ═══════════════════════════════════════════════════════════
+-- STRATEGY LIFECYCLE — promotion stage state machine
+-- Tracks (strategy, universe) tuples through activation stages:
+--   RESEARCH → PAPER → LIVE → RETIRED
+--
+-- SEPARATE from monitor/lifecycle.py which tracks operational
+-- health of LIVE strategies (RAMP_UP / ACTIVE / WATCH / PROBATION
+-- / SUSPENDED). These answer DIFFERENT questions:
+--   - Promotion lifecycle: where in activation pipeline?
+--   - Health lifecycle: is this LIVE strategy performing OK?
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS strategy_lifecycle (
+    strategy             TEXT NOT NULL,
+    universe             TEXT NOT NULL,
+    state                TEXT NOT NULL CHECK (state IN ('RESEARCH', 'PAPER', 'LIVE', 'RETIRED')),
+    entered_state_at     TEXT NOT NULL,        -- ISO datetime of last transition
+    prev_state           TEXT,                 -- state before this transition
+    transition_reason    TEXT,                 -- human/system-readable reason
+    paper_start_date     TEXT,                 -- set on RESEARCH→PAPER transition
+    paper_end_date       TEXT,                 -- set on PAPER→LIVE transition
+    auto_promotion_id    TEXT,                 -- link to auto_promote run that triggered
+    notes                TEXT,
+    PRIMARY KEY (strategy, universe)
+);
+
+CREATE TABLE IF NOT EXISTS strategy_lifecycle_history (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    strategy             TEXT NOT NULL,
+    universe             TEXT NOT NULL,
+    from_state           TEXT,                 -- NULL on initial seed
+    to_state             TEXT NOT NULL,
+    transitioned_at      TEXT NOT NULL,        -- ISO datetime
+    reason               TEXT,
+    auto_promotion_id    TEXT,
+    operator             TEXT                  -- 'system' or operator name / 'manual'
+);
+
+CREATE INDEX IF NOT EXISTS idx_lifecycle_history_strategy
+    ON strategy_lifecycle_history(strategy, universe, transitioned_at);
