@@ -321,6 +321,175 @@ def _send_promotion_telegram(
         logger.error("Telegram send failed for %s/%s: %s", strategy, universe, exc)
 
 
+
+# ── Single-combo evaluation (callable from API) ────────────────────────────────
+
+def evaluate_and_promote(
+    strategy: str,
+    universe: str,
+    *,
+    force: bool = False,
+    dry_run: bool = False,
+    no_telegram: bool = False,
+) -> Dict[str, Any]:
+    """Evaluate all promotion gates for a single (strategy, universe) combo.
+
+    This is the primary callable interface used by the dashboard API
+    (``services/api/lifecycle.py POST /api/strategy-lifecycle/promote-paper``).
+    It always runs the full gate set — no quick pre-filter — so the caller always
+    receives a detailed ``gates`` dict.
+
+    ``run_promotion()`` wraps this function for the batch CLI path, applying its
+    own pre-filter optimisation before calling here.
+
+    Args:
+        strategy:    Strategy name, e.g. ``"momentum_breakout"``.
+        universe:    Universe / market ID, e.g. ``"sp500"``.
+        force:       Unused here (gate evaluation always runs in full); kept for
+                     API signature symmetry with ``run_promotion`` CLI flag.
+        dry_run:     Compute gates but skip state transition, log write, Telegram.
+        no_telegram: Suppress Telegram even on a real promotion.
+
+    Returns:
+        Dict with keys::
+
+            promoted          bool
+            strategy          str
+            universe          str
+            gates             dict[str, str]   — {"A": "PASS", "B": "FAIL", ...}
+            paper_sharpe      float | None
+            research_sharpe   float | None
+            gap               float | None
+            days_in_paper     float | None
+            paper_trades      int
+            reason            str | None       — present when promoted=False
+            auto_promotion_id str | None       — present when promoted=True
+            dry_run           bool | None      — present when dry_run=True
+    """
+    import re as _re
+
+    from monitor.strategy_lifecycle import PromotionState, list_state, transition
+
+    # ── Fetch the PAPER row ────────────────────────────────────────────────────
+    paper_rows = list_state(PromotionState.PAPER)
+    matching = [
+        r for r in paper_rows
+        if r["strategy"] == strategy and r["universe"] == universe
+    ]
+
+    if not matching:
+        return {
+            "promoted": False,
+            "strategy": strategy,
+            "universe": universe,
+            "reason": f"{strategy}/{universe} is not in PAPER state",
+            "gates": {},
+            "paper_sharpe": None,
+            "research_sharpe": None,
+            "gap": None,
+            "days_in_paper": None,
+            "paper_trades": 0,
+        }
+
+    row = matching[0]
+
+    # ── Full gate evaluation (no pre-filter — caller always gets details) ──────
+    paper_pnls = _fetch_paper_trades(strategy, universe, window_days=30)
+    research_row = _fetch_research_best(strategy, universe)
+    all_pass, reasons, metrics = _evaluate_gates(row, paper_pnls, research_row)
+
+    # Parse gate outcomes from reasons strings
+    gates_dict: Dict[str, str] = {}
+    for r in reasons:
+        m = _re.match(r"Gate ([A-Z]) \((PASS|FAIL|BYPASS)\)", r)
+        if m:
+            gates_dict[m.group(1)] = m.group(2)
+
+    result: Dict[str, Any] = {
+        "promoted": False,  # overwritten below on success
+        "strategy": strategy,
+        "universe": universe,
+        "gates": gates_dict,
+        "paper_sharpe": metrics.get("paper_sharpe"),
+        "research_sharpe": metrics.get("research_sharpe"),
+        "gap": metrics.get("gap"),
+        "days_in_paper": metrics.get("days_in_paper"),
+        "paper_trades": metrics.get("paper_trades", 0),
+    }
+
+    if not all_pass:
+        failed_gates = [g for g, s in gates_dict.items() if s == "FAIL"]
+        result["reason"] = (
+            f"Gate(s) failed: {', '.join(failed_gates)}"
+            if failed_gates
+            else "One or more gates failed"
+        )
+        return result
+
+    # ── All gates pass ─────────────────────────────────────────────────────────
+    promo_id = str(uuid.uuid4())
+    result["auto_promotion_id"] = promo_id
+
+    if dry_run:
+        logger.info(
+            "DRY-RUN PROMOTE %s/%s — gates all pass (promo_id=%s)",
+            strategy, universe, promo_id,
+        )
+        result["promoted"] = True
+        result["dry_run"] = True
+        return result
+
+    # Write promotion log BEFORE transition
+    log_entry: Dict[str, Any] = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "strategy": strategy,
+        "universe": universe,
+        "paper_sharpe": metrics["paper_sharpe"],
+        "research_sharpe": metrics["research_sharpe"],
+        "gap": metrics["gap"],
+        "paper_trades": metrics["paper_trades"],
+        "days_in_paper": metrics["days_in_paper"],
+        "from_state": "PAPER",
+        "to_state": "LIVE",
+        "auto_promotion_id": promo_id,
+    }
+    try:
+        _append_promotion_log(log_entry)
+        logger.info(
+            "Appended promotion_log.json for %s/%s (promo_id=%s)",
+            strategy, universe, promo_id,
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed to write promotion_log.json for %s/%s: %s",
+            strategy, universe, exc,
+        )
+        result["reason"] = f"Failed to write promotion audit log: {exc}"
+        return result
+
+    # Transition to LIVE
+    try:
+        transition(
+            strategy=strategy,
+            universe=universe,
+            new_state=PromotionState.LIVE,
+            reason="auto_promote_paper_to_live: 30-day gate pass",
+            auto_promotion_id=promo_id,
+            operator="system",
+        )
+        logger.info("PROMOTED %s/%s → LIVE (promo_id=%s)", strategy, universe, promo_id)
+    except Exception as exc:
+        logger.error("transition() failed for %s/%s: %s", strategy, universe, exc)
+        result["reason"] = f"State transition failed: {exc}"
+        return result
+
+    # Telegram alert (non-fatal)
+    _send_promotion_telegram(strategy, universe, metrics, no_telegram)
+
+    result["promoted"] = True
+    return result
+
+
 # ── Main evaluation loop ───────────────────────────────────────────────────────
 
 def run_promotion(
@@ -370,96 +539,46 @@ def run_promotion(
         strategy = row["strategy"]
         universe = row["universe"]
         entered_at = row.get("entered_state_at") or ""
-        paper_start = row.get("paper_start_date") or entered_at
 
         logger.info("─── Evaluating %s / %s ───", strategy, universe)
 
-        # Quick pre-filter to avoid DB calls when clearly insufficient data
+        # Quick pre-filter: avoid full gate evaluation when clearly insufficient.
+        # (evaluate_and_promote always runs all gates — that is the API path.)
         days_in_paper = _days_since_entered_paper(entered_at)
-        paper_pnls = _fetch_paper_trades(strategy, universe, window_days=30)
-        n_trades = len(paper_pnls)
+        n_quick = len(_fetch_paper_trades(strategy, universe, window_days=30))
 
-        if days_in_paper < GATE_A_MIN_DAYS or n_trades < GATE_B_MIN_TRADES:
+        if not force and (days_in_paper < GATE_A_MIN_DAYS or n_quick < GATE_B_MIN_TRADES):
             logger.info(
                 "SKIP %s/%s: insufficient sample n=%d days=%.1f",
-                strategy, universe, n_trades, days_in_paper,
+                strategy, universe, n_quick, days_in_paper,
             )
             skipped += 1
             continue
 
-        # Full gate evaluation
-        research_row = _fetch_research_best(strategy, universe)
-        all_pass, reasons, metrics = _evaluate_gates(row, paper_pnls, research_row)
+        # Full evaluation via the single-combo function
+        result = evaluate_and_promote(
+            strategy,
+            universe,
+            dry_run=dry_run,
+            no_telegram=no_telegram,
+        )
 
-        for reason_line in reasons:
-            logger.info("  %s", reason_line)
+        # Log per-gate outcomes
+        for gate, status in result.get("gates", {}).items():
+            logger.info("  Gate %s: %s", gate, status)
 
-        if not all_pass:
-            logger.info("REJECT %s/%s — one or more gates failed", strategy, universe)
+        if result.get("promoted"):
+            promoted += 1
+            if dry_run:
+                logger.info("DRY-RUN PROMOTE %s/%s", strategy, universe)
+            else:
+                logger.info(
+                    "PROMOTED %s/%s → LIVE (promo_id=%s)",
+                    strategy, universe, result.get("auto_promotion_id"),
+                )
+        else:
+            logger.info("REJECT %s/%s — %s", strategy, universe, result.get("reason", "unknown"))
             rejected += 1
-            continue
-
-        # ── All gates pass — promote ───────────────────────────────────────────
-        promo_id = str(uuid.uuid4())
-        log_entry: Dict[str, Any] = {
-            "ts": datetime.now(timezone.utc).isoformat(),
-            "strategy": strategy,
-            "universe": universe,
-            "paper_sharpe": metrics["paper_sharpe"],
-            "research_sharpe": metrics["research_sharpe"],
-            "gap": metrics["gap"],
-            "paper_trades": metrics["paper_trades"],
-            "days_in_paper": metrics["days_in_paper"],
-            "from_state": "PAPER",
-            "to_state": "LIVE",
-            "auto_promotion_id": promo_id,
-        }
-
-        if dry_run:
-            logger.info(
-                "DRY-RUN PROMOTE %s/%s — would transition to LIVE (promo_id=%s)",
-                strategy, universe, promo_id,
-            )
-            promoted += 1
-            continue
-
-        # Write promotion log BEFORE state transition so we have a record even if
-        # transition() fails.
-        try:
-            _append_promotion_log(log_entry)
-            logger.info(
-                "Appended promotion_log.json entry for %s/%s (promo_id=%s)",
-                strategy, universe, promo_id,
-            )
-        except Exception as exc:
-            logger.error(
-                "Failed to write promotion_log.json for %s/%s: %s",
-                strategy, universe, exc,
-            )
-            # Do not promote if we can't write the audit log
-            continue
-
-        # Transition to LIVE
-        try:
-            transition(
-                strategy=strategy,
-                universe=universe,
-                new_state=PromotionState.LIVE,
-                reason="auto_promote_paper_to_live: 30-day gate pass",
-                auto_promotion_id=promo_id,
-                operator="system",
-            )
-            logger.info("PROMOTED %s/%s → LIVE (promo_id=%s)", strategy, universe, promo_id)
-            promoted += 1
-        except Exception as exc:
-            logger.error(
-                "transition() failed for %s/%s: %s",
-                strategy, universe, exc,
-            )
-            continue
-
-        # Telegram alert (non-fatal)
-        _send_promotion_telegram(strategy, universe, metrics, no_telegram)
 
     dry_tag = " [DRY-RUN]" if dry_run else ""
     logger.info(
