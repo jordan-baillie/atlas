@@ -107,3 +107,6 @@ TZ=Australia/Brisbane
 0 9 * * 6 /root/atlas/scripts/pi-cron.sh health-check sp500
 # Sunday 22:00 AEST (Sun 12:00 UTC) — verify weekly health reports exist
 0 22 * * 0 /usr/bin/flock -n /tmp/verify_health_reports.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/verify_weekly_health_reports.py' >> /root/atlas/logs/verify_health_reports.log 2>&1
+# Monday 08:00 AEST (Sun 22:00 UTC) — auto-promote PAPER strategies to LIVE
+# (22:00 UTC Sunday = 08:00 AEST Monday with TZ=Australia/Brisbane)
+0 8 * * 1 /root/atlas/scripts/pi-cron.sh auto_promote_paper

@@ -504,8 +504,16 @@ LOCKEOF
         hb "notify-rollup" "completed"
         exit 0
         ;;
+    auto_promote_paper)
+        # ── Auto-promote paper → live (Mon 08:00 AEST = Sun 22:00 UTC) ──
+        # Evaluates all (strategy, universe) combos in PAPER state against 9 promotion gates.
+        # On success: transitions to LIVE, appends data/promotion_log.json, sends Telegram.
+        # Cron: 0 8 * * 1 (TZ=Australia/Brisbane in atlas.crontab)
+        /usr/bin/flock -n /tmp/auto_promote_paper.lock bash -c             'cd /root/atlas && timeout 5m python3 scripts/auto_promote_paper_to_live.py'             >> /root/atlas/logs/auto_promote_paper.log 2>&1
+        exit $?
+        ;;
     *)
-        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals|notify-rollup} [market] [agent-id]"
+        echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals|notify-rollup|auto_promote_paper} [market] [agent-id]"
         exit 1
         ;;
 esac
