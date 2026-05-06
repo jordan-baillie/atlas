@@ -519,6 +519,13 @@ def main():
 
     log.info("Monitor cycle complete")
 
+    # ── Heartbeat ──────────────────────────────────────────────────────────
+    try:
+        from db.atlas_db import record_heartbeat
+        record_heartbeat("intraday_monitor", "completed", {"market": args.market if hasattr(args, "market") else "all"})
+    except Exception as _hb_exc:
+        log.debug("intraday_monitor: heartbeat write failed (non-fatal): %s", _hb_exc)
+
     # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
     if _has_open_paper_trades_for_universe(market_id):
         log.info("[PAPER] Open paper trades detected for %s — running paper monitor pass", market_id)
@@ -558,4 +565,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as _main_exc:
+        try:
+            from db.atlas_db import record_heartbeat
+            record_heartbeat("intraday_monitor", "failed", {"error": str(_main_exc)[:200]})
+        except Exception:
+            pass
+        raise

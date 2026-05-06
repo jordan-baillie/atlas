@@ -722,7 +722,8 @@ def main():
         if rc not in today_closed:
             today_closed.append(rc)
 
-    realized_today = round(sum(t.get("pnl", 0) for t in today_closed), 2)
+    # Reconciled broker-fill stubs may carry pnl=None — coerce with `or 0`
+    realized_today = round(sum((t.get("pnl") or 0) for t in today_closed), 2)
 
     summary = {
         "trade_date": trade_date,
@@ -948,6 +949,16 @@ def main():
         "tp_exits": len(tp_exits),
     })
 
+    # ── Heartbeat ─────────────────────────────────────────────────────────
+    try:
+        from db.atlas_db import record_heartbeat
+        record_heartbeat("eod_settlement", "completed", {
+            "market": market_id,
+            "exits_recorded": len(stop_exits) + len(tp_exits),
+        })
+    except Exception as _hb_exc:
+        log.debug("eod_settlement: heartbeat write failed (non-fatal): %s", _hb_exc)
+
     # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
     if _has_open_paper_trades_for_universe(market_id):
         log.info("[PAPER] Open paper trades detected for %s — running paper EOD pass", market_id)
@@ -1116,4 +1127,9 @@ if __name__ == "__main__":
             )
         except (ImportError, OSError, ConnectionError, RuntimeError) as e:  # Telegram in crash guard
             log.warning("Crash-alert Telegram notification failed: %s", e)
+        try:
+            from db.atlas_db import record_heartbeat
+            record_heartbeat("eod_settlement", "failed", {"error": str(exc)[:200]})
+        except Exception:
+            pass
         raise

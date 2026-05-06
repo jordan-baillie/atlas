@@ -1,31 +1,43 @@
 {
   "market_id": "sector_etfs",
   "mode": "live",
-  "positions": [
+  "positions": [],
+  "closed_trades": [
     {
       "ticker": "XLE",
       "strategy": "momentum_breakout",
       "entry_date": "2026-05-05",
       "entry_price": 59.06,
+      "exit_date": "2026-05-06",
+      "exit_price": 59.3451,
       "shares": 8,
-      "stop_price": 57.56,
-      "order_id": "",
-      "stop_order_id": "a52b73c2-2a71-44f6-825f-aa3d6c095cf4",
-      "tp_order_id": ""
+      "pnl": 2.28,
+      "pnl_pct": 0.48,
+      "exit_type": "manual_consolidation_close",
+      "exit_reason": "manual_consolidation_close",
+      "mae": 0.0,
+      "mfe": 0.0,
+      "sector": "Unknown",
+      "holding_days": 1
     },
     {
       "ticker": "XLI",
       "strategy": "momentum_breakout",
       "entry_date": "2026-05-05",
       "entry_price": 173.97,
+      "exit_date": "2026-05-06",
+      "exit_price": 172.1705,
       "shares": 9,
-      "stop_price": 170.07,
-      "order_id": "",
-      "stop_order_id": "5d4cc2c2-4115-4e1e-b480-c145f6f29e3f",
-      "tp_order_id": ""
+      "pnl": -16.2,
+      "pnl_pct": -1.03,
+      "exit_type": "manual_consolidation_close",
+      "exit_reason": "manual_consolidation_close",
+      "mae": 0.0,
+      "mfe": 0.0,
+      "sector": "Unknown",
+      "holding_days": 1
     }
   ],
-  "closed_trades": [],
   "equity_history": [
     {
       "date": "2026-04-24",
@@ -268,11 +280,31 @@
           "holding_days": 0
         }
       ]
+    },
+    {
+      "date": "2026-05-05",
+      "equity": 3202.08,
+      "cash": 4042.88,
+      "positions_value": -840.8,
+      "num_positions": 0,
+      "total_realized_pnl": -13.92,
+      "total_closed_trades": 2,
+      "positions": []
+    },
+    {
+      "date": "2026-05-06",
+      "equity": 3202.08,
+      "cash": 3606.56,
+      "positions_value": -404.48,
+      "num_positions": 0,
+      "total_realized_pnl": -13.92,
+      "total_closed_trades": 2,
+      "positions": []
     }
   ],
   "daily_high_water": 2637.57,
   "daily_high_water_date": "2026-05-05",
   "halted": false,
-  "halt_reason": "Daily drawdown 49.78% >= 2.00%",
-  "last_saved": "2026-05-05T15:06:06.847862"
+  "halt_reason": "",
+  "last_saved": "2026-05-07T08:01:05.525238"
 }

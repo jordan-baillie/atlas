@@ -452,7 +452,21 @@ def main(argv: list[str] | None = None) -> None:
         help="Do not send Telegram alerts (test/dry-run mode).",
     )
     args = parser.parse_args(argv)
-    sys.exit(run_once(quiet=args.quiet, no_alert=args.no_alert))
+    try:
+        rc = run_once(quiet=args.quiet, no_alert=args.no_alert)
+    except Exception as _exc:
+        try:
+            from db.atlas_db import record_heartbeat
+            record_heartbeat("healthcheck_pipelines", "failed", {"error": str(_exc)[:200]})
+        except Exception:
+            pass
+        raise
+    try:
+        from db.atlas_db import record_heartbeat
+        record_heartbeat("healthcheck_pipelines", "completed", {})
+    except Exception as _hb_exc:
+        logger.debug("healthcheck_pipelines: heartbeat write failed (non-fatal): %s", _hb_exc)
+    sys.exit(rc)
 
 
 if __name__ == "__main__":
