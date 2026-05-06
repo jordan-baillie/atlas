@@ -104,17 +104,24 @@ def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter
 def get_live_broker(config: Dict[str, Any]) -> Optional[BrokerAdapter]:
     """Create a live broker instance if configured and available.
 
-    Returns None if live trading is not enabled. The broker is NOT
+    Supports three modes (trading.mode in config):
+      "live"  — real-money trading, requires live_enabled=True
+      "paper" — Alpaca paper account, does NOT require live_enabled=True
+      "passive" — monitoring only, no orders
+
+    Returns None if neither live_enabled nor mode=="paper". The broker is NOT
     connected — call broker.connect() after pre-flight checks.
     """
     _register_defaults()
     live_enabled = config.get("trading", {}).get("live_enabled", False)
+    mode = _resolve_mode(config)
     broker_name = _resolve_broker_name(config)
 
-    if not live_enabled or broker_name not in _KNOWN_BROKERS:
+    # Paper mode works even without live_enabled (it targets a simulated account)
+    if not (live_enabled or mode == "paper") or broker_name not in _KNOWN_BROKERS:
         logger.debug(
-            "Live broker not available (broker=%s, live_enabled=%s)",
-            broker_name, live_enabled,
+            "Live broker not available (broker=%s, live_enabled=%s, mode=%s)",
+            broker_name, live_enabled, mode,
         )
         return None
 
@@ -158,8 +165,22 @@ def _resolve_broker_name(config: Dict[str, Any]) -> str:
     return config.get("trading", {}).get("broker", "alpaca").lower().strip()
 
 
+def _resolve_mode(config: Dict[str, Any]) -> str:
+    """Extract and normalise trading mode from config.
+
+    Valid values: "live" (default), "paper", "passive".
+    Unknown values are coerced to "live" for safety.
+    """
+    mode = config.get("trading", {}).get("mode", "live").lower().strip()
+    if mode not in ("live", "paper", "passive"):
+        logger.warning("Unknown trading mode '%s' — defaulting to 'live'", mode)
+        return "live"
+    return mode
+
+
 def _make_alpaca_broker(
     market_id: str, config: Dict[str, Any], live: bool = False, **kwargs,
 ) -> BrokerAdapter:
     from brokers.alpaca.broker import AlpacaBroker
-    return AlpacaBroker(config, live=live)
+    mode = _resolve_mode(config)
+    return AlpacaBroker(config, live=live, mode=mode)

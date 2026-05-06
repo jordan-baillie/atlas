@@ -163,9 +163,13 @@ def reconcile_positions(
     # Build lookup: ticker -> internal position
     internal_map = {p["ticker"]: p for p in internal_positions}
 
+    # ── Mode detection ───────────────────────────────────────
+    _rp_mode = config.get("trading", {}).get("mode", "live")
+    _rp_mode_label = f"[{_rp_mode.upper()}]"
+
     # ── Connect to broker ───────────────────────────────────
     broker_name = config.get("trading", {}).get("broker", _DEFAULT_BROKER.get(market_id, "alpaca"))
-    logger.info("Reconciling %s via %s broker", market_id.upper(), broker_name)
+    logger.info("%s Reconciling %s via %s broker", _rp_mode_label, market_id.upper(), broker_name)
 
     broker = None
     try:
@@ -502,21 +506,48 @@ def reconcile_positions(
                                     "universe resolved to %s (ticker not in %s universe)",
                                     _ticker, market_id, _rp_derived_universe, market_id,
                                 )
-                            atlas_db.record_trade_entry(
-                                ticker=_ticker,
-                                strategy=_strategy,
-                                universe=_rp_derived_universe or market_id,
-                                entry_price=float(cp.get("entry_price") or 0),
-                                shares=int(cp.get("shares") or 0),
-                                stop_price=_stop_price,
-                                take_profit=None,
-                                confidence=0.0,
-                                regime_state=None,
-                                direction="long",
-                            )
+                            if _rp_mode == "paper":
+                                try:
+                                    _rp_paper_acct = getattr(broker, "account_number", None) if broker else None
+                                    atlas_db.record_paper_trade_entry(
+                                        ticker=_ticker,
+                                        strategy=_strategy,
+                                        universe=_rp_derived_universe or market_id,
+                                        entry_price=float(cp.get("entry_price") or 0),
+                                        shares=int(cp.get("shares") or 0),
+                                        stop_price=_stop_price,
+                                        take_profit=None,
+                                        confidence=0.0,
+                                        regime_state=None,
+                                        direction="long",
+                                        paper_account_id=_rp_paper_acct,
+                                    )
+                                except AttributeError:
+                                    logger.warning("%s record_paper_trade_entry not available — falling back", _rp_mode_label)
+                                    atlas_db.record_trade_entry(
+                                        ticker=_ticker, strategy=_strategy,
+                                        universe=_rp_derived_universe or market_id,
+                                        entry_price=float(cp.get("entry_price") or 0),
+                                        shares=int(cp.get("shares") or 0),
+                                        stop_price=_stop_price, take_profit=None,
+                                        confidence=0.0, regime_state=None, direction="long",
+                                    )
+                            else:
+                                atlas_db.record_trade_entry(
+                                    ticker=_ticker,
+                                    strategy=_strategy,
+                                    universe=_rp_derived_universe or market_id,
+                                    entry_price=float(cp.get("entry_price") or 0),
+                                    shares=int(cp.get("shares") or 0),
+                                    stop_price=_stop_price,
+                                    take_profit=None,
+                                    confidence=0.0,
+                                    regime_state=None,
+                                    direction="long",
+                                )
                             logger.info(
-                                "reconcile_positions: SQLite dual-write inserted %s/%s",
-                                _ticker, _strategy,
+                                "%s reconcile_positions: SQLite dual-write inserted %s/%s",
+                                _rp_mode_label, _ticker, _strategy,
                             )
                         except Exception as _db_exc:
                             logger.error(

@@ -34,6 +34,15 @@ REQUIRED_MODE = 0o600
 SECRET_KEYS = {
     # Interactive Brokers
     "IBKR_ACCOUNT_ID": "IBKR account ID (e.g. U1234567 or DU1234567 for paper)",
+
+    # Alpaca — live real-money trading
+    "ALPACA_API_KEY": "Alpaca live API key (from Alpaca dashboard → Live Trading)",
+    "ALPACA_SECRET_KEY": "Alpaca live secret key (from Alpaca dashboard → Live Trading)",
+
+    # Alpaca — paper trading (simulated account, $100K virtual balance)
+    "ALPACA_PAPER_API_KEY": "Alpaca paper API key (from Alpaca dashboard → Paper Trading)",
+    "ALPACA_PAPER_SECRET_KEY": "Alpaca paper secret key (from Alpaca dashboard → Paper Trading)",
+    "ALPACA_PAPER_ENDPOINT": "Alpaca paper endpoint URL (default: https://paper-api.alpaca.markets)",
 }
 
 

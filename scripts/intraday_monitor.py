@@ -365,14 +365,18 @@ def main():
     config = get_active_config(market_id)
 
     # Skip markets that aren't live-enabled (avoids ERROR-level Telegram spam)
-    if not config.get("trading", {}).get("live_enabled", False):
-        log.info("Market %s has live_enabled=False — skipping monitor", market_id)
+    # Paper mode is active even without live_enabled (targets Alpaca paper account)
+    _trading_cfg = config.get("trading", {})
+    _mode_intraday = _trading_cfg.get("mode", "live")
+    if not (_trading_cfg.get("live_enabled", False) or _mode_intraday == "paper"):
+        log.info("[%s] Market %s has live_enabled=False — skipping monitor", _mode_intraday.upper(), market_id)
         try:
             from monitor.health_writer import heartbeat as _hb
             _hb("intraday_monitor", "skipped", {"market": market_id, "reason": "market_disabled"})
         except Exception:
             pass
         return
+    _mode_label_intraday = f"[{_mode_intraday.upper()}]"
 
     portfolio = LivePortfolio(config, market_id=market_id)
     if not portfolio.connect():

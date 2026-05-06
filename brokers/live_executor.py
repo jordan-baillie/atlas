@@ -149,8 +149,11 @@ def preflight_check_config(config: dict) -> list[str]:
     """Validate config has all required safety fields. Returns list of errors."""
     errors = []
     trading = config.get("trading", {})
+    mode = trading.get("mode", "live")
 
-    if not trading.get("live_enabled", False):
+    # Paper mode does not require live_enabled=True — it uses a virtual account.
+    # live_enabled=False is still an error for mode="live" (safety gate for real money).
+    if not trading.get("live_enabled", False) and mode != "paper":
         errors.append("trading.live_enabled is False")
 
     safety = trading.get("live_safety", {})
@@ -258,6 +261,8 @@ class LiveExecutor:
         self._daily_start_equity: float = 0.0
         # Per-execute_plan account info cache (avoids repeated broker RPCs)
         self._account_info_cache = None
+        # Trading mode: "live", "paper", or "passive"
+        self._mode: str = config.get("trading", {}).get("mode", "live")
 
     @property
     def is_live_enabled(self) -> bool:
@@ -1294,104 +1299,146 @@ class LiveExecutor:
             # status=SUBMITTED — recording it now would create phantom
             # positions for orders that may never fill.
             if order_result.status == OrderStatus.FILLED:
-                try:
-                    from journal.logger import TradeLedger
-                    _ledger = TradeLedger()
-                    _trade_id = _ledger.record_entry({
-                        "ticker": ticker, "strategy": strategy, "shares": qty,
-                        "fill_price": order_result.fill_price or price,
-                        "planned_price": price, "stop_price": stop_price,
-                        "slippage_bps": result.get("slippage_bps"),
-                        "order_id": order_result.order_id,
-                        "timestamp": datetime.now().isoformat(),
-                        "direction": direction,
-                        "confidence": confidence,
-                        "market_id": self.config.get("market_id", "sp500"),
-                        "config_version": self.config.get("version"),
-                        "regime_state": _regime_state,
-                    })
-                    # Emit structured TRADE_OPENED only on a genuine new insert
-                    # (record_entry returns None on duplicate constraint)
-                    if _trade_id is not None:
-                        logger.info(
-                            "TRADE_OPENED symbol=%s qty=%d entry_price=%.2f"
-                            " strategy=%s universe=%s trade_id=%s"
-                            " order_id=%s stop_price=%.2f",
-                            ticker, qty, order_result.fill_price or price, strategy,
-                            self.config.get("market_id", "unknown"),
-                            _trade_id,
-                            order_result.order_id, stop_price,
+                _trade_id = None
+                _fill_price_entry = order_result.fill_price or price
+                _market_id_entry = self.config.get("market_id", "sp500")
+                if self._mode == "paper":
+                    # Paper mode: write to paper_trades table only (NOT trades)
+                    try:
+                        from db import atlas_db as _adb_entry
+                        from universe.membership import derive_universe as _du_entry
+                        _paper_account_id = getattr(self._broker, "account_number", None) if self._broker else None
+                        _universe_entry = _du_entry(ticker, _market_id_entry) if ticker else _market_id_entry
+                        _trade_id = _adb_entry.record_paper_trade_entry(
+                            ticker=ticker,
+                            strategy=strategy,
+                            universe=_universe_entry,
+                            entry_price=_fill_price_entry,
+                            shares=qty,
+                            stop_price=stop_price,
+                            take_profit=None,
+                            confidence=confidence,
+                            regime_state=_regime_state,
+                            direction=direction,
+                            config_version=self.config.get("version"),
+                            paper_account_id=_paper_account_id,
                         )
-                    # Populate trades.stop_order_id / tp_order_id from bracket child legs.
-                    # alpaca-py exposes child legs on the parent order via .raw["legs"] (a list
-                    # of dicts when using the SDK), each leg having id, side, order_type.
-                    if _trade_id is not None:
-                        try:
-                            _legs = order_result.raw.get("legs") or []
-                            _stop_id, _tp_id = "", ""
-                            for _leg in _legs:
-                                _leg_type = str(_leg.get("order_type", "")).lower()
-                                _leg_side = str(_leg.get("side", "")).lower()
-                                if _leg_side != "sell":
-                                    continue
-                                if _leg_type in ("stop", "stop_limit", "trailing_stop"):
-                                    _stop_id = str(_leg.get("id", ""))
-                                elif _leg_type == "limit":
-                                    _tp_id = str(_leg.get("id", ""))
-                            if _stop_id or _tp_id:
-                                from db.atlas_db import update_trade_protective_orders
-                                _n = update_trade_protective_orders(
-                                    ticker=ticker,
-                                    universe=self.config.get("market_id", "sp500"),
-                                    stop_order_id=_stop_id or None,
-                                    tp_order_id=_tp_id or None,
-                                )
-                                logger.info(
-                                    "BRACKET legs recorded: %s trade_id=%s stop_order_id=%s "
-                                    "tp_order_id=%s rows_updated=%d",
-                                    ticker, _trade_id, _stop_id, _tp_id, _n,
-                                )
-                                # Phase B.0: also write to position_protective_orders ledger
-                                # (additive second writer; does NOT replace trades.stop_order_id)
-                                try:
-                                    if _protective_ledger_enabled():
-                                        from db.atlas_db import upsert_protective_record as _upr
-                                        _mkt = self.config.get("market_id", "sp500")
-                                        _upr(
-                                            market_id=_mkt,
-                                            ticker=ticker,
-                                            trade_id=_trade_id,
-                                            position_qty=qty,
-                                            stop_order_id=_stop_id or None,
-                                            stop_price=stop_price if stop_price else None,
-                                            tp_order_id=_tp_id or None,
-                                            tp_price=_atomic_take_profit if _atomic_take_profit else None,
-                                            oco_class="bracket",
-                                        )
-                                        logger.debug(
-                                            "Protective ledger: upserted bracket record %s/%s "
-                                            "trade_id=%s stop=%s tp=%s",
-                                            ticker, _mkt, _trade_id,
-                                            (_stop_id or "")[:8], (_tp_id or "")[:8],
-                                        )
-                                except Exception as _prot_exc:
-                                    logger.warning(
-                                        "Protective ledger upsert failed for %s (non-fatal): %s",
-                                        ticker, _prot_exc,
-                                    )
-                            else:
-                                logger.warning(
-                                    "BRACKET fill recorded but no child legs found in order "
-                                    "%s for %s — sync_protective will need to repair",
-                                    order_result.order_id, ticker,
-                                )
-                        except Exception as _legs_exc:
-                            logger.warning(
-                                "Failed to record BRACKET child leg IDs for %s: %s",
-                                ticker, _legs_exc,
+                        if _trade_id is not None:
+                            logger.info(
+                                "[paper] PAPER_TRADE_OPENED symbol=%s qty=%d entry_price=%.2f"
+                                " strategy=%s universe=%s trade_id=%s"
+                                " order_id=%s stop_price=%.2f",
+                                ticker, qty, _fill_price_entry, strategy,
+                                _market_id_entry, _trade_id,
+                                order_result.order_id, stop_price,
                             )
-                except Exception as _ledger_exc:
-                    logger.warning("TradeLedger entry record failed (non-fatal): %s", _ledger_exc)
+                    except AttributeError as _paper_attr_exc:
+                        logger.warning(
+                            "[paper] record_paper_trade_entry not available (non-fatal): %s",
+                            _paper_attr_exc,
+                        )
+                    except Exception as _paper_exc:
+                        logger.error(
+                            "[paper] Paper trade entry write failed for %s: %s", ticker, _paper_exc,
+                        )
+                else:
+                    try:
+                        from journal.logger import TradeLedger
+                        _ledger = TradeLedger()
+                        _trade_id = _ledger.record_entry({
+                            "ticker": ticker, "strategy": strategy, "shares": qty,
+                            "fill_price": _fill_price_entry,
+                            "planned_price": price, "stop_price": stop_price,
+                            "slippage_bps": result.get("slippage_bps"),
+                            "order_id": order_result.order_id,
+                            "timestamp": datetime.now().isoformat(),
+                            "direction": direction,
+                            "confidence": confidence,
+                            "market_id": _market_id_entry,
+                            "config_version": self.config.get("version"),
+                            "regime_state": _regime_state,
+                        })
+                        # Emit structured TRADE_OPENED only on a genuine new insert
+                        # (record_entry returns None on duplicate constraint)
+                        if _trade_id is not None:
+                            logger.info(
+                                "TRADE_OPENED symbol=%s qty=%d entry_price=%.2f"
+                                " strategy=%s universe=%s trade_id=%s"
+                                " order_id=%s stop_price=%.2f",
+                                ticker, qty, _fill_price_entry, strategy,
+                                _market_id_entry, _trade_id,
+                                order_result.order_id, stop_price,
+                            )
+                    except Exception as _live_ledger_exc:
+                        logger.error("[live] TradeLedger entry write failed for %s: %s", ticker, _live_ledger_exc)
+                # Populate trades.stop_order_id / tp_order_id from bracket child legs.
+                # alpaca-py exposes child legs on the parent order via .raw["legs"] (a list
+                # of dicts when using the SDK), each leg having id, side, order_type.
+                if _trade_id is not None:
+                    try:
+                        _legs = order_result.raw.get("legs") or []
+                        _stop_id, _tp_id = "", ""
+                        for _leg in _legs:
+                            _leg_type = str(_leg.get("order_type", "")).lower()
+                            _leg_side = str(_leg.get("side", "")).lower()
+                            if _leg_side != "sell":
+                                continue
+                            if _leg_type in ("stop", "stop_limit", "trailing_stop"):
+                                _stop_id = str(_leg.get("id", ""))
+                            elif _leg_type == "limit":
+                                _tp_id = str(_leg.get("id", ""))
+                        if _stop_id or _tp_id:
+                            from db.atlas_db import update_trade_protective_orders
+                            _n = update_trade_protective_orders(
+                                ticker=ticker,
+                                universe=self.config.get("market_id", "sp500"),
+                                stop_order_id=_stop_id or None,
+                                tp_order_id=_tp_id or None,
+                            )
+                            logger.info(
+                                "BRACKET legs recorded: %s trade_id=%s stop_order_id=%s "
+                                "tp_order_id=%s rows_updated=%d",
+                                ticker, _trade_id, _stop_id, _tp_id, _n,
+                            )
+                            # Phase B.0: also write to position_protective_orders ledger
+                            # (additive second writer; does NOT replace trades.stop_order_id)
+                            try:
+                                if _protective_ledger_enabled():
+                                    from db.atlas_db import upsert_protective_record as _upr
+                                    _mkt = self.config.get("market_id", "sp500")
+                                    _upr(
+                                        market_id=_mkt,
+                                        ticker=ticker,
+                                        trade_id=_trade_id,
+                                        position_qty=qty,
+                                        stop_order_id=_stop_id or None,
+                                        stop_price=stop_price if stop_price else None,
+                                        tp_order_id=_tp_id or None,
+                                        tp_price=_atomic_take_profit if _atomic_take_profit else None,
+                                        oco_class="bracket",
+                                    )
+                                    logger.debug(
+                                        "Protective ledger: upserted bracket record %s/%s "
+                                        "trade_id=%s stop=%s tp=%s",
+                                        ticker, _mkt, _trade_id,
+                                        (_stop_id or "")[:8], (_tp_id or "")[:8],
+                                    )
+                            except Exception as _prot_exc:
+                                logger.warning(
+                                    "Protective ledger upsert failed for %s (non-fatal): %s",
+                                    ticker, _prot_exc,
+                                )
+                        else:
+                            logger.warning(
+                                "BRACKET fill recorded but no child legs found in order "
+                                "%s for %s — sync_protective will need to repair",
+                                order_result.order_id, ticker,
+                            )
+                    except Exception as _legs_exc:
+                        logger.warning(
+                            "Failed to record BRACKET child leg IDs for %s: %s",
+                            ticker, _legs_exc,
+                        )
             else:
                 logger.info(
                     "Order %s for %s accepted but not yet filled (status=%s) — "
@@ -1666,12 +1713,33 @@ class LiveExecutor:
                 "direction": direction,
                 "regime_at_exit": _regime_state,
             }
-            try:
-                from journal.logger import TradeLedger
-                _ledger = TradeLedger()
-                _ledger.record_exit(_exit_record)
-            except Exception as _ledger_exc:
-                logger.warning("TradeLedger exit record failed (non-fatal): %s", _ledger_exc)
+            if self._mode == "paper":
+                # Paper mode: write to paper_trades table only (NOT trades)
+                try:
+                    from db import atlas_db as _adb_exit
+                    _paper_account_id_exit = getattr(self._broker, "account_number", None) if self._broker else None
+                    _strategy_exit = pos.strategy if pos and hasattr(pos, "strategy") else ""
+                    _adb_exit.record_paper_trade_exit(
+                        ticker=ticker,
+                        strategy=_strategy_exit,
+                        exit_price=_fill_price,
+                        exit_reason=reason,
+                        regime_at_exit=_regime_state,
+                        paper_account_id=_paper_account_id_exit,
+                    )
+                    logger.info("[paper] Paper exit recorded: %s fill=%.2f pnl=%s", ticker, _fill_price,
+                                f"{_pnl:+.2f}" if _pnl is not None else "?")
+                except AttributeError as _paper_exit_attr:
+                    logger.warning("[paper] record_paper_trade_exit not available (non-fatal): %s", _paper_exit_attr)
+                except Exception as _paper_exit_exc:
+                    logger.error("[paper] Paper trade exit write failed for %s: %s", ticker, _paper_exit_exc)
+            else:
+                try:
+                    from journal.logger import TradeLedger
+                    _ledger = TradeLedger()
+                    _ledger.record_exit(_exit_record)
+                except Exception as _ledger_exc:
+                    logger.warning("TradeLedger exit record failed (non-fatal): %s", _ledger_exc)
 
             # Phase B.0: close position_protective_orders ledger record on exit
             try:
@@ -2705,11 +2773,13 @@ class LiveExecutor:
             # The JSON ledger only deduplicates by order_id; SQLite dedup by ticker
             # prevents cross-market ghost rows when fills from other-market orders
             # are returned by the broker's 7-day history scan.
+            # Paper mode queries paper_trades; live mode queries trades.
+            _dedup_table = "paper_trades" if self._mode == "paper" else "trades"
             try:
                 from db import atlas_db as _adb
                 with _adb.get_db() as _chk_db:
                     _sqlite_open = _chk_db.execute(
-                        "SELECT id, strategy FROM trades WHERE status='open' AND ticker=? LIMIT 1",
+                        f"SELECT id, strategy FROM {_dedup_table} WHERE status='open' AND ticker=? LIMIT 1",
                         (ticker,),
                     ).fetchone()
                 if _sqlite_open:
@@ -2718,17 +2788,17 @@ class LiveExecutor:
                     if _existing_strat in ("unknown", "reconciled", "") and strategy not in ("unknown", "reconciled", ""):
                         with _adb.get_db() as _upd_db:
                             _upd_db.execute(
-                                "UPDATE trades SET strategy=?, stop_price=? WHERE id=?",
+                                f"UPDATE {_dedup_table} SET strategy=?, stop_price=? WHERE id=?",
                                 (strategy, stop_price, _existing_id),
                             )
                         logger.info(
-                            "reconcile_entry_fills: dedup_guard upgraded id=%d %s strategy %s→%s",
-                            _existing_id, ticker, _existing_strat, strategy,
+                            "reconcile_entry_fills: dedup_guard upgraded id=%d %s strategy %s→%s [%s]",
+                            _existing_id, ticker, _existing_strat, strategy, self._mode,
                         )
                     else:
                         logger.debug(
-                            "reconcile_entry_fills: dedup_guard: %s already open id=%d, skipping INSERT",
-                            ticker, _existing_id,
+                            "reconcile_entry_fills: dedup_guard: %s already open id=%d [%s], skipping INSERT",
+                            ticker, _existing_id, self._mode,
                         )
                     continue
             except Exception as _dedup_exc:
@@ -2757,28 +2827,54 @@ class LiveExecutor:
                 "config_version": self.config.get("version"),
                 "regime_state": _recon_regime,
             }
-            try:
-                _trade_id = _ledger.record_entry(ledger_record)
-                logger.info(
-                    "Reconciled fill: BUY %s %d @ $%.2f (order %s)",
-                    ticker, qty, fill_price, order_id[:12],
-                )
-                # Emit structured TRADE_OPENED only on a genuine new insert
-                if _trade_id is not None:
-                    logger.info(
-                        "TRADE_OPENED symbol=%s qty=%d entry_price=%.2f"
-                        " strategy=%s universe=%s trade_id=%s"
-                        " order_id=%s stop_price=%.2f",
-                        ticker, qty, fill_price, strategy,
-                        self.config.get("market_id", "unknown"),
-                        _trade_id,
-                        order_id, stop_price,
+            if self._mode == "paper":
+                # Paper mode: write directly to paper_trades (skip TradeLedger / trades)
+                try:
+                    from db import atlas_db as _adb_recon
+                    from universe.membership import derive_universe as _du_recon
+                    _paper_acct_recon = getattr(self._broker, "account_number", None) if self._broker else None
+                    _mkt_recon = self.config.get("market_id", "sp500")
+                    _univ_recon = _du_recon(ticker, _mkt_recon) if ticker else _mkt_recon
+                    _trade_id = _adb_recon.record_paper_trade_entry(
+                        ticker=ticker, strategy=strategy,
+                        universe=_univ_recon,
+                        entry_price=fill_price, shares=qty,
+                        stop_price=stop_price, take_profit=None,
+                        confidence=ledger_record.get("confidence", 0),
+                        regime_state=_recon_regime,
+                        config_version=self.config.get("version"),
+                        paper_account_id=_paper_acct_recon,
                     )
-                reconciled.append(ledger_record)
-            except Exception as e:
-                logger.error(
-                    "Failed to reconcile fill for %s: %s", ticker, e,
-                )
+                    logger.info("[paper] Reconciled fill: BUY %s %d @ $%.2f (order %s)",
+                                ticker, qty, fill_price, order_id[:12])
+                    reconciled.append(ledger_record)
+                except AttributeError as _pr_attr:
+                    logger.warning("[paper] record_paper_trade_entry not available: %s", _pr_attr)
+                except Exception as _pr_exc:
+                    logger.error("[paper] Paper reconcile entry failed for %s: %s", ticker, _pr_exc)
+            else:
+                try:
+                    _trade_id = _ledger.record_entry(ledger_record)
+                    logger.info(
+                        "Reconciled fill: BUY %s %d @ $%.2f (order %s)",
+                        ticker, qty, fill_price, order_id[:12],
+                    )
+                    # Emit structured TRADE_OPENED only on a genuine new insert
+                    if _trade_id is not None:
+                        logger.info(
+                            "TRADE_OPENED symbol=%s qty=%d entry_price=%.2f"
+                            " strategy=%s universe=%s trade_id=%s"
+                            " order_id=%s stop_price=%.2f",
+                            ticker, qty, fill_price, strategy,
+                            self.config.get("market_id", "unknown"),
+                            _trade_id,
+                            order_id, stop_price,
+                        )
+                    reconciled.append(ledger_record)
+                except Exception as e:
+                    logger.error(
+                        "Failed to reconcile fill for %s: %s", ticker, e,
+                    )
 
         if reconciled:
             logger.info(
@@ -2950,35 +3046,56 @@ class LiveExecutor:
                 "reconciled": True,
                 "regime_at_exit": _recon_exit_regime,
             }
-            try:
-                _ledger.record_exit(exit_record)
-                logger.info(
-                    "Reconciled exit: SELL %s %d @ $%.2f PnL=$%s (order %s)",
-                    ticker, qty, fill_price,
-                    f"{pnl:+.2f}" if pnl is not None else "?",
-                    order_id[:12],
-                )
-                reconciled.append(exit_record)
-                # Phase B.0: close protective ledger on reconciled exit
+            if self._mode == "paper":
+                # Paper mode: write to paper_trades exit (skip TradeLedger / trades)
                 try:
-                    if _protective_ledger_enabled():
-                        from db.atlas_db import close_protective_record as _cpr_recon
-                        _cpr_recon(
-                            market_id=self.config.get("market_id", "sp500"),
-                            ticker=ticker,
-                        )
-                        logger.debug(
-                            "Protective ledger: closed record %s (reconciled exit)", ticker,
-                        )
-                except Exception as _prot_recon_exc:
-                    logger.warning(
-                        "Protective ledger close failed for %s reconciled exit (non-fatal): %s",
-                        ticker, _prot_recon_exc,
+                    from db import atlas_db as _adb_recon_exit
+                    _paper_acct_recon_exit = getattr(self._broker, "account_number", None) if self._broker else None
+                    _adb_recon_exit.record_paper_trade_exit(
+                        ticker=ticker, strategy=exit_record.get("strategy", strategy),
+                        exit_price=fill_price, exit_reason=exit_record.get("exit_reason", "reconciled_exit"),
+                        regime_at_exit=_recon_exit_regime,
+                        paper_account_id=_paper_acct_recon_exit,
                     )
-            except Exception as e:
-                logger.error(
-                    "Failed to reconcile exit for %s: %s", ticker, e,
-                )
+                    logger.info("[paper] Reconciled exit: SELL %s %d @ $%.2f PnL=$%s (order %s)",
+                                ticker, qty, fill_price,
+                                f"{pnl:+.2f}" if pnl is not None else "?",
+                                order_id[:12])
+                    reconciled.append(exit_record)
+                except AttributeError as _pr_exit_attr:
+                    logger.warning("[paper] record_paper_trade_exit not available: %s", _pr_exit_attr)
+                except Exception as _pr_exit_exc:
+                    logger.error("[paper] Paper reconcile exit failed for %s: %s", ticker, _pr_exit_exc)
+            else:
+                try:
+                    _ledger.record_exit(exit_record)
+                    logger.info(
+                        "Reconciled exit: SELL %s %d @ $%.2f PnL=$%s (order %s)",
+                        ticker, qty, fill_price,
+                        f"{pnl:+.2f}" if pnl is not None else "?",
+                        order_id[:12],
+                    )
+                    reconciled.append(exit_record)
+                    # Phase B.0: close protective ledger on reconciled exit
+                    try:
+                        if _protective_ledger_enabled():
+                            from db.atlas_db import close_protective_record as _cpr_recon
+                            _cpr_recon(
+                                market_id=self.config.get("market_id", "sp500"),
+                                ticker=ticker,
+                            )
+                            logger.debug(
+                                "Protective ledger: closed record %s (reconciled exit)", ticker,
+                            )
+                    except Exception as _prot_recon_exc:
+                        logger.warning(
+                            "Protective ledger close failed for %s reconciled exit (non-fatal): %s",
+                            ticker, _prot_recon_exc,
+                        )
+                except Exception as e:
+                    logger.error(
+                        "Failed to reconcile exit for %s: %s", ticker, e,
+                    )
 
             # Also record to LivePortfolio.closed_trades (broker state JSON).
             # _portfolio is constructed once above the loop with the live broker

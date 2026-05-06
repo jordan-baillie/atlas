@@ -217,24 +217,26 @@ class AlpacaBroker(BrokerAdapter):
     Supports SP500 (and any US equity) via Alpaca's REST API.
     Uses the official alpaca-py SDK — no raw HTTP calls.
 
-    Paper trading is the default (paper=True in config or unset).
-    Set 'alpaca.paper: false' in config for live real-money trading.
+    Three trading modes (set via trading.mode in config):
+      "live"  — real-money Alpaca account (ALPACA_API_KEY / ALPACA_SECRET_KEY)
+      "paper" — Alpaca paper account (ALPACA_PAPER_API_KEY / ALPACA_PAPER_SECRET_KEY)
+      "passive" — monitoring only, no orders placed
 
-    Credentials are loaded from environment variables or
-    ~/.atlas-secrets.json using keys ALPACA_API_KEY and
-    ALPACA_SECRET_KEY.
+    The legacy 'alpaca.paper' config key is still respected for backward compatibility
+    when mode is not explicitly set.
     """
 
-    def __init__(self, config: dict, live: bool = False):
+    def __init__(self, config: dict, live: bool = False, mode: str = "live"):
         super().__init__(config)
         self._live = live
+        self._mode = mode  # "live", "paper", or "passive"
 
         alpaca_cfg = config.get("alpaca", {})
 
-        # 'paper' in config takes precedence over the live flag.
-        # paper=True → simulated orders (safe default)
-        # paper=False → real money orders
-        self._paper = alpaca_cfg.get("paper", not live)
+        # mode="paper" always forces paper endpoint.
+        # Legacy alpaca_cfg["paper"] key still respected for backward compat when
+        # mode is not "paper" (e.g. mode="live" with alpaca.paper=true still works).
+        self._paper = (mode == "paper") or alpaca_cfg.get("paper", not live)
 
         # Data feed: "iex" (free) or "sip" (paid subscription)
         self._feed = alpaca_cfg.get("feed", "iex")
@@ -245,6 +247,9 @@ class AlpacaBroker(BrokerAdapter):
         self._trade_client: Optional["TradingClient"] = None
         self._market_data: Optional[AlpacaMarketData] = None
 
+        # Cached account number (set in connect()) for paper_account_id logging
+        self._account_number: str = ""
+
         # Track Atlas order_id → Alpaca order ID mapping (both are the same
         # UUID returned by Alpaca — we use Alpaca's ID as our order_id)
         # Kept for explicit clarity and future local state if needed.
@@ -254,8 +259,26 @@ class AlpacaBroker(BrokerAdapter):
 
     @property
     def name(self) -> str:
-        mode = "PAPER" if self._paper else "LIVE"
-        return f"AlpacaBroker[{mode}]"
+        """Human-readable broker name for operator log clarity.
+
+        When mode is explicitly set to "paper" or "passive", uses the mode string.
+        For mode="live", falls back to self._paper for backward compatibility with
+        the legacy ``alpaca.paper: true`` config key (no explicit mode set).
+        """
+        if self._mode != "live":
+            return f"AlpacaBroker[{self._mode.upper()}]"
+        # mode="live": respect self._paper (includes legacy alpaca.paper=True config)
+        return f"AlpacaBroker[{'PAPER' if self._paper else 'LIVE'}]"
+
+    @property
+    def mode(self) -> str:
+        """Trading mode: 'live', 'paper', or 'passive'."""
+        return self._mode
+
+    @property
+    def account_number(self) -> str:
+        """Alpaca account number (populated after connect())."""
+        return self._account_number
 
     @property
     def is_live(self) -> bool:
@@ -303,16 +326,27 @@ class AlpacaBroker(BrokerAdapter):
             logger.error("alpaca-py not installed — cannot connect")
             return False
 
-        # Load credentials
-        api_key = get_secret("ALPACA_API_KEY", prompt=False)
-        api_secret = get_secret("ALPACA_SECRET_KEY", prompt=False)
-
-        if not api_key or not api_secret:
-            logger.error(
-                "Alpaca credentials not found. Set ALPACA_API_KEY and "
-                "ALPACA_SECRET_KEY in environment or ~/.atlas-secrets.json"
-            )
-            return False
+        # Load credentials based on trading mode.
+        # mode="paper" → ALPACA_PAPER_* keys (Alpaca paper account, virtual $)
+        # mode="live"  → ALPACA_* keys (Alpaca live account, real money)
+        if self._mode == "paper":
+            api_key = get_secret("ALPACA_PAPER_API_KEY", prompt=False)
+            api_secret = get_secret("ALPACA_PAPER_SECRET_KEY", prompt=False)
+            if not api_key or not api_secret:
+                logger.error(
+                    "Alpaca paper credentials not found. Set ALPACA_PAPER_API_KEY and "
+                    "ALPACA_PAPER_SECRET_KEY in environment or ~/.atlas-secrets.json"
+                )
+                return False
+        else:
+            api_key = get_secret("ALPACA_API_KEY", prompt=False)
+            api_secret = get_secret("ALPACA_SECRET_KEY", prompt=False)
+            if not api_key or not api_secret:
+                logger.error(
+                    "Alpaca credentials not found. Set ALPACA_API_KEY and "
+                    "ALPACA_SECRET_KEY in environment or ~/.atlas-secrets.json"
+                )
+                return False
 
         try:
             self._trade_client = TradingClient(
@@ -335,9 +369,12 @@ class AlpacaBroker(BrokerAdapter):
             # Handle both enum (AccountStatus.ACTIVE) and string
             status = raw_status.name if hasattr(raw_status, 'name') else str(raw_status)
 
+            # Cache account number for paper_account_id on trade records
+            self._account_number = str(getattr(account, "account_number", "") or "")
+
             logger.info(
-                "AlpacaBroker connected: paper=%s feed=%s equity=$%.2f status=%s",
-                self._paper, self._feed, equity, status,
+                "AlpacaBroker[%s] connected: paper=%s feed=%s equity=$%.2f status=%s",
+                self._mode.upper(), self._paper, self._feed, equity, status,
             )
 
             # Warn if account is not active

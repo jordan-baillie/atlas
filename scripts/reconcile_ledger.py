@@ -89,10 +89,15 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
         "errors": [],
     }
 
+    # ── Mode detection ────────────────────────────────────────
+    _rl_config = load_config(market_id)
+    _rl_mode = _rl_config.get("trading", {}).get("mode", "live")
+    _rl_mode_label = f"[{_rl_mode.upper()}]"
+
     # ── Broker connection ─────────────────────────────────────
     own_broker = False
     if broker is None:
-        config = load_config(market_id)
+        config = _rl_config
         broker = get_live_broker(config)
         if not broker or not broker.connect():
             log.error("Cannot connect to broker")
@@ -154,10 +159,18 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
         log.info("Broker positions for %s: %d", market_id, len(broker_map))
 
         # 2. Get ledger open trades for this market ────────────
-        open_trades = atlas_db.get_open_positions()
+        # Paper mode reads from paper_trades; live mode reads from trades
+        if _rl_mode == "paper":
+            try:
+                open_trades = atlas_db.get_open_paper_trades()
+            except AttributeError:
+                log.warning("%s get_open_paper_trades not available — falling back to trades", _rl_mode_label)
+                open_trades = atlas_db.get_open_positions()
+        else:
+            open_trades = atlas_db.get_open_positions()
         ledger_map = {t["ticker"]: t for t in open_trades
                       if t.get("universe") == market_id}
-        log.info("Ledger open trades for %s: %d", market_id, len(ledger_map))
+        log.info("%s Ledger open trades for %s: %d", _rl_mode_label, market_id, len(ledger_map))
 
         # 3. Fetch recent order history for fill data ─────────
         try:
@@ -369,22 +382,48 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                         ticker, _chk_exc,
                     )
 
-                atlas_db.record_trade_entry(
-                    ticker=ticker,
-                    strategy=_backfill_strategy,
-                    universe=_derived_universe or market_id,
-                    entry_price=entry_price,
-                    shares=shares,
-                    stop_price=_stop_to_write,
-                    take_profit=None,
-                    confidence=0.0,
-                    regime_state=None,
-                    direction="long",
-                )
+                if _rl_mode == "paper":
+                    try:
+                        _paper_acct_rl = getattr(broker, "account_number", None) if broker else None
+                        atlas_db.record_paper_trade_entry(
+                            ticker=ticker,
+                            strategy=_backfill_strategy,
+                            universe=_derived_universe or market_id,
+                            entry_price=entry_price,
+                            shares=shares,
+                            stop_price=_stop_to_write,
+                            take_profit=None,
+                            confidence=0.0,
+                            regime_state=None,
+                            direction="long",
+                            paper_account_id=_paper_acct_rl,
+                        )
+                    except AttributeError:
+                        log.warning("%s record_paper_trade_entry not available — falling back to trades", _rl_mode_label)
+                        atlas_db.record_trade_entry(
+                            ticker=ticker, strategy=_backfill_strategy,
+                            universe=_derived_universe or market_id,
+                            entry_price=entry_price, shares=shares,
+                            stop_price=_stop_to_write, take_profit=None,
+                            confidence=0.0, regime_state=None, direction="long",
+                        )
+                else:
+                    atlas_db.record_trade_entry(
+                        ticker=ticker,
+                        strategy=_backfill_strategy,
+                        universe=_derived_universe or market_id,
+                        entry_price=entry_price,
+                        shares=shares,
+                        stop_price=_stop_to_write,
+                        take_profit=None,
+                        confidence=0.0,
+                        regime_state=None,
+                        direction="long",
+                    )
                 stats["backfilled"].append(ticker)
                 log.info(
-                    "Backfilled ledger entry for %s: %d shares @ $%.2f stop=%s",
-                    ticker,
+                    "%s Backfilled ledger entry for %s: %d shares @ $%.2f stop=%s",
+                    _rl_mode_label, ticker,
                     shares,
                     entry_price,
                     f"{_stop_to_write:.4f}" if _stop_to_write is not None else "NULL",
@@ -466,17 +505,35 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None) -> dict
                         stats["errors"].append(f"{ticker}: no exit price (P3 skip, stays open)")
                         continue
 
-                atlas_db.record_trade_exit(
-                    ticker=ticker,
-                    strategy=trade.get("strategy", "unknown"),
-                    exit_price=exit_price,
-                    exit_reason=exit_reason,
-                    regime_at_exit=None,
-                )
+                if _rl_mode == "paper":
+                    try:
+                        _paper_acct_rl_exit = getattr(broker, "account_number", None) if broker else None
+                        atlas_db.record_paper_trade_exit(
+                            ticker=ticker,
+                            strategy=trade.get("strategy", "unknown"),
+                            exit_price=exit_price,
+                            exit_reason=exit_reason,
+                            regime_at_exit=None,
+                            paper_account_id=_paper_acct_rl_exit,
+                        )
+                    except AttributeError:
+                        log.warning("%s record_paper_trade_exit not available — falling back to trades", _rl_mode_label)
+                        atlas_db.record_trade_exit(
+                            ticker=ticker, strategy=trade.get("strategy", "unknown"),
+                            exit_price=exit_price, exit_reason=exit_reason, regime_at_exit=None,
+                        )
+                else:
+                    atlas_db.record_trade_exit(
+                        ticker=ticker,
+                        strategy=trade.get("strategy", "unknown"),
+                        exit_price=exit_price,
+                        exit_reason=exit_reason,
+                        regime_at_exit=None,
+                    )
                 stats["closed_phantom"].append(ticker)
                 log.info(
-                    "Closed phantom ledger entry for %s (exit_price=$%.2f, reason=%s)",
-                    ticker,
+                    "%s Closed phantom ledger entry for %s (exit_price=$%.2f, reason=%s)",
+                    _rl_mode_label, ticker,
                     exit_price,
                     exit_reason,
                 )

@@ -537,9 +537,12 @@ def main():
     config = load_config(market_id)
 
     # Skip non-live markets — they don't have broker connections
+    # Paper mode is active even without live_enabled (targets Alpaca paper account)
     live_enabled = config.get("trading", {}).get("live_enabled", False)
-    if not live_enabled:
-        log.info("Market %s is not live-enabled (live_enabled=False). Skipping EOD settlement.", market_id)
+    _mode_eod = config.get("trading", {}).get("mode", "live")
+    _mode_label_eod = f"[{_mode_eod.upper()}]"
+    if not (live_enabled or _mode_eod == "paper"):
+        log.info("%s Market %s is not live-enabled (live_enabled=False). Skipping EOD settlement.", _mode_label_eod, market_id)
         print(f"Market {market_id} is not live-enabled. Skipping settlement.")
         _health_log("info", "EOD settlement skipped: market not live-enabled", {"market": market_id, "reason": "market_disabled"})
         return

@@ -850,8 +850,11 @@ def sync_market(
     # ── Determine broker ─────────────────────────────────────
     broker_name = config.get("trading", {}).get("broker", _DEFAULT_BROKER.get(market_id, "alpaca"))
     live_enabled = config.get("trading", {}).get("live_enabled", False)
+    _mode = config.get("trading", {}).get("mode", "live")
+    _mode_label = f"[{_mode.upper()}]"
 
-    if not live_enabled:
+    # Paper mode is active even without live_enabled (targets Alpaca paper account)
+    if not (live_enabled or _mode == "paper"):
         result["error"] = f"live_enabled=False in config — skipping {market_id}"
         logger.info("Skipping %s: live trading not enabled", market_id)
         try:
@@ -862,8 +865,8 @@ def sync_market(
         return result
 
     logger.info(
-        "Syncing %s via %s broker (dry_run=%s)",
-        market_id.upper(), broker_name, dry_run,
+        "%s Syncing %s via %s broker (dry_run=%s)",
+        _mode_label, market_id.upper(), broker_name, dry_run,
     )
 
     # ── Load plan ────────────────────────────────────────────
