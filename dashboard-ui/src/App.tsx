@@ -14,22 +14,19 @@ const FinanceTab = lazy(() =>
   import('./components/finance/FinanceTab').then((m) => ({ default: m.FinanceTab })),
 )
 
-// Preload helpers for TabBar hover (bundle-conditional rule: start the network
-// request before the user clicks so the chunk is already warm).
-export const preloadPortfolioTab = () => import('./components/portfolio/PortfolioTab')
-export const preloadFinanceTab = () => import('./components/finance/FinanceTab')
+// Re-export preload helpers from standalone module (avoids circular ESM dep
+// with TabBar.tsx, which imported them from here and caused TDZ in Chromium).
+export { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab, preloadControlsTab } from './lib/preloaders'
+
 const ResearchTab = lazy(() =>
   import('./components/research/ResearchTab').then((m) => ({ default: m.ResearchTab })),
 )
-export const preloadResearchTab = () => import('./components/research/ResearchTab')
 const RemediationTab = lazy(() =>
   import('./components/error_remediation/RemediationTab').then((m) => ({ default: m.RemediationTab })),
 )
-export const preloadRemediationTab = () => import('./components/error_remediation/RemediationTab')
 const ControlsTab = lazy(() =>
   import('./components/controls/ControlsTab').then((m) => ({ default: m.ControlsTab })),
 )
-export const preloadControlsTab = () => import('./components/controls/ControlsTab')
 
 // Skeleton matching the tab content shape — prevents layout shift during
 // code-split load (async-suspense-boundaries rule).

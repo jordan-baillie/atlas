@@ -910,11 +910,13 @@ export function LifecycleTransitionModal({
 
           {/* Force-override section — shown after "Disallowed" 400 */}
           {disallowedMsg && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded p-3 space-y-2">
+            <div
+              className="bg-red-500/10 border border-red-500/30 rounded p-3 space-y-2"
+              data-testid="force-override-section"
+            >
               <div className="text-sm text-red-400">{disallowedMsg}</div>
               <label
                 className="flex items-center gap-2 cursor-pointer select-none"
-                data-testid="force-override-section"
               >
                 <input
                   type="checkbox"

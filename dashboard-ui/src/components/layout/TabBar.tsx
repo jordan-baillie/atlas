@@ -1,4 +1,4 @@
-import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab, preloadControlsTab } from '../../App'
+import { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab, preloadControlsTab } from '../../lib/preloaders'
 import { FEATURE_CONTROLS_TAB } from '../../lib/featureFlags'
 
 type TabId = 'portfolio' | 'finance' | 'research' | 'remediation' | 'controls'
