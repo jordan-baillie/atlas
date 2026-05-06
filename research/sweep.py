@@ -239,7 +239,7 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
     # ── Tier 1 / Core ────────────────────────────────────────────────────
     "mean_reversion": {
         "rsi_period": [7, 10, 14, 21, 5],
-        "rsi_oversold": [25, 30, 35, 40, 20],
+        "rsi_oversold": [30, 35, 40],  # tightened: removed 20 (min=-5.63) and 25 (min=-2.64) — both seed exploration of oversold<30 region, empirically negative Sharpe
         "zscore_lookback": [15, 20, 30, 10],
         "zscore_entry": [-1.5, -2.0, -2.5, -1.0],
         "atr_period": [10, 14, 20, 7],
@@ -250,9 +250,9 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "ibs_max": [0.3, 0.5, 0.7, 1.0],
     },
     "trend_following": {
-        "fast_ma": [10, 15, 20, 30, 50],
+        "fast_ma": [10, 15, 30, 50],  # tightened: removed 20 — equals min slow_ma=20, seeds degenerate zero-spread MA exploration
         "slow_ma": [20, 50, 100, 200],
-        "pullback_pct": [0.02, 0.03, 0.04, 0.05, 0.06],
+        "pullback_pct": [0.02, 0.03, 0.04, 0.05],  # tightened: removed 0.06 (avg_sharpe=-0.60, min=-2.95) — 6% pullback fires only into continuation moves
         "atr_period": [10, 14, 20],
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "trailing_stop_atr_mult": [1.5, 2.0, 2.5, 3.0],
@@ -260,7 +260,7 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "sma200_filter": [True, False],
     },
     "opening_gap": {
-        "gap_threshold": [-0.01, -0.015, -0.02, -0.025, -0.03],
+        "gap_threshold": [-0.01, -0.015, -0.02],  # tightened: removed -0.025,-0.03 (min=-11.24 both) — deep gaps in sp500 large-caps lack statistical power
         "ibs_confirm": [0.3, 0.4, 0.5, 0.6],
         "rsi14_max": [20, 25, 30, 35],
         "vol_surge_threshold": [1.0, 1.2, 1.5, 2.0],
@@ -296,8 +296,8 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "atr_stop_mult": [1.5, 2.0, 2.5],
     },
     "bb_squeeze": {
-        "bb_period": [10, 15, 20, 30],
-        "bb_std": [1.5, 2.0, 2.5],
+        "bb_period": [10, 15],  # tightened: removed 20 (min=-2.39) and 30 (min=-7.67) — wide bands with short holds are noise-fitting
+        "bb_std": [1.5, 2.0],  # tightened: removed 2.5 (min=-1.09) — over-wide bands miss squeeze signals
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 10, 15],
     },
@@ -311,14 +311,14 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "sma200_filter": [True, False],
     },
     "consecutive_down_days": {
-        "min_down_days": [2, 3, 4, 5],
+        "min_down_days": [2, 3, 4],  # tightened: removed 5 (avg=-4.48, min=-17.88) — 5-day down streak fires into momentum crashes, not mean-reversion
         "ibs_threshold": [0.2, 0.3, 0.5, 1.0],
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [3, 5, 7, 10],
         "sma200_filter": [True, False],
     },
     "demark_sequential": {
-        "setup_bars": [7, 9, 13],
+        "setup_bars": [7, 9],  # tightened: removed 13 (avg=-4.96, min=-6.48) — DeMark countdown extension lacks statistical power in sp500
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 7, 10, 15],
         "sma200_filter": [True, False],
@@ -330,8 +330,8 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
         "sma200_filter": [True, False],
     },
     "stochastic_oversold": {
-        "stoch_period": [5, 10, 14, 21],
-        "stoch_smooth": [3, 5],
+        "stoch_period": [5, 10, 14],  # tightened: removed 21 (avg=-3.46, min=-3.98) — 21-bar stochastic lags too far for short-term MR
+        "stoch_smooth": [3],  # tightened: removed 5 (avg=-3.73, min=-4.47) — over-smoothing makes stochastic a lagging indicator, catastrophically bad
         "stoch_entry": [10, 15, 20, 25],
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 7, 10, 15],
@@ -339,30 +339,30 @@ PARAM_GRIDS: Dict[str, Dict[str, list]] = {
     },
     "williams_percent_r": {
         "wr_period": [10, 14, 21],
-        "wr_entry": [-80, -85, -90, -95],
+        "wr_entry": [-80, -85, -95],  # tightened: removed -90 (avg=-5.16, min=-13.86) — fires into sustained downtrends, knife-catching overfit
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 7, 10, 15],
         "sma200_filter": [True, False],
     },
     "lower_band_reversion": {
         "band_mult": [1.0, 1.5, 2.0, 2.5],
-        "ibs_threshold": [0.2, 0.3, 0.5],
+        "ibs_threshold": [0.2, 0.5],  # tightened: removed 0.3 (avg=-1.60, min=-3.09) — mid-point threshold captures neither clean lower-band touches nor confirmed reversals
         "range_lookback": [10, 15, 20, 25],
-        "max_hold_days": [3, 5, 7, 10],
+        "max_hold_days": [5, 7, 10],  # tightened: removed 3 (avg=-2.93, min=-3.72) — 3-day hold exits before mean reversion completes
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "sma200_filter": [True, False],
     },
     "triple_rsi": {
         "rsi_period": [3, 5, 7],
-        "rsi_entry": [20, 25, 30, 35],
-        "decline_days": [2, 3, 4],
+        "rsi_entry": [30, 35],  # tightened: removed 20 (avg=-5.28, min=-7.91) and 25 (avg=-2.51, min=-5.15) — triple-RSI<25 fires only during crashes
+        "decline_days": [2, 3],  # tightened: removed 4 (avg=-4.46, min=-5.70) — 4-day decline + triple-RSI fires only in deep downtrends
         "max_hold_days": [3, 5, 7, 10],
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "sma200_filter": [True, False],
     },
     "keltner_reversion": {
-        "ema_period": [10, 15, 20],
-        "atr_mult": [1.5, 2.0, 2.5],
+        "ema_period": [15, 20],  # tightened: removed 10 (avg=-33.49, min=-66.56) — short EMA creates hairline bands, catastrophic overtrading on sp500
+        "atr_mult": [1.5, 2.0],  # tightened: removed 2.5 (avg=-8.90, min=-15.90) — over-wide Keltner bands miss the reversion window
         "atr_stop_mult": [1.5, 2.0, 2.5, 3.0],
         "max_hold_days": [5, 7, 10, 15],
         "sma200_filter": [True, False],
