@@ -511,5 +511,17 @@
       }
     },
     "auto": true
+  },
+  {
+    "timestamp": "2026-05-06T03:49:04.888007+00:00",
+    "strategy": "connors_rsi2",
+    "market": "sp500",
+    "prev_version": "v3.2.1",
+    "new_version": "v3.2.2",
+    "prev_config_path": "/root/atlas/config/versions/sp500_v3.2.1.json",
+    "old_weight": 0.5,
+    "new_weight": 0.3,
+    "reason": "AUDIT-2026-05-06 revert: May 1 manual edit cbee5b18 had no auto_promote entry; current research_best Sharpe 0.1416 sub-gate; strategy in WATCH; reverting to April 2 validated level (delta_sharpe=+0.4591)",
+    "audit_bypass": true
   }
 ]

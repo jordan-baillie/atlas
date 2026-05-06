@@ -1,5 +1,5 @@
 {
-  "version": "v3.2.1",
+  "version": "v3.2.2",
   "project": "Atlas",
   "market": "sp500",
   "description": "SP500 v2.2 \u2014 max_open_positions 10\u219215 (Task #26 research: Sharpe 0.868\u21920.983, CAGR 11.7%\u219213.3%, PnL +15%). Base: v2.1 parallel coordinate descent optimized.",
@@ -17,7 +17,7 @@
   },
   "risk": {
     "starting_equity": 971,
-    "_starting_equity_note": "Recalibrated 2026-04-29 (commit e58c8557) from per-market broker equity slice ($971 sp500 + $3216 sector_etfs + $1001 commodity_etfs = $5188 real broker total, vs $15,011 phantom pre-recalibration). This is the BASELINE for risk sizing (0.5% × $971 = $4.86/trade), NOT the current equity. Current per-market equity slice tracked separately in brokers/state/live_sp500.json equity_history. Re-recalibrate via scripts/recalibrate_starting_equity.py (see health_check.py line 408) when allocation changes.",
+    "_starting_equity_note": "Recalibrated 2026-04-29 (commit e58c8557) from per-market broker equity slice ($971 sp500 + $3216 sector_etfs + $1001 commodity_etfs = $5188 real broker total, vs $15,011 phantom pre-recalibration). This is the BASELINE for risk sizing (0.5% \u00d7 $971 = $4.86/trade), NOT the current equity. Current per-market equity slice tracked separately in brokers/state/live_sp500.json equity_history. Re-recalibrate via scripts/recalibrate_starting_equity.py (see health_check.py line 408) when allocation changes.",
     "leverage": 2.0,
     "max_risk_per_trade_pct": 0.005,
     "max_open_positions": 10,
@@ -68,7 +68,7 @@
   "strategies": {
     "momentum_breakout": {
       "enabled": true,
-      "weight": 0.5,
+      "weight": 0.7,
       "atr_stop_mult": 0.61,
       "max_hold_days": 15,
       "lookback_days": 14,
@@ -221,7 +221,7 @@
       "max_hold_days": 5,
       "atr_period": 14,
       "atr_stop_mult": 1.0,
-      "weight": 0.5
+      "weight": 0.3
     }
   },
   "moomoo": {
@@ -734,17 +734,68 @@
   },
   "_audit_2026_05_01_disable_unvalidated": {
     "updated_at": "2026-05-01T00:00:00+00:00",
-    "rationale": "User mandate: only best validated strategies active. Disabled 3 strategies failing quality thresholds (Sharpe ≥ 0.5, MaxDD ≤ 25%, ≥ 200 trades for live markets).",
+    "rationale": "User mandate: only best validated strategies active. Disabled 3 strategies failing quality thresholds (Sharpe \u2265 0.5, MaxDD \u2264 25%, \u2265 200 trades for live markets).",
     "disabled": [
-      {"strategy": "mean_reversion", "old_weight": 0.0978, "new_weight": 0, "reason": "Live params solo Sharpe = -0.33 (full sp500 universe, 198 tickers, live cache 5.75yr). Was previously thought to be 1.15 — that was a top-50-subset autoresearch artifact. research_best params (rsi=10, oversold=52, entry=-0.68) only achieve solo Sharpe +0.28 on 7yr snapshot, still sub-gate. Re-enable after sweep finds params with full-universe solo Sharpe ≥ 0.5."},
-      {"strategy": "opening_gap", "old_weight": 0.05, "new_weight": 0, "reason": "research_best Sharpe 0.60 OK but MaxDD 29.94% breaches 25% threshold. Re-enable if a tighter ATR stop reduces DD."},
-      {"strategy": "sector_rotation", "old_weight": 0.05, "new_weight": 0, "reason": "research_best Sharpe 0.0442 — essentially no edge. The strategy is structurally unsuited to single-ETF-per-sector universes (proven by sector_etfs result: 0 trades when min_sector_stocks=3 vs 1 ETF/sector). For sp500 it produced 647 trades but no risk-adjusted edge."}
+      {
+        "strategy": "mean_reversion",
+        "old_weight": 0.0978,
+        "new_weight": 0,
+        "reason": "Live params solo Sharpe = -0.33 (full sp500 universe, 198 tickers, live cache 5.75yr). Was previously thought to be 1.15 \u2014 that was a top-50-subset autoresearch artifact. research_best params (rsi=10, oversold=52, entry=-0.68) only achieve solo Sharpe +0.28 on 7yr snapshot, still sub-gate. Re-enable after sweep finds params with full-universe solo Sharpe \u2265 0.5."
+      },
+      {
+        "strategy": "opening_gap",
+        "old_weight": 0.05,
+        "new_weight": 0,
+        "reason": "research_best Sharpe 0.60 OK but MaxDD 29.94% breaches 25% threshold. Re-enable if a tighter ATR stop reduces DD."
+      },
+      {
+        "strategy": "sector_rotation",
+        "old_weight": 0.05,
+        "new_weight": 0,
+        "reason": "research_best Sharpe 0.0442 \u2014 essentially no edge. The strategy is structurally unsuited to single-ETF-per-sector universes (proven by sector_etfs result: 0 trades when min_sector_stocks=3 vs 1 ETF/sector). For sp500 it produced 647 trades but no risk-adjusted edge."
+      }
     ],
     "renormalized": [
-      {"strategy": "momentum_breakout", "old_weight": 0.3, "new_weight": 0.5, "rationale": "research_best Sharpe 0.99 solo / 0.75 portfolio, dd 22.93%, 829 trades. Best-validated sp500 strategy."},
-      {"strategy": "connors_rsi2", "old_weight": 0.3, "new_weight": 0.5, "rationale": "research_best portfolio Sharpe 0.71, 1144 trades, dd 26.95% (just above gate but trades count and signal quality high)."}
+      {
+        "strategy": "momentum_breakout",
+        "old_weight": 0.3,
+        "new_weight": 0.5,
+        "rationale": "research_best Sharpe 0.99 solo / 0.75 portfolio, dd 22.93%, 829 trades. Best-validated sp500 strategy."
+      },
+      {
+        "strategy": "connors_rsi2",
+        "old_weight": 0.3,
+        "new_weight": 0.5,
+        "rationale": "research_best portfolio Sharpe 0.71, 1144 trades, dd 26.95% (just above gate but trades count and signal quality high)."
+      }
     ],
     "weights_sum_check": 1.0,
-    "open_positions_at_change": ["CAT/momentum_breakout", "FCX/connors_rsi2", "MU/momentum_breakout"]
+    "open_positions_at_change": [
+      "CAT/momentum_breakout",
+      "FCX/connors_rsi2",
+      "MU/momentum_breakout"
+    ]
+  },
+  "_audit_2026_05_06_revert_connors_rsi2_overweight": {
+    "updated_at": "2026-05-06T03:49:04.888007+00:00",
+    "rationale": "AUDIT-2026-05-06 revert: May 1 commit cbee5b18 manually doubled connors_rsi2 weight 0.30\u21920.50 with NO auto_promote log entry (operator-bypass). Current research_best Sharpe = 0.1416 \u2014 sub-gate (\u22650.5). Strategy in WATCH. Reverting to April 2 validated level (delta_sharpe=+0.4591 from auto_promote run).",
+    "changes": [
+      {
+        "strategy": "connors_rsi2",
+        "old_weight": 0.5,
+        "new_weight": 0.3
+      },
+      {
+        "strategy": "momentum_breakout",
+        "old_weight": 0.5,
+        "new_weight": 0.7,
+        "rationale": "renormalize sum=1.0; research_best validates solo Sharpe 0.99"
+      }
+    ],
+    "weights_sum_check": 1.0,
+    "open_positions_at_change": [
+      "CAT/momentum_breakout",
+      "SYK/momentum_breakout"
+    ]
   }
 }
