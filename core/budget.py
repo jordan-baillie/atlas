@@ -169,7 +169,7 @@ def enforce_budget(
 
 def _try_telegram(msg: str) -> None:
     try:
-        from utils.telegram import send_message
-        send_message(msg[:3500])
+        from alerting import get_alert_manager
+        get_alert_manager().send(msg[:3500])
     except Exception as e:
         logger.warning("Telegram send failed: %s", e)

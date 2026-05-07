@@ -14,9 +14,9 @@ except Exception:  # pragma: no cover
     get_research_best = None  # type: ignore[assignment]
 
 try:
-    from utils.telegram import send_message  # noqa: F401
+    from alerting.manager import get_alert_manager  # noqa: F401
 except Exception:  # pragma: no cover
-    send_message = None  # type: ignore[assignment]
+    get_alert_manager = None  # type: ignore[assignment]
 
 
 def check_freshness(
@@ -87,8 +87,8 @@ def check_freshness(
 def _send_alert(reason: str) -> None:
     """Send Telegram alert about a freshness rejection. Non-fatal."""
     try:
-        _sm = send_message  # module-level name, patchable in tests
-        if _sm is not None:
-            _sm(f"⚠️ research_best freshness guard: {reason}", silent=True)
+        _am_fn = get_alert_manager  # module-level name, patchable in tests
+        if _am_fn is not None:
+            _am_fn().send(f"⚠️ research_best freshness guard: {reason}", silent=True)
     except Exception as exc:
         logger.debug("[freshness] telegram alert failed (non-fatal): %s", exc)

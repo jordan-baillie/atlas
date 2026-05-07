@@ -485,10 +485,8 @@ def _try_send_telegram(text: str) -> None:
     Uses ``utils.telegram.smart_notify`` if available.
     """
     try:
-        from utils.telegram import smart_notify
-        smart_notify(text, category="autoresearch")
-    except ImportError:
-        logger.info("Telegram notification not configured (utils.telegram not found).")
+        from alerting import get_alert_manager
+        get_alert_manager().send(text)
     except Exception as exc:
         logger.warning("Telegram notification failed (non-fatal): %s", exc)
 

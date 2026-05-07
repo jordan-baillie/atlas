@@ -811,7 +811,7 @@ def verify_sqlite_integrity(
                 market_id, len(still_missing), still_missing,
             )
             try:
-                from utils.telegram import send_message
+                from alerting import get_alert_manager
                 alert = (
                     f"🚨 <b>DATA INTEGRITY FAILURE [{market_id.upper()}]</b>\n\n"
                     f"{len(still_missing)} tickers have NO data in SQLite "
@@ -819,7 +819,7 @@ def verify_sqlite_integrity(
                     + "\n".join(f"  • {t}" for t in still_missing)
                     + "\n\nParquet cache also missing. Manual investigation required."
                 )
-                send_message(alert)
+                get_alert_manager().send(alert)
             except Exception:
                 pass
     else:
@@ -1446,7 +1446,7 @@ def verify_ingest_freshness(
 
         # Send Telegram alert for auto-exclusions
         try:
-            from utils.telegram import send_message
+            from alerting import get_alert_manager
             ticker_lines = "\n".join(f"  • {d}" for d in excluded_details)
             alert = (
                 f"⚠️ <b>AUTO-EXCLUDED STALE TICKERS [{market_label.upper()}]</b>\n\n"
@@ -1457,7 +1457,7 @@ def verify_ingest_freshness(
                 f"💡 These tickers will be retried weekly. "
                 f"Check if delisted or renamed."
             )
-            send_message(alert)
+            get_alert_manager().send(alert)
         except Exception as tg_exc:
             logger.warning("Could not send auto-exclusion Telegram alert: %s", tg_exc)
 
@@ -1472,7 +1472,7 @@ def verify_ingest_freshness(
 
     # Send Telegram alert for systemic issue
     try:
-        from utils.telegram import send_message
+        from alerting import get_alert_manager
         stale_sample = stale_tickers[:10]
         halt = True  # safe default
         if config:
@@ -1492,7 +1492,7 @@ def verify_ingest_freshness(
             alert += "This looks like a data provider outage, not individual delistings."
         else:
             alert += "⚡ Continuing despite systemic stale data (halt_on_stale_data=false)"
-        send_message(alert)
+        get_alert_manager().send(alert)
     except Exception as tg_exc:
         logger.warning("Could not send stale data Telegram alert: %s", tg_exc)
 

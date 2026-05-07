@@ -297,7 +297,7 @@ def run_llm_loop(
 def _send_telegram(summary: dict) -> None:
     """Send a brief Telegram notification about the LLM loop run."""
     try:
-        from utils.telegram import notify
+        from alerting import get_alert_manager
         status = summary.get("status", "unknown")
         runtime = summary.get("runtime_s", 0) / 60
         emoji = "🧠" if status == "complete" else "⚠️"
@@ -307,7 +307,7 @@ def _send_telegram(summary: dict) -> None:
             f"Runtime: {runtime:.1f} min\n"
             f"Turns: {summary.get('num_turns', '?')}"
         )
-        notify(msg, category="autoresearch")
+        get_alert_manager().send(msg)
     except Exception as e:
         logger.warning("Telegram notify failed: %s", e)
 

@@ -217,7 +217,7 @@ def _persist_merge_result(
 def _send_failure_alert(outcome: MergeOutcome) -> None:
     """Send Telegram alert on merge failure. On success: never (Phase 2 policy)."""
     try:
-        from utils.telegram import send_message  # type: ignore[import]
+        from alerting import get_alert_manager
 
         lines = [
             "\U0001f534 <b>Auto-fix merge BLOCKED</b>",
@@ -234,7 +234,7 @@ def _send_failure_alert(outcome: MergeOutcome) -> None:
             lines.append(f"Error: {outcome.error[:300]}")
         lines.append("\nHuman review required — check auto-fix-staging branch.")
 
-        send_message("\n".join(lines))
+        get_alert_manager().send("\n".join(lines))
     except Exception:
         logger.warning("Failed to send Telegram failure alert", exc_info=True)
 

@@ -440,14 +440,8 @@ def _log_daily_run(report: DailyReport) -> None:
 
 # ─── Telegram digest ─────────────────────────────────────────────────────────
 
-# TODO(#PERF-TG-CONSOLIDATE): rewrite to use utils.telegram.notify() if formatting can move into caller
 def _send_telegram_digest(report: DailyReport) -> None:
     """Send a formatted Telegram message with the daily discovery summary."""
-    telegram_script = ATLAS_ROOT / "scripts" / "telegram_notify.py"
-    if not telegram_script.exists():
-        logger.warning("telegram_notify.py not found — skipping digest")
-        return
-
     passed_emoji = "✅" if report.strategies_passed_quickcheck else "⚪"
     error_note = f"\n⚠️ Errors: {len(report.errors)}" if report.errors else ""
 
@@ -491,12 +485,8 @@ def _send_telegram_digest(report: DailyReport) -> None:
     )
 
     try:
-        subprocess.run(
-            [sys.executable, str(telegram_script), message],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+        from alerting import get_alert_manager
+        get_alert_manager().send(message)
         logger.info("Telegram digest sent")
     except Exception as e:
         logger.warning("Telegram digest failed: %s", e)

@@ -415,9 +415,9 @@ def evaluate_and_report(days: int = 7) -> dict:
         stats["shadow"] = {}
 
     try:
-        from utils.telegram import send_message  # type: ignore
+        from alerting import get_alert_manager
         msg = _format_stats(stats)
-        send_message(msg)
+        get_alert_manager().send(msg)
         logger.info("evaluator: Telegram summary sent")
     except Exception as exc:
         logger.warning("evaluator: Telegram send failed (non-fatal): %s", exc)

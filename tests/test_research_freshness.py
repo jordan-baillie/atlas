@@ -112,17 +112,21 @@ def test_configurable_threshold():
 # ── 5. Telegram alert sent on rejection ──────────────────────────────────────
 
 def test_telegram_alert_sent_on_rejection():
-    """Module-level send_message called once containing 'freshness' on rejection."""
+    """get_alert_manager().send() called once containing 'freshness' on rejection.
+
+    freshness.py was migrated to AlertManager (#7).  The patchable module-level
+    name is now ``research.freshness.get_alert_manager`` (was ``send_message``).
+    """
     from research.freshness import check_freshness
 
     stale_ts = datetime.now(timezone.utc) - timedelta(days=30)
     alerts = []
 
-    def _fake_send(msg, **kwargs):
-        alerts.append(msg)
+    mock_am = MagicMock()
+    mock_am.send.side_effect = lambda msg, **kw: alerts.append(msg) or True
 
     with patch("research.freshness.get_research_best", _no_existing), \
-         patch("research.freshness.send_message", _fake_send):
+         patch("research.freshness.get_alert_manager", return_value=mock_am):
         allow, reason = check_freshness(
             "momentum", "sp500",
             candidate_timestamp=stale_ts,
@@ -131,7 +135,7 @@ def test_telegram_alert_sent_on_rejection():
         )
 
     assert allow is False
-    assert len(alerts) == 1
+    assert mock_am.send.call_count == 1
     assert "freshness" in alerts[0].lower()
 
 
