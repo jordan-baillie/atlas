@@ -82,7 +82,7 @@ except Exception as _ph_import_err:  # pragma: no cover
 
 import random
 
-from utils.telegram import notify  # noqa: E402
+from alerting import get_alert_manager  # noqa: E402
 
 def expand_grid(
     base_grid: Dict[str, list],
@@ -500,25 +500,29 @@ def _write_heartbeat(
     last_result: str = "",
     last_delta: float = 0.0,
 ) -> None:
+    """Write sweep heartbeat to file (read by pi-cron.sh) and DB via health_writer."""
+    hb = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "status": status,
+        "pid": os.getpid(),
+        "strategy": strategy,
+        "experiments_total": experiments,
+        "experiments_kept": kept,
+        "uptime_s": round(time.time() - session_start, 0) if session_start else 0,
+        "activity": activity,
+        "detail": detail,
+        "param": param,
+        "param_value": str(param_value),
+        "candidates": candidates,
+        "last_result": last_result,
+        "last_delta": round(last_delta, 4),
+    }
     try:
-        HEARTBEAT_PATH.write_text(json.dumps({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "status": status,
-            "pid": os.getpid(),
-            "strategy": strategy,
-            "experiments_total": experiments,
-            "experiments_kept": kept,
-            "uptime_s": round(time.time() - session_start, 0) if session_start else 0,
-            "activity": activity,
-            "detail": detail,
-            "param": param,
-            "param_value": str(param_value),
-            "candidates": candidates,
-            "last_result": last_result,
-            "last_delta": round(last_delta, 4),
-        }, indent=2))
+        HEARTBEAT_PATH.write_text(json.dumps(hb, indent=2))
     except OSError:
         pass
+    from monitor.health_writer import heartbeat as _hb
+    _hb(service="research.sweep", status=status, detail=hb)
 
 
 def _should_stop() -> bool:
@@ -1243,11 +1247,10 @@ def run_sweep(
                         f"  • {imp['param']}={imp['value']} "
                         f"(Sharpe {imp['delta_sharpe']:+.4f} → {imp['new_sharpe']:.4f})"
                     )
-                notify(
+                get_alert_manager().send(
                     f"📈 <b>{strategy_name}</b> improved! "
                     f"{result['experiments_run']} run, {result['experiments_kept']} kept\n"
-                    + "\n".join(imp_lines),
-                    category="improvement",
+                    + "\n".join(imp_lines)
                 )
 
         # Cycle complete
