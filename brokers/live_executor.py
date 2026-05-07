@@ -141,9 +141,7 @@ class LiveExecutor:
     @property
     def is_dry_run(self) -> bool:
         """Whether dry-run mode is active (logs but doesn't execute)."""
-        return self.config.get("trading", {}).get("live_safety", {}).get(
-            "dry_run_first", True
-        )
+        return self._policy.is_dry_run
 
     @property
     def safety(self) -> dict:

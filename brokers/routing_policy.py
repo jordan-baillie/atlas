@@ -75,6 +75,12 @@ class BrokerRoutingPolicy:
         """True if `trading.mode == "passive"`."""
         return self.mode == "passive"
 
+    @property
+    def is_dry_run(self) -> bool:
+        """True if `trading.live_safety.dry_run_first` is true (default True for safety)."""
+        safety = self.config.get("trading", {}).get("live_safety", {})
+        return bool(safety.get("dry_run_first", True))
+
     # ── Decisions ─────────────────────────────────────────────────────────
 
     def should_skip(self) -> bool:
