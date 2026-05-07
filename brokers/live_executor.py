@@ -41,6 +41,10 @@ from brokers.base import (
 logger = logging.getLogger("atlas.live_executor")
 
 from brokers.routing_policy import BrokerRoutingPolicy
+from brokers.execution_journal import (
+    EXECUTION_LOG,
+    journal_entry as _journal_entry,  # back-compat alias for all ~30 internal callsites
+)
 
 
 def _fmt(x: object, spec: str = "{:.2f}") -> str:
@@ -71,7 +75,6 @@ def _get_regime_model():
         from regime.model import RegimeModel
         _regime_model = RegimeModel()
     return _regime_model
-EXECUTION_LOG = PROJECT_ROOT / "logs" / "live_executions.jsonl"
 
 
 def _health_log(level: str, message: str, detail: dict = None) -> None:
@@ -204,38 +207,8 @@ def preflight_check_order(
 
 
 # ═══════════════════════════════════════════════════════════════
-# Execution journal
-# ═══════════════════════════════════════════════════════════════
 
-def _journal_entry(event: str, data: dict):
-    """Append a line to the execution journal (JSONL).
-
-    Resilient: any write failure is caught and logged — it must never
-    interrupt or crash real trade execution.
-
-    Atomic write pattern: the JSON line is staged to a .tmp file first.
-    Only when that succeeds is the line appended to the live log.  This
-    prevents a partial JSON line from corrupting the JSONL file if the
-    process is killed or a disk-full error occurs mid-write.
-    """
-    try:
-        entry = {
-            "timestamp": datetime.now().isoformat(),
-            "event": event,
-            **data,
-        }
-        EXECUTION_LOG.parent.mkdir(parents=True, exist_ok=True)
-        line = json.dumps(entry, default=str) + "\n"
-
-        # Stage to temp; copy to log only when fully written and serialised.
-        tmp = EXECUTION_LOG.with_suffix(".tmp")
-        tmp.write_text(line, encoding="utf-8")
-        with open(EXECUTION_LOG, "ab") as log_f:
-            log_f.write(tmp.read_bytes())
-        tmp.unlink(missing_ok=True)
-    except Exception as exc:
-        # Journal failure must NEVER crash execution — just warn.
-        logger.warning("Journal write failed (execution continues): %s", exc)
+# Execution journal — moved to brokers/execution_journal.py (decomposition PR1.1)
 
 
 # ═══════════════════════════════════════════════════════════════
