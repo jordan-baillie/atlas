@@ -216,7 +216,7 @@ class TestIsAlreadyProtectedExceptConversion:
         mock_broker = MagicMock()
         mock_broker.get_open_orders.side_effect = ConnectionError("broker offline")
 
-        with caplog.at_level(logging.DEBUG, logger="atlas.live_executor"):
+        with caplog.at_level(logging.DEBUG, logger="atlas.preflight"):
             result = self._fn()(mock_broker, "AAPL")
 
         assert result is False
