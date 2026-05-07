@@ -331,24 +331,22 @@ def should_stop() -> bool:
     return _shutdown_requested.is_set() or STOP_PATH.exists()
 
 
-def write_heartbeat(phase: str, strategy: str, cycle: int, **extra):
-    try:
-        strat_idx = STRATEGIES.index(strategy) if strategy in STRATEGIES else -1
-        data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "pid": os.getpid(),
+def write_heartbeat(phase: str, strategy: str, cycle: int, **extra) -> None:
+    """Record autoresearch heartbeat via monitor.health_writer (DB-backed)."""
+    strat_idx = STRATEGIES.index(strategy) if strategy in STRATEGIES else -1
+    from monitor.health_writer import heartbeat as _hb
+    _hb(
+        service="autoresearch",
+        status=phase or "running",
+        detail={
             "partition": PARTITION,
-            "phase": phase,
             "strategy": strategy,
             "strategy_index": strat_idx,
             "strategy_total": len(STRATEGIES),
             "cycle": cycle,
-            "status": "running",
             **extra,
-        }
-        HEARTBEAT_PATH.write_text(json.dumps(data, indent=2))
-    except OSError:
-        pass
+        },
+    )
 
 
 
