@@ -24,6 +24,8 @@ from utils.logging_config import setup_logging
 
 log = setup_logging("reconcile_ledger", extra_log_file="reconcile_ledger")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 
 def load_config(market_id: str) -> dict:
     """Load active config for the given market (consults overrides)."""
@@ -103,10 +105,16 @@ def reconcile_ledger(market_id: str, dry_run: bool = False, broker=None, mode_ov
     if broker is None:
         # When mode_override is set, apply it to the config so get_live_broker
         # returns the appropriate broker (live vs paper account).
-        if mode_override is not None:
-            config = {**_rl_config, "trading": {**_rl_config.get("trading", {}), "mode": mode_override}}
-        else:
-            config = _rl_config
+        _rl_policy = BrokerRoutingPolicy(_rl_config, market_id=market_id)
+        if mode_override == "paper":
+            _rl_policy = _rl_policy.for_paper()
+        elif mode_override is not None and mode_override != _rl_policy.mode:
+            # Handle mode_override="live" or other explicit overrides
+            _rl_policy = BrokerRoutingPolicy(
+                {**_rl_config, "trading": {**_rl_config.get("trading", {}), "mode": mode_override}},
+                market_id=market_id,
+            )
+        config = _rl_policy.config
         broker = get_live_broker(config)
         if not broker or not broker.connect():
             log.error("Cannot connect to broker")
@@ -730,16 +738,9 @@ def main() -> int:
 
         # ── PAPER pass (only if open paper trades exist) ───────────────
         result_paper: dict = {}
-        try:
-            from db.atlas_db import get_open_paper_trades as _gopt
-            _paper_open = [r for r in _gopt() if r.get("universe") == args.market]
-        except Exception as _e:
-            log.debug("Paper trades check failed (non-fatal): %s", _e)
-            _paper_open = []
-
-        if _paper_open:
-            log.info("Paper trades detected (%d) for %s — running PAPER reconcile pass",
-                     len(_paper_open), args.market)
+        _main_policy = BrokerRoutingPolicy(load_config(args.market), market_id=args.market)
+        if _main_policy.needs_paper_pass():
+            log.info("needs_paper_pass()=True for %s — running PAPER reconcile pass", args.market)
             result_paper = reconcile_ledger(args.market, dry_run=args.dry_run, mode_override="paper")
             if "error" in result_paper:
                 log.error("PAPER reconciliation failed: %s", result_paper["error"])

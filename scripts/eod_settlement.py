@@ -34,6 +34,8 @@ os.chdir(PROJECT)
 from utils.logging_config import setup_logging
 log = setup_logging("eod_settlement", extra_log_file="eod_settlement")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 # FIX-PMEQ-AUDIT-004: all 3 tracked markets must get a market_equity_history row
 # each EOD, even if some have zero positions. Prevents next-day HWM inflation to
 # global broker equity when all positions in a market closed the same day.
@@ -538,13 +540,12 @@ def main():
 
     # Skip non-live markets — they don't have broker connections
     # Paper mode is active even without live_enabled (targets Alpaca paper account)
-    live_enabled = config.get("trading", {}).get("live_enabled", False)
-    _mode_eod = config.get("trading", {}).get("mode", "live")
-    _mode_label_eod = f"[{_mode_eod.upper()}]"
-    if not (live_enabled or _mode_eod == "paper"):
-        log.info("%s Market %s is not live-enabled (live_enabled=False). Skipping EOD settlement.", _mode_label_eod, market_id)
-        print(f"Market {market_id} is not live-enabled. Skipping settlement.")
-        _health_log("info", "EOD settlement skipped: market not live-enabled", {"market": market_id, "reason": "market_disabled"})
+    policy = BrokerRoutingPolicy(config, market_id=market_id)
+    _mode_label_eod = f"[{policy.mode.upper()}]"
+    if policy.should_skip():
+        log.info("%s Market %s policy.should_skip() True. Skipping EOD settlement.", _mode_label_eod, market_id)
+        print(f"Market {market_id} skipped (policy.should_skip()).")
+        _health_log("info", "EOD settlement skipped: policy.should_skip()", {"market": market_id, "reason": "market_disabled"})
         return
 
     from brokers.live_portfolio import LivePortfolio
@@ -960,9 +961,9 @@ def main():
         log.debug("eod_settlement: heartbeat write failed (non-fatal): %s", _hb_exc)
 
     # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
-    if _has_open_paper_trades_for_universe(market_id):
+    if policy.needs_paper_pass():
         log.info("[PAPER] Open paper trades detected for %s — running paper EOD pass", market_id)
-        _paper_config_eod = {**config, "trading": {**config.get("trading", {}), "mode": "paper"}}
+        _paper_config_eod = policy.paper_config
         _settle_paper_pass(_paper_config_eod, market_id, trade_date, args.dry_run)
     else:
         log.debug("[PAPER] No open paper trades for %s — skipping paper EOD pass", market_id)
@@ -1001,17 +1002,6 @@ def _eod_monitor_mark_sent() -> None:
     except (OSError, json.JSONDecodeError) as exc:  # state file write
         log.warning("_eod_monitor_mark_sent: state write failed (non-fatal): %s", exc)
 
-
-
-def _has_open_paper_trades_for_universe(universe: str) -> bool:
-    """Return True if there is at least one open paper trade for *universe*."""
-    try:
-        from db.atlas_db import get_open_paper_trades
-        rows = get_open_paper_trades()
-        return any(r.get("universe") == universe for r in rows)
-    except Exception as _e:
-        log.debug("_has_open_paper_trades_for_universe (non-fatal): %s", _e)
-        return False
 
 
 def _settle_paper_pass(paper_config: dict, market_id: str, trade_date: str, dry_run: bool) -> None:

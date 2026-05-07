@@ -40,6 +40,8 @@ from brokers.base import (
 
 logger = logging.getLogger("atlas.live_executor")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 
 def _fmt(x: object, spec: str = "{:.2f}") -> str:
     """None-safe numeric formatter for reconcile log messages.
@@ -263,6 +265,9 @@ class LiveExecutor:
         self._account_info_cache = None
         # Trading mode: "live", "paper", or "passive"
         self._mode: str = config.get("trading", {}).get("mode", "live")
+        self._policy: BrokerRoutingPolicy = BrokerRoutingPolicy(
+            config, market_id=config.get("market_id", "sp500"),
+        )
 
     @property
     def is_live_enabled(self) -> bool:
@@ -1302,7 +1307,7 @@ class LiveExecutor:
                 _trade_id = None
                 _fill_price_entry = order_result.fill_price or price
                 _market_id_entry = self.config.get("market_id", "sp500")
-                if self._mode == "paper":
+                if self._policy.is_paper:
                     # Paper mode: write to paper_trades table only (NOT trades)
                     try:
                         from db import atlas_db as _adb_entry
@@ -1713,7 +1718,7 @@ class LiveExecutor:
                 "direction": direction,
                 "regime_at_exit": _regime_state,
             }
-            if self._mode == "paper":
+            if self._policy.is_paper:
                 # Paper mode: write to paper_trades table only (NOT trades)
                 try:
                     from db import atlas_db as _adb_exit
@@ -2774,7 +2779,7 @@ class LiveExecutor:
             # prevents cross-market ghost rows when fills from other-market orders
             # are returned by the broker's 7-day history scan.
             # Paper mode queries paper_trades; live mode queries trades.
-            _dedup_table = "paper_trades" if self._mode == "paper" else "trades"
+            _dedup_table = self._policy.trade_table()
             try:
                 from db import atlas_db as _adb
                 with _adb.get_db() as _chk_db:
@@ -2827,7 +2832,7 @@ class LiveExecutor:
                 "config_version": self.config.get("version"),
                 "regime_state": _recon_regime,
             }
-            if self._mode == "paper":
+            if self._policy.is_paper:
                 # Paper mode: write directly to paper_trades (skip TradeLedger / trades)
                 try:
                     from db import atlas_db as _adb_recon
@@ -3046,7 +3051,7 @@ class LiveExecutor:
                 "reconciled": True,
                 "regime_at_exit": _recon_exit_regime,
             }
-            if self._mode == "paper":
+            if self._policy.is_paper:
                 # Paper mode: write to paper_trades exit (skip TradeLedger / trades)
                 try:
                     from db import atlas_db as _adb_recon_exit

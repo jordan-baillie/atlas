@@ -41,6 +41,8 @@ ALERT_STATE_DIR.mkdir(parents=True, exist_ok=True)
 from utils.logging_config import setup_logging
 log = setup_logging("intraday_monitor", extra_log_file="intraday_monitor")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 # ── Thresholds ────────────────────────────────────────────────
 
 STOP_PROXIMITY_PCT = 0.03      # alert when price within 3% of stop
@@ -346,17 +348,6 @@ def build_status_line(portfolio, prices: dict, market_id: str) -> str:
 # ── Main ──────────────────────────────────────────────────────
 
 
-def _has_open_paper_trades_for_universe(universe: str) -> bool:
-    """Return True if there is at least one open paper trade for *universe*."""
-    try:
-        from db.atlas_db import get_open_paper_trades
-        rows = get_open_paper_trades()
-        return any(r.get("universe") == universe for r in rows)
-    except Exception as _e:
-        log.debug("_has_open_paper_trades_for_universe failed (non-fatal): %s", _e)
-        return False
-
-
 def main():
     parser = argparse.ArgumentParser(description="Atlas Intraday Monitor")
     parser.add_argument("--market", "-m", default="asx", help="Market ID (default: asx)")
@@ -378,17 +369,16 @@ def main():
 
     # Skip markets that aren't live-enabled (avoids ERROR-level Telegram spam)
     # Paper mode is active even without live_enabled (targets Alpaca paper account)
-    _trading_cfg = config.get("trading", {})
-    _mode_intraday = _trading_cfg.get("mode", "live")
-    if not (_trading_cfg.get("live_enabled", False) or _mode_intraday == "paper"):
-        log.info("[%s] Market %s has live_enabled=False — skipping monitor", _mode_intraday.upper(), market_id)
+    policy = BrokerRoutingPolicy(config, market_id=market_id)
+    if policy.should_skip():
+        log.info("[%s] Market %s policy.should_skip() True — skipping monitor", policy.mode.upper(), market_id)
         try:
             from monitor.health_writer import heartbeat as _hb
             _hb("intraday_monitor", "skipped", {"market": market_id, "reason": "market_disabled"})
         except Exception:
             pass
         return
-    _mode_label_intraday = f"[{_mode_intraday.upper()}]"
+    _mode_label_intraday = f"[{policy.mode.upper()}]"
 
     portfolio = LivePortfolio(config, market_id=market_id)
     if not portfolio.connect():
@@ -402,7 +392,7 @@ def main():
     if not portfolio.positions:
         log.info("No open positions — nothing to monitor.")
         # Don't return early if paper trades exist — paper pass still needs to run
-        if not _has_open_paper_trades_for_universe(market_id):
+        if not policy.needs_paper_pass():
             return
 
     # ── Enrich positions with stop prices from plan/state ──────
@@ -470,7 +460,7 @@ def main():
                     f"Position monitoring unavailable this cycle."
                 )
         # Don't return if paper trades exist — paper pass still runs
-        if not _has_open_paper_trades_for_universe(market_id):
+        if not policy.needs_paper_pass():
             return
 
     # ── Run checks ────────────────────────────────────────────
@@ -527,10 +517,10 @@ def main():
         log.debug("intraday_monitor: heartbeat write failed (non-fatal): %s", _hb_exc)
 
     # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
-    if _has_open_paper_trades_for_universe(market_id):
+    if policy.needs_paper_pass():
         log.info("[PAPER] Open paper trades detected for %s — running paper monitor pass", market_id)
         try:
-            paper_config = {**config, "trading": {**config.get("trading", {}), "mode": "paper"}}
+            paper_config = policy.paper_config
             paper_portfolio = LivePortfolio(paper_config, market_id=market_id)
             if paper_portfolio.connect() and paper_portfolio.broker_data_valid and paper_portfolio.positions:
                 _paper_key = f"{market_id}_paper"

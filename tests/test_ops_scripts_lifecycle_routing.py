@@ -162,8 +162,6 @@ class TestSyncProtectiveLifecycleRouting:
 
         live_broker = self._live_broker()
 
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: False)
-
         def fake_get_live_broker(cfg):
             return live_broker
 
@@ -182,7 +180,7 @@ class TestSyncProtectiveLifecycleRouting:
         (tmp_path / "brokers" / "state" / "live_sp500.json").write_text(json.dumps(state))
         (tmp_path / "plans").mkdir(parents=True)
 
-        with patch("brokers.registry.get_live_broker", side_effect=counting_get_live_broker):
+        with patch("brokers.registry.get_live_broker", side_effect=counting_get_live_broker),              patch("db.atlas_db.get_open_paper_trades", return_value=[]):
             result = mod.sync_market("sp500", "2026-01-01", dry_run=True)
 
         # get_live_broker called once (live pass only)
@@ -208,7 +206,6 @@ class TestSyncProtectiveLifecycleRouting:
                 brokers_by_mode["live"] = live_broker
                 return live_broker
 
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: True)
         monkeypatch.setattr(mod, "PROJECT", tmp_path)
 
         # Create live state file (CAT)
@@ -238,7 +235,6 @@ class TestSyncProtectiveLifecycleRouting:
         import scripts.sync_protective_orders as mod
 
         live_broker = self._live_broker()
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: False)
         monkeypatch.setattr(mod, "PROJECT", tmp_path)
 
         (tmp_path / "brokers").mkdir(parents=True)
@@ -247,7 +243,7 @@ class TestSyncProtectiveLifecycleRouting:
         live_state = {"positions": [{"ticker": "CAT", "stop_price": 90.0}]}
         (tmp_path / "brokers" / "state" / "live_sp500.json").write_text(json.dumps(live_state))
 
-        with patch("brokers.registry.get_live_broker", return_value=live_broker):
+        with patch("brokers.registry.get_live_broker", return_value=live_broker),              patch("db.atlas_db.get_open_paper_trades", return_value=[]):
             result = mod.sync_market("sp500", "2026-01-01", dry_run=True)
 
         # CAT should appear in live results
@@ -260,7 +256,6 @@ class TestSyncProtectiveLifecycleRouting:
         import scripts.sync_protective_orders as mod
 
         live_broker = self._live_broker()
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: False)
         monkeypatch.setattr(mod, "PROJECT", tmp_path)
 
         (tmp_path / "brokers").mkdir(parents=True)
@@ -270,7 +265,7 @@ class TestSyncProtectiveLifecycleRouting:
         state = {"positions": [{"ticker": "RESRCH", "stop_price": 50.0, "strategy": "some_research_strategy"}]}
         (tmp_path / "brokers" / "state" / "live_sp500.json").write_text(json.dumps(state))
 
-        with patch("brokers.registry.get_live_broker", return_value=live_broker):
+        with patch("brokers.registry.get_live_broker", return_value=live_broker),              patch("db.atlas_db.get_open_paper_trades", return_value=[]):
             result = mod.sync_market("sp500", "2026-01-01", dry_run=True)
 
         # Should complete without error (the live pass handles it)
@@ -293,7 +288,6 @@ class TestIntradayMonitorLifecycleRouting:
         lp_mock.broker_data_valid = True
         lp_mock.positions = []  # no positions → returns early
 
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: False)
 
         with patch("utils.config.get_active_config", return_value=_make_config("live")), \
              patch("brokers.live_portfolio.LivePortfolio", return_value=lp_mock) as lp_class:
@@ -337,11 +331,13 @@ class TestIntradayMonitorLifecycleRouting:
             instance_count[0] += 1
             return inst
 
-        monkeypatch.setattr(mod, "_has_open_paper_trades_for_universe", lambda u: True)
         # Use tmp_path for alert state
         monkeypatch.setattr(mod, "ALERT_STATE_DIR", tmp_path)
 
         with patch("utils.config.get_active_config", return_value=_make_config("live")), \
+             patch("db.atlas_db.get_open_paper_trades", return_value=[
+                 {"ticker": "XYZ", "universe": "sp500", "status": "open"},
+             ]), \
              patch("brokers.live_portfolio.LivePortfolio", side_effect=fake_lp):
             import sys as _sys
             old_argv = _sys.argv
@@ -371,10 +367,11 @@ class TestEodSettlementLifecycleRouting:
         from scripts.eod_settlement import _settle_paper_pass
         assert callable(_settle_paper_pass)
 
-    def test_has_open_paper_trades_helper_exists(self):
-        """_has_open_paper_trades_for_universe is importable from eod_settlement."""
-        from scripts.eod_settlement import _has_open_paper_trades_for_universe
-        assert callable(_has_open_paper_trades_for_universe)
+    def test_routing_policy_needs_paper_pass_accessible(self):
+        """BrokerRoutingPolicy.needs_paper_pass is the replacement for the old per-module helpers."""
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
+        assert callable(policy.needs_paper_pass)
 
     def test_paper_pass_skips_when_no_positions(self, monkeypatch):
         """_settle_paper_pass: no positions → returns cleanly without ordering."""
@@ -430,11 +427,12 @@ class TestEodSettlementLifecycleRouting:
         assert not mock_live_exit.called, "record_trade_exit (live) was called for paper exit — wrong table!"
 
     def test_no_paper_pass_when_no_paper_trades(self, monkeypatch):
-        """_has_open_paper_trades_for_universe returns False → _settle_paper_pass not called."""
-        from scripts.eod_settlement import _has_open_paper_trades_for_universe
+        """BrokerRoutingPolicy.needs_paper_pass() returns False when no paper trades."""
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
 
         with patch("db.atlas_db.get_open_paper_trades", return_value=[]):
-            result = _has_open_paper_trades_for_universe("sp500")
+            result = policy.needs_paper_pass()
 
         assert result is False
 
@@ -633,45 +631,58 @@ class TestReconcilePositionsLifecycleRouting:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Cross-script: _has_open_paper_trades_for_universe helper
+# Cross-script: BrokerRoutingPolicy.needs_paper_pass (replaces per-module helper)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestHasOpenPaperTradesHelper:
-    """Test the shared helper pattern across scripts."""
+    """Test the consolidated BrokerRoutingPolicy.needs_paper_pass behaviour.
+
+    The per-module _has_open_paper_trades_for_universe helpers were removed
+    in the BrokerRoutingPolicy migration.  These tests verify the equivalent
+    behaviour through policy.needs_paper_pass().
+    """
 
     def test_returns_false_when_empty(self):
-        import scripts.sync_protective_orders as mod
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
         with patch("db.atlas_db.get_open_paper_trades", return_value=[]):
-            assert mod._has_open_paper_trades_for_universe("sp500") is False
+            assert policy.needs_paper_pass() is False
 
     def test_returns_true_when_matching_universe(self):
-        import scripts.sync_protective_orders as mod
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
         with patch("db.atlas_db.get_open_paper_trades", return_value=[
             {"ticker": "XYZ", "universe": "sp500", "status": "open"},
         ]):
-            assert mod._has_open_paper_trades_for_universe("sp500") is True
+            assert policy.needs_paper_pass() is True
 
     def test_returns_false_for_different_universe(self):
-        import scripts.sync_protective_orders as mod
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
         with patch("db.atlas_db.get_open_paper_trades", return_value=[
             {"ticker": "XYZ", "universe": "commodity_etfs", "status": "open"},
         ]):
-            assert mod._has_open_paper_trades_for_universe("sp500") is False
+            assert policy.needs_paper_pass() is False
 
     def test_returns_false_on_db_error(self, monkeypatch):
-        import scripts.sync_protective_orders as mod
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
         with patch("db.atlas_db.get_open_paper_trades", side_effect=Exception("db error")):
-            # Should not raise; returns False safely
-            assert mod._has_open_paper_trades_for_universe("sp500") is False
+            # Should not raise; returns False safely (FAIL-OPEN)
+            assert policy.needs_paper_pass() is False
 
-    def test_eod_settlement_has_same_helper(self):
-        """eod_settlement also has the helper (not just sync_protective_orders)."""
-        import scripts.eod_settlement as mod
+    def test_eod_settlement_uses_policy(self):
+        """eod_settlement calls policy.needs_paper_pass() — verified by DB patch."""
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "sp500")
         with patch("db.atlas_db.get_open_paper_trades", return_value=[]):
-            assert mod._has_open_paper_trades_for_universe("sp500") is False
+            assert policy.needs_paper_pass() is False
 
-    def test_intraday_monitor_has_same_helper(self):
-        """intraday_monitor also has the helper."""
-        import scripts.intraday_monitor as mod
-        with patch("db.atlas_db.get_open_paper_trades", return_value=[]):
-            assert mod._has_open_paper_trades_for_universe("sp500") is False
+    def test_intraday_monitor_uses_policy(self):
+        """intraday_monitor calls policy.needs_paper_pass() — verified by DB patch."""
+        from brokers.routing_policy import BrokerRoutingPolicy
+        policy = BrokerRoutingPolicy({"trading": {"mode": "live", "live_enabled": True}}, "commodity_etfs")
+        with patch("db.atlas_db.get_open_paper_trades", return_value=[
+            {"ticker": "GLD", "universe": "commodity_etfs", "status": "open"},
+        ]):
+            assert policy.needs_paper_pass() is True

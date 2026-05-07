@@ -51,6 +51,8 @@ from utils.logging_config import setup_logging  # noqa: E402
 
 logger = logging.getLogger("atlas.sync_protective_orders")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 # PDT backoff: expiry-based check (wired C3 — covers pre-market same-day denials)
 from brokers.pdt_state import (  # noqa: E402
     is_pdt_deferred,
@@ -90,21 +92,6 @@ def _protective_ledger_enabled() -> bool:
     """
     val = os.environ.get("PROTECTIVE_LEDGER_WRITE_ENABLED", "true").lower()
     return val not in ("false", "0", "no")
-
-
-def _has_open_paper_trades_for_universe(universe: str) -> bool:
-    """Return True if there is at least one open paper trade for *universe*.
-
-    Used to decide whether to run the PAPER pass in dual-pass routing.
-    Non-fatal on DB error (returns False = skip paper pass safely).
-    """
-    try:
-        from db.atlas_db import get_open_paper_trades
-        rows = get_open_paper_trades()
-        return any(r.get("universe") == universe for r in rows)
-    except Exception as _e:
-        logger.debug("_has_open_paper_trades_for_universe failed (non-fatal): %s", _e)
-        return False
 
 
 # 00:00–13:59 UTC ≈ before US market open — same-day restriction has cleared overnight.
@@ -895,10 +882,8 @@ def _run_paper_sync_pass(
         # ── Build paper config ────────────────────────────────
         if base_config is None:
             base_config = load_config(market_id, config_path)
-        paper_config: dict = {
-            **base_config,
-            "trading": {**base_config.get("trading", {}), "mode": "paper"},
-        }
+        _base_policy = BrokerRoutingPolicy(base_config, market_id=market_id)
+        paper_config: dict = _base_policy.paper_config
 
         logger.info("[PAPER] Syncing protective orders for %s (dry_run=%s)", market_id, dry_run)
 
@@ -1062,14 +1047,12 @@ def sync_market(
 
     # ── Determine broker ─────────────────────────────────────
     broker_name = config.get("trading", {}).get("broker", _DEFAULT_BROKER.get(market_id, "alpaca"))
-    live_enabled = config.get("trading", {}).get("live_enabled", False)
-    _mode = config.get("trading", {}).get("mode", "live")
-    _mode_label = f"[{_mode.upper()}]"
+    policy = BrokerRoutingPolicy(config, market_id=market_id)
+    _mode_label = f"[{policy.mode.upper()}]"
 
-    # Paper mode is active even without live_enabled (targets Alpaca paper account)
-    if not (live_enabled or _mode == "paper"):
-        result["error"] = f"live_enabled=False in config — skipping {market_id}"
-        logger.info("Skipping %s: live trading not enabled", market_id)
+    if policy.should_skip():
+        result["error"] = f"policy.should_skip() True (mode={policy.mode}, live_enabled={policy.live_enabled}) — skipping {market_id}"
+        logger.info("Skipping %s: policy.should_skip() True", market_id)
         try:
             from monitor.health_writer import heartbeat as _hb
             _hb("sync_protective", "skipped", {"market": market_id, "reason": "market_disabled"})
@@ -1537,7 +1520,7 @@ def sync_market(
     # ── Paper pass: dual-pass routing for PAPER lifecycle strategies ─────
     # Runs AFTER the live pass (and its broker is disconnected).  Only if
     # there is at least one open paper trade for this universe.
-    if _has_open_paper_trades_for_universe(market_id):
+    if policy.needs_paper_pass():
         logger.info("[PAPER] Open paper trades detected for %s — running paper sync pass", market_id)
         try:
             _paper_result = _run_paper_sync_pass(

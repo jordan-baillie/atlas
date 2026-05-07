@@ -38,11 +38,14 @@ if str(PROJECT) not in sys.path:
 
 import scripts.execute_approved as mod
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _make_config(mode: str) -> dict:
-    return {"trading": {"mode": mode, "auto_approve": False}}
+def _make_config(mode: str, live_enabled: bool = True) -> dict:
+    """Build a minimal config dict. live_enabled=True for non-passive modes."""
+    return {"trading": {"mode": mode, "live_enabled": live_enabled, "auto_approve": False}}
 
 
 def _make_entry(ticker: str, strategy: str = "momentum_breakout") -> dict:
@@ -341,7 +344,7 @@ def test_split_preserves_order():
         return strategy == "short_term_mr"
 
     with patch(_PATCH_IS_PAPER, side_effect=fake_is_paper):
-        live_es, paper_es = mod._split_by_lifecycle(entries, "sp500")
+        live_es, paper_es = BrokerRoutingPolicy(_make_config("live"), "sp500").split_entries_by_lifecycle(entries)
 
     assert [e["ticker"] for e in live_es] == ["B", "D"]
     assert [e["ticker"] for e in paper_es] == ["A", "C", "E"]
@@ -358,7 +361,7 @@ def test_split_exits_without_strategy_go_to_live():
     # Even if is_paper would return True for a non-empty strategy,
     # empty strategy string skips the lifecycle check entirely
     with patch(_PATCH_IS_PAPER, return_value=True):
-        live_es, paper_es = mod._split_by_lifecycle(exits, "sp500")
+        live_es, paper_es = BrokerRoutingPolicy(_make_config("live"), "sp500").split_entries_by_lifecycle(exits)
 
     assert len(live_es) == 2
     assert len(paper_es) == 0
@@ -374,7 +377,7 @@ def test_split_by_lifecycle_import_failure_routes_all_to_live():
 
     # Simulate ImportError by replacing the module with None in sys.modules
     with patch.dict("sys.modules", {"monitor.strategy_lifecycle": None}):
-        live_es, paper_es = mod._split_by_lifecycle(entries, "sp500")
+        live_es, paper_es = BrokerRoutingPolicy(_make_config("live"), "sp500").split_entries_by_lifecycle(entries)
 
     assert len(live_es) == 2
     assert len(paper_es) == 0

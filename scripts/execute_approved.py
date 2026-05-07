@@ -30,6 +30,8 @@ os.chdir(PROJECT)
 from utils.logging_config import setup_logging
 log = setup_logging("execute_approved", extra_log_file="execute_approved")
 
+from brokers.routing_policy import BrokerRoutingPolicy
+
 
 def _is_market_halted(market_id: str) -> tuple[bool, str, str]:
     """Query market_state.halted for *market_id*.
@@ -55,46 +57,6 @@ def _is_market_halted(market_id: str) -> tuple[bool, str, str]:
     except Exception as _e:
         log.warning("Halt state DB query failed (fail-open): %s", _e)
         return False, "", ""
-
-
-def _split_by_lifecycle(entries: list, universe: str) -> tuple[list, list]:
-    """Split plan entries into (live_entries, paper_entries) by lifecycle state.
-
-    Entries whose originating strategy is currently in PAPER lifecycle state
-    are routed to the paper executor.  All other entries (LIVE, RESEARCH,
-    RETIRED, or unknown/missing strategy) are routed to the live executor.
-
-    This is the per-strategy routing mechanism for Phase B dogfood testing:
-    a single sp500 plan can simultaneously execute some strategies on real
-    capital (LIVE lifecycle) and others on the virtual paper account (PAPER
-    lifecycle) without any universe-level config change.
-
-    Args:
-        entries: List of entry/exit dicts from the plan.
-        universe: Universe / market_id string (e.g. "sp500").
-
-    Returns:
-        Tuple (live_entries, paper_entries).
-    """
-    try:
-        from monitor.strategy_lifecycle import is_paper as _lc_is_paper
-    except ImportError:
-        log.warning(
-            "_split_by_lifecycle: strategy_lifecycle import failed — "
-            "routing all %d entries to live (safe fallback)",
-            len(entries),
-        )
-        return entries, []
-
-    live_es: list = []
-    paper_es: list = []
-    for e in entries:
-        strategy = e.get("strategy", "")
-        if strategy and _lc_is_paper(strategy, universe):
-            paper_es.append(e)
-        else:
-            live_es.append(e)
-    return live_es, paper_es
 
 
 def _run_executor(
@@ -190,9 +152,10 @@ def main():
     config = get_active_config(market_id)
 
     mode = config.get("trading", {}).get("mode", "")
-    # "passive" → skip entirely.  "live" and "paper" both proceed.
-    if mode == "passive":
-        log.info("Trading mode is 'passive' — skipping")
+    policy = BrokerRoutingPolicy(config, market_id=market_id)
+    if policy.should_skip():
+        log.info("policy.should_skip() True (mode=%s, live_enabled=%s) — skipping",
+                 policy.mode, policy.live_enabled)
         return
 
     from brokers.plan import TradePlanGenerator
@@ -334,7 +297,7 @@ def main():
     live_report: dict | None = None
     paper_report: dict | None = None
 
-    if mode == "paper":
+    if policy.is_paper:
         # Entire universe is in paper mode — route everything to paper executor
         log.info("[paper] Universe mode=paper — routing all %d entries, %d exits to paper",
                  len(entries), len(exits))
@@ -345,8 +308,8 @@ def main():
 
     else:
         # mode == "live" — split by per-strategy lifecycle state
-        live_entries, paper_entries = _split_by_lifecycle(entries, market_id)
-        live_exits, paper_exits = _split_by_lifecycle(exits, market_id)
+        live_entries, paper_entries = policy.split_entries_by_lifecycle(entries)
+        live_exits, paper_exits = policy.split_entries_by_lifecycle(exits)
 
         if paper_entries or paper_exits:
             log.info(
@@ -363,10 +326,7 @@ def main():
             )
 
         if paper_entries or paper_exits:
-            paper_config = {
-                **config,
-                "trading": {**config.get("trading", {}), "mode": "paper"},
-            }
+            paper_config = policy.paper_config
             paper_report = _run_executor(
                 paper_config, plan, paper_entries, paper_exits,
                 market_id, trade_date, args.dry_run, "[paper]",
