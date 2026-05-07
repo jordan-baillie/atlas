@@ -175,6 +175,44 @@ Once the paper executor is built, the promotion flow will be:
 
 ---
 
+## Broker Routing Policy
+
+The **broker routing policy** is the (mode, live_enabled, market_id, lifecycle) decision layer that routes execution and DB writes between live and paper paths. It lives at `brokers/routing_policy.py` as `BrokerRoutingPolicy`.
+
+### Glossary
+
+- **Broker routing policy** — the (mode, live_enabled, market_id, lifecycle) decisions that route execution and DB writes between live and paper paths. Encapsulated by `brokers/routing_policy.py::BrokerRoutingPolicy`.
+- **Live pass** — execution against the real-money broker (`mode=live`).
+- **Paper pass** — execution against the Alpaca paper account (`mode=paper`), used for PAPER-lifecycle strategies running alongside LIVE strategies in the same universe.
+- **Lifecycle split** — partitioning plan entries by the originating strategy's promotion state (PAPER → paper executor; LIVE/RESEARCH/RETIRED/unknown → live executor).
+- **Skip gate** — the universe-level check that bails out before any broker connection (`mode=passive` or `mode=live AND live_enabled=False`).
+
+### Where it's used
+
+| Caller | Purpose |
+|--------|---------|
+| `scripts/execute_approved.py` | Skip-gate, lifecycle split, paper-config |
+| `scripts/sync_protective_orders.py` | Skip-gate, paper-pass detection, paper-config |
+| `scripts/intraday_monitor.py` | Skip-gate, paper-pass detection (3 sites), paper-config |
+| `scripts/eod_settlement.py` | Skip-gate, paper-pass detection, paper-config |
+| `scripts/reconcile_ledger.py` | Mode-override patch, paper-pass detection |
+| `brokers/live_executor.py` | Per-write-site paper/live discrimination, dedup-table selection |
+
+### Key methods
+
+- `policy.should_skip()` → bool — universe-level bail-out
+- `policy.needs_paper_pass()` → bool — DB-backed, memoized
+- `policy.split_entries_by_lifecycle(entries)` → `(live, paper)` — delegates to `monitor.strategy_lifecycle.split_trades_by_lifecycle`
+- `policy.paper_config` → dict — paper-mode config patch (no mutation)
+- `policy.for_paper()` → new `BrokerRoutingPolicy` — immutable mode transition
+- `policy.is_paper` / `policy.is_live` / `policy.is_passive` → bool
+- `policy.trade_table()` → `"paper_trades"` or `"trades"`
+- `policy.protective_table()` → paper or live protective-orders table
+
+Spec: [`docs/specs/broker-routing-policy.md`](../specs/broker-routing-policy.md)
+
+---
+
 ## Related Files
 
 | File | Role |
