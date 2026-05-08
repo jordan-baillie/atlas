@@ -554,3 +554,18 @@ Phase B2 complete. Atlas now trades sp500 only.
 ⚠️ **Outstanding follow-up**: `live_sp500.json` lists 5 positions (CAT, SYK, MCHP, FSLR, EBAY) but Alpaca broker holds only 2 (CAT, SYK). MCHP/FSLR/EBAY are orphaned state entries. Requires reconciliation.
 
 Re-enable criteria: sp500 green ≥30 days (after 2026-06-06), freed capital deployed, operator approval, MCHP/FSLR/EBAY discrepancy resolved.
+
+---
+
+## #314 (NEW) — Upgrade text-summary feature set after vision A/B
+- Source: spec'd as follow-up to #258 (Phase C2 chart-vision A/B review)
+- Problem: current text-summary overlay uses a sparse feature set; vision A/B review surfaced cases where richer text features would have caught what vision flagged. Vision's only unique signal attempts (Apr 21 tighten on SPY/QQQ) were also made by text-overlay — vision added nothing; upgrading text features may close that gap without the vision inference cost.
+- Tasks:
+  1. Audit current text-summary feature inputs (which fields, which lookback windows)
+  2. Add: candle-pattern detector (engulfing, doji, hammer), multi-timeframe trend agreement (5m vs 1h vs 1d), volume profile vs N-day median
+  3. Re-run a 30-day A/B vs current text-summary
+  4. If improvement: ship behind feature flag
+
+## #258 follow-up A — Sweep pre-Apr-17 archived overlay logs for literal text/vision pairing
+- **COMPLETED 2026-05-08**: Zero vision references in pre-Apr-17 logs. Vision A/B system (logs/overlay_vision_ab/) first activated 2026-04-17. No historical text/vision pairs exist before that date.
+- Files checked: logs/overlay_20260402.log-20260404 through overlay_20260415.log-20260417
