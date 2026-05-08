@@ -2398,14 +2398,10 @@ class LiveExecutor:
             logger.error("reconcile_entry_fills: cannot fetch orders: %s", e)
             return []
 
-        # Build mapping of ticker→latest FILLED SELL timestamp.
-        # Used below to detect bracket exits that already closed the position
-        # at the broker.  Without this guard, a BUY fill in the 7-day lookback
-        # window causes a zombie 'open' trade row even though the bracket SELL
-        # also filled within the same window.  Root cause of EBAY id=206 zombie
-        # (2026-05-06): BUY filled 13:30 UTC, bracket STOP SELL filled 13:30:37
-        # UTC — both visible in CLOSED orders scan; guard prevents re-opening.
-        filled_sells_by_ticker: dict[str, datetime] = {}
+        # Build mapping of ticker→sorted list of (filled_at, order) for FILLED
+        # SELLs.  Fix #311: store full order object so same-bar round-trips can
+        # be recorded in the ledger rather than silently dropped.
+        filled_sells_by_ticker: dict[str, list] = {}
         for _o in orders:
             try:
                 _side_v = _o.side.value.lower() if hasattr(_o.side, "value") else str(_o.side).lower()
@@ -2418,9 +2414,15 @@ class LiveExecutor:
             _filled_at = getattr(_o, "filled_at", None)
             if _filled_at is None:
                 continue
-            _prev = filled_sells_by_ticker.get(_sym)
-            if _prev is None or _filled_at > _prev:
-                filled_sells_by_ticker[_sym] = _filled_at
+            filled_sells_by_ticker.setdefault(_sym, []).append((_filled_at, _o))
+        for _sym in filled_sells_by_ticker:
+            filled_sells_by_ticker[_sym].sort(key=lambda x: x[0])
+
+        # Build exit order ID set for same-bar round-trip dedup (#311)
+        _exit_order_ids_for_recon = {
+            t.get("order_id") for t in _ledger.trades
+            if t.get("type") == "exit" and t.get("order_id")
+        }
 
         reconciled = []
         for order in orders:
@@ -2435,20 +2437,33 @@ class LiveExecutor:
             if status_val != "filled":
                 continue
 
-            # Guard: skip BUY whose bracket SELL has also filled — position
-            # already closed at broker.  sell_filled_at >= buy_filled_at means
-            # the SELL belongs to the same (or a later) trade lifecycle.
-            # Using >= instead of > to handle sub-second atomic bracket fills
-            # where SELL timestamp == BUY timestamp.
+            # Guard: detect BUY whose bracket SELL also filled.
+            # Fix #311: record completed round-trip instead of silently
+            # dropping it.  Zombie-open-row protection preserved.
             _buy_filled_at = getattr(order, "filled_at", None)
-            _sell_filled_at = filled_sells_by_ticker.get(str(order.symbol))
-            if _sell_filled_at is not None and _buy_filled_at is not None and _sell_filled_at >= _buy_filled_at:
-                logger.info(
-                    "reconcile_entry_fills: skipping %s — bracket SELL already filled at %s "
-                    "(BUY filled at %s); position closed at broker, no row to create",
-                    order.symbol, _sell_filled_at, _buy_filled_at,
-                )
-                continue
+            _matching_sell_pair: tuple | None = None
+            for _sell_ts, _sell_ord in filled_sells_by_ticker.get(str(order.symbol), []):
+                if _buy_filled_at is not None and _sell_ts >= _buy_filled_at:
+                    _matching_sell_pair = (_sell_ts, _sell_ord)
+                    break  # earliest qualifying sell
+            if _matching_sell_pair is not None:
+                _sell_filled_at, _sell_order_obj = _matching_sell_pair
+                _sell_order_id = str(_sell_order_obj.id)
+                if _sell_order_id not in _exit_order_ids_for_recon:
+                    self._record_same_bar_round_trip(
+                        buy_order=order,
+                        sell_order=_sell_order_obj,
+                        ledger=_ledger,
+                        plan_by_ticker=plan_by_ticker,
+                        regime=_recon_regime,
+                    )
+                    _exit_order_ids_for_recon.add(_sell_order_id)
+                else:
+                    logger.debug(
+                        "reconcile_entry_fills: same-bar %s already in"
+                        " ledger (sell %s)", order.symbol, _sell_order_id[:12],
+                    )
+                continue  # still skip OPEN-row creation
 
             # Skip protective orders — only reconcile entry fills.
             # Intent convention: atlas_entry_* = entry, atlas_stop_*/atlas_tp_* = protective
@@ -2845,6 +2860,170 @@ class LiveExecutor:
 
         return reconciled
 
+
+    def _record_same_bar_round_trip(
+        self,
+        buy_order: object,
+        sell_order: object,
+        ledger: object,
+        plan_by_ticker: dict,
+        regime: str | None,
+    ) -> None:
+        """Record entry stub + exit for a same-bar buy/sell round-trip.
+
+        Fix #311: When reconcile_entry_fills detects a BUY whose bracket SELL
+        also filled, records BOTH entry stub AND exit in the ledger so PnL
+        is not silently dropped.  Zombie-open-row protection preserved.
+        """
+        ticker = str(buy_order.symbol)
+        buy_price = float(buy_order.filled_avg_price or 0)
+        buy_qty = int(float(buy_order.filled_qty or buy_order.qty or 0))
+        sell_price = float(sell_order.filled_avg_price or 0)
+        sell_qty = int(float(sell_order.filled_qty or sell_order.qty or 0))
+        qty = min(buy_qty, sell_qty) if (buy_qty > 0 and sell_qty > 0) else max(buy_qty, sell_qty)
+
+        if buy_price <= 0 or sell_price <= 0 or qty <= 0:
+            logger.warning(
+                "SAME_BAR_ROUND_TRIP: skipping %s -- invalid price/qty"
+                " (buy_price=%.2f sell_price=%.2f qty=%d)",
+                ticker, buy_price, sell_price, qty,
+            )
+            return
+
+        buy_filled_at = getattr(buy_order, "filled_at", None)
+        sell_filled_at = getattr(sell_order, "filled_at", None)
+        round_trip_seconds = (
+            (sell_filled_at - buy_filled_at).total_seconds()
+            if buy_filled_at and sell_filled_at else None
+        )
+        realized_pnl = round((sell_price - buy_price) * qty, 2)
+
+        sell_coid = str(getattr(sell_order, "client_order_id", "")).lower()
+        try:
+            sell_otype = sell_order.order_type.value.lower()
+        except Exception:
+            sell_otype = str(getattr(sell_order, "order_type", "")).lower()
+
+        if "atlas_stop_" in sell_coid or "_stop_" in sell_coid:
+            exit_reason = "stop_loss"
+        elif "atlas_tp_" in sell_coid or "_tp_" in sell_coid:
+            exit_reason = "take_profit"
+        elif "atlas_trail_" in sell_coid or "trail" in sell_coid or sell_otype == "trailing_stop":
+            exit_reason = "trailing_stop_fill"
+        elif "atlas_exit_" in sell_coid or "exit" in sell_coid:
+            exit_reason = "signal_exit"
+        elif sell_otype in ("stop", "stop_limit"):
+            exit_reason = "stop_loss"
+        else:
+            exit_reason = "same_bar_bracket_exit"
+
+        plan_e = plan_by_ticker.get(ticker, {})
+        strategy = plan_e.get("strategy") or "reconciled"
+        if strategy == "unknown":
+            strategy = "reconciled"
+        stop_price = plan_e.get("stop_price", sell_price)
+        planned_price = plan_e.get("entry_price", buy_price)
+        confidence = float(plan_e.get("confidence", 0) or 0)
+        market_id = self.config.get("market_id", "sp500")
+        buy_order_id = str(buy_order.id)
+        sell_order_id = str(sell_order.id)
+        buy_ts = str(buy_filled_at)[:19] if buy_filled_at else ""
+        sell_ts = str(sell_filled_at)[:26] if sell_filled_at else ""
+
+        logger.warning(
+            "SAME_BAR_ROUND_TRIP ticker=%s buy_price=%.2f sell_price=%.2f"
+            " pnl=%.2f reason=%s elapsed_s=%s buy_order=%s sell_order=%s",
+            ticker, buy_price, sell_price, realized_pnl, exit_reason,
+            f"{round_trip_seconds:.0f}" if round_trip_seconds is not None else "?",
+            buy_order_id[:12], sell_order_id[:12],
+        )
+
+        _sbrt_policy = getattr(self, "_policy", None)
+        if _sbrt_policy is not None and _sbrt_policy.is_paper:
+            try:
+                from db import atlas_db as _adb_sbrt
+                from universe.membership import derive_universe as _du_sbrt
+                _univ = _du_sbrt(ticker, market_id) if ticker else market_id
+                _paper_acct = getattr(self._broker, "account_number", None) if self._broker else None
+                _adb_sbrt.record_paper_trade_entry(
+                    ticker=ticker, strategy=strategy, universe=_univ,
+                    entry_price=buy_price, shares=qty,
+                    stop_price=stop_price, take_profit=None,
+                    confidence=confidence, regime_state=regime,
+                    config_version=self.config.get("version"),
+                    paper_account_id=_paper_acct,
+                )
+                _adb_sbrt.record_paper_trade_exit(
+                    ticker=ticker, strategy=strategy,
+                    exit_price=sell_price, exit_reason=exit_reason,
+                    regime_at_exit=regime, paper_account_id=_paper_acct,
+                )
+                logger.info(
+                    "[paper] Recorded same-bar round-trip: %s qty=%d buy=%.2f sell=%.2f pnl=%.2f",
+                    ticker, qty, buy_price, sell_price, realized_pnl,
+                )
+            except AttributeError as _p_attr:
+                logger.warning("[paper] same-bar round-trip unavailable: %s", _p_attr)
+            except Exception as _p_exc:
+                logger.error("[paper] same-bar round-trip failed for %s: %s", ticker, _p_exc)
+            return
+
+        # Live mode: write entry stub + exit to TradeLedger
+        entry_record = {
+            "ticker": ticker,
+            "strategy": strategy,
+            "shares": qty,
+            "fill_price": buy_price,
+            "planned_price": planned_price,
+            "stop_price": stop_price,
+            "order_id": buy_order_id,
+            "timestamp": buy_ts,
+            "direction": "long",
+            "reconciled": True,
+            "same_bar_round_trip": True,
+            "confidence": confidence,
+            "market_id": market_id,
+            "config_version": self.config.get("version"),
+            "regime_state": regime,
+        }
+        exit_record = {
+            "ticker": ticker,
+            "strategy": strategy,
+            "shares": qty,
+            "fill_price": sell_price,
+            "exit_price": sell_price,
+            "entry_price": buy_price,
+            "pnl": realized_pnl,
+            "pnl_pct": round((sell_price - buy_price) / buy_price * 100, 2) if buy_price > 0 else None,
+            "exit_reason": exit_reason,
+            "order_id": sell_order_id,
+            "timestamp": sell_ts,
+            "reconciled": True,
+            "same_bar_round_trip": True,
+            "market_id": market_id,
+            "regime_at_exit": regime,
+        }
+        try:
+            ledger.record_entry(entry_record)
+        except Exception as _entry_exc:
+            logger.error("same_bar_round_trip: record_entry failed for %s: %s", ticker, _entry_exc)
+        try:
+            ledger.record_exit(exit_record)
+        except Exception as _exit_exc:
+            logger.error("same_bar_round_trip: record_exit failed for %s: %s", ticker, _exit_exc)
+
+        try:
+            from utils.telegram import send_message as _tg_send
+            _elapsed_str = f"{round_trip_seconds:.0f}s" if round_trip_seconds is not None else "?"
+            _tg_send(
+                f"\U0001f504 Same-bar round-trip: <b>{ticker}</b>"
+                f" buy@${buy_price:.2f} sell@${sell_price:.2f}"
+                f" PnL <b>${realized_pnl:+.2f}</b> ({_elapsed_str}) reason={exit_reason}",
+                parse_mode="HTML",
+            )
+        except Exception as _tg_exc:
+            logger.debug("same_bar_round_trip: Telegram notify failed: %s", _tg_exc)
+
     # ── Volatility gate ────────────────────────────────────────
 
     def _run_volatility_gate(self) -> dict:
@@ -2886,4 +3065,4 @@ class LiveExecutor:
             "exits": [],
         }
 
-# TEST_MARKER_1234
+# TEST_MARKER_WRITE_CHECK_9999

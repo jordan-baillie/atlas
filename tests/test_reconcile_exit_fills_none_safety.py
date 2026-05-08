@@ -180,6 +180,8 @@ class TestReconcileExitFillsNoneSafety:
         executor._connected = True
         executor._broker = MagicMock()
         executor._broker._trade_client = MagicMock()
+        from brokers.routing_policy import BrokerRoutingPolicy
+        executor._policy = BrokerRoutingPolicy(config, market_id="commodity_etfs")
         return executor
 
     def test_none_fill_price_skipped(self):

@@ -98,6 +98,8 @@ def _make_executor() -> object:
     ex._connected = True
     ex._broker = MagicMock()
     ex._halted = False
+    from brokers.routing_policy import BrokerRoutingPolicy
+    ex._policy = BrokerRoutingPolicy(cfg, market_id="sp500")
     return ex
 
 
@@ -136,6 +138,7 @@ def _call_reconcile(
     with (
         patch("brokers.live_executor._get_regime_model") as mock_regime,
         patch("journal.logger.TradeLedger", return_value=mock_ledger),
+        patch("utils.telegram.send_message"),
     ):
         # _get_regime_model().classify_current().state.value
         mock_regime.return_value.classify_current.return_value.state.value = "bull_risk_on"
@@ -155,12 +158,16 @@ class TestReconcileEntryFillsGuard:
     # ── Case 1 ────────────────────────────────────────────────────────────────
 
     def test_skips_buy_when_sell_also_filled(self):
-        """FILLED BUY + FILLED SELL (sell after buy) → BUY is skipped entirely.
+        """FILLED BUY + FILLED SELL (sell after buy) → round-trip recorded; no OPEN row.
+
+        Fix #311: the guard now records the round-trip in the ledger (entry stub
+        + exit) instead of silently dropping it.  Zombie protection is preserved:
+        no OPEN trade row is created (result == []).
 
         Mirrors the EBAY id=206 zombie scenario:
           BUY  filled 2026-05-05 13:30:00 UTC
           SELL filled 2026-05-05 13:30:37 UTC  (bracket stop fill)
-        Expected: reconcile_entry_fills returns [] AND record_entry is never called.
+        Expected: result == [] (no open row), but record_entry AND record_exit called.
         """
         ex = _make_executor()
         buy_order = _make_order(
@@ -176,7 +183,7 @@ class TestReconcileEntryFillsGuard:
             symbol="EBAY",
             side="sell",
             status="filled",
-            filled_at=_ts(13, 30, 37),  # AFTER the buy → guard fires
+            filled_at=_ts(13, 30, 37),  # AFTER the buy → round-trip recorded
             fill_price=107.0969,
             qty=1,
             client_order_id="atlas_stop_ebay_test",
@@ -185,11 +192,18 @@ class TestReconcileEntryFillsGuard:
 
         result, mock_ledger = _call_reconcile(ex, [buy_order, sell_order], plan)
 
+        # No OPEN row created (zombie protection preserved)
         assert result == [], (
-            f"Expected empty result (BUY skipped by bracket guard), got: {result}"
+            f"Expected empty result (no OPEN row for EBAY), got: {result}"
         )
-        # record_entry must NOT have been called — guard must fire before any ledger write
-        mock_ledger.record_entry.assert_not_called()
+        # Fix #311: round-trip IS now recorded in ledger (entry stub + exit)
+        mock_ledger.record_entry.assert_called_once()
+        entry_call = mock_ledger.record_entry.call_args[0][0]
+        assert entry_call["ticker"] == "EBAY"
+        assert entry_call.get("same_bar_round_trip") is True
+        mock_ledger.record_exit.assert_called_once()
+        exit_call = mock_ledger.record_exit.call_args[0][0]
+        assert exit_call["exit_reason"] == "stop_loss"
 
     # ── Case 2 ────────────────────────────────────────────────────────────────
 
