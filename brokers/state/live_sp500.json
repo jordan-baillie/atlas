@@ -11,7 +11,7 @@
       "stop_price": 861.21,
       "order_id": "",
       "stop_order_id": "a1021664-51c8-4ac1-aecc-a8d70feb7cf8",
-      "tp_order_id": ""
+      "tp_order_id": "3d035b5f-3926-4d2d-9506-0c588e691fcb"
     },
     {
       "ticker": "SYK",
@@ -22,34 +22,7 @@
       "stop_price": 286.12,
       "order_id": "",
       "stop_order_id": "72608264-4f61-40f0-abe9-fbbb041c7f68",
-      "tp_order_id": ""
-    },
-    {
-      "ticker": "MCHP",
-      "strategy": "momentum_breakout",
-      "entry_date": "2026-05-08",
-      "entry_price": 102.28,
-      "shares": 2,
-      "stop_price": 100.8875,
-      "order_id": ""
-    },
-    {
-      "ticker": "FSLR",
-      "strategy": "reconciled",
-      "entry_date": "2026-05-08",
-      "entry_price": 218.16,
-      "shares": 2,
-      "stop_price": 213.8228,
-      "order_id": ""
-    },
-    {
-      "ticker": "EBAY",
-      "strategy": "reconciled",
-      "entry_date": "2026-05-08",
-      "entry_price": 107.5,
-      "shares": 4,
-      "stop_price": 107.0969,
-      "order_id": ""
+      "tp_order_id": "23fe6825-8cfd-405a-a59f-45c00375978e"
     }
   ],
   "closed_trades": [
@@ -495,6 +468,42 @@
       "order_id": "cd1225ee-7730-4a34-ae84-356057a28882",
       "entry_date": "2026-05-05",
       "backfilled": true
+    },
+    {
+      "ticker": "EBAY",
+      "strategy": "momentum_breakout",
+      "entry_price": 107.5,
+      "exit_price": 107.0969,
+      "shares": 4,
+      "pnl": -1.61,
+      "pnl_pct": -0.37,
+      "entry_date": "2026-05-05",
+      "exit_date": "2026-05-06",
+      "exit_reason": "stop_loss"
+    },
+    {
+      "ticker": "FSLR",
+      "strategy": "momentum_breakout",
+      "entry_price": 218.16,
+      "exit_price": 213.8228,
+      "shares": 2,
+      "pnl": -8.67,
+      "pnl_pct": -1.99,
+      "entry_date": "2026-05-07",
+      "exit_date": "2026-05-08",
+      "exit_reason": "stop_loss"
+    },
+    {
+      "ticker": "MCHP",
+      "strategy": "momentum_breakout",
+      "entry_price": 102.28,
+      "exit_price": 100.945,
+      "shares": 2,
+      "pnl": -2.67,
+      "pnl_pct": -1.31,
+      "entry_date": "2026-05-08",
+      "exit_date": "2026-05-08",
+      "exit_reason": "stop_loss"
     }
   ],
   "equity_history": [
