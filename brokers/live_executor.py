@@ -2955,6 +2955,40 @@ class LiveExecutor:
         )
         realized_pnl = round((sell_price - buy_price) * qty, 2)
 
+        # ── Idempotency precheck (Fix: stop SAME_BAR_ROUND_TRIP cron spam) ──
+        # `reconcile_entry_fills` runs every 15 min and re-detects the same
+        # buy/sell pair at Alpaca. The in-memory `_ledger.trades` dedup is
+        # empty between runs (TradeLedger._save() is a no-op since Wave D1).
+        # SQLite is the source of truth — check there. Match on ticker+today+pnl,
+        # which is the same natural key the `uq_trades_active_closed` index uses.
+        # Fail-OPEN: on DB error, fall through and re-record (better to double-
+        # post than to silently drop a legitimate event).
+        try:
+            from db import atlas_db as _adb_idem
+            with _adb_idem.get_db() as _db_idem:
+                _existing_close = _db_idem.execute(
+                    "SELECT id FROM trades "
+                    "WHERE ticker = ? "
+                    "AND status = 'closed' AND superseded = 0 "
+                    "AND DATE(exit_date) = DATE('now') "
+                    "AND ROUND(pnl, 2) = ROUND(?, 2) "
+                    "LIMIT 1",
+                    (ticker, realized_pnl),
+                ).fetchone()
+            if _existing_close is not None:
+                logger.debug(
+                    "SAME_BAR_ROUND_TRIP: %s already recorded today "
+                    "(trade id=%d, pnl=%.2f) — skipping duplicate alert",
+                    ticker, _existing_close["id"], realized_pnl,
+                )
+                return
+        except Exception as _idem_exc:
+            logger.warning(
+                "SAME_BAR_ROUND_TRIP idempotency check failed for %s: %s "
+                "— falling through to record (fail-open)",
+                ticker, _idem_exc,
+            )
+
         sell_coid = str(getattr(sell_order, "client_order_id", "")).lower()
         try:
             sell_otype = sell_order.order_type.value.lower()
