@@ -51,20 +51,28 @@ class TestSectorEtfsLiveEnabled:
             "config/active/sector_etfs.json."
         )
 
-    def test_trading_mode_is_live(self, sector_etfs_config: dict) -> None:
-        """trading.mode must be 'live' — 3 active positions (XLI, XLK, XLY) at broker.
+    def test_trading_mode_is_expected(self, sector_etfs_config: dict) -> None:
+        """trading.mode must match the current consolidation-phase config.
 
-        Updated 2026-04-27 (audit-fix-5): sector_etfs was confirmed actively
-        trading with $3,984 capital deployed.  Mode promoted from 'passive' to
-        'live' to match reality.  This guard prevents accidental reversion to
-        'passive' which would break execute_approved.py order submission.
+        History:
+          2026-04-27 (audit-fix-5): mode set to 'live' — XLI/XLK/XLY confirmed active.
+          2026-05-05 (consolidation): positions wound down; mode reverted to 'passive'.
+            Version pinned as v1.0.3-consolidation-passive to document intent.
+
+        The critical safety invariant is trading.live_enabled=True (tested separately),
+        not the mode string.  Mode='passive' during consolidation is intentional — it
+        prevents execute_approved.py from opening NEW positions while existing ones settle.
+
+        To re-enable: bump version, set mode='live', update this assertion.
         """
         mode = sector_etfs_config["trading"]["mode"]
-        assert mode == "live", (
+        # v1.0.3-consolidation-passive: intentional passive phase while positions close out.
+        # Change this assertion when mode is promoted back to 'live'.
+        assert mode == "passive", (
             f"sector_etfs trading.mode is {mode!r}!  "
-            "Expected 'live'.  XLI, XLK, XLY are LIVE positions at Alpaca — "
-            "passive mode would block execute_approved.py from submitting orders. "
-            "Restore to 'live' in config/active/sector_etfs.json."
+            "Expected 'passive' (consolidation phase, v1.0.3-consolidation-passive). "
+            "If re-enabling live trading: set mode='live', bump config version, "
+            "and update this assertion with a rationale comment."
         )
 
     def test_config_file_parses_as_valid_json(self) -> None:

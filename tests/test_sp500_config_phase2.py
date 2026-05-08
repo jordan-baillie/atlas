@@ -19,24 +19,49 @@ def test_w1_sp500_config_loads_cleanly(cfg):
     assert "strategies" in cfg
 
 
-def test_w1_sector_rotation_weight_is_005(cfg):
-    assert cfg["strategies"]["sector_rotation"]["weight"] == 0.05
+def test_w1_sector_rotation_is_disabled(cfg):
+    # 2026-04-28 W1: sector_rotation de-weighted to 0.05.
+    # 2026-05-01 audit: disabled entirely (Sharpe 0.044 — no edge in sp500 universe).
+    # Guard: sector_rotation must stay disabled until research validates a real edge.
+    sr = cfg["strategies"]["sector_rotation"]
+    assert sr.get("enabled") is False, (
+        f"sector_rotation.enabled is {sr.get('enabled')!r} — must be False. "
+        "It was disabled 2026-05-01 after solo Sharpe measured at 0.044 (< 0.5 gate). "
+        "Do NOT re-enable without a validated research_best entry."
+    )
+    assert sr.get("weight", 0) == 0, (
+        f"sector_rotation.weight is {sr.get('weight')} — must be 0 while disabled."
+    )
 
 
-def test_w1_momentum_and_connors_each_at_030(cfg):
-    assert cfg["strategies"]["momentum_breakout"]["weight"] == 0.30
-    assert cfg["strategies"]["connors_rsi2"]["weight"] == 0.30
+def test_w1_momentum_and_connors_weights(cfg):
+    # 2026-04-28 W1 set both to 0.30.
+    # 2026-05-01 audit renormalized to 0.50 each (sector_rotation/opening_gap/mean_reversion disabled).
+    # 2026-05-06 audit reverted connors_rsi2 overweight (research Sharpe 0.14 < 0.5 gate):
+    #   momentum_breakout → 0.70, connors_rsi2 → 0.30.
+    # Current validated weights (v3.2.2):
+    assert cfg["strategies"]["momentum_breakout"]["weight"] == 0.70, (
+        "momentum_breakout weight changed from expected 0.70 — check _audit_2026_05_06_revert"
+    )
+    assert cfg["strategies"]["connors_rsi2"]["weight"] == 0.30, (
+        "connors_rsi2 weight changed from expected 0.30 — check _audit_2026_05_06_revert"
+    )
 
 
 def test_w1_total_enabled_strategy_weight_matches_expected(cfg):
-    # User-specified change: sum drops from 0.8978 to 0.7978 (-0.10).
-    # Tolerate small float error.
+    # 2026-04-28 W1: sum was 0.7978.
+    # 2026-05-01 audit: disabled 3 unvalidated strategies; renormalized remaining 2 → sum=1.0.
+    # 2026-05-06 audit: reverted connors_rsi2 overweight; sum still 1.0.
+    # Invariant: enabled strategy weights must always sum to 1.0 (normalised allocation).
     enabled_weight = sum(
         s.get("weight", 0)
         for s in cfg["strategies"].values()
         if s.get("enabled") is True
     )
-    assert abs(enabled_weight - 0.7978) < 1e-6, f"Expected 0.7978, got {enabled_weight}"
+    assert abs(enabled_weight - 1.0) < 1e-6, (
+        f"Enabled strategy weights sum to {enabled_weight:.6f}, expected 1.0. "
+        "All weights must be renormalised after enabling/disabling strategies."
+    )
 
 
 # ── W2 tests ─────────────────────────────────────────────────────────────────
