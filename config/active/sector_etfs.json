@@ -2,7 +2,7 @@
   "version": "v1.0.3-consolidation-passive",
   "project": "Atlas",
   "market": "sector_etfs",
-  "description": "Sector ETFs — PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (XLE, XLI) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
+  "description": "Sector ETFs \u2014 PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (XLE, XLI) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
   "universe": {
     "method": "static",
     "benchmark_ticker": "SPY"
@@ -25,13 +25,13 @@
     "max_position_pct_equity": 0.2,
     "_max_position_cap_note": "2026-04-28 audit: cap added after Apr 24 XLI 28.8% / XLK 23.8% / XLY 22.1% concentration",
     "max_gross_exposure_pct": 1.75,
-    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py — rejects new entries if account-wide gross would exceed this value.",
+    "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
     "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
   },
   "trading": {
     "mode": "passive",
     "broker": "alpaca",
-    "live_enabled": true,
+    "live_enabled": false,
     "holding_period_min": 2,
     "holding_period_max": 20,
     "data_frequency": "daily",
@@ -57,7 +57,7 @@
     "flat_fee_threshold": 0,
     "min_position_value": 100.0,
     "_broker": "alpaca",
-    "_fee_notes": "Alpaca Markets — commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+    "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
     "slippage_model": "volume_aware",
     "slippage_impact_exponent": 0.5
   },
@@ -244,7 +244,7 @@
   },
   "_audit_2026_05_01_disable_sector_rotation": {
     "updated_at": "2026-05-01T00:00:00+00:00",
-    "rationale": "Validated-strategies audit. Disabled sector_rotation (0 trades in fresh backtest, structural mismatch with single-ETF-per-sector universe — min_sector_stocks=3 vs 1 ticker per sector). Open positions check: XLI under momentum_breakout (kept). 0 open positions on sector_rotation.",
+    "rationale": "Validated-strategies audit. Disabled sector_rotation (0 trades in fresh backtest, structural mismatch with single-ETF-per-sector universe \u2014 min_sector_stocks=3 vs 1 ticker per sector). Open positions check: XLI under momentum_breakout (kept). 0 open positions on sector_rotation.",
     "disabled": [
       {
         "strategy": "sector_rotation",
@@ -267,19 +267,5 @@
     ],
     "follow_up": "research_best for sector_etfs/mean_reversion and sector_etfs/momentum_breakout are stale (2026-04-21, P1.1 contamination era). Re-run sweeps after fixing the snapshot-required bug in research/loop.py:556 and DEFAULT_STRATEGIES in research/autoresearch_nightly.py."
   },
-  "_consolidation_note": {
-    "paused_at": "2026-05-04T22:30:00+00:00",
-    "decision": "User-approved consolidation. Pause sector_etfs+commodity_etfs live trading; sp500 remains live. Mode=passive blocks new entries while protective infra keeps maintaining OCO brackets on remaining open positions until closure script runs.",
-    "open_positions_at_pause": [
-      "XLE/momentum_breakout (8 shares @ $59.06, stop $57.56, OCO live at broker)",
-      "XLI/momentum_breakout (9 shares @ $173.97, stop $170.07, OCO live at broker)"
-    ],
-    "closure_plan": "scripts/consolidation_close_positions.py executes manual market-sell at next US open (2026-05-05 13:30 UTC) or operator-chosen RTH window. Cancels OCO + market sell + DB/state update.",
-    "reenable_criteria": [
-      "(1) sp500 live performance shows sustained edge over 30+ trading days",
-      "(2) sector_etfs/commodity_etfs research_best Sharpe >= 0.5 with passing OOS gates 1-4",
-      "(3) Operator decision to redeploy capital across multiple universes"
-    ],
-    "reversibility": "Set trading.mode='live', restore cron entries (see git log around 2026-05-04 for removed lines), bump version. Heartbeat config entries preserved — re-enable services if removed."
-  }
+  "_consolidation_note": "Disabled 2026-05-07 per #297. Re-enable criteria in docs/multi-universe-consolidation-2026-05-07.md."
 }

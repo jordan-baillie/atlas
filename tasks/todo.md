@@ -537,3 +537,20 @@ Files changed: `scripts/cli.py`, `tests/test_plan_generator_lifecycle.py` (8 tes
   appear, fix dispatch will be silently blocked by L4. Operator should reset the sp500
   equity_history baseline or update `check_l4_drawdown()` to use the correct window
   (start from 2026-04-29 onward only).
+
+---
+
+## Task #297 — Multi-universe consolidation: sp500-only (completed 2026-05-07)
+
+Phase B2 complete. Atlas now trades sp500 only.
+
+- [x] Phase 1: `trading.live_enabled: false` in both `config/active/sector_etfs.json` and `config/active/commodity_etfs.json`
+- [x] Phase 2 (SKIP — no-op): commodity_etfs and sector_etfs had 0 open positions at consolidation time (exited 2026-05-05)
+- [x] Phase 3: 13 crontab entries commented (preserved with `CONSOLIDATED-2026-05-07` prefix); reconcile_ledger updated to sp500-only
+- [x] Phase 4: systemd timers `atlas-research-window@commodity_etfs.timer` and `atlas-research-window@sector_etfs.timer` disabled
+- [x] Phase 5 (code audit): all execution paths respect `BrokerRoutingPolicy.should_skip()` → `live_enabled=False` gate. No auto-re-enable risk.
+- [x] Phase 6: Re-enable criteria documented at `docs/multi-universe-consolidation-2026-05-07.md`
+
+⚠️ **Outstanding follow-up**: `live_sp500.json` lists 5 positions (CAT, SYK, MCHP, FSLR, EBAY) but Alpaca broker holds only 2 (CAT, SYK). MCHP/FSLR/EBAY are orphaned state entries. Requires reconciliation.
+
+Re-enable criteria: sp500 green ≥30 days (after 2026-06-06), freed capital deployed, operator approval, MCHP/FSLR/EBAY discrepancy resolved.

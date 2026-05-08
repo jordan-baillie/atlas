@@ -13,7 +13,8 @@
 #   DO NOT add a cron entry — would cause duplicate runs.
 
 # ── Universe coverage policy (audit 2026-05-04) ───────────────────────────────
-# LIVE markets (full cron coverage below): sp500, sector_etfs, commodity_etfs
+# LIVE markets (full cron coverage below): sp500 ONLY (as of 2026-05-07 consolidation #297)
+# CONSOLIDATED (live_enabled=false, crons disabled): sector_etfs, commodity_etfs
 #   — config has trading.mode="live" AND trading.live_enabled=true
 # RESEARCH-ONLY markets (NO live cron — sweep populates SQLite via systemd timers):
 #   - crypto         (mode=paper,    live_enabled=false)
@@ -33,8 +34,8 @@ TZ=Australia/Brisbane
 # Audit stagger fix: offset by +1/+2/+3/+4 min from each quarter (:00,:15,:30,:45)
 # so all four tasks no longer collide at the :00 mark (especially 23:00 AEST).
 1,16,31,46 * * * * /usr/bin/flock -n /tmp/sync_protective.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_protective_orders.py --market sp500 --quiet' >> /root/atlas/logs/sync_protective.log 2>&1
-2,17,32,47 * * * * /usr/bin/flock -n /tmp/sync_protective_commodity.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_protective_orders.py --market commodity_etfs --quiet' >> /root/atlas/logs/sync_protective.log 2>&1
-3,18,33,48 * * * * /usr/bin/flock -n /tmp/sync_protective_sector.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_protective_orders.py --market sector_etfs --quiet' >> /root/atlas/logs/sync_protective.log 2>&1
+# CONSOLIDATED-2026-05-07: 2,17,32,47 * * * * /usr/bin/flock -n /tmp/sync_protective_commodity.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_protective_orders.py --market commodity_etfs --quiet' >> /root/atlas/logs/sync_protective.log 2>&1
+# CONSOLIDATED-2026-05-07: 3,18,33,48 * * * * /usr/bin/flock -n /tmp/sync_protective_sector.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_protective_orders.py --market sector_etfs --quiet' >> /root/atlas/logs/sync_protective.log 2>&1
 4,19,34,49 * * * * /usr/bin/flock -n /tmp/healthcheck_tp.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/healthcheck_tp_coverage.py --once --quiet' >> /root/atlas/logs/healthcheck_tp.log 2>&1
 
 # ── Hourly — healthz (offset +5 min from hour; clears compute_daily_risk at :00) ─
@@ -43,8 +44,8 @@ TZ=Australia/Brisbane
 # ── Intraday monitor every 30 min during US RTH ────────────────────────────────
 # 01:30–07:30 AEST = 15:30–21:30 UTC (US regular trading hours overlap)
 30 1-7 * * * /usr/bin/flock -n /tmp/intraday_sp500.lock bash -c 'cd /root/atlas && timeout 25m python3 scripts/intraday_monitor.py -m sp500' >> /root/atlas/logs/intraday_sp500.log 2>&1
-30 1-7 * * * /usr/bin/flock -n /tmp/intraday_commodity_etfs.lock bash -c 'cd /root/atlas && timeout 25m python3 scripts/intraday_monitor.py -m commodity_etfs' >> /root/atlas/logs/intraday_commodity_etfs.log 2>&1
-32 1-7 * * * /usr/bin/flock -n /tmp/intraday_sector_etfs.lock bash -c 'cd /root/atlas && timeout 25m python3 scripts/intraday_monitor.py -m sector_etfs' >> /root/atlas/logs/intraday_sector_etfs.log 2>&1
+# CONSOLIDATED-2026-05-07: 30 1-7 * * * /usr/bin/flock -n /tmp/intraday_commodity_etfs.lock bash -c 'cd /root/atlas && timeout 25m python3 scripts/intraday_monitor.py -m commodity_etfs' >> /root/atlas/logs/intraday_commodity_etfs.log 2>&1
+# CONSOLIDATED-2026-05-07: 32 1-7 * * * /usr/bin/flock -n /tmp/intraday_sector_etfs.lock bash -c 'cd /root/atlas && timeout 25m python3 scripts/intraday_monitor.py -m sector_etfs' >> /root/atlas/logs/intraday_sector_etfs.log 2>&1
 
 # ── 22:00 AEST daily — pipeline health check ──────────────────────────────────
 0 22 * * * /usr/bin/flock -n /tmp/healthcheck_pipelines.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/healthcheck_pipelines.py --once --quiet' >> /root/atlas/logs/healthcheck_pipelines.log 2>&1
@@ -54,13 +55,13 @@ TZ=Australia/Brisbane
 
 # ── 23:15/23:20 AEST Mon–Fri — execute approved trade plans (15 min before US open)
 15 23 * * 1-5 /usr/bin/flock -n /tmp/execute_approved.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/execute_approved.py -m sp500' >> /root/atlas/logs/execute_approved.log 2>&1
-15 23 * * 1-5 /usr/bin/flock -n /tmp/execute_approved_commodity.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/execute_approved.py -m commodity_etfs' >> /root/atlas/logs/execute_approved.log 2>&1
-20 23 * * 1-5 /usr/bin/flock -n /tmp/execute_approved_sector.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/execute_approved.py -m sector_etfs' >> /root/atlas/logs/execute_approved.log 2>&1
+# CONSOLIDATED-2026-05-07: 15 23 * * 1-5 /usr/bin/flock -n /tmp/execute_approved_commodity.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/execute_approved.py -m commodity_etfs' >> /root/atlas/logs/execute_approved.log 2>&1
+# CONSOLIDATED-2026-05-07: 20 23 * * 1-5 /usr/bin/flock -n /tmp/execute_approved_sector.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/execute_approved.py -m sector_etfs' >> /root/atlas/logs/execute_approved.log 2>&1
 
 # ── Pre-market 19:00 AEST Mon–Fri (= 09:00 UTC Mon–Fri) ─────────────────────
 0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket sp500
-0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket commodity_etfs
-0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket sector_etfs
+# CONSOLIDATED-2026-05-07: 0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket commodity_etfs
+# CONSOLIDATED-2026-05-07: 0 19 * * 1-5 /root/atlas/scripts/pi-cron.sh premarket sector_etfs
 
 # ── Pre-market rollup 19:45 AEST Mon–Fri — one Telegram message for all 3 markets ─
 # Runs after all 3 premarket pi-agents have had time to finish (~10-25 min each).
@@ -68,16 +69,17 @@ TZ=Australia/Brisbane
 
 # ── Post-close 08:00 AEST Tue–Sat (= 22:00 UTC Mon–Fri) ─────────────────────
 0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose sp500
-0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose commodity_etfs
-0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose sector_etfs
+# CONSOLIDATED-2026-05-07: 0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose commodity_etfs
+# CONSOLIDATED-2026-05-07: 0 8 * * 2-6 /root/atlas/scripts/pi-cron.sh postclose sector_etfs
 
 # ── Reconciliation 09:00 AEST Tue–Sat (staggered 0/+2/+5 min per market) ─────
 0 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile.lock bash -c 'cd /root/atlas && python3 scripts/reconcile_positions.py --market sp500 --quiet' >> /root/atlas/logs/reconciliation.log 2>&1
-2 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_commodity.lock bash -c 'cd /root/atlas && python3 scripts/reconcile_positions.py --market commodity_etfs --quiet' >> /root/atlas/logs/reconciliation.log 2>&1
-5 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_sector.lock bash -c 'cd /root/atlas && python3 scripts/reconcile_positions.py --market sector_etfs --quiet' >> /root/atlas/logs/reconciliation.log 2>&1
+# CONSOLIDATED-2026-05-07: 2 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_commodity.lock bash -c 'cd /root/atlas && python3 scripts/reconcile_positions.py --market commodity_etfs --quiet' >> /root/atlas/logs/reconciliation.log 2>&1
+# CONSOLIDATED-2026-05-07: 5 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_sector.lock bash -c 'cd /root/atlas && python3 scripts/reconcile_positions.py --market sector_etfs --quiet' >> /root/atlas/logs/reconciliation.log 2>&1
 
 # ── Reconcile ledger 09:30 AEST Tue–Sat ──────────────────────────────────────
-30 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_ledger.lock bash -c 'cd /root/atlas && for m in sp500 commodity_etfs sector_etfs; do timeout 5m python3 scripts/reconcile_ledger.py --market $m; done' >> /root/atlas/logs/reconcile_ledger.log 2>&1
+# CONSOLIDATED-2026-05-07 (original ran all 3 markets): 30 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_ledger.lock bash -c 'cd /root/atlas && for m in sp500 commodity_etfs sector_etfs; do timeout 5m python3 scripts/reconcile_ledger.py --market $m; done' >> /root/atlas/logs/reconcile_ledger.log 2>&1
+30 9 * * 2-6 /usr/bin/flock -n /tmp/reconcile_ledger.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/reconcile_ledger.py --market sp500' >> /root/atlas/logs/reconcile_ledger.log 2>&1
 
 # ── Daily ops ──────────────────────────────────────────────────────────────────
 # verify_dual_write: 10:00 AEST Tue-Sat (= 00:00 UTC Tue-Sat)
