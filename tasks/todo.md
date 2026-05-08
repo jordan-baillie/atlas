@@ -522,3 +522,18 @@ Owner: TBD. Estimated 2-3 sessions of focused work.
 - [x] Phase B dogfood — short_term_mr/sp500 included in plan generation via lifecycle-aware `get_strategies`: strategies in PAPER lifecycle state are instantiated with research_best params. short_term_mr now appears in sp500 daily plan.
 
 Files changed: `scripts/cli.py`, `tests/test_plan_generator_lifecycle.py` (8 tests). Commit: 963e20a1
+
+---
+
+## 14-day reminders
+
+- **2026-05-21 — #288**: Evaluate auto-remediation Phase 3 results (active since 2026-04-30,
+  ~21 days by then). Decide on any Phase 3 config tightening or whitelist expansion.
+  Check: `curl http://127.0.0.1:8899/api/error_remediation/summary` for attempts/reverts.
+  
+  ⚠️ **Prerequisite investigation before evaluating**: L4 kill-switch shows false-positive
+  75.6% drawdown (equity_history peak 2026-04-24 = $5,429 global, vs current sp500-only
+  $1,324 after 2026-04-29 per-market equity refactor). If any ASSIST/AUTO_FIX errors ever
+  appear, fix dispatch will be silently blocked by L4. Operator should reset the sp500
+  equity_history baseline or update `check_l4_drawdown()` to use the correct window
+  (start from 2026-04-29 onward only).

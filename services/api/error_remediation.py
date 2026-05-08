@@ -24,6 +24,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
@@ -34,10 +36,38 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path("/root/atlas")
 _DB_PATH = PROJECT_ROOT / "data" / "atlas.db"
+_CFG_PATH = PROJECT_ROOT / "config" / "auto_remediation.yaml"
 
 # Cache for cheap queries (60s TTL)
 _cache: dict = {}
 _CACHE_TTL = 60.0
+_cfg_cache: dict = {}
+_CFG_TTL = 120.0  # Re-read config every 2 min
+
+
+def _load_phase_config() -> dict:
+    """Return (phase_current, phase_3_enabled, dry_run) from auto_remediation.yaml.
+    
+    Cached for _CFG_TTL seconds to avoid hitting disk on every request.
+    Falls back to Phase-1 defaults if the file is unreadable.
+    """
+    now = time.time()
+    if _cfg_cache and (now - _cfg_cache.get("ts", 0)) < _CFG_TTL:
+        return _cfg_cache["data"]
+    try:
+        cfg = yaml.safe_load(_CFG_PATH.read_text())
+        phase_cfg = cfg.get("phase", {})
+        monitor_cfg = cfg.get("monitor", {})
+        data = {
+            "phase": phase_cfg.get("current", 1),
+            "phase_3_enabled": phase_cfg.get("phase_3_enabled", False),
+            "dry_run": monitor_cfg.get("dry_run", True),
+        }
+    except Exception as e:
+        logger.warning("Could not read %s: %s — using Phase 1 defaults", _CFG_PATH, e)
+        data = {"phase": 1, "phase_3_enabled": False, "dry_run": True}
+    _cfg_cache.update({"data": data, "ts": now})
+    return data
 
 
 def _get_conn():
@@ -82,9 +112,7 @@ def summary():
                 "attempts_total": attempts_total,
                 "attempts_by_status": attempts_by_status,
                 "audit_log_total": audit_total,
-                "phase": 1,
-                "phase_3_enabled": False,
-                "dry_run": True,
+                **_load_phase_config(),
             }
     return _cached("summary", _CACHE_TTL, _q)
 
@@ -191,8 +219,9 @@ def health():
                 "halt_active": halt_active,
                 "halt_files_present": halt_files_present,
                 "halt_reasons": halt_reasons,
-                "phase": 1,
-                "phase_3_enabled": False,
+                "phase": _load_phase_config()["phase"],
+                "phase_3_enabled": _load_phase_config()["phase_3_enabled"],
+                "dry_run": _load_phase_config()["dry_run"],
                 "ok": backlog_ok and not halt_active,
             }
     return _cached("health", 30, _q)
