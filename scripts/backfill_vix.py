@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -163,7 +165,7 @@ def backfill(days: int = DEFAULT_DAYS) -> bool:
 
     # Atomic write: write to tmp then rename
     INDICES_CACHE.mkdir(parents=True, exist_ok=True)
-    tmp_path = VIX_PARQUET.with_suffix(".tmp.parquet")
+    tmp_path = INDICES_CACHE / f"VIX.tmp.{os.getpid()}.{time.time_ns()}.parquet"
     try:
         df.to_parquet(tmp_path, compression="snappy")
         tmp_path.rename(VIX_PARQUET)
