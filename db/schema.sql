@@ -200,7 +200,8 @@ CREATE TABLE IF NOT EXISTS portfolio_snapshots (
     exposure_by_sector      TEXT,  -- JSON: {energy: 0.15, tech: 0.10}
     regime_state            TEXT,
     source                  TEXT    DEFAULT 'eod',  -- 'eod', 'intraday', 'manual'
-    market_id               TEXT    DEFAULT 'sp500' -- 'sp500', 'commodity_etfs', 'ALL' (aggregate)
+    market_id               TEXT    DEFAULT 'sp500', -- 'sp500', 'commodity_etfs', 'ALL' (aggregate)
+    daily_pnl_pct           REAL    -- (total_equity - prev_total_equity) / prev_total_equity * 100
 );
 CREATE INDEX IF NOT EXISTS idx_snapshots_ts ON portfolio_snapshots(timestamp);
 CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_market_ts

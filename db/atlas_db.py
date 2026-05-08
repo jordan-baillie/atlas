@@ -1259,25 +1259,46 @@ def record_snapshot(
 ) -> None:
     """Insert a per-market portfolio snapshot.
 
+    Automatically computes and stores ``daily_pnl_pct`` as
+    ``(total_equity - prev_total_equity) / prev_total_equity * 100``
+    by looking up the most recent prior row for the same ``market_id``.
+    Returns NULL when no prior row exists or when equity values are missing.
+
     Args:
         market_id: The market whose positions this snapshot covers (e.g. 'sp500',
                    'commodity_etfs'). Use 'ALL' for the broker-level aggregate row
                    written once per EOD cycle via record_all_markets_snapshot().
     """
     with get_db() as db:
+        # Compute daily_pnl_pct from previous snapshot for this market.
+        daily_pnl_pct: Optional[float] = None
+        if total_equity is not None:
+            prev_row = db.execute(
+                """SELECT total_equity FROM portfolio_snapshots
+                   WHERE market_id = ?
+                   ORDER BY timestamp DESC LIMIT 1""",
+                (market_id,),
+            ).fetchone()
+            if prev_row is not None:
+                prev_eq = prev_row[0]
+                if prev_eq is not None and prev_eq != 0.0:
+                    daily_pnl_pct = round(
+                        (total_equity - prev_eq) / prev_eq * 100.0, 4
+                    )
+
         db.execute(
             """
             INSERT INTO portfolio_snapshots
                 (timestamp, total_equity, cash, positions, exposure_by_universe,
-                 exposure_by_sector, regime_state, source, market_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 exposure_by_sector, regime_state, source, market_id, daily_pnl_pct)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 timestamp, total_equity, cash,
                 json.dumps(positions) if positions is not None else None,
                 json.dumps(exposure_by_universe) if exposure_by_universe is not None else None,
                 json.dumps(exposure_by_sector) if exposure_by_sector is not None else None,
-                regime_state, source, market_id,
+                regime_state, source, market_id, daily_pnl_pct,
             ),
         )
 
