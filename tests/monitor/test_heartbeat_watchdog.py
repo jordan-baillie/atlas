@@ -443,3 +443,144 @@ def test_config_loads_expected_keys():
     for svc, scfg in cfg["services"].items():
         assert "expected_cron" in scfg, f"{svc} missing expected_cron"
         assert "threshold_hours" in scfg, f"{svc} missing threshold_hours"
+
+
+# ─── Test A: Source regression guard for sync_protective typo ─────────────────
+
+def test_sync_protective_orders_typo_fix_source_inspection():
+    """Regression guard: policy.should_skip() heartbeat must use 'sync_protective_orders',
+    NOT the old typo 'sync_protective'.
+
+    If this test breaks, the typo introduced in commit 39023372 has been re-introduced.
+    """
+    import ast
+    source_path = Path(__file__).resolve().parent.parent.parent / "scripts" / "sync_protective_orders.py"
+    source = source_path.read_text()
+
+    # The fixed name MUST appear
+    assert '_hb("sync_protective_orders", "skipped"' in source, (
+        "Expected '_hb(\"sync_protective_orders\", \"skipped\"' in sync_protective_orders.py "
+        "— the policy.should_skip() heartbeat call uses the wrong service name"
+    )
+
+    # The typo MUST NOT appear
+    assert '_hb("sync_protective", "skipped"' not in source, (
+        "Found typo '_hb(\"sync_protective\", \"skipped\"' in sync_protective_orders.py "
+        "— this creates an orphaned heartbeat row when market is disabled"
+    )
+
+
+# ─── Test B: Unconfigured service does NOT escalate every cycle ───────────────
+
+def test_unconfigured_service_does_not_escalate_every_cycle(tmp_path):
+    """Regression guard for heartbeat_watchdog escalation spam.
+
+    For services NOT in heartbeat.json config (fallback path), the escalation
+    override must NOT fire on every 15-min watchdog cycle.  It should fire once,
+    then be throttled by min_alert_gap_hours.
+
+    Setup: service 'some_legacy_thing' has a very stale heartbeat (never updated)
+    and is not in heartbeat.json config.  Two watchdog cycles 15 min apart.
+    Expected: Telegram called exactly ONCE (second cycle is throttled).
+
+    Note: off-hours threshold is 6h (default_threshold_hours from heartbeat.json).
+    stale_ts must be >6h before T0 so the row is stale at both cycles.
+    """
+    T0 = datetime(2026, 5, 1, 3, 0, tzinfo=timezone.utc)
+    T1 = T0 + timedelta(minutes=15)
+
+    # Heartbeat row: 7h stale at T0 — well past the 6h off-hours threshold
+    stale_ts = T0 - timedelta(hours=7)
+    row = _make_row("some_legacy_thing", stale_ts, status="ok", now=T0)
+    rows = [row]
+
+    state_file = tmp_path / "state.json"
+    call_count: list[int] = [0]
+
+    def _mock_send(msg: str) -> bool:
+        call_count[0] += 1
+        return True
+
+    with patch("utils.telegram.send_message", side_effect=_mock_send):
+        with patch("utils.market_hours.is_rth", return_value=False):
+            # Cycle 1 — T0 — should alert (first time)
+            run_watchdog(
+                dry_run=False,
+                load_heartbeats_fn=lambda _: rows,
+                flip_fn=lambda _: [],
+                now_utc=T0,
+                state_file=state_file,
+            )
+            # Cycle 2 — T0+15min — must be THROTTLED (same stale row, gap<4h)
+            run_watchdog(
+                dry_run=False,
+                load_heartbeats_fn=lambda _: rows,
+                flip_fn=lambda _: [],
+                now_utc=T1,
+                state_file=state_file,
+            )
+
+    assert call_count[0] == 1, (
+        f"Expected Telegram called exactly 1 time across 2 watchdog cycles for "
+        f"unconfigured service, but got {call_count[0]}. "
+        "The escalation override is firing every cycle (Bug #3 regression)."
+    )
+
+
+# ─── Test C: Unconfigured service alerts again after min_gap expires ──────────
+
+def test_unconfigured_service_alerts_again_after_min_gap(tmp_path):
+    """After min_alert_gap_hours (4h) the watchdog SHOULD re-alert.
+
+    Setup: same as Test B but third call at T0+5h (past gap window).
+    Expected: Telegram called TWICE total (initial alert + after-gap alert).
+    """
+    T0 = datetime(2026, 5, 1, 3, 0, tzinfo=timezone.utc)
+    T1 = T0 + timedelta(minutes=15)
+    T5 = T0 + timedelta(hours=5)   # past min_alert_gap_hours=4
+
+    # 7h stale at T0 — exceeds the 6h off-hours threshold at all three cycles
+    stale_ts = T0 - timedelta(hours=7)
+    # Row timestamp stays constant — heartbeat was never refreshed
+    row = _make_row("some_legacy_thing", stale_ts, status="ok", now=T0)
+    rows = [row]
+
+    state_file = tmp_path / "state.json"
+    call_count: list[int] = [0]
+
+    def _mock_send(msg: str) -> bool:
+        call_count[0] += 1
+        return True
+
+    with patch("utils.telegram.send_message", side_effect=_mock_send):
+        with patch("utils.market_hours.is_rth", return_value=False):
+            # Cycle 1 — T0 — alert fires
+            run_watchdog(
+                dry_run=False,
+                load_heartbeats_fn=lambda _: rows,
+                flip_fn=lambda _: [],
+                now_utc=T0,
+                state_file=state_file,
+            )
+            # Cycle 2 — T0+15min — throttled
+            run_watchdog(
+                dry_run=False,
+                load_heartbeats_fn=lambda _: rows,
+                flip_fn=lambda _: [],
+                now_utc=T1,
+                state_file=state_file,
+            )
+            # Cycle 3 — T0+5h — gap expired → alert fires again
+            run_watchdog(
+                dry_run=False,
+                load_heartbeats_fn=lambda _: rows,
+                flip_fn=lambda _: [],
+                now_utc=T5,
+                state_file=state_file,
+            )
+
+    assert call_count[0] == 2, (
+        f"Expected Telegram called exactly 2 times (initial + after-gap), "
+        f"but got {call_count[0]}. "
+        "Either the first alert was suppressed or the second was not fired after gap expiry."
+    )

@@ -341,8 +341,14 @@ def run_watchdog(
             if _should_alert(svc, prev_exp, now_utc, alert_state, min_alert_gap):
                 final_alerts.append(row)
         else:
-            # Fallback service — simple time-based throttle (use now_utc as sentinel)
-            if _should_alert(svc, now_utc, now_utc, alert_state, min_alert_gap):
+            # Fallback service — use the heartbeat's own last_run_ts as the
+            # stable prev_expected so the escalation override only fires when
+            # the heartbeat is genuinely refreshed (not every cycle).
+            try:
+                last_run_ts = _parse_ts(row["timestamp"])
+            except (ValueError, TypeError, KeyError):
+                last_run_ts = now_utc  # defensive fallback
+            if _should_alert(svc, last_run_ts, now_utc, alert_state, min_alert_gap):
                 final_alerts.append(row)
 
     if not final_alerts and not flipped_services:

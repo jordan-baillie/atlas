@@ -1055,7 +1055,7 @@ def sync_market(
         logger.info("Skipping %s: policy.should_skip() True", market_id)
         try:
             from monitor.health_writer import heartbeat as _hb
-            _hb("sync_protective", "skipped", {"market": market_id, "reason": "market_disabled"})
+            _hb("sync_protective_orders", "skipped", {"market": market_id, "reason": "market_disabled"})
         except Exception:
             pass
         return result
