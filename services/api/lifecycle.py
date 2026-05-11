@@ -2,16 +2,23 @@
 
 Routes (all require HTTP Basic Auth):
   GET  /api/strategy-lifecycle
+  GET  /api/lifecycle
       — list all strategy_lifecycle rows enriched with paper/live/research metrics
 
   GET  /api/strategy-lifecycle/{strategy}/{universe}/history
+  GET  /api/lifecycle/{strategy}/{universe}/history
       — transition history for one (strategy, universe) combo
 
   POST /api/strategy-lifecycle/transition
+  POST /api/lifecycle/transition
       — operator-initiated state transition (graph-enforced; force=true bypasses)
 
   POST /api/strategy-lifecycle/promote-paper
+  POST /api/lifecycle/promote-paper
       — run auto-promote gates for one PAPER combo and transition to LIVE if all pass
+
+Both /api/strategy-lifecycle and /api/lifecycle prefixes serve identical content.
+The /api/lifecycle alias was added as part of F-03 audit fix (2026-05-11).
 
 Spec: Sub-phase 1.5 — Dashboard Controls tab backend.
 """
@@ -29,7 +36,10 @@ from pydantic import BaseModel
 
 from services.auth import check_auth
 
-router = APIRouter(prefix="/api/strategy-lifecycle", tags=["lifecycle"])
+# F-03 audit fix: no prefix here — each endpoint carries full absolute paths so
+# both /api/strategy-lifecycle (original) and /api/lifecycle (alias) are served
+# from the single router that chat_server already mounts.
+router = APIRouter(tags=["lifecycle"])
 logger = logging.getLogger(__name__)
 
 
@@ -181,8 +191,12 @@ def _enrich_row(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+# F-03: Each handler is registered under BOTH the original /api/strategy-lifecycle
+# path and the /api/lifecycle alias.  FastAPI supports stacked @router.get
+# decorators natively — both are live from a single router mounted in chat_server.
 
-@router.get("")
+@router.get("/api/strategy-lifecycle")
+@router.get("/api/lifecycle")
 def get_lifecycle_list(
     _auth: HTTPBasicCredentials = Depends(check_auth),
 ) -> JSONResponse:
@@ -198,7 +212,8 @@ def get_lifecycle_list(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.get("/{strategy}/{universe}/history")
+@router.get("/api/strategy-lifecycle/{strategy}/{universe}/history")
+@router.get("/api/lifecycle/{strategy}/{universe}/history")
 def get_lifecycle_history(
     strategy: str,
     universe: str,
@@ -236,7 +251,8 @@ def get_lifecycle_history(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@router.post("/transition")
+@router.post("/api/strategy-lifecycle/transition")
+@router.post("/api/lifecycle/transition")
 def post_lifecycle_transition(
     body: TransitionRequest,
     _auth: HTTPBasicCredentials = Depends(check_auth),
@@ -329,7 +345,8 @@ def post_lifecycle_transition(
     })
 
 
-@router.post("/promote-paper")
+@router.post("/api/strategy-lifecycle/promote-paper")
+@router.post("/api/lifecycle/promote-paper")
 def post_promote_paper(
     body: PromotePaperRequest,
     _auth: HTTPBasicCredentials = Depends(check_auth),
