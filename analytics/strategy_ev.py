@@ -1,7 +1,10 @@
-"""Signal EV scoring using historical trade outcomes.
+"""Strategy EV (expected value) analytics.
 
-Computes probability-weighted expected value per strategy based on closed trades.
-Stores results to signal_ev table for use by other modules.
+Computes probability-weighted expected value per strategy based on closed
+trades. Writes results to the `signal_ev` SQLite table. Consumed by
+dashboard, risk API, and daily risk-report cron — NOT by the live signal
+pipeline. Relocated from signals/ev_scorer.py 2026-05-11 (it has no
+generate_signal()).
 """
 import logging
 from datetime import datetime, timezone

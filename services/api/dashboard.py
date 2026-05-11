@@ -189,7 +189,7 @@ def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
     broker dataclasses, exactly as the original handler does.
     """
     try:
-        from signals.ev_scorer import (
+        from analytics.strategy_ev import (
             get_latest_ev_stats,
             compute_all_strategies_ev,
             persist_strategy_ev,

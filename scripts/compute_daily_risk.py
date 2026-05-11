@@ -172,7 +172,7 @@ def main() -> int:
 
     # 6. Compute strategy EV scoring
     try:
-        from signals.ev_scorer import compute_all_strategies_ev, persist_strategy_ev
+        from analytics.strategy_ev import compute_all_strategies_ev, persist_strategy_ev
         ev_results = compute_all_strategies_ev(min_trades=3)
         n_persisted = persist_strategy_ev(ev_results)
         logger.info("Strategy EV computed for %d strategies (%d persisted)", len(ev_results), n_persisted)

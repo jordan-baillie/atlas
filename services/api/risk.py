@@ -339,7 +339,7 @@ def signals_ev(_auth: HTTPBasicCredentials = Depends(check_auth)):
             return {"strategies": [dict(r) for r in rows], "source": "cached"}
 
         # Fallback: live compute
-        from signals.ev_scorer import compute_all_strategies_ev, persist_strategy_ev
+        from analytics.strategy_ev import compute_all_strategies_ev, persist_strategy_ev
         results = compute_all_strategies_ev(min_trades=3)
         try:
             persist_strategy_ev(results)
