@@ -576,3 +576,29 @@ Re-enable criteria: sp500 green ≥30 days (after 2026-06-06), freed capital dep
 ## #258 follow-up A — Sweep pre-Apr-17 archived overlay logs for literal text/vision pairing
 - **COMPLETED 2026-05-08**: Zero vision references in pre-Apr-17 logs. Vision A/B system (logs/overlay_vision_ab/) first activated 2026-04-17. No historical text/vision pairs exist before that date.
 - Files checked: logs/overlay_20260402.log-20260404 through overlay_20260415.log-20260417
+
+---
+
+## #324 — PDT pre-submit guard for BUY orders (FTNT incident) — DONE 2026-05-11
+
+- [x] **Alert**: 2026-05-11 23:15 UTC LIVE BUY FAILED: FTNT — Alpaca code 40310100 (pattern day trading protection)
+- [x] **Root cause**: `brokers/alpaca/broker.py:638` PDT pre-check only fired for `side == OrderSide.SELL`; BUY orders bypassed local guard and hit Alpaca broker-level rejection
+- [x] **Underlying driver**: Account equity ~$5,237 (<$25k PDT threshold) with 3 real same-bar Alpaca round-trips in rolling 5-business-day window (MCHP 36s + EBAY 37s on 2026-05-08, CRWD 336s). Alpaca pre-emptively denied because a same-day FTNT exit would complete a 4th day-trade
+- [x] **Fix** (commit `636d3c8d`): (a) ticker-level pre-check now applies to BOTH sides, (b) new `AlpacaBroker.get_pdt_status()` queries Alpaca account.daytrade_count/pattern_day_trader/equity, (c) BUY orders consult account-level pre-empt before submit when equity<$25k AND daytrade_count>=3 — fails open on API hiccup, calls `_set_pdt_deferred_new` so subsequent cycles also skip
+- [x] **Tests**: 11 new in `tests/test_pdt_buy_guard.py`, 5 existing in `test_pdt_backoff_avgo_ccj.py` — all green
+
+## #325 — director_cron heartbeat false-positive (38h alert) — DONE 2026-05-11
+
+- [x] **Alert**: 2026-05-11 23:24 AEST "🔴 director_cron — idle — 38.2h ago"
+- [x] **Root cause**: `config/heartbeat.json` had no entry for `director_cron`; watchdog fell through to 6h fallback. Director is weekly (Sat 22:00 UTC per atlas-director.timer)
+- [x] **Fix** (commit `94606c0c`): added `director_cron` to heartbeat.json with `expected_cron="0 22 * * 6"`, `threshold_hours=30` (24h+6h grace). Cleared stale alert state.
+- [x] **Test**: `tests/test_heartbeat_watchdog_schedule_aware.py::test_director_cron_configured_in_heartbeat_json`
+- [x] **Live verified**: `python3 scripts/heartbeat_watchdog.py --dry-run` no longer mentions director_cron
+
+## #326 — silent-failure-watchdog autoresearch race condition — DONE 2026-05-11
+
+- [x] **Alert**: 2026-05-11 23:00 AEST "⚠️ 1 zero-byte autoresearch log(s) in last 24h: autoresearch_connors_rsi2_20260511.log"
+- [x] **Root cause**: `silent_failure_watchdog.py::check_autoresearch_logs` flagged a log that was JUST created. Both `atlas-silent-failure-watchdog.timer` (OnCalendar=hourly) and the autoresearch nightly fire at 13:00 UTC simultaneously. The autoresearch runner created the log file (start banner: `Started : 2026-05-11 13:00:05 UTC`) at the exact second the watchdog scanned the dir (`May 11 23:00:05 pi systemd[1]: Starting atlas-silent-failure-watchdog.service`). File existed but buffered IO hadn't flushed yet → 0 bytes
+- [x] **Fix** (commit `94606c0c`): added `_AUTORESEARCH_MIN_AGE_SECONDS = 15 * 60` constant; logs younger than 15 min are skipped with a "race-condition skip" INFO line. Distinguishes "just created, will flush" from "real silent failure"
+- [x] **Tests**: 4 new in `tests/test_silent_failure_watchdog_autoresearch.py` — fresh skipped, old alerted, paused skipped, non-zero never alerts
+- [x] **Live verified**: `python3 scripts/silent_failure_watchdog.py --dry-run` → "OK (no zero-byte logs in last 24h)"
