@@ -216,6 +216,17 @@ def run_llm_loop(
     except ImportError:
         pass  # Auth check not available, proceed anyway
 
+    # Fast probe — 30s haiku call to validate model routing before a 30-min hang
+    try:
+        from utils.pi_subprocess import call_pi as _probe_call
+        _probe = _probe_call("ok", model="claude-haiku-4-5", timeout=30, mode=None, extra_args=["--no-tools"])
+        if not _probe or not _probe.strip():
+            logger.error("Pi probe returned empty — model routing may be broken. Aborting full LLM loop.")
+            return {"status": "probe_failed", "runtime_s": 0}
+    except Exception as e:
+        logger.error("Pi probe failed (%s) — aborting full LLM loop to avoid 30-min hang.", e)
+        return {"status": "probe_failed", "error": str(e), "runtime_s": 0}
+
     logger.info("Building LLM loop prompt (strategies=%s, minutes=%d)", strategies, minutes)
     prompt = _build_prompt(minutes, strategies, universe=universe)
 
@@ -277,7 +288,7 @@ def run_llm_loop(
         runtime_s = time.time() - start
         err_msg = str(e)
         if "timed out" in err_msg:
-            logger.error("Pi CLI timed out after %ds", timeout_s)
+            logger.error("Pi CLI timed out after %ds", timeout_s, extra={"timeout_s": timeout_s, "model": "claude-sonnet-4-6"})
             with open(log_path, "w") as f:
                 f.write(f"=== LLM Loop TIMEOUT {date_str} ===\nTimeout after {timeout_s}s\n")
             return {"status": "timeout", "runtime_s": round(runtime_s, 1), "log_path": str(log_path)}
