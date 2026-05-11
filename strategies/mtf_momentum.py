@@ -217,7 +217,7 @@ class MTFMomentum(BaseStrategy):
                     continue
 
                 entry_price = today_close
-                stop_price = entry_price - self.atr_stop_mult * current_atr
+                stop_price = self._atr_stop(entry_price, current_atr)
                 take_profit = entry_price + 3.0 * current_atr
 
                 # P1-A: Dynamic sizing — use DynamicSizer when volatility_scaling.enabled
@@ -333,14 +333,9 @@ class MTFMomentum(BaseStrategy):
         """Check exit conditions for MTF momentum positions."""
         exits: List[Dict[str, Any]] = []
 
-        for pos in positions:
-            if pos.get("strategy") != self.name:
-                continue
-
-            ticker = pos["ticker"]
+        for ticker, pos, df in self._iter_my_positions(data, positions):
             try:
-                df = data.get(ticker)
-                if df is None or len(df) < self.atr_period + 1:
+                if len(df) < self.atr_period + 1:
                     continue
 
                 today_close = df["close"].iloc[-1]
@@ -353,7 +348,7 @@ class MTFMomentum(BaseStrategy):
                 if pd.isna(current_atr):
                     continue
 
-                stop_price = pos.get("stop_price", entry_price - self.atr_stop_mult * current_atr)
+                stop_price = pos.get("stop_price", self._atr_stop(entry_price, current_atr))
 
                 # Pre-compute trailing stop hit (Audit C7 follow-up: single flat predicate
                 # so the elif chain doesn't shadow time_exit when days_held >= 3 but
