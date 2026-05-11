@@ -72,3 +72,45 @@ def is_rth(now: Optional[datetime] = None) -> bool:
     rth_start = time(9, 30)
     rth_end = time(16, 0)
     return rth_start <= et_approx.time() < rth_end
+
+
+def last_us_market_session(now: Optional[datetime] = None) -> str:
+    """Return the YYYY-MM-DD of the most recent NYSE trading session.
+
+    If *now* is during RTH on a trading day, returns today's date.
+    Otherwise returns the last completed trading day (skips weekends +
+    holidays).
+
+    Args:
+        now: Datetime to check (UTC-aware). Defaults to ``datetime.now(UTC)``.
+
+    Returns:
+        ISO date string ``"YYYY-MM-DD"`` of the most recent NYSE session.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    if _NYSE is not None:
+        try:
+            from datetime import timedelta
+            sched = _NYSE.schedule(
+                start_date=now.date() - timedelta(days=14),
+                end_date=now.date(),
+            )
+            if sched.empty:
+                return now.date().isoformat()
+            return sched.index[-1].date().isoformat()
+        except Exception as _e:
+            logger.warning(
+                "last_us_market_session: pandas_market_calendars failed (%s) — using fallback",
+                _e,
+            )
+
+    # Fallback: walk backwards skipping Sat/Sun
+    from datetime import timedelta
+    d = now.date()
+    while d.weekday() >= 5:  # 5=Sat, 6=Sun
+        d -= timedelta(days=1)
+    return d.isoformat()
