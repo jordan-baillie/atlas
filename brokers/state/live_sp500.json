@@ -5,7 +5,7 @@
     {
       "ticker": "CAT",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-05-09",
+      "entry_date": "2026-05-11",
       "entry_price": 835.24,
       "shares": 1,
       "stop_price": 861.21,
@@ -15,97 +15,6 @@
     }
   ],
   "closed_trades": [
-    {
-      "ticker": "ADBE",
-      "strategy": "opening_gap",
-      "entry_price": 248.0,
-      "exit_price": 250.35,
-      "shares": 2,
-      "pnl": 4.7,
-      "pnl_pct": 0.95,
-      "holding_days": 2,
-      "exit_reason": "trailing_stop",
-      "exit_date": "2026-03-18",
-      "order_id": "ff52c18d-9906-4771-aa59-436cd34d71f9"
-    },
-    {
-      "ticker": "DHR",
-      "strategy": "mean_reversion",
-      "entry_price": 186.25,
-      "exit_price": 188.69,
-      "shares": 1,
-      "pnl": 2.44,
-      "pnl_pct": 1.31,
-      "holding_days": 6,
-      "exit_reason": "trailing_stop",
-      "exit_date": "2026-03-19",
-      "order_id": "6d437765-a29f-43a7-8429-e274fd390dab"
-    },
-    {
-      "ticker": "HCA",
-      "strategy": "connors_rsi2",
-      "entry_price": 509.8,
-      "exit_price": 496.5994,
-      "shares": 2,
-      "pnl": -26.4,
-      "pnl_pct": -2.59,
-      "holding_days": 1,
-      "exit_reason": "trailing_stop",
-      "exit_date": "2026-03-19",
-      "order_id": "6b395c86-88a1-4d68-980b-4ec334d685d9"
-    },
-    {
-      "ticker": "ULTA",
-      "strategy": "opening_gap",
-      "entry_price": 532.92,
-      "exit_price": 533.57,
-      "shares": 1,
-      "pnl": 0.65,
-      "pnl_pct": 0.12,
-      "holding_days": 4,
-      "exit_reason": "signal",
-      "exit_date": "2026-03-20",
-      "order_id": "c499893c-86fd-4faf-9066-ba57d3e9d4c1"
-    },
-    {
-      "ticker": "BKR",
-      "strategy": "connors_rsi2",
-      "entry_price": 54.27,
-      "exit_price": 60.83,
-      "shares": 11,
-      "pnl": 72.16,
-      "pnl_pct": 12.09,
-      "holding_days": 4,
-      "exit_reason": "signal",
-      "exit_date": "2026-03-20",
-      "order_id": "2bb7d062-9374-4db2-b461-a62d05113e9f"
-    },
-    {
-      "ticker": "OXY",
-      "strategy": "momentum_breakout",
-      "entry_price": 57.63,
-      "exit_price": 58.44,
-      "shares": 2,
-      "pnl": 1.62,
-      "pnl_pct": 1.41,
-      "holding_days": 10,
-      "exit_reason": "trailing_stop",
-      "exit_date": "2026-03-23",
-      "order_id": "3d0b3334-8cf7-4ed4-9d4f-f2e0979b8dca"
-    },
-    {
-      "ticker": "NOW",
-      "strategy": "trend_following",
-      "entry_price": 114.97,
-      "exit_price": 108.4551,
-      "shares": 3,
-      "pnl": -19.54,
-      "pnl_pct": -5.67,
-      "holding_days": 6,
-      "exit_reason": "trailing_stop",
-      "exit_date": "2026-03-24",
-      "order_id": "1437c05e-06b4-4493-b7eb-d31a8730f77a"
-    },
     {
       "ticker": "D",
       "strategy": "mean_reversion",
@@ -175,19 +84,6 @@
       "holding_days": -1
     },
     {
-      "ticker": "WM",
-      "strategy": "short_term_mr",
-      "entry_price": 226.28,
-      "exit_price": 220.66,
-      "shares": 2,
-      "pnl": -11.24,
-      "pnl_pct": -2.48,
-      "holding_days": 0,
-      "exit_reason": "stop_loss",
-      "exit_date": "2026-03-25",
-      "order_id": "e8cf100a-a1cf-42e4-9080-c06e5ff7de40"
-    },
-    {
       "ticker": "CVX",
       "strategy": "momentum_breakout",
       "entry_date": "2026-03-28",
@@ -218,32 +114,6 @@
       "exit_reason": "broker_trailing_stop",
       "reconciled": true,
       "holding_days": 0
-    },
-    {
-      "ticker": "CVX",
-      "strategy": "momentum_breakout",
-      "entry_price": 205.32,
-      "exit_price": 208.93,
-      "shares": 3,
-      "pnl": 10.82,
-      "pnl_pct": 5.27,
-      "holding_days": 1,
-      "exit_reason": "trailing_stop_fill",
-      "exit_date": "2026-04-01",
-      "reconciled": true
-    },
-    {
-      "ticker": "DOW",
-      "strategy": "sector_rotation",
-      "entry_price": 36.39,
-      "exit_price": 40.91,
-      "shares": 3,
-      "pnl": 13.56,
-      "pnl_pct": 12.42,
-      "holding_days": 1,
-      "exit_reason": "trailing_stop_fill",
-      "exit_date": "2026-04-01",
-      "reconciled": true
     },
     {
       "ticker": "BSX",
@@ -514,9 +384,9 @@
       "entry_price": 0,
       "exit_price": 286.68,
       "shares": 1,
-      "pnl": 0.0,
-      "pnl_pct": 0.0,
-      "holding_days": 0,
+      "pnl": null,
+      "pnl_pct": null,
+      "holding_days": null,
       "exit_reason": "trailing_stop_fill",
       "exit_date": "2026-05-08",
       "order_id": "a81fde74-4f88-471d-ba22-9ad9fae2755d",
@@ -2404,11 +2274,33 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-05-11",
+      "equity": 1311.97,
+      "cash": 4313.32,
+      "positions_value": -3001.35,
+      "num_positions": 1,
+      "total_realized_pnl": 278.76,
+      "total_closed_trades": 25,
+      "positions": [
+        {
+          "ticker": "CAT",
+          "strategy": "momentum_breakout",
+          "shares": 1,
+          "entry_price": 835.24,
+          "current_price": 897.45,
+          "unrealized_pnl": 62.21,
+          "mae": 0.0,
+          "mfe": 7.45,
+          "holding_days": 0
+        }
+      ]
     }
   ],
-  "daily_high_water": 5253.31,
-  "daily_high_water_date": "2026-05-09",
+  "daily_high_water": 5211.19,
+  "daily_high_water_date": "2026-05-11",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-05-09T09:44:34.314417"
+  "last_saved": "2026-05-11T17:16:05.504005"
 }
