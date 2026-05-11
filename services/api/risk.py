@@ -26,6 +26,72 @@ logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path("/root/atlas")
 
+def _build_positions_array() -> list[dict]:
+    """Build per-position risk decomposition for live cache-hit responses.
+
+    Reads open trades from SQLite (superseded=0), enriches with the current
+    broker price from the dashboard cache (best-effort), and computes per-position
+    metrics.  Returns [] on any failure — degraded UX is better than a 500 error.
+    """
+    try:
+        from db.atlas_db import get_db
+        with get_db() as _db:
+            rows = _db.execute(
+                "SELECT id, ticker, strategy, universe, entry_price, shares, "
+                "stop_price, take_profit, entry_date, stop_order_id, tp_order_id "
+                "FROM trades WHERE status='open' AND superseded=0"
+            ).fetchall()
+        if not rows:
+            return []
+
+        # Best-effort live price lookup via dashboard cache
+        live_prices: dict[str, float] = {}
+        try:
+            from services.api.dashboard import _build_dashboard_data
+            _dd = _build_dashboard_data()
+            for _pos in (_dd.get("positions") or []):
+                _t = _pos.get("ticker")
+                _cp = _pos.get("current_price")
+                if _t and _cp is not None:
+                    live_prices[_t] = float(_cp)
+        except Exception as _live_exc:
+            logger.debug("_build_positions_array: live price fetch failed: %s", _live_exc)
+
+        positions = []
+        for _r in rows:
+            _rd = dict(_r)
+            _ticker = _rd["ticker"]
+            _entry = float(_rd["entry_price"] or 0.0)
+            _shares = int(_rd["shares"] or 0)
+            _stop = _rd.get("stop_price")
+            _tp = _rd.get("take_profit")
+            _cur = live_prices.get(_ticker, _entry)
+            _mv = _cur * _shares
+            _unreal = (_cur - _entry) * _shares
+            _risk_to_stop = None
+            if _stop is not None:
+                _risk_to_stop = round((_cur - float(_stop)) * _shares, 2)
+            positions.append({
+                "ticker": _ticker,
+                "strategy": _rd["strategy"],
+                "universe": _rd["universe"],
+                "entry_price": _entry,
+                "current_price": _cur,
+                "shares": _shares,
+                "market_value": round(_mv, 2),
+                "stop_price": _stop,
+                "take_profit": _tp,
+                "unrealized_pnl": round(_unreal, 2),
+                "risk_to_stop": _risk_to_stop,
+                "entry_date": _rd["entry_date"],
+                "stop_order_id": _rd.get("stop_order_id") or None,
+                "tp_order_id": _rd.get("tp_order_id") or None,
+            })
+        return positions
+    except Exception as _exc:
+        logger.warning("_build_positions_array failed: %s", _exc)
+        return []
+
 
 # ── GET /api/positions/risk ───────────────────────────────────────────────────
 
@@ -38,10 +104,19 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
         from db.atlas_db import get_cached_portfolio_risk
         _cached_pr = get_cached_portfolio_risk(max_age_hours=24)
         if _cached_pr and not _cached_pr.get("stale"):
+            # Audit F-01: override equity from market_equity_history (correct source)
+            from db.atlas_db import get_db as _get_db
+            with _get_db() as _dbx:
+                _r = _dbx.execute(
+                    "SELECT broker_equity FROM market_equity_history "
+                    "WHERE market_id='sp500' "
+                    "ORDER BY date DESC, snapshot_time DESC LIMIT 1"
+                ).fetchone()
+                _live_eq = float(_r[0]) if _r else float(_cached_pr.get("equity", 0))
             return JSONResponse({
-                "positions": [],
+                "positions": _build_positions_array(),
                 "summary": {
-                    "equity": _cached_pr.get("equity", 0),
+                    "equity": _live_eq,
                     "positions_count": _cached_pr.get("positions_count", 0),
                     "tickers": _cached_pr.get("tickers", []),
                 },
@@ -67,10 +142,19 @@ def positions_risk(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 )
             except Exception as _pe:
                 logger.warning("positions_risk: bg refresh failed to start: %s", _pe)
+            # Audit F-01: override equity from market_equity_history (correct source)
+            from db.atlas_db import get_db as _get_db
+            with _get_db() as _dbx:
+                _r = _dbx.execute(
+                    "SELECT broker_equity FROM market_equity_history "
+                    "WHERE market_id='sp500' "
+                    "ORDER BY date DESC, snapshot_time DESC LIMIT 1"
+                ).fetchone()
+                _live_eq = float(_r[0]) if _r else float(_cached_pr.get("equity", 0))
             return JSONResponse({
-                "positions": [],
+                "positions": _build_positions_array(),
                 "summary": {
-                    "equity": _cached_pr.get("equity", 0),
+                    "equity": _live_eq,
                     "positions_count": _cached_pr.get("positions_count", 0),
                     "tickers": _cached_pr.get("tickers", []),
                 },
@@ -402,6 +486,19 @@ def risk_ruin(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     "median_end_equity": rd["median_end_equity"],
                 }
             prob = horizons.get("30d", {}).get("prob_ruin", 0.0)
+            # Audit F-01: override current_equity from market_equity_history (correct source)
+            try:
+                from db.atlas_db import get_db as _ruin_db
+                with _ruin_db() as _rdb:
+                    _rr = _rdb.execute(
+                        "SELECT broker_equity FROM market_equity_history "
+                        "WHERE market_id='sp500' "
+                        "ORDER BY date DESC, snapshot_time DESC LIMIT 1"
+                    ).fetchone()
+                    if _rr:
+                        current_equity = float(_rr[0])
+            except Exception as _re:
+                logger.debug("risk_ruin: market_equity_history lookup failed: %s", _re)
             return {
                 "current_equity": current_equity,
                 "floor": floor,

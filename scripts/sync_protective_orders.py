@@ -829,6 +829,72 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict, pass_label:
                     "Protective ledger batch refresh failed (non-fatal): %s", _prot_all_exc,
                 )
 
+
+        # ── F-12: Persist broker stop_price → trades.stop_price when NULL ────
+        # Write the broker's stop price back to the trades table when:
+        #   (a) the live pass (not paper) has resolved a stop order ID, AND
+        #   (b) per_ticker carries a stop_price from the plan/state, AND
+        #   (c) the trades row currently has stop_price IS NULL, AND
+        #   (d) the price satisfies the CHECK constraint.
+        # Non-fatal: any DB error is logged as WARNING and swallowed.
+        if pass_label == "live":
+            try:
+                from db.atlas_db import get_db as _f12_get_db
+                for _f12_ticker, _f12_tres in per_ticker.items():
+                    _f12_ops = ticker_ops.get(_f12_ticker, {"stop": "", "tp": ""})
+                    if not _f12_ops.get("stop"):
+                        continue  # No resolved stop order for this ticker
+                    _f12_sp = _f12_tres.get("stop_price")
+                    if _f12_sp is None:
+                        continue  # No stop price in sync data
+                    try:
+                        _f12_sp_f = float(_f12_sp)
+                    except (TypeError, ValueError):
+                        continue
+                    try:
+                        with _f12_get_db() as _f12_db:
+                            _f12_row = _f12_db.execute(
+                                "SELECT id, direction, entry_price FROM trades "
+                                "WHERE ticker=? AND universe=? AND status=\'open\' "
+                                "AND superseded=0 AND stop_price IS NULL",
+                                (_f12_ticker, market_id),
+                            ).fetchone()
+                            if not _f12_row:
+                                continue  # Already populated or not found
+                            _f12_tid, _f12_dir, _f12_ep = _f12_row
+                            _f12_dir = (_f12_dir or "long").lower()
+                            _f12_ep = float(_f12_ep or 0)
+                            # Validate CHECK constraint before writing
+                            _f12_ok = (
+                                (_f12_dir == "long" and _f12_sp_f < _f12_ep)
+                                or (_f12_dir == "short" and _f12_sp_f > _f12_ep)
+                            )
+                            if not _f12_ok:
+                                logger.debug(
+                                    "F-12 stop_price skip %s: %.2f fails CHECK "
+                                    "(dir=%s entry=%.2f) — may be profit-locking stop",
+                                    _f12_ticker, _f12_sp_f, _f12_dir, _f12_ep,
+                                )
+                                continue
+                            _f12_db.execute(
+                                "UPDATE trades SET stop_price=?, updated_at=datetime(\'now\') "
+                                "WHERE id=?",
+                                (_f12_sp_f, _f12_tid),
+                            )
+                            logger.info(
+                                "F-12 stop_price persisted: %s/%s stop=%.2f entry=%.2f (trade %d)",
+                                _f12_ticker, market_id, _f12_sp_f, _f12_ep, _f12_tid,
+                            )
+                    except sqlite3.Error as _f12_db_exc:
+                        logger.warning(
+                            "F-12 stop_price DB write failed for %s/%s (non-fatal): %s",
+                            _f12_ticker, market_id, _f12_db_exc,
+                        )
+            except Exception as _f12_exc:
+                logger.warning(
+                    "F-12 stop_price persistence block failed (non-fatal): %s", _f12_exc,
+                )
+
     except Exception as wrap_exc:  # noqa: BLE001 — outer DB consistency block catches all
         logger.warning(
             "sync_protective DB consistency block failed (non-fatal): %s", wrap_exc,
