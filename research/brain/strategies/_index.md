@@ -17,7 +17,7 @@
 | keltner_reversion | active | 0.0408 | 129 | 2026-03-16 07:37 |
 | lower_band_reversion | active | 0.3934 | 393 | 2026-03-15 11:10 |
 | macd_divergence | untested | 0.0000 | 0 | 2026-03-12 02:55 |
-| mean_reversion | active | 1.1500 | 95 | 2026-05-10 10:19 |
+| mean_reversion | active | 1.1500 | 95 | 2026-05-11 07:30 |
 | momentum_breakout | active | 1.2140 | 585 | 2026-05-07 14:04 |
 | monthly_rotation | untested | 0.0000 | 0 | 2026-03-12 02:55 |
 | opening_gap | active | 0.6016 | 1106 | 2026-04-28 13:44 |

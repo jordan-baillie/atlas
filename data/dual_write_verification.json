@@ -97,6 +97,12 @@
       "passed": false,
       "details": "4/6 pass",
       "source": "cron"
+    },
+    {
+      "date": "2026-05-11",
+      "passed": true,
+      "details": "6/6 pass",
+      "source": "manual"
     }
   ],
   "consecutive_passes": 0,

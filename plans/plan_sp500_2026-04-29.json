@@ -1,6 +1,6 @@
 {
   "trade_date": "2026-04-29",
-  "generated_at": "2026-04-29T10:33:40.131401",
+  "generated_at": "2026-05-11T18:44:14.529343",
   "market_id": "sp500",
   "config_version": "test",
   "status": "PENDING_APPROVAL",
@@ -38,7 +38,7 @@
     "risk_pct_of_equity": 0.0,
     "positions_after": 1,
     "cash_after_entries": 10000.0,
-    "portfolio_exposure_pct": 0.0
+    "portfolio_exposure_pct": 10.0
   },
   "open_positions": [
     {

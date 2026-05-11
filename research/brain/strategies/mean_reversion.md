@@ -1,7 +1,7 @@
 # mean_reversion
 
 > **Status:** active | **Best Sharpe:** 1.1500 | **Trades:** 95
-> **Updated:** 2026-05-11 01:39
+> **Updated:** 2026-05-11 08:34
 
 ## Current Best Params
 
@@ -24,14 +24,6 @@
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
-| 2026-05-07 01:52 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 01:54 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 01:56 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 01:58 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 02:04 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 03:39 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 03:41 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-05-07 03:49 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
 | 2026-05-07 03:52 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
 | 2026-05-07 03:54 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
 | 2026-05-07 04:00 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
@@ -54,3 +46,11 @@
 | 2026-05-11 01:26 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
 | 2026-05-11 01:28 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
 | 2026-05-11 01:39 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 07:26 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 07:28 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 07:30 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 08:03 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 08:14 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 08:20 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 08:29 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-11 08:34 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |

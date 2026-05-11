@@ -3922,7 +3922,7 @@
   ],
   "sizing_multiplier": 1.0,
   "regime_reasoning": "bull_risk_on: SPY above 200 DMA (trend +0.30), VIX low/calm (risk +0.81), credit tight (credit +1.00), yield curve normal (+0.44). Composite: +0.46",
-  "approved_at": "2026-05-11T12:08:16.602151",
+  "approved_at": "2026-05-11T17:50:32.509002",
   "approver": "human",
   "approval_reason": "auto_approve_plans config flag"
 }

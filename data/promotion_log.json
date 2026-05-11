@@ -128,5 +128,18 @@
     "from_state": "PAPER",
     "to_state": "LIVE",
     "auto_promotion_id": "fa270989-2111-4530-a4aa-e88ae2b388e5"
+  },
+  {
+    "ts": "2026-05-11T08:39:25.771193+00:00",
+    "strategy": "clean_strategy",
+    "universe": "sp500",
+    "paper_sharpe": 0.61978,
+    "research_sharpe": 0.65,
+    "gap": 0.046493,
+    "paper_trades": 35,
+    "days_in_paper": 35.0,
+    "from_state": "PAPER",
+    "to_state": "LIVE",
+    "auto_promotion_id": "28383b9a-10b7-452a-b150-864e13bb134d"
   }
 ]

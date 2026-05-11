@@ -1,6 +1,6 @@
 # Atlas Research Brain
 
-> **Updated:** 2026-05-11 00:55 UTC | **Last sweep:** 20260511_005535
+> **Updated:** 2026-05-11 07:40 UTC | **Last sweep:** 20260511_074020
 
 ## Navigation
 
@@ -9,7 +9,7 @@
 | [strategies/](_index.md) | Per-strategy params, metrics, history | 30 |
 | [params/](_index.md) | Parameter test results across strategies | 51 |
 | [experiments/](_index.md) | Individual experiment records (rolling 100) | 100 |
-| [sweeps/](_index.md) | Sweep session summaries | 33 |
+| [sweeps/](_index.md) | Sweep session summaries | 37 |
 | [patterns/](_index.md) | Confirmed rules — never violate | 5 |
 | [decisions/](_index.md) | Closed decisions — don't revisit | 28 |
 | [hypotheses/](_index.md) | Open questions to test | 4 |
