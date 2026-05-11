@@ -196,7 +196,7 @@ class SectorRotation(BaseStrategy):
                     continue
 
                 entry_price = today_close
-                stop_price = entry_price - self.atr_stop_mult * atr
+                stop_price = self._atr_stop(entry_price, atr)
                 if stop_price <= 0 or stop_price >= entry_price:
                     continue
 
@@ -274,15 +274,7 @@ class SectorRotation(BaseStrategy):
         """Check sector rotation positions for exit conditions."""
         exit_recs: List[Dict[str, Any]] = []
 
-        for pos in positions:
-            if pos.get("strategy") != self.name:
-                continue
-
-            ticker = pos["ticker"]
-            df = data.get(ticker)
-            if df is None or df.empty:
-                continue
-
+        for ticker, pos, df in self._iter_my_positions(data, positions):
             close = df["close"]
             high = df["high"]
             low = df["low"]
