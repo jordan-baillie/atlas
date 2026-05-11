@@ -139,10 +139,7 @@ class OpeningGap(BaseStrategy):
 
                 # SMA-200 trend filter: only buy gap-downs in uptrends
                 if self.sma200_filter:
-                    if self._precomputed:
-                        sma200_val = float(df["_og_sma200"].iloc[-1])
-                    else:
-                        sma200_val = close.rolling(200).mean().iloc[-1]
+                    sma200_val = self._get_indicator(df, "_og_sma200", lambda d: d["close"].rolling(200).mean()).iloc[-1]
                     if pd.isna(sma200_val) or today_close < sma200_val:
                         continue
 
@@ -161,12 +158,7 @@ class OpeningGap(BaseStrategy):
                         pass  # Gracefully degrade if earnings data unavailable
 
                 # --- Entry Condition 2: Oversold confirmation ---
-                if self._precomputed:
-                    current_ibs = float(df["_og_ibs"].iloc[-1])
-                else:
-                    high = df["high"]
-                    low = df["low"]
-                    current_ibs = float(calc_ibs(high, low, close).iloc[-1])
+                current_ibs = float(self._get_indicator(df, "_og_ibs", lambda d: calc_ibs(d["high"], d["low"], d["close"])).iloc[-1])
 
                 if pd.isna(current_ibs):
                     continue
@@ -184,11 +176,7 @@ class OpeningGap(BaseStrategy):
                     continue
 
                 # --- Entry Condition 3: Volume filter ---
-                if self._precomputed:
-                    current_vol_ratio = float(df["_og_vol_ratio"].iloc[-1])
-                else:
-                    volume = df["volume"]
-                    current_vol_ratio = float(calc_volume_ratio(volume, lookback=20).iloc[-1])
+                current_vol_ratio = float(self._get_indicator(df, "_og_vol_ratio", lambda d: calc_volume_ratio(d["volume"], lookback=20)).iloc[-1])
 
                 if pd.isna(current_vol_ratio):
                     current_vol_ratio = 0.0
@@ -202,10 +190,7 @@ class OpeningGap(BaseStrategy):
                     continue
 
                 # --- Entry Condition 4: RSI(14) filter ---
-                if self._precomputed:
-                    current_rsi = float(df["_og_rsi"].iloc[-1])
-                else:
-                    current_rsi = float(calc_rsi(close, period=14).iloc[-1])
+                current_rsi = float(self._get_indicator(df, "_og_rsi", lambda d: calc_rsi(d["close"], period=14)).iloc[-1])
 
                 if pd.isna(current_rsi):
                     continue
@@ -218,12 +203,7 @@ class OpeningGap(BaseStrategy):
                     continue
 
                 # --- Calculate ATR for stops ---
-                if self._precomputed:
-                    current_atr = float(df["_og_atr"].iloc[-1])
-                else:
-                    high = df["high"]
-                    low = df["low"]
-                    current_atr = float(calc_atr(high, low, close, period=self.atr_period).iloc[-1])
+                current_atr = float(self._get_indicator(df, "_og_atr", lambda d: calc_atr(d["high"], d["low"], d["close"], period=self.atr_period)).iloc[-1])
 
                 if pd.isna(current_atr) or current_atr <= 0:
                     continue
@@ -232,7 +212,7 @@ class OpeningGap(BaseStrategy):
                 entry_price = today_close
 
                 # Stop loss: entry - atr_stop_mult * ATR
-                stop_price = entry_price - (self.atr_stop_mult * current_atr)
+                stop_price = self._atr_stop(entry_price, current_atr)
                 if stop_price <= 0:
                     continue
 
@@ -352,18 +332,9 @@ class OpeningGap(BaseStrategy):
         """Check exit conditions for opening gap positions."""
         exits = []
 
-        for pos in existing_positions:
-            if pos.get("strategy") != "opening_gap":
-                continue
-
-            ticker = pos.get("ticker", "")
-            if ticker not in data:
-                continue
-
-            df = data[ticker]
+        for ticker, pos, df in self._iter_my_positions(data, existing_positions):
             if len(df) < max(self.sma_exit_period, self.atr_period) + 5:
                 continue
-
             try:
                 close = df["close"]
                 current_price = float(close.iloc[-1])
@@ -371,19 +342,14 @@ class OpeningGap(BaseStrategy):
                 entry_date = pos.get("entry_date")
 
                 # ATR for stops
-                if self._precomputed:
-                    current_atr = float(df["_og_atr"].iloc[-1])
-                else:
-                    high = df["high"]
-                    low = df["low"]
-                    current_atr = float(calc_atr(high, low, close, self.atr_period).iloc[-1])
+                current_atr = float(self._get_indicator(df, "_og_atr", lambda d: calc_atr(d["high"], d["low"], d["close"], self.atr_period)).iloc[-1])
                 if np.isnan(current_atr) or current_atr <= 0:
                     current_atr = entry_price * 0.02
 
                 exit_reason = None
 
                 # 1. Stop loss
-                stop_price = entry_price - self.atr_stop_mult * current_atr
+                stop_price = self._atr_stop(entry_price, current_atr)
                 if current_price <= stop_price:
                     exit_reason = f"Stop loss: {current_price:.4f} <= {stop_price:.4f}"
 
@@ -395,21 +361,13 @@ class OpeningGap(BaseStrategy):
 
                 # 3. SMA exit: price closes above SMA (mean reverted)
                 if exit_reason is None:
-                    if self._precomputed:
-                        sma_val = float(df["_og_sma_exit"].iloc[-1])
-                    else:
-                        sma_val = float(close.rolling(self.sma_exit_period).mean().iloc[-1])
+                    sma_val = float(self._get_indicator(df, "_og_sma_exit", lambda d: d["close"].rolling(self.sma_exit_period).mean()).iloc[-1])
                     if not np.isnan(sma_val) and current_price > sma_val:
                         exit_reason = f"SMA exit: {current_price:.4f} > SMA({self.sma_exit_period})={sma_val:.4f}"
 
                 # 4. IBS exit: high IBS indicates overbought intraday
                 if exit_reason is None:
-                    if self._precomputed:
-                        current_ibs_val = float(df["_og_ibs"].iloc[-1])
-                    else:
-                        high = df["high"]
-                        low = df["low"]
-                        current_ibs_val = float(calc_ibs(high, low, close).iloc[-1])
+                    current_ibs_val = float(self._get_indicator(df, "_og_ibs", lambda d: calc_ibs(d["high"], d["low"], d["close"])).iloc[-1])
                     if not np.isnan(current_ibs_val) and current_ibs_val > self.ibs_exit_threshold:
                         exit_reason = f"IBS exit: IBS={current_ibs_val:.4f} > {self.ibs_exit_threshold}"
 
