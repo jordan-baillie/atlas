@@ -40,6 +40,11 @@ DRAWDOWN_HALT_PCT = 5.0           # L4 — 5% daily DD halts remediation
 HEALTHCHECK_FAIL_THRESHOLD = 3    # L5 — 3 critical healthchecks failing
 REVIEWER_REJECTION_HALT_PCT = 50.0  # L6 — 50% of last 10 reviews rejected
 
+# Per-market equity attribution refactor cutover. Pre-cutover equity_history rows
+# hold GLOBAL broker equity (~$5,300); post-cutover rows hold per-market sp500 equity
+# (~$1,300). Mixing them in a max() produces phantom drawdowns. (#314)
+ATTRIBUTION_CUTOVER_DATE = "2026-04-29"
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,6 +114,11 @@ def check_l4_drawdown(
         datetime.now(timezone.utc) - timedelta(days=window_days)
     ).strftime("%Y-%m-%d")
 
+    logger.debug(
+        "L4 lookback: window_days=%d, effective_start=%s (cutover_floor=%s)",
+        window_days, max(cutoff_date, ATTRIBUTION_CUTOVER_DATE), ATTRIBUTION_CUTOVER_DATE,
+    )
+
     try:
         with _sqlite3.connect(path, timeout=10) as conn:
             conn.row_factory = _sqlite3.Row
@@ -117,8 +127,9 @@ def check_l4_drawdown(
                    FROM equity_history
                    WHERE market_id = 'sp500'
                      AND date >= ?
+                     AND date >= ?
                    ORDER BY date ASC""",
-                (cutoff_date,),
+                (cutoff_date, ATTRIBUTION_CUTOVER_DATE),
             ).fetchall()
     except (_sqlite3.OperationalError, _sqlite3.DatabaseError) as e:
         # Explicit, loud log — not the silent bare-except from before.
