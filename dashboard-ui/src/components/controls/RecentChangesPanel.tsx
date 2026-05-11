@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { useOverrideAudit } from '../../api/admin-queries'
 import { useRecentLifecycleHistory } from '../../api/lifecycle'
 import { RevertButton } from './RevertButton'
+import { Badge } from '../shared/Badge'
 import { fmtRelativeTime } from '../../lib/format'
 import type { AuditEntry } from '../../api/admin-types'
 import type { RecentHistoryEntry } from '../../api/lifecycle'
+import type { BadgeVariant } from '../shared/Badge'
 
-// ── Config override audit entries ──────────────────────────────────
+// ── Config override audit entries ─────────────────────────────────────────
 
-const ACTION_BADGE: Record<string, string> = {
-  create:    'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  revert:    'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
-  supersede: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  expire:    'bg-zinc-500/15 text-zinc-500 border-zinc-500/30',
+function actionVariant(action: string): BadgeVariant {
+  if (action === 'create') return 'info'
+  if (action === 'supersede') return 'warning'
+  return 'neutral'
 }
 
 function AuditRow({ entry }: { entry: AuditEntry }) {
@@ -24,14 +25,10 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   return (
     <div className="border-b border-[var(--color-border)]/40 py-2 text-xs">
       <div className="flex items-center gap-2 flex-wrap">
-        <span title={entry.ts} className="text-[var(--color-text-muted)] min-w-[80px]">
+        <span title={entry.ts} className="text-[var(--color-text-muted)] font-mono tabular-nums min-w-[80px]">
           {fmtRelativeTime(entry.ts)}
         </span>
-        <span
-          className={`px-1.5 py-0.5 rounded text-[10px] font-mono border ${ACTION_BADGE[entry.action] ?? ''}`}
-        >
-          {entry.action}
-        </span>
+        <Badge variant={actionVariant(entry.action)} size="xs">{entry.action}</Badge>
         <span className="text-[var(--color-text-muted)]">{actor}</span>
         <span className="font-mono">
           {entry.scope} {entry.key}
@@ -56,13 +53,13 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
   )
 }
 
-// ── Lifecycle change entries ────────────────────────────────────────
+// ── Lifecycle change entries ──────────────────────────────────────────────
 
-const LC_STATE_BADGE: Record<string, string> = {
-  RESEARCH: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  PAPER:    'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  LIVE:     'bg-green-500/15 text-green-400 border-green-500/30',
-  RETIRED:  'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+function lcStateVariant(state: string): BadgeVariant {
+  if (state === 'RESEARCH') return 'info'
+  if (state === 'PAPER') return 'warning'
+  if (state === 'LIVE') return 'success'
+  return 'neutral'  // RETIRED
 }
 
 function LifecycleRow({ entry }: { entry: RecentHistoryEntry }) {
@@ -75,34 +72,32 @@ function LifecycleRow({ entry }: { entry: RecentHistoryEntry }) {
       <div className="flex items-center gap-2 flex-wrap">
         <span
           title={entry.transitioned_at}
-          className="text-[var(--color-text-muted)] min-w-[80px]"
+          className="text-[var(--color-text-muted)] font-mono tabular-nums min-w-[80px]"
         >
           {fmtRelativeTime(entry.transitioned_at)}
         </span>
+
         {/* Source pill */}
-        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono border bg-purple-500/15 text-purple-400 border-purple-500/30">
-          lifecycle
-        </span>
+        <Badge variant="accent" size="xs">lifecycle</Badge>
+
         {entry.operator && (
           <span className="text-[var(--color-text-muted)]">{entry.operator}</span>
         )}
         <span className="font-mono">
           {entry.strategy} · {entry.universe}
         </span>
-        {/* State transition */}
+
+        {/* State transition badges */}
         <span className="flex items-center gap-1">
           {entry.from_state && (
             <>
-              <span className={`px-1.5 py-0.5 rounded font-mono border text-[10px] ${LC_STATE_BADGE[entry.from_state] ?? ''}`}>
-                {entry.from_state}
-              </span>
+              <Badge variant={lcStateVariant(entry.from_state)} size="xs">{entry.from_state}</Badge>
               <span className="text-[var(--color-text-muted)]">→</span>
             </>
           )}
-          <span className={`px-1.5 py-0.5 rounded font-mono border text-[10px] ${LC_STATE_BADGE[entry.to_state] ?? ''}`}>
-            {entry.to_state}
-          </span>
+          <Badge variant={lcStateVariant(entry.to_state)} size="xs">{entry.to_state}</Badge>
         </span>
+
         {entry.auto_promotion_id != null && (
           <span className="text-[var(--color-text-muted)] text-[10px]">
             auto #{entry.auto_promotion_id}
@@ -122,7 +117,7 @@ function LifecycleRow({ entry }: { entry: RecentHistoryEntry }) {
   )
 }
 
-// ── Panel ──────────────────────────────────────────────────────────
+// ── Panel ─────────────────────────────────────────────────────────────────
 
 export function RecentChangesPanel() {
   const { data, isLoading, error } = useOverrideAudit({ limit: 50 })
@@ -131,14 +126,16 @@ export function RecentChangesPanel() {
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card space-y-4">
 
-      {/* ── Config override audit ── */}
+      {/* Config override audit */}
       <section>
-        <h3 className="text-sm font-semibold mb-3">Config override changes (last 50)</h3>
+        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold mb-3">
+          Config override changes (last 50)
+        </div>
         {isLoading && (
           <div className="text-xs text-[var(--color-text-muted)]">Loading audit log…</div>
         )}
         {error && (
-          <div className="text-xs text-red-400">
+          <div className="text-xs text-[var(--color-red)]">
             Failed to load: {(error as Error).message}
           </div>
         )}
@@ -150,18 +147,19 @@ export function RecentChangesPanel() {
         ))}
       </section>
 
-      {/* ── Lifecycle transitions ── */}
+      {/* Lifecycle transitions */}
       <section>
-        <h3 className="text-sm font-semibold mb-3">Lifecycle changes (last 20)</h3>
+        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold mb-3">
+          Lifecycle changes (last 20)
+        </div>
         {lcLoading && (
           <div className="text-xs text-[var(--color-text-muted)]">Loading lifecycle history…</div>
         )}
         {lcError && (
-          <div className="text-xs text-red-400">
+          <div className="text-xs text-[var(--color-red)]">
             Failed to load: {(lcError as Error).message}
           </div>
         )}
-        {/* null response means endpoint not available yet — degrade gracefully */}
         {lcData === null && !lcLoading && !lcError && (
           <div className="text-xs text-[var(--color-text-muted)]">
             Lifecycle history endpoint not available yet.

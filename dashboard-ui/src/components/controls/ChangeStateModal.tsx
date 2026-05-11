@@ -13,7 +13,9 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { fmtSignedCcy, fmtNum } from '../../lib/format'
 import { transition as lifecycleTransition, promotePaper } from '../../api/lifecycle'
 import { ApiError } from '../../api/client'
+import { Badge } from '../shared/Badge'
 import type { LifecycleActionType, LifecycleRow, LifecycleState, PromotionResponse } from '../../api/lifecycle'
+import type { BadgeVariant } from '../shared/Badge'
 
 // ─── Public types ─────────────────────────────────────────────
 
@@ -102,14 +104,10 @@ function expiryToApiValue(choice: ExpiryChoice): string | null | undefined {
   return d.toISOString()
 }
 
-function stateBadgeClasses(state: string): string {
-  switch (state) {
-    case 'live':     return 'bg-green-500/15 text-green-400 border border-green-500/30'
-    case 'passive':  return 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
-    case 'disabled': return 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30'
-    case 'enabled':  return 'text-green-400'
-    default:         return 'text-zinc-400'
-  }
+function stateBadgeVariant(state: string): BadgeVariant {
+  if (state === 'live' || state === 'enabled') return 'success'
+  if (state === 'passive') return 'warning'
+  return 'neutral'
 }
 
 function submitBtnClasses(targetState: string): string {
@@ -313,21 +311,21 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
     >
       {/* Modal box — stop propagation so backdrop handler does not fire on inner clicks */}
       <div
-        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 shadow-2xl max-w-md md:max-w-lg w-full"
+        className="animate-in bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-2xl p-6 max-w-2xl w-full"
         onClick={e => e.stopPropagation()}
       >
 
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-2 mb-4">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold leading-snug">{title}</h2>
+            <h2 className="text-xl font-semibold leading-snug">{title}</h2>
 
             {/* Current-state subline */}
             <div className="mt-1 flex items-center gap-1.5 flex-wrap text-xs text-[var(--color-text-muted)]">
               <span>Current:</span>
-              <span className={`px-2 py-0.5 rounded font-mono ${stateBadgeClasses(currentState)}`}>
+              <Badge variant={stateBadgeVariant(currentState)} size="xs">
                 {currentState.toUpperCase()}
-              </span>
+              </Badge>
               <span>(source: {currentSource})</span>
             </div>
 
@@ -360,7 +358,7 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
 
           {/* Step 1 — State picker */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-1.5">
               New state
             </div>
             <div className="space-y-1">
@@ -398,7 +396,7 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
 
           {/* Step 2 — Reason textarea */}
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+            <label className="block text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-1.5">
               Reason (required, ≥10 chars)
             </label>
             <textarea
@@ -411,7 +409,7 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
                 if (e.key === 'Enter') e.stopPropagation()
               }}
               placeholder="Describe why you are making this change…"
-              className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded p-2 text-sm font-mono resize-none focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
+              className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-md px-3 py-2 text-sm font-mono resize-none focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 transition-colors"
             />
             <div className={`text-xs mt-0.5 text-right tabular-nums ${charCountClass(reason.length)}`}>
               {reason.length} / 500
@@ -420,7 +418,7 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
 
           {/* Step 3 — Auto-expire radio group */}
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+            <div className="text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-1.5">
               Auto-expire after
             </div>
             <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -491,8 +489,8 @@ export function ChangeStateModal(props: ChangeStateModalProps) {
                 spellCheck={false}
                 autoComplete="off"
                 className={[
-                  'w-full bg-[var(--color-surface-alt)] rounded p-2 text-sm font-mono',
-                  'border focus:outline-none transition-colors',
+                  'w-full h-9 bg-[var(--color-surface-alt)] rounded-md px-3 text-sm font-mono',
+                  'border focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 transition-colors',
                   confirmInputBorderClass(confirmText, marketId),
                 ].join(' ')}
               />
@@ -608,13 +606,11 @@ const ACTION_CFG: Record<LifecycleActionType, ActionConfig> = {
 
 // ── Lifecycle state badge helper ────────────────────────────────────
 
-function lcStateBadge(state: LifecycleState): string {
-  switch (state) {
-    case 'RESEARCH': return 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-    case 'PAPER':    return 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-    case 'LIVE':     return 'bg-green-500/15 text-green-400 border-green-500/30'
-    case 'RETIRED':  return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30'
-  }
+function lcStateVariant(state: LifecycleState): BadgeVariant {
+  if (state === 'RESEARCH') return 'info'
+  if (state === 'PAPER') return 'warning'
+  if (state === 'LIVE') return 'success'
+  return 'neutral'  // RETIRED
 }
 
 // ── Gate failure display ────────────────────────────────────────────
@@ -824,30 +820,24 @@ export function LifecycleTransitionModal({
       onClick={e => { if (!busy && e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 shadow-2xl max-w-md md:max-w-lg w-full"
+        className="animate-in bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-2xl p-6 max-w-2xl w-full"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-4">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold leading-snug">{cfg.label}</h2>
+            <h2 className="text-xl font-semibold leading-snug">{cfg.label}</h2>
             <div className="mt-1 text-xs text-[var(--color-text-muted)] font-mono">
               {row.strategy} · {row.universe}
             </div>
             <div className="mt-1 flex items-center gap-1.5 flex-wrap text-xs text-[var(--color-text-muted)]">
               <span>Current:</span>
-              <span
-                className={`px-1.5 py-0.5 rounded font-mono border text-[10px] ${lcStateBadge(row.state)}`}
-                data-testid="lifecycle-current-state"
-              >
-                {row.state}
+              <span data-testid="lifecycle-current-state">
+                <Badge variant={lcStateVariant(row.state)} size="xs">{row.state}</Badge>
               </span>
               <span>→</span>
-              <span
-                className={`px-1.5 py-0.5 rounded font-mono border text-[10px] ${lcStateBadge(cfg.targetState)}`}
-                data-testid="lifecycle-target-state"
-              >
-                {cfg.targetState}
+              <span data-testid="lifecycle-target-state">
+                <Badge variant={lcStateVariant(cfg.targetState)} size="xs">{cfg.targetState}</Badge>
               </span>
             </div>
           </div>
@@ -873,7 +863,7 @@ export function LifecycleTransitionModal({
 
           {/* Reason textarea — always shown; note for promote_live: not sent to backend */}
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">
+            <label className="block text-[11px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-1.5">
               Reason (required, ≥10 chars)
               {action === 'promote_live' && (
                 <span className="ml-1 normal-case">(for operator audit log)</span>
@@ -886,7 +876,7 @@ export function LifecycleTransitionModal({
               onChange={e => setReason(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') e.stopPropagation() }}
               placeholder="Describe why you are making this change…"
-              className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded p-2 text-sm font-mono resize-none focus:outline-none focus:ring-1 focus:ring-[var(--color-border)]"
+              className="w-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-md px-3 py-2 text-sm font-mono resize-none focus:border-[var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]/20 transition-colors"
             />
             <div className={`text-xs mt-0.5 text-right tabular-nums ${charCountClass(reason.length)}`}>
               {reason.length} / 500

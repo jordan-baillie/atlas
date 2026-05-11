@@ -6,63 +6,52 @@ import { LifecycleTransitionModal } from './ChangeStateModal'
 import { LifecycleActions } from './LifecycleActions'
 import { LifecycleHistoryModal } from './LifecycleHistoryModal'
 import { RevertButton } from './RevertButton'
+import { Badge } from '../shared/Badge'
 import { fmtNum, fmtSignedCcy } from '../../lib/format'
 import type { StrategyAdminRow } from '../../api/admin-types'
 import type { LifecycleRow, LifecycleActionType } from '../../api/lifecycle'
+import type { BadgeVariant } from '../shared/Badge'
 
-// ── Lifecycle badge helpers ─────────────────────────────────────────
+// ── Lifecycle badge helpers ───────────────────────────────────────────────
 
-const LC_BADGE_CLASS: Record<string, string> = {
-  RESEARCH: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  PAPER:    'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  LIVE:     'bg-green-500/15 text-green-400 border-green-500/30',
-  RETIRED:  'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+function lcVariant(state: string): BadgeVariant {
+  if (state === 'RESEARCH') return 'info'
+  if (state === 'PAPER') return 'warning'
+  if (state === 'LIVE') return 'success'
+  return 'neutral'  // RETIRED + unknown
 }
 
-const LC_BADGE_ICON: Record<string, string> = {
-  RESEARCH: '🔵',
-  PAPER:    '🟡',
-  LIVE:     '🟢',
-  RETIRED:  '⚫',
-}
+// ── Gap color helper ──────────────────────────────────────────────────────
 
-// ── Gap color helper ────────────────────────────────────────────────
-
-function gapClass(gap: number | null | undefined): string {
-  if (gap == null) return 'text-[var(--color-text-muted)]'
-  if (gap > 0.5) return 'text-red-400'
-  if (gap > 0.3) return 'text-amber-400'
-  return 'text-green-400'
+function gapVariant(gap: number | null | undefined): BadgeVariant {
+  if (gap == null) return 'neutral'
+  if (gap > 0.5) return 'danger'
+  if (gap > 0.3) return 'warning'
+  return 'success'
 }
 
 function m(v: number | null | undefined, digits = 2): string {
   return v != null ? fmtNum(v, digits) : '—'
 }
 
-// ── Per-state inline metrics ────────────────────────────────────────
+// ── Per-state inline metrics ──────────────────────────────────────────────
 
 function LifecycleMetrics({ lr }: { lr: LifecycleRow }) {
   switch (lr.state) {
     case 'RESEARCH':
       return lr.research_sharpe != null ? (
-        <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+        <span className="text-[10px] text-[var(--color-text-muted)] font-mono tabular-nums">
           Research σ {m(lr.research_sharpe)}
         </span>
       ) : null
 
     case 'PAPER': {
-      const gc = gapClass(lr.gap)
       return (
-        <span className="text-[10px] font-mono">
+        <span className="text-[10px] font-mono tabular-nums flex items-center gap-1.5">
           <span className="text-[var(--color-text-muted)]">Paper σ </span>
           <span className="text-[var(--color-text)]">{m(lr.paper_sharpe)}</span>
           {lr.gap != null && (
-            <>
-              {' '}
-              <span className={`px-1 py-0.5 rounded border text-[9px] ${gc === 'text-red-400' ? 'bg-red-500/10 text-red-400 border-red-500/30' : gc === 'text-amber-400' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
-                gap {m(lr.gap)}
-              </span>
-            </>
+            <Badge variant={gapVariant(lr.gap)} size="xs">gap {m(lr.gap)}</Badge>
           )}
         </span>
       )
@@ -70,7 +59,7 @@ function LifecycleMetrics({ lr }: { lr: LifecycleRow }) {
 
     case 'LIVE':
       return lr.live_sharpe != null ? (
-        <span className="text-[10px] text-[var(--color-text-muted)] font-mono">
+        <span className="text-[10px] text-[var(--color-text-muted)] font-mono tabular-nums">
           Live σ <span className="text-[var(--color-text)]">{m(lr.live_sharpe)}</span>
           {lr.live_trades_count != null && (
             <> · {m(lr.live_trades_count, 0)} trades</>
@@ -83,7 +72,7 @@ function LifecycleMetrics({ lr }: { lr: LifecycleRow }) {
   }
 }
 
-// ── Component ───────────────────────────────────────────────────────
+// ── Component ─────────────────────────────────────────────────────────────
 
 interface Props {
   row: StrategyAdminRow
@@ -91,8 +80,7 @@ interface Props {
 }
 
 export function StrategyRow({ row, lifecycleRow }: Props) {
-  // ── Config override modal state ──────────────────────────────────
-  const [overrideOpen,    setOverrideOpen]    = useState(false)
+  const [overrideOpen, setOverrideOpen] = useState(false)
   const mutation = useChangeStrategyState()
 
   const overrideExpiringSoon = row.override?.expires_at
@@ -119,9 +107,8 @@ export function StrategyRow({ row, lifecycleRow }: Props) {
     })
   }
 
-  // ── Lifecycle modal state ────────────────────────────────────────
-  const [historyOpen,    setHistoryOpen]    = useState(false)
-  const [activeAction,   setActiveAction]   = useState<LifecycleActionType | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [activeAction, setActiveAction] = useState<LifecycleActionType | null>(null)
   const invalidateLifecycle = useInvalidateLifecycle()
 
   function handleLifecycleAction(action: LifecycleActionType) {
@@ -133,67 +120,71 @@ export function StrategyRow({ row, lifecycleRow }: Props) {
   }
 
   return (
-    <div className="border border-[var(--color-border)]/50 rounded-md px-3 py-2 flex items-start justify-between gap-3 text-sm flex-wrap">
+    <div className="border border-[var(--color-border)]/50 rounded-md px-3 py-2 flex items-start justify-between gap-3 text-sm flex-wrap hover:bg-[var(--color-surface-alt)]/20 transition-colors">
 
-      {/* ── Left: identity + enable/disable status ── */}
+      {/* Left: identity + enabled/disabled */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="font-mono min-w-[200px]">{row.strategy}</span>
-        <span className={`text-xs ${row.effective_enabled ? 'text-green-400' : 'text-zinc-500'}`}>
-          {row.effective_enabled ? '✓ ENABLED' : '— disabled'}
+
+        {/* Enabled / disabled badge */}
+        <Badge variant={row.effective_enabled ? 'success' : 'neutral'} size="xs" dot>
+          {row.effective_enabled ? 'ENABLED' : 'DISABLED'}
+        </Badge>
+
+        <span className="text-xs text-[var(--color-text-muted)] font-mono tabular-nums">
+          w={row.weight.toFixed(2)}
         </span>
-        <span className="text-xs text-[var(--color-text-muted)]">w={row.weight.toFixed(2)}</span>
+
         {row.override && (
-          <span
-            className={`px-2 py-0.5 rounded text-xs font-mono border ${
-              overrideExpiringSoon
-                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                : 'bg-zinc-700/30 text-zinc-300 border-zinc-600/30'
-            }`}
+          <Badge
+            variant={overrideExpiringSoon ? 'warning' : 'neutral'}
+            size="xs"
             title={`Reason: ${row.override.reason ?? '—'}\nBy: ${row.override.created_by}\nAt: ${row.override.created_at}\nExpires: ${row.override.expires_at ?? 'never'}`}
           >
             override
-          </span>
+          </Badge>
         )}
       </div>
 
-      {/* ── Right: metrics + badges + actions ── */}
+      {/* Right: metrics + badges + actions */}
       <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] flex-wrap">
-        {/* Existing 30d stats */}
-        <span>
+        {/* 30d stats */}
+        <span className="font-mono tabular-nums">
           {row.trades_30d} trades · {fmtSignedCcy(row.pnl_30d)} 30d
         </span>
 
-        {/* Old lifecycle field (ACTIVE/WATCH/RETIRED/UNKNOWN) — keep for backward compat */}
-        <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-700/30 text-zinc-300 border border-zinc-600/30">
-          {row.lifecycle}
-        </span>
+        {/* Legacy lifecycle field */}
+        <Badge variant="neutral" size="xs">{row.lifecycle}</Badge>
 
-        {/* NEW: Lifecycle state badge — clickable → history modal */}
+        {/* New lifecycle state badge — clickable → history modal */}
         {lifecycleRow && (
           <>
             <button
               onClick={() => setHistoryOpen(true)}
               title="Click to see lifecycle history"
-              className={`px-1.5 py-0.5 rounded text-[10px] font-mono border cursor-pointer hover:opacity-80 transition-opacity ${LC_BADGE_CLASS[lifecycleRow.state] ?? ''}`}
+              className="focus:outline-none focus:ring-2 focus:ring-[var(--color-border)] rounded-full"
               data-testid="lifecycle-state-badge"
             >
-              {LC_BADGE_ICON[lifecycleRow.state]} {lifecycleRow.state}
+              <Badge variant={lcVariant(lifecycleRow.state)} size="xs" dot>
+                {lifecycleRow.state}
+              </Badge>
             </button>
-            {/* Per-state metrics inline */}
             <LifecycleMetrics lr={lifecycleRow} />
           </>
         )}
 
-        {/* Existing action buttons */}
+        {/* Action buttons */}
         {row.override && <RevertButton overrideId={row.override.id} />}
+
         <button
           onClick={() => setOverrideOpen(true)}
-          className="px-2 py-0.5 rounded bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] text-xs"
+          className="h-8 px-2.5 rounded-md bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)]
+                     border border-[var(--color-border)] text-xs text-[var(--color-text-muted)]
+                     hover:text-[var(--color-text)] transition-colors"
         >
           Toggle
         </button>
 
-        {/* NEW: Lifecycle action buttons */}
         {lifecycleRow && (
           <LifecycleActions
             row={lifecycleRow}

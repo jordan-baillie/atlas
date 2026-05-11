@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { RegimeTransitions } from '../../api/types'
 import { getRegimeColor } from '../../lib/colors'
+import { Badge } from '../shared/Badge'
 
 interface Props { transitions: RegimeTransitions }
 
@@ -25,6 +26,7 @@ function RegimeMatrixInner({ transitions }: Props) {
       <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
         REGIME TRANSITION MATRIX
       </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-[520px] w-full text-xs font-mono border-separate border-spacing-0">
           <thead>
@@ -56,10 +58,15 @@ function RegimeMatrixInner({ transitions }: Props) {
                     }`}
                     style={{ color: isCurrent ? getRegimeColor(from) : 'var(--color-text-muted)' }}
                   >
-                    {isCurrent && (
-                      <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5" style={{ backgroundColor: getRegimeColor(from) }} />
-                    )}
-                    {from}
+                    <span className="flex items-center gap-1.5">
+                      {isCurrent && (
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getRegimeColor(from) }}
+                        />
+                      )}
+                      {from}
+                    </span>
                   </td>
                   {states.map((to, ci) => {
                     const p = matrix[from]?.[to] ?? 0
@@ -99,23 +106,27 @@ function RegimeMatrixInner({ transitions }: Props) {
               style={isCurrent ? { borderLeftColor: color, borderLeftWidth: 3 } : undefined}
             >
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span
+                  className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                />
                 <span className="text-xs font-mono font-semibold">{s}</span>
                 {isCurrent && (
-                  <span className="rounded-full px-1.5 py-0 text-[9px] font-mono bg-[var(--color-accent)]/20 text-[var(--color-accent)]">
-                    CURRENT
-                  </span>
+                  <Badge variant="accent" size="xs">CURRENT</Badge>
                 )}
               </div>
               <div className="text-[10px] text-[var(--color-text-muted)] space-y-0.5 font-mono tabular-nums">
                 <div className="flex justify-between">
-                  <span>avg</span><span>{d?.avg_days?.toFixed(1) ?? '\u2014'}d</span>
+                  <span>avg</span>
+                  <span>{d?.avg_days?.toFixed(1) ?? '\u2014'}d</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>max</span><span>{d?.max_days ?? '\u2014'}d</span>
+                  <span>max</span>
+                  <span>{d?.max_days ?? '\u2014'}d</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>total</span><span>{d?.total_days ?? '\u2014'}d</span>
+                  <span>total</span>
+                  <span>{d?.total_days ?? '\u2014'}d</span>
                 </div>
               </div>
             </div>

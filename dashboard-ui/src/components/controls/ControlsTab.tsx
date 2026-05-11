@@ -2,22 +2,42 @@ import { useState } from 'react'
 import { useAdminUniverses, useAdminStrategies } from '../../api/admin-queries'
 import { useLifecycle } from '../../api/lifecycle'
 import { SectionBoundary } from '../layout/SectionBoundary'
+import { Skeleton } from '../layout/Skeleton'
 import { UniverseRow } from './UniverseRow'
 import { StrategyRow } from './StrategyRow'
 import { RecentChangesPanel } from './RecentChangesPanel'
 import type { StrategyAdminRow } from '../../api/admin-types'
 import type { LifecycleRow } from '../../api/lifecycle'
 
+// ── Section header utility ────────────────────────────────────────────────
+
+function SectionHeader({ children }: { children: string }) {
+  return (
+    <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold mb-3">
+      {children}
+    </div>
+  )
+}
+
+// ── Universes section ─────────────────────────────────────────────────────
+
 function UniversesSection() {
   const { data, isLoading, error } = useAdminUniverses(true)
+
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-      <h3 className="text-sm font-semibold mb-3">Universes</h3>
+      <SectionHeader>Universes</SectionHeader>
       {isLoading && (
-        <div className="text-xs text-[var(--color-text-muted)]">Loading…</div>
+        <div className="space-y-2">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+        </div>
       )}
       {error && (
-        <div className="text-xs text-red-400">Failed: {(error as Error).message}</div>
+        <div className="text-xs text-[var(--color-red)]">
+          Failed: {(error as Error).message}
+        </div>
       )}
       <div className="space-y-2">
         {data?.universes.map((u) => (
@@ -28,24 +48,23 @@ function UniversesSection() {
   )
 }
 
+// ── Strategies section ────────────────────────────────────────────────────
+
 function StrategiesSection() {
   const { data, isLoading, error } = useAdminStrategies(true)
-
-  // Fetch lifecycle data in parallel — lifecycle rows are optional (degrade gracefully)
   const { data: lcData } = useLifecycle(true)
-
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 text-xs text-[var(--color-text-muted)]">
-        Loading strategies…
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4">
+        <Skeleton.Text lines={4} />
       </div>
     )
   }
   if (error) {
     return (
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 text-xs text-red-400">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 text-xs text-[var(--color-red)]">
         Failed: {(error as Error).message}
       </div>
     )
@@ -65,12 +84,11 @@ function StrategiesSection() {
   }
   const universeKeys = Object.keys(byUniverse).sort()
 
-  // Default-expand the first universe
   const isExpanded = (k: string) => expanded[k] ?? k === universeKeys[0]
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-      <h3 className="text-sm font-semibold mb-3">Strategies (grouped by universe)</h3>
+      <SectionHeader>Strategies (grouped by universe)</SectionHeader>
       <div className="space-y-3">
         {universeKeys.map((u) => {
           const rows = byUniverse[u]
@@ -79,7 +97,7 @@ function StrategiesSection() {
             <div key={u}>
               <button
                 onClick={() => setExpanded({ ...expanded, [u]: !open })}
-                className="w-full text-left text-xs font-mono font-semibold flex items-center gap-2 py-1 text-[var(--color-text)]"
+                className="w-full text-left text-xs font-mono font-semibold flex items-center gap-2 py-1 text-[var(--color-text)] hover:text-[var(--color-text-muted)] transition-colors"
               >
                 <span>{open ? '▼' : '▶'}</span>
                 <span>{u}</span>
@@ -105,6 +123,8 @@ function StrategiesSection() {
     </div>
   )
 }
+
+// ── Main export ───────────────────────────────────────────────────────────
 
 export function ControlsTab() {
   return (

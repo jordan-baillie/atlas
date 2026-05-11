@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { RegimeHistoryDay } from '../../api/types'
 import { getRegimeColor, CANONICAL_REGIME_NAMES } from '../../lib/colors'
+import { Badge } from '../shared/Badge'
 
 interface Props { history: RegimeHistoryDay[] }
 
@@ -31,20 +32,26 @@ function buildSegments(days: RegimeHistoryDay[]): Segment[] {
 
 function RegimeTimelineInner({ history }: Props) {
   const last90 = history.slice(-90)
-  const states = Array.from(new Set(last90.map((d) => d.state).filter((s): s is string => s != null)))
+  const states = Array.from(
+    new Set(last90.map((d) => d.state).filter((s): s is string => s != null)),
+  )
   const segments = buildSegments(last90)
   const totalDays = last90.length
   const currentState = last90.length > 0 ? last90[last90.length - 1].state : undefined
 
   return (
     <div data-testid="regime-timeline">
+      {/* Header row */}
       <div className="flex items-center justify-between mb-3">
         <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold">
           90-DAY REGIME HISTORY
         </div>
         {currentState && (
           <div className="flex items-center gap-1.5">
-            <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: getRegimeColor(currentState) }} />
+            <span
+              className="inline-block w-2 h-2 rounded-full"
+              style={{ backgroundColor: getRegimeColor(currentState) }}
+            />
             <span className="text-xs font-mono" style={{ color: getRegimeColor(currentState) }}>
               {currentState}
             </span>
@@ -52,6 +59,7 @@ function RegimeTimelineInner({ history }: Props) {
         )}
       </div>
 
+      {/* Timeline bar */}
       <div className="flex h-8 rounded-lg overflow-hidden gap-px bg-[var(--color-border)]/30">
         {segments.map((seg, i) => {
           const widthPct = (seg.count / totalDays) * 100
@@ -64,7 +72,12 @@ function RegimeTimelineInner({ history }: Props) {
               style={{
                 width: `${widthPct}%`,
                 backgroundColor: getRegimeColor(seg.state),
-                borderRadius: i === 0 ? '0.5rem 0 0 0.5rem' : i === segments.length - 1 ? '0 0.5rem 0.5rem 0' : '0',
+                borderRadius:
+                  i === 0
+                    ? '0.5rem 0 0 0.5rem'
+                    : i === segments.length - 1
+                    ? '0 0.5rem 0.5rem 0'
+                    : '0',
               }}
               title={`${seg.state}: ${startDate} — ${endDate} (${seg.count}d)`}
             >
@@ -78,31 +91,39 @@ function RegimeTimelineInner({ history }: Props) {
         })}
       </div>
 
-      <div className="flex justify-between mt-1.5 text-[10px] text-[var(--color-text-muted)] font-mono">
+      {/* Date range labels */}
+      <div className="flex justify-between mt-1.5 text-[10px] text-[var(--color-text-muted)] font-mono tabular-nums">
         <span>{last90[0]?.date ?? ''}</span>
         <span>{last90[last90.length - 1]?.date ?? ''}</span>
       </div>
 
-      <div className="flex flex-wrap gap-3 mt-3">
+      {/* Legend pills — Badge with custom-color icon dot */}
+      <div className="flex flex-wrap gap-2 mt-3">
         {CANONICAL_REGIME_NAMES.map((s) => {
           const isCurrent = s === currentState
           const seen = states.includes(s)
           if (!seen && !isCurrent) return null
+          const color = getRegimeColor(s)
           return (
-            <div
+            <Badge
               key={s}
-              className={`flex items-center gap-2 text-xs font-mono px-2 py-1 rounded-md transition-colors ${
-                isCurrent ? 'bg-[var(--color-surface-alt)] ring-1 ring-[var(--color-border)]' : ''
-              }`}
+              variant="neutral"
+              size="xs"
+              icon={
+                <span
+                  className="inline-block rounded-full flex-shrink-0"
+                  style={{ width: 6, height: 6, backgroundColor: color }}
+                  aria-hidden="true"
+                />
+              }
+              className={
+                isCurrent
+                  ? 'ring-1 ring-[var(--color-border)] font-semibold !text-[var(--color-text)]'
+                  : ''
+              }
             >
-              <span
-                className="inline-block rounded-full"
-                style={{ width: 8, height: 8, backgroundColor: getRegimeColor(s) }}
-              />
-              <span className={isCurrent ? 'text-[var(--color-text)] font-semibold' : 'text-[var(--color-text-muted)]'}>
-                {s}
-              </span>
-            </div>
+              {s}
+            </Badge>
           )
         })}
       </div>

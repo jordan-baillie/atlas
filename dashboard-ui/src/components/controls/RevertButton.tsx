@@ -4,9 +4,13 @@ import { ApiError } from '../../api/client'
 
 interface Props {
   overrideId: number
-  label?: string  // default "Revert"
+  label?: string   // default "Revert"
   onSuccess?: () => void
 }
+
+// Shared button base for consistent height (32px)
+const BTN_BASE =
+  'h-8 px-2.5 rounded-md text-xs border transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 
 export function RevertButton({ overrideId, label = 'Revert', onSuccess }: Props) {
   const [confirming, setConfirming] = useState(false)
@@ -33,18 +37,18 @@ export function RevertButton({ overrideId, label = 'Revert', onSuccess }: Props)
         <button
           onClick={() => void doRevert()}
           disabled={mutation.isPending}
-          className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 disabled:opacity-50 text-xs"
+          className={`${BTN_BASE} bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20`}
         >
           {mutation.isPending ? '…' : `Confirm ${label.toLowerCase()}?`}
         </button>
         <button
           onClick={() => setConfirming(false)}
           disabled={mutation.isPending}
-          className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
         >
           cancel
         </button>
-        {error && <span className="text-xs text-red-400">{error}</span>}
+        {error && <span className="text-xs text-[var(--color-red)]">{error}</span>}
       </span>
     )
   }
@@ -52,7 +56,7 @@ export function RevertButton({ overrideId, label = 'Revert', onSuccess }: Props)
   return (
     <button
       onClick={() => setConfirming(true)}
-      className="px-2 py-0.5 rounded bg-zinc-500/10 text-zinc-300 border border-zinc-500/30 hover:bg-zinc-500/20 text-xs"
+      className={`${BTN_BASE} bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]`}
     >
       ↺ {label}
     </button>

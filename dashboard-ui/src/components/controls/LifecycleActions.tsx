@@ -2,6 +2,11 @@
  * LifecycleActions — pure presentational component.
  * Renders 1–2 action buttons based on the current lifecycle state.
  * Calls onAction with the action type; parent owns modal state.
+ *
+ * Button palette:
+ *   ACCENT  — primary promotions (promote_paper, promote_live, revive)
+ *   WARN    — soft rollbacks (rollback, rollback_paper)
+ *   DANGER  — destructive (retire)
  */
 
 import type { LifecycleRow, LifecycleActionType } from '../../api/lifecycle'
@@ -12,15 +17,30 @@ interface Props {
   disabled?: boolean
 }
 
-const BASE =
-  'px-2 py-0.5 rounded text-xs bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] ' +
-  'border border-[var(--color-border)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+// ── Button class variants ─────────────────────────────────────────────────
 
-const DANGER =
-  BASE + ' text-red-400 hover:text-red-300'
+/** Primary / promotion — accent border + tint */
+const ACCENT =
+  'h-8 px-2.5 rounded-md text-xs font-medium border ' +
+  'border-[var(--color-accent)] text-[var(--color-accent)] ' +
+  'bg-[var(--color-accent)]/5 hover:bg-[var(--color-accent)]/15 ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
 
+/** Soft rollback — amber border + tint */
 const WARN =
-  BASE + ' text-amber-400 hover:text-amber-300'
+  'h-8 px-2.5 rounded-md text-xs font-medium border ' +
+  'border-amber-500/50 text-amber-400 ' +
+  'bg-amber-500/5 hover:bg-amber-500/15 ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+
+/** Destructive — danger border + tint */
+const DANGER =
+  'h-8 px-2.5 rounded-md text-xs font-medium border ' +
+  'border-red-500/50 text-red-400 ' +
+  'bg-red-500/5 hover:bg-red-500/15 ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+
+// ── Component ─────────────────────────────────────────────────────────────
 
 export function LifecycleActions({ row, onAction, disabled = false }: Props) {
   switch (row.state) {
@@ -29,7 +49,7 @@ export function LifecycleActions({ row, onAction, disabled = false }: Props) {
         <button
           disabled={disabled}
           onClick={() => onAction('promote_paper')}
-          className={BASE}
+          className={ACCENT}
           data-testid="action-promote-paper"
         >
           Promote to PAPER ↑
@@ -42,7 +62,7 @@ export function LifecycleActions({ row, onAction, disabled = false }: Props) {
           <button
             disabled={disabled}
             onClick={() => onAction('promote_live')}
-            className={BASE}
+            className={ACCENT}
             data-testid="action-promote-live"
           >
             Promote to LIVE ↑
@@ -85,7 +105,7 @@ export function LifecycleActions({ row, onAction, disabled = false }: Props) {
         <button
           disabled={disabled}
           onClick={() => onAction('revive')}
-          className={BASE}
+          className={ACCENT}
           data-testid="action-revive"
         >
           ↑ Revive
