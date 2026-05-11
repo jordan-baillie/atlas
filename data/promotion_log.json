@@ -102,5 +102,31 @@
     "from_state": "PAPER",
     "to_state": "LIVE",
     "auto_promotion_id": "bfcdaa0a-240e-418a-baf2-20b41024ef4e"
+  },
+  {
+    "ts": "2026-05-11T01:39:16.249169+00:00",
+    "strategy": "clean_strategy",
+    "universe": "sp500",
+    "paper_sharpe": 0.61978,
+    "research_sharpe": 0.65,
+    "gap": 0.046493,
+    "paper_trades": 35,
+    "days_in_paper": 35.0,
+    "from_state": "PAPER",
+    "to_state": "LIVE",
+    "auto_promotion_id": "e468a9ed-4df4-48d7-9e5b-aa3cffaccaec"
+  },
+  {
+    "ts": "2026-05-11T02:53:20.554278+00:00",
+    "strategy": "clean_strategy",
+    "universe": "sp500",
+    "paper_sharpe": 0.61978,
+    "research_sharpe": 0.65,
+    "gap": 0.046493,
+    "paper_trades": 35,
+    "days_in_paper": 35.0,
+    "from_state": "PAPER",
+    "to_state": "LIVE",
+    "auto_promotion_id": "fa270989-2111-4530-a4aa-e88ae2b388e5"
   }
 ]
