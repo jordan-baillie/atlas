@@ -1,0 +1,52 @@
+{
+  "market_id": "sector_etfs",
+  "trade_date": "2026-05-05",
+  "plan_status": "HALTED",
+  "halt_reason": "daily_drawdown 49.78% on sector_etfs",
+  "n_entries": 0,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 0.0,
+  "total_position_value": 0.0,
+  "leverage_pct": 0.0,
+  "summary_lines": [],
+  "rejection_reason": null,
+  "halt_diagnostics": {
+    "hwm": 5189.01,
+    "hwm_date": "2026-05-05",
+    "current_eq_estimate": 3191.73,
+    "dd_pct": 49.78,
+    "dd_limit_pct": 2.0,
+    "snap_allocated_equity": 2637.57,
+    "snap_position_mv": 2013.94,
+    "snap_cash_attributed": 592.2,
+    "snap_broker_equity": 5250.44,
+    "snap_date": "2026-05-05"
+  },
+  "trading_mode": "passive",
+  "open_positions_full": [
+    {
+      "ticker": "XLE",
+      "shares": 8,
+      "entry_price": 59.06,
+      "current_price": 59.39,
+      "unrealized_pnl": 2.64,
+      "unrealized_pnl_pct": 0.0,
+      "stop_price": null,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "XLI",
+      "shares": 9,
+      "entry_price": 173.97,
+      "current_price": 170.98,
+      "unrealized_pnl": -26.91,
+      "unrealized_pnl_pct": 0.0,
+      "stop_price": null,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    }
+  ],
+  "written_at": "2026-05-05T10:06:23.307315+00:00"
+}

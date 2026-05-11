@@ -1902,5 +1902,2016 @@
     "status": "approved",
     "approved_at": "2026-04-27T14:34:30.218312+00:00",
     "version": "v1.2"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "sector_etfs",
+    "candidate_config": {
+      "version": "v1.0.2",
+      "project": "Atlas",
+      "market": "sector_etfs",
+      "description": "Sector ETFs v1.0 \u2014 SPDR sector rotation, passive (Sharpe 0.14, needs research loop tuning before live)",
+      "universe": {
+        "method": "static",
+        "benchmark_ticker": "SPY"
+      },
+      "risk": {
+        "starting_equity": 3216,
+        "leverage": 1.0,
+        "max_risk_per_trade_pct": 0.005,
+        "max_open_positions": 5,
+        "max_sector_concentration": 2,
+        "max_daily_drawdown_pct": 0.02,
+        "require_stop_loss": true,
+        "require_planned_exit": true,
+        "min_confidence": 0.65,
+        "trailing_stop": {
+          "enabled": false,
+          "activation_pct": 0.02,
+          "atr_multiplier": 2.0
+        },
+        "max_position_pct_equity": 0.2,
+        "_max_position_cap_note": "2026-04-28 audit: cap added after Apr 24 XLI 28.8% / XLK 23.8% / XLY 22.1% concentration",
+        "max_gross_exposure_pct": 1.75,
+        "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+        "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
+      },
+      "trading": {
+        "mode": "live",
+        "broker": "alpaca",
+        "live_enabled": true,
+        "holding_period_min": 2,
+        "holding_period_max": 20,
+        "data_frequency": "daily",
+        "order_type": "market_on_open",
+        "auto_approve": true,
+        "live_safety": {
+          "require_double_approval": false,
+          "max_order_value": 5000,
+          "max_daily_orders": 3,
+          "dry_run_first": false,
+          "max_daily_loss_pct": 0.02
+        }
+      },
+      "alpaca": {
+        "paper": false,
+        "data_feed": "iex",
+        "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
+      },
+      "fees": {
+        "commission_per_trade": 0,
+        "commission_pct": 0,
+        "slippage_pct": 0.0005,
+        "flat_fee_threshold": 0,
+        "min_position_value": 100.0,
+        "_broker": "alpaca",
+        "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+        "slippage_model": "volume_aware",
+        "slippage_impact_exponent": 0.5
+      },
+      "strategies": {
+        "sector_rotation": {
+          "enabled": false,
+          "weight": 0,
+          "atr_stop_mult": 2.0,
+          "trailing_stop_atr_mult": 3.0,
+          "profit_target_atr_mult": 3.5
+        },
+        "mean_reversion": {
+          "enabled": true,
+          "weight": 0.4,
+          "rsi_period": 14,
+          "rsi_oversold": 52,
+          "zscore_lookback": 34,
+          "zscore_entry": -1.62,
+          "atr_period": 20,
+          "atr_stop_mult": 1.35,
+          "profit_target_atr_mult": 2.5,
+          "max_hold_days": 20,
+          "sma200_filter": false,
+          "ibs_max": 0.7,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5,
+            "surge_threshold": 1.5,
+            "surge_boost": 0.0,
+            "dry_penalty": 0.0
+          },
+          "earnings_blackout": {
+            "enabled": true,
+            "days_before": 5,
+            "days_after": 1
+          },
+          "breadth": {
+            "enabled": true,
+            "metric": "pct_above_50ma",
+            "low_threshold": 48.0,
+            "high_threshold": 58.0,
+            "low_boost": 0.015,
+            "high_penalty": 0.015
+          },
+          "relative_strength": {
+            "enabled": false
+          },
+          "cointegration_filter": {
+            "enabled": false
+          }
+        },
+        "momentum_breakout": {
+          "enabled": true,
+          "weight": 0.6,
+          "atr_stop_mult": 1.5,
+          "max_hold_days": 15,
+          "lookback_days": 15,
+          "atr_period": 20,
+          "trend_ma_period": 20,
+          "profit_target_atr_mult": 6.0
+        },
+        "connors_rsi2": {
+          "enabled": false,
+          "weight": 0,
+          "rsi_period": 3,
+          "rsi_entry": 40,
+          "sma_trend_period": 150,
+          "sma200_filter": false,
+          "min_consecutive_down": 1,
+          "ibs_max": 0.5,
+          "ibs_filter_enabled": false,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5
+          },
+          "sma_exit_period": 5,
+          "rsi_exit": 65,
+          "exit_mode": "sma",
+          "max_hold_days": 5,
+          "atr_period": 14,
+          "atr_stop_mult": 1.0
+        },
+        "trend_following": {
+          "enabled": false,
+          "weight": 0
+        },
+        "opening_gap": {
+          "enabled": false,
+          "weight": 0
+        },
+        "short_term_mr": {
+          "enabled": false,
+          "weight": 0
+        },
+        "bb_squeeze": {
+          "enabled": false,
+          "weight": 0
+        },
+        "mtf_momentum": {
+          "enabled": false,
+          "weight": 0
+        },
+        "dividend_capture": {
+          "enabled": false,
+          "weight": 0
+        }
+      },
+      "backtest": {
+        "train_window_days": 252,
+        "test_window_days": 63,
+        "step_days": 21,
+        "min_history_days": 60,
+        "volume_participation_limit": 0.01
+      },
+      "data": {
+        "source": "yfinance",
+        "source_priority": [
+          "alpaca",
+          "yfinance"
+        ],
+        "fallback_enabled": true,
+        "history_years": 7,
+        "cache_dir": "data/cache",
+        "raw_dir": "data/raw",
+        "processed_dir": "data/processed"
+      },
+      "regime_enabled": false,
+      "regime_gate": {
+        "enabled": false
+      },
+      "volatility_gate": {
+        "enabled": false
+      },
+      "overlay": {
+        "enabled": false,
+        "shadow_mode": true
+      },
+      "macro_regime": {
+        "enabled": false
+      },
+      "intraday": {
+        "enabled": false
+      },
+      "annealing": {
+        "max_changes_per_cycle": 2,
+        "min_oos_sharpe_improvement": 0.05,
+        "max_drawdown_increase_pct": 0.01,
+        "changelog_file": "journal/changelog.json"
+      },
+      "dynamic_sizing": {
+        "enabled": true,
+        "base_risk_pct": 0.005,
+        "min_risk_pct": 0.003,
+        "max_risk_pct": 0.0075,
+        "confidence_scaling": {
+          "enabled": false
+        },
+        "volatility_scaling": {
+          "enabled": true
+        },
+        "equity_curve_scaling": {
+          "enabled": true,
+          "graduated_tiers": [
+            {
+              "threshold": 0.04,
+              "scale": 0.75
+            },
+            {
+              "threshold": 0.07,
+              "scale": 0.5
+            },
+            {
+              "threshold": 0.1,
+              "scale": 0.25
+            }
+          ]
+        }
+      },
+      "vol_scaling": {
+        "enabled": true,
+        "lookback": 60,
+        "half_life": 20,
+        "target_vol": 0.12,
+        "conditional": true,
+        "percentile_threshold": 80
+      },
+      "event_calendar": {
+        "enabled": false
+      },
+      "portfolio_optimizer": {
+        "method": "mean_variance",
+        "min_weight": 0.05,
+        "max_weight": 0.4,
+        "cluster_threshold": 0.7
+      },
+      "_audit_2026_05_01_disable_sector_rotation": {
+        "updated_at": "2026-05-01T00:00:00+00:00",
+        "rationale": "Validated-strategies audit. Disabled sector_rotation (0 trades in fresh backtest, structural mismatch with single-ETF-per-sector universe \u2014 min_sector_stocks=3 vs 1 ticker per sector). Open positions check: XLI under momentum_breakout (kept). 0 open positions on sector_rotation.",
+        "disabled": [
+          {
+            "strategy": "sector_rotation",
+            "old_weight": 0.4,
+            "new_weight": 0,
+            "reason": "Strategy fundamentally requires multi-stock sectors; sector_etfs has 1 ETF per sector. 0 trades across full backtest history."
+          }
+        ],
+        "renormalized": [
+          {
+            "strategy": "momentum_breakout",
+            "old_weight": 0.3,
+            "new_weight": 0.6
+          },
+          {
+            "strategy": "mean_reversion",
+            "old_weight": 0.3,
+            "new_weight": 0.4
+          }
+        ],
+        "follow_up": "research_best for sector_etfs/mean_reversion and sector_etfs/momentum_breakout are stale (2026-04-21, P1.1 contamination era). Re-run sweeps after fixing the snapshot-required bug in research/loop.py:556 and DEFAULT_STRATEGIES in research/autoresearch_nightly.py."
+      },
+      "_sweep_metadata": {
+        "promoted_at": "2026-05-04T15:15:11.959709+00:00",
+        "strategy": "mean_reversion",
+        "initial_sharpe": 0.2788,
+        "final_sharpe": 0.2973,
+        "delta_sharpe": 0.0185,
+        "sweep_improvements": [
+          "autoresearch_runner sweep: Sharpe 0.2788 -> 0.4545"
+        ]
+      }
+    },
+    "metadata": {
+      "strategy": "mean_reversion",
+      "initial_sharpe": 0.2788,
+      "final_sharpe": 0.2973,
+      "delta_sharpe": 0.0185,
+      "improvements": [
+        "autoresearch_runner sweep: Sharpe 0.2788 -> 0.4545"
+      ],
+      "baseline_metrics": {
+        "total_trades": 121,
+        "cagr_pct": 3.0947,
+        "cagr_full_period_pct": 2.6174,
+        "sharpe": -0.2692,
+        "sortino": -0.3688,
+        "max_drawdown_pct": 10.7052,
+        "win_rate_pct": 41.32,
+        "profit_factor": 1.393,
+        "total_pnl": 641.94,
+        "avg_trade": 5.31,
+        "final_equity": 3853.09,
+        "expectancy_r": 0.3436,
+        "avg_r": 0.3436,
+        "r_count": 121,
+        "edge_p_value": 0.100282,
+        "edge_significant": false,
+        "var_95_pct": 0.649,
+        "cvar_95_pct": 0.908,
+        "calmar": 0.2891,
+        "mc_p95_drawdown_pct": 11.61,
+        "mc_fragile": false,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 74,
+            "total_pnl": 276.62,
+            "win_rate_pct": 31.1
+          },
+          "mean_reversion": {
+            "trades": 47,
+            "total_pnl": 365.32,
+            "win_rate_pct": 57.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 10,
+            "win_rate_pct": 60.0,
+            "avg_trade": 5.97,
+            "total_pnl": 59.69,
+            "profit_factor": 1.7139,
+            "sharpe_approx": 0.2408,
+            "avg_r": 0.4543
+          },
+          "bull": {
+            "trades": 30,
+            "win_rate_pct": 26.7,
+            "avg_trade": 0.52,
+            "total_pnl": 15.68,
+            "profit_factor": 1.0334,
+            "sharpe_approx": 0.0127,
+            "avg_r": 0.0463
+          },
+          "neutral": {
+            "trades": 81,
+            "win_rate_pct": 44.4,
+            "avg_trade": 6.99,
+            "total_pnl": 566.57,
+            "profit_factor": 1.5244,
+            "sharpe_approx": 0.1709,
+            "avg_r": 0.44
+          }
+        }
+      },
+      "candidate_metrics": {
+        "total_trades": 146,
+        "cagr_pct": 10.6063,
+        "cagr_full_period_pct": 8.9217,
+        "sharpe": 0.3916,
+        "sortino": 1.2367,
+        "max_drawdown_pct": 7.8768,
+        "win_rate_pct": 46.58,
+        "profit_factor": 2.4,
+        "total_pnl": 2645.56,
+        "avg_trade": 18.12,
+        "final_equity": 5847.09,
+        "expectancy_r": 0.923,
+        "avg_r": 0.923,
+        "r_count": 146,
+        "edge_p_value": 0.019894,
+        "edge_significant": true,
+        "var_95_pct": 0.66,
+        "cvar_95_pct": 1.026,
+        "calmar": 1.3465,
+        "mc_p95_drawdown_pct": 9.33,
+        "mc_fragile": false,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 69,
+            "total_pnl": 1890.87,
+            "win_rate_pct": 33.3
+          },
+          "mean_reversion": {
+            "trades": 77,
+            "total_pnl": 754.69,
+            "win_rate_pct": 58.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 11,
+            "win_rate_pct": 63.6,
+            "avg_trade": 46.03,
+            "total_pnl": 506.29,
+            "profit_factor": 4.1087,
+            "sharpe_approx": 0.3018,
+            "avg_r": 3.0817
+          },
+          "bull": {
+            "trades": 35,
+            "win_rate_pct": 37.1,
+            "avg_trade": 33.27,
+            "total_pnl": 1164.48,
+            "profit_factor": 3.2459,
+            "sharpe_approx": 0.1803,
+            "avg_r": 1.2599
+          },
+          "neutral": {
+            "trades": 100,
+            "win_rate_pct": 48.0,
+            "avg_trade": 9.75,
+            "total_pnl": 974.79,
+            "profit_factor": 1.8067,
+            "sharpe_approx": 0.2453,
+            "avg_r": 0.5676
+          }
+        }
+      },
+      "comparisons": {
+        "sharpe": {
+          "baseline": -0.2692,
+          "candidate": 0.3916,
+          "delta": 0.6608,
+          "pct_change": 245.47
+        },
+        "cagr_pct": {
+          "baseline": 3.0947,
+          "candidate": 10.6063,
+          "delta": 7.5116,
+          "pct_change": 242.72
+        },
+        "sortino": {
+          "baseline": -0.3688,
+          "candidate": 1.2367,
+          "delta": 1.6055,
+          "pct_change": 435.33
+        },
+        "profit_factor": {
+          "baseline": 1.393,
+          "candidate": 2.4,
+          "delta": 1.007,
+          "pct_change": 72.29
+        },
+        "win_rate_pct": {
+          "baseline": 41.32,
+          "candidate": 46.58,
+          "delta": 5.26,
+          "pct_change": 12.73
+        },
+        "max_drawdown_pct": {
+          "baseline": 10.7052,
+          "candidate": 7.8768,
+          "delta": -2.8284
+        },
+        "total_trades": {
+          "baseline": 121,
+          "candidate": 146,
+          "delta": 25,
+          "pct_change": 20.66
+        }
+      },
+      "oos_result": {
+        "pass": true,
+        "reason": "OOS validation passed",
+        "sharpe_oos": 1.331,
+        "profit_factor_oos": 7.1268,
+        "cagr_degradation_pct": -1863.3,
+        "perturbation_pass_rate": 1.0,
+        "cached_at": "2026-05-04T15:16:51.451680+00:00"
+      },
+      "dsr": {
+        "dsr_expected_max_sharpe": 5.8226,
+        "dsr_num_experiments": 24269,
+        "dsr_significant": "False"
+      }
+    },
+    "delta_sharpe": 0.0185,
+    "final_sharpe": 0.2973,
+    "timestamp": "2026-05-04T15:16:51.481888+00:00",
+    "pending_id": "9b268a4fcb5e",
+    "status": "rejected",
+    "rejected_at": "2026-05-05T06:17:01.021536+00:00",
+    "reject_reason": "Rejected via dashboard"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "sector_etfs",
+    "candidate_config": {
+      "version": "v1.0.3-consolidation-passive",
+      "project": "Atlas",
+      "market": "sector_etfs",
+      "description": "Sector ETFs \u2014 PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (XLE, XLI) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
+      "universe": {
+        "method": "static",
+        "benchmark_ticker": "SPY"
+      },
+      "risk": {
+        "starting_equity": 3216,
+        "leverage": 1.0,
+        "max_risk_per_trade_pct": 0.005,
+        "max_open_positions": 5,
+        "max_sector_concentration": 2,
+        "max_daily_drawdown_pct": 0.02,
+        "require_stop_loss": true,
+        "require_planned_exit": true,
+        "min_confidence": 0.65,
+        "trailing_stop": {
+          "enabled": false,
+          "activation_pct": 0.02,
+          "atr_multiplier": 2.0
+        },
+        "max_position_pct_equity": 0.2,
+        "_max_position_cap_note": "2026-04-28 audit: cap added after Apr 24 XLI 28.8% / XLK 23.8% / XLY 22.1% concentration",
+        "max_gross_exposure_pct": 1.75,
+        "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+        "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
+      },
+      "trading": {
+        "mode": "passive",
+        "broker": "alpaca",
+        "live_enabled": true,
+        "holding_period_min": 2,
+        "holding_period_max": 20,
+        "data_frequency": "daily",
+        "order_type": "market_on_open",
+        "auto_approve": false,
+        "live_safety": {
+          "require_double_approval": false,
+          "max_order_value": 5000,
+          "max_daily_orders": 3,
+          "dry_run_first": false,
+          "max_daily_loss_pct": 0.02
+        }
+      },
+      "alpaca": {
+        "paper": false,
+        "data_feed": "iex",
+        "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
+      },
+      "fees": {
+        "commission_per_trade": 0,
+        "commission_pct": 0,
+        "slippage_pct": 0.0005,
+        "flat_fee_threshold": 0,
+        "min_position_value": 100.0,
+        "_broker": "alpaca",
+        "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+        "slippage_model": "volume_aware",
+        "slippage_impact_exponent": 0.5
+      },
+      "strategies": {
+        "sector_rotation": {
+          "enabled": false,
+          "weight": 0,
+          "atr_stop_mult": 2.0,
+          "trailing_stop_atr_mult": 3.0,
+          "profit_target_atr_mult": 3.5
+        },
+        "mean_reversion": {
+          "enabled": true,
+          "weight": 0.4,
+          "rsi_period": 14,
+          "rsi_oversold": 52,
+          "zscore_lookback": 34,
+          "zscore_entry": -1.22,
+          "atr_period": 30,
+          "atr_stop_mult": 1.35,
+          "profit_target_atr_mult": 2.5,
+          "max_hold_days": 20,
+          "sma200_filter": false,
+          "ibs_max": 0.7,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5,
+            "surge_threshold": 1.5,
+            "surge_boost": 0.0,
+            "dry_penalty": 0.0
+          },
+          "earnings_blackout": {
+            "enabled": true,
+            "days_before": 5,
+            "days_after": 1
+          },
+          "breadth": {
+            "enabled": true,
+            "metric": "pct_above_50ma",
+            "low_threshold": 48.0,
+            "high_threshold": 58.0,
+            "low_boost": 0.015,
+            "high_penalty": 0.015
+          },
+          "relative_strength": {
+            "enabled": false
+          },
+          "cointegration_filter": {
+            "enabled": false
+          }
+        },
+        "momentum_breakout": {
+          "enabled": true,
+          "weight": 0.6,
+          "atr_stop_mult": 1.5,
+          "max_hold_days": 15,
+          "lookback_days": 15,
+          "atr_period": 20,
+          "trend_ma_period": 20,
+          "profit_target_atr_mult": 6.0
+        },
+        "connors_rsi2": {
+          "enabled": false,
+          "weight": 0,
+          "rsi_period": 3,
+          "rsi_entry": 40,
+          "sma_trend_period": 150,
+          "sma200_filter": false,
+          "min_consecutive_down": 1,
+          "ibs_max": 0.5,
+          "ibs_filter_enabled": false,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5
+          },
+          "sma_exit_period": 5,
+          "rsi_exit": 65,
+          "exit_mode": "sma",
+          "max_hold_days": 5,
+          "atr_period": 14,
+          "atr_stop_mult": 1.0
+        },
+        "trend_following": {
+          "enabled": false,
+          "weight": 0
+        },
+        "opening_gap": {
+          "enabled": false,
+          "weight": 0
+        },
+        "short_term_mr": {
+          "enabled": false,
+          "weight": 0
+        },
+        "bb_squeeze": {
+          "enabled": false,
+          "weight": 0
+        },
+        "mtf_momentum": {
+          "enabled": false,
+          "weight": 0
+        },
+        "dividend_capture": {
+          "enabled": false,
+          "weight": 0
+        }
+      },
+      "backtest": {
+        "train_window_days": 252,
+        "test_window_days": 63,
+        "step_days": 21,
+        "min_history_days": 60,
+        "volume_participation_limit": 0.01
+      },
+      "data": {
+        "source": "yfinance",
+        "source_priority": [
+          "alpaca",
+          "yfinance"
+        ],
+        "fallback_enabled": true,
+        "history_years": 7,
+        "cache_dir": "data/cache",
+        "raw_dir": "data/raw",
+        "processed_dir": "data/processed"
+      },
+      "regime_enabled": false,
+      "regime_gate": {
+        "enabled": false
+      },
+      "volatility_gate": {
+        "enabled": false
+      },
+      "overlay": {
+        "enabled": false,
+        "shadow_mode": true
+      },
+      "macro_regime": {
+        "enabled": false
+      },
+      "intraday": {
+        "enabled": false
+      },
+      "annealing": {
+        "max_changes_per_cycle": 2,
+        "min_oos_sharpe_improvement": 0.05,
+        "max_drawdown_increase_pct": 0.01,
+        "changelog_file": "journal/changelog.json"
+      },
+      "dynamic_sizing": {
+        "enabled": true,
+        "base_risk_pct": 0.005,
+        "min_risk_pct": 0.003,
+        "max_risk_pct": 0.0075,
+        "confidence_scaling": {
+          "enabled": false
+        },
+        "volatility_scaling": {
+          "enabled": true
+        },
+        "equity_curve_scaling": {
+          "enabled": true,
+          "graduated_tiers": [
+            {
+              "threshold": 0.04,
+              "scale": 0.75
+            },
+            {
+              "threshold": 0.07,
+              "scale": 0.5
+            },
+            {
+              "threshold": 0.1,
+              "scale": 0.25
+            }
+          ]
+        }
+      },
+      "vol_scaling": {
+        "enabled": true,
+        "lookback": 60,
+        "half_life": 20,
+        "target_vol": 0.12,
+        "conditional": true,
+        "percentile_threshold": 80
+      },
+      "event_calendar": {
+        "enabled": false
+      },
+      "portfolio_optimizer": {
+        "method": "mean_variance",
+        "min_weight": 0.05,
+        "max_weight": 0.4,
+        "cluster_threshold": 0.7
+      },
+      "_audit_2026_05_01_disable_sector_rotation": {
+        "updated_at": "2026-05-01T00:00:00+00:00",
+        "rationale": "Validated-strategies audit. Disabled sector_rotation (0 trades in fresh backtest, structural mismatch with single-ETF-per-sector universe \u2014 min_sector_stocks=3 vs 1 ticker per sector). Open positions check: XLI under momentum_breakout (kept). 0 open positions on sector_rotation.",
+        "disabled": [
+          {
+            "strategy": "sector_rotation",
+            "old_weight": 0.4,
+            "new_weight": 0,
+            "reason": "Strategy fundamentally requires multi-stock sectors; sector_etfs has 1 ETF per sector. 0 trades across full backtest history."
+          }
+        ],
+        "renormalized": [
+          {
+            "strategy": "momentum_breakout",
+            "old_weight": 0.3,
+            "new_weight": 0.6
+          },
+          {
+            "strategy": "mean_reversion",
+            "old_weight": 0.3,
+            "new_weight": 0.4
+          }
+        ],
+        "follow_up": "research_best for sector_etfs/mean_reversion and sector_etfs/momentum_breakout are stale (2026-04-21, P1.1 contamination era). Re-run sweeps after fixing the snapshot-required bug in research/loop.py:556 and DEFAULT_STRATEGIES in research/autoresearch_nightly.py."
+      },
+      "_consolidation_note": {
+        "paused_at": "2026-05-04T22:30:00+00:00",
+        "decision": "User-approved consolidation. Pause sector_etfs+commodity_etfs live trading; sp500 remains live. Mode=passive blocks new entries while protective infra keeps maintaining OCO brackets on remaining open positions until closure script runs.",
+        "open_positions_at_pause": [
+          "XLE/momentum_breakout (8 shares @ $59.06, stop $57.56, OCO live at broker)",
+          "XLI/momentum_breakout (9 shares @ $173.97, stop $170.07, OCO live at broker)"
+        ],
+        "closure_plan": "scripts/consolidation_close_positions.py executes manual market-sell at next US open (2026-05-05 13:30 UTC) or operator-chosen RTH window. Cancels OCO + market sell + DB/state update.",
+        "reenable_criteria": [
+          "(1) sp500 live performance shows sustained edge over 30+ trading days",
+          "(2) sector_etfs/commodity_etfs research_best Sharpe >= 0.5 with passing OOS gates 1-4",
+          "(3) Operator decision to redeploy capital across multiple universes"
+        ],
+        "reversibility": "Set trading.mode='live', restore cron entries (see git log around 2026-05-04 for removed lines), bump version. Heartbeat config entries preserved \u2014 re-enable services if removed."
+      },
+      "_sweep_metadata": {
+        "promoted_at": "2026-05-05T15:15:07.185904+00:00",
+        "strategy": "mean_reversion",
+        "initial_sharpe": -0.2487,
+        "final_sharpe": 0.3397,
+        "delta_sharpe": 0.5884,
+        "sweep_improvements": [
+          "autoresearch_runner sweep: Sharpe -0.2487 -> 0.4359"
+        ]
+      }
+    },
+    "metadata": {
+      "strategy": "mean_reversion",
+      "initial_sharpe": -0.2487,
+      "final_sharpe": 0.3397,
+      "delta_sharpe": 0.5884,
+      "improvements": [
+        "autoresearch_runner sweep: Sharpe -0.2487 -> 0.4359"
+      ],
+      "baseline_metrics": {
+        "total_trades": 165,
+        "cagr_pct": 11.9328,
+        "cagr_full_period_pct": 10.0378,
+        "sharpe": 0.4087,
+        "sortino": 1.548,
+        "max_drawdown_pct": 9.2242,
+        "win_rate_pct": 47.88,
+        "profit_factor": 2.3116,
+        "total_pnl": 3070.26,
+        "avg_trade": 18.61,
+        "final_equity": 6279.3,
+        "expectancy_r": 1.0059,
+        "avg_r": 1.0059,
+        "r_count": 165,
+        "edge_p_value": 0.026466,
+        "edge_significant": true,
+        "var_95_pct": 0.662,
+        "cvar_95_pct": 1.008,
+        "calmar": 1.2936,
+        "mc_p95_drawdown_pct": 10.52,
+        "mc_fragile": false,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 67,
+            "total_pnl": 1452.23,
+            "win_rate_pct": 34.3
+          },
+          "mean_reversion": {
+            "trades": 98,
+            "total_pnl": 1618.03,
+            "win_rate_pct": 57.1
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 12,
+            "win_rate_pct": 58.3,
+            "avg_trade": 3.03,
+            "total_pnl": 36.39,
+            "profit_factor": 1.2399,
+            "sharpe_approx": 0.0867,
+            "avg_r": 0.6755
+          },
+          "bull": {
+            "trades": 44,
+            "win_rate_pct": 40.9,
+            "avg_trade": 50.87,
+            "total_pnl": 2238.5,
+            "profit_factor": 4.4919,
+            "sharpe_approx": 0.2435,
+            "avg_r": 2.4899
+          },
+          "neutral": {
+            "trades": 109,
+            "win_rate_pct": 49.5,
+            "avg_trade": 7.3,
+            "total_pnl": 795.37,
+            "profit_factor": 1.5137,
+            "sharpe_approx": 0.1758,
+            "avg_r": 0.4433
+          }
+        }
+      },
+      "candidate_metrics": {
+        "total_trades": 165,
+        "cagr_pct": 11.9328,
+        "cagr_full_period_pct": 10.0378,
+        "sharpe": 0.4087,
+        "sortino": 1.548,
+        "max_drawdown_pct": 9.2242,
+        "win_rate_pct": 47.88,
+        "profit_factor": 2.3116,
+        "total_pnl": 3070.26,
+        "avg_trade": 18.61,
+        "final_equity": 6279.3,
+        "expectancy_r": 1.0059,
+        "avg_r": 1.0059,
+        "r_count": 165,
+        "edge_p_value": 0.026466,
+        "edge_significant": true,
+        "var_95_pct": 0.662,
+        "cvar_95_pct": 1.008,
+        "calmar": 1.2936,
+        "mc_p95_drawdown_pct": 10.52,
+        "mc_fragile": false,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 67,
+            "total_pnl": 1452.23,
+            "win_rate_pct": 34.3
+          },
+          "mean_reversion": {
+            "trades": 98,
+            "total_pnl": 1618.03,
+            "win_rate_pct": 57.1
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 12,
+            "win_rate_pct": 58.3,
+            "avg_trade": 3.03,
+            "total_pnl": 36.39,
+            "profit_factor": 1.2399,
+            "sharpe_approx": 0.0867,
+            "avg_r": 0.6755
+          },
+          "bull": {
+            "trades": 44,
+            "win_rate_pct": 40.9,
+            "avg_trade": 50.87,
+            "total_pnl": 2238.5,
+            "profit_factor": 4.4919,
+            "sharpe_approx": 0.2435,
+            "avg_r": 2.4899
+          },
+          "neutral": {
+            "trades": 109,
+            "win_rate_pct": 49.5,
+            "avg_trade": 7.3,
+            "total_pnl": 795.37,
+            "profit_factor": 1.5137,
+            "sharpe_approx": 0.1758,
+            "avg_r": 0.4433
+          }
+        }
+      },
+      "comparisons": {
+        "sharpe": {
+          "baseline": 0.4087,
+          "candidate": 0.4087,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "cagr_pct": {
+          "baseline": 11.9328,
+          "candidate": 11.9328,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "sortino": {
+          "baseline": 1.548,
+          "candidate": 1.548,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "profit_factor": {
+          "baseline": 2.3116,
+          "candidate": 2.3116,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "win_rate_pct": {
+          "baseline": 47.88,
+          "candidate": 47.88,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "max_drawdown_pct": {
+          "baseline": 9.2242,
+          "candidate": 9.2242,
+          "delta": 0.0
+        },
+        "total_trades": {
+          "baseline": 165,
+          "candidate": 165,
+          "delta": 0,
+          "pct_change": -0.0
+        }
+      },
+      "oos_result": {
+        "pass": true,
+        "reason": "OOS validation passed",
+        "sharpe_oos": 1.2156,
+        "profit_factor_oos": 5.1694,
+        "cagr_degradation_pct": -1526.8,
+        "perturbation_pass_rate": 1.0,
+        "cached_at": "2026-05-05T15:16:50.576934+00:00"
+      },
+      "dsr": {
+        "dsr_expected_max_sharpe": 5.7996,
+        "dsr_num_experiments": 24644,
+        "dsr_significant": "False"
+      }
+    },
+    "delta_sharpe": 0.5884,
+    "final_sharpe": 0.3397,
+    "timestamp": "2026-05-05T15:16:50.612520+00:00",
+    "pending_id": "9829b31afe94",
+    "status": "rejected",
+    "rejected_at": "2026-05-06T01:45:52.440709+00:00",
+    "reject_reason": "Rejected via dashboard"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "commodity_etfs",
+    "candidate_config": {
+      "version": "v1.3-consolidation-passive",
+      "project": "Atlas",
+      "market": "commodity_etfs",
+      "description": "Commodity ETFs \u2014 PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (GLD) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
+      "universe": {
+        "method": "static",
+        "benchmark_ticker": "DBC"
+      },
+      "risk": {
+        "starting_equity": 1001,
+        "leverage": 1.0,
+        "max_risk_per_trade_pct": 0.005,
+        "max_open_positions": 5,
+        "max_sector_concentration": 3,
+        "max_daily_drawdown_pct": 0.02,
+        "require_stop_loss": true,
+        "require_planned_exit": true,
+        "min_confidence": 0.65,
+        "trailing_stop": {
+          "enabled": false,
+          "activation_pct": 0.02,
+          "atr_multiplier": 2.0
+        },
+        "max_position_pct_equity": 0.2,
+        "_max_position_cap_note": "2026-04-28 audit: applied same concentration cap as sector_etfs for consistency",
+        "max_gross_exposure_pct": 1.75,
+        "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+        "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
+      },
+      "trading": {
+        "mode": "passive",
+        "broker": "alpaca",
+        "live_enabled": true,
+        "holding_period_min": 2,
+        "holding_period_max": 20,
+        "data_frequency": "daily",
+        "order_type": "market_on_open",
+        "auto_approve": false,
+        "live_safety": {
+          "require_double_approval": false,
+          "max_order_value": 5000,
+          "max_daily_orders": 3,
+          "dry_run_first": false,
+          "max_daily_loss_pct": 0.02
+        }
+      },
+      "alpaca": {
+        "paper": false,
+        "data_feed": "iex",
+        "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
+      },
+      "fees": {
+        "commission_per_trade": 0,
+        "commission_pct": 0,
+        "slippage_pct": 0.0005,
+        "flat_fee_threshold": 0,
+        "min_position_value": 100.0,
+        "_broker": "alpaca",
+        "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+        "slippage_model": "volume_aware",
+        "slippage_impact_exponent": 0.5
+      },
+      "strategies": {
+        "momentum_breakout": {
+          "enabled": true,
+          "weight": 0.5,
+          "atr_stop_mult": 0.72,
+          "max_hold_days": 15,
+          "lookback_days": 22,
+          "atr_period": 20,
+          "trend_ma_period": 27,
+          "profit_target_atr_mult": 6.0,
+          "breakout_period": 10
+        },
+        "mean_reversion": {
+          "enabled": true,
+          "weight": 0.3,
+          "rsi_period": 16,
+          "rsi_oversold": 35,
+          "zscore_lookback": 22,
+          "zscore_entry": -2.0,
+          "atr_period": 15,
+          "atr_stop_mult": 0.21,
+          "profit_target_atr_mult": 3.12,
+          "max_hold_days": 20,
+          "sma200_filter": false,
+          "ibs_max": 1.05,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5,
+            "surge_threshold": 1.5,
+            "surge_boost": 0.0,
+            "dry_penalty": 0.0
+          },
+          "earnings_blackout": {
+            "enabled": false,
+            "days_before": 5,
+            "days_after": 1
+          },
+          "breadth": {
+            "enabled": false
+          }
+        },
+        "connors_rsi2": {
+          "enabled": true,
+          "weight": 0.2,
+          "rsi_period": 3,
+          "rsi_entry": 40,
+          "sma_trend_period": 150,
+          "sma200_filter": false,
+          "min_consecutive_down": 1,
+          "ibs_max": 0.5,
+          "ibs_filter_enabled": false,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5
+          },
+          "sma_exit_period": 5,
+          "rsi_exit": 65,
+          "exit_mode": "sma",
+          "max_hold_days": 5,
+          "atr_period": 14,
+          "atr_stop_mult": 1.0
+        },
+        "sector_rotation": {
+          "enabled": false,
+          "weight": 0,
+          "atr_stop_mult": 2.0,
+          "trailing_stop_atr_mult": 3.0,
+          "profit_target_atr_mult": 3.5
+        },
+        "trend_following": {
+          "enabled": false,
+          "weight": 0
+        },
+        "opening_gap": {
+          "enabled": false,
+          "weight": 0
+        },
+        "short_term_mr": {
+          "enabled": false,
+          "weight": 0
+        },
+        "bb_squeeze": {
+          "enabled": false,
+          "weight": 0
+        },
+        "mtf_momentum": {
+          "enabled": false,
+          "weight": 0
+        },
+        "dividend_capture": {
+          "enabled": false,
+          "weight": 0
+        }
+      },
+      "backtest": {
+        "train_window_days": 252,
+        "test_window_days": 63,
+        "step_days": 21,
+        "min_history_days": 60,
+        "volume_participation_limit": 0.01
+      },
+      "data": {
+        "source": "yfinance",
+        "source_priority": [
+          "alpaca",
+          "yfinance"
+        ],
+        "fallback_enabled": true,
+        "history_years": 7,
+        "cache_dir": "data/cache",
+        "raw_dir": "data/raw",
+        "processed_dir": "data/processed"
+      },
+      "regime_enabled": false,
+      "regime_gate": {
+        "enabled": false
+      },
+      "volatility_gate": {
+        "enabled": false
+      },
+      "overlay": {
+        "enabled": false,
+        "shadow_mode": true
+      },
+      "macro_regime": {
+        "enabled": false
+      },
+      "intraday": {
+        "enabled": false
+      },
+      "annealing": {
+        "max_changes_per_cycle": 2,
+        "min_oos_sharpe_improvement": 0.05,
+        "max_drawdown_increase_pct": 0.01,
+        "changelog_file": "journal/changelog.json"
+      },
+      "dynamic_sizing": {
+        "enabled": true,
+        "base_risk_pct": 0.005,
+        "min_risk_pct": 0.003,
+        "max_risk_pct": 0.0075,
+        "confidence_scaling": {
+          "enabled": false
+        },
+        "volatility_scaling": {
+          "enabled": true
+        },
+        "equity_curve_scaling": {
+          "enabled": true,
+          "graduated_tiers": [
+            {
+              "threshold": 0.04,
+              "scale": 0.75
+            },
+            {
+              "threshold": 0.07,
+              "scale": 0.5
+            },
+            {
+              "threshold": 0.1,
+              "scale": 0.25
+            }
+          ]
+        }
+      },
+      "vol_scaling": {
+        "enabled": true,
+        "lookback": 60,
+        "half_life": 20,
+        "target_vol": 0.12,
+        "conditional": true,
+        "percentile_threshold": 80
+      },
+      "event_calendar": {
+        "enabled": false
+      },
+      "portfolio_optimizer": {
+        "method": "mean_variance",
+        "min_weight": 0.05,
+        "max_weight": 0.4,
+        "cluster_threshold": 0.7
+      },
+      "_sweep_metadata": {
+        "promoted_at": "2026-05-06T14:12:30.678315+00:00",
+        "strategy": "mean_reversion",
+        "initial_sharpe": 1.0133,
+        "final_sharpe": 1.028,
+        "delta_sharpe": 0.0147,
+        "sweep_improvements": [
+          "autoresearch_runner sweep: Sharpe 1.0133 -> 1.0801"
+        ]
+      },
+      "_consolidation_note": {
+        "paused_at": "2026-05-04T22:30:00+00:00",
+        "decision": "User-approved consolidation. Pause sector_etfs+commodity_etfs live trading; sp500 remains live. Mode=passive blocks new entries while protective infra keeps maintaining OCO brackets on remaining open positions until closure script runs.",
+        "open_positions_at_pause": [
+          "GLD/momentum_breakout (2 shares @ $442.80, stop $403.32, OCO live at broker)"
+        ],
+        "closure_plan": "scripts/consolidation_close_positions.py executes manual market-sell at next US open (2026-05-05 13:30 UTC) or operator-chosen RTH window. Cancels OCO + market sell + DB/state update.",
+        "reenable_criteria": [
+          "(1) sp500 live performance shows sustained edge over 30+ trading days",
+          "(2) sector_etfs/commodity_etfs research_best Sharpe >= 0.5 with passing OOS gates 1-4",
+          "(3) Operator decision to redeploy capital across multiple universes"
+        ],
+        "reversibility": "Set trading.mode='live', restore cron entries (see git log around 2026-05-04 for removed lines), bump version. Heartbeat config entries preserved \u2014 re-enable services if removed."
+      },
+      "_version_metadata": {
+        "created_at": "2026-04-28T00:34:30.214264",
+        "previous_version": "v1.1.1",
+        "market": "commodity_etfs"
+      }
+    },
+    "metadata": {
+      "strategy": "mean_reversion",
+      "initial_sharpe": 1.0133,
+      "final_sharpe": 1.028,
+      "delta_sharpe": 0.0147,
+      "improvements": [
+        "autoresearch_runner sweep: Sharpe 1.0133 -> 1.0801"
+      ],
+      "baseline_metrics": {
+        "total_trades": 563,
+        "cagr_pct": 27.3453,
+        "cagr_full_period_pct": 22.7669,
+        "sharpe": 1.3592,
+        "sortino": 1.9789,
+        "max_drawdown_pct": 18.9089,
+        "win_rate_pct": 42.1,
+        "profit_factor": 1.6515,
+        "total_pnl": 3321.96,
+        "avg_trade": 5.9,
+        "final_equity": 4203.17,
+        "expectancy_r": 0.9115,
+        "avg_r": 0.9115,
+        "r_count": 563,
+        "edge_p_value": 3e-06,
+        "edge_significant": true,
+        "var_95_pct": 1.427,
+        "cvar_95_pct": 2.07,
+        "calmar": 1.4462,
+        "mc_p95_drawdown_pct": 34.08,
+        "mc_fragile": true,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 248,
+            "total_pnl": 2036.75,
+            "win_rate_pct": 27.8
+          },
+          "connors_rsi2": {
+            "trades": 246,
+            "total_pnl": 94.44,
+            "win_rate_pct": 55.3
+          },
+          "mean_reversion": {
+            "trades": 69,
+            "total_pnl": 1190.77,
+            "win_rate_pct": 46.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 11,
+            "win_rate_pct": 54.5,
+            "avg_trade": 21.9,
+            "total_pnl": 240.91,
+            "profit_factor": 4.1344,
+            "sharpe_approx": 0.4218,
+            "avg_r": 3.6559
+          },
+          "bull": {
+            "trades": 107,
+            "win_rate_pct": 43.9,
+            "avg_trade": 10.59,
+            "total_pnl": 1133.18,
+            "profit_factor": 1.7851,
+            "sharpe_approx": 0.1817,
+            "avg_r": 1.4532
+          },
+          "neutral": {
+            "trades": 445,
+            "win_rate_pct": 41.3,
+            "avg_trade": 4.38,
+            "total_pnl": 1947.87,
+            "profit_factor": 1.5443,
+            "sharpe_approx": 0.134,
+            "avg_r": 0.7134
+          }
+        }
+      },
+      "candidate_metrics": {
+        "total_trades": 563,
+        "cagr_pct": 27.3453,
+        "cagr_full_period_pct": 22.7669,
+        "sharpe": 1.3592,
+        "sortino": 1.9789,
+        "max_drawdown_pct": 18.9089,
+        "win_rate_pct": 42.1,
+        "profit_factor": 1.6515,
+        "total_pnl": 3321.96,
+        "avg_trade": 5.9,
+        "final_equity": 4203.17,
+        "expectancy_r": 0.9115,
+        "avg_r": 0.9115,
+        "r_count": 563,
+        "edge_p_value": 3e-06,
+        "edge_significant": true,
+        "var_95_pct": 1.427,
+        "cvar_95_pct": 2.07,
+        "calmar": 1.4462,
+        "mc_p95_drawdown_pct": 34.08,
+        "mc_fragile": true,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 248,
+            "total_pnl": 2036.75,
+            "win_rate_pct": 27.8
+          },
+          "connors_rsi2": {
+            "trades": 246,
+            "total_pnl": 94.44,
+            "win_rate_pct": 55.3
+          },
+          "mean_reversion": {
+            "trades": 69,
+            "total_pnl": 1190.77,
+            "win_rate_pct": 46.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 31,
+            "win_rate_pct": 54.8,
+            "avg_trade": 16.55,
+            "total_pnl": 513.01,
+            "profit_factor": 3.9215,
+            "sharpe_approx": 0.3937,
+            "avg_r": 2.8837
+          },
+          "bull": {
+            "trades": 100,
+            "win_rate_pct": 42.0,
+            "avg_trade": 7.63,
+            "total_pnl": 762.92,
+            "profit_factor": 1.5531,
+            "sharpe_approx": 0.1367,
+            "avg_r": 1.2948
+          },
+          "neutral": {
+            "trades": 432,
+            "win_rate_pct": 41.2,
+            "avg_trade": 4.74,
+            "total_pnl": 2046.03,
+            "profit_factor": 1.5774,
+            "sharpe_approx": 0.139,
+            "avg_r": 0.6813
+          }
+        }
+      },
+      "comparisons": {
+        "sharpe": {
+          "baseline": 1.3592,
+          "candidate": 1.3592,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "cagr_pct": {
+          "baseline": 27.3453,
+          "candidate": 27.3453,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "sortino": {
+          "baseline": 1.9789,
+          "candidate": 1.9789,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "profit_factor": {
+          "baseline": 1.6515,
+          "candidate": 1.6515,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "win_rate_pct": {
+          "baseline": 42.1,
+          "candidate": 42.1,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "max_drawdown_pct": {
+          "baseline": 18.9089,
+          "candidate": 18.9089,
+          "delta": 0.0
+        },
+        "total_trades": {
+          "baseline": 563,
+          "candidate": 563,
+          "delta": 0,
+          "pct_change": -0.0
+        }
+      },
+      "oos_result": {
+        "pass": true,
+        "reason": "OOS validation passed",
+        "sharpe_oos": 2.427,
+        "profit_factor_oos": 8.5716,
+        "cagr_degradation_pct": -99.3,
+        "perturbation_pass_rate": 1.0,
+        "cached_at": "2026-04-30T14:13:07.489808+00:00"
+      },
+      "dsr": {
+        "dsr_expected_max_sharpe": 1.0599,
+        "dsr_num_experiments": 186,
+        "dsr_significant": "False"
+      }
+    },
+    "delta_sharpe": 0.0147,
+    "final_sharpe": 1.028,
+    "timestamp": "2026-05-06T14:12:56.830249+00:00",
+    "pending_id": "7d47d5878e9d",
+    "status": "rejected",
+    "rejected_at": "2026-05-06T23:21:36.287943+00:00",
+    "reject_reason": "Rejected via dashboard"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "commodity_etfs",
+    "candidate_config": {
+      "version": "v1.0",
+      "project": "Atlas",
+      "market": "commodity_etfs",
+      "description": "Commodity ETFs \u2014 PAUSED 2026-05-04 (consolidation focus on sp500). Mode=passive blocks new entries; live_enabled stays true so protective stops on remaining positions (GLD) keep running until closure script executes. Re-enable: flip mode back to 'live' + restore crons.",
+      "universe": {
+        "method": "static",
+        "benchmark_ticker": "DBC"
+      },
+      "risk": {
+        "starting_equity": 1001,
+        "leverage": 1.0,
+        "max_risk_per_trade_pct": 0.005,
+        "max_open_positions": 5,
+        "max_sector_concentration": 3,
+        "max_daily_drawdown_pct": 0.02,
+        "require_stop_loss": true,
+        "require_planned_exit": true,
+        "min_confidence": 0.65,
+        "trailing_stop": {
+          "enabled": false,
+          "activation_pct": 0.02,
+          "atr_multiplier": 2.0
+        },
+        "max_position_pct_equity": 0.2,
+        "_max_position_cap_note": "2026-04-28 audit: applied same concentration cap as sector_etfs for consistency",
+        "max_gross_exposure_pct": 1.75,
+        "_max_gross_exposure_note": "2026-04-28 B1: global gross exposure cap (sum(abs MV)/equity). Evaluated at entry time via risk/gross_exposure_guard.py \u2014 rejects new entries if account-wide gross would exceed this value.",
+        "last_recalibrated_at": "2026-04-29T09:25:27+00:00"
+      },
+      "trading": {
+        "mode": "passive",
+        "broker": "alpaca",
+        "live_enabled": true,
+        "holding_period_min": 2,
+        "holding_period_max": 20,
+        "data_frequency": "daily",
+        "order_type": "market_on_open",
+        "auto_approve": false,
+        "live_safety": {
+          "require_double_approval": false,
+          "max_order_value": 5000,
+          "max_daily_orders": 3,
+          "dry_run_first": false,
+          "max_daily_loss_pct": 0.02
+        }
+      },
+      "alpaca": {
+        "paper": false,
+        "data_feed": "iex",
+        "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
+      },
+      "fees": {
+        "commission_per_trade": 0,
+        "commission_pct": 0,
+        "slippage_pct": 0.0005,
+        "flat_fee_threshold": 0,
+        "min_position_value": 100.0,
+        "_broker": "alpaca",
+        "_fee_notes": "Alpaca Markets \u2014 commission-free equity trading. No platform, settlement, or activity fees. Only slippage modeled.",
+        "slippage_model": "volume_aware",
+        "slippage_impact_exponent": 0.5
+      },
+      "strategies": {
+        "momentum_breakout": {
+          "enabled": true,
+          "weight": 0.5,
+          "atr_stop_mult": 0.72,
+          "max_hold_days": 15,
+          "lookback_days": 22,
+          "atr_period": 20,
+          "trend_ma_period": 27,
+          "profit_target_atr_mult": 6.0,
+          "breakout_period": 10
+        },
+        "mean_reversion": {
+          "enabled": true,
+          "weight": 0.3,
+          "rsi_period": 16,
+          "rsi_oversold": 35,
+          "zscore_lookback": 22,
+          "zscore_entry": -2.0,
+          "atr_period": 15,
+          "atr_stop_mult": 0.21,
+          "profit_target_atr_mult": 3.12,
+          "max_hold_days": 20,
+          "sma200_filter": false,
+          "ibs_max": 1.05,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5,
+            "surge_threshold": 1.5,
+            "surge_boost": 0.0,
+            "dry_penalty": 0.0
+          },
+          "earnings_blackout": {
+            "enabled": false,
+            "days_before": 5,
+            "days_after": 1
+          },
+          "breadth": {
+            "enabled": false
+          }
+        },
+        "connors_rsi2": {
+          "enabled": true,
+          "weight": 0.2,
+          "rsi_period": 3,
+          "rsi_entry": 40,
+          "sma_trend_period": 150,
+          "sma200_filter": false,
+          "min_consecutive_down": 1,
+          "ibs_max": 0.5,
+          "ibs_filter_enabled": false,
+          "volume": {
+            "lookback": 20,
+            "min_ratio": 0.5
+          },
+          "sma_exit_period": 5,
+          "rsi_exit": 65,
+          "exit_mode": "sma",
+          "max_hold_days": 5,
+          "atr_period": 14,
+          "atr_stop_mult": 1.0
+        },
+        "sector_rotation": {
+          "enabled": false,
+          "weight": 0,
+          "atr_stop_mult": 2.0,
+          "trailing_stop_atr_mult": 3.0,
+          "profit_target_atr_mult": 3.5
+        },
+        "trend_following": {
+          "enabled": false,
+          "weight": 0
+        },
+        "opening_gap": {
+          "enabled": false,
+          "weight": 0
+        },
+        "short_term_mr": {
+          "enabled": false,
+          "weight": 0
+        },
+        "bb_squeeze": {
+          "enabled": false,
+          "weight": 0
+        },
+        "mtf_momentum": {
+          "enabled": false,
+          "weight": 0
+        },
+        "dividend_capture": {
+          "enabled": false,
+          "weight": 0
+        }
+      },
+      "backtest": {
+        "train_window_days": 252,
+        "test_window_days": 63,
+        "step_days": 21,
+        "min_history_days": 60,
+        "volume_participation_limit": 0.01
+      },
+      "data": {
+        "source": "yfinance",
+        "source_priority": [
+          "alpaca",
+          "yfinance"
+        ],
+        "fallback_enabled": true,
+        "history_years": 7,
+        "cache_dir": "data/cache",
+        "raw_dir": "data/raw",
+        "processed_dir": "data/processed"
+      },
+      "regime_enabled": false,
+      "regime_gate": {
+        "enabled": false
+      },
+      "volatility_gate": {
+        "enabled": false
+      },
+      "overlay": {
+        "enabled": false,
+        "shadow_mode": true
+      },
+      "macro_regime": {
+        "enabled": false
+      },
+      "intraday": {
+        "enabled": false
+      },
+      "annealing": {
+        "max_changes_per_cycle": 2,
+        "min_oos_sharpe_improvement": 0.05,
+        "max_drawdown_increase_pct": 0.01,
+        "changelog_file": "journal/changelog.json"
+      },
+      "dynamic_sizing": {
+        "enabled": true,
+        "base_risk_pct": 0.005,
+        "min_risk_pct": 0.003,
+        "max_risk_pct": 0.0075,
+        "confidence_scaling": {
+          "enabled": false
+        },
+        "volatility_scaling": {
+          "enabled": true
+        },
+        "equity_curve_scaling": {
+          "enabled": true,
+          "graduated_tiers": [
+            {
+              "threshold": 0.04,
+              "scale": 0.75
+            },
+            {
+              "threshold": 0.07,
+              "scale": 0.5
+            },
+            {
+              "threshold": 0.1,
+              "scale": 0.25
+            }
+          ]
+        }
+      },
+      "vol_scaling": {
+        "enabled": true,
+        "lookback": 60,
+        "half_life": 20,
+        "target_vol": 0.12,
+        "conditional": true,
+        "percentile_threshold": 80
+      },
+      "event_calendar": {
+        "enabled": false
+      },
+      "portfolio_optimizer": {
+        "method": "mean_variance",
+        "min_weight": 0.05,
+        "max_weight": 0.4,
+        "cluster_threshold": 0.7
+      },
+      "_sweep_metadata": {
+        "promoted_at": "2026-05-06T14:28:00.816885+00:00",
+        "strategy": "mean_reversion",
+        "initial_sharpe": 1.0133,
+        "final_sharpe": 1.0801,
+        "delta_sharpe": 0.0668,
+        "sweep_improvements": [
+          "nightly sweep: Sharpe 1.0133 -> 1.0801"
+        ]
+      },
+      "_consolidation_note": {
+        "paused_at": "2026-05-04T22:30:00+00:00",
+        "decision": "User-approved consolidation. Pause sector_etfs+commodity_etfs live trading; sp500 remains live. Mode=passive blocks new entries while protective infra keeps maintaining OCO brackets on remaining open positions until closure script runs.",
+        "open_positions_at_pause": [
+          "GLD/momentum_breakout (2 shares @ $442.80, stop $403.32, OCO live at broker)"
+        ],
+        "closure_plan": "scripts/consolidation_close_positions.py executes manual market-sell at next US open (2026-05-05 13:30 UTC) or operator-chosen RTH window. Cancels OCO + market sell + DB/state update.",
+        "reenable_criteria": [
+          "(1) sp500 live performance shows sustained edge over 30+ trading days",
+          "(2) sector_etfs/commodity_etfs research_best Sharpe >= 0.5 with passing OOS gates 1-4",
+          "(3) Operator decision to redeploy capital across multiple universes"
+        ],
+        "reversibility": "Set trading.mode='live', restore cron entries (see git log around 2026-05-04 for removed lines), bump version. Heartbeat config entries preserved \u2014 re-enable services if removed."
+      },
+      "_version_metadata": {
+        "created_at": "2026-05-07T09:21:34.598638",
+        "previous_version": "v1.3-consolidation-passive",
+        "market": "commodity_etfs"
+      }
+    },
+    "metadata": {
+      "strategy": "mean_reversion",
+      "initial_sharpe": 1.0133,
+      "final_sharpe": 1.0801,
+      "delta_sharpe": 0.0668,
+      "improvements": [
+        "nightly sweep: Sharpe 1.0133 -> 1.0801"
+      ],
+      "baseline_metrics": {
+        "total_trades": 563,
+        "cagr_pct": 27.3453,
+        "cagr_full_period_pct": 22.7669,
+        "sharpe": 1.3592,
+        "sortino": 1.9789,
+        "max_drawdown_pct": 18.9089,
+        "win_rate_pct": 42.1,
+        "profit_factor": 1.6515,
+        "total_pnl": 3321.96,
+        "avg_trade": 5.9,
+        "final_equity": 4203.17,
+        "expectancy_r": 0.9115,
+        "avg_r": 0.9115,
+        "r_count": 563,
+        "edge_p_value": 3e-06,
+        "edge_significant": true,
+        "var_95_pct": 1.427,
+        "cvar_95_pct": 2.07,
+        "calmar": 1.4462,
+        "mc_p95_drawdown_pct": 34.08,
+        "mc_fragile": true,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 248,
+            "total_pnl": 2036.75,
+            "win_rate_pct": 27.8
+          },
+          "connors_rsi2": {
+            "trades": 246,
+            "total_pnl": 94.44,
+            "win_rate_pct": 55.3
+          },
+          "mean_reversion": {
+            "trades": 69,
+            "total_pnl": 1190.77,
+            "win_rate_pct": 46.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 11,
+            "win_rate_pct": 54.5,
+            "avg_trade": 21.9,
+            "total_pnl": 240.91,
+            "profit_factor": 4.1344,
+            "sharpe_approx": 0.4218,
+            "avg_r": 3.6559
+          },
+          "bull": {
+            "trades": 107,
+            "win_rate_pct": 43.9,
+            "avg_trade": 10.59,
+            "total_pnl": 1133.18,
+            "profit_factor": 1.7851,
+            "sharpe_approx": 0.1817,
+            "avg_r": 1.4532
+          },
+          "neutral": {
+            "trades": 445,
+            "win_rate_pct": 41.3,
+            "avg_trade": 4.38,
+            "total_pnl": 1947.87,
+            "profit_factor": 1.5443,
+            "sharpe_approx": 0.134,
+            "avg_r": 0.7134
+          }
+        }
+      },
+      "candidate_metrics": {
+        "total_trades": 563,
+        "cagr_pct": 27.3453,
+        "cagr_full_period_pct": 22.7669,
+        "sharpe": 1.3592,
+        "sortino": 1.9789,
+        "max_drawdown_pct": 18.9089,
+        "win_rate_pct": 42.1,
+        "profit_factor": 1.6515,
+        "total_pnl": 3321.96,
+        "avg_trade": 5.9,
+        "final_equity": 4203.17,
+        "expectancy_r": 0.9115,
+        "avg_r": 0.9115,
+        "r_count": 563,
+        "edge_p_value": 3e-06,
+        "edge_significant": true,
+        "var_95_pct": 1.427,
+        "cvar_95_pct": 2.07,
+        "calmar": 1.4462,
+        "mc_p95_drawdown_pct": 34.08,
+        "mc_fragile": true,
+        "windows_configured": 69,
+        "windows_used": 69,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "momentum_breakout": {
+            "trades": 248,
+            "total_pnl": 2036.75,
+            "win_rate_pct": 27.8
+          },
+          "connors_rsi2": {
+            "trades": 246,
+            "total_pnl": 94.44,
+            "win_rate_pct": 55.3
+          },
+          "mean_reversion": {
+            "trades": 69,
+            "total_pnl": 1190.77,
+            "win_rate_pct": 46.4
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 31,
+            "win_rate_pct": 54.8,
+            "avg_trade": 16.55,
+            "total_pnl": 513.01,
+            "profit_factor": 3.9215,
+            "sharpe_approx": 0.3937,
+            "avg_r": 2.8837
+          },
+          "bull": {
+            "trades": 100,
+            "win_rate_pct": 42.0,
+            "avg_trade": 7.63,
+            "total_pnl": 762.92,
+            "profit_factor": 1.5531,
+            "sharpe_approx": 0.1367,
+            "avg_r": 1.2948
+          },
+          "neutral": {
+            "trades": 432,
+            "win_rate_pct": 41.2,
+            "avg_trade": 4.74,
+            "total_pnl": 2046.03,
+            "profit_factor": 1.5774,
+            "sharpe_approx": 0.139,
+            "avg_r": 0.6813
+          }
+        }
+      },
+      "comparisons": {
+        "sharpe": {
+          "baseline": 1.3592,
+          "candidate": 1.3592,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "cagr_pct": {
+          "baseline": 27.3453,
+          "candidate": 27.3453,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "sortino": {
+          "baseline": 1.9789,
+          "candidate": 1.9789,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "profit_factor": {
+          "baseline": 1.6515,
+          "candidate": 1.6515,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "win_rate_pct": {
+          "baseline": 42.1,
+          "candidate": 42.1,
+          "delta": 0.0,
+          "pct_change": 0.0
+        },
+        "max_drawdown_pct": {
+          "baseline": 18.9089,
+          "candidate": 18.9089,
+          "delta": 0.0
+        },
+        "total_trades": {
+          "baseline": 563,
+          "candidate": 563,
+          "delta": 0,
+          "pct_change": -0.0
+        }
+      },
+      "oos_result": {
+        "pass": true,
+        "reason": "OOS validation passed",
+        "sharpe_oos": 2.427,
+        "profit_factor_oos": 8.5716,
+        "cagr_degradation_pct": -99.3,
+        "perturbation_pass_rate": 1.0,
+        "cached_at": "2026-04-30T14:13:07.489808+00:00"
+      },
+      "dsr": {
+        "dsr_expected_max_sharpe": 1.0599,
+        "dsr_num_experiments": 186,
+        "dsr_significant": "True"
+      }
+    },
+    "delta_sharpe": 0.0668,
+    "final_sharpe": 1.0801,
+    "timestamp": "2026-05-06T14:28:28.943627+00:00",
+    "pending_id": "0a60c82dc526",
+    "status": "approved",
+    "approved_at": "2026-05-06T23:21:34.601780+00:00",
+    "version": "v1.0"
   }
 ]

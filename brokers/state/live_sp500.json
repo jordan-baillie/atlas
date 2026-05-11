@@ -5,24 +5,13 @@
     {
       "ticker": "CAT",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-05-08",
+      "entry_date": "2026-05-09",
       "entry_price": 835.24,
       "shares": 1,
       "stop_price": 861.21,
       "order_id": "",
       "stop_order_id": "a1021664-51c8-4ac1-aecc-a8d70feb7cf8",
-      "tp_order_id": "3d035b5f-3926-4d2d-9506-0c588e691fcb"
-    },
-    {
-      "ticker": "SYK",
-      "strategy": "connors_rsi2",
-      "entry_date": "2026-05-08",
-      "entry_price": 294.65,
-      "shares": 1,
-      "stop_price": 286.12,
-      "order_id": "",
-      "stop_order_id": "72608264-4f61-40f0-abe9-fbbb041c7f68",
-      "tp_order_id": "23fe6825-8cfd-405a-a59f-45c00375978e"
+      "tp_order_id": ""
     }
   ],
   "closed_trades": [
@@ -227,7 +216,8 @@
       "pnl_pct": -0.8,
       "exit_type": "broker_trailing_stop",
       "exit_reason": "broker_trailing_stop",
-      "reconciled": true
+      "reconciled": true,
+      "holding_days": 0
     },
     {
       "ticker": "CVX",
@@ -265,7 +255,8 @@
       "pnl": -4.18,
       "shares": 7,
       "exit_reason": "signal_exit",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "COP",
@@ -277,7 +268,8 @@
       "pnl": 5.94,
       "shares": 2,
       "exit_reason": "trailing_stop",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "CARR",
@@ -289,7 +281,8 @@
       "pnl": 9.95,
       "shares": 5,
       "exit_reason": "broker_stop_fill",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "HCA",
@@ -301,7 +294,8 @@
       "pnl": 2.17,
       "shares": 1,
       "exit_reason": "signal_exit",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "MRVL",
@@ -313,7 +307,8 @@
       "pnl": 17.57,
       "shares": 3,
       "exit_reason": "trailing_stop",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "MSI",
@@ -325,7 +320,8 @@
       "pnl": 14.2,
       "shares": 1,
       "exit_reason": "signal_exit",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "DVN",
@@ -337,7 +333,8 @@
       "pnl": -22.0,
       "shares": 5,
       "exit_reason": "trailing_stop_fill",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "OXY",
@@ -349,7 +346,8 @@
       "pnl": -19.68,
       "shares": 3,
       "exit_reason": "trailing_stop_fill",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "D",
@@ -361,7 +359,8 @@
       "pnl": 36.27,
       "shares": 13,
       "exit_reason": "signal_exit",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "COP",
@@ -373,7 +372,8 @@
       "pnl": -18.06,
       "shares": 2,
       "exit_reason": "trailing_stop_fill",
-      "pnl_pct": 0.0
+      "pnl_pct": 0.0,
+      "holding_days": 0
     },
     {
       "ticker": "AMT",
@@ -479,7 +479,8 @@
       "pnl_pct": -0.37,
       "entry_date": "2026-05-05",
       "exit_date": "2026-05-06",
-      "exit_reason": "stop_loss"
+      "exit_reason": "stop_loss",
+      "holding_days": 0
     },
     {
       "ticker": "FSLR",
@@ -491,7 +492,8 @@
       "pnl_pct": -1.99,
       "entry_date": "2026-05-07",
       "exit_date": "2026-05-08",
-      "exit_reason": "stop_loss"
+      "exit_reason": "stop_loss",
+      "holding_days": 0
     },
     {
       "ticker": "MCHP",
@@ -503,7 +505,22 @@
       "pnl_pct": -1.31,
       "entry_date": "2026-05-08",
       "exit_date": "2026-05-08",
-      "exit_reason": "stop_loss"
+      "exit_reason": "stop_loss",
+      "holding_days": 0
+    },
+    {
+      "ticker": "SYK",
+      "strategy": "unknown",
+      "entry_price": 0,
+      "exit_price": 286.68,
+      "shares": 1,
+      "pnl": 0.0,
+      "pnl_pct": 0.0,
+      "holding_days": 0,
+      "exit_reason": "trailing_stop_fill",
+      "exit_date": "2026-05-08",
+      "order_id": "a81fde74-4f88-471d-ba22-9ad9fae2755d",
+      "reconciled": true
     }
   ],
   "equity_history": [
@@ -2365,11 +2382,33 @@
           "holding_days": -1
         }
       ]
+    },
+    {
+      "date": "2026-05-08",
+      "equity": 1360.74,
+      "cash": 4313.32,
+      "positions_value": -2952.58,
+      "num_positions": 1,
+      "total_realized_pnl": 327.53,
+      "total_closed_trades": 35,
+      "positions": [
+        {
+          "ticker": "CAT",
+          "strategy": "momentum_breakout",
+          "shares": 1,
+          "entry_price": 835.24,
+          "current_price": 897.45,
+          "unrealized_pnl": 62.21,
+          "mae": 0.0,
+          "mfe": 7.45,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 5262.03,
-  "daily_high_water_date": "2026-05-08",
+  "daily_high_water": 5253.31,
+  "daily_high_water_date": "2026-05-09",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-05-08T11:30:49.048517"
+  "last_saved": "2026-05-09T09:44:34.314417"
 }

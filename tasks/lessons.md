@@ -190,3 +190,14 @@ Rule: any code that can fire alerts from a loop needs per-invocation throttling.
 existed at broker, linked to a different DB row. DB-only fix would have created
 duplicate TP orders. ALWAYS verify broker state with `broker.get_open_orders()`
 before any DB reconciliation action.
+
+### 45. `dict.get(key, default)` does NOT default when value is None
+`t.get("pnl", 0)` returns `None` if `t["pnl"] is None` — the default only kicks
+in when the key is *missing*. Reconciled broker-fill stubs in `closed_trades`
+carry `pnl=None` (no entry_price → no PnL computable), and any `sum(...)` over
+them crashes with `TypeError: float + NoneType`. Crashed eod_settlement on
+2026-05-07 in two places (`live_portfolio.record_equity`, `eod_settlement.main`,
+`telegram._format_postclose_summary`). Correct idiom: `(t.get("pnl") or 0)`.
+Already used elsewhere in same files. Sweep `t.get("pnl", 0)` callers when
+convenient — `backtest/metrics.py` and `scripts/strategy_evaluator.py` still
+have unprotected sites that would crash on stub-laden ledgers.

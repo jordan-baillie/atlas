@@ -1,9 +1,16 @@
 # Sweep Sessions Index
 
-> Last 25 sessions (newest first).
+> Last 32 sessions (newest first).
 
 | Session | Results (kept/total) | Runtime |
 |---------|----------------------|---------|
+| 20260510_101825 | 0/0 kept | 1s |
+| 20260508_000250 | 0/0 kept | 1s |
+| 20260507_235419 | 0/0 kept | 1s |
+| 20260507_233306 | 0/0 kept | 1s |
+| 20260501_041424 | 0/0 kept | 1s |
+| 20260501_041245 | 0/0 kept | 1s |
+| 20260501_040341 | 0/0 kept | 1s |
 | 20260427_144939 | 0/0 kept | 0s |
 | 20260427_140241 | 0/0 kept | 0s |
 | 20260424_020624 | 0/0 kept | 0s |

@@ -86,7 +86,7 @@
     "runtime_s": 50.7
   },
   "description": "min_down_days 2\u21923: require more consecutive down days for higher quality entries",
-  "experiments_run": 18,
+  "experiments_run": 22,
   "experiments_kept": 5,
   "updated_at": "2026-04-25T14:29:27.658516+00:00"
 }

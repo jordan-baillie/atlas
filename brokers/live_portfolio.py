@@ -1336,7 +1336,9 @@ class LivePortfolio:
                 "holding_days": p.holding_days(trade_date),
             })
         # Realized P&L from all closed trades
-        total_realized = round(sum(t.get("pnl", 0) for t in self.closed_trades), 2)
+        # NOTE: use `(t.get("pnl") or 0)` because reconciled broker-fill stubs may carry pnl=None
+        # (see same pattern at line ~785). dict.get("pnl", 0) does NOT default when key exists with None.
+        total_realized = round(sum((t.get("pnl") or 0) for t in self.closed_trades), 2)
         self.equity_history.append({
             "date": trade_date,
             "equity": eq,

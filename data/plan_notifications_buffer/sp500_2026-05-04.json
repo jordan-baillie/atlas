@@ -1,0 +1,17 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-05-04",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 1,
+  "n_approved": 1,
+  "n_exits": 0,
+  "total_risk_pct": 0.65,
+  "total_position_value": 294.7,
+  "leverage_pct": 31.62,
+  "summary_lines": [
+    "SYK \u00d7 1 @ $294.70 \u2192 stop $286.12"
+  ],
+  "rejection_reason": null,
+  "written_at": "2026-05-04T09:12:49.667989+00:00"
+}

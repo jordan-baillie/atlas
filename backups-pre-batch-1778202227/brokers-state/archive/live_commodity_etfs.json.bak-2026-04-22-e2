@@ -1,0 +1,406 @@
+{
+  "market_id": "commodity_etfs",
+  "mode": "live",
+  "positions": [
+    {
+      "ticker": "AMD",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 278.25,
+      "shares": 2,
+      "stop_price": 264.3375,
+      "order_id": ""
+    },
+    {
+      "ticker": "CHTR",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 243.93,
+      "shares": 1,
+      "stop_price": 231.7335,
+      "order_id": ""
+    },
+    {
+      "ticker": "FCX",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-22",
+      "entry_price": 68.03,
+      "shares": 5,
+      "stop_price": 66.755,
+      "order_id": ""
+    },
+    {
+      "ticker": "GLD",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-04-22",
+      "entry_price": 442.8,
+      "shares": 2,
+      "stop_price": 418.105,
+      "order_id": ""
+    },
+    {
+      "ticker": "ON",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 85.51,
+      "shares": 4,
+      "stop_price": 81.2345,
+      "order_id": ""
+    },
+    {
+      "ticker": "UNG",
+      "strategy": "connors_rsi2",
+      "entry_date": "2026-04-22",
+      "entry_price": 10.68,
+      "shares": 54,
+      "stop_price": 10.47,
+      "order_id": ""
+    },
+    {
+      "ticker": "XLY",
+      "strategy": "unknown",
+      "entry_date": "2026-04-22",
+      "entry_price": 116.44,
+      "shares": 10,
+      "stop_price": 110.618,
+      "order_id": ""
+    }
+  ],
+  "closed_trades": [],
+  "equity_history": [
+    {
+      "date": "2026-04-14",
+      "equity": 4994.72,
+      "cash": 2082.93,
+      "positions_value": 2911.79,
+      "num_positions": 2,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "momentum_breakout",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 68.27,
+          "unrealized_pnl": 1.2,
+          "mae": 0.0,
+          "mfe": 0.35,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "connors_rsi2",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.56,
+          "unrealized_pnl": -6.48,
+          "mae": -1.12,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-14",
+      "equity": 4994.72,
+      "cash": 2082.93,
+      "positions_value": 2911.79,
+      "num_positions": 2,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 68.27,
+          "unrealized_pnl": 1.2,
+          "mae": 0.0,
+          "mfe": 0.35,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.56,
+          "unrealized_pnl": -6.48,
+          "mae": -1.12,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-15",
+      "equity": 4992.79,
+      "cash": 282.89,
+      "positions_value": 4709.9,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 68.7,
+          "unrealized_pnl": 3.35,
+          "mae": 0.0,
+          "mfe": 0.98,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 440.46,
+          "unrealized_pnl": -4.68,
+          "mae": -0.53,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "momentum_breakout",
+          "shares": 6,
+          "entry_price": 71.92,
+          "current_price": 71.84,
+          "unrealized_pnl": -0.48,
+          "mae": -0.11,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.58,
+          "unrealized_pnl": -5.4,
+          "mae": -0.94,
+          "mfe": 0.0,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-16",
+      "equity": 4997.13,
+      "cash": 802.23,
+      "positions_value": 4194.9,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 68.28,
+          "unrealized_pnl": 1.25,
+          "mae": 0.0,
+          "mfe": 0.37,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 440.08,
+          "unrealized_pnl": -5.44,
+          "mae": -0.61,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "momentum_breakout",
+          "shares": 6,
+          "entry_price": 71.92,
+          "current_price": 71.24,
+          "unrealized_pnl": -4.08,
+          "mae": -0.95,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.78,
+          "unrealized_pnl": 5.4,
+          "mae": 0.0,
+          "mfe": 0.94,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-17",
+      "equity": 5036.06,
+      "cash": 520.58,
+      "positions_value": 4515.48,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 70.21,
+          "unrealized_pnl": 10.9,
+          "mae": 0.0,
+          "mfe": 3.2,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 445.93,
+          "unrealized_pnl": 6.26,
+          "mae": 0.0,
+          "mfe": 0.71,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "momentum_breakout",
+          "shares": 6,
+          "entry_price": 71.92,
+          "current_price": 73.63,
+          "unrealized_pnl": 10.26,
+          "mae": 0.0,
+          "mfe": 2.38,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.84,
+          "unrealized_pnl": 8.64,
+          "mae": 0.0,
+          "mfe": 1.5,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-20",
+      "equity": 5019.89,
+      "cash": 1318.15,
+      "positions_value": 3701.74,
+      "num_positions": 4,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "reconciled",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 70.18,
+          "unrealized_pnl": 10.75,
+          "mae": 0.0,
+          "mfe": 3.16,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "reconciled",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 442.09,
+          "unrealized_pnl": -1.42,
+          "mae": -0.16,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "SLV",
+          "strategy": "reconciled",
+          "shares": 6,
+          "entry_price": 71.92,
+          "current_price": 72.15,
+          "unrealized_pnl": 1.38,
+          "mae": 0.0,
+          "mfe": 0.32,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "reconciled",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.85,
+          "unrealized_pnl": 9.18,
+          "mae": 0.0,
+          "mfe": 1.59,
+          "holding_days": -1
+        }
+      ]
+    },
+    {
+      "date": "2026-04-21",
+      "equity": 4985.82,
+      "cash": 1158.08,
+      "positions_value": 3827.74,
+      "num_positions": 3,
+      "total_realized_pnl": 0,
+      "total_closed_trades": 0,
+      "positions": [
+        {
+          "ticker": "FCX",
+          "strategy": "momentum_breakout",
+          "shares": 5,
+          "entry_price": 68.03,
+          "current_price": 67.57,
+          "unrealized_pnl": -2.3,
+          "mae": -0.68,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "GLD",
+          "strategy": "momentum_breakout",
+          "shares": 2,
+          "entry_price": 442.8,
+          "current_price": 429.57,
+          "unrealized_pnl": -26.46,
+          "mae": -2.99,
+          "mfe": 0.0,
+          "holding_days": -1
+        },
+        {
+          "ticker": "UNG",
+          "strategy": "connors_rsi2",
+          "shares": 54,
+          "entry_price": 10.68,
+          "current_price": 10.95,
+          "unrealized_pnl": 14.58,
+          "mae": 0.0,
+          "mfe": 2.53,
+          "holding_days": -1
+        }
+      ]
+    }
+  ],
+  "daily_high_water": 5036.06,
+  "halted": false,
+  "halt_reason": "",
+  "last_saved": "2026-04-22T09:00:13.410947"
+}

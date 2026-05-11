@@ -1,0 +1,132 @@
+{
+  "trade_date": "2026-05-01",
+  "generated_at": "2026-05-01T19:03:04.098339",
+  "market_id": "sector_etfs",
+  "config_version": "v1.0.2",
+  "status": "EXECUTED",
+  "portfolio_snapshot": {
+    "equity": 3221.49,
+    "cash": 1665.37,
+    "open_positions": 1,
+    "total_pnl": 5.49,
+    "total_pnl_pct": 0.17
+  },
+  "proposed_entries": [
+    {
+      "ticker": "XLE",
+      "strategy": "momentum_breakout",
+      "entry_price": 59.650001525878906,
+      "stop_price": 57.5607,
+      "take_profit": 68.0074,
+      "position_size": 8,
+      "position_value": 477.2,
+      "risk_amount": 16.71,
+      "confidence": 0.7515,
+      "rationale": "XLE broke above 15-day high of $59.03 closing at $59.65 (+1.1%). Trend aligned: price > 20MA $57.32 (+4.1%). Volume 0.7x avg. ATR=1.39, stop=$57.56.",
+      "features": {
+        "lookback_high": 59.03,
+        "breakout_pct": 1.05,
+        "volume_ratio": 0.74,
+        "trend_ma": 57.316,
+        "trend_strength_pct": 4.07,
+        "atr": 1.3929,
+        "close": 59.65,
+        "signal_mode": "raw",
+        "breadth_pct_above_50ma": 90.9,
+        "breadth_pct_above_200ma": 81.8,
+        "breadth_ad_ratio": 11.0,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": 0.0,
+        "rs_percentile": 100.0,
+        "rs_score": 49.1,
+        "rs_momentum": 0.0,
+        "roc_20": 1.15,
+        "roc_60": 15.44,
+        "roc_120": 172.94,
+        "sector": "Energy"
+      },
+      "sector": "Energy",
+      "market_id": ""
+    }
+  ],
+  "rejected_entries": [
+    {
+      "ticker": "XLP",
+      "strategy": "momentum_breakout",
+      "entry_price": 84.30999755859375,
+      "stop_price": 82.5605,
+      "take_profit": 91.308,
+      "position_size": 11,
+      "position_value": 927.41,
+      "risk_amount": 19.24,
+      "confidence": 0.7125,
+      "rationale": "XLP broke above 15-day high of $83.48 closing at $84.31 (+1.0%). Trend aligned: price > 20MA $82.40 (+2.3%). Volume 1.2x avg. ATR=1.17, stop=$82.56.",
+      "features": {
+        "lookback_high": 83.48,
+        "breakout_pct": 0.99,
+        "volume_ratio": 1.22,
+        "trend_ma": 82.404,
+        "trend_strength_pct": 2.31,
+        "atr": 1.1663,
+        "close": 84.31,
+        "signal_mode": "raw",
+        "breadth_pct_above_50ma": 90.9,
+        "breadth_pct_above_200ma": 81.8,
+        "breadth_ad_ratio": 11.0,
+        "breadth_thrust": 0.0,
+        "breadth_momentum": 0.0,
+        "breadth_net_new_highs_pct": 0.0,
+        "rs_percentile": 30.0,
+        "rs_score": 3.52,
+        "rs_momentum": 0.0,
+        "roc_20": 3.5,
+        "roc_60": -1.82,
+        "roc_120": 11.02,
+        "sector": "Consumer Staples"
+      },
+      "sector": "Consumer Staples",
+      "market_id": "",
+      "rejection_reason": "Risk $19.24 exceeds max $16.08"
+    }
+  ],
+  "proposed_exits": [],
+  "total_signals_generated": 2,
+  "risk_summary": {
+    "total_proposed_cost": 477.2,
+    "total_proposed_risk": 16.71,
+    "risk_pct_of_equity": 0.52,
+    "positions_after": 2,
+    "cash_after_entries": 1188.17,
+    "portfolio_exposure_pct": 63.12
+  },
+  "open_positions": [
+    {
+      "ticker": "XLI",
+      "strategy": "momentum_breakout",
+      "entry_date": "2026-05-01",
+      "entry_price": 173.97,
+      "current_price": 174.5800018310547,
+      "shares": 9,
+      "unrealized_pnl": 5.49,
+      "unrealized_pnl_pct": 0.35,
+      "stop_price": 170.075,
+      "take_profit": 200.07,
+      "sector": "Unknown",
+      "mae_pct": 0.0,
+      "mfe_pct": 0.0,
+      "holding_days": 0
+    }
+  ],
+  "allocation_summary": {},
+  "vol_scale_applied": 1.0,
+  "approved_at": "2026-05-01T19:04:05.744721",
+  "approver": "human",
+  "executed_at": "2026-05-01T23:20:23.191445",
+  "execution_report": {
+    "successful_entries": 1,
+    "successful_exits": 0,
+    "total_entries": 1,
+    "total_exits": 0
+  }
+}

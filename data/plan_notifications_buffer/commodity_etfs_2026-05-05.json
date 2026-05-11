@@ -1,0 +1,81 @@
+{
+  "market_id": "commodity_etfs",
+  "trade_date": "2026-05-05",
+  "plan_status": "PENDING",
+  "halt_reason": null,
+  "n_entries": 3,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 1.51,
+  "total_position_value": 1555.4,
+  "leverage_pct": 139.85,
+  "summary_lines": [
+    "DBB \u00d7 18 @ $24.49 \u2192 stop $24.19",
+    "XOP \u00d7 1 @ $181.01 \u2192 stop $177.31",
+    "DBA \u00d7 33 @ $28.29 \u2192 stop $28.13"
+  ],
+  "entries_full": [
+    {
+      "ticker": "DBB",
+      "side": "BUY",
+      "qty": 18,
+      "entry_price": 24.489999771118164,
+      "stop_price": 24.19,
+      "take_profit": null,
+      "risk_amount": 5.4,
+      "position_value": 440.82,
+      "strategy": "connors_rsi2",
+      "sector": "Industrial Metals",
+      "confidence": 0.844
+    },
+    {
+      "ticker": "XOP",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 181.00999450683594,
+      "stop_price": 177.3094,
+      "take_profit": 211.848,
+      "risk_amount": 3.7,
+      "position_value": 181.01,
+      "strategy": "momentum_breakout",
+      "sector": "Energy",
+      "confidence": 0.7172
+    },
+    {
+      "ticker": "DBA",
+      "side": "BUY",
+      "qty": 33,
+      "entry_price": 28.290000915527344,
+      "stop_price": 28.1322,
+      "take_profit": 29.6054,
+      "risk_amount": 5.21,
+      "position_value": 933.57,
+      "strategy": "momentum_breakout",
+      "sector": "Agriculture",
+      "confidence": 0.7147
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "GLD",
+      "shares": 2,
+      "entry_price": 442.8,
+      "current_price": 414.7099914550781,
+      "unrealized_pnl": -56.18,
+      "unrealized_pnl_pct": -6.34,
+      "stop_price": 403.32,
+      "take_profit": 509.22,
+      "strategy": "momentum_breakout"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 944.82,
+    "cash": 1178.86,
+    "total_pnl": -56.18,
+    "total_pnl_pct": -5.61
+  },
+  "trading_mode": "passive",
+  "rejection_reason": null,
+  "written_at": "2026-05-05T10:06:23.294988+00:00"
+}

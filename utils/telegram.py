@@ -807,12 +807,13 @@ def send_postclose_summary(market_id: str = "sp500") -> bool:
         return True
 
     if closed_today:
-        total_realized = sum(t.get("pnl", 0) for t in closed_today)
+        # Reconciled broker-fill stubs may carry pnl=None — coerce with `or 0`
+        total_realized = sum((t.get("pnl") or 0) for t in closed_today)
         lines.append(f"<b>Trades Closed Today ({len(closed_today)}):</b>")
         for t in closed_today:
             ticker = t.get("ticker", "?")
-            pnl = t.get("pnl", 0)
-            pnl_pct = t.get("pnl_pct", 0)
+            pnl = t.get("pnl") or 0
+            pnl_pct = t.get("pnl_pct") or 0
             reason = t.get("exit_reason", t.get("reason", "?"))
             strategy = t.get("strategy", "")
             icon = "🟢" if pnl >= 0 else "🔴"

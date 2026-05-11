@@ -1,65 +1,56 @@
 # mean_reversion
 
-> **Status:** active | **Best Sharpe:** 1.0215 | **Trades:** 1142
-> **Updated:** 2026-04-28 14:40
+> **Status:** active | **Best Sharpe:** 1.1500 | **Trades:** 95
+> **Updated:** 2026-05-10 10:19
 
 ## Current Best Params
 
 | Parameter | Value |
 |-----------|-------|
-| atr_period | 20 |
-| atr_stop_mult | 1.35 |
-| ibs_max | 0.7 |
-| max_hold_days | 25 |
-| profit_target_atr_mult | 2.5 |
-| rsi_oversold | 35 |
-| rsi_period | 10 |
-| sma200_filter | False |
-| zscore_entry | -0.9 |
-| zscore_lookback | 20 |
+| rsi_period | 12 |
 
 ## Current Metrics
 
 | Metric | Value |
 |--------|-------|
-| Sharpe | 1.0215 |
-| CAGR | 33.4% |
-| Profit Factor | 1.33 |
-| Max Drawdown | 37.2% |
-| Total Trades | 1142 |
-| Win Rate | 39.8% |
+| Sharpe | 1.1500 |
+| CAGR | 14.0% |
+| Profit Factor | 0.00 |
+| Max Drawdown | 0.0% |
+| Total Trades | 95 |
+| Win Rate | 0.0% |
 
 ## History
 
 | Date | Sharpe | Trades | PF | CAGR | Change |
 |------|--------|--------|----|------|--------|
-| 2026-04-28 01:27 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:29 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:30 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:32 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:33 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:35 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:36 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:38 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 01:39 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:04 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:06 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:08 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:09 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:37 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:42 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:44 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:46 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:48 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 02:49 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
-| 2026-04-28 13:21 | 0.4815 | 1176 | 1.18 | 15.5% | rsi_period: 14 → 10 |
-| 2026-04-28 13:21 | 0.4815 | 1176 | 1.18 | 15.5% | autoresearch_runner keep: rsi_period=10 |
-| 2026-04-28 14:02 | 1.0094 | 565 | 1.55 | 19.6% | rsi_period: 14 → 15 |
-| 2026-04-28 14:02 | 1.0094 | 565 | 1.55 | 19.6% | autoresearch_runner keep: rsi_period=15 |
-| 2026-04-28 14:03 | 1.0933 | 569 | 1.59 | 21.1% | zscore_lookback: 24 → 22 |
-| 2026-04-28 14:03 | 1.0933 | 569 | 1.59 | 21.1% | autoresearch_runner keep: zscore_lookback=22 |
-| 2026-04-28 14:07 | 1.2075 | 579 | 1.66 | 24.3% | atr_stop_mult: 0.56 → 0.28 |
-| 2026-04-28 14:07 | 1.2075 | 579 | 1.66 | 24.3% | autoresearch_runner keep: atr_stop_mult=0.28 |
-| 2026-04-28 14:11 | 1.2368 | 573 | 1.68 | 24.9% | ibs_max: 0.7 → 1.05 |
-| 2026-04-28 14:11 | 1.2368 | 573 | 1.68 | 24.9% | autoresearch_runner keep: ibs_max=1.05 |
-| 2026-04-28 14:40 | 1.0215 | 1142 | 1.33 | 33.4% | rsi_oversold: 39 → 35 (less selective entry) |
+| 2026-05-06 04:54 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-06 14:01 | 1.0801 | 609 | 1.56 | 21.8% | rsi_period: 15 → 16 |
+| 2026-05-06 14:01 | 1.0801 | 609 | 1.56 | 21.8% | autoresearch_runner keep: rsi_period=16 |
+| 2026-05-07 01:48 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 01:50 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 01:52 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 01:54 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 01:56 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 01:58 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 02:04 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 03:39 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 03:41 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 03:49 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 03:52 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 03:54 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 04:00 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 14:05 | 1.4414 | 537 | 1.80 | 30.0% | atr_stop_mult: 0.21 → 0.16 |
+| 2026-05-07 14:05 | 1.4414 | 537 | 1.80 | 30.0% | autoresearch_runner keep: atr_stop_mult=0.16 |
+| 2026-05-07 23:34 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 23:35 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-07 23:55 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:04 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:06 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:10 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:12 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:14 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:18 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 00:19 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-08 02:19 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |
+| 2026-05-10 10:19 | 1.1500 | 95 | 0.00 | 14.0% | autoresearch_runner keep: rsi_period=12 |

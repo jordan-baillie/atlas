@@ -1,0 +1,15 @@
+{
+  "market_id": "commodity_etfs",
+  "trade_date": "2026-05-04",
+  "plan_status": "EMPTY",
+  "halt_reason": null,
+  "n_entries": 0,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 0.0,
+  "total_position_value": 0.0,
+  "leverage_pct": 0.0,
+  "summary_lines": [],
+  "rejection_reason": null,
+  "written_at": "2026-05-04T09:06:15.577375+00:00"
+}

@@ -1,0 +1,15 @@
+{
+  "market_id": "sector_etfs",
+  "trade_date": "2026-05-06",
+  "plan_status": "EMPTY",
+  "halt_reason": null,
+  "n_entries": 0,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 0.0,
+  "total_position_value": 0.0,
+  "leverage_pct": 0.0,
+  "summary_lines": [],
+  "rejection_reason": null,
+  "written_at": "2026-05-06T09:05:38.965642+00:00"
+}

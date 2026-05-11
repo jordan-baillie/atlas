@@ -1,0 +1,41 @@
+{
+  "market_id": "commodity_etfs",
+  "trade_date": "2026-05-06",
+  "plan_status": "PENDING",
+  "halt_reason": null,
+  "n_entries": 1,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 0.54,
+  "total_position_value": 936.21,
+  "leverage_pct": -224.69,
+  "summary_lines": [
+    "DBA \u00d7 33 @ $28.37 \u2192 stop $28.21"
+  ],
+  "entries_full": [
+    {
+      "ticker": "DBA",
+      "side": "BUY",
+      "qty": 33,
+      "entry_price": 28.3700008392334,
+      "stop_price": 28.2139,
+      "take_profit": 29.6706,
+      "risk_amount": 5.15,
+      "position_value": 936.21,
+      "strategy": "momentum_breakout",
+      "sector": "Agriculture",
+      "confidence": 0.6931
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [],
+  "equity_snapshot": {
+    "equity": 956.82,
+    "cash": 4042.88,
+    "total_pnl": -44.18,
+    "total_pnl_pct": -4.41
+  },
+  "trading_mode": "passive",
+  "rejection_reason": null,
+  "written_at": "2026-05-06T09:08:01.995084+00:00"
+}

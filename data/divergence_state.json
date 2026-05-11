@@ -1,0 +1,20 @@
+{
+  "connors_rsi2:commodity_etfs": {
+    "current_state": "LIVE",
+    "consecutive_breach_days": 5,
+    "last_breach_date": "2026-05-10",
+    "last_check_date": "2026-05-10"
+  },
+  "momentum_breakout:sp500": {
+    "current_state": "LIVE",
+    "consecutive_breach_days": 5,
+    "last_breach_date": "2026-05-10",
+    "last_check_date": "2026-05-10"
+  },
+  "momentum_breakout:sector_etfs": {
+    "current_state": "LIVE",
+    "consecutive_breach_days": 0,
+    "last_check_date": "2026-05-10"
+  },
+  "_last_run_date": "2026-05-10"
+}

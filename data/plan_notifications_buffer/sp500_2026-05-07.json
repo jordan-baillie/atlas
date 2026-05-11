@@ -1,0 +1,103 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-05-07",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 3,
+  "n_approved": 3,
+  "n_exits": 0,
+  "total_risk_pct": 2.28,
+  "total_position_value": 1253.3,
+  "leverage_pct": 214.9,
+  "summary_lines": [
+    "LRCX \u00d7 1 @ $297.06 \u2192 stop $289.44",
+    "MCHP \u00d7 6 @ $102.93 \u2192 stop $100.89",
+    "XOP \u00d7 2 @ $169.33 \u2192 stop $163.87"
+  ],
+  "entries_full": [
+    {
+      "ticker": "LRCX",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 297.06,
+      "stop_price": 289.4433,
+      "take_profit": 371.9785,
+      "risk_amount": 7.62,
+      "position_value": 297.06,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "MCHP",
+      "side": "BUY",
+      "qty": 6,
+      "entry_price": 102.93,
+      "stop_price": 100.8875,
+      "take_profit": 123.0201,
+      "risk_amount": 12.26,
+      "position_value": 617.58,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "XOP",
+      "side": "BUY",
+      "qty": 2,
+      "entry_price": 169.3300018310547,
+      "stop_price": 163.87,
+      "take_profit": null,
+      "risk_amount": 10.92,
+      "position_value": 338.66,
+      "strategy": "connors_rsi2",
+      "sector": "Energy",
+      "confidence": 0.894
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "CAT",
+      "shares": 1,
+      "entry_price": 835.24,
+      "current_price": 926.89,
+      "unrealized_pnl": 91.65,
+      "unrealized_pnl_pct": 10.97,
+      "stop_price": 861.21,
+      "take_profit": 978.33,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "FSLR",
+      "shares": 2,
+      "entry_price": 218.16,
+      "current_price": 218.02,
+      "unrealized_pnl": -0.28,
+      "unrealized_pnl_pct": -0.06,
+      "stop_price": 213.84,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "SYK",
+      "shares": 1,
+      "entry_price": 294.65,
+      "current_price": 292.23,
+      "unrealized_pnl": -2.42,
+      "unrealized_pnl_pct": -0.82,
+      "stop_price": 286.12,
+      "take_profit": null,
+      "strategy": "connors_rsi2"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 1353.41,
+    "cash": 3606.56,
+    "total_pnl": 382.41,
+    "total_pnl_pct": 39.38
+  },
+  "trading_mode": "live",
+  "rejection_reason": null,
+  "written_at": "2026-05-07T09:11:00.993983+00:00"
+}

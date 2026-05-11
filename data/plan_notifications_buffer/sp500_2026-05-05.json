@@ -1,0 +1,134 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-05-05",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 6,
+  "n_approved": 6,
+  "n_exits": 0,
+  "total_risk_pct": 4.33,
+  "total_position_value": 2112.27,
+  "leverage_pct": 171.77,
+  "summary_lines": [
+    "CDNS \u00d7 1 @ $349.65 \u2192 stop $342.35",
+    "EBAY \u00d7 5 @ $109.34 \u2192 stop $107.16",
+    "F \u00d7 38 @ $11.49 \u2192 stop $11.14",
+    "FCX \u00d7 3 @ $55.59 \u2192 stop $53.03",
+    "GLD \u00d7 1 @ $414.71 \u2192 stop $405.85",
+    "SLV \u00d7 3 @ $65.94 \u2192 stop $63.18"
+  ],
+  "entries_full": [
+    {
+      "ticker": "CDNS",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 349.65,
+      "stop_price": 342.3468,
+      "take_profit": 421.4846,
+      "risk_amount": 7.3,
+      "position_value": 349.65,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 0.969
+    },
+    {
+      "ticker": "EBAY",
+      "side": "BUY",
+      "qty": 5,
+      "entry_price": 109.34,
+      "stop_price": 107.1641,
+      "take_profit": 130.7428,
+      "risk_amount": 10.88,
+      "position_value": 546.7,
+      "strategy": "momentum_breakout",
+      "sector": "Consumer Cyclical",
+      "confidence": 0.9369
+    },
+    {
+      "ticker": "F",
+      "side": "BUY",
+      "qty": 38,
+      "entry_price": 11.49,
+      "stop_price": 11.14,
+      "take_profit": null,
+      "risk_amount": 13.3,
+      "position_value": 436.62,
+      "strategy": "connors_rsi2",
+      "sector": "Consumer Cyclical",
+      "confidence": 0.934
+    },
+    {
+      "ticker": "FCX",
+      "side": "BUY",
+      "qty": 3,
+      "entry_price": 55.59,
+      "stop_price": 53.03,
+      "take_profit": null,
+      "risk_amount": 7.68,
+      "position_value": 166.77,
+      "strategy": "connors_rsi2",
+      "sector": "Basic Materials",
+      "confidence": 0.882
+    },
+    {
+      "ticker": "GLD",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 414.7099914550781,
+      "stop_price": 405.85,
+      "take_profit": null,
+      "risk_amount": 8.86,
+      "position_value": 414.71,
+      "strategy": "connors_rsi2",
+      "sector": "Precious Metals",
+      "confidence": 0.847
+    },
+    {
+      "ticker": "SLV",
+      "side": "BUY",
+      "qty": 3,
+      "entry_price": 65.94000244140625,
+      "stop_price": 63.18,
+      "take_profit": null,
+      "risk_amount": 8.28,
+      "position_value": 197.82,
+      "strategy": "connors_rsi2",
+      "sector": "Precious Metals",
+      "confidence": 0.765
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "CAT",
+      "shares": 1,
+      "entry_price": 835.24,
+      "current_price": 874.94,
+      "unrealized_pnl": 39.7,
+      "unrealized_pnl_pct": 4.75,
+      "stop_price": 861.21,
+      "take_profit": 978.33,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "SYK",
+      "shares": 1,
+      "entry_price": 294.65,
+      "current_price": 291.03,
+      "unrealized_pnl": -3.62,
+      "unrealized_pnl_pct": -1.23,
+      "stop_price": 286.12,
+      "take_profit": null,
+      "strategy": "connors_rsi2"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 1300.54,
+    "cash": 1178.86,
+    "total_pnl": 329.54,
+    "total_pnl_pct": 33.94
+  },
+  "trading_mode": "live",
+  "rejection_reason": null,
+  "written_at": "2026-05-05T10:06:23.283063+00:00"
+}

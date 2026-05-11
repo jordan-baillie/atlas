@@ -1,0 +1,102 @@
+{
+  "strategy": "connors_rsi2",
+  "market": "commodity_etfs",
+  "params": {
+    "weight": 0.2,
+    "rsi_period": 4,
+    "rsi_entry": 75,
+    "sma_trend_period": 150,
+    "sma200_filter": false,
+    "min_consecutive_down": 1,
+    "ibs_max": 0.5,
+    "ibs_filter_enabled": false,
+    "volume": {
+      "lookback": 15,
+      "min_ratio": 0.5
+    },
+    "sma_exit_period": 8,
+    "rsi_exit": 65,
+    "exit_mode": "sma",
+    "max_hold_days": 4,
+    "atr_period": 14,
+    "atr_stop_mult": 0.68
+  },
+  "metrics": {
+    "total_trades": 637,
+    "cagr_pct": 18.068,
+    "cagr_full_period_pct": 15.1411,
+    "sharpe": 0.9681,
+    "sortino": 1.2853,
+    "max_drawdown_pct": 15.8965,
+    "win_rate_pct": 44.27,
+    "profit_factor": 1.5055,
+    "total_pnl": 1685.68,
+    "avg_trade": 2.65,
+    "final_equity": 2682.79,
+    "expectancy_r": 0.4898,
+    "avg_r": 0.4898,
+    "r_count": 637,
+    "edge_p_value": 0.000408,
+    "edge_significant": true,
+    "var_95_pct": 1.253,
+    "cvar_95_pct": 1.965,
+    "calmar": 1.1366,
+    "mc_p95_drawdown_pct": 23.83,
+    "mc_fragile": false,
+    "windows_configured": 69,
+    "windows_used": 69,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 252,
+        "total_pnl": 1266.28,
+        "win_rate_pct": 26.6
+      },
+      "connors_rsi2": {
+        "trades": 329,
+        "total_pnl": 381.23,
+        "win_rate_pct": 56.8
+      },
+      "mean_reversion": {
+        "trades": 56,
+        "total_pnl": 38.17,
+        "win_rate_pct": 50.0
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 43,
+        "win_rate_pct": 60.5,
+        "avg_trade": 1.78,
+        "total_pnl": 76.47,
+        "profit_factor": 1.5148,
+        "sharpe_approx": 0.1388,
+        "avg_r": 0.344
+      },
+      "bull": {
+        "trades": 111,
+        "win_rate_pct": 41.4,
+        "avg_trade": 7.34,
+        "total_pnl": 814.97,
+        "profit_factor": 2.0446,
+        "sharpe_approx": 0.2093,
+        "avg_r": 1.0304
+      },
+      "neutral": {
+        "trades": 483,
+        "win_rate_pct": 43.5,
+        "avg_trade": 1.64,
+        "total_pnl": 794.24,
+        "profit_factor": 1.3301,
+        "sharpe_approx": 0.0885,
+        "avg_r": 0.3786
+      }
+    },
+    "solo_sharpe": 0.8977,
+    "runtime_s": 28.1
+  },
+  "description": "max_hold_days: 5 \u2192 4",
+  "experiments_run": 0,
+  "experiments_kept": 11,
+  "updated_at": "2026-05-06T14:16:22.837717+00:00"
+}

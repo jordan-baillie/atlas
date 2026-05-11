@@ -1,0 +1,106 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-05-06",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 4,
+  "n_approved": 4,
+  "n_exits": 0,
+  "total_risk_pct": 2.63,
+  "total_position_value": 1092.5,
+  "leverage_pct": -121.16,
+  "summary_lines": [
+    "FSLR \u00d7 2 @ $219.26 \u2192 stop $213.84",
+    "LRCX \u00d7 1 @ $275.88 \u2192 stop $268.60",
+    "CCJ \u00d7 1 @ $114.46 \u2192 stop $108.10",
+    "SLV \u00d7 4 @ $65.91 \u2192 stop $63.27"
+  ],
+  "entries_full": [
+    {
+      "ticker": "FSLR",
+      "side": "BUY",
+      "qty": 2,
+      "entry_price": 219.26,
+      "stop_price": 213.8436,
+      "take_profit": 272.5357,
+      "risk_amount": 10.83,
+      "position_value": 438.52,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "LRCX",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 275.88,
+      "stop_price": 268.6016,
+      "take_profit": 347.4708,
+      "risk_amount": 7.28,
+      "position_value": 275.88,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "CCJ",
+      "side": "BUY",
+      "qty": 1,
+      "entry_price": 114.45999908447266,
+      "stop_price": 108.1,
+      "take_profit": null,
+      "risk_amount": 6.36,
+      "position_value": 114.46,
+      "strategy": "connors_rsi2",
+      "sector": "Uranium",
+      "confidence": 0.865
+    },
+    {
+      "ticker": "SLV",
+      "side": "BUY",
+      "qty": 4,
+      "entry_price": 65.91000366210938,
+      "stop_price": 63.27,
+      "take_profit": null,
+      "risk_amount": 10.56,
+      "position_value": 263.64,
+      "strategy": "connors_rsi2",
+      "sector": "Precious Metals",
+      "confidence": 0.766
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "CAT",
+      "shares": 1,
+      "entry_price": 835.24,
+      "current_price": 904.195,
+      "unrealized_pnl": 68.96,
+      "unrealized_pnl_pct": 8.26,
+      "stop_price": 861.21,
+      "take_profit": 978.33,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "SYK",
+      "shares": 1,
+      "entry_price": 294.65,
+      "current_price": 295.28,
+      "unrealized_pnl": 0.63,
+      "unrealized_pnl_pct": 0.21,
+      "stop_price": 286.12,
+      "take_profit": null,
+      "strategy": "connors_rsi2"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 1334.05,
+    "cash": 4042.88,
+    "total_pnl": 363.05,
+    "total_pnl_pct": 37.39
+  },
+  "trading_mode": "live",
+  "rejection_reason": null,
+  "written_at": "2026-05-06T09:16:25.452902+00:00"
+}

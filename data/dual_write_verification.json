@@ -37,8 +37,68 @@
       "passed": true,
       "details": "6/6 pass",
       "source": "cron"
+    },
+    {
+      "date": "2026-05-05",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "manual"
+    },
+    {
+      "date": "2026-05-05",
+      "passed": false,
+      "details": "5/6 pass",
+      "source": "cron"
+    },
+    {
+      "date": "2026-05-06",
+      "passed": true,
+      "details": "6/6 pass",
+      "source": "manual"
+    },
+    {
+      "date": "2026-05-06",
+      "passed": false,
+      "details": "5/6 pass",
+      "source": "cron"
+    },
+    {
+      "date": "2026-05-07",
+      "passed": false,
+      "details": "5/6 pass",
+      "source": "manual"
+    },
+    {
+      "date": "2026-05-07",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "cron"
+    },
+    {
+      "date": "2026-05-08",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "manual"
+    },
+    {
+      "date": "2026-05-08",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "cron"
+    },
+    {
+      "date": "2026-05-09",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "manual"
+    },
+    {
+      "date": "2026-05-09",
+      "passed": false,
+      "details": "4/6 pass",
+      "source": "cron"
     }
   ],
-  "consecutive_passes": 1,
+  "consecutive_passes": 0,
   "gate_target": 5
 }

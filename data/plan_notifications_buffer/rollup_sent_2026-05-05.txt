@@ -1,0 +1,2 @@
+sent at 2026-05-05T09:45:02.955994+00:00
+markets: ['sector_etfs', 'commodity_etfs', 'sp500']
