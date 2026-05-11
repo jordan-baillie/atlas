@@ -208,6 +208,42 @@ class BaseStrategy(ABC):
         """
         ...
 
+
+    def _iter_my_positions(self, data, positions):
+        """Yield (ticker, pos, df) for this strategy's open positions with valid OHLCV.
+
+        `positions` is List[Dict[str, Any]] with at minimum 'strategy', 'ticker'.
+        Filters out positions belonging to other strategies, missing tickers,
+        and tickers whose OHLCV frame is missing or empty.
+        """
+        for pos in positions:
+            if pos.get("strategy") != self.name:
+                continue
+            ticker = pos.get("ticker")
+            if not ticker:
+                continue
+            df = data.get(ticker)
+            if df is None or df.empty:
+                continue
+            yield ticker, pos, df
+
+    def _atr_stop(self, entry_price: float, atr: float) -> float:
+        """ATR-based stop: entry_price - atr_stop_mult * atr.
+
+        Subclass must define `self.atr_stop_mult` (typical: 2.0-3.5).
+        """
+        return entry_price - self.atr_stop_mult * atr
+
+    def _get_indicator(self, df, col_name: str, fallback_fn):
+        """Return precomputed indicator column if present, else compute via fallback_fn(df).
+
+        Replaces the `if self._precomputed: x = df['col'] else: x = calc_X(df, ...)` pattern.
+        `fallback_fn` is a callable taking df -> Series/scalar.
+        """
+        if self._precomputed and col_name in df.columns:
+            return df[col_name]
+        return fallback_fn(df)
+
     def _get_held_tickers(self, existing_positions: List[Dict[str, Any]]) -> set:
         """Extract set of tickers currently held."""
         return {p["ticker"] for p in existing_positions if p.get("ticker")}
