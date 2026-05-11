@@ -43,10 +43,17 @@ from conftest import MINIMAL_CONFIG  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def _config(mode: str = "live", market: str = "sp500") -> dict:
-    """Return a minimal config dict with a specific trading.mode."""
+    """Return a minimal config dict with a specific trading.mode.
+
+    For mode="live", live_enabled is set to True so the #300 live_enabled
+    gate does not block the test.  MINIMAL_CONFIG has live_enabled=False
+    (paper/test default); live mode tests need it True.
+    """
     cfg = copy.deepcopy(MINIMAL_CONFIG)
     cfg["market"] = market
     cfg["trading"]["mode"] = mode
+    if mode == "live":
+        cfg["trading"]["live_enabled"] = True
     return cfg
 
 

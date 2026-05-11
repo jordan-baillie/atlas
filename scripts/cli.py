@@ -367,6 +367,17 @@ def cmd_plan(args):
         print(f"Skipping plan generation for {market_id} (trading.mode={mode})")
         return
 
+    # Per #300/#317: live_enabled=False is an explicit override that disables
+    # trading for live-mode universes (belt-and-suspenders after the mode check).
+    # Paper mode is NOT gated by live_enabled (paper broker, no real capital).
+    if mode == "live" and not config.get("trading", {}).get("live_enabled", True):
+        logger.info(
+            "cmd_plan: skipping %s — trading.live_enabled=false (#300)",
+            market_id,
+        )
+        print(f"Skipping plan generation for {market_id} (trading.live_enabled=false)")
+        return
+
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
     tickers = get_tickers(market_id)
     data = load_data(tickers, config)

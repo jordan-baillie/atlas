@@ -709,6 +709,37 @@ class TradePlanGenerator:
         # b. Get active universes from the classification.
         active_universes: list = regime.active_universes
 
+        # Filter passive universes (#300): skip universes where trading.live_enabled
+        # is False so their signals never propagate into the calling market's plan
+        # file.  Downstream consumers (execute_approved.py) already filter via
+        # BrokerRoutingPolicy.should_skip(), but filtering here avoids loading
+        # universe data and generating signals entirely — saving LLM tokens and
+        # eliminating noise in plan_<market>_*.json files.
+        # Fails open (keeps universe) if its config cannot be loaded.
+        try:
+            from utils.config import get_active_config as _gac  # local import — avoid circular
+            _live_universes: list = []
+            for _u in active_universes:
+                try:
+                    _ucfg = _gac(_u)
+                    if _ucfg.get("trading", {}).get("live_enabled", False):
+                        _live_universes.append(_u)
+                    else:
+                        logger.info(
+                            "plan: skipping passive universe %s in regime-aware plan "
+                            "— trading.live_enabled=false (#300)",
+                            _u,
+                        )
+                except Exception as _exc:
+                    logger.debug(
+                        "plan: config for universe %s unavailable (fail-open): %s",
+                        _u, _exc,
+                    )
+                    _live_universes.append(_u)  # fail-open: include if config missing
+            active_universes = _live_universes
+        except Exception as _exc:
+            logger.warning("Passive-universe filter failed (fail-open): %s", _exc)
+
         # c. Load data for each active universe.
         multi_data: dict = build_multi_universe(active_universes)
 
