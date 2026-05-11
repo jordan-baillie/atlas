@@ -2788,6 +2788,39 @@ class LiveExecutor:
                 "reconciled": True,
                 "regime_at_exit": _recon_exit_regime,
             }
+            # ── Idempotency guard (#315) ──────────────────────────────────────
+            # Skip if SQLite already has a closed row for this fill within the
+            # Alpaca 7-day lookback window. Natural key: ticker + DATE(exit_date)
+            # + exit_price + shares. Fail-OPEN on DB error (better to double-
+            # record than silently drop). Same pattern as _record_same_bar_round_trip.
+            try:
+                from db import atlas_db as _adb_recon_idem
+                _exit_dt_str = str(getattr(order, "filled_at", ""))[:10]  # YYYY-MM-DD
+                if _exit_dt_str:
+                    with _adb_recon_idem.get_db() as _db_recon_idem:
+                        _existing = _db_recon_idem.execute(
+                            "SELECT id FROM trades "
+                            "WHERE ticker = ? "
+                            "AND status = 'closed' AND superseded = 0 "
+                            "AND DATE(exit_date) = ? "
+                            "AND exit_price = ? "
+                            "AND shares = ? "
+                            "LIMIT 1",
+                            (ticker, _exit_dt_str, fill_price, qty),
+                        ).fetchone()
+                    if _existing is not None:
+                        logger.debug(
+                            "reconcile_exit_fills: %s already recorded "
+                            "(id=%d, %s @ $%.4f x%d) — skipping",
+                            ticker, _existing["id"], _exit_dt_str, fill_price, qty,
+                        )
+                        continue
+            except Exception as _idem_exc:
+                logger.warning(
+                    "reconcile_exit_fills idempotency check failed for %s: %s "
+                    "— fail-open, will record",
+                    ticker, _idem_exc,
+                )
             if self._policy.is_paper:
                 # Paper mode: write to paper_trades exit (skip TradeLedger / trades)
                 try:

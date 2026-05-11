@@ -152,6 +152,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_unique_open ON trades(ticker, unive
 CREATE UNIQUE INDEX IF NOT EXISTS uq_trades_active_closed
   ON trades(ticker, strategy, DATE(exit_date), ROUND(pnl, 2))
   WHERE status = 'closed' AND superseded = 0;
+-- Natural-key dedup index (#315): blocks reconciler from re-recording the same
+-- logical fill across consecutive days. Key: ticker + fill-date + price + shares.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_trades_natural_key
+  ON trades(ticker, DATE(exit_date), exit_price, shares)
+ WHERE exit_date IS NOT NULL AND status = 'closed';
 
 -- Convenience view: all non-superseded trades (used by P&L consumers)
 DROP VIEW IF EXISTS trades_active;
