@@ -101,3 +101,13 @@ export function fmtAudSigned(v: number | null | undefined): string {
     maximumFractionDigits: 2,
   })
 }
+
+export function fmtSignedNum(v: number | null | undefined, digits = 2): string {
+  if (v == null || Number.isNaN(v)) return EM_DASH
+  const abs = Math.abs(v).toLocaleString('en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })
+  // Explicit + for positives (including zero); negatives get '-' from Math.sign handling
+  return (v >= 0 ? '+' : '-') + abs
+}

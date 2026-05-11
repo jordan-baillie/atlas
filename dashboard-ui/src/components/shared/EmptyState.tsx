@@ -27,13 +27,19 @@ export function EmptyState({
     return (
       <div className={`flex flex-col items-center justify-center py-10 gap-3 text-center ${className}`}>
         {icon && (
-          <div className="text-2xl text-[var(--color-text-muted)] select-none" aria-hidden="true">
+          <div
+            className="text-2xl text-[var(--color-text-muted)] select-none"
+            aria-hidden="true"
+          >
             {icon}
           </div>
         )}
-        <p className="text-sm font-semibold text-[var(--color-text)]">{heading}</p>
+        {/* Tightened from text-sm to text-[13px] per typography scale */}
+        <p className="text-[13px] font-semibold text-[var(--color-text)]">{heading}</p>
         {description && (
-          <p className="text-xs text-[var(--color-text-muted)] max-w-xs leading-relaxed">{description}</p>
+          <p className="text-xs text-[var(--color-text-muted)] max-w-xs leading-relaxed">
+            {description}
+          </p>
         )}
         {action && (
           <button
@@ -52,7 +58,7 @@ export function EmptyState({
 
   /* Simple / legacy fallback */
   return (
-    <div className={`text-center py-8 text-sm text-[var(--color-text-muted)] ${className}`}>
+    <div className={`text-center py-8 text-[13px] text-[var(--color-text-muted)] ${className}`}>
       {message}
     </div>
   )

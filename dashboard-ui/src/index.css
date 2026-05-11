@@ -31,6 +31,11 @@
   --color-spending: #f59e0b;
   --color-investment: #3b82f6;
   --color-muted: #a1a1aa;
+  /* Semantic aliases — use these in components instead of raw palette names */
+  --color-success: var(--color-green);
+  --color-warning: var(--color-amber);
+  --color-danger: var(--color-red);
+  --color-info: var(--color-investment);
   /* Spacing scale */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -83,10 +88,11 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-md);
   padding: 1rem;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-normal);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 .dash-card:hover {
   box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
 }
 
 /* Compact variant for stat-grid items */
@@ -96,13 +102,19 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-md);
   padding: 0.75rem;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-normal);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
 .dash-card-tight:hover {
   box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
 }
 
 /* Animations */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -165,6 +177,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Rule: rendering-content-visibility — defer offscreen layout/paint for long lists */
 @layer utilities {
+  /* Tabular numerics utility — apply to any container of financial numbers */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
   .cv-auto {
     content-visibility: auto;
     contain-intrinsic-size: auto 100px;
@@ -187,6 +203,7 @@ h1, h2, h3, h4, h5, h6 {
   }
   .animate-in, .skeleton { animation: none !important; }
   .dash-card, .dash-card-tight { transition: none !important; }
+  .status-pulse { animation: none !important; }
 }
 
 @layer base {
