@@ -72,6 +72,20 @@ def _load(path: Path) -> Tuple[Optional[object], Optional[str]]:
         return None, f"parse error ({path.name}): {exc}"
 
 
+
+
+# ── Live-market filter ────────────────────────────────────────────────────────
+def _is_live_market(market_id: str) -> bool:
+    """Return True iff config/active/<market>.json has trading.live_enabled == True."""
+    cfg_path = PROJECT / "config" / "active" / f"{market_id}.json"
+    if not cfg_path.exists():
+        return False
+    try:
+        cfg = json.loads(cfg_path.read_text())
+        return bool(cfg.get("trading", {}).get("live_enabled", False))
+    except Exception:
+        return False
+
 # ═════════════════════════════════════════════════════════════════════════════
 # CHECK 1 — Trades
 # ═════════════════════════════════════════════════════════════════════════════
@@ -752,6 +766,10 @@ def check_market_state() -> bool:
     for state_file in state_files:
         market_id = state_file.stem.removeprefix("live_")
 
+        if not _is_live_market(market_id):
+            print(f"     ⏭️  {market_id}: skipped (trading.live_enabled=false)")
+            continue
+
         data, err = _load(state_file)
         if err:
             print(f"     {BAD} {market_id}: {err}")
@@ -842,6 +860,10 @@ def check_equity_history(N: int = 7) -> bool:
 
     for state_file in state_files:
         market_id = state_file.stem.removeprefix("live_")
+
+        if not _is_live_market(market_id):
+            print(f"     ⏭️  {market_id}: skipped (trading.live_enabled=false)")
+            continue
 
         data, err = _load(state_file)
         if err:
