@@ -70,7 +70,8 @@ research/experiments/exp-*.json
 research/experiments/archive/
 research/vault/Experiments/
 research/vault/Parameters/
-research/archive/
+research/archive/**
+!research/archive/**/*.py
 research/tf_creative.py
 research/batch_experiment.py
 
