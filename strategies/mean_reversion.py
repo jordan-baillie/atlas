@@ -381,6 +381,14 @@ class MeanReversion(BaseStrategy):
 
                 # 20-day moving average (mean reversion target)
                 mean_20 = self._get_indicator(df, "_mr_mean_target", lambda d: d["close"].iloc[-self.zscore_lookback:].mean())
+                # Coerce to scalar — _get_indicator returns the full Series when
+                # _precomputed=True (df[col_name]) instead of a scalar from .mean().
+                if hasattr(mean_20, "iloc"):
+                    mean_20 = float(mean_20.iloc[-1])
+                elif hasattr(mean_20, "item"):
+                    mean_20 = float(mean_20.item())
+                else:
+                    mean_20 = float(mean_20)
 
                 # 1. Hard stop hit
                 if today_close <= stop_price:

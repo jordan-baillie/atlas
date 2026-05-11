@@ -25,11 +25,13 @@ sys.path.insert(0, str(ATLAS_ROOT))
 def _load_module(relative_path: str):
     """Import a module by file path without executing __main__ blocks."""
     full_path = ATLAS_ROOT / relative_path
-    spec = importlib.util.spec_from_file_location(
-        relative_path.replace("/", ".").rstrip(".py"),
-        str(full_path),
-    )
+    # removesuffix(".py") is correct; rstrip(".py") strips individual chars
+    # and corrupts names ending in 'p' or 'y' (e.g. "sweep" -> "swee").
+    name = relative_path.replace("/", ".").removesuffix(".py")
+    spec = importlib.util.spec_from_file_location(name, str(full_path))
     mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    # Register under correct name so patch("<name>.X") targets this module.
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
@@ -158,7 +160,7 @@ class TestSweepUniverseDataLoading:
 
         with patch("research.archive.sweep.ResearchSession") as MockSession, \
              patch("research.archive.sweep.STRATEGY_ORDER", ["mean_reversion"]), \
-             patch("research.archive.sweep.PARAM_GRIDS", {"mean_reversion": {}}):
+             patch("research.archive.sweep.PARAM_GRIDS", {"mean_reversion": {"rsi_period": [14]}}):
 
             mock_session = MagicMock()
             mock_session._data = {"AAPL": MagicMock()}
@@ -267,13 +269,17 @@ class TestRunnerUniverseDataLoading:
         """run_session() with universe='sp500' must NOT call build_from_definition."""
         mod = _load_module("research/autoresearch_runner.py")
 
-        with patch("research.autoresearch_runner.ResearchSession") as MockSession, \
+        # Fix A1: ResearchSession is lazy-imported inside run_session() via
+        # `from research.loop import ResearchSession`, so the canonical patch
+        # target is research.loop (not autoresearch_runner module level).
+        with patch("research.loop.ResearchSession") as MockSession, \
              patch("universe.builder.build_from_definition") as mock_bfd:
 
             mock_session = MagicMock()
             mock_session._data = {"AAPL": MagicMock()}
             mock_session._best_params = {"rsi_period": 14}
-            mock_session._config = {}
+            # market must match run_session(market=) to pass sanity assert
+            mock_session._config = {"market": "sp500"}
             mock_session.market = "sp500"
             mock_session.session_id = "test-session"
             # Make baseline fail quickly so we don't run full backtest
@@ -285,6 +291,7 @@ class TestRunnerUniverseDataLoading:
                 market="sp500",
                 universe="sp500",
                 hours=0.001,  # Very short budget
+                fast_screen=False,  # skip solo-screen block to reach baseline quickly
             )
 
             mock_bfd.assert_not_called()
@@ -296,13 +303,16 @@ class TestRunnerUniverseDataLoading:
 
         fake_data = {"GLD": MagicMock(), "SLV": MagicMock()}
 
-        with patch("research.autoresearch_runner.ResearchSession") as MockSession, \
+        # Fix A1: ResearchSession is lazy-imported inside run_session(), so
+        # patch at the canonical source (research.loop), not autoresearch_runner.
+        with patch("research.loop.ResearchSession") as MockSession, \
              patch("universe.builder.build_from_definition", return_value=fake_data) as mock_bfd:
 
             mock_session = MagicMock()
             mock_session._data = {"AAPL": MagicMock()}
             mock_session._best_params = {"rsi_period": 14}
-            mock_session._config = {}
+            # market must match run_session(market=) to pass sanity assert
+            mock_session._config = {"market": "sp500"}
             mock_session.market = "sp500"
             mock_session.session_id = "test-session"
             # Abort after data override so we don't run full backtest
@@ -314,6 +324,7 @@ class TestRunnerUniverseDataLoading:
                 market="sp500",
                 universe="commodity_etfs",
                 hours=0.001,
+                fast_screen=False,  # skip solo-screen block to reach baseline quickly
             )
 
             mock_bfd.assert_called_once_with("commodity_etfs")
