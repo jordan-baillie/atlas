@@ -138,7 +138,7 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
         universes_data = []
         try:
             import json as _uj
-            from db.atlas_db import get_db as _ugh_db, get_latest_equity as _ugh_eq
+            from db.atlas_db import get_db as _ugh_db
 
             # Discover market IDs via glob; load effective config via canonical loader
             _universe_cfgs: list = []
@@ -180,8 +180,19 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
                     _approval = bool(_cfg.get("trading", {}).get("live_enabled", False))
                     _starting_eq = _cfg.get("risk", {}).get("starting_equity")
                     _open_pos = _open_pos_by_market.get(_mid, 0)
-                    _eq_row = _ugh_eq(market_id=_mid)
-                    _eq_val = (_eq_row or {}).get("equity")
+                    # Audit F-01: read from market_equity_history.allocated_equity
+                    _eq_val = None
+                    try:
+                        with _ugh_db() as _gheq_db:
+                            _gheq_r = _gheq_db.execute(
+                                "SELECT allocated_equity FROM market_equity_history "
+                                "WHERE market_id=? ORDER BY date DESC LIMIT 1",
+                                (_mid,),
+                            ).fetchone()
+                            if _gheq_r:
+                                _eq_val = float(_gheq_r[0])
+                    except Exception as _gheq_err:
+                        logger.debug("system_health: equity lookup failed for %s: %s", _mid, _gheq_err)
                     universes_data.append({
                         "market_id": _mid,
                         "mode": _mode,
@@ -325,7 +336,7 @@ def _build_universes_list() -> list:
     opening one DB connection per universe (eliminates N+1 pattern).
     """
     import json as _uj
-    from db.atlas_db import get_db as _udb, get_latest_equity as _ueq
+    from db.atlas_db import get_db as _udb
 
     # Discover market IDs via glob; load effective config via canonical loader
     universe_cfgs: list = []
@@ -371,8 +382,19 @@ def _build_universes_list() -> list:
             approval = bool(cfg.get("trading", {}).get("live_enabled", False))
             starting_equity = cfg.get("risk", {}).get("starting_equity")
             open_positions = open_pos_by_market.get(market_id, 0)
-            eq_row = _ueq(market_id=market_id)
-            equity = (eq_row or {}).get("equity")
+            # Audit F-01: read from market_equity_history.allocated_equity
+            equity = None
+            try:
+                with _udb() as _heq_db:
+                    _heq_r = _heq_db.execute(
+                        "SELECT allocated_equity FROM market_equity_history "
+                        "WHERE market_id=? ORDER BY date DESC LIMIT 1",
+                        (market_id,),
+                    ).fetchone()
+                    if _heq_r:
+                        equity = float(_heq_r[0])
+            except Exception as _heq_err:
+                logger.debug("universes: equity lookup failed for %s: %s", market_id, _heq_err)
             universes.append({
                 "market_id": market_id,
                 "mode": mode,

@@ -33,17 +33,44 @@ logger = logging.getLogger(__name__)
 
 @router.get("/api/portfolio")
 @router.get("/api/db/portfolio")
-def db_portfolio(_auth: HTTPBasicCredentials = Depends(check_auth)):
-    """GET /api/portfolio — open positions + latest equity from SQLite."""
+def db_portfolio(
+    universe: str | None = None,
+    _auth: HTTPBasicCredentials = Depends(check_auth),
+):
+    """GET /api/portfolio — open positions + latest equity from market_equity_history.
+
+    Equity source is market_equity_history (broker_equity == total account equity;
+    allocated_equity == per-market virtual slice). This replaced the corrupt
+    equity_curve table which had broken per-universe attribution (negative cash/
+    positions_value were possible — audit finding F-01/F-04).
+    """
     try:
         from db import atlas_db
         positions = atlas_db.get_open_positions()
         regime = atlas_db.get_current_regime()
+        market_id = universe or "sp500"
         with atlas_db.get_db() as db:
             row = db.execute(
-                "SELECT * FROM equity_curve ORDER BY date DESC LIMIT 1"
+                "SELECT date, market_id, broker_equity, allocated_equity, "
+                "cash_attributed, position_mv, broker_cash "
+                "FROM market_equity_history "
+                "WHERE market_id=? ORDER BY date DESC LIMIT 1",
+                (market_id,),
             ).fetchone()
-            equity = dict(row) if row else None
+            if row:
+                rd = dict(row)
+                # Backward-compat shape: callers expect 'equity', 'cash', 'positions_value'
+                equity = {
+                    "date": rd["date"],
+                    "market_id": rd["market_id"],
+                    "equity": rd["broker_equity"],           # account total (F-01 fix)
+                    "allocated_equity": rd["allocated_equity"],
+                    "cash": rd["cash_attributed"],
+                    "broker_cash": rd["broker_cash"],
+                    "positions_value": rd["position_mv"],
+                }
+            else:
+                equity = None
         return JSONResponse({"positions": positions, "regime": regime, "equity": equity})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

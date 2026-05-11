@@ -255,7 +255,7 @@ def _supersede_active_override(
 def admin_get_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """GET /api/admin/universes — all universes with effective and config state."""
     from utils.config import get_active_config, get_raw_config
-    from db.atlas_db import get_db, get_latest_equity
+    from db.atlas_db import get_db
 
     market_ids = _list_market_ids()
 
@@ -289,13 +289,19 @@ def admin_get_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
         config_state = _effective_state_for_universe(mid, raw_cfg)
         override = _get_active_override("universe", mid)
 
-        # Equity
-        eq_row = None
+        # Equity — from market_equity_history.allocated_equity (audit F-01 fix)
+        current_equity = None
         try:
-            eq_row = get_latest_equity(market_id=mid)
+            with get_db() as _eq_db:
+                _eq_r = _eq_db.execute(
+                    "SELECT allocated_equity FROM market_equity_history "
+                    "WHERE market_id=? ORDER BY date DESC LIMIT 1",
+                    (mid,),
+                ).fetchone()
+                if _eq_r:
+                    current_equity = float(_eq_r[0])
         except Exception:
             pass
-        current_equity = (eq_row or {}).get("equity")
         starting_equity = effective_cfg.get("risk", {}).get("starting_equity")
 
         universes.append({
@@ -319,9 +325,21 @@ def admin_get_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
 def admin_get_strategies(_auth: HTTPBasicCredentials = Depends(check_auth)):
     """GET /api/admin/strategies — all (universe, strategy) pairs with effective state."""
     from utils.config import get_active_config, get_raw_config
+    from db.atlas_db import get_db
 
     market_ids = _list_market_ids()
     strategies = []
+
+    # Pre-fetch all lifecycle rows once (audit F-10: replace hardcoded UNKNOWN)
+    _lifecycle_map: dict[tuple[str, str], str] = {}
+    try:
+        with get_db() as _lc_db:
+            for _lc_row in _lc_db.execute(
+                "SELECT strategy, universe, state FROM strategy_lifecycle"
+            ).fetchall():
+                _lifecycle_map[(_lc_row[0], _lc_row[1])] = _lc_row[2]
+    except Exception as _lc_err:
+        logger.warning("admin_get_strategies: lifecycle prefetch failed: %s", _lc_err)
 
     for mid in market_ids:
         try:
@@ -351,7 +369,7 @@ def admin_get_strategies(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 "open_positions": open_pos,
                 "trades_30d": trades_30d,
                 "pnl_30d": round(pnl_30d, 2),
-                "lifecycle": "UNKNOWN",  # §11.5 decision: skip lifecycle integration
+                "lifecycle": _lifecycle_map.get((strat_name, mid), "UNKNOWN"),
             })
 
     return JSONResponse({"strategies": strategies})
