@@ -2970,14 +2970,14 @@ class LiveExecutor:
                     "SELECT id FROM trades "
                     "WHERE ticker = ? "
                     "AND status = 'closed' AND superseded = 0 "
-                    "AND DATE(exit_date) = DATE('now', 'localtime') "
+                    "AND DATE(exit_date) >= DATE('now', 'localtime', '-8 days') "
                     "AND ROUND(pnl, 2) = ROUND(?, 2) "
                     "LIMIT 1",
                     (ticker, realized_pnl),
                 ).fetchone()
             if _existing_close is not None:
                 logger.debug(
-                    "SAME_BAR_ROUND_TRIP: %s already recorded today "
+                    "SAME_BAR_ROUND_TRIP: %s already recorded within 8-day window "
                     "(trade id=%d, pnl=%.2f) — skipping duplicate alert",
                     ticker, _existing_close["id"], realized_pnl,
                 )
