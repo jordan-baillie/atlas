@@ -465,6 +465,56 @@ class AlpacaBroker(BrokerAdapter):
             halt_reason=halt_reason,
         )
 
+    def get_pdt_status(self) -> dict:
+        """Query Alpaca account for pattern-day-trading status.
+
+        Returns dict with:
+          - daytrade_count: int  — number of round-trip day-trades in last 5 business days
+          - pattern_day_trader: bool — Alpaca-flagged PDT account
+          - equity: float  — account equity (used to determine $25k threshold)
+          - blocked: bool  — True if a new BUY would likely hit 40310100
+          - reason: str    — human-readable reason if blocked
+
+        A new opening BUY in a sub-$25k account that already has 3+ day-trades
+        in the rolling 5-business-day window is at high risk of broker-level
+        PDT rejection because the next same-day exit would complete a 4th
+        day-trade.  Returning blocked=True lets callers skip the submit and
+        avoid 40310100 error noise.
+        """
+        try:
+            account = self._broker_call(self._trade_client.get_account)
+        except Exception as exc:
+            logger.warning("get_pdt_status: account fetch failed (%s) — fail-open", exc)
+            return {
+                "daytrade_count": 0,
+                "pattern_day_trader": False,
+                "equity": 0.0,
+                "blocked": False,
+                "reason": f"account_fetch_failed: {exc}",
+            }
+
+        daytrade_count = int(getattr(account, "daytrade_count", 0) or 0)
+        pattern_day_trader = bool(getattr(account, "pattern_day_trader", False))
+        equity = float(getattr(account, "equity", 0) or 0)
+
+        # PDT threshold: <$25k equity AND daytrade_count >= 3 means the NEXT
+        # round-trip would trigger the rule.  Block new opening BUYs preemptively.
+        blocked = equity < 25_000.0 and daytrade_count >= 3
+        reason = ""
+        if blocked:
+            reason = (
+                f"pdt_preempt: equity=${equity:.0f} < $25k AND "
+                f"daytrade_count={daytrade_count} >= 3"
+            )
+
+        return {
+            "daytrade_count": daytrade_count,
+            "pattern_day_trader": pattern_day_trader,
+            "equity": equity,
+            "blocked": blocked,
+            "reason": reason,
+        }
+
     def get_positions(self) -> list[PositionInfo]:
         """Return all open positions from Alpaca, enriched with Tiingo prices.
 
@@ -632,13 +682,15 @@ class AlpacaBroker(BrokerAdapter):
                 requested_price=price, message=str(e),
             )
 
-        # ── PDT backoff: pre-check for SELL orders ────────────────────────────
+        # ── PDT backoff: pre-check (BUY and SELL) ────────────────────────────
         # If the ticker was denied earlier today (40310100), block the submit
         # immediately rather than burning another API round-trip and error log.
-        if side == OrderSide.SELL and _is_pdt_deferred_new(ticker):
+        # Applies to BOTH sides: a same-day BUY after a PDT-denied SELL (or
+        # vice versa) will hit the same broker-level rejection.
+        if _is_pdt_deferred_new(ticker):
             logger.info(
-                "pdt_skip: %s — pre-check, PDT deferred until RTH close "
-                "(skipping submit_order)", ticker,
+                "pdt_skip: %s %s — pre-check, PDT deferred until RTH close "
+                "(skipping submit_order)", ticker, side.value,
             )
             return OrderResult(
                 success=False, ticker=ticker, side=side,
@@ -646,6 +698,27 @@ class AlpacaBroker(BrokerAdapter):
                 requested_price=price,
                 message=f"pdt_deferred: {_PDT_ERROR_CODE}",
             )
+
+        # ── PDT account-level pre-check (BUY only) ────────────────────────────
+        # Sub-$25k accounts with daytrade_count >= 3 are at high risk of broker-
+        # level rejection on the NEXT opening BUY because a same-day exit would
+        # complete a 4th day-trade in the rolling 5-business-day window.
+        # Skip the submit and record the ticker as deferred so subsequent
+        # cycles (sync_protective_orders, intraday_monitor) also skip it.
+        if side == OrderSide.BUY:
+            pdt_status = self.get_pdt_status()
+            if pdt_status["blocked"]:
+                logger.warning(
+                    "pdt_preempt: %s BUY blocked — %s (skipping submit_order)",
+                    ticker, pdt_status["reason"],
+                )
+                _set_pdt_deferred_new(ticker, _pdt_rth_close())
+                return OrderResult(
+                    success=False, ticker=ticker, side=side,
+                    status=OrderStatus.FAILED, requested_qty=qty,
+                    requested_price=price,
+                    message=f"pdt_preempt: {pdt_status['reason']}",
+                )
 
         try:
             order = self._broker_call(self._trade_client.submit_order, order_data)
