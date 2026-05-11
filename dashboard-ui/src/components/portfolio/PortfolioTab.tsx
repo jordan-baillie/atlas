@@ -148,7 +148,7 @@ export function PortfolioTab() {
       <div className="animate-in">
         <SectionBoundary title="Summary">
           {portfolio.data?.account
-            ? <SummaryStrip account={portfolio.data.account} todayPnl={portfolio.data.summary?.today_pnl} positionsCount={portfolio.data.positions?.length ?? 0} />
+            ? <SummaryStrip account={portfolio.data.account} todayPnl={portfolio.data.summary?.today_pnl} positionsCount={portfolio.data.positions?.length ?? 0} asOf={portfolio.data.timestamp} />
             : <Skeleton className="h-28" />}
         </SectionBoundary>
       </div>

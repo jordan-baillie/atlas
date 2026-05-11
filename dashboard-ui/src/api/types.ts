@@ -222,6 +222,8 @@ export interface HealthHeartbeat {
 
 export interface HealthDataFreshness {
   ohlcv_last_date?: string
+  ohlcv_last_session?: string  // last NYSE trading session date (YYYY-MM-DD) — from backend
+  ohlcv_is_fresh?: boolean     // true when ohlcv_last_date >= ohlcv_last_session
   equity_last_date?: string
   overlay_decisions_count?: number
 }
