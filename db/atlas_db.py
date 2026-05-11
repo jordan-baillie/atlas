@@ -98,14 +98,23 @@ def init_db(db_path: Optional[str] = None) -> None:
 
 # ── Helper ──────────────────────────────────────────────────────────────────
 
+_STRATEGY_SKIP: frozenset = frozenset({"reconciled", "unknown", ""})
+
+
 def _group_performance(trades: List[Dict], field: str) -> Dict[str, Any]:
     """
     Group closed trades by *field* and return per-group performance stats.
     Used by performance_summary().
+
+    F-06: when field='strategy', trades with strategy in
+    ('reconciled', 'unknown', '') or NULL are excluded from rollups —
+    these are synthetic housekeeping markers, not real strategies.
     """
     groups: Dict[str, List[Dict]] = {}
     for trade in trades:
         key = trade.get(field) or "unknown"
+        if field == "strategy" and (key in _STRATEGY_SKIP or key is None):
+            continue  # skip synthetic/housekeeping strategy markers
         groups.setdefault(key, []).append(trade)
 
     result: Dict[str, Any] = {}

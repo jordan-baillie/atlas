@@ -647,9 +647,13 @@ def build_strategy_stats(
             "        OR exit_reason NOT IN ('reconcile_phantom', 'reconcile_fill'))"
         ).fetchall()
 
+        # F-06: synthetic/housekeeping strategies filtered from rollups
+        _SKIP_STRATEGIES: frozenset = frozenset({"reconciled", "unknown", ""})
         by_strategy: dict = {}
         for t in trades_rows:
-            s = t["strategy"] or "unknown"
+            s = t["strategy"]
+            if not s or s in _SKIP_STRATEGIES:
+                continue  # exclude synthetic markers (reconciled, unknown, empty, null)
             if s not in by_strategy:
                 by_strategy[s] = {"trades": 0, "pnl": 0.0, "wins": 0}
             by_strategy[s]["trades"] += 1
