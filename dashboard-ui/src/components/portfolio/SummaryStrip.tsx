@@ -14,21 +14,40 @@ interface Props {
 export function SummaryStrip({ account, todayPnl, positionsCount, asOf }: Props) {
   // num_positions from API is unreliable (returns 0). Prefer explicit positionsCount from positions array.
   const count = positionsCount ?? account.num_positions ?? 0
+
+  // TODAY P&L accent stripe: green for gains, red for losses, none for null
+  const todayAccent =
+    todayPnl != null
+      ? todayPnl >= 0
+        ? 'var(--color-green)'
+        : 'var(--color-red)'
+      : undefined
+
   return (
     <div data-testid="summary-strip" className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
       <StatCard
         label="PORTFOLIO"
         value={
-          <span className="flex items-center gap-1.5 flex-wrap">
+          <span className="flex items-center gap-1.5 flex-wrap tabular-nums">
             {fmtCcy(account.equity)}
             <AsOfBadge source="live" asOf={asOf} />
           </span>
         }
         hero
       />
-      <StatCard label="TODAY P&L" value={<span className={pnlClass(todayPnl)}>{fmtSignedCcy(todayPnl)}</span>} />
-      <StatCard label="POSITIONS" value={`${count}/10`} />
-      <StatCard label="MARGIN USED" value={fmtPct(account.margin_usage_pct)} />
+      {/* TODAY P&L — hero card: this is the focal number on the strip */}
+      <StatCard
+        label="TODAY P&L"
+        value={
+          <span className={`tabular-nums ${pnlClass(todayPnl)}`}>
+            {fmtSignedCcy(todayPnl)}
+          </span>
+        }
+        hero
+        accent={todayAccent}
+      />
+      <StatCard label="POSITIONS" value={<span className="tabular-nums">{count}/10</span>} />
+      <StatCard label="MARGIN USED" value={<span className="tabular-nums">{fmtPct(account.margin_usage_pct)}</span>} />
     </div>
   )
 }

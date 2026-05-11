@@ -15,17 +15,27 @@ const COLUMNS: Column<Row>[] = [
     label: 'Strategy',
     render: (r) => (
       <div className="flex items-center gap-2 font-mono">
-        <span className="inline-block rounded-full" style={{ width: 8, height: 8, backgroundColor: getStrategyColor(r.name) }} />
+        <span
+          className="inline-block rounded-full flex-shrink-0"
+          style={{ width: 8, height: 8, backgroundColor: getStrategyColor(r.name) }}
+        />
         {r.name}
       </div>
     ),
   },
-  { key: 'trades', label: 'Trades', align: 'right', render: (r) => String(r.trades ?? 0) },
+  {
+    key: 'trades',
+    label: 'Trades',
+    align: 'right',
+    render: (r) => <span className="font-mono tabular-nums">{String(r.trades ?? 0)}</span>,
+  },
   {
     key: 'pnl',
     label: 'P&L',
     align: 'right',
-    render: (r) => <span className={`font-mono ${pnlClass(r.pnl)}`}>{fmtSignedCcy(r.pnl)}</span>,
+    render: (r) => (
+      <span className={`font-mono tabular-nums ${pnlClass(r.pnl)}`}>{fmtSignedCcy(r.pnl)}</span>
+    ),
   },
   {
     key: 'win_rate',
@@ -36,8 +46,11 @@ const COLUMNS: Column<Row>[] = [
       const wins = r.wins ?? 0
       const rate = total > 0 ? (wins / total) * 100 : null
       return (
-        <div className="font-mono">
-          {fmtPct(rate)} <span className="text-[var(--color-text-muted)] text-xs">({wins}/{total})</span>
+        <div className="font-mono tabular-nums">
+          {fmtPct(rate)}{' '}
+          <span className="text-[var(--color-text-muted)] text-xs tabular-nums">
+            ({wins}/{total})
+          </span>
         </div>
       )
     },
@@ -48,11 +61,14 @@ const COLUMNS: Column<Row>[] = [
     align: 'right',
     render: (r) => {
       const ev = r.ev_per_trade
-      if (ev == null) return <span className="text-[var(--color-text-muted)]">—</span>
-      const cls = r.ev_classification === 'positive' ? 'text-[var(--color-positive)]'
-                : r.ev_classification === 'negative' ? 'text-[var(--color-negative)]'
-                : 'text-[var(--color-text-muted)]'
-      return <span className={`font-mono ${cls}`}>{fmtSignedCcy(ev)}</span>
+      if (ev == null) return <span className="text-[var(--color-text-muted)]">{'\u2014'}</span>
+      const cls =
+        r.ev_classification === 'positive'
+          ? 'text-[var(--color-positive)]'
+          : r.ev_classification === 'negative'
+          ? 'text-[var(--color-negative)]'
+          : 'text-[var(--color-text-muted)]'
+      return <span className={`font-mono tabular-nums ${cls}`}>{fmtSignedCcy(ev)}</span>
     },
   },
 ]
@@ -69,7 +85,9 @@ export function StrategyBreakdown({ performance }: Props) {
 
   return (
     <div data-testid="strategy-breakdown">
-      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">STRATEGY BREAKDOWN</div>
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
+        STRATEGY BREAKDOWN
+      </div>
       <DataTable columns={COLUMNS} data={rows} emptyMessage="No strategy data" />
     </div>
   )

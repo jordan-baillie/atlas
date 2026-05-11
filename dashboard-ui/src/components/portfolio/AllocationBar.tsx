@@ -8,27 +8,41 @@ export function AllocationBar({ allocation, equity }: Props) {
   const items = allocation.filter((a) => (a.pct ?? 0) > 0)
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">CAPITAL ALLOCATION</div>
+      <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
+        CAPITAL ALLOCATION
+      </div>
+      {/* Allocation bar — strategy colors with subtle inset definition border */}
       <div className="flex h-8 rounded-lg overflow-hidden border border-[var(--color-border)]">
         {items.map((a) => (
           <div
             key={a.strategy ?? 'unknown'}
-            style={{ width: `${a.pct ?? 0}%`, backgroundColor: getStrategyColor(a.strategy) }}
+            style={{
+              width: `${a.pct ?? 0}%`,
+              backgroundColor: getStrategyColor(a.strategy),
+              // Subtle 1px inset border for segment definition on dark backgrounds
+              boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.25)',
+            }}
             title={`${a.strategy}: ${fmtPct(a.pct)}`}
           />
         ))}
       </div>
+      {/* Legend chips */}
       <div className="flex flex-wrap gap-2 mt-3">
         {items.map((a) => {
           const pctOfEquity = equity && equity > 0 ? ((a.value ?? 0) / equity) * 100 : null
           return (
             <div
               key={a.strategy ?? 'unknown'}
-              className="flex items-center gap-2 text-xs font-mono bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-md px-2 py-1"
+              className="flex items-center gap-2 text-xs font-mono tabular-nums bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-md px-2 py-1"
             >
-              <span className="inline-block rounded-full" style={{ width: 8, height: 8, backgroundColor: getStrategyColor(a.strategy) }} />
+              <span
+                className="inline-block rounded-full flex-shrink-0"
+                style={{ width: 8, height: 8, backgroundColor: getStrategyColor(a.strategy) }}
+              />
               <span>{a.strategy}</span>
-              <span className="text-[var(--color-text-muted)]">{fmtCcy(a.value)} ({fmtPct(pctOfEquity)} of equity)</span>
+              <span className="text-[var(--color-text-muted)]">
+                {fmtCcy(a.value)} ({fmtPct(pctOfEquity)} of equity)
+              </span>
             </div>
           )
         })}

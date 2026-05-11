@@ -3,6 +3,7 @@ import { usePortfolioData, useRegimeCurrent, useRegimeHistory, useSystemHealth, 
 import type { RuinProbability, RegimeForecast } from '../../api/types'
 import { Skeleton } from '../layout/Skeleton'
 import { SectionBoundary } from '../layout/SectionBoundary'
+import { Badge } from '../shared/Badge'
 import { SummaryStrip } from './SummaryStrip'
 import { EquityChart } from './EquityChart'
 import { PnlSlicedSection } from './PnlSlicedSection'
@@ -19,9 +20,11 @@ import { VixTermStructureCard } from './VixTermStructureCard'
 function GroupDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 py-2">
-      <div className="h-px flex-1 bg-[var(--color-border)]"></div>
-      <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] font-semibold">{label}</span>
-      <div className="h-px flex-1 bg-[var(--color-border)]"></div>
+      <div className="h-px flex-1 bg-[var(--color-border)]" />
+      <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] font-semibold">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-[var(--color-border)]" />
     </div>
   )
 }
@@ -37,46 +40,65 @@ function CollapsibleGroup({ label, defaultOpen = false, children }: CollapsibleG
   return (
     <details open={defaultOpen} className="group">
       <summary className="flex items-center gap-3 py-2 cursor-pointer list-none select-none">
-        <div className="h-px flex-1 bg-[var(--color-border)]"></div>
+        <div className="h-px flex-1 bg-[var(--color-border)]" />
         <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] font-semibold flex items-center gap-2">
-          <svg className="w-4 h-4 transition-transform duration-200 group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
+          <svg
+            className="w-4 h-4 transition-transform duration-200 group-open:rotate-90"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
           {label}
         </span>
-        <div className="h-px flex-1 bg-[var(--color-border)]"></div>
+        <div className="h-px flex-1 bg-[var(--color-border)]" />
       </summary>
-      <div className="space-y-4 md:space-y-6 mt-4">
-        {children}
-      </div>
+      <div className="space-y-4 md:space-y-6 mt-4">{children}</div>
     </details>
   )
 }
 
-// SurvivalOddsBanner — horizontal banner showing 90-day ruin probability
+// SurvivalOddsBanner — horizontal banner showing 90-day ruin probability.
+// Uses token-based container colors + Badge primitive for the status indicator.
 function SurvivalOddsBanner({ data }: { data?: RuinProbability }) {
   if (!data || !data.horizons) return null
   const h90 = data.horizons['90d']
   if (!h90) return null
   const pRuin = h90.prob_ruin ?? 0
   const survivalPct = (1 - pRuin) * 100
-  const color = pRuin < 0.05 ? 'bg-green-500/10 border-green-500/40 text-green-300'
-              : pRuin < 0.15 ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-              : 'bg-red-500/10 border-red-500/40 text-red-300'
-  const dot = pRuin < 0.05 ? '\u{1F7E2}' : pRuin < 0.15 ? '\u{1F7E1}' : '\u{1F534}'
+
+  // Badge variant drives indicator color
+  const variant = pRuin < 0.05 ? 'success' : pRuin < 0.15 ? 'warning' : 'danger'
+
+  // Container uses CSS-var-based background tint — token-driven, no Tailwind color names
+  const containerCls =
+    pRuin < 0.05
+      ? 'bg-[var(--color-green)]/5 border-[var(--color-green)]/20'
+      : pRuin < 0.15
+      ? 'bg-[var(--color-amber)]/5 border-[var(--color-amber)]/20'
+      : 'bg-[var(--color-red)]/5 border-[var(--color-red)]/20'
+
   return (
-    <div className={`rounded-lg border px-4 py-3 mb-3 ${color}`}>
+    <div className={`rounded-lg border px-4 py-3 mb-3 ${containerCls}`}>
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="text-lg">{dot}</span>
+          {/* Status indicator — Badge replaces inline emoji+text colored chip */}
+          <Badge variant={variant} size="md" dot>
+            Survival Odds
+          </Badge>
           <div>
-            <div className="text-xs uppercase tracking-wider opacity-70">Survival Odds</div>
-            <div className="text-lg font-mono font-semibold">{survivalPct.toFixed(1)}% safe over 90 days</div>
+            {/* tabular-nums on the focal percentage number */}
+            <div className="text-lg font-mono font-semibold tabular-nums">
+              {survivalPct.toFixed(1)}% safe over 90 days
+            </div>
           </div>
         </div>
-        <div className="text-xs opacity-80 font-mono">
-          P(equity &lt; ${(data.floor ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} in 90d): {(pRuin * 100).toFixed(2)}%
-          <br/>
+        <div className="text-xs opacity-80 font-mono tabular-nums text-[var(--color-text-muted)]">
+          P(equity &lt; ${(data.floor ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} in 90d):{' '}
+          {(pRuin * 100).toFixed(2)}%
+          <br />
           Based on {(data.tickers?.length ?? 0)} positions, {data.n_paths.toLocaleString()} paths
         </div>
       </div>
@@ -84,7 +106,8 @@ function SurvivalOddsBanner({ data }: { data?: RuinProbability }) {
   )
 }
 
-// RegimeForecastCard — 30-day regime forecast with state probability bars
+// RegimeForecastCard — 30-day regime forecast with state probability bars.
+// Accent-colored bars (token-driven). Tabular-nums on all numeric outputs.
 function RegimeForecastCard({ data }: { data?: RegimeForecast }) {
   if (!data || !data.horizons) return null
   const h30 = data.horizons['30d']
@@ -94,11 +117,20 @@ function RegimeForecastCard({ data }: { data?: RegimeForecast }) {
     .slice(0, 4)
   return (
     <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-xs">
-      <div className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Regime Forecast &#xB7; 30 days</div>
-      <div className="grid grid-cols-3 gap-3 mb-3 font-mono">
+      <div className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
+        Regime Forecast &middot; 30 days
+      </div>
+      {/* Summary stats grid — all values mono + tabular-nums */}
+      <div className="grid grid-cols-3 gap-3 mb-3 font-mono tabular-nums">
         <div>
           <div className="text-[var(--color-text-muted)] text-[10px] uppercase">E[Return]</div>
-          <div className={(h30.expected_return ?? 0) >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}>
+          <div
+            className={
+              (h30.expected_return ?? 0) >= 0
+                ? 'text-[var(--color-positive)]'
+                : 'text-[var(--color-negative)]'
+            }
+          >
             {((h30.expected_return ?? 0) * 100).toFixed(2)}%
           </div>
         </div>
@@ -116,10 +148,16 @@ function RegimeForecastCard({ data }: { data?: RegimeForecast }) {
         {stateProbs.map(([state, p]) => (
           <div key={state} className="flex items-center gap-2 font-mono text-[11px]">
             <span className="text-[var(--color-text-muted)] w-44 truncate">{state}</span>
+            {/* Progress bar — accent color from design tokens */}
             <div className="flex-1 bg-[var(--color-surface-alt)] h-1.5 rounded overflow-hidden">
-              <div className="bg-[var(--color-accent)] h-full" style={{ width: `${(p * 100).toFixed(0)}%` }} />
+              <div
+                className="bg-[var(--color-accent)] h-full"
+                style={{ width: `${(p * 100).toFixed(0)}%` }}
+              />
             </div>
-            <span className="text-[var(--color-text)] w-10 text-right">{(p * 100).toFixed(0)}%</span>
+            <span className="text-[var(--color-text)] w-10 text-right tabular-nums">
+              {(p * 100).toFixed(0)}%
+            </span>
           </div>
         ))}
       </div>
@@ -147,9 +185,16 @@ export function PortfolioTab() {
       {/* Group 1: AT-A-GLANCE */}
       <div className="animate-in">
         <SectionBoundary title="Summary">
-          {portfolio.data?.account
-            ? <SummaryStrip account={portfolio.data.account} todayPnl={portfolio.data.summary?.today_pnl} positionsCount={portfolio.data.positions?.length ?? 0} asOf={portfolio.data.timestamp} />
-            : <Skeleton className="h-28" />}
+          {portfolio.data?.account ? (
+            <SummaryStrip
+              account={portfolio.data.account}
+              todayPnl={portfolio.data.summary?.today_pnl}
+              positionsCount={portfolio.data.positions?.length ?? 0}
+              asOf={portfolio.data.timestamp}
+            />
+          ) : (
+            <Skeleton className="h-28" />
+          )}
         </SectionBoundary>
       </div>
 
@@ -172,9 +217,11 @@ export function PortfolioTab() {
 
       <div className="animate-in">
         <SectionBoundary title="Positions">
-          {portfolio.data?.positions
-            ? <PositionsGrid positions={portfolio.data.positions} />
-            : <Skeleton className="h-48" />}
+          {portfolio.data?.positions ? (
+            <PositionsGrid positions={portfolio.data.positions} />
+          ) : (
+            <Skeleton className="h-48" />
+          )}
         </SectionBoundary>
       </div>
 
@@ -189,9 +236,11 @@ export function PortfolioTab() {
       <div className="animate-in">
         <CollapsibleGroup label="Market Context" defaultOpen={true}>
           <SectionBoundary title="Regime">
-            {regimeHistory.data && transitions.data
-              ? <RegimeSection history={regimeHistory.data} transitions={transitions.data} />
-              : <Skeleton className="h-64" />}
+            {regimeHistory.data && transitions.data ? (
+              <RegimeSection history={regimeHistory.data} transitions={transitions.data} />
+            ) : (
+              <Skeleton className="h-64" />
+            )}
           </SectionBoundary>
 
           <RegimeForecastCard data={forecastData} />
@@ -201,9 +250,11 @@ export function PortfolioTab() {
           </SectionBoundary>
 
           <SectionBoundary title="VIX Term Structure">
-            {vixTermStructure.data
-              ? <VixTermStructureCard data={vixTermStructure.data} />
-              : <Skeleton className="h-40" />}
+            {vixTermStructure.data ? (
+              <VixTermStructureCard data={vixTermStructure.data} />
+            ) : (
+              <Skeleton className="h-40" />
+            )}
           </SectionBoundary>
         </CollapsibleGroup>
       </div>
@@ -212,13 +263,19 @@ export function PortfolioTab() {
       <div className="animate-in">
         <CollapsibleGroup label="Performance" defaultOpen={false}>
           <SectionBoundary title="Performance">
-            {portfolio.data ? <PerformanceSection data={portfolio.data} /> : <Skeleton className="h-64" />}
+            {portfolio.data ? (
+              <PerformanceSection data={portfolio.data} />
+            ) : (
+              <Skeleton className="h-64" />
+            )}
           </SectionBoundary>
 
           <SectionBoundary title="Orders">
-            {portfolio.data?.recent_orders
-              ? <OrdersTable orders={portfolio.data.recent_orders} />
-              : <Skeleton className="h-32" />}
+            {portfolio.data?.recent_orders ? (
+              <OrdersTable orders={portfolio.data.recent_orders} />
+            ) : (
+              <Skeleton className="h-32" />
+            )}
           </SectionBoundary>
         </CollapsibleGroup>
       </div>

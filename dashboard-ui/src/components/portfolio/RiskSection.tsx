@@ -30,13 +30,14 @@ function PortfolioTailRisk({ pr }: { pr: PortfolioRiskMetrics }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
-        PORTFOLIO TAIL RISK · {pr.method ?? 'unknown'} · {fmtRegime(pr.current_regime)}
+        PORTFOLIO TAIL RISK &middot; {pr.method ?? 'unknown'} &middot; {fmtRegime(pr.current_regime)}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           label="1-DAY VAR 95%"
           value={fmtCcy(h1?.var_95)}
           sub={var95Pct ?? undefined}
+          subColor="negative"
         />
         <StatCard
           label="1-DAY CVAR 95%"
@@ -47,6 +48,7 @@ function PortfolioTailRisk({ pr }: { pr: PortfolioRiskMetrics }) {
           label="5-DAY VAR 95%"
           value={fmtCcy(h5?.var_95)}
           sub={h5?.var_95_pct != null ? `${(h5.var_95_pct * 100).toFixed(2)}%` : undefined}
+          subColor="negative"
         />
         <StatCard
           label="5-DAY CVAR 95%"
@@ -54,20 +56,25 @@ function PortfolioTailRisk({ pr }: { pr: PortfolioRiskMetrics }) {
           sub="expected shortfall"
         />
       </div>
+      {/* Effective bets / correlation stats — mono + tabular-nums */}
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-[var(--color-text-muted)] font-mono">
         <div>
           <span className="uppercase tracking-wide">EFFECTIVE BETS</span>
-          <div className="text-[var(--color-text)] text-base">{pr.effective_bets?.toFixed(2) ?? '\u2014'}</div>
+          <div className="text-[var(--color-text)] text-base tabular-nums">
+            {pr.effective_bets?.toFixed(2) ?? '\u2014'}
+          </div>
         </div>
         <div>
           <span className="uppercase tracking-wide">CORR (AVG / MAX)</span>
-          <div className="text-[var(--color-text)] text-base">
+          <div className="text-[var(--color-text)] text-base tabular-nums">
             {pr.correlation_avg?.toFixed(2) ?? '\u2014'} / {pr.correlation_max?.toFixed(2) ?? '\u2014'}
           </div>
         </div>
         <div>
           <span className="uppercase tracking-wide">SIM PATHS</span>
-          <div className="text-[var(--color-text)] text-base">{pr.n_paths?.toLocaleString() ?? '\u2014'}</div>
+          <div className="text-[var(--color-text)] text-base tabular-nums">
+            {pr.n_paths?.toLocaleString() ?? '\u2014'}
+          </div>
         </div>
       </div>
     </div>
@@ -97,8 +104,8 @@ function RuinStalenessSection() {
   const survivalPct = (1 - pRuin) * 100
 
   const bannerMsg = ruinData.reason
-    ? `🟡 ${ruinData.reason}`
-    : '🟡 PORTFOLIO CHANGED — recomputing ruin probability with current positions'
+    ? `\u{1F7E1} ${ruinData.reason}`
+    : '\u{1F7E1} PORTFOLIO CHANGED \u2014 recomputing ruin probability with current positions'
 
   function handleRefresh() {
     setRefreshing(true)
@@ -113,7 +120,7 @@ function RuinStalenessSection() {
         <div>
           <div className="text-amber-200 text-xs font-medium mb-1">{bannerMsg}</div>
           {h90 && (
-            <div className="text-amber-300/60 text-xs font-mono opacity-60">
+            <div className="text-amber-300/60 text-xs font-mono tabular-nums opacity-60">
               Last computed: {survivalPct.toFixed(1)}% safe over 90d
               {ruinData.as_of && (
                 <span className="ml-2 text-amber-300/40">
@@ -129,7 +136,7 @@ function RuinStalenessSection() {
           disabled={refreshing || refresh.isPending}
           className="text-[11px] px-3 py-1.5 rounded border border-amber-600/50 text-amber-200 hover:bg-amber-800/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-mono whitespace-nowrap"
         >
-          {refreshing || refresh.isPending ? '⟳ Refreshing…' : '↻ Refresh now'}
+          {refreshing || refresh.isPending ? '\u27f3 Refreshing\u2026' : '\u21bb Refresh now'}
         </button>
       </div>
     </div>
@@ -145,15 +152,26 @@ export function RiskSection({ data }: Props) {
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-6 dash-card">
       <RuinStalenessSection />
       <div>
-        <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">POSITION RISK</div>
+        <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-muted)] font-semibold mb-3">
+          POSITION RISK
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="CAPITAL AT RISK" value={fmtCcy(s?.total_risk_dollars)} sub={fmtPct(s?.total_risk_pct)} />
+          <StatCard
+            label="CAPITAL AT RISK"
+            value={fmtCcy(s?.total_risk_dollars)}
+            sub={fmtPct(s?.total_risk_pct)}
+            subColor="negative"
+          />
           <StatCard
             label="EQUITY"
             value={
-              <span className="flex items-center gap-1.5 flex-wrap">
+              <span className="flex items-center gap-1.5 flex-wrap tabular-nums">
                 {fmtCcy(s?.equity)}
-                <AsOfBadge source="snapshot" asOf={data.as_of} title="End-of-day snapshot — market_equity_history last NYSE close" />
+                <AsOfBadge
+                  source="snapshot"
+                  asOf={data.as_of}
+                  title="End-of-day snapshot \u2014 market_equity_history last NYSE close"
+                />
               </span>
             }
             sub={`${s?.num_positions ?? 0} positions`}
@@ -162,7 +180,8 @@ export function RiskSection({ data }: Props) {
           <StatCard
             label="MAX RISK/TRADE"
             value={fmtPct(s?.max_risk_per_trade_pct)}
-            sub={<span className={unprotected > 0 ? 'text-[var(--color-red)]' : ''}>{unprotected} unprotected</span>}
+            sub={`${unprotected} unprotected`}
+            subColor={unprotected > 0 ? 'negative' : 'neutral'}
           />
         </div>
       </div>
