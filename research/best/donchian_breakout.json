@@ -42,7 +42,7 @@
         "win_rate_pct": 100.0,
         "avg_trade": 3.75,
         "total_pnl": 3.75,
-        "profit_factor": Infinity,
+        "profit_factor": null,
         "sharpe_approx": 0,
         "avg_r": 0.1824
       },
@@ -70,5 +70,7 @@
   "description": "sma200_filter=False",
   "experiments_run": 6,
   "experiments_kept": 7,
-  "updated_at": "2026-03-16T06:11:58.031989+00:00"
+  "updated_at": "2026-03-16T06:11:58.031989+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

@@ -70,5 +70,7 @@
   "description": "rsi_period=5",
   "experiments_run": 5,
   "experiments_kept": 6,
-  "updated_at": "2026-03-16T06:58:57.845447+00:00"
+  "updated_at": "2026-03-16T06:58:57.845447+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

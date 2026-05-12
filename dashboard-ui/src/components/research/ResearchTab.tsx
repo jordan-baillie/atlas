@@ -126,7 +126,19 @@ function StrategyCard({ s }: { s: StrategyDetail }) {
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{(s.strategy ?? '').replace(/_/g, ' ')}</div>
+          <div className="flex items-center flex-wrap gap-1">
+            <span className="font-medium text-sm truncate">{(s.strategy ?? '').replace(/_/g, ' ')}</span>
+            {s.is_solo === false && (
+              <span className="text-xs px-2 py-0.5 rounded bg-yellow-700/40 text-yellow-200" title={s.contamination_note || ''}>
+                🟡 PORTFOLIO-CONTAMINATED
+              </span>
+            )}
+            {s.is_solo === true && (
+              <span className="text-xs px-2 py-0.5 rounded bg-emerald-800/40 text-emerald-200">
+                🟢 SOLO
+              </span>
+            )}
+          </div>
           <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
             {s.total_experiments ?? 0} experiments · {s.kept_count ?? 0} kept
           </div>

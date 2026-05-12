@@ -100,5 +100,8 @@
   "description": "atr_period: 25 \u2192 28",
   "experiments_run": 395,
   "experiments_kept": 22,
-  "updated_at": "2026-04-28T13:44:04.451825+00:00"
+  "updated_at": "2026-04-28T13:44:04.451825+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.0018,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: sector_rotation (81.9%). True solo performance unknown \u2014 see task #327."
 }

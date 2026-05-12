@@ -88,5 +88,8 @@
   "description": "min_down_days 2\u21923: require more consecutive down days for higher quality entries",
   "experiments_run": 22,
   "experiments_kept": 5,
-  "updated_at": "2026-04-25T14:29:27.658516+00:00"
+  "updated_at": "2026-04-25T14:29:27.658516+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.0,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: momentum_breakout (52.1%). True solo performance unknown \u2014 see task #327."
 }

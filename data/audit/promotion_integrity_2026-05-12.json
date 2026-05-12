@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-05-12T09:53:15.609809+00:00",
+  "promotions_audited": 9,
+  "events": [
+    {
+      "strategy": "connors_rsi2",
+      "universe": "commodity_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.9681,
+      "file_is_solo_now": true,
+      "file_solo_fraction": 0.5165,
+      "verdict": "CLEAN"
+    },
+    {
+      "strategy": "connors_rsi2",
+      "universe": "gold_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.9865,
+      "file_is_solo_now": true,
+      "file_solo_fraction": 1.0,
+      "verdict": "CLEAN"
+    },
+    {
+      "strategy": "connors_rsi2",
+      "universe": "sp500",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.1416,
+      "file_is_solo_now": false,
+      "file_solo_fraction": 0.1096,
+      "verdict": "CONTAMINATED_AT_PROMOTION"
+    },
+    {
+      "strategy": "mean_reversion",
+      "universe": "commodity_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 1.4414,
+      "file_is_solo_now": false,
+      "file_solo_fraction": 0.1322,
+      "verdict": "CONTAMINATED_AT_PROMOTION"
+    },
+    {
+      "strategy": "mean_reversion",
+      "universe": "sector_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.4359,
+      "file_is_solo_now": true,
+      "file_solo_fraction": 0.6333,
+      "verdict": "CLEAN"
+    },
+    {
+      "strategy": "momentum_breakout",
+      "universe": "commodity_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 1.214,
+      "file_is_solo_now": false,
+      "file_solo_fraction": 0.4684,
+      "verdict": "CONTAMINATED_AT_PROMOTION"
+    },
+    {
+      "strategy": "momentum_breakout",
+      "universe": "sector_etfs",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.3083,
+      "file_is_solo_now": true,
+      "file_solo_fraction": 0.6582,
+      "verdict": "CLEAN"
+    },
+    {
+      "strategy": "momentum_breakout",
+      "universe": "sp500",
+      "to_state": "LIVE",
+      "promoted_at": "2026-05-06T04:28:26",
+      "reason": "Migration: pre-existing live strategy at lifecycle rollout 2026-05-06",
+      "cited_sharpe": 0.749,
+      "file_is_solo_now": true,
+      "file_solo_fraction": 0.72,
+      "verdict": "CLEAN"
+    },
+    {
+      "strategy": "short_term_mr",
+      "universe": "sp500",
+      "to_state": "PAPER",
+      "promoted_at": "2026-05-06T06:23:35",
+      "reason": "Phase B dogfood activation 2026-05-06: paper-trading rollout test (per audit_202",
+      "cited_sharpe": 1.4386,
+      "file_is_solo_now": false,
+      "file_solo_fraction": 0.2357,
+      "verdict": "CONTAMINATED_AT_PROMOTION"
+    }
+  ],
+  "summary": {
+    "clean": 5,
+    "contaminated": 4,
+    "no_file_or_no_trades": 0
+  }
+}

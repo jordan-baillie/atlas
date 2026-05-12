@@ -83,7 +83,10 @@
     "runtime_s": 123.0
   },
   "description": "rsi_oversold=8",
-  "experiments_run": 92,
+  "experiments_run": 98,
   "experiments_kept": 15,
-  "updated_at": "2026-05-08T14:24:26.002978+00:00"
+  "updated_at": "2026-05-08T14:24:26.002978+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.2357,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: momentum_breakout (76.0%). True solo performance unknown \u2014 see task #327."
 }

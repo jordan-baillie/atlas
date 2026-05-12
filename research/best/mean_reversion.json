@@ -121,5 +121,8 @@
   "description": "rsi_oversold: 39 \u2192 35 (less selective entry)",
   "experiments_run": 794,
   "experiments_kept": 37,
-  "updated_at": "2026-04-28T14:40:31.851863+00:00"
+  "updated_at": "2026-04-28T14:40:31.851863+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.0455,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: sector_rotation (77.1%). True solo performance unknown \u2014 see task #327."
 }

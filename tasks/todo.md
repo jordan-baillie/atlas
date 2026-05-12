@@ -615,3 +615,13 @@ Re-enable criteria: sp500 green ≥30 days (after 2026-06-06), freed capital dep
 - [x] **Audit**: `data/audit/cat_state_repair_2026-05-12.json` (git-ignored, on-disk only)
 - [x] **Tests**: 21/21 in `tests/test_state_order_id_uniqueness.py`
 - [x] **Script**: `scripts/audit_state_order_id_collisions.py` (reusable collision scanner for CI)
+
+## #327 — Run clean solo backtests for contaminated research_best files
+
+- [ ] 14 contaminated files identified (see `data/audit/promotion_integrity_2026-05-12.json` and review session 2026-05-12).
+- [ ] For each (connors_rsi2 sp500, consecutive_down_days sp500, mean_reversion sp500+all etfs, momentum_breakout commodity/defensive/gold/treasury etfs, opening_gap sp500, short_term_mr sp500, mean_reversion crypto): run TRUE solo backtest with Alpaca $0 commission, current 7-yr universe, regime-aware splitter.
+- [ ] Replace contaminated `research/best/<name>.json` with the solo result.
+- [ ] Re-verify `is_solo: true` for all 14 post-rerun.
+- [ ] Run `python3 scripts/audit_promotion_integrity.py` post-rerun; expect 0 contaminated.
+- [ ] Surface in dashboard — contamination badge should disappear for all 14.
+- [ ] Audit contaminated-at-promotion events: connors_rsi2/sp500, mean_reversion/commodity_etfs, momentum_breakout/commodity_etfs, short_term_mr/sp500 (PAPER) — consider re-evaluation after solo backtests complete.

@@ -403,6 +403,18 @@ def research_strategies(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 else:
                     s["best_params"] = None
 
+            # Enrich with research integrity fields (is_solo, solo_fraction, contamination_note)
+            try:
+                from research.integrity import check_solo
+                for s in strategies:
+                    _strategy = s.get("strategy", "")
+                    _is_solo, _solo_frac, _note = check_solo(_strategy, universe="sp500")
+                    s["is_solo"] = _is_solo
+                    s["solo_fraction"] = _solo_frac
+                    s["contamination_note"] = _note
+            except Exception as _ie:
+                logger.warning("integrity enrichment failed: %s", _ie)
+
             return JSONResponse(content={"strategies": strategies})
     except Exception as e:  # noqa: BLE001 — HTTP handler catch-all
         logger.exception("research_strategies failed")

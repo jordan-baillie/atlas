@@ -510,6 +510,26 @@ def _run_promotion_sweep(results: List[Dict], market: str, universe: str) -> Lis
         # Baseline = pre-sweep Sharpe captured by the runner
         initial_sharpe = r.get("starting_sharpe", 0.0) or 0.0
 
+        # Gate against portfolio-contaminated metrics
+        try:
+            from research.integrity import check_solo
+            _is_solo, _solo_frac, _note = check_solo(strategy, universe)
+            if _is_solo is False:  # explicit false, not None
+                _msg = (
+                    f"Refusing to promote {strategy}/{universe} on contaminated portfolio metrics "
+                    f"(solo_fraction={_solo_frac:.2%}). Run a true solo backtest first. {_note}"
+                )
+                print(f"[promo] BLOCKED: {_msg}")
+                _logger.warning(_msg)
+                outcomes.append({
+                    "strategy": strategy,
+                    "promoted": False,
+                    "reason": f"contaminated_metrics: solo_fraction={_solo_frac:.2%}",
+                })
+                continue
+        except ImportError:
+            pass  # integrity module not yet available — skip gate
+
         # Gate delta-Sharpe client-side so we don't spam promoter
         # with tiny improvements (promoter has its own gates but
         # this saves an OOS validation subprocess per insignificant

@@ -83,5 +83,8 @@
   "description": "trend_ma_period: 20 \u2192 25",
   "experiments_run": 0,
   "experiments_kept": 9,
-  "updated_at": "2026-04-20T16:10:09.583596+00:00"
+  "updated_at": "2026-04-20T16:10:09.583596+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.3091,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: connors_rsi2 (49.1%). True solo performance unknown \u2014 see task #327."
 }

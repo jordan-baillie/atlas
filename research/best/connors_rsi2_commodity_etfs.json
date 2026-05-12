@@ -98,5 +98,7 @@
   "description": "max_hold_days: 5 \u2192 4",
   "experiments_run": 0,
   "experiments_kept": 11,
-  "updated_at": "2026-05-06T14:16:22.837717+00:00"
+  "updated_at": "2026-05-06T14:16:22.837717+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.5165
 }

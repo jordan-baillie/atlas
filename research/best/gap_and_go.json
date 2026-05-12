@@ -29,5 +29,8 @@
   "description": "baseline",
   "experiments_run": 0,
   "experiments_kept": 1,
-  "updated_at": "2026-03-11T11:49:03.703253+00:00"
+  "updated_at": "2026-03-11T11:49:03.703253+00:00",
+  "is_solo": null,
+  "solo_fraction": null,
+  "contamination_note": "No trades recorded \u2014 backtest not yet run or no signals fired."
 }

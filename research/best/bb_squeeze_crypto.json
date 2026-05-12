@@ -8,7 +8,7 @@
     "cagr_full_period_pct": 0.0,
     "sharpe": 0.0,
     "sortino": 0.0,
-    "max_drawdown_pct": NaN,
+    "max_drawdown_pct": null,
     "win_rate_pct": 0.0,
     "profit_factor": 0.0,
     "total_pnl": 0,
@@ -21,7 +21,7 @@
     "edge_significant": false,
     "var_95_pct": 0.0,
     "cvar_95_pct": 0.0,
-    "calmar": NaN,
+    "calmar": null,
     "mc_p95_drawdown_pct": 0.0,
     "mc_fragile": false,
     "windows_configured": 78,
@@ -33,5 +33,8 @@
   "description": "baseline",
   "experiments_run": 0,
   "experiments_kept": 1,
-  "updated_at": "2026-05-01T19:03:35.507786+00:00"
+  "updated_at": "2026-05-01T19:03:35.507786+00:00",
+  "is_solo": null,
+  "solo_fraction": null,
+  "contamination_note": "No trades recorded \u2014 backtest not yet run or no signals fired."
 }

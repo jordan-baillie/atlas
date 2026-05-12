@@ -33,6 +33,10 @@ export interface StrategyDetail {
   best_cagr?: number
   last_improvement?: string
   best_params?: Record<string, unknown>
+  // Research integrity fields (Task A — 2026-05-12)
+  is_solo?: boolean | null
+  solo_fraction?: number | null
+  contamination_note?: string | null
 }
 
 export interface ResearchStrategies {

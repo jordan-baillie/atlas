@@ -111,5 +111,7 @@
   "description": "atr_period: 20 \u2192 30",
   "experiments_run": 0,
   "experiments_kept": 28,
-  "updated_at": "2026-05-05T15:05:46.561872+00:00"
+  "updated_at": "2026-05-05T15:05:46.561872+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.6333
 }

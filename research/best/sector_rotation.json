@@ -86,5 +86,7 @@
   "description": "baseline",
   "experiments_run": 30,
   "experiments_kept": 1,
-  "updated_at": "2026-04-13T09:49:10.122936+00:00"
+  "updated_at": "2026-04-13T09:49:10.122936+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.779
 }

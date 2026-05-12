@@ -42,5 +42,7 @@
   "description": "atr_stop_mult=2.0",
   "experiments_run": 79,
   "experiments_kept": 15,
-  "updated_at": "2026-03-11T14:53:38.054965+00:00"
+  "updated_at": "2026-03-11T14:53:38.054965+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

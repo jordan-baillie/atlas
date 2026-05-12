@@ -106,5 +106,8 @@
   "description": "atr_stop_mult: 0.21 \u2192 0.16",
   "experiments_run": 0,
   "experiments_kept": 17,
-  "updated_at": "2026-05-07T14:05:32.789826+00:00"
+  "updated_at": "2026-05-07T14:05:32.789826+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.1322,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: momentum_breakout (46.6%). True solo performance unknown \u2014 see task #327."
 }

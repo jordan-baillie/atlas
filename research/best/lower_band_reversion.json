@@ -69,5 +69,7 @@
   "description": "band_mult=1.5",
   "experiments_run": 4,
   "experiments_kept": 5,
-  "updated_at": "2026-03-15T11:10:51.486369+00:00"
+  "updated_at": "2026-03-15T11:10:51.486369+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

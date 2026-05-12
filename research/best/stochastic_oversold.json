@@ -40,7 +40,7 @@
         "win_rate_pct": 100.0,
         "avg_trade": 79.98,
         "total_pnl": 159.96,
-        "profit_factor": Infinity,
+        "profit_factor": null,
         "sharpe_approx": 9.1364,
         "avg_r": 1.126
       },
@@ -68,5 +68,7 @@
   "description": "stoch_entry=15",
   "experiments_run": 2,
   "experiments_kept": 3,
-  "updated_at": "2026-03-15T03:05:04.158618+00:00"
+  "updated_at": "2026-03-15T03:05:04.158618+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

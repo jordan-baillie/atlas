@@ -79,7 +79,9 @@
     "runtime_s": 77.5
   },
   "description": "trend_ma_period=35",
-  "experiments_run": 382,
+  "experiments_run": 386,
   "experiments_kept": 28,
-  "updated_at": "2026-05-05T14:36:58.034772+00:00"
+  "updated_at": "2026-05-05T14:36:58.034772+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.72
 }

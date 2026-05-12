@@ -43,7 +43,7 @@
         "win_rate_pct": 100.0,
         "avg_trade": 9.7,
         "total_pnl": 29.11,
-        "profit_factor": Infinity,
+        "profit_factor": null,
         "sharpe_approx": 1.1688,
         "avg_r": 0.7671
       },
@@ -71,5 +71,7 @@
   "description": "wr_period=14",
   "experiments_run": 8,
   "experiments_kept": 9,
-  "updated_at": "2026-03-15T10:40:50.553612+00:00"
+  "updated_at": "2026-03-15T10:40:50.553612+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

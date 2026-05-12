@@ -70,5 +70,7 @@
   "experiments_kept": 21,
   "updated_at": "2026-03-11T07:42:15.500724+00:00",
   "_fix_note": "Reset to live v2.2 params (Sharpe ~0.50). Previous best had inverted fast/slow MA.",
-  "sharpe": 0.5
+  "sharpe": 0.5,
+  "is_solo": true,
+  "solo_fraction": 1.0
 }

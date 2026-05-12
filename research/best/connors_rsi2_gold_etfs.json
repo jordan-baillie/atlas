@@ -87,5 +87,7 @@
   "description": "rsi_entry: 36 \u2192 40",
   "experiments_run": 0,
   "experiments_kept": 38,
-  "updated_at": "2026-05-10T16:01:56.242382+00:00"
+  "updated_at": "2026-05-10T16:01:56.242382+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
 }
