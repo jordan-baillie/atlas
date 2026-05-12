@@ -36,6 +36,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
 from utils.config import get_active_config
@@ -2349,6 +2351,62 @@ async def _check_job_completion(ctx: ContextTypes.DEFAULT_TYPE):
 SPECS_DIR = PROJECT_ROOT / "specs"
 
 
+async def capture_inbound_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Catch-all handler that persists every inbound message to telegram_messages.
+
+    Registered at group=-1 (before command handlers) so it sees every message
+    regardless of whether a command handler also matches. Does NOT block the
+    update — python-telegram-bot v22 dispatches to all matching groups.
+
+    Fail-open: any exception is logged but never propagated.
+    """
+    try:
+        msg = update.effective_message
+        if msg is None:
+            return
+        chat = update.effective_chat
+        user = update.effective_user
+
+        # Body: text for text messages, caption for media
+        body = msg.text or msg.caption or ""
+        if not body:
+            # Pure media with no caption — record a placeholder so we know
+            # something arrived but skip if completely empty
+            body = f"[media: {msg.effective_attachment.__class__.__name__ if msg.effective_attachment else 'unknown'}]"
+
+        # Command detection
+        is_command = False
+        command_name: Optional[str] = None
+        if msg.text and msg.text.startswith("/"):
+            is_command = True
+            first_token = msg.text.split(None, 1)[0]  # "/cmd@bot args" or "/cmd"
+            command_name = first_token.lstrip("/").split("@", 1)[0] or None
+
+        # Timestamp from Telegram message date (UTC) if available, else now
+        sent_at = None
+        if msg.date is not None:
+            try:
+                sent_at = msg.date.isoformat(timespec="seconds")
+                if not sent_at.endswith("Z") and "+" not in sent_at[-6:]:
+                    sent_at = sent_at + "Z"
+            except Exception:
+                sent_at = None
+
+        from db.atlas_db import record_telegram_inbound
+        record_telegram_inbound(
+            chat_id=str(chat.id) if chat else "unknown",
+            body=body,
+            message_id=msg.message_id,
+            user_id=str(user.id) if user else None,
+            username=(user.username if user else None),
+            sent_at=sent_at,
+            is_command=is_command,
+            command_name=command_name,
+        )
+    except Exception as e:  # noqa: BLE001 — observability never breaks bot
+        logger.warning("telegram inbound capture failed: %s", e)
+
+
 def _get_skill_aliases() -> list[str]:
     """Get available skill alias names."""
     from services.job_server import SKILL_ALIASES
@@ -2452,6 +2510,13 @@ def main():
 
     app = Application.builder().token(token).post_init(_restore_job_monitors).build()
 
+    # Catch-all capture handler — runs in group=-1 BEFORE command handlers
+    # so it persists every inbound message regardless of command match.
+    app.add_handler(
+        MessageHandler(filters.ALL & ~filters.StatusUpdate.ALL, capture_inbound_message),
+        group=-1,
+    )
+
     # Command handlers
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("plan", cmd_plan))
@@ -2505,7 +2570,7 @@ def main():
 
     app.add_error_handler(_error_handler)
 
-    logger.info("Bot polling started. Commands: /status /plan /halt /unhalt /halt_remediation /resume_remediation /approve_fix /task /jobs /job /kill /logs /specs")
+    logger.info("Bot polling started. Inbound capture: ENABLED (group=-1). Commands: /status /plan /halt /unhalt /halt_remediation /resume_remediation /approve_fix /task /jobs /job /kill /logs /specs")
     app.run_polling(drop_pending_updates=True)
 
 

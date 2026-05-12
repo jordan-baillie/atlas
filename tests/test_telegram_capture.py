@@ -152,3 +152,119 @@ def test_outbound_indexes_used():
 
     assert "idx_tgm_chat_time" in plan_chat_text, f"chat_id query did not hit index: {plan_chat_text}"
     assert "idx_tgm_direction_time" in plan_dir_text, f"direction query did not hit index: {plan_dir_text}"
+
+
+# ─── Inbound ────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def _bot_module():
+    """Import the bot module; tolerate import-time side effects."""
+    import importlib
+    mod = importlib.import_module("services.telegram_bot")
+    return mod
+
+
+def _make_update(*, text=None, caption=None, message_id=42, chat_id=12345,
+                 user_id=999, username="testuser", date_iso="2026-05-12T10:00:00+00:00"):
+    """Build a minimal duck-typed Update for capture_inbound_message."""
+    from datetime import datetime as _dt
+    msg = MagicMock()
+    msg.text = text
+    msg.caption = caption
+    msg.message_id = message_id
+    msg.effective_attachment = None
+    msg.date = _dt.fromisoformat(date_iso)
+
+    chat = MagicMock()
+    chat.id = chat_id
+
+    user = MagicMock()
+    user.id = user_id
+    user.username = username
+
+    update = MagicMock()
+    update.effective_message = msg
+    update.effective_chat = chat
+    update.effective_user = user
+    return update
+
+
+def test_inbound_command_captured(_bot_module):
+    import asyncio
+    update = _make_update(text="/status")
+    asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+    with atlas_db.get_db() as db:
+        rows = db.execute("SELECT * FROM telegram_messages WHERE direction='inbound'").fetchall()
+    assert len(rows) == 1
+    row = dict(rows[0])
+    assert row["body"] == "/status"
+    assert row["is_command"] == 1
+    assert row["command_name"] == "status"
+    assert row["chat_id"] == "12345"
+    assert row["user_id"] == "999"
+    assert row["username"] == "testuser"
+    assert row["message_id"] == 42
+
+
+def test_inbound_command_with_bot_suffix_captured(_bot_module):
+    import asyncio
+    update = _make_update(text="/halt@AtlasBot now")
+    asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+    with atlas_db.get_db() as db:
+        rows = db.execute("SELECT * FROM telegram_messages WHERE direction='inbound'").fetchall()
+    assert len(rows) == 1
+    row = dict(rows[0])
+    assert row["is_command"] == 1
+    assert row["command_name"] == "halt"
+    assert row["body"] == "/halt@AtlasBot now"
+
+
+def test_inbound_free_text_captured(_bot_module):
+    import asyncio
+    update = _make_update(text="hello orchestrator")
+    asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+    with atlas_db.get_db() as db:
+        rows = db.execute("SELECT * FROM telegram_messages WHERE direction='inbound'").fetchall()
+    assert len(rows) == 1
+    row = dict(rows[0])
+    assert row["body"] == "hello orchestrator"
+    assert row["is_command"] == 0
+    assert row["command_name"] is None
+
+
+def test_inbound_media_with_caption_captured(_bot_module):
+    import asyncio
+    update = _make_update(text=None, caption="screenshot of alert")
+    asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+    with atlas_db.get_db() as db:
+        rows = db.execute("SELECT body, is_command FROM telegram_messages WHERE direction='inbound'").fetchall()
+    assert len(rows) == 1
+    assert dict(rows[0])["body"] == "screenshot of alert"
+    assert dict(rows[0])["is_command"] == 0
+
+
+def test_inbound_db_failure_failopen(_bot_module):
+    """If DB write fails, handler must not raise — bot stays alive."""
+    import asyncio
+    update = _make_update(text="/test")
+    with patch("db.atlas_db.record_telegram_inbound", side_effect=RuntimeError("boom")):
+        # Must NOT raise
+        asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+
+def test_inbound_no_text_no_caption_still_records_placeholder(_bot_module):
+    import asyncio
+    # Media-only message with no text/caption
+    update = _make_update(text=None, caption=None)
+    update.effective_message.effective_attachment = MagicMock()
+    update.effective_message.effective_attachment.__class__.__name__ = "PhotoSize"
+    asyncio.run(_bot_module.capture_inbound_message(update, None))
+
+    with atlas_db.get_db() as db:
+        rows = db.execute("SELECT body FROM telegram_messages WHERE direction='inbound'").fetchall()
+    assert len(rows) == 1
+    assert "media" in dict(rows[0])["body"].lower()
