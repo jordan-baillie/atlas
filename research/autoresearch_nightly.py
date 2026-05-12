@@ -66,19 +66,18 @@ RESULTS_DIR = ATLAS_ROOT / "research" / "results"
 import logging
 _logger = logging.getLogger(__name__)
 
-# Per-universe MAX_ROWS_PER_UNIVERSE: operator-set ceilings (kept low so we
-# alert if the sweep produces fewer than this).  Calibrated 2026-05-06 audit.
-# These are MAXIMA — actual threshold is min(this, dynamic_floor) where
-# dynamic_floor = enabled_strategies * MIN_ROWS_PER_STRATEGY.
-# This auto-scales when strategies are disabled in a universe's config,
-# preventing false "silent failure" alerts on narrow universes
-# (errors table ids 19,20,21,27-29 db).
+# Per-universe operator-set FLOORS (lower bounds): alert if the sweep produces
+# fewer rows than this.  Calibrated 2026-05-12 against last-11-days production
+# data.  Threshold = max(operator_floor, enabled_strategies * MIN_ROWS_PER_STRATEGY)
+# so neither floor can weaken the other.
+# errors table ids 19,20,21,27-29 db → gold/commodity false-positives fixed by
+# lowering calibrated floors to match actual narrow-universe output.
 MIN_ROWS_PER_UNIVERSE = {
-    "sp500": 50,
-    "commodity_etfs": 20,
-    "sector_etfs": 20,
-    "gold_etfs": 10,
-    "treasury_etfs": 10,
+    "sp500": 50,          # typical 100-330 rows, 2 enabled — preserve alert sensitivity
+    "commodity_etfs": 5,  # typical 6-30 rows, 3 enabled (recent runs low)
+    "sector_etfs": 20,    # typical 13-44 rows, 2 enabled
+    "gold_etfs": 3,       # typical 1-8 rows, 1 enabled strategy
+    "treasury_etfs": 10,  # no enabled strategies — conservative sentinel
     "defensive_etfs": 10,
     "crypto": 10,
     "asx": 10,
@@ -197,16 +196,21 @@ def _count_rows_added(universe: str, session_start_ts: float) -> int:
 
 
 def _resolve_min_rows(universe: str) -> int:
-    """Dynamic silent-failure threshold based on enabled-strategy count.
+    """Dynamic silent-failure threshold combining operator floor + per-strategy floor.
 
-    Returns ``min(operator_ceiling, enabled_strategies * MIN_ROWS_PER_STRATEGY)``
-    with a floor of 3.  This auto-adapts when strategies are disabled in a
-    universe's active config — prevents false alerts on narrow universes like
-    gold_etfs (1 strategy) and commodity_etfs (3 strategies).
+    Threshold = max(operator_floor, enabled_strategies * MIN_ROWS_PER_STRATEGY)
 
-    If the active config cannot be loaded, falls back to the static ceiling
-    or DEFAULT_MIN_ROWS (fail-safe: prefer false-positive alerts over silent
-    silent-failures).
+    - Operator floor: from MIN_ROWS_PER_UNIVERSE dict — hand-calibrated per universe
+      based on typical sweep output. ALWAYS respected as a lower bound — we want
+      to alert if sp500 drops from 100+ to 30 rows, even with 2 strategies enabled.
+    - Dynamic floor: enabled_strategies * 3 — safety net for universes not in the
+      operator dict (so we still alert if a NEW universe is added but forgotten).
+
+    Returns the LARGER of the two so neither can weaken the other.
+
+    Fail-safe: on any error (missing config, corrupt JSON), falls back to the
+    operator floor or DEFAULT_MIN_ROWS — better to surface a false-positive alert
+    than to silently miss a real silent failure.
     """
     try:
         from pathlib import Path
@@ -225,8 +229,8 @@ def _resolve_min_rows(universe: str) -> int:
             # Use the static ceiling so we still alert if rows ARE produced.
             return MIN_ROWS_PER_UNIVERSE.get(universe, DEFAULT_MIN_ROWS)
         dynamic_floor = max(3, enabled * MIN_ROWS_PER_STRATEGY)
-        operator_ceiling = MIN_ROWS_PER_UNIVERSE.get(universe, DEFAULT_MIN_ROWS)
-        return min(operator_ceiling, dynamic_floor)
+        operator_floor = MIN_ROWS_PER_UNIVERSE.get(universe, DEFAULT_MIN_ROWS)
+        return max(operator_floor, dynamic_floor)
     except Exception as exc:
         _logger.warning(
             "_resolve_min_rows(%s) failed: %s — falling back to static threshold",
