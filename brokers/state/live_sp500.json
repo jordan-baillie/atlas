@@ -5,13 +5,13 @@
     {
       "ticker": "CAT",
       "strategy": "momentum_breakout",
-      "entry_date": "2026-05-11",
+      "entry_date": "2026-05-12",
       "entry_price": 835.24,
       "shares": 1,
       "stop_price": 861.21,
       "order_id": "",
       "stop_order_id": "a1021664-51c8-4ac1-aecc-a8d70feb7cf8",
-      "tp_order_id": ""
+      "tp_order_id": "3d035b5f-3926-4d2d-9506-0c588e691fcb"
     }
   ],
   "closed_trades": [
@@ -2472,11 +2472,33 @@
           "holding_days": 0
         }
       ]
+    },
+    {
+      "date": "2026-05-11",
+      "equity": 1341.31,
+      "cash": 4313.32,
+      "positions_value": -2972.01,
+      "num_positions": 1,
+      "total_realized_pnl": 278.76,
+      "total_closed_trades": 25,
+      "positions": [
+        {
+          "ticker": "CAT",
+          "strategy": "momentum_breakout",
+          "shares": 1,
+          "entry_price": 835.24,
+          "current_price": 926.79,
+          "unrealized_pnl": 91.55,
+          "mae": 0.0,
+          "mfe": 10.96,
+          "holding_days": -1
+        }
+      ]
     }
   ],
-  "daily_high_water": 5211.19,
-  "daily_high_water_date": "2026-05-11",
+  "daily_high_water": 5208.96,
+  "daily_high_water_date": "2026-05-12",
   "halted": false,
   "halt_reason": "",
-  "last_saved": "2026-05-11T17:20:53.812465"
+  "last_saved": "2026-05-12T08:00:39.595263"
 }

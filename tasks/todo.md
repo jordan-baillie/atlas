@@ -602,3 +602,16 @@ Re-enable criteria: sp500 green ≥30 days (after 2026-06-06), freed capital dep
 - [x] **Fix** (commit `94606c0c`): added `_AUTORESEARCH_MIN_AGE_SECONDS = 15 * 60` constant; logs younger than 15 min are skipped with a "race-condition skip" INFO line. Distinguishes "just created, will flush" from "real silent failure"
 - [x] **Tests**: 4 new in `tests/test_silent_failure_watchdog_autoresearch.py` — fresh skipped, old alerted, paused skipped, non-zero never alerts
 - [x] **Live verified**: `python3 scripts/silent_failure_watchdog.py --dry-run` → "OK (no zero-byte logs in last 24h)"
+
+## #327-B — CAT stop_order_id/tp_order_id collision investigation — DONE 2026-05-12
+
+- [x] **Finding**: `live_sp500.json` CAT had `tp_order_id=""` after prior repair; Alpaca confirmed both OCO legs are active
+  - stop leg `a1021664-...` = OCO stop@861.21 (status=HELD) ✓
+  - TP leg `3d035b5f-...` = OCO limit@978.33 (status=NEW, `client_order_id=atlas_retro_tp_1509d405`) — was missing from state
+- [x] **Root cause**: commit `aaafb2d9` placed same UUID in both fields; later fix identified correct stop_order_id but cleared `tp_order_id` to `""` instead of the retro-TP UUID
+- [x] **Diagnosis**: Branch A — both OCO legs active, state file just had wrong/empty tp_order_id
+- [x] **Fix** (state-file only, no broker mutations): set `tp_order_id="3d035b5f-3926-4d2d-9506-0c588e691fcb"` in `brokers/state/live_sp500.json`
+- [x] **Collision scan**: 0 other collisions across 3 markets (commodity_etfs, sector_etfs, sp500)
+- [x] **Audit**: `data/audit/cat_state_repair_2026-05-12.json` (git-ignored, on-disk only)
+- [x] **Tests**: 21/21 in `tests/test_state_order_id_uniqueness.py`
+- [x] **Script**: `scripts/audit_state_order_id_collisions.py` (reusable collision scanner for CI)
