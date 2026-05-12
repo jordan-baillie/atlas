@@ -80,6 +80,34 @@ def _load_credentials() -> tuple[str, str]:
 # Core send
 # ---------------------------------------------------------------------------
 
+def _persist_outbound(
+    chat_id: str,
+    body: str,
+    *,
+    parse_mode: Optional[str],
+    message_id: Optional[int],
+    api_status: Optional[int],
+    api_error: Optional[str],
+) -> None:
+    """Wrapper around db.atlas_db.record_telegram_outbound with import-time fail-open.
+
+    Imports lazily so utils/telegram.py remains importable when db layer is
+    unavailable (e.g. fresh checkout before init_db, or DB file missing).
+    """
+    try:
+        from db.atlas_db import record_telegram_outbound
+        record_telegram_outbound(
+            chat_id,
+            body,
+            parse_mode=parse_mode,
+            message_id=message_id,
+            api_status=api_status,
+            api_error=api_error,
+        )
+    except Exception as e:  # noqa: BLE001 — observability never breaks send
+        logger.warning("telegram outbound capture skipped: %s", e)
+
+
 def send_message(text: str, parse_mode: str = "HTML", silent: bool = False,
                  reply_markup: dict = None) -> bool:
     """Send a message to the configured Telegram chat.
@@ -93,6 +121,8 @@ def send_message(text: str, parse_mode: str = "HTML", silent: bool = False,
 
     Returns:
         True if sent successfully, False otherwise.
+
+    Side effect: persists every send attempt to telegram_messages table (fail-open).
     """
     try:
         token, chat_id = _load_credentials()
@@ -123,18 +153,51 @@ def send_message(text: str, parse_mode: str = "HTML", silent: bool = False,
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            body = json.loads(resp.read())
-            if body.get("ok"):
+            resp_body = json.loads(resp.read())
+            if resp_body.get("ok"):
                 logger.info("Telegram message sent (chat_id=%s)", chat_id)
+                msg_id = None
+                try:
+                    msg_id = resp_body.get("result", {}).get("message_id")
+                except Exception:
+                    pass
+                _persist_outbound(
+                    chat_id, text,
+                    parse_mode=parse_mode,
+                    message_id=msg_id,
+                    api_status=200,
+                    api_error=None,
+                )
                 return True
-            logger.warning("Telegram API returned ok=false: %s", body)
+            logger.warning("Telegram API returned ok=false: %s", resp_body)
+            _persist_outbound(
+                chat_id, text,
+                parse_mode=parse_mode,
+                message_id=None,
+                api_status=200,
+                api_error=f"api_ok_false: {resp_body!r}"[:500],
+            )
             return False
     except urllib.error.HTTPError as e:
-        body = e.read().decode(errors="replace")
-        logger.error("Telegram HTTP %d: %s", e.code, body)
+        err_body = e.read().decode(errors="replace")
+        logger.error("Telegram HTTP %d: %s", e.code, err_body)
+        _persist_outbound(
+            chat_id, text,
+            parse_mode=parse_mode,
+            message_id=None,
+            api_status=e.code,
+            api_error=err_body[:500],
+        )
         return False
     except Exception as e:
         logger.error("Telegram send error: %s", e)
+        _persist_outbound(
+            chat_id, text,
+            parse_mode=parse_mode,
+            message_id=None,
+            api_status=None,
+            api_error=repr(e)[:500],
+        )
         return False
 
 
