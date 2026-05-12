@@ -3548,3 +3548,72 @@ def list_active_paper_protective_records(
             "list_active_paper_protective_records failed: %s", exc
         )
         return []
+
+
+# ── Telegram message capture ────────────────────────────────────────────────
+
+def record_telegram_outbound(
+    chat_id: str,
+    body: str,
+    *,
+    parse_mode: Optional[str] = None,
+    message_id: Optional[int] = None,
+    api_status: Optional[int] = None,
+    api_error: Optional[str] = None,
+    sent_at: Optional[str] = None,
+) -> Optional[int]:
+    """Persist an outbound Telegram message. Fail-open: returns None on DB error.
+
+    sent_at defaults to current UTC ISO-8601.
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        ts = sent_at or datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        with get_db() as db:
+            cur = db.execute(
+                """
+                INSERT INTO telegram_messages
+                    (direction, chat_id, message_id, body, parse_mode,
+                     sent_at, api_status, api_error, is_command, command_name)
+                VALUES ('outbound', ?, ?, ?, ?, ?, ?, ?, 0, NULL)
+                """,
+                (str(chat_id), message_id, body, parse_mode, ts, api_status, api_error),
+            )
+            return cur.lastrowid
+    except Exception as e:  # noqa: BLE001 — fail-open observability path
+        _log.warning("record_telegram_outbound failed (capture only — send pipeline unaffected): %s", e)
+        return None
+
+
+def record_telegram_inbound(
+    chat_id: str,
+    body: str,
+    *,
+    message_id: Optional[int] = None,
+    user_id: Optional[str] = None,
+    username: Optional[str] = None,
+    sent_at: Optional[str] = None,
+    is_command: bool = False,
+    command_name: Optional[str] = None,
+) -> Optional[int]:
+    """Persist an inbound Telegram message. Fail-open: returns None on DB error."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        ts = sent_at or datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        with get_db() as db:
+            cur = db.execute(
+                """
+                INSERT INTO telegram_messages
+                    (direction, chat_id, message_id, user_id, username, body,
+                     sent_at, is_command, command_name)
+                VALUES ('inbound', ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (str(chat_id), message_id, user_id, username, body, ts,
+                 1 if is_command else 0, command_name),
+            )
+            return cur.lastrowid
+    except Exception as e:  # noqa: BLE001 — fail-open observability path
+        _log.warning("record_telegram_inbound failed (capture only — receive pipeline unaffected): %s", e)
+        return None

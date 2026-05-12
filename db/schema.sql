@@ -700,3 +700,29 @@ CREATE INDEX IF NOT EXISTS idx_paper_protective_status
     ON paper_position_protective_orders(status);
 CREATE INDEX IF NOT EXISTS idx_paper_protective_trade_id
     ON paper_position_protective_orders(trade_id);
+
+
+-- ═══════════════════════════════════════════════════════════
+-- TELEGRAM MESSAGE CAPTURE (bidirectional observability)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS telegram_messages (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    direction    TEXT NOT NULL CHECK (direction IN ('outbound', 'inbound')),
+    chat_id      TEXT NOT NULL,
+    message_id   INTEGER,
+    user_id      TEXT,
+    username     TEXT,
+    body         TEXT NOT NULL,
+    parse_mode   TEXT,
+    sent_at      TEXT NOT NULL,
+    api_status   INTEGER,
+    api_error    TEXT,
+    is_command   INTEGER DEFAULT 0,
+    command_name TEXT,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_tgm_chat_time ON telegram_messages(chat_id, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tgm_direction_time ON telegram_messages(direction, sent_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tgm_command ON telegram_messages(command_name) WHERE command_name IS NOT NULL;
