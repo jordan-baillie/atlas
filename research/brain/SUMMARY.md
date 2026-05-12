@@ -1,65 +1,127 @@
-# Atlas — Session Memory Summary
-*Last updated: 2026-03-13 | Keep under 100 lines*
+# Research Brain Summary
 
-## System State
+*Auto-regenerated 2026-05-12. Re-run via `python3 scripts/regen_brain_summary.py`.*
 
-| Market | Broker | Mode | Config | Strategies Active |
-|--------|--------|------|--------|-------------------|
-| **SP500** | Alpaca ($0 commission) | LIVE | v3.0 | TF+MR+OG+MB+SR+STMR+CR2 (max_pos=10, weighted alloc) |
-| **ASX** | Moomoo (monitoring only — 2 open positions) | MONITOR | v1.0-passive | No new trades; Moomoo = source of truth |
-| **HK (SEHK)** | INACTIVE (config moved to config/inactive/) | — | — | — |
+*This file is overwritten on each regen — do not edit by hand.*
 
-**Live positions:** SP500: 2 (DHR, OXY via Alpaca, ~$3,520 USD equity). ASX: 2 (WHC.AX, WDS.AX via Moomoo, ~A$12,417 account equity).
+---
 
-## Key Architecture Decisions
+## 1. Strategy Lifecycle State Distribution
 
-1. **Live broker = sole source of truth.** Paper engine removed. Broker state > paper state at all times.
-2. **SP500 via Alpaca ($0 commission).** Switched from Moomoo 2026-03-13. Commission-free eliminates fee drag.
-3. **ASX monitoring mode.** config/active/asx.json uses Moomoo (monitoring_enabled=true, live_enabled=false). No new trades; reads real positions from Moomoo REAL account. `atlas status -m asx` shows live positions. HK still inactive.
-5. **No paper trading layer.** `LivePortfolio` reads broker. Paper engine used only for backtest and plan generation.
-6. **Allocation pools implemented but disabled** (`allocation.enabled=false`). Enable when momentum_breakout is re-activated.
-7. **Position count:** SP500 max_open_positions=15 (up from 10 — confirmed +13% Sharpe improvement).
-8. **SMA-200 filter on all SP500 strategies** (v2.1 onwards). Sharpe +47%, DD -1.2pp.
-9. **Research cron runs Mon-Fri 09:00 AEST** — both markets closed in this window.
-10. **All crons are Tue-Sat** for overnight US sessions (Friday US = Saturday AEST).
+| State | Count |
+|-------|-------|
+| `RESEARCH` | 65 |
+| `LIVE` | 8 |
+| `PAPER` | 1 |
+| **Total** | **74** |
 
-## Known Issues & Gotchas
+## 2. Active Strategies per Market
 
-- **C3/C4 (CRITICAL — FIXED):** `LivePortfolio.update_positions()` and `get_today_deals()` missing on IBKR — fixed in 2026-03-02 audit swarm.
-- **C1 (FIXED):** Look-ahead bias in trailing stop exits — fixed to use T-1 close.
-- **C5 (FIXED):** IBKR account ID hardcoded in config — moved to secrets.
-- **Alpaca live.** API key/secret in ~/.atlas-secrets.json. DNS fix in /etc/hosts for api.alpaca.markets.
-- **SP500 state reset 2026-03-13:** Old Moomoo state caused false drawdown halt. Clean state for Alpaca start.
-- **Sector rotation generates 0 trades** when tested solo (sector_map missing SP500 entries). Fixed via sector_map_sp500.json.
-- **MTF Momentum has Series comparison bugs** — deferred, needs full code audit.
-- **BB Squeeze solo** near-breakeven after optimization (Sharpe -0.38) — deferred.
+**asx** ⚪ (mode=`passive`, live_enabled=`False`)
+  *(no strategies configured)*
 
-## Critical Operational Procedures
+**commodity_etfs** ⚪ (mode=`passive`, live_enabled=`False`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
 
-```bash
-# Daily health check
-python3 scripts/cli.py status               # portfolio state
-python3 scripts/health_check.py             # degradation check
+**crypto** ⚪ (mode=`paper`, live_enabled=`False`)
+  `connors_rsi2`, `mean_reversion`, `momentum_breakout`, `trend_following`
 
-# Pre-market
-python3 scripts/cli.py -m sp500 ingest && python3 scripts/cli.py -m sp500 plan
+**defensive_etfs** ⚪ (mode=`passive`, live_enabled=`False`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
 
-# Emergency halt
-python3 scripts/cli.py halt                 # cancels all open orders
+**gold_etfs** ⚪ (mode=`passive`, live_enabled=`False`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
 
-# Re-optimization (when health check flags degradation)
-python3 scripts/reoptimize_parallel.py --market sp500  # ~2h
+**regime** ⚪ (mode=`?`, live_enabled=`False`)
+  *(no strategies configured)*
 
-# Recovery
-scripts/pi-cron.sh recover postclose sp500
-```
+**sector_etfs** ⚪ (mode=`passive`, live_enabled=`False`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
 
-## Research State
+**sp500** 🟢 (mode=`live`, live_enabled=`True`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
 
-- **Wave 1** (Dormant Strategy Activation): 23/24 resolved. **2 promoted** (SMA-200 to SP500 v2.1, ASX reopt to v9.3).
-- **Root finding:** Position contention (max_pos=10) blocked all dormant strategies. Allocation pools built (Task #52) as the unlock mechanism.
-- **Wave 2** (Enhanced MR Alpha): 6/10 run. **0 promotions.** ConnorsRSI2 and all solo strategies unprofitable at $4K equity.
-- **Wave 3** (MR Deep Dive): 5/5 run. **0 promotions.** IBS, volume, hold-period sweeps — marginal improvements only.
-- **Wave 4** (LBR + MR Tweaks): 7/10 run, 3 deferred. **0 promotions.** LBR comprehensively unprofitable on individual stocks (Sharpe -2.08 to -1.44). Published ETF strategies do NOT translate to component stocks. MR strength exit no improvement.
-  - **Pattern confirmed:** Strategies published for SPY/index ETFs (ConnorsRSI2, LBR) fail on individual SP500 stocks. Don't adapt more of these.
-  - **Queue empty** — need Wave 5 theme. Options: re-optimization of TF/MR/OG (>30 days), portfolio-level improvements, or new strategy class designed for individual stocks.
+**treasury_etfs** ⚪ (mode=`passive`, live_enabled=`False`)
+  `bb_squeeze`, `connors_rsi2`, `dividend_capture`, `mean_reversion`, `momentum_breakout`, `mtf_momentum`, `opening_gap`, `sector_rotation`, `short_term_mr`, `trend_following`
+
+## 3. Top-10 Strategies by Sharpe Ratio
+
+| # | Strategy | Universe | Regime | Sharpe | Trades | Max DD% | Updated |
+|---|----------|----------|--------|--------|--------|---------|---------|
+| 1 | `connors_rsi2` | `commodity_etfs` | `bull_risk_on` | 1.4978 | 651 | 20.4% | 2026-05-06 |
+| 2 | `mean_reversion` | `commodity_etfs` | `cross` | 1.4414 | 537 | 18.8% | 2026-05-07 |
+| 3 | `short_term_mr` | `sp500` | `cross` | 1.4386 | 263 | 26.9% | 2026-05-08 |
+| 4 | `mean_reversion` | `commodity_etfs` | `bull_risk_on` | 1.4141 | 598 | 16.8% | 2026-05-06 |
+| 5 | `mean_reversion` | `sp500` | `bull_risk_on` | 1.3720 | 77 | 10.7% | 2026-05-06 |
+| 6 | `momentum_breakout` | `commodity_etfs` | `bull_risk_on` | 1.3160 | 556 | 13.7% | 2026-05-06 |
+| 7 | `short_term_mr` | `sp500` | `bull_risk_on` | 1.2781 | 292 | 24.9% | 2026-05-06 |
+| 8 | `momentum_breakout` | `commodity_etfs` | `cross` | 1.2140 | 585 | 22.3% | 2026-05-07 |
+| 9 | `momentum_breakout` | `sp500` | `bull_risk_on` | 1.2031 | 232 | 18.4% | 2026-05-06 |
+| 10 | `connors_rsi2` | `sp500` | `bull_risk_on` | 1.1504 | 269 | 28.5% | 2026-05-06 |
+
+## 4. Recent Transitions & Promotions
+
+*Source: strategy_lifecycle_history table*
+
+| Strategy | Universe | Transition | Date | Reason |
+|----------|----------|------------|------|--------|
+| `short_term_mr` | `sp500` | `RESEARCH` → `PAPER` | 2026-05-06 | Phase B dogfood activation 2026-05-06: paper-trading rollout |
+| `connors_rsi2` | `commodity_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `connors_rsi2` | `gold_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `connors_rsi2` | `sp500` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `mean_reversion` | `commodity_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `mean_reversion` | `sector_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `momentum_breakout` | `commodity_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `momentum_breakout` | `sector_etfs` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `momentum_breakout` | `sp500` | `—` → `LIVE` | 2026-05-06 | Migration: pre-existing live strategy at lifecycle rollout 2 |
+| `adx_trend_pullback` | `sp500` | `—` → `RESEARCH` | 2026-05-06 | Migration: research-discovered strategy at lifecycle rollout |
+
+*Source: data/promotion_log.json (auto-promotion runs)*
+
+| Strategy | Universe | Paper Sharpe | Research Sharpe | Date |
+|----------|----------|-------------|-----------------|------|
+| `clean_strategy` | `sp500` | 0.6198 | 0.6500 | 2026-05-11 |
+| `clean_strategy` | `sp500` | 0.6198 | 0.6500 | 2026-05-11 |
+| `clean_strategy` | `sp500` | 0.6198 | 0.6500 | 2026-05-11 |
+| `clean_strategy` | `sp500` | 0.6198 | 0.6500 | 2026-05-08 |
+| `clean_strategy` | `sp500` | 0.6198 | 0.6500 | 2026-05-07 |
+
+## 5. Research Integrity Check
+
+**19 contaminated file(s) found:**
+  - research/best/inside_bar_nr7.json
+  - research/best/sector_rotation.json
+  - research/best/triple_rsi.json
+  - research/best/adx_trend_pullback.json
+  - research/best/dividend_capture.json
+  - research/best/keltner_reversion.json
+  - research/best/donchian_breakout.json
+  - research/best/connors_rsi2_commodity_etfs.json
+  - research/best/williams_percent_r.json
+  - research/best/momentum_breakout.json
+  - research/best/mean_reversion_sector_etfs.json
+  - research/best/lower_band_reversion.json
+  - research/best/connors_rsi2_gold_etfs.json
+  - research/best/demark_sequential.json
+  - research/best/bb_squeeze.json
+  - research/best/connors_rsi2_sector_etfs.json
+  - research/best/trend_following.json
+  - research/best/momentum_breakout_sector_etfs.json
+  - research/best/stochastic_oversold.json
+
+*research_best rows with non-portfolio metric_type: 20*
+
+| Strategy | Universe | Metric Type | Sharpe |
+|----------|----------|-------------|--------|
+| `adx_trend_pullback` | `sp500` | `legacy_portfolio` | 0.4423 |
+| `adx_trend_pullback` | `sp500` | `unknown` | 0.9517 |
+| `adx_trend_pullback` | `sp500` | `unknown` | 0.5793 |
+| `bb_squeeze` | `crypto` | `unknown` | 0.0000 |
+| `bb_squeeze` | `sp500` | `legacy_portfolio` | 0.4859 |
+| `bb_squeeze` | `sp500` | `unknown` | 0.6868 |
+| `bb_squeeze` | `sp500` | `unknown` | 0.4859 |
+| `connors_rsi2` | `commodity_etfs` | `both` | 0.9681 |
+| `connors_rsi2` | `commodity_etfs` | `unknown` | 1.4978 |
+| `connors_rsi2` | `gold_etfs` | `both` | 0.9865 |
+
+

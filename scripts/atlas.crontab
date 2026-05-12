@@ -114,3 +114,9 @@ TZ=Australia/Brisbane
 # Monday 08:00 AEST (Sun 22:00 UTC) — auto-promote PAPER strategies to LIVE
 # (22:00 UTC Sunday = 08:00 AEST Monday with TZ=Australia/Brisbane)
 0 8 * * 1 /root/atlas/scripts/pi-cron.sh auto_promote_paper
+
+# ── Operational sediment cleanup + doc staleness check ─────────────────────────
+# sediment cleanup: 14:00 AEST daily (= 04:00 UTC) — delete incident snapshots >14d old (outside top-3)
+0 14 * * * /usr/bin/flock -n /tmp/cleanup_sediment.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/cleanup_sediment.py --apply' >> /root/atlas/logs/cleanup_sediment.log 2>&1
+# doc staleness check: 18:00 AEST daily (= 08:00 UTC) — alert if KNOWLEDGE_INDEX or SUMMARY >30d
+0 18 * * * /usr/bin/flock -n /tmp/check_doc_staleness.lock bash -c 'cd /root/atlas && timeout 2m python3 scripts/check_doc_staleness.py' >> /root/atlas/logs/check_doc_staleness.log 2>&1
