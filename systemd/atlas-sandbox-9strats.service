@@ -1,7 +1,5 @@
 [Unit]
 Description=Atlas Sandbox — 9 strategy parameter sweeps (sp500)
-After=atlas-resweep-20260428.service
-Wants=atlas-resweep-20260428.service
 
 [Service]
 Type=simple
