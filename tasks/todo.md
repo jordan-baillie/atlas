@@ -940,3 +940,23 @@ skips both the existing research gate and this new lifecycle guard (same files, 
 **Deviation**: `get_macro_indicators_cols` uses `(cols, end_date, limit)` not `(cols, start_date, end_date)`.
 Actual SQL in macro_surprise.py is `WHERE date <= ? ORDER BY date DESC LIMIT ?` — not a date range query.
 Spec signature was incompatible; specific function matching real usage created instead.
+
+---
+
+## D1 / Wave 3.3 — Split data/ingest.py into sub-modules (2026-05-14)
+
+**Status**: ✅ COMPLETED
+
+- [x] `data/ingest/` package created (was single 1603-LOC file)
+- [x] `data/ingest/cache.py` — standalone constants + helpers (`_is_crypto_ticker`, `get_asx200_tickers`, `get_market_tickers`, constants)
+- [x] `data/ingest/normalization.py` — `_normalize_ticker`, `_clean_ohlcv`, `_clean_alpaca_bars`, `_apply_split_adjustments`
+- [x] `data/ingest/downloaders.py` — `_download_via_yfinance`, `_download_via_alpaca`, `_fetch_ohlcv` routing
+- [x] `data/ingest/sqlite_writer.py` — `_sqlite_batch_write`, `verify_sqlite_integrity`
+- [x] `data/ingest/freshness.py` — `_last_trading_day`, `check_data_freshness`, `verify_ingest_freshness` (stub; live definitions in __init__.py)
+- [x] `data/ingest/macro.py` — `refresh_macro_data`
+- [x] `data/ingest/__init__.py` — re-export shim + orchestrators + cache I/O + freshness functions
+- [x] `data/ingest/__main__.py` — CLI entry point for `python3 -m data.ingest`
+- [x] All 108 ingest-related tests pass (76 baseline + 32 halt/ohlcv tests)
+- [x] 13 public function imports all verified
+
+**Design note**: Cache I/O (`_save_cache`, `_load_cache`, `_market_cache_dir`, `CACHE_DIR`, etc.) and freshness functions (`_last_trading_day`, `check_data_freshness`, `verify_ingest_freshness`) are defined directly in `__init__.py` (not re-exported from sub-modules). Reason: tests patch `data.ingest._market_cache_dir` and `data.ingest._last_trading_day`. Python resolves these lookups through the function's `__globals__` dict, which is `data.ingest.__dict__` only when the calling function is defined in `data.ingest`. If these were in `cache.py`/`freshness.py`, the patches would be invisible to the callers.
