@@ -1,5 +1,6 @@
 """Shared test fixtures for Atlas test suite."""
 import copy
+import importlib
 import json
 import sys
 from datetime import datetime, timedelta
@@ -192,101 +193,142 @@ def _isolate_prod_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: p
     yield
     # monkeypatch auto-restores _db_path_override on fixture teardown.
 
+
 # ---------------------------------------------------------------------------
-# HALT file isolation — prevent ANY test from writing to production data/HALT
-#
-# Root cause (2026-04-29): tests calling check_daily_drawdown() without
-# patching kill_switch.halt → write real /root/atlas/data/HALT → blocks
-# live trading.  Same class of bug as the prod-DB leak fixed 2026-04-20.
+# _make_path_isolation_fixtures — factory for triple-isolation fixture sets
+# Kept manual (cannot factory-ise): _isolate_test_logs (log-handler logic),
+# _isolate_prod_db_* (init_db + marker opt-out), _isolate_state_dir
+# (function-scope only, different attr), _zz_verify_no_state_file_pollution
+# (checks 3 live_*.json files, not a single path).
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_halt_file_session(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """Session-scope: redirect kill_switch._HALT_FILE to a tmp dir from the
-    very start of the run.
+def _make_path_isolation_fixtures(
+    module_path: str,
+    attr: str,
+    session_tmp_name: str,
+    tmp_filename: str,
+    prod_path: str | None = None,
+    *,
+    label: str,
+    extra_setattr: dict | None = None,
+    is_dir: bool = False,
+    cleanup_if_created: bool = False,
+) -> tuple:
+    """Generate (session_fixture, func_fixture, verify_fixture | None).
 
-    Session-scope ensures this fires before module-scope fixtures that might
-    call check_daily_drawdown().  The function-scope layer below gives each
-    individual test a fresh HALT path so tests don't bleed halt state into
-    each other.
+    Replaces the hand-coded (session-scope autouse, function-scope autouse,
+    session-end verify) triple for one production artifact.  Assign results
+    to module-level names so pytest discovers them:
 
-    See lessons learned 2026-04-29 — pytest run wrote real HALT file at
-    /root/atlas/data/HALT, blocking pre-market execute_approved.
+        _sess, _func, _verify = _make_path_isolation_fixtures(
+            "brokers.price_arbiter", "_THROTTLE_PATH",
+            "pa_session", "throttle.json",
+            "/root/atlas/data/price_arbiter_alert_throttle.json",
+            label="price_arbiter",
+        )
+
+    prod_path=None          → verify is None (no pollution check).
+    is_dir=True             → attr points at a dir; session uses mktemp() directly.
+    cleanup_if_created=True → HALT-style: remove + fail if file created by tests.
+    extra_setattr           → additional attrs patched alongside *attr*.
     """
-    try:
-        import brokers.kill_switch as _ks
-    except Exception:
-        yield
-        return
 
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_halt_dir = tmp_path_factory.mktemp("halt_session")
-    session_halt_file = session_halt_dir / "HALT"
-    mp.setattr(_ks, "_HALT_FILE", session_halt_file)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_halt_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Function-scope: each test gets a fresh HALT file location.
-
-    Layered on top of _isolate_halt_file_session — the function-scope
-    fixture wins for individual tests, giving them a per-test HALT path.
-    This prevents halt state written by one test from affecting the next.
-    """
-    try:
-        import brokers.kill_switch as _ks
-    except Exception:
-        yield
-        return
-
-    fn_halt_file = tmp_path / "HALT"
-    monkeypatch.setattr(_ks, "_HALT_FILE", fn_halt_file)
-    yield
-    # monkeypatch auto-restores _HALT_FILE on fixture teardown.
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _zz_verify_no_halt_pollution() -> None:
-    """Session-end assertion: production /root/atlas/data/HALT was not touched.
-
-    Named _zz_... so it runs AFTER all _isolate_... fixtures in lexical order,
-    meaning its post-yield (teardown) runs first — verifies the production
-    path while isolation is still active.
-
-    If this fixture fails, a test leaked past the isolation layer — investigate
-    kill_switch usage in the failing test and add explicit patching.
-    """
-    import os as _os
-    halt_path = "/root/atlas/data/HALT"
-    pre_exists = _os.path.exists(halt_path)
-    pre_mtime = _os.path.getmtime(halt_path) if pre_exists else None
-
-    yield
-
-    post_exists = _os.path.exists(halt_path)
-    post_mtime = _os.path.getmtime(halt_path) if post_exists else None
-
-    if not pre_exists and post_exists:
-        # Clean up so live trading isn't blocked, then fail loudly
+    @pytest.fixture(scope="session", autouse=True)
+    def _session_iso(tmp_path_factory: pytest.TempPathFactory) -> None:
         try:
-            _os.remove(halt_path)
+            mod = importlib.import_module(module_path)
         except Exception:
-            pass
-        pytest.fail(
-            f"Test session created /root/atlas/data/HALT (mtime={post_mtime}) — "
-            f"kill_switch isolation broken.  A test wrote to the production HALT "
-            f"path.  Check which test calls kill_switch.halt() without patching "
-            f"_HALT_FILE or mocking the halt() function."
-        )
-    if pre_exists and post_exists and pre_mtime != post_mtime:
-        pytest.fail(
-            f"Test session modified /root/atlas/data/HALT "
-            f"(mtime {pre_mtime} → {post_mtime}) — kill_switch isolation broken."
-        )
+            yield
+            return
+        from _pytest.monkeypatch import MonkeyPatch
+        mp = MonkeyPatch()
+        if is_dir:
+            tmp = tmp_path_factory.mktemp(session_tmp_name)
+        else:
+            tmp = tmp_path_factory.mktemp(session_tmp_name) / tmp_filename
+        mp.setattr(mod, attr, tmp)
+        for k, v in (extra_setattr or {}).items():
+            mp.setattr(mod, k, v)
+        yield
+        mp.undo()
 
+    _session_iso.__name__ = f"_isolate_{label}_session"
+    _session_iso.__qualname__ = _session_iso.__name__
+
+    @pytest.fixture(autouse=True)
+    def _func_iso(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        try:
+            mod = importlib.import_module(module_path)
+        except Exception:
+            yield
+            return
+        if is_dir:
+            tmp = tmp_path / tmp_filename
+            tmp.mkdir(parents=True, exist_ok=True)
+        else:
+            tmp = tmp_path / tmp_filename
+        monkeypatch.setattr(mod, attr, tmp)
+        for k, v in (extra_setattr or {}).items():
+            monkeypatch.setattr(mod, k, v)
+        yield
+
+    _func_iso.__name__ = f"_isolate_{label}"
+    _func_iso.__qualname__ = _func_iso.__name__
+
+    if prod_path is None:
+        return _session_iso, _func_iso, None
+
+    @pytest.fixture(scope="session", autouse=True)
+    def _verify_iso() -> None:
+        import os as _os
+        pre_exists = _os.path.exists(prod_path)
+        pre_mtime = _os.path.getmtime(prod_path) if pre_exists else None
+        pre_size = _os.path.getsize(prod_path) if pre_exists else None
+        yield
+        post_exists = _os.path.exists(prod_path)
+        if cleanup_if_created and not pre_exists and post_exists:
+            try:
+                _os.remove(prod_path)
+            except Exception:
+                pass
+            pytest.fail(
+                f"Test session created {prod_path} — {label} isolation broken.  "
+                f"A test called code that writes to {attr} without patching it."
+            )
+        if pre_exists and post_exists:
+            cur_mtime = _os.path.getmtime(prod_path)
+            cur_size = _os.path.getsize(prod_path)
+            if cur_mtime != pre_mtime:
+                pytest.fail(
+                    f"PROD POLLUTION: {prod_path} mtime changed during pytest "
+                    f"({pre_mtime:.3f} → {cur_mtime:.3f}). "
+                    f"Some test wrote to production {label}."
+                )
+            if cur_size != pre_size:
+                pytest.fail(
+                    f"PROD POLLUTION: {prod_path} size changed during pytest "
+                    f"({pre_size} → {cur_size} bytes)."
+                )
+
+    _verify_iso.__name__ = f"_zz_verify_no_{label}_pollution"
+    _verify_iso.__qualname__ = _verify_iso.__name__
+
+    return _session_iso, _func_iso, _verify_iso
+
+
+# HALT file isolation: cleanup_if_created=True removes /root/atlas/data/HALT
+# and fails loudly if a test creates it (root cause 2026-04-29).
+(
+    _isolate_halt_file_session,
+    _isolate_halt_file,
+    _zz_verify_no_halt_pollution,
+) = _make_path_isolation_fixtures(
+    "brokers.kill_switch", "_HALT_FILE",
+    "halt_session", "HALT",
+    "/root/atlas/data/HALT",
+    label="halt",
+    cleanup_if_created=True,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -643,6 +685,9 @@ def _isolate_state_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
     Only test_state_file_sqlite_parity.py should opt-out (it explicitly needs
     to test the parity mechanism and manages its own override).
+
+    Kept manual: function-scope only (no session layer or verify needed);
+    uses a different attr name (_state_dir_override, not a Path constant).
     """
     try:
         import db.atlas_db as _adb
@@ -655,114 +700,30 @@ def _isolate_state_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(_adb, "_state_dir_override", str(state_tmp))
     yield
 
-# ---------------------------------------------------------------------------
-# LivePortfolio state-file isolation
-# Prevents ANY test from writing to brokers/state/live_*.json (real broker state).
-# Root cause 2026-04-29: pytest run emptied live_sp500.json positions (CAT lost).
-# Same pattern as _isolate_halt_file — session-scope + function-scope layers.
-# ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_live_portfolio_state_session(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> None:
-    """Session-scope: redirect brokers.live_portfolio._STATE_DIR to tmp from session start.
+# LivePortfolio + reconcile_positions state-file isolation.
+# Verify is the manual _zz_verify_no_state_file_pollution (3 files, can't use factory).
+(
+    _isolate_live_portfolio_state_session,
+    _isolate_live_portfolio_state,
+    _lp_noop_verify,  # None — _zz_verify_no_state_file_pollution covers this
+) = _make_path_isolation_fixtures(
+    "brokers.live_portfolio", "_STATE_DIR",
+    "live_portfolio_state_session", "lp_state",
+    label="live_portfolio_state",
+    is_dir=True,
+)
 
-    Session-scope fires before module-scope fixtures, ensuring that even
-    LivePortfolio instances created at module-import time (e.g. in module-level
-    fixtures) write to tmp instead of production.
-
-    See: tests/test_state_file_isolation.py for self-tests.
-    Root cause: test calls to record_equity()/record_closed_trade()/save_state()
-    on a LivePortfolio with broker_data_valid=True + no path redirect wrote
-    positions=[] to brokers/state/live_sp500.json.
-    """
-    try:
-        import brokers.live_portfolio as _lp
-    except Exception:
-        yield
-        return
-
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_state_dir = tmp_path_factory.mktemp("live_portfolio_state_session")
-    mp.setattr(_lp, "_STATE_DIR", session_state_dir)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_live_portfolio_state(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Function-scope: each test gets a fresh LivePortfolio state directory.
-
-    Layered on top of _isolate_live_portfolio_state_session — the per-test
-    fixture wins, giving each test an isolated empty state dir.  Tests that
-    need to seed a state file create it at `tmp_path / "lp_state" / "live_{mkt}.json"`.
-
-    Covers:
-    - LivePortfolio.save_state() writes  
-    - LivePortfolio.record_equity() writes (calls save_state)
-    - LivePortfolio.record_closed_trade() writes (calls save_state)
-    - LivePortfolio._update_state_positions() reads+writes
-    - LivePortfolio._load_local_state() reads (returns empty if file not present)
-    """
-    try:
-        import brokers.live_portfolio as _lp
-    except Exception:
-        yield
-        return
-
-    state_dir = tmp_path / "lp_state"
-    state_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(_lp, "_STATE_DIR", state_dir)
-    yield
-
-
-# ---------------------------------------------------------------------------
-# scripts.reconcile_positions state-file isolation
-# Prevents ANY test from triggering save_internal_state() writes to
-# brokers/state/live_*.json. Same root cause class as
-# brokers.live_portfolio._STATE_DIR (commit 4ea328fa).
-# Discovered 2026-04-30: test_reconcile_positions_fix_idempotent wrote
-# positions=[] to live_sp500.json, wiping CAT/FCX/MU.
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_reconcile_positions_state_dir_session(
-    tmp_path_factory: pytest.TempPathFactory,
-) -> None:
-    """Session-scope: redirect scripts.reconcile_positions._STATE_DIR to tmp."""
-    try:
-        import scripts.reconcile_positions as _rp
-    except Exception:
-        yield
-        return
-
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_state_dir = tmp_path_factory.mktemp("reconcile_positions_state_session")
-    mp.setattr(_rp, "_STATE_DIR", session_state_dir)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_reconcile_positions_state_dir(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Function-scope: each test gets a fresh reconcile_positions state dir."""
-    try:
-        import scripts.reconcile_positions as _rp
-    except Exception:
-        yield
-        return
-
-    state_dir = tmp_path / "rp_state"
-    state_dir.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(_rp, "_STATE_DIR", state_dir)
-    yield
+(
+    _isolate_reconcile_positions_state_dir_session,
+    _isolate_reconcile_positions_state_dir,
+    _rp_noop_verify,  # None — no single prod path verify needed for this dir
+) = _make_path_isolation_fixtures(
+    "scripts.reconcile_positions", "_STATE_DIR",
+    "reconcile_positions_state_session", "rp_state",
+    label="reconcile_positions_state_dir",
+    is_dir=True,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -772,6 +733,9 @@ def _zz_verify_no_state_file_pollution() -> None:
     Named _zz_ so teardown runs first (after all tests complete), verifying
     production state files are intact.  Fails loudly with mtime+size details
     if any production state file was touched.
+
+    Kept manual: checks 3 specific live_*.json files simultaneously — cannot
+    be expressed as a single prod_path in the factory.
 
     See: tests/test_state_file_isolation.py for self-tests.
     """
@@ -810,207 +774,38 @@ def _zz_verify_no_state_file_pollution() -> None:
         )
 
 
-# ---------------------------------------------------------------------------
-# chat_db isolation
-# Prevents ANY test from writing to data/chat.db (production chat database).
-# services.chat_db uses CHAT_DB_PATH (Path) and _chat_db_path_override (str|None).
-# Both are patched so every write path goes to a tmp file.
-# ---------------------------------------------------------------------------
+# chat_db / price_arbiter / reconcile_shadow — pure factory fits.
+# extra_setattr for chat_db patches _chat_db_path_override = None alongside CHAT_DB_PATH.
+(
+    _isolate_chat_db_session,
+    _isolate_chat_db,
+    _zz_verify_no_chat_db_pollution,
+) = _make_path_isolation_fixtures(
+    "services.chat_db", "CHAT_DB_PATH",
+    "chat_db_session", "chat.db",
+    "/root/atlas/data/chat.db",
+    label="chat_db",
+    extra_setattr={"_chat_db_path_override": None},
+)
 
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_chat_db_session(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """Session-scope: redirect services.chat_db.CHAT_DB_PATH to tmp from session start.
+(
+    _isolate_price_arbiter_session,
+    _isolate_price_arbiter,
+    _zz_verify_no_price_arbiter_pollution,
+) = _make_path_isolation_fixtures(
+    "brokers.price_arbiter", "_THROTTLE_PATH",
+    "price_arbiter_session", "price_arbiter_throttle.json",
+    "/root/atlas/data/price_arbiter_alert_throttle.json",
+    label="price_arbiter",
+)
 
-    CRITICAL: session-scope fires before module-scope fixtures, ensuring that
-    even chat_db connections opened during module-level setup write to tmp.
-
-    See: tests/test_state_isolation_self.py for self-tests.
-    Root cause class: module-level hardcoded paths — same as kill_switch._HALT_FILE
-    and live_portfolio._STATE_DIR (commits dede8d62 / 4ea328fa).
-    """
-    try:
-        import services.chat_db as _cdb
-    except Exception:
-        yield
-        return
-
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_tmp = tmp_path_factory.mktemp("chat_db_session")
-    session_path = session_tmp / "chat_session.db"
-    mp.setattr(_cdb, "CHAT_DB_PATH", session_path)
-    mp.setattr(_cdb, "_chat_db_path_override", None)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_chat_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Function-scope: each test gets a fresh chat.db path in its own tmp dir."""
-    try:
-        import services.chat_db as _cdb
-    except Exception:
-        yield
-        return
-
-    fn_db_path = tmp_path / "chat_test.db"
-    monkeypatch.setattr(_cdb, "CHAT_DB_PATH", fn_db_path)
-    monkeypatch.setattr(_cdb, "_chat_db_path_override", None)
-    yield
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _zz_verify_no_chat_db_pollution() -> None:
-    """Session-end: assert data/chat.db was NOT modified during pytest.
-
-    Named _zz_ so teardown runs after all tests complete.
-    """
-    import os as _os
-
-    prod_path = "/root/atlas/data/chat.db"
-    pre_mtime = _os.path.getmtime(prod_path) if _os.path.exists(prod_path) else None
-    pre_size = _os.path.getsize(prod_path) if _os.path.exists(prod_path) else None
-
-    yield
-
-    if pre_mtime is not None and _os.path.exists(prod_path):
-        cur_mtime = _os.path.getmtime(prod_path)
-        cur_size = _os.path.getsize(prod_path)
-        assert cur_mtime == pre_mtime, (
-            f"PROD POLLUTION: {prod_path} mtime changed during pytest "
-            f"({pre_mtime:.3f} → {cur_mtime:.3f}). Some test wrote to prod chat.db."
-        )
-        assert cur_size == pre_size, (
-            f"PROD POLLUTION: {prod_path} size changed during pytest "
-            f"({pre_size} → {cur_size} bytes)."
-        )
-
-
-# ---------------------------------------------------------------------------
-# price_arbiter isolation
-# Prevents ANY test from writing to data/price_arbiter_alert_throttle.json.
-# brokers.price_arbiter uses module-level _THROTTLE_PATH (Path).
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_price_arbiter_session(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """Session-scope: redirect brokers.price_arbiter._THROTTLE_PATH to tmp.
-
-    See: tests/test_state_isolation_self.py for self-tests.
-    """
-    try:
-        import brokers.price_arbiter as _pa
-    except Exception:
-        yield
-        return
-
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_tmp = tmp_path_factory.mktemp("price_arbiter_session")
-    session_path = session_tmp / "throttle_session.json"
-    mp.setattr(_pa, "_THROTTLE_PATH", session_path)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_price_arbiter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Function-scope: each test gets a fresh throttle path in its own tmp dir."""
-    try:
-        import brokers.price_arbiter as _pa
-    except Exception:
-        yield
-        return
-
-    fn_throttle_path = tmp_path / "price_arbiter_throttle.json"
-    monkeypatch.setattr(_pa, "_THROTTLE_PATH", fn_throttle_path)
-    yield
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _zz_verify_no_price_arbiter_pollution() -> None:
-    """Session-end: assert data/price_arbiter_alert_throttle.json was NOT modified."""
-    import os as _os
-
-    prod_path = "/root/atlas/data/price_arbiter_alert_throttle.json"
-    pre_mtime = _os.path.getmtime(prod_path) if _os.path.exists(prod_path) else None
-    pre_size = _os.path.getsize(prod_path) if _os.path.exists(prod_path) else None
-
-    yield
-
-    if pre_mtime is not None and _os.path.exists(prod_path):
-        cur_mtime = _os.path.getmtime(prod_path)
-        cur_size = _os.path.getsize(prod_path)
-        assert cur_mtime == pre_mtime, (
-            f"PROD POLLUTION: {prod_path} mtime changed during pytest "
-            f"({pre_mtime:.3f} → {cur_mtime:.3f}). Some test wrote to prod throttle."
-        )
-        assert cur_size == pre_size, (
-            f"PROD POLLUTION: {prod_path} size changed during pytest "
-            f"({pre_size} → {cur_size} bytes)."
-        )
-
-
-# ---------------------------------------------------------------------------
-# reconcile_shadow isolation
-# Prevents ANY test from writing to data/reconcile_shadow_alert_state.json.
-# scripts.reconcile_shadow uses module-level _ALERT_STATE_FILE (Path).
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_reconcile_shadow_session(tmp_path_factory: pytest.TempPathFactory) -> None:
-    """Session-scope: redirect scripts.reconcile_shadow._ALERT_STATE_FILE to tmp.
-
-    See: tests/test_state_isolation_self.py for self-tests.
-    """
-    try:
-        import scripts.reconcile_shadow as _rs
-    except Exception:
-        yield
-        return
-
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    session_tmp = tmp_path_factory.mktemp("reconcile_shadow_session")
-    session_path = session_tmp / "alert_state_session.json"
-    mp.setattr(_rs, "_ALERT_STATE_FILE", session_path)
-    yield
-    mp.undo()
-
-
-@pytest.fixture(autouse=True)
-def _isolate_reconcile_shadow(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Function-scope: each test gets a fresh alert state path in its own tmp dir."""
-    try:
-        import scripts.reconcile_shadow as _rs
-    except Exception:
-        yield
-        return
-
-    fn_alert_path = tmp_path / "reconcile_shadow_alert_state.json"
-    monkeypatch.setattr(_rs, "_ALERT_STATE_FILE", fn_alert_path)
-    yield
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _zz_verify_no_reconcile_shadow_pollution() -> None:
-    """Session-end: assert data/reconcile_shadow_alert_state.json was NOT modified."""
-    import os as _os
-
-    prod_path = "/root/atlas/data/reconcile_shadow_alert_state.json"
-    pre_mtime = _os.path.getmtime(prod_path) if _os.path.exists(prod_path) else None
-    pre_size = _os.path.getsize(prod_path) if _os.path.exists(prod_path) else None
-
-    yield
-
-    if pre_mtime is not None and _os.path.exists(prod_path):
-        cur_mtime = _os.path.getmtime(prod_path)
-        cur_size = _os.path.getsize(prod_path)
-        assert cur_mtime == pre_mtime, (
-            f"PROD POLLUTION: {prod_path} mtime changed during pytest "
-            f"({pre_mtime:.3f} → {cur_mtime:.3f}). Some test wrote to prod alert state."
-        )
-        assert cur_size == pre_size, (
-            f"PROD POLLUTION: {prod_path} size changed during pytest "
-            f"({pre_size} → {cur_size} bytes)."
-        )
+(
+    _isolate_reconcile_shadow_session,
+    _isolate_reconcile_shadow,
+    _zz_verify_no_reconcile_shadow_pollution,
+) = _make_path_isolation_fixtures(
+    "scripts.reconcile_shadow", "_ALERT_STATE_FILE",
+    "reconcile_shadow_session", "reconcile_shadow_alert_state.json",
+    "/root/atlas/data/reconcile_shadow_alert_state.json",
+    label="reconcile_shadow",
+)
