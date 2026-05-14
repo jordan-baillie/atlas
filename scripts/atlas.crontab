@@ -97,6 +97,14 @@ TZ=Australia/Brisbane
 0 17 * * * python3 /root/atlas/scripts/cleanup_stale_plans.py >> /root/atlas/logs/cleanup_stale_plans.log 2>&1
 # up-bank sync: 06:30 AEST daily
 30 6 * * * /usr/bin/python3 /root/up-bank/up_sync.py --full-resync >> /root/up-bank/logs/up_sync.log 2>&1
+
+# ── NRL-Predict — weekly tipping pipeline (cross-project adoption-by-atlas; INTERIM 2026-05-15) ─
+# Will be moved to /etc/cron.d/nrl-predict in Phase 5 (this session)
+# nrl-cron.sh wraps: refresh (scrape last round + plan week), tips (predict + submit ALL), pregame (lineup-swing re-tip)
+0 20 * * 1          /root/NRL-Predict/scripts/nrl-cron.sh refresh   >> /root/NRL-Predict/logs/cron-stub.log 2>&1
+0 17 * * 2          /root/NRL-Predict/scripts/nrl-cron.sh tips      >> /root/NRL-Predict/logs/cron-stub.log 2>&1
+*/30 13-20 * * 4-7  /root/NRL-Predict/scripts/nrl-cron.sh pregame   >> /root/NRL-Predict/logs/cron-stub.log 2>&1
+
 # discovery run: DISABLED 2026-05-06 (audit: 26 runs, 0 specs, 0 adopted — see docs/audits/research-system-audit-2026-05-06.md)
 # 0 6 * * * cd /root/atlas && /usr/bin/python3 research/discovery/run.py >> /root/atlas/research/discovery/logs/cron.log 2>&1
 # macro freshness check: 09:30 AEST daily
