@@ -166,3 +166,28 @@ This fix is LOW RISK and should be landed before Issue 1 (it's ~2 lines).
 - [x] **Rec 1.3** — OOS trade-count floor 10 → 30 in both `_run_oos_validation` and `keep_or_discard`.
 - [x] **Rec 1.4** — CAGR degradation gate (trivially passes at negative CAGR) replaced by absolute OOS CAGR ≥ 5% floor.
 - [x] **Rec 1.6** — Pre-commit hook blocks direct edits to `config/active/*.json` without auto_promote audit trail. Bypass: `BYPASS_RESEARCH_GATE="reason" git commit` or `git commit --no-verify`.
+
+---
+
+## Paper executor credentials — VERIFIED (2026-05-14)
+
+Confirmed via spot-check on 2026-05-14:
+
+- **`ALPACA_PAPER_API_KEY`**: ✅ present in `~/.atlas-secrets.json`
+  (first confirmed 2026-05-06; still present)
+- **`ALPACA_PAPER_SECRET_KEY`**: ✅ present
+- **`ALPACA_PAPER_ENDPOINT`**: ✅ present
+- **Credential loading path**: `brokers/alpaca/broker.py` lines 333–338 —
+  `mode="paper"` loads `ALPACA_PAPER_API_KEY` / `ALPACA_PAPER_SECRET_KEY` via
+  `get_secret()`; `paper=True` flag passed to Alpaca `TradingClient`.
+- **Test suite**: `tests/test_paper_broker_creds.py` (10 tests) and
+  `tests/test_paper_executor.py` (4 tests) — all **14/14 PASS** as of this date.
+- **No "credentials missing" warnings**: `brokers/alpaca/broker.py` line 337
+  would emit `logger.warning("Alpaca paper credentials not found...")` — no such
+  warning found in recent logs (`logs/atlas.log`).
+- **`brokers/paper/` directory**: does NOT exist (not needed — paper mode uses
+  `AlpacaBroker(mode="paper")` which routes to Alpaca's paper endpoint directly).
+  Paper DB writes go to `paper_trades` table via `db/atlas_db.py`.
+- **Paper routing**: `scripts/execute_approved.py` `_split_by_lifecycle()` routes
+  PAPER-state strategies to a paper-mode executor instance. See
+  `tests/test_execute_approved_paper_routing.py` (9 tests, all passing).

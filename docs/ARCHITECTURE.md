@@ -947,6 +947,86 @@ Portfolio constructor runs inside plan generation:
 
 ---
 
+## Strategy Lifecycle
+
+Atlas strategies progress through 4 states tracked in the `strategy_lifecycle`
+SQLite table (see `db/schema.sql`):
+
+```
+RESEARCH → PAPER → LIVE → RETIRED
+```
+
+### States
+
+| State | Meaning |
+|-------|---------|
+| `RESEARCH` | Strategy under sweep; not authorized for any execution |
+| `PAPER` | Strategy executes on Alpaca paper broker only; producing fills + PnL |
+| `LIVE` | Strategy executes via Alpaca live broker with real capital |
+| `RETIRED` | Strategy disabled; historic data preserved |
+
+Transitions are enforced by `monitor/strategy_lifecycle.py` (`transition()`).
+Only legal moves (RESEARCH→PAPER, PAPER→LIVE, LIVE→RETIRED, etc.) are allowed;
+illegal transitions raise `ValueError`.
+
+### Auto-promotion gates (PAPER → LIVE)
+
+A strategy may auto-promote PAPER → LIVE only when ALL ten gates pass.
+Gate constants live in `scripts/auto_promote_paper_to_live.py`; the full
+evaluation function is `_evaluate_gates()` there, and the callable
+`evaluate_and_promote()` is exported from `services/api/lifecycle.py`.
+
+| Gate | Criterion | Default |
+|------|-----------|---------|
+| A | Days in PAPER state | ≥ 30 days |
+| B | Paper trades in last 30 days | ≥ 30 trades |
+| C | Paper Sharpe | ≥ 0.3 |
+| D | Relative Sharpe gap vs research-best | < 50% |
+| E | DSR per-strategy Sharpe variance | within tolerance |
+| F | Research-best Sharpe | ≥ 0.5 |
+| G | OOS Sharpe | ≥ 0.3 |
+| H | OOS trade count | ≥ 30 |
+| I | OOS CAGR | ≥ 5% |
+| J | No active divergence alert in last N days | 7 days clean |
+
+Gate J is evaluated by `_check_divergence_gate()` in
+`scripts/auto_promote_paper_to_live.py`, reading `data/divergence_state.json`.
+
+On all-gates-pass the script writes to `data/promotion_log.json`, calls
+`monitor.strategy_lifecycle.transition()`, and sends a Telegram notification.
+Manual override is available via `POST /api/strategy-lifecycle/promote-paper`
+(`services/api/lifecycle.py`).
+
+### Divergence rollback semantics
+
+If a PAPER strategy's PnL diverges from research-best for ≥ 5 consecutive days,
+auto-rollback fires PAPER → RESEARCH.
+If a LIVE strategy diverges, a force-to-watch health escalation triggers
+(operator must act; no silent LIVE → PAPER state flip).
+
+Rollback logic: `scripts/check_live_research_divergence.py` —
+`process_rollbacks()` and `run_divergence_check()`.
+Divergence streaks are persisted in `data/divergence_state.json`.
+
+### State transitions are append-only
+
+The `strategy_lifecycle` table stores the **current** state (one row per
+`strategy × universe` pair). Every transition is also written to
+`strategy_lifecycle_history` (append-only; never deleted).
+
+Current state query:
+```sql
+SELECT state FROM strategy_lifecycle WHERE strategy=? AND universe=?
+```
+
+Full history query:
+```sql
+SELECT * FROM strategy_lifecycle_history
+WHERE strategy=? AND universe=? ORDER BY transitioned_at
+```
+
+---
+
 ## New File Structure
 
 ```

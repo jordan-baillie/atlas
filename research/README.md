@@ -114,3 +114,65 @@ Each `exp-{id}.json` contains everything needed to understand the experiment:
 | `atlas-research-loop` | Daily research cycle (researcher → backtester → analyst → risk) |
 | `atlas-research` | Ad-hoc research and validation |
 | `atlas-reoptimize` | Optimization and config promotion |
+
+---
+
+## Before Going Live: Pre-Live Validation Gates
+
+Before any strategy enters PAPER (let alone LIVE), it must pass several checks.
+The canonical promotion state machine lives in `monitor/strategy_lifecycle.py`;
+lifecycle API endpoints are in `services/api/lifecycle.py`.
+
+### 1. Research-best contamination check
+
+The `research_best` SQLite table is the canonical source of best-known parameters
+per `strategy × universe`. Before considering a candidate for promotion, check:
+
+- Run `scripts/data_integrity_monitor.py` — flags cross-universe identical-metric
+  patterns. Any flagged candidate is contaminated; do NOT promote.
+- Confirm the row's `updated_at` is **after 2026-04-22** (P1.1 universe isolation
+  fix). Rows from before that date may carry contaminated baselines.
+- Check `is_solo` field in `research/best/<strategy>.json`; `is_solo=False` rows
+  are blocked by `_run_promotion_sweep()` in `research/autoresearch_nightly.py`.
+
+### 2. Paper validation period
+
+After RESEARCH → PAPER transition (`monitor/strategy_lifecycle.transition()`),
+the strategy must run on the Alpaca paper broker for ≥ 30 trading days with:
+
+- Paper trades count ≥ 30
+- Paper Sharpe ≥ 0.3 (gate C threshold in `scripts/auto_promote_paper_to_live.py`)
+- OOS Sharpe ≥ 0.3, OOS trades ≥ 30, OOS CAGR ≥ 5% (gates G/H/I)
+- No divergence alert active for ≥ 7 consecutive days (gate J)
+
+Paper fills are written to the `paper_trades` table (mirroring `trades`).
+Execution routing: `scripts/execute_approved.py` splits plan entries by
+`monitor.strategy_lifecycle.is_paper()` — PAPER-state strategies route to the
+Alpaca paper broker regardless of universe `trading.mode`.
+
+### 3. LIVE promotion (gates A–J)
+
+PAPER → LIVE auto-promotion runs via `scripts/auto_promote_paper_to_live.py`
+(cron: weekly, Mon 22:00 UTC). It evaluates all ten gates (see
+`docs/ARCHITECTURE.md` § Strategy Lifecycle for the full gate table). On
+all-pass:
+
+1. Writes entry to `data/promotion_log.json`
+2. Calls `monitor.strategy_lifecycle.transition(strategy, universe, 'LIVE')`
+3. Sends Telegram notification
+
+Manual promotion override: `POST /api/strategy-lifecycle/promote-paper`
+(`services/api/lifecycle.py`), requires operator credentials.
+
+After LIVE promotion, the divergence monitor (`scripts/check_live_research_divergence.py`,
+`run_divergence_check()`) runs continuously. If live-equivalent PnL diverges from
+research-best over a rolling window, `process_rollbacks()` fires LIVE → force-to-watch
+health escalation (operator must act) or PAPER → RESEARCH auto-rollback.
+
+### Promotion mechanism
+
+State transitions use `monitor.strategy_lifecycle.transition(strategy, universe, new_state)`.
+Never edit `config/active/*.json` directly to enable a strategy — the pre-commit hook
+(lifecycle 1.6 guard) will block commits that bypass the promotion audit trail.
+Use `BYPASS_RESEARCH_GATE="<reason>" git commit` only when you have a documented
+operational reason.

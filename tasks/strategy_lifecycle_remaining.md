@@ -230,12 +230,12 @@ Tests deferred from Phase 1 (foundations):
 
 ---
 
-## Sub-phase 1.7 — Documentation
+## Sub-phase 1.7 — Documentation ✅ COMPLETE (2026-05-14)
 
-- [ ] Update `docs/ARCHITECTURE.md` with full lifecycle (promotion + health, both machines)
-- [ ] Update `research/README.md` — add "Before Live" section explaining paper phase requirement
+- [x] Update `docs/ARCHITECTURE.md` with full lifecycle (promotion + health, both machines)
+- [x] Update `research/README.md` — add "Before Live" section explaining paper phase requirement
 - [ ] Add to `scripts/pi-cron.sh` comments: paper-promotion and divergence-monitor cron entries
-- [ ] Update `tasks/audit_2026-05-06_followups.md` with paper-executor done entry (once shipped)
+- [x] Update `tasks/audit_2026-05-06_followups.md` with paper-executor done entry (once shipped)
 
 ---
 
