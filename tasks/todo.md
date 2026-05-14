@@ -909,3 +909,23 @@ skips both the existing research gate and this new lifecycle guard (same files, 
 `(strategy, universe)` — one row per pair). Fixed to plain `WHERE strategy = ? AND universe = ?`.
 
 **Bypass**: `git commit --no-verify` or `BYPASS_RESEARCH_GATE="reason" git commit ...`
+
+---
+
+## #8 / Wave 2.1 — Collapse conftest.py triple-isolation fixtures into factory (2026-05-14)
+
+**Status**: ✅ COMPLETED — commit `a81ac2a2`
+
+- [x] Extracted `_make_path_isolation_fixtures()` factory in `tests/conftest.py`
+- [x] Replaced 18 hand-coded (session + function + verify) fixture trios with 6 factory calls
+- [x] Resources factored: `kill_switch._HALT_FILE`, `live_portfolio._STATE_DIR`,
+      `reconcile_positions._STATE_DIR`, `chat_db.CHAT_DB_PATH`, `price_arbiter._THROTTLE_PATH`,
+      `reconcile_shadow._ALERT_STATE_FILE`
+- [x] Kept manual (can't factory-ise): `_isolate_test_logs` (log handler logic),
+      `_isolate_prod_db_*` (init_db + marker opt-out), `_isolate_state_dir` (func-scope only),
+      `_zz_verify_no_state_file_pollution` (checks 3 live_*.json files simultaneously)
+- [x] Net: 1016 → 811 LOC (-205 LOC, ≥190 target)
+- [x] Test collection: 6145 (was 6125, both ≥6102 baseline)
+- [x] test_state_isolation_self.py: 3/3 PASS
+- [x] test_halt_isolation.py: 2/2 PASS
+- [x] test_no_prod_db_writes.py: 3/3 PASS
