@@ -1,5 +1,19 @@
 # Atlas system crontab — restore via `crontab /root/atlas/scripts/atlas.crontab`
-# Updated: 2026-05-01 — restored after Apr 30 23:02 deletion incident
+# Updated: 2026-05-15 — migrated non-Atlas projects to /etc/cron.d/<project> fragments
+#          2026-05-01 — restored after Apr 30 23:02 deletion incident
+#
+# Per-project cron scheme (2026-05-15):
+#   Non-Atlas project cron entries now live in /etc/cron.d/<project> files.
+#   These survive `crontab -r` (which destroys only the per-user crontab).
+#   This file (atlas.crontab) is canonical for ATLAS entries only.
+#
+#   Current /etc/cron.d/ fragments owned by Pi/Atlas:
+#     /etc/cron.d/nrl-predict     — NRL tipping (refresh/tips/pregame)
+#     /etc/cron.d/up-bank         — Up Bank daily resync
+#
+#   Recovery from `crontab -r`: `sudo crontab /root/atlas/scripts/atlas.crontab`
+#   restores Atlas. /etc/cron.d/ fragments are untouched by crontab -r.
+#
 # Timezone: Australia/Brisbane (AEST). All times below are AEST unless noted.
 #
 # Apply: sudo crontab /root/atlas/scripts/atlas.crontab && sudo crontab -l
@@ -95,15 +109,12 @@ TZ=Australia/Brisbane
 0 7 * * * /root/atlas/scripts/cleanup_research_locks.sh >> /root/atlas/logs/cleanup_research_locks.log 2>&1
 # cleanup stale plans: 17:00 AEST daily (= 07:00 UTC)
 0 17 * * * python3 /root/atlas/scripts/cleanup_stale_plans.py >> /root/atlas/logs/cleanup_stale_plans.log 2>&1
-# up-bank sync: 06:30 AEST daily
-30 6 * * * /usr/bin/python3 /root/up-bank/up_sync.py --full-resync >> /root/up-bank/logs/up_sync.log 2>&1
+# ── up-bank — moved to /etc/cron.d/up-bank (2026-05-15) ─────
+# See /etc/cron.d/up-bank for the canonical schedule.
 
-# ── NRL-Predict — weekly tipping pipeline (cross-project adoption-by-atlas; INTERIM 2026-05-15) ─
-# Will be moved to /etc/cron.d/nrl-predict in Phase 5 (this session)
-# nrl-cron.sh wraps: refresh (scrape last round + plan week), tips (predict + submit ALL), pregame (lineup-swing re-tip)
-0 20 * * 1          /root/NRL-Predict/scripts/nrl-cron.sh refresh   >> /root/NRL-Predict/logs/cron-stub.log 2>&1
-0 17 * * 2          /root/NRL-Predict/scripts/nrl-cron.sh tips      >> /root/NRL-Predict/logs/cron-stub.log 2>&1
-*/30 13-20 * * 4-7  /root/NRL-Predict/scripts/nrl-cron.sh pregame   >> /root/NRL-Predict/logs/cron-stub.log 2>&1
+# ── NRL-Predict — moved to /etc/cron.d/nrl-predict (2026-05-15) ─────
+# See /etc/cron.d/nrl-predict for the canonical schedule.
+# /etc/cron.d/ fragments survive `crontab -r` and per-user crontab corruption.
 
 # discovery run: DISABLED 2026-05-06 (audit: 26 runs, 0 specs, 0 adopted — see docs/audits/research-system-audit-2026-05-06.md)
 # 0 6 * * * cd /root/atlas && /usr/bin/python3 research/discovery/run.py >> /root/atlas/research/discovery/logs/cron.log 2>&1
