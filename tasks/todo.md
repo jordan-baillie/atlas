@@ -33,6 +33,15 @@ tracks real work against real commits.
       at import time so accidental cross-universe ticker additions surface
       immediately on startup rather than silently corrupting per-market equity
       calculations. 78/78 universe tests pass.
+- [x] **D2 / Wave 2.2** — Dedupe SPDR sector ETF constants into `signals/constants.py`.
+      Created canonical `SECTOR_ETFS` (11-tuple), `SECTOR_ETF_NAMES` (dict),
+      `DEFENSIVE_ETFS_PURE` (frozenset{XLU,XLP}), `DEFENSIVE_ETFS_INCLUSIVE`
+      (frozenset{XLU,XLP,XLV}), `CYCLICAL_ETFS` (frozenset). Decision: KEPT
+      DIVERGENT — price-momentum thesis excludes XLV (ambiguous biotech
+      exposure); volume-flow thesis includes XLV (institutional defensive
+      destination). `signals/sector_rotation.py` and `signals/etf_flows.py`
+      migrated to import from constants. 56/57 tests pass (1 pre-existing
+      failure `test_risk_on_via_surge_drought_count` — unchanged before/after).
 
 ---
 

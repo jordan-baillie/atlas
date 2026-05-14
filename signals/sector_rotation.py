@@ -15,25 +15,16 @@ from pathlib import Path
 from typing import Optional
 
 from db.atlas_db import get_db
+from signals.constants import DEFENSIVE_ETFS_PURE, SECTOR_ETF_NAMES
 
 logger = logging.getLogger(__name__)
 
-# The 11 SPDR Select Sector ETFs
-SPDR_SECTORS = {
-    "XLB": "Materials",
-    "XLC": "Communication Services",
-    "XLE": "Energy",
-    "XLF": "Financials",
-    "XLI": "Industrials",
-    "XLK": "Technology",
-    "XLP": "Consumer Staples",
-    "XLRE": "Real Estate",
-    "XLU": "Utilities",
-    "XLV": "Health Care",
-    "XLY": "Consumer Discretionary",
-}
+# The 11 SPDR Select Sector ETFs — sourced from signals.constants
+SPDR_SECTORS = SECTOR_ETF_NAMES
 
-DEFENSIVE_ETFS = {"XLU", "XLP"}
+# Pure defensive set (XLU + XLP): price-leadership of bond-proxy sectors
+# is an unambiguous risk-off signal.  XLV excluded — see signals/constants.py.
+DEFENSIVE_ETFS = DEFENSIVE_ETFS_PURE
 
 # yfinance fallback cache
 CACHE_PATH = Path(__file__).parent.parent / "data" / "cache" / "sector_etfs.json"

@@ -19,24 +19,21 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# The 11 SPDR Select Sector ETFs
-SECTOR_ETFS = {
-    "XLB": "Materials",
-    "XLC": "Communication Services",
-    "XLE": "Energy",
-    "XLF": "Financials",
-    "XLI": "Industrials",
-    "XLK": "Technology",
-    "XLP": "Consumer Staples",
-    "XLRE": "Real Estate",
-    "XLU": "Utilities",
-    "XLV": "Health Care",
-    "XLY": "Consumer Discretionary",
-}
+# The 11 SPDR Select Sector ETFs — sourced from signals.constants
+# Dict interface (ticker → name) preserved for backward compatibility.
+from signals.constants import (
+    CYCLICAL_ETFS,
+    DEFENSIVE_ETFS_INCLUSIVE,
+    SECTOR_ETF_NAMES,
+)
 
-# Classification
-CYCLICAL_ETFS = {"XLK", "XLF", "XLI", "XLY"}
-DEFENSIVE_ETFS = {"XLU", "XLP", "XLV"}
+SECTOR_ETFS = SECTOR_ETF_NAMES  # {ticker: name} dict — used by callers
+
+# Inclusive defensive set (XLU + XLP + XLV): volume-flow thesis.
+# XLV is a real institutional defensive-rotation destination.
+# See signals/constants.py for detailed rationale.
+DEFENSIVE_ETFS = DEFENSIVE_ETFS_INCLUSIVE
+# CYCLICAL_ETFS imported above (frozenset{"XLK", "XLF", "XLI", "XLY"})
 
 # Thresholds
 SURGE_THRESHOLD = 2.0    # z-score > 2.0 = volume surge
