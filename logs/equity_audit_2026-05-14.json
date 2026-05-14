@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-05-14T14:23:07.311401",
+  "run_at": "2026-05-14T15:24:31.144293",
   "db_path": "/root/atlas/data/atlas.db",
   "threshold": 0.01,
   "markets": [
@@ -18,23 +18,14 @@
     {
       "market_id": "commodity_etfs",
       "live_enabled": false,
-      "status": "FAIL",
-      "json_raw_rows": 18,
-      "json_deduped_rows": 15,
+      "status": "PASS",
+      "json_raw_rows": 19,
+      "json_deduped_rows": 16,
       "sqlite_rows": 16,
-      "matches": 14,
-      "divergences": [
-        {
-          "date": "2026-05-05",
-          "json_equity": 956.82,
-          "sqlite_equity": 944.82,
-          "diff": 12.0
-        }
-      ],
+      "matches": 16,
+      "divergences": [],
       "json_only_dates": [],
-      "sqlite_only_dates": [
-        "2026-05-01"
-      ]
+      "sqlite_only_dates": []
     },
     {
       "market_id": "regime",
@@ -51,23 +42,14 @@
     {
       "market_id": "sector_etfs",
       "live_enabled": false,
-      "status": "FAIL",
-      "json_raw_rows": 9,
-      "json_deduped_rows": 7,
+      "status": "PASS",
+      "json_raw_rows": 10,
+      "json_deduped_rows": 8,
       "sqlite_rows": 8,
-      "matches": 6,
-      "divergences": [
-        {
-          "date": "2026-05-05",
-          "json_equity": 3202.08,
-          "sqlite_equity": 3191.73,
-          "diff": 10.35
-        }
-      ],
+      "matches": 8,
+      "divergences": [],
       "json_only_dates": [],
-      "sqlite_only_dates": [
-        "2026-05-01"
-      ]
+      "sqlite_only_dates": []
     }
   ],
   "summary": {

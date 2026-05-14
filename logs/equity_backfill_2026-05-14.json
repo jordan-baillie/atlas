@@ -1,60 +1,40 @@
 {
-  "_doc": "Audit log for PMEQ-002 equity_history backfill verification — 2026-05-14",
-  "generated_at": "2026-05-14T14:23:00+10:00",
-  "task": "Stream A / B.2 unblock",
-
-  "discrepancy_as_reported": {
-    "market_id": "sp500",
-    "date": "2026-05-11",
-    "json_equity_authoritative": 1341.31,
-    "sqlite_equity_stale": 1311.97,
-    "absolute_diff": 29.34,
-    "source": "Engineering Lead SQL query 2026-05-14 ~13:00 AEST"
-  },
-
-  "current_state": {
-    "sqlite_2026-05-11": 1341.31,
-    "json_last_per_date_2026-05-11": 1341.31,
-    "status": "MATCH — discrepancy is resolved"
-  },
-
-  "resolution": {
-    "method": "commit 6312e5ba (FIX-PMEQ-002) applied direct SQLite INSERT OR REPLACE for date=2026-05-11",
-    "commit_sha": "6312e5ba",
-    "commit_message": "fix(reconcile): #FIX-PMEQ-002 + reconcile_positions:376 entry_date residual",
-    "manual_sql_required": false,
-    "note": "No manual SQL intervention was needed at this point because commit 6312e5ba already contained the equity_history backfill as part of the INSERT OR REPLACE idempotency fix to record_equity()."
-  },
-
-  "verification": {
-    "script": "scripts/verify_dual_write.py",
-    "run_at": "2026-05-14 14:22:00 AEST",
-    "source": "manual",
-    "result": "6/6 PASS",
-    "consecutive_cron_passes": 0,
-    "gate_target": 5,
-    "streak_note": "Cron has been failing for ~10 days (4/6 PASS due to disabled-market checks). Streak counter will start on next 10:00 UTC cron run that picks up the fix.",
-    "verify_dual_write_output": [
-      "3. Plans: 49 JSON, 158 SQLite — PASS",
-      "4. OHLCV (AMT/NOC/KMB): 5 days match each — PASS",
-      "4b. OHLCV all universes: 5/5 sampled OK each — PASS",
-      "5. Equity Curve: 34 unique-date (raw 39), 38 SQLite rows, latest match 2026-05-13 — PASS",
-      "6. Market State: sp500 halted=False hwm=5222.95 — PASS",
-      "7. Equity History: sp500 last 7 entries match — PASS",
-      "RESULT: 6/6 PASS"
-    ]
-  },
-
-  "json_duplicate_rows_noted": {
-    "description": "live_sp500.json equity_history has 39 raw rows but only 34 unique dates (5 duplicates across 4 dates). The dual-write check (Check 7) uses last-per-date dedup so this does not cause verify failures.",
-    "duplicate_dates": {
-      "2026-04-14": ["5374.77", "5374.77"],
-      "2026-05-06": ["1353.51", "1353.51"],
-      "2026-05-07": ["1324.49", "1324.49"],
-      "2026-05-11": ["1311.97", "1311.97", "1341.31"]
+  "run_at": "2026-05-14T05:23:30.675225+00:00",
+  "dry_run": false,
+  "status": "ok",
+  "market_id_changes": [
+    {
+      "market": "commodity_etfs",
+      "date": "2026-05-05",
+      "action": "sqlite_update_skipped_idempotent",
+      "before": 956.82,
+      "after": 956.82,
+      "source_of_truth": "brokers/state/live_commodity_etfs.json (last entry 2026-05-05)"
     },
-    "root_cause": "record_equity() in brokers/live_portfolio.py had no dedup guard before commit 8ed3b044 (2026-05-14). Multiple cron invocations per day each appended without checking for same-date last entry.",
-    "fix_applied": "commit 8ed3b044 — dedup guard added at live_portfolio.py:1366-1374",
-    "remaining_gap": "Historical duplicate rows already in JSON are not cleaned up on state load. Recommended follow-up: add dedup-on-load in _load_local_state() (~line 127) to scan full equity_history list on startup."
-  }
+    {
+      "market": "sector_etfs",
+      "date": "2026-05-05",
+      "action": "sqlite_update_skipped_idempotent",
+      "before": 3202.08,
+      "after": 3202.08,
+      "source_of_truth": "brokers/state/live_sector_etfs.json (last entry 2026-05-05)"
+    },
+    {
+      "market": "commodity_etfs",
+      "date": "2026-05-01",
+      "action": "json_append_skipped_idempotent",
+      "before": null,
+      "after": 956.58,
+      "source_of_truth": "SQLite equity_history (commodity_etfs, 2026-05-01)"
+    },
+    {
+      "market": "sector_etfs",
+      "date": "2026-05-01",
+      "action": "json_append_skipped_idempotent",
+      "before": null,
+      "after": 3204.93,
+      "source_of_truth": "SQLite equity_history (sector_etfs, 2026-05-01)"
+    }
+  ],
+  "errors": []
 }
