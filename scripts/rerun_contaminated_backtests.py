@@ -74,21 +74,53 @@ KNOWN_CONTAMINATED: list[tuple[str, str]] = [
 # Dynamic detection
 # ---------------------------------------------------------------------------
 
-def detect_contaminated_pairs() -> list[tuple[str, str, Path]]:
-    """Scan research/best/*.json for portfolio-contaminated entries.
+def detect_contaminated_pairs(
+    best_dir: Path | None = None,
+) -> list[tuple[str, str, Path]]:
+    """Scan research/best/*.json for contaminated/unvalidated entries.
 
-    Returns list of (strategy, market, json_path) tuples.
+    Detection criteria (any match → contaminated):
+
+    1. ``is_solo == false``  — explicitly portfolio-contaminated (not a solo backtest).
+    2. ``is_solo == true`` AND ``solo_sharpe_clean`` is absent/None  — tagged solo via
+       the integrity audit but clean rerun not yet performed (orphan).
+    3. Neither ``is_solo`` nor ``solo_sharpe_clean`` present  — legacy entry predating
+       the integrity-audit enrichment; no contamination verdict yet.
+
+    Args:
+        best_dir: Override directory for tests. Defaults to ``BEST_DIR``.
+
+    Returns:
+        List of ``(strategy, market, json_path)`` tuples.
     """
+    _dir = best_dir if best_dir is not None else BEST_DIR
     pairs: list[tuple[str, str, Path]] = []
-    for f in sorted(BEST_DIR.glob("*.json")):
+    for f in sorted(_dir.glob("*.json")):
         try:
             d = json.loads(f.read_text())
-            note = d.get("contamination_note", "")
-            if "portfolio-contaminated" in note:
-                strategy = d.get("strategy", "")
-                market   = d.get("market", d.get("universe", "sp500"))
-                if strategy:
-                    pairs.append((strategy, market, f))
+            strategy = d.get("strategy", "")
+            market   = d.get("market", d.get("universe", "sp500"))
+            if not strategy:
+                continue
+
+            is_solo           = d.get("is_solo")            # may be absent
+            solo_sharpe_clean = d.get("solo_sharpe_clean")  # may be absent or None
+            has_is_solo       = "is_solo" in d
+            has_clean_sharpe  = "solo_sharpe_clean" in d
+
+            contaminated = False
+            if has_is_solo and is_solo is False:
+                # Criterion 1: explicitly not-solo (portfolio contaminated)
+                contaminated = True
+            elif has_is_solo and is_solo is True and solo_sharpe_clean is None:
+                # Criterion 2: tagged solo but clean rerun metric missing (orphan)
+                contaminated = True
+            elif not has_is_solo and not has_clean_sharpe:
+                # Criterion 3: legacy entry — neither integrity field populated yet
+                contaminated = True
+
+            if contaminated:
+                pairs.append((strategy, market, f))
         except Exception as exc:
             logger.warning("Could not parse %s: %s", f.name, exc)
     return pairs
@@ -331,10 +363,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nTotal: {len(detected)}")
         return 0
 
-    # Build work list (use detected; fall back to known if best/ is empty)
-    work: list[tuple[str, str, Path]] = detected if detected else [
-        (s, m, _best_json_path(s, m)) for s, m in KNOWN_CONTAMINATED
-    ]
+    # Build work list — detected is the primary source; KNOWN_CONTAMINATED is the
+    # fallback for the edge case where the detection yields zero entries (e.g. an
+    # empty best/ directory during testing or first-run bootstrap).
+    if detected:
+        work: list[tuple[str, str, Path]] = [(s, m, p) for s, m, p in detected]
+    else:
+        logger.warning(
+            "No dynamic detection — falling back to KNOWN_CONTAMINATED (%d entries)",
+            len(KNOWN_CONTAMINATED),
+        )
+        work = [(s, m, _best_json_path(s, m)) for s, m in KNOWN_CONTAMINATED]
 
     # Apply filters
     if args.strategy:
