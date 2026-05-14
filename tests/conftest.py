@@ -20,8 +20,21 @@ from strategies.base import Signal  # noqa: E402
 # (was incorrectly in pytest.ini as collect_ignore_glob; that key is only
 # valid in conftest.py, not pytest.ini).
 # Path is relative to this conftest.py file, so "archive/*" means tests/archive/*.
+# "_attic/**" resolves to <project_root>/_attic/** and excludes archived WIP tests.
 # ---------------------------------------------------------------------------
-collect_ignore_glob = ["archive/*"]
+collect_ignore_glob = ["archive/*", "../_attic/**"]
+
+# ---------------------------------------------------------------------------
+# importlib-mode compat: register this module as 'tests.conftest' in sys.modules
+# ---------------------------------------------------------------------------
+# pytest --import-mode=importlib imports conftest.py as 'conftest' (not as
+# 'tests.conftest').  Test files that use absolute imports like
+#   from tests.conftest import make_ohlcv_df
+# fail collection unless we register an alias here.  This is safe: the module
+# IS tests/conftest.py by definition — we're just adding a second sys.modules key.
+_this_mod = sys.modules.get(__name__) or sys.modules.get('conftest')
+if _this_mod is not None and 'tests.conftest' not in sys.modules:
+    sys.modules['tests.conftest'] = _this_mod
 
 
 # ---------------------------------------------------------------------------

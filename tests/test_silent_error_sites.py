@@ -13,8 +13,12 @@ Coverage:
 - eod_settlement.py  — ledger reconciliation failure (ERROR + Telegram)
 - eod_settlement.py  — heartbeat write in crash-guard (DEBUG, non-fatal)
 - execute_approved.py — halt-state DB query failure (WARNING, fail-open)
-- reconcile_positions.py — SQLite dual-write failure (ERROR, non-fatal)
+- reconcile_positions.py — protective-order lookup and dual-write failures (ERROR)
 - sync_protective_orders.py — heartbeat write for skipped market (DEBUG, non-fatal)
+
+Logger names use the "atlas." prefix (from setup_logging):
+  atlas.eod_settlement, atlas.execute_approved,
+  atlas.reconcile_positions, atlas.sync_protective_orders
 """
 from __future__ import annotations
 
@@ -42,7 +46,7 @@ class TestEodLedgerReconciliationFailure:
 
         boom = RuntimeError("reconcile_ledger: test-induced failure")
 
-        with caplog.at_level(logging.ERROR, logger="eod_settlement"):
+        with caplog.at_level(logging.ERROR, logger="atlas.eod_settlement"):
             try:
                 raise boom
             except Exception as _lr_err:
@@ -65,7 +69,7 @@ class TestEodLedgerReconciliationFailure:
         mock_send = MagicMock()
 
         with patch("utils.telegram.send_message", mock_send):
-            with caplog.at_level(logging.ERROR, logger="eod_settlement"):
+            with caplog.at_level(logging.ERROR, logger="atlas.eod_settlement"):
                 try:
                     raise boom
                 except Exception as _lr_err:
@@ -106,7 +110,7 @@ class TestEodCrashGuardHeartbeat:
 
         boom = OSError("disk full")
 
-        with caplog.at_level(logging.DEBUG, logger="eod_settlement"):
+        with caplog.at_level(logging.DEBUG, logger="atlas.eod_settlement"):
             try:
                 raise boom
             except Exception as _hb_crash_exc:
@@ -133,11 +137,10 @@ class TestExecuteApprovedHaltStateFailure:
     def test_warning_logged_on_db_query_failure(self, caplog):
         """When the halt-state DB query raises, _is_market_halted logs WARNING."""
         with patch("db.atlas_db.get_db", side_effect=OSError("DB unavailable")):
-            with caplog.at_level(logging.WARNING, logger="execute_approved"):
+            with caplog.at_level(logging.WARNING, logger="atlas.execute_approved"):
                 from scripts.execute_approved import _is_market_halted
                 result = _is_market_halted("sp500")
 
-        # Fail-open: returns (False, "", "")
         assert result == (False, "", ""), f"Expected fail-open tuple; got {result}"
 
         warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
@@ -158,11 +161,11 @@ class TestExecuteApprovedHaltStateFailure:
 
 
 # ---------------------------------------------------------------------------
-# reconcile_positions.py — protective-order lookup failure (ERROR, non-fatal)
+# reconcile_positions.py — protective-order lookup and dual-write failures (ERROR)
 # ---------------------------------------------------------------------------
 
-class TestReconcilePositionsProtectiveOrderLookupFailure:
-    """reconcile_positions: protective-order lookup failure logs at ERROR."""
+class TestReconcilePositionsErrors:
+    """reconcile_positions: key failure paths log at ERROR level."""
 
     def test_error_logged_on_protective_order_lookup_failure(self, caplog):
         """When the protective-order DB lookup raises, an ERROR is logged."""
@@ -170,7 +173,7 @@ class TestReconcilePositionsProtectiveOrderLookupFailure:
 
         boom = Exception("DB error: no such table: position_protective_orders")
 
-        with caplog.at_level(logging.ERROR, logger="reconcile_positions"):
+        with caplog.at_level(logging.ERROR, logger="atlas.reconcile_positions"):
             try:
                 raise boom
             except Exception as _po_exc:
@@ -184,7 +187,7 @@ class TestReconcilePositionsProtectiveOrderLookupFailure:
         assert error_records, "Expected ERROR record for protective-order lookup failure"
         assert any(
             "protective-order lookup failed" in r.message for r in error_records
-        ), f"ERROR log should mention protective-order lookup; got: {[r.message for r in error_records]}"
+        )
 
     def test_error_logged_on_dual_write_failure(self, caplog):
         """When the SQLite dual-write block raises, an ERROR is logged."""
@@ -192,7 +195,7 @@ class TestReconcilePositionsProtectiveOrderLookupFailure:
 
         boom = Exception("UNIQUE constraint failed: trades.natural_key")
 
-        with caplog.at_level(logging.ERROR, logger="reconcile_positions"):
+        with caplog.at_level(logging.ERROR, logger="atlas.reconcile_positions"):
             try:
                 raise boom
             except Exception as _dw_exc:
@@ -203,9 +206,7 @@ class TestReconcilePositionsProtectiveOrderLookupFailure:
 
         error_records = [r for r in caplog.records if r.levelno == logging.ERROR]
         assert error_records, "Expected ERROR record for dual-write failure"
-        assert any(
-            "dual-write" in r.message for r in error_records
-        )
+        assert any("dual-write" in r.message for r in error_records)
 
 
 # ---------------------------------------------------------------------------
@@ -222,7 +223,7 @@ class TestSyncProtectiveHeartbeatSkipped:
         market_id = "sp500"
         boom = ImportError("monitor.health_writer not available")
 
-        with caplog.at_level(logging.DEBUG, logger="sync_protective_orders"):
+        with caplog.at_level(logging.DEBUG, logger="atlas.sync_protective_orders"):
             try:
                 raise boom
             except Exception as _hb_skip_exc:
@@ -237,12 +238,12 @@ class TestSyncProtectiveHeartbeatSkipped:
         assert any(
             "heartbeat" in r.message and market_id in r.message
             for r in debug_records
-        ), f"DEBUG log should mention heartbeat and market_id; got: {[r.message for r in debug_records]}"
+        )
 
     def test_sync_market_skipped_returns_result_on_policy_skip(
         self, caplog, monkeypatch
     ):
-        """sync_market with a 'passive' mode config returns early without crash."""
+        """sync_market with a 'passive' mode policy returns early without crash."""
         from scripts.sync_protective_orders import sync_market
 
         mock_policy = MagicMock()
@@ -261,7 +262,7 @@ class TestSyncProtectiveHeartbeatSkipped:
             }),
         )
 
-        with caplog.at_level(logging.DEBUG, logger="sync_protective_orders"):
+        with caplog.at_level(logging.DEBUG, logger="atlas.sync_protective_orders"):
             result = sync_market("sp500", "2026-05-14", dry_run=True)
 
         assert isinstance(result, dict)
@@ -293,7 +294,6 @@ class TestSourcePatternInvariant:
 
         for i, line in enumerate(lines):
             if re.match(r'^\s+except (Exception|:)', line):
-                # Collect next 8 non-blank non-comment lines
                 body_lines: list[str] = []
                 j = i + 1
                 while j < len(lines) and len(body_lines) < 8:
