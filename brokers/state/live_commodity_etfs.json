@@ -93,39 +93,6 @@
       "positions": [
         {
           "ticker": "FCX",
-          "strategy": "momentum_breakout",
-          "shares": 5,
-          "entry_price": 68.03,
-          "current_price": 68.27,
-          "unrealized_pnl": 1.2,
-          "mae": 0.0,
-          "mfe": 0.35,
-          "holding_days": -1
-        },
-        {
-          "ticker": "UNG",
-          "strategy": "connors_rsi2",
-          "shares": 54,
-          "entry_price": 10.68,
-          "current_price": 10.56,
-          "unrealized_pnl": -6.48,
-          "mae": -1.12,
-          "mfe": 0.0,
-          "holding_days": -1
-        }
-      ]
-    },
-    {
-      "date": "2026-04-14",
-      "equity": 4994.72,
-      "cash": 2082.93,
-      "positions_value": 2911.79,
-      "num_positions": 2,
-      "total_realized_pnl": 0,
-      "total_closed_trades": 0,
-      "positions": [
-        {
-          "ticker": "FCX",
           "strategy": "reconciled",
           "shares": 5,
           "entry_price": 68.03,
@@ -677,50 +644,6 @@
           "mae": -6.34,
           "mfe": 0.0,
           "holding_days": -1
-        }
-      ]
-    },
-    {
-      "date": "2026-05-05",
-      "equity": 944.82,
-      "cash": 1178.86,
-      "positions_value": -234.04,
-      "num_positions": 1,
-      "total_realized_pnl": 0,
-      "total_closed_trades": 0,
-      "positions": [
-        {
-          "ticker": "GLD",
-          "strategy": "momentum_breakout",
-          "shares": 2,
-          "entry_price": 442.8,
-          "current_price": 414.71,
-          "unrealized_pnl": -56.18,
-          "mae": -6.34,
-          "mfe": 0.0,
-          "holding_days": 0
-        }
-      ]
-    },
-    {
-      "date": "2026-05-05",
-      "equity": 944.82,
-      "cash": 1178.86,
-      "positions_value": -234.04,
-      "num_positions": 1,
-      "total_realized_pnl": 0,
-      "total_closed_trades": 0,
-      "positions": [
-        {
-          "ticker": "GLD",
-          "strategy": "momentum_breakout",
-          "shares": 2,
-          "entry_price": 442.8,
-          "current_price": 414.71,
-          "unrealized_pnl": -56.18,
-          "mae": -6.34,
-          "mfe": 0.0,
-          "holding_days": 0
         }
       ]
     },
