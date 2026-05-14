@@ -140,17 +140,9 @@ class ShortTermMR(BaseStrategy):
 
                 # Calculate indicators
                 today_close = close.iloc[-1]
-                if self._precomputed:
-                    current_rsi = df["_st_rsi"].iloc[-1]
-                    current_ibs = df["_st_ibs"].iloc[-1]
-                    current_sma = df["_st_sma"].iloc[-1]
-                else:
-                    rsi = calc_rsi(close, period=self.rsi_period)
-                    ibs = calc_ibs(high, low, close)
-                    sma = close.rolling(window=self.sma_period).mean()
-                    current_rsi = rsi.iloc[-1]
-                    current_ibs = ibs.iloc[-1]
-                    current_sma = sma.iloc[-1]
+                current_rsi = self._get_indicator(df, "_st_rsi", lambda d: calc_rsi(d["close"], period=self.rsi_period)).iloc[-1]
+                current_ibs = self._get_indicator(df, "_st_ibs", lambda d: calc_ibs(d["high"], d["low"], d["close"])).iloc[-1]
+                current_sma = self._get_indicator(df, "_st_sma", lambda d: d["close"].rolling(window=self.sma_period).mean()).iloc[-1]
 
                 if pd.isna(current_rsi) or pd.isna(current_sma):
                     continue
@@ -340,14 +332,10 @@ class ShortTermMR(BaseStrategy):
                 days_held = (today_date - entry_date).days
 
                 # Calculate RSI(2) and SMA for exit checks
-                if self._precomputed:
-                    current_rsi = df["_st_rsi"].iloc[-1]
-                    current_sma = df["_st_sma"].iloc[-1]
-                else:
-                    rsi = calc_rsi(close, period=self.rsi_period)
-                    sma = close.rolling(window=self.sma_period).mean()
-                    current_rsi = rsi.iloc[-1] if not rsi.empty else 50
-                    current_sma = sma.iloc[-1] if not sma.empty else today_close
+                rsi_series = self._get_indicator(df, "_st_rsi", lambda d: calc_rsi(d["close"], period=self.rsi_period))
+                sma_series = self._get_indicator(df, "_st_sma", lambda d: d["close"].rolling(window=self.sma_period).mean())
+                current_rsi = rsi_series.iloc[-1] if rsi_series is not None and not rsi_series.empty else 50
+                current_sma = sma_series.iloc[-1] if sma_series is not None and not sma_series.empty else today_close
 
                 # 1. Hard stop hit
                 if today_close <= stop_price:

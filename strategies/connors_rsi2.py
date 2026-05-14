@@ -148,32 +148,23 @@ class ConnorsRSI2(BaseStrategy):
                         continue
 
                 # --- RSI(2) extreme oversold ---
-                if self._precomputed:
-                    current_rsi = df["_cr_rsi"].iloc[-1]
-                else:
-                    rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
-                    if rsi_vals is None or len(rsi_vals) < 2:
-                        continue
-                    current_rsi = rsi_vals.iloc[-1]
+                rsi_vals = self._get_indicator(df, "_cr_rsi", lambda d: calc_rsi(d["close"], period=self.rsi_period))
+                if rsi_vals is None or len(rsi_vals) < 2:
+                    continue
+                current_rsi = rsi_vals.iloc[-1]
                 if pd.isna(current_rsi) or current_rsi >= self.rsi_entry:
                     continue
 
                 # --- Volume filter ---
-                if self._precomputed:
-                    vol_ratio = df["_cr_vol_ratio"].iloc[-1]
-                else:
-                    vol_series = calc_volume_ratio(df["volume"], self.vol_lookback)
-                    vol_ratio = vol_series.iloc[-1] if vol_series is not None and len(vol_series) > 0 else None
+                vol_series = self._get_indicator(df, "_cr_vol_ratio", lambda d: calc_volume_ratio(d["volume"], self.vol_lookback))
+                vol_ratio = vol_series.iloc[-1] if vol_series is not None and len(vol_series) > 0 else None
                 if vol_ratio is not None and not pd.isna(vol_ratio) and vol_ratio < self.vol_min_ratio:
                     continue
 
                 # --- IBS filter (optional) ---
                 if self.ibs_filter_enabled:
-                    if self._precomputed:
-                        ibs = df["_cr_ibs"].iloc[-1]
-                    else:
-                        ibs_series = calc_ibs(df["high"], df["low"], df["close"])
-                        ibs = ibs_series.iloc[-1] if ibs_series is not None and len(ibs_series) > 0 else None
+                    ibs_series = self._get_indicator(df, "_cr_ibs", lambda d: calc_ibs(d["high"], d["low"], d["close"]))
+                    ibs = ibs_series.iloc[-1] if ibs_series is not None and len(ibs_series) > 0 else None
                     if ibs is None or pd.isna(ibs) or ibs > self.ibs_max:
                         continue
 
@@ -189,16 +180,10 @@ class ConnorsRSI2(BaseStrategy):
                 # Entry at next bar open (we detect signal at close, enter next open)
                 entry_price = close  # Approximation; actual entry at next open
 
-                if self._precomputed:
-                    atr = df["_cr_atr"].iloc[-1]
-                else:
-                    atr_series = calc_atr(
-                        df["high"], df["low"], df["close"],
-                        period=self.atr_period,
-                    )
-                    if atr_series is None or atr_series.empty:
-                        continue
-                    atr = atr_series.iloc[-1]
+                atr_series = self._get_indicator(df, "_cr_atr", lambda d: calc_atr(d["high"], d["low"], d["close"], period=self.atr_period))
+                if atr_series is None or atr_series.empty:
+                    continue
+                atr = atr_series.iloc[-1]
                 if pd.isna(atr) or atr <= 0:
                     continue
 
@@ -305,11 +290,8 @@ class ConnorsRSI2(BaseStrategy):
 
                 # --- Take profit ---
                 if self.profit_target_atr_mult > 0:
-                    if self._precomputed:
-                        atr = df["_cr_atr"].iloc[-1]
-                    else:
-                        atr_series = calc_atr(df["high"], df["low"], df["close"], period=self.atr_period)
-                        atr = atr_series.iloc[-1] if atr_series is not None else 0
+                    atr_series = self._get_indicator(df, "_cr_atr", lambda d: calc_atr(d["high"], d["low"], d["close"], period=self.atr_period))
+                    atr = atr_series.iloc[-1] if atr_series is not None else 0
                     if not pd.isna(atr) and atr > 0:
                         tp_price = entry_price + (self.profit_target_atr_mult * atr)
                         if close >= tp_price:
@@ -357,11 +339,8 @@ class ConnorsRSI2(BaseStrategy):
 
                 # --- RSI exit (alternative: RSI recovered above threshold) ---
                 if self.exit_mode in ("rsi", "both"):
-                    if self._precomputed:
-                        current_rsi = df["_cr_rsi"].iloc[-1]
-                    else:
-                        rsi_vals = calc_rsi(df["close"], period=self.rsi_period)
-                        current_rsi = rsi_vals.iloc[-1] if rsi_vals is not None and len(rsi_vals) > 0 else float("nan")
+                    rsi_series = self._get_indicator(df, "_cr_rsi", lambda d: calc_rsi(d["close"], period=self.rsi_period))
+                    current_rsi = rsi_series.iloc[-1] if rsi_series is not None and len(rsi_series) > 0 else float("nan")
                     if not pd.isna(current_rsi) and current_rsi > self.rsi_exit:
                         exits.append({
                             "ticker": ticker,

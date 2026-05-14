@@ -156,14 +156,8 @@ class MeanReversion(BaseStrategy):
                 volume = df["volume"]
 
                 # Calculate indicators
-                if self._precomputed:
-                    current_rsi = df["_mr_rsi"].iloc[-1]
-                    current_zscore = df["_mr_zscore"].iloc[-1]
-                else:
-                    rsi = calc_rsi(close, period=self.rsi_period)
-                    zscore = calc_zscore(close, lookback=self.zscore_lookback)
-                    current_rsi = rsi.iloc[-1]
-                    current_zscore = zscore.iloc[-1]
+                current_rsi = self._get_indicator(df, "_mr_rsi", lambda d: calc_rsi(d["close"], period=self.rsi_period)).iloc[-1]
+                current_zscore = self._get_indicator(df, "_mr_zscore", lambda d: calc_zscore(d["close"], lookback=self.zscore_lookback)).iloc[-1]
 
                 if pd.isna(current_rsi) or pd.isna(current_zscore):
                     continue
@@ -272,10 +266,8 @@ class MeanReversion(BaseStrategy):
                     continue
 
                 # 20-day mean for reference
-                if self._precomputed:
-                    mean_20 = df["_mr_mean_target"].iloc[-1]
-                else:
-                    mean_20 = close.iloc[-self.zscore_lookback:].mean()
+                _mean_20_raw = self._get_indicator(df, "_mr_mean_target", lambda d: d["close"].iloc[-self.zscore_lookback:].mean())
+                mean_20 = float(_mean_20_raw.iloc[-1]) if hasattr(_mean_20_raw, "iloc") else float(_mean_20_raw)
 
                 # Confidence: base 0.6 for meeting entry criteria + bonuses for depth
                 # RSI bonus: saturates when RSI is 15 below oversold threshold

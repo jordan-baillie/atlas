@@ -104,16 +104,10 @@ class BBSqueeze(BaseStrategy):
                 volume = df["volume"]
 
                 # Bollinger Bands and Keltner Channels
-                if self._precomputed:
-                    bb_ma = df["_bb_ma"]
-                    bb_std_val = df["_bb_std"]
-                    kc_ma = df["_bb_kc_ma"]
-                    kc_atr = df["_bb_kc_atr"]
-                else:
-                    bb_ma = close.rolling(self.bb_period).mean()
-                    bb_std_val = close.rolling(self.bb_period).std()
-                    kc_ma = close.ewm(span=self.kc_period, adjust=False).mean()
-                    kc_atr = calc_atr(high, low, close, self.kc_period)
+                bb_ma = self._get_indicator(df, "_bb_ma", lambda d: d["close"].rolling(self.bb_period).mean())
+                bb_std_val = self._get_indicator(df, "_bb_std", lambda d: d["close"].rolling(self.bb_period).std())
+                kc_ma = self._get_indicator(df, "_bb_kc_ma", lambda d: d["close"].ewm(span=self.kc_period, adjust=False).mean())
+                kc_atr = self._get_indicator(df, "_bb_kc_atr", lambda d: calc_atr(d["high"], d["low"], d["close"], self.kc_period))
 
                 bb_upper = bb_ma + self.bb_std * bb_std_val
                 bb_lower = bb_ma - self.bb_std * bb_std_val
@@ -167,10 +161,7 @@ class BBSqueeze(BaseStrategy):
                 confidence += min(abs(norm_slope) * 100, 0.15)
 
                 # Volume surge bonus
-                if self._precomputed:
-                    vol_ratio = df["_bb_vol_ratio"]
-                else:
-                    vol_ratio = calc_volume_ratio(volume, 20)
+                vol_ratio = self._get_indicator(df, "_bb_vol_ratio", lambda d: calc_volume_ratio(d["volume"], 20))
                 if float(vol_ratio.iloc[curr]) > self.vol_surge_threshold:
                     confidence += 0.10
 
