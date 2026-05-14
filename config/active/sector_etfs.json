@@ -242,30 +242,5 @@
     "max_weight": 0.4,
     "cluster_threshold": 0.7
   },
-  "_audit_2026_05_01_disable_sector_rotation": {
-    "updated_at": "2026-05-01T00:00:00+00:00",
-    "rationale": "Validated-strategies audit. Disabled sector_rotation (0 trades in fresh backtest, structural mismatch with single-ETF-per-sector universe \u2014 min_sector_stocks=3 vs 1 ticker per sector). Open positions check: XLI under momentum_breakout (kept). 0 open positions on sector_rotation.",
-    "disabled": [
-      {
-        "strategy": "sector_rotation",
-        "old_weight": 0.4,
-        "new_weight": 0,
-        "reason": "Strategy fundamentally requires multi-stock sectors; sector_etfs has 1 ETF per sector. 0 trades across full backtest history."
-      }
-    ],
-    "renormalized": [
-      {
-        "strategy": "momentum_breakout",
-        "old_weight": 0.3,
-        "new_weight": 0.6
-      },
-      {
-        "strategy": "mean_reversion",
-        "old_weight": 0.3,
-        "new_weight": 0.4
-      }
-    ],
-    "follow_up": "research_best for sector_etfs/mean_reversion and sector_etfs/momentum_breakout are stale (2026-04-21, P1.1 contamination era). Re-run sweeps after fixing the snapshot-required bug in research/loop.py:556 and DEFAULT_STRATEGIES in research/autoresearch_nightly.py."
-  },
   "_consolidation_note": "Disabled 2026-05-07 per #297. Re-enable criteria in docs/multi-universe-consolidation-2026-05-07.md."
 }
