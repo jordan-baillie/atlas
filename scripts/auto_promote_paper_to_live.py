@@ -60,6 +60,8 @@ GATE_F_MIN_RESEARCH_SHARPE = 0.5
 GATE_G_MIN_OOS_SHARPE = 0.3
 GATE_H_MIN_OOS_TRADES = 30
 GATE_I_MIN_OOS_CAGR = 5.0       # stored as percent (e.g. 5.2 means 5.2 %)
+DIVERGENCE_STATE_FILE = ATLAS_ROOT / "data" / "divergence_state.json"
+DIVERGENCE_WINDOW_DAYS = 7   # Gate J: must be clean for this many days
 
 
 # ── Sharpe helper (mirrors check_live_research_divergence._compute_live_sharpe) ─
@@ -77,6 +79,72 @@ def _compute_sharpe(pnl_pcts: List[float]) -> Optional[float]:
     if sd == 0:
         return None
     return mean / sd
+
+
+# ── Divergence gate helper ─────────────────────────────────────────────────────
+
+def _check_divergence_gate(
+    strategy: str,
+    universe: str,
+    state_file: Optional[Path] = None,
+) -> Tuple[bool, str]:
+    """Gate J: no active divergence alert in the last DIVERGENCE_WINDOW_DAYS days.
+
+    Reads data/divergence_state.json (written by check_live_research_divergence.py).
+    Passes when:
+      - the file doesn't exist (no divergence data yet), OR
+      - the (strategy, universe) combo has no entry, OR
+      - consecutive_breach_days == 0 (streak is clean), OR
+      - last_breach_date is older than DIVERGENCE_WINDOW_DAYS days ago.
+
+    Fails when consecutive_breach_days > 0 AND last_breach_date is within
+    the last DIVERGENCE_WINDOW_DAYS days — indicating an active divergence alert.
+
+    Returns:
+        (passes: bool, reason: str)
+    """
+    from datetime import date as _date
+
+    sf = state_file or DIVERGENCE_STATE_FILE
+    if not sf.exists():
+        return True, "Gate J (PASS): no divergence state file — no active alert"
+
+    try:
+        state = json.loads(sf.read_text())
+    except Exception as exc:
+        logger.warning("Gate J: could not read divergence state from %s: %s", sf, exc)
+        return True, f"Gate J (BYPASS): could not read divergence state — {exc}"
+
+    if not isinstance(state, dict):
+        return True, "Gate J (PASS): divergence state is not a dict — skipping"
+
+    key = f"{strategy}:{universe}"
+    entry = state.get(key)
+    if not entry or not isinstance(entry, dict):
+        return True, f"Gate J (PASS): no divergence entry for {key}"
+
+    consecutive_days = int(entry.get("consecutive_breach_days", 0))
+    if consecutive_days == 0:
+        return True, f"Gate J (PASS): consecutive_breach_days=0 (clean streak)"
+
+    # Streak is active — check whether the last breach is within the window
+    last_breach = entry.get("last_breach_date", "")
+    if last_breach:
+        try:
+            breach_date = _date.fromisoformat(last_breach)
+            days_since = (_date.today() - breach_date).days
+            if days_since > DIVERGENCE_WINDOW_DAYS:
+                return True, (
+                    f"Gate J (PASS): last breach {days_since}d ago "
+                    f"(>{DIVERGENCE_WINDOW_DAYS}d window, streak old)"
+                )
+        except Exception as exc:
+            logger.debug("Gate J: could not parse last_breach_date %r: %s", last_breach, exc)
+
+    return False, (
+        f"Gate J (FAIL): active divergence alert — "
+        f"consecutive_breach_days={consecutive_days}, last_breach={last_breach!r}"
+    )
 
 
 # ── DB helpers ─────────────────────────────────────────────────────────────────
@@ -136,6 +204,7 @@ def _evaluate_gates(
     row: Dict,
     paper_pnls: List[float],
     research_row: Optional[Dict],
+    divergence_state_file: Optional[Path] = None,
 ) -> Tuple[bool, List[str], Dict[str, Any]]:
     """Evaluate all gates for a single (strategy, universe) combo.
 
@@ -293,6 +362,11 @@ def _evaluate_gates(
         )
     all_pass &= i_pass
 
+    # Gate J — no active divergence alert in last DIVERGENCE_WINDOW_DAYS days
+    j_pass, j_reason = _check_divergence_gate(strategy, universe, divergence_state_file)
+    reasons.append(j_reason)
+    all_pass &= j_pass
+
     metrics: Dict[str, Any] = {
         "days_in_paper": round(days_in_paper, 2),
         "paper_trades": n_trades,
@@ -358,6 +432,7 @@ def evaluate_and_promote(
     force: bool = False,
     dry_run: bool = False,
     no_telegram: bool = False,
+    divergence_state_file: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Evaluate all promotion gates for a single (strategy, universe) combo.
 
@@ -423,7 +498,7 @@ def evaluate_and_promote(
     # ── Full gate evaluation (no pre-filter — caller always gets details) ──────
     paper_pnls = _fetch_paper_trades(strategy, universe, window_days=30)
     research_row = _fetch_research_best(strategy, universe)
-    all_pass, reasons, metrics = _evaluate_gates(row, paper_pnls, research_row)
+    all_pass, reasons, metrics = _evaluate_gates(row, paper_pnls, research_row, divergence_state_file)
 
     # Parse gate outcomes from reasons strings
     gates_dict: Dict[str, str] = {}
@@ -523,6 +598,7 @@ def run_promotion(
     dry_run: bool = False,
     force: Optional[str] = None,
     no_telegram: bool = False,
+    divergence_state_file: Optional[Path] = None,
 ) -> int:
     """Evaluate all PAPER combos and promote those that pass all gates.
 
@@ -588,6 +664,7 @@ def run_promotion(
             universe,
             dry_run=dry_run,
             no_telegram=no_telegram,
+            divergence_state_file=divergence_state_file,
         )
 
         # Log per-gate outcomes
@@ -666,6 +743,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         dry_run=args.dry_run,
         force=args.force,
         no_telegram=args.no_telegram,
+        # divergence_state_file=None  →  uses DIVERGENCE_STATE_FILE default
     )
 
 

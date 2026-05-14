@@ -594,3 +594,244 @@ def test_live_breach_calls_force_to_watch_and_sends_telegram(
     # Breach streak is kept at 5 (not reset for LIVE — operator must act)
     saved = _load_state(state_file)
     assert saved[_LIVE_KEY]["consecutive_breach_days"] == 5
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Spec-required test names (Task 14 acceptance criteria)
+# These carry the exact function names from the spec for traceability.
+# Where equivalent logic already exists in classes above, these standalone
+# functions add the canonical spec name.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_5_consecutive_days_paper_triggers_rollback_to_research(
+    state_file: Path, rollback_log: Path, no_telegram: MagicMock
+) -> None:
+    """PAPER → RESEARCH auto-rollback fires on 5th consecutive breach day.
+
+    Replicates TestPaperRollback but as a top-level function per spec naming.
+    """
+    today = _today()
+    yesterday = _yesterday()
+
+    # Pre-seed: 4 days breach (5th today fires rollback)
+    pre_state = {
+        _KEY: _make_breach_entry(streak=4, last_check=yesterday, last_breach=yesterday),
+    }
+    _save_state_atomic(pre_state, state_file)
+
+    from db.atlas_db import get_db
+    with get_db() as conn:
+        _seed_lifecycle(conn, _STRATEGY, _UNIVERSE, "PAPER")
+
+    with (
+        patch("scripts.check_live_research_divergence._fetch_research_best_rows",
+              return_value=_RESEARCH_ROW),
+        patch("scripts.check_live_research_divergence._fetch_live_trades",
+              return_value=_BREACH_PNL),
+    ):
+        rc = run_divergence_check(
+            gap_threshold=0.5,
+            state_file=state_file,
+            no_rollback=False,
+            dry_run_telegram=True,
+            no_telegram=False,
+            today=today,
+        )
+
+    assert rc == 0
+    from monitor.strategy_lifecycle import get_state
+    assert get_state(_STRATEGY, _UNIVERSE) == PromotionState.RESEARCH, (
+        "PAPER strategy must roll back to RESEARCH after 5 consecutive breach days"
+    )
+    assert rollback_log.exists()
+    entries = json.loads(rollback_log.read_text())
+    assert entries[0]["from_state"] == "PAPER"
+    assert entries[0]["to_state"] == "RESEARCH"
+
+
+def test_4_consecutive_days_no_rollback(
+    state_file: Path, rollback_log: Path
+) -> None:
+    """4 consecutive breach days must NOT trigger rollback (threshold is 5)."""
+    today = _today()
+    yesterday = _yesterday()
+
+    # Pre-seed: 3 days breach (4th today, NOT enough)
+    pre_state = {
+        _KEY: _make_breach_entry(streak=3, last_check=yesterday, last_breach=yesterday),
+    }
+    _save_state_atomic(pre_state, state_file)
+
+    from db.atlas_db import get_db
+    with get_db() as conn:
+        _seed_lifecycle(conn, _STRATEGY, _UNIVERSE, "PAPER")
+
+    with (
+        patch("scripts.check_live_research_divergence._fetch_research_best_rows",
+              return_value=_RESEARCH_ROW),
+        patch("scripts.check_live_research_divergence._fetch_live_trades",
+              return_value=_BREACH_PNL),
+    ):
+        rc = run_divergence_check(
+            gap_threshold=0.5,
+            state_file=state_file,
+            no_rollback=False,
+            dry_run_telegram=True,
+            no_telegram=True,
+            today=today,
+        )
+
+    assert rc == 0
+    from monitor.strategy_lifecycle import get_state
+    assert get_state(_STRATEGY, _UNIVERSE) == PromotionState.PAPER, (
+        "4 consecutive days must NOT trigger rollback — threshold is 5"
+    )
+    assert not rollback_log.exists()
+    saved = _load_state(state_file)
+    assert saved[_KEY]["consecutive_breach_days"] == 4, "Streak should increment to 4"
+
+
+def test_5_consecutive_days_live_soft_rollback_to_paper(
+    state_file: Path, rollback_log: Path
+) -> None:
+    """5 consecutive breach days for LIVE → health demotion (force_to_watch).
+
+    NOTE: The implementation performs health-state demotion to WATCH (via
+    StrategyLifecycleManager.force_to_watch) rather than a promotion-state
+    transition to PAPER. This is a deliberate design decision: the operator
+    must manually flip the config and promotion state via the Controls UI.
+
+    The spec says 'transition(LIVE → PAPER)'; the implementation instead uses
+    force_to_watch which changes the HEALTH state to WATCH, leaving the
+    PROMOTION state as LIVE.  This deviation is flagged in the commit message.
+    """
+    today = _today()
+    yesterday = _yesterday()
+
+    _LIVE_S = "mean_reversion"
+    _LIVE_U = "sp500"
+    _LIVE_K = f"{_LIVE_S}:{_LIVE_U}"
+    _LIVE_R = [{"strategy": _LIVE_S, "universe": _LIVE_U, "sharpe": 1.0, "trades": 10, "updated_at": today}]
+
+    pre_state = {
+        _LIVE_K: _make_breach_entry(streak=4, last_check=yesterday, last_breach=yesterday, state="LIVE"),
+    }
+    _save_state_atomic(pre_state, state_file)
+
+    from db.atlas_db import get_db
+    with get_db() as conn:
+        _seed_lifecycle(conn, _LIVE_S, _LIVE_U, "LIVE")
+
+    force_to_watch_calls: list = []
+    mock_lcm = MagicMock()
+    mock_lcm.force_to_watch = MagicMock(
+        side_effect=lambda s, r: (force_to_watch_calls.append((s, r)), True)[1]
+    )
+
+    with (
+        patch("scripts.check_live_research_divergence._fetch_research_best_rows",
+              return_value=_LIVE_R),
+        patch("scripts.check_live_research_divergence._fetch_live_trades",
+              return_value=_BREACH_PNL),
+        patch("monitor.lifecycle.StrategyLifecycleManager", return_value=mock_lcm),
+        patch("utils.config.get_active_config", return_value={}),
+    ):
+        rc = run_divergence_check(
+            gap_threshold=0.5,
+            state_file=state_file,
+            no_rollback=False,
+            dry_run_telegram=True,
+            no_telegram=True,
+            today=today,
+        )
+
+    assert rc == 0
+    # Implementation: promotion state STAYS LIVE (force_to_watch, not LIVE→PAPER)
+    from monitor.strategy_lifecycle import get_state
+    assert get_state(_LIVE_S, _LIVE_U) == PromotionState.LIVE, (
+        "Promotion state must remain LIVE (operator action required for demotion)"
+    )
+    # Health demotion must have been triggered
+    assert len(force_to_watch_calls) == 1, "force_to_watch must be called"
+    assert force_to_watch_calls[0][0] == _LIVE_S
+
+
+def test_gap_normalizes_resets_counter(state_file: Path) -> None:
+    """Gap falling below threshold resets the consecutive breach counter.
+
+    Day 1-3: breach (streak=3). Day 4: gap normalizes (clean) → streak resets to 0.
+    Day 5 onwards: fresh start if breach resumes.
+    """
+    today = _today()
+    yesterday = _yesterday()
+
+    # Simulate: after 3 breach days, today is clean
+    entry_after_3_days = _make_breach_entry(streak=3, last_check=yesterday, last_breach=yesterday)
+    updated = _compute_updated_entry(
+        entry_after_3_days, is_breach=False, today_str=today, yesterday_str=yesterday
+    )
+    assert updated["consecutive_breach_days"] == 0, (
+        "Counter must reset to 0 when gap normalizes (clean day)"
+    )
+
+    # Verify: clean day does NOT update last_breach_date
+    assert updated.get("last_breach_date") == yesterday, (
+        "last_breach_date must not be updated on a clean day"
+    )
+
+    # Verify: a new breach on the next day after normalization starts fresh at 1
+    next_day = today
+    prev_day = yesterday
+    fresh_breach = _compute_updated_entry(
+        {"consecutive_breach_days": 0, "last_check_date": today, "last_breach_date": yesterday},
+        is_breach=True, today_str=next_day, yesterday_str=prev_day
+    )
+    # Note: last_check == yesterday (the clean day), last_breach != yesterday
+    # → streak broken → new streak = 1
+    assert fresh_breach["consecutive_breach_days"] == 1
+
+
+def test_dry_run_no_transition(state_file: Path, rollback_log: Path) -> None:
+    """--no-rollback (dry-run equivalent) prevents transition even at 5 breach days.
+
+    The divergence script has --no-rollback (not --dry-run) as the flag that
+    suppresses state transitions.  This test verifies the safety gate.
+    """
+    today = _today()
+    yesterday = _yesterday()
+
+    # Pre-seed: 4 breach days (5th today would normally fire rollback)
+    pre_state = {
+        _KEY: _make_breach_entry(streak=4, last_check=yesterday, last_breach=yesterday),
+    }
+    _save_state_atomic(pre_state, state_file)
+
+    from db.atlas_db import get_db
+    with get_db() as conn:
+        _seed_lifecycle(conn, _STRATEGY, _UNIVERSE, "PAPER")
+
+    with (
+        patch("scripts.check_live_research_divergence._fetch_research_best_rows",
+              return_value=_RESEARCH_ROW),
+        patch("scripts.check_live_research_divergence._fetch_live_trades",
+              return_value=_BREACH_PNL),
+    ):
+        rc = run_divergence_check(
+            gap_threshold=0.5,
+            state_file=state_file,
+            no_rollback=True,        # ← safety gate equivalent to dry-run
+            dry_run_telegram=True,
+            no_telegram=True,
+            today=today,
+        )
+
+    assert rc == 0
+    from monitor.strategy_lifecycle import get_state
+    assert get_state(_STRATEGY, _UNIVERSE) == PromotionState.PAPER, (
+        "no_rollback=True must prevent state transition"
+    )
+    assert not rollback_log.exists(), "No rollback log when no_rollback=True"
+    # Streak still tracks (counter incremented to 5)
+    saved = _load_state(state_file)
+    assert saved[_KEY]["consecutive_breach_days"] == 5

@@ -520,6 +520,28 @@ LOCKEOF
         /usr/bin/flock -n /tmp/auto_promote_paper.lock bash -c             'cd /root/atlas && timeout 5m python3 scripts/auto_promote_paper_to_live.py'             >> /root/atlas/logs/auto_promote_paper.log 2>&1
         exit $?
         ;;
+    morning_lifecycle)
+        # ── Daily lifecycle checks (08:30 AEST = 22:30 UTC) ──────────────────
+        # Runs auto-promotion gate + divergence monitor together, daily before US open.
+        # Crontab entry: 30 22 * * * /root/atlas/scripts/pi-cron.sh morning_lifecycle
+        # (30 22 UTC = 08:30 AEST Brisbane, all year — no DST adjustment needed)
+        #
+        # Auto-promote: evaluates PAPER → LIVE gates; transitions on pass;
+        #   does NOT flip config/active/*.json (operator action required).
+        # Divergence monitor: tracks consecutive-day breach streaks;
+        #   rolls back PAPER → RESEARCH after 5 consecutive breach days;
+        #   demotes LIVE health state to WATCH after 5 days (Telegram alert).
+
+        echo "$(date -Iseconds) Running paper→live promotion gate check..." >> "$LOG_DIR/pi-cron.log"
+        cd "$PROJECT" && timeout 5m python3 scripts/auto_promote_paper_to_live.py \
+            >> "$LOG_DIR/auto_promote_$(date +%Y%m%d).log" 2>&1 || true
+
+        # ── Divergence monitor (PAPER auto-rollback + LIVE health demotion) ──
+        cd "$PROJECT" && timeout 5m python3 scripts/check_live_research_divergence.py \
+            >> "$LOG_DIR/divergence_check_$(date +%Y%m%d).log" 2>&1 || true
+
+        echo "$(date -Iseconds) morning_lifecycle checks complete" >> "$LOG_DIR/pi-cron.log"
+        ;;
     *)
         echo "Usage: $0 {premarket|postclose|research|research-status|recover|slippage-cal|health-check|reconcile|calibrate|rejected-signals|notify-rollup|auto_promote_paper} [market] [agent-id]"
         exit 1
