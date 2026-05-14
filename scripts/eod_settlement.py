@@ -137,6 +137,7 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                 broker = getattr(portfolio, '_broker', None)
                 broker_sell_ok = False
                 actual_exit_price = exit_price  # default to stop price
+                sell_result = None
 
                 if broker:
                     try:
@@ -215,7 +216,7 @@ def check_stop_losses(portfolio, prices, lows, trade_date, dry_run):
                             # sell_result may not exist when broker=None (backtest mode).
                             _eod_sl_fill_ts: str | None = (
                                 (getattr(sell_result, "raw", {}) or {}).get("filled_at")  # type: ignore[possibly-undefined]
-                                if broker and broker_sell_ok and "sell_result" in dir()
+                                if broker and broker_sell_ok and sell_result is not None
                                 else None
                             )
                             if _eod_sl_fill_ts and str(_eod_sl_fill_ts).lower() in ("none", "null", ""):
@@ -267,6 +268,7 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                 broker = getattr(portfolio, '_broker', None)
                 broker_sell_ok = False
                 actual_exit_price = exit_price  # default to take-profit price
+                sell_result = None
 
                 if broker:
                     try:
@@ -345,7 +347,7 @@ def check_take_profits(portfolio, prices, highs, trade_date, dry_run):
                             # sell_result may not exist when broker=None (backtest mode).
                             _eod_tp_fill_ts: str | None = (
                                 (getattr(sell_result, "raw", {}) or {}).get("filled_at")  # type: ignore[possibly-undefined]
-                                if broker and broker_sell_ok and "sell_result" in dir()
+                                if broker and broker_sell_ok and sell_result is not None
                                 else None
                             )
                             if _eod_tp_fill_ts and str(_eod_tp_fill_ts).lower() in ("none", "null", ""):
