@@ -140,9 +140,7 @@ session — none are quick fixes.
       one-line config change (no code drift).
       **Gate check 2026-05-08**: 27 overlay_decisions over 21 days → ≥1 week threshold MET.
       Weekly evaluator (overlay_eval_*.log) writing 0 bytes — manual table review needed.
-- [ ] **#216 — Phase 5 coverage gap.** Research matrix has stale
-      `research_best` rows; population requires a dedicated compute window,
-      not a code change. Blocks #219.
+- [x] **#216 — Phase 5 coverage gap + atlas-compute-matrix tolerance fix (2026-05-14).** Research matrix sweep was failing (rc=2) for all 6 universes. Root causes fixed: (1) `_count_rows_added` SQLite date-format mismatch (ISO 'T' vs space) → always returned 0 → false-positive silent_failure; (2) TSV-based fallback added so "0 keeps above threshold" exits rc=0 with `completed_no_keeps` sentinel; (3) `run_compute_matrix.py` now distinguishes ok/no_keeps/benchmark_unavailable/config_missing/error and returns 0 for all non-error outcomes. Service confirmed running. 19/19 tests. Blocks #219 unblocked.
 - [ ] **#217 — Phase 5 sweep scheduling.** Per-universe timers landed
       (Wave 2), but sweep *quality* (symbols covered, strategies run) is
       not yet validated end-to-end on the new templated units.

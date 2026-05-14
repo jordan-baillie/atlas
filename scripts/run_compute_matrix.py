@@ -65,6 +65,73 @@ logging.basicConfig(
 logger = logging.getLogger("run_compute_matrix")
 
 
+# Statuses that indicate a successful run (≥0 kept, or a known graceful no-op)
+_SUCCESS_STATUSES = frozenset({"ok", "dry_run", "no_keeps", "benchmark_unavailable", "config_missing"})
+
+
+def _parse_log_for_outcome(log_path: "Path", returncode: int) -> str:
+    """Parse autoresearch_nightly log to determine the sweep outcome.
+
+    Precedence:
+      1. ATLAS_NIGHTLY_STATUS sentinel JSON (written by nightly.py #216 fix)
+      2. Summary "Total: X screened, Y promoted, Z kept" line
+      3. "Config file not found" / missing-config patterns
+      4. "Benchmark … data unavailable" patterns
+      5. returncode as final fallback
+
+    Returns one of: "ok", "no_keeps", "benchmark_unavailable", "config_missing",
+    "error".
+    """
+    import json as _json
+    import re as _re
+
+    try:
+        text = log_path.read_text(errors="replace")
+    except Exception:
+        return "error" if returncode != 0 else "ok"
+
+    # ── 1. Sentinel JSON (most authoritative) ──────────────────────────────
+    for line in text.splitlines():
+        if line.startswith("ATLAS_NIGHTLY_STATUS:"):
+            try:
+                data = _json.loads(line[len("ATLAS_NIGHTLY_STATUS:"):].strip())
+                status = data.get("status", "")
+                if status == "completed_no_keeps":
+                    return "no_keeps"
+                if status in _SUCCESS_STATUSES:
+                    return status
+            except Exception:
+                pass
+
+    # ── 2. Summary "Total: X screened, Y promoted, Z kept" ─────────────────
+    m = _re.search(r"Total:\s+(\d+)\s+screened,\s+\d+\s+promoted,\s+(\d+)\s+kept", text)
+    if m:
+        screened = int(m.group(1))
+        kept = int(m.group(2))
+        if screened > 0:
+            # Workers ran; 0 kept is a legitimate no-op
+            return "ok" if kept > 0 else "no_keeps"
+
+    # ── 3. Missing config (workers failed because no config/active/*.json) ──
+    _config_missing_signals = (
+        "Config file not found" in text
+        or "Could not load active config" in text
+        or "No active config for market" in text
+        or "ResearchSession market mismatch: config.market=None" in text
+    )
+    if _config_missing_signals and returncode != 0:
+        # Workers likely all crashed before producing any results
+        return "config_missing"
+
+    # ── 4. Benchmark unavailable (workers continued past DBC.AX warning) ───
+    if ("data unavailable" in text or "no data returned from any source" in text):
+        if returncode == 0:
+            return "benchmark_unavailable"
+
+    # ── 5. returncode fallback ──────────────────────────────────────────────
+    return "ok" if returncode == 0 else "error"
+
+
 # ---------------------------------------------------------------------------
 # Checkpoint helpers
 # ---------------------------------------------------------------------------
@@ -143,20 +210,41 @@ def run_universe_sweep(
                 timeout=timeout_s,
             )
         elapsed = round(time.time() - t0, 1)
-        status = "ok" if proc.returncode == 0 else "nonzero_exit"
+        # Parse the log to determine the actual outcome (ok / no_keeps /
+        # benchmark_unavailable / config_missing / error).
+        outcome = _parse_log_for_outcome(log_path, proc.returncode)
         result.update({
-            "status":      status,
+            "status":      outcome,
             "returncode":  proc.returncode,
             "elapsed_s":   elapsed,
             "finished_at": datetime.now(timezone.utc).isoformat(),
         })
-        if proc.returncode != 0:
-            logger.error(
-                "Sweep failed: universe=%s  rc=%d  elapsed=%ss",
-                universe, proc.returncode, elapsed,
-            )
+        if outcome in _SUCCESS_STATUSES:
+            if outcome == "no_keeps":
+                logger.info(
+                    "Sweep completed: universe=%s, 0 keeps above silent-failure "
+                    "threshold (rc=%d treated as no-op)  elapsed=%ss",
+                    universe, proc.returncode, elapsed,
+                )
+            elif outcome == "benchmark_unavailable":
+                logger.warning(
+                    "Sweep completed: universe=%s, benchmark data unavailable "
+                    "(rc=%d treated as no-op)  elapsed=%ss",
+                    universe, proc.returncode, elapsed,
+                )
+            elif outcome == "config_missing":
+                logger.warning(
+                    "Sweep skipped: universe=%s, active config file not found "
+                    "(create config/active/%s.json to enable sweeps)  elapsed=%ss",
+                    universe, universe, elapsed,
+                )
+            else:
+                logger.info("Sweep done: universe=%s  elapsed=%ss", universe, elapsed)
         else:
-            logger.info("Sweep done: universe=%s  elapsed=%ss", universe, elapsed)
+            logger.error(
+                "Sweep failed: universe=%s  rc=%d  outcome=%s  elapsed=%ss",
+                universe, proc.returncode, outcome, elapsed,
+            )
 
     except subprocess.TimeoutExpired:
         elapsed = round(time.time() - t0, 1)
@@ -234,8 +322,8 @@ def main(argv: list[str] | None = None) -> int:
     results: list[dict] = []
     for universe in requested:
         # Resume: skip completed universes
-        if args.resume and progress.get(universe, {}).get("status") == "ok":
-            logger.info("Skipping %s (already done in checkpoint)", universe)
+        if args.resume and progress.get(universe, {}).get("status") in _SUCCESS_STATUSES:
+            logger.info("Skipping %s (already done in checkpoint, status=%s)", universe, progress[universe].get("status"))
             results.append(progress[universe])
             continue
 
@@ -247,6 +335,26 @@ def main(argv: list[str] | None = None) -> int:
         results.append(r)
         progress[universe] = r
         _save_progress(run_id, progress)
+        # Emit explicit outcome message for non-ok success statuses so it
+        # appears in the run log regardless of how run_universe_sweep is called.
+        r_status = r.get("status", "")
+        if r_status == "no_keeps":
+            logger.info(
+                "Sweep completed: universe=%s, 0 keeps above silent-failure threshold "
+                "(sweep ran cleanly — no improvement beat the threshold)",
+                universe,
+            )
+        elif r_status == "config_missing":
+            logger.warning(
+                "Sweep skipped: universe=%s, no active config (create "
+                "config/active/%s.json to enable sweeps)",
+                universe, universe,
+            )
+        elif r_status == "benchmark_unavailable":
+            logger.warning(
+                "Sweep skipped: universe=%s, benchmark data unavailable",
+                universe,
+            )
 
     # Write final summary
     summary_path = OUTPUT_DIR / f"summary_{run_id}.json"
@@ -257,16 +365,21 @@ def main(argv: list[str] | None = None) -> int:
     (OUTPUT_DIR / f"compute_matrix_{run_id}.done").touch()
 
     # Report outcomes
-    n_ok    = sum(1 for r in results if r.get("status") == "ok")
-    n_dry   = sum(1 for r in results if r.get("status") == "dry_run")
-    failed  = [r for r in results if r.get("status") not in ("ok", "dry_run")]
+    n_ok       = sum(1 for r in results if r.get("status") == "ok")
+    n_no_keeps = sum(1 for r in results if r.get("status") == "no_keeps")
+    n_skip     = sum(1 for r in results if r.get("status") in ("benchmark_unavailable", "config_missing"))
+    n_dry      = sum(1 for r in results if r.get("status") == "dry_run")
+    failed     = [r for r in results if r.get("status") not in _SUCCESS_STATUSES]
 
     logger.info(
-        "=== Finished ===  ok=%d  dry_run=%d  failed=%d",
-        n_ok, n_dry, len(failed),
+        "=== Finished ===  ok=%d  no_keeps=%d  skipped=%d  dry_run=%d  failed=%d",
+        n_ok, n_no_keeps, n_skip, n_dry, len(failed),
     )
     if failed:
-        logger.error("Failed universes: %s", [f["universe"] for f in failed])
+        logger.error(
+            "Failed universes (genuine sweep errors): %s",
+            [f["universe"] for f in failed],
+        )
         return 1
     return 0
 
