@@ -125,6 +125,22 @@ class LivePortfolio:
                 self.closed_trades = state.get("closed_trades", [])
                 self.closed_trades_quarantine = state.get("closed_trades_quarantine", [])
                 self.equity_history = state.get("equity_history", [])
+                # Dedup historical duplicates by date (last-wins semantics matches
+                # record_equity() within-session behavior + SQLite INSERT OR REPLACE).
+                # Legacy state files (pre-8ed3b044) may contain multiple rows per date;
+                # this self-heals on first load without any manual migration.
+                if self.equity_history:
+                    _seen: dict[str, dict] = {}
+                    for _row in self.equity_history:
+                        _d = _row.get("date")
+                        if _d:
+                            _seen[_d] = _row  # last wins
+                    if len(_seen) != len(self.equity_history):
+                        logger.info(
+                            "_load_local_state %s: deduped equity_history %d → %d rows",
+                            self.market_id, len(self.equity_history), len(_seen),
+                        )
+                    self.equity_history = list(_seen.values())
                 self.daily_high_water = state.get("daily_high_water", self.starting_equity)
                 self.daily_high_water_date = state.get("daily_high_water_date", None)
                 self.halted = state.get("halted", False)
