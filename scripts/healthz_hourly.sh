@@ -388,7 +388,7 @@ fi
 # INFO logs have been quieted, so the old journald-silence check fired false
 # positives. Use the heartbeat table (same source cronus-watchdog uses) —
 # alert if the last heartbeat is >5 minutes old.
-CRONUS_DB="/root/cronus/data/cronus_paper_state.db"
+CRONUS_DB="/root/_archive/cronus-2026-05-18/data/cronus_paper_state.db"
 CRONUS_HB_STALE_SECS=300   # 5 minutes — matches cronus-watchdog convention
 
 check_cronus_hb() {

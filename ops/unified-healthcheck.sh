@@ -110,7 +110,7 @@ check_large_logs() {
     local count=0
     local log_dirs=(
         "/root/atlas/logs"
-        "/root/cronus/logs"
+        "/root/_archive/cronus-2026-05-18/logs"
         "/tmp"
         "/var/log"
     )
@@ -139,7 +139,7 @@ check_nrl_cron() {
 get_atlas_equity() {
     # Read from portfolio snapshots JSONL
     local sp500_snapshots="/root/atlas/logs/portfolio_snapshots.jsonl"
-    local asx_snapshots="/root/cronus/logs/portfolio_snapshots.jsonl"
+    local asx_snapshots="/root/_archive/cronus-2026-05-18/logs/portfolio_snapshots.jsonl"
     
     local sp500_equity="N/A"
     local asx_equity="N/A"

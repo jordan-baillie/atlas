@@ -60,13 +60,13 @@ get_cronus_data() {
     local service_status="Unknown"
     
     # Check if paper trading DB exists
-    if [[ -f /root/cronus/data/cronus_paper_state.db ]]; then
+    if [[ -f /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db ]]; then
         # Count open positions in paper trading
-        active_positions=$(sqlite3 /root/cronus/data/cronus_paper_state.db \
+        active_positions=$(sqlite3 /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db \
             "SELECT COUNT(*) FROM positions WHERE status='open';" 2>/dev/null || echo "0")
         
         # Get paper PnL (if available)
-        paper_pnl=$(sqlite3 /root/cronus/data/cronus_paper_state.db \
+        paper_pnl=$(sqlite3 /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db \
             "SELECT ROUND(SUM(unrealized_pnl), 2) FROM positions WHERE status='open';" 2>/dev/null || echo "N/A")
     fi
     
@@ -116,8 +116,8 @@ get_infrastructure_data() {
         grep -ci 'Started\|Stopped\|Restarted' || echo "0")
     
     # Check for IB Gateway disconnections in logs
-    if [[ -d /root/cronus/logs ]]; then
-        ib_disconnections=$(find /root/cronus/logs -name "*.log" -type f \
+    if [[ -d /root/_archive/cronus-2026-05-18/logs ]]; then
+        ib_disconnections=$(find /root/_archive/cronus-2026-05-18/logs -name "*.log" -type f \
             -newermt "$START_DATE" -exec grep -ci 'disconnected\|connection lost' {} + 2>/dev/null | \
             awk '{sum+=$1} END {print sum+0}')
     fi

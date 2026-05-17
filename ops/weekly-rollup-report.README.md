@@ -71,13 +71,13 @@ Generated: YYYY-MM-DD HH:MM AEST
 | Atlas Equity | Latest positions JSON | `/root/atlas/data/position_monitor/positions.json` |
 | Atlas Trades | Trade ledger | `/root/atlas/journal/trade_ledger.json` |
 | Atlas Errors | Log files (7 days) | `/root/atlas/logs/*.log` |
-| Cronus Positions | Paper trading DB | `/root/cronus/data/cronus_paper_state.db` |
+| Cronus Positions | Paper trading DB | `/root/_archive/cronus-2026-05-18/data/cronus_paper_state.db` |
 | Cronus Status | Systemd service | `systemctl status cronus-trader.service` |
 | NRL Submit | Cron logs | `/root/NRL-Predict/logs/nrl-cron-tips.log.1` |
 | Service Restarts | Journal (7 days) | `journalctl --since "$START_DATE"` |
 | Failed Services | Systemd | `systemctl list-units --state=failed` |
 | Disk Usage | Filesystem | `df -h /` |
-| IB Disconnections | Cronus logs (7 days) | `/root/cronus/logs/*.log` |
+| IB Disconnections | Cronus logs (7 days) | `/root/_archive/cronus-2026-05-18/logs/*.log` |
 | Backup Status | Restic (if configured) | `restic snapshots` |
 | Action Items | Task file | `/root/tasks/portfolio-gap-analysis-2026-q1.md` |
 
