@@ -71,6 +71,21 @@ def _should_send_alert(ticker: str) -> bool:
         return True
 
 
+def _send_telegram_bg(msg: str) -> None:
+    """Fire a Telegram CRITICAL alert in a daemon thread.
+
+    Extracted as a module-level function so tests can patch it cleanly via
+    ``patch("brokers.price_arbiter._send_telegram_bg", ...)``.
+    """
+    def _run() -> None:
+        try:
+            from utils.telegram import send_message
+            send_message(f"\U0001f6a8 {msg}")
+        except Exception as e:
+            logger.warning("telegram alert failed: %s", e)
+    threading.Thread(target=_run, daemon=True, name="price_arbiter_alert").start()
+
+
 def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
     """Return the authoritative price. Updates halt set if spread > halt_pct."""
     cfg = _load_config()
@@ -105,15 +120,7 @@ def arbitrate(ticker: str, tiingo_price: float, alpaca_price: float) -> float:
         if within_rth:
             logger.critical(msg)
             if _should_send_alert(ticker):
-                def _tg_alert_send():
-                    try:
-                        from utils.telegram import send_message
-                        send_message(f"\U0001f6a8 {msg}")
-                    except Exception as e:
-                        logger.warning("telegram alert failed: %s", e)
-                threading.Thread(
-                    target=_tg_alert_send, daemon=True, name="price_arbiter_alert"
-                ).start()
+                _send_telegram_bg(msg)
         else:
             logger.warning(
                 "price divergence outside RTH — ticker=%s tiingo=$%.2f alpaca=$%.2f spread=%.2f%% (not alerting)",
