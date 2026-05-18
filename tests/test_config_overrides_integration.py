@@ -167,36 +167,38 @@ def test_audit_trail_complete_flow(client):
 
 
 def test_strategy_override_affects_get_active_config(client):
-    """POST disable connors_rsi2 on sp500 → cfg['strategies']['connors_rsi2']['enabled'] == False."""
-    # sp500 has connors_rsi2 enabled in raw config
+    """POST disable momentum_breakout on sp500 → cfg['strategies']['momentum_breakout']['enabled'] == False."""
+    # sp500 has momentum_breakout enabled in raw config
+    # (connors_rsi2 was decommissioned 2026-05-18 per #340 — no longer a valid enabled-strategy anchor)
     from utils.config import get_raw_config
     raw = get_raw_config("sp500")
-    assert raw.get("strategies", {}).get("connors_rsi2", {}).get("enabled") is True
+    assert raw.get("strategies", {}).get("momentum_breakout", {}).get("enabled") is True
 
     r = _post_strategy(
-        client, "sp500", "connors_rsi2", "disabled",
-        reason="Integration test: disabling connors_rsi2 on sp500"
+        client, "sp500", "momentum_breakout", "disabled",
+        reason="Integration test: disabling momentum_breakout on sp500"
     )
     assert r.status_code == 200
 
     from utils.config import get_active_config
     cfg = get_active_config("sp500")
-    assert cfg["strategies"]["connors_rsi2"]["enabled"] is False
+    assert cfg["strategies"]["momentum_breakout"]["enabled"] is False
     assert cfg.get("_overrides_applied") is True
 
 
 def test_apply_overrides_false_bypasses(client):
     """get_active_config(market_id, apply_overrides=False) returns raw even with active override."""
     r = _post_strategy(
-        client, "sp500", "connors_rsi2", "disabled",
+        client, "sp500", "momentum_breakout", "disabled",
         reason="Integration test: verifying bypass with apply_overrides=False"
     )
     assert r.status_code == 200
 
     from utils.config import get_active_config
     raw = get_active_config("sp500", apply_overrides=False)
-    # Raw should still show connors_rsi2 as enabled (the original JSON config)
-    assert raw["strategies"]["connors_rsi2"]["enabled"] is True
+    # Raw should still show momentum_breakout as enabled (the original JSON config)
+    # (connors_rsi2 was decommissioned 2026-05-18 per #340 — no longer a valid anchor here)
+    assert raw["strategies"]["momentum_breakout"]["enabled"] is True
     assert "_overrides_applied" not in raw
 
 
