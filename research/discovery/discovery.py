@@ -413,7 +413,9 @@ def _extract_specs(papers: list) -> list:
     PAPERS_DIR.mkdir(parents=True, exist_ok=True)
     prompt = prompt_file.read_text()
     prompt = prompt.replace("{papers_dir}", str(PAPERS_DIR.resolve()))
-    prompt = prompt.replace("{papers_json}", json.dumps(papers, indent=2))
+    # Include vision-extracted figure summaries in the prompt context (#256)
+    papers_for_prompt = papers  # already enriched in place with vision_summary keys
+    prompt = prompt.replace("{papers_json}", json.dumps(papers_for_prompt, indent=2))
 
     result = _run_pi(prompt, mcp=False, allowed_tools="Bash,Read")
 
@@ -759,6 +761,13 @@ def discover_daily() -> DailyReport:
                 mark_seen(url, "filtered")
     except Exception as exc:
         logger.warning("URL mark_seen (filtered) failed: %s", exc, exc_info=True)
+
+    # ── Step 4.5: vision pre-pass — extract figure content from PDFs (#256) ──
+    try:
+        from research.discovery.pdf_vision import enrich_papers_with_vision
+        enrich_papers_with_vision(filtered_papers, max_pages=8)
+    except Exception as e:
+        logger.warning("vision pre-pass failed (non-fatal): %s", e)
 
     # ── Step 5: extract specs ─────────────────────────────────────────────
     specs = []
