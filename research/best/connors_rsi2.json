@@ -90,10 +90,10 @@
     "runtime_s": 342.1
   },
   "description": "max_hold_days: 10 \u2192 5",
-  "experiments_run": 241,
+  "experiments_run": 282,
   "experiments_kept": 19,
   "updated_at": "2026-05-05T13:56:22.073366+00:00",
-  "is_solo": false,
-  "solo_fraction": 0.1096,
-  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: momentum_breakout (89.0%). True solo performance unknown \u2014 see task #327."
+  "is_solo": true,
+  "solo_fraction": 1.0,
+  "solo_sharpe_clean": -0.2433
 }
