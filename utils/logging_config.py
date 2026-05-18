@@ -90,8 +90,10 @@ class TelegramErrorCollector(logging.Handler):
 
         try:
             from utils.telegram import send_message, _esc
-        except Exception:
-            return  # can't send — silently give up
+        except ImportError as exc:
+            # Can't import telegram at process exit — print to stderr (logger may be torn down).
+            print(f"[TelegramErrorCollector] Could not import telegram module: {exc} — skipping batch alert", file=sys.stderr)
+            return
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
         n = len(records)
@@ -172,7 +174,8 @@ class SQLiteErrorWriter(logging.Handler):
         try:
             import socket
             return socket.gethostname()
-        except Exception:
+        except OSError:
+            # Hostname unavailable in restricted environments — acceptable silent failure.
             return None
 
     def emit(self, record: logging.LogRecord) -> None:
@@ -181,10 +184,10 @@ class SQLiteErrorWriter(logging.Handler):
             return
         try:
             self._write_record(record)
-        except Exception:
+        except Exception as exc:
             # Never crash the calling process due to a logging-handler failure.
-            # Silently drop — we can't even safely log the error.
-            pass
+            # Use handleError (Python logging convention) to route to sys.stderr without recursion.
+            self.handleError(record)
 
     def _write_record(self, record: logging.LogRecord) -> None:
         from utils.error_fingerprint import compute_fingerprint  # avoids circular import
@@ -199,8 +202,11 @@ class SQLiteErrorWriter(logging.Handler):
             try:
                 import traceback as _tb
                 tb = "".join(_tb.format_exception(*record.exc_info))[:8000]
-            except Exception:
-                tb = None
+            except Exception as exc:
+                # traceback.format_exception failed (e.g., exotic exception type) — degrade gracefully.
+                # Can't use logger here (inside emit handler — recursion risk). Print to stderr.
+                tb = f"<traceback format error: {exc}>"
+                print(f"[SQLiteErrorWriter] traceback.format_exception failed: {exc}", file=sys.stderr)
 
         fp = compute_fingerprint(
             exc_type=exc_type,
@@ -381,9 +387,10 @@ def setup_logging(
         try:
             _sqlite_writer = SQLiteErrorWriter(script_name=script_name)
             root.addHandler(_sqlite_writer)
-        except Exception:
+        except Exception as exc:
             # Never let logging setup fail because SQLite is unavailable.
-            pass
+            # Print to stderr — logger isn't fully configured yet at this point.
+            print(f"[setup_logging] SQLiteErrorWriter init failed (non-fatal): {exc}", file=sys.stderr)
 
     # Suppress noisy third-party loggers
     for noisy in ["urllib3", "peewee", "httpx", "httpcore"]:

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal, Optional
@@ -104,7 +105,8 @@ def _config_state_for_universe(market_id: str) -> str:
     try:
         raw = get_raw_config(market_id)
         return _effective_state_for_universe(market_id, raw)
-    except Exception:
+    except Exception as exc:
+        logger.warning("_config_state_for_universe(%s) failed: %s", market_id, exc, exc_info=True)
         return "unknown"
 
 
@@ -123,8 +125,8 @@ def _get_active_override(scope: str, key: str) -> Optional[dict]:
                 (scope, key),
             ).fetchone()
         return dict(row) if row else None
-    except Exception as e:
-        logger.warning("Override lookup failed for %s/%s: %s", scope, key, e)
+    except Exception:
+        logger.warning("Override lookup failed for %s/%s", scope, key, exc_info=True)
         return None
 
 
@@ -134,7 +136,8 @@ def _get_current_effective_universe_state(market_id: str) -> str:
     try:
         cfg = get_active_config(market_id)
         return _effective_state_for_universe(market_id, cfg)
-    except Exception:
+    except Exception as exc:
+        logger.warning("_get_current_effective_universe_state(%s) failed: %s", market_id, exc, exc_info=True)
         return "unknown"
 
 
@@ -147,7 +150,8 @@ def _is_production(market_id: str) -> bool:
             cfg.get("trading", {}).get("mode") == "live"
             and bool(cfg.get("trading", {}).get("live_enabled", False))
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("_is_production(%s) failed: %s", market_id, exc, exc_info=True)
         return False
 
 
@@ -166,7 +170,8 @@ def _open_position_count(market_id: str) -> int:
                 (market_id,),
             ).fetchone()
         return int(row["n"]) if row else 0
-    except Exception:
+    except sqlite3.Error as exc:
+        logger.warning("_open_position_count(%s) DB error: %s", market_id, exc, exc_info=True)
         return 0
 
 
@@ -181,7 +186,8 @@ def _open_positions_by_strategy(market_id: str, strategy: str) -> int:
                 (market_id, strategy),
             ).fetchone()
         return int(row["n"]) if row else 0
-    except Exception:
+    except sqlite3.Error as exc:
+        logger.warning("_open_positions_by_strategy(%s, %s) DB error: %s", market_id, strategy, exc, exc_info=True)
         return 0
 
 
@@ -200,7 +206,8 @@ def _trades_30d_and_pnl(market_id: str, strategy: str) -> tuple[int, float]:
                 (market_id, strategy, cutoff),
             ).fetchone()
         return int(row["n"]), float(row["pnl"])
-    except Exception:
+    except sqlite3.Error as exc:
+        logger.warning("_trades_30d_and_pnl(%s, %s) DB error: %s", market_id, strategy, exc, exc_info=True)
         return 0, 0.0
 
 
@@ -214,7 +221,8 @@ def _last_trade_at(market_id: str) -> Optional[str]:
                 (market_id,),
             ).fetchone()
         return row["d"] if row and row["d"] else None
-    except Exception:
+    except sqlite3.Error as exc:
+        logger.warning("_last_trade_at(%s) DB error: %s", market_id, exc, exc_info=True)
         return None
 
 
@@ -273,16 +281,16 @@ def admin_get_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 ).fetchall()
             for r in rows:
                 open_pos_by_market[r["universe"]] = r["n"]
-        except Exception as e:
-            logger.warning("Batch open-pos query failed: %s", e)
+        except Exception:
+            logger.warning("Batch open-pos query failed", exc_info=True)
 
     universes = []
     for mid in market_ids:
         try:
             effective_cfg = get_active_config(mid)
             raw_cfg = get_raw_config(mid)
-        except Exception as e:
-            logger.warning("Config load failed for %s: %s", mid, e)
+        except Exception:
+            logger.warning("Config load failed for %s", mid, exc_info=True)
             continue
 
         effective_state = _effective_state_for_universe(mid, effective_cfg)
@@ -301,7 +309,7 @@ def admin_get_universes(_auth: HTTPBasicCredentials = Depends(check_auth)):
                 if _eq_r:
                     current_equity = float(_eq_r[0])
         except Exception:
-            pass
+            logger.debug("current_equity lookup failed for %s", mid, exc_info=True)
         starting_equity = effective_cfg.get("risk", {}).get("starting_equity")
 
         universes.append({
@@ -346,6 +354,7 @@ def admin_get_strategies(_auth: HTTPBasicCredentials = Depends(check_auth)):
             effective_cfg = get_active_config(mid)
             raw_cfg = get_raw_config(mid)
         except Exception:
+            logger.warning("Config load failed for market %s in admin_get_strategies", mid, exc_info=True)
             continue
 
         raw_strats = raw_cfg.get("strategies", {})
@@ -557,6 +566,7 @@ async def admin_set_strategy_state(
     try:
         raw_cfg = get_raw_config(market_id)
     except Exception:
+        logger.warning("Config not found for %s in admin_set_strategy_state", market_id, exc_info=True)
         raise HTTPException(status_code=404, detail=f"Config not found for {market_id}")
 
     if strategy not in raw_cfg.get("strategies", {}):
@@ -688,6 +698,7 @@ async def admin_revert_override(
                     to_state = _effective_state_for_universe(key, raw)
                     source_label = "config"
                 except Exception:
+                    logger.warning("Failed to determine revert to_state for universe %s", key, exc_info=True)
                     to_state = "unknown"
                     source_label = "config"
             else:
@@ -700,6 +711,7 @@ async def admin_revert_override(
                     to_state = "enabled" if raw_en else "disabled"
                     source_label = "config"
                 except Exception:
+                    logger.warning("Failed to determine revert to_state for strategy %s", key, exc_info=True)
                     to_state = "unknown"
                     source_label = "config"
 

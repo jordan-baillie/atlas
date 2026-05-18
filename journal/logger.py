@@ -44,7 +44,8 @@ class DecisionJournal:
             try:
                 with open(self.FILE) as f:
                     return json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                logger.warning("DecisionJournal failed to load %s: %s", self.FILE, exc, exc_info=True)
                 return []
         return []
 
@@ -125,8 +126,8 @@ class DecisionJournal:
                     f"🚨 SIGNAL WRITE FAILURE [{entry.get('market_id', '?')}] "
                     f"{signal.ticker}/{entry.get('strategy', '?')}: {_db_exc}"
                 )
-            except Exception:
-                pass  # Telegram alert is best-effort; never crash signal path
+            except Exception as _tg_exc:
+                logger.debug("Telegram signal-write alert failed (best-effort): %s", _tg_exc)
         logger.info(f"Decision recorded: {signal.ticker} ({signal.strategy}) -> {action}")
 
     def get_entries(self, ticker: str = None, strategy: str = None,
@@ -183,7 +184,8 @@ class TradeLedger:
             try:
                 with open(self.FILE) as f:
                     return json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                logger.warning("DecisionJournal failed to load %s: %s", self.FILE, exc, exc_info=True)
                 return []
         return []
 
@@ -380,7 +382,8 @@ class MistakeLog:
             try:
                 with open(self.FILE) as f:
                     return json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                logger.warning("MistakeLog failed to load %s: %s", self.FILE, exc, exc_info=True)
                 return []
         return []
 
@@ -559,7 +562,8 @@ class WeeklySummary:
             try:
                 with open(self.FILE) as f:
                     summaries = json.load(f)
-            except Exception:
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                logger.warning("WeeklySummary failed to load existing %s: %s", self.FILE, exc, exc_info=True)
                 summaries = []
         summaries.append(summary)
         with open(self.FILE, "w") as f:

@@ -195,7 +195,7 @@ def _count_rows_added(universe: str, session_start_ts: float) -> int:
             row = cur.fetchone()
             return int(row[0]) if row else 0
     except Exception as exc:
-        _logger.error("_count_rows_added failed: %s", exc)
+        _logger.error("_count_rows_added failed: %s", exc, exc_info=True)
         return 0
 
 
@@ -235,10 +235,10 @@ def _resolve_min_rows(universe: str) -> int:
         dynamic_floor = max(3, enabled * MIN_ROWS_PER_STRATEGY)
         operator_floor = MIN_ROWS_PER_UNIVERSE.get(universe, DEFAULT_MIN_ROWS)
         return max(operator_floor, dynamic_floor)
-    except Exception as exc:
+    except Exception:
         _logger.warning(
-            "_resolve_min_rows(%s) failed: %s — falling back to static threshold",
-            universe, exc,
+            "_resolve_min_rows(%s) failed — falling back to static threshold",
+            universe, exc_info=True,
         )
         return MIN_ROWS_PER_UNIVERSE.get(universe, DEFAULT_MIN_ROWS)
 
@@ -774,7 +774,7 @@ def run_nightly(
                     end_session(session_id, experiments_run=total_screened,
                                 experiments_kept=total_kept, status="completed")
                 except Exception:
-                    pass
+                    _logger.warning("end_session failed in completed_no_keeps path", exc_info=True)
             return result
 
         silent_failure = db_silent  # Only truly silent if BOTH DB=0 and TSV=0
@@ -807,7 +807,7 @@ def run_nightly(
                     end_session(session_id, experiments_run=total_screened,
                                 experiments_kept=total_kept, status="silent_failure")
                 except Exception:
-                    pass
+                    _logger.warning("end_session failed in silent_failure path", exc_info=True)
             return result
 
         # Normal completion path
@@ -821,7 +821,7 @@ def run_nightly(
             try:
                 end_session(session_id, experiments_run=0, experiments_kept=0, status="failed")
             except Exception:
-                pass
+                _logger.warning("end_session failed in exception cleanup path", exc_info=True)
         raise
 
 

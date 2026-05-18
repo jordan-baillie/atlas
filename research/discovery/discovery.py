@@ -130,8 +130,8 @@ def _run_pi(
     except PiSubprocessError:
         logger.warning("Pi CLI not working — skipping LLM call. Ensure pi is installed and configured.")
         return {"error": "not_authenticated", "raw": "Pi CLI not working"}
-    except Exception:
-        pass  # If auth check fails, try the actual call anyway
+    except Exception as exc:
+        logger.debug("Pi CLI auth pre-check failed (will attempt main call anyway): %s", exc, exc_info=True)
 
     # Note: pi CLI does not support --mcp-config; MCP browsing tools not available
     # The LLM will use bash/read tools for web access instead
@@ -202,9 +202,9 @@ def _run_pi(
             return {"error": "pi not found", "raw": ""}
         logger.error("_run_pi error: %s", e)
         return {"error": str(e), "raw": ""}
-    except Exception as e:
-        logger.error("_run_pi error: %s", e)
-        return {"error": str(e), "raw": ""}
+    except Exception as exc:
+        logger.error("_run_pi unexpected error", exc_info=True)
+        return {"error": str(exc), "raw": ""}
 
 
 # ─── Browse helpers ──────────────────────────────────────────────────────────
@@ -488,9 +488,9 @@ def _generate_strategies(specs: list) -> list:
                 "quick_check %s: alive=%s reason=%s",
                 strategy_name, qc_result.get("alive"), qc_result.get("reason", "")
             )
-        except Exception as e:
-            qc_result = {"alive": False, "reason": str(e)}
-            logger.warning("quick_check error for %s: %s", strategy_name, e)
+        except Exception as exc:
+            qc_result = {"alive": False, "reason": str(exc)}
+            logger.warning("quick_check error for %s", strategy_name, exc_info=True)
 
         results.append({
             "spec": spec,
@@ -529,8 +529,8 @@ def _review_backlog() -> list:
                 for spec in entry.get("specs", []):
                     if isinstance(spec, dict) and spec.get("strategy_name"):
                         retry_specs.append(spec)
-    except Exception as e:
-        logger.warning("_review_backlog error: %s", e)
+    except Exception:
+        logger.warning("_review_backlog error", exc_info=True)
 
     logger.info("_review_backlog: found %d specs to retry", len(retry_specs))
     return retry_specs
@@ -608,8 +608,8 @@ def _send_telegram_digest(report: DailyReport) -> None:
                     f"{mo['strategies_generated']} strategies | "
                     f"{mo['strategies_passed']} passed QC"
                 )
-        except Exception:
-            pass
+        except (OSError, json.JSONDecodeError, KeyError) as exc:
+            logger.debug("Monthly stats load failed for digest: %s", exc, exc_info=True)
 
     generated_list = ""
     if report.strategies_generated:
@@ -757,8 +757,8 @@ def discover_daily() -> DailyReport:
             url = p.get("url", p.get("pdf_url", p.get("arxiv_id", "")))
             if url:
                 mark_seen(url, "filtered")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("URL mark_seen (filtered) failed: %s", exc, exc_info=True)
 
     # ── Step 5: extract specs ─────────────────────────────────────────────
     specs = []
@@ -793,8 +793,8 @@ def discover_daily() -> DailyReport:
         specs_file = SPECS_DIR / f"specs_{today}.json"
         try:
             specs_file.write_text(json.dumps(unique_specs, indent=2))
-        except Exception:
-            pass
+        except (OSError, TypeError) as exc:
+            logger.warning("Failed to write specs file %s: %s", specs_file, exc, exc_info=True)
 
     # ── Step 7: generate strategies ───────────────────────────────────────
     gen_results = []
