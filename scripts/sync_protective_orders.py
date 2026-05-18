@@ -73,6 +73,9 @@ _DEFAULT_BROKER: dict[str, str] = {
 # State file tracking stop orders observed in "held" status
 _HELD_STATE_FILE = PROJECT / "data" / "stops_held_state.json"
 
+# Broker position state directory — isolated by tests via monkeypatching
+_BROKER_STATE_DIR: Path = PROJECT / "brokers" / "state"
+
 # Max consecutive held-cancel-resubmit cycles before giving up on a ticker.
 # After this many attempts, the ticker is flagged permanently_skipped and
 # the operator is alerted at most once per calendar day.
@@ -652,6 +655,81 @@ def _pdt_should_skip(ticker: str, market_id: str, pdt_state: dict) -> bool:
 # ═══════════════════════════════════════════════════════════════
 
 # Actions from sync_all_protective_orders that place a NEW operative order.
+def _apply_state_file_consistency(
+    market_id: str,
+    ticker_ops: dict,
+    *,
+    state_dir: "Path | None" = None,
+) -> None:
+    """Persist resolved stop/tp broker order IDs to live_{market_id}.json position state.
+
+    Reads the live state file, updates ``stop_order_id`` / ``tp_order_id`` on
+    each position whose ticker appears in *ticker_ops*, and writes back.  Only
+    non-empty IDs are written; existing values are never clobbered with blank
+    strings — so a position whose order ID is unknown this cycle keeps its
+    previously-recorded value.
+
+    This ensures the next sync cycle's "already exists" detection can find
+    the protective order in the state file instead of re-querying the broker
+    on every run.
+
+    Non-fatal — any I/O or JSON error is logged as WARNING and swallowed.
+
+    Args:
+        market_id:  Market identifier (e.g. ``"sp500"``).
+        ticker_ops: ``{ticker: {"stop": order_id, "tp": order_id}}`` resolved
+                    by scanning all live broker open orders.
+        state_dir:  Override the broker state directory (tests only).
+    """
+    _dir = state_dir or _BROKER_STATE_DIR
+    state_path = _dir / f"live_{market_id}.json"
+    if not state_path.exists():
+        logger.debug(
+            "_apply_state_file_consistency: %s not found — skipping",
+            state_path.name,
+        )
+        return
+    try:
+        with open(state_path) as _f:
+            state = json.load(_f)
+        positions = state.get("positions", [])
+        changed = False
+        for pos in positions:
+            ticker = pos.get("ticker", "")
+            ops = ticker_ops.get(ticker)
+            if not ops:
+                continue
+            new_stop = ops.get("stop") or ""
+            new_tp = ops.get("tp") or ""
+            if new_stop and pos.get("stop_order_id", "") != new_stop:
+                logger.debug(
+                    "_apply_state_file_consistency: %s/%s stop_order_id=%s",
+                    ticker, market_id, new_stop[:8],
+                )
+                pos["stop_order_id"] = new_stop
+                changed = True
+            if new_tp and pos.get("tp_order_id", "") != new_tp:
+                logger.debug(
+                    "_apply_state_file_consistency: %s/%s tp_order_id=%s",
+                    ticker, market_id, new_tp[:8],
+                )
+                pos["tp_order_id"] = new_tp
+                changed = True
+        if changed:
+            state["positions"] = positions
+            with open(state_path, "w") as _f:
+                json.dump(state, _f, indent=2)
+            logger.info(
+                "sync_protective: persisted broker order IDs to %s",
+                state_path.name,
+            )
+    except (OSError, json.JSONDecodeError, TypeError, ValueError, KeyError) as exc:
+        logger.warning(
+            "_apply_state_file_consistency: failed to update %s (non-fatal): %s",
+            state_path.name, exc,
+        )
+
+
 # Used by _apply_db_consistency to decide which tickers need a DB update.
 _DB_UPDATE_ACTIONS: frozenset[str] = frozenset({
     "oco_placed", "tightened", "placed_pdt_fallback",
@@ -659,7 +737,10 @@ _DB_UPDATE_ACTIONS: frozenset[str] = frozenset({
 })
 
 
-def _apply_db_consistency(broker, market_id: str, sync_result: dict, pass_label: str = "live") -> None:
+def _apply_db_consistency(
+    broker, market_id: str, sync_result: dict, pass_label: str = "live",
+    *, state_dir: "Path | None" = None,
+) -> None:
     """Persist new operative stop/tp order IDs to trades/paper_trades table after a sync cycle.
 
     Args:
@@ -894,6 +975,14 @@ def _apply_db_consistency(broker, market_id: str, sync_result: dict, pass_label:
                 logger.warning(
                     "F-12 stop_price persistence block failed (non-fatal): %s", _f12_exc,
                 )
+
+        # ── Persist resolved order IDs to live_{market_id}.json state file ───
+        # Mirrors the SQLite write above so the JSON position state file has
+        # current broker order IDs.  The next sync-cycle "already exists"
+        # check then detects the protective order without hitting the broker.
+        # Only applied to the live pass (paper has a separate paper_*.json).
+        if pass_label == "live":
+            _apply_state_file_consistency(market_id, ticker_ops, state_dir=state_dir)
 
     except Exception as wrap_exc:  # noqa: BLE001 — outer DB consistency block catches all
         logger.warning(
