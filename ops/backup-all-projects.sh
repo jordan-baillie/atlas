@@ -46,7 +46,6 @@ restic -r "$RESTIC_REPOSITORY" backup \
     --exclude "/root/atlas/data/cache/backtest/" \
     --exclude "/root/atlas/data/cache/bars/" \
     --exclude "/root/atlas/data/cache/historical/" \
-    --exclude "/root/_archive/cronus-2026-05-18/data/cache/" \
     --exclude "/root/NRL-Predict/data/cache/" \
     --exclude "**/__pycache__/" \
     --exclude "**/*.pyc" \
@@ -59,10 +58,6 @@ restic -r "$RESTIC_REPOSITORY" backup \
     /root/atlas/brokers/state/ \
     /root/atlas/tasks/ \
     /root/atlas/docs/ \
-    /root/_archive/cronus-2026-05-18/config/ \
-    /root/_archive/cronus-2026-05-18/data/ \
-    /root/_archive/cronus-2026-05-18/tasks/ \
-    /root/_archive/cronus-2026-05-18/docs/ \
     /root/NRL-Predict/data/ \
     /root/NRL-Predict/models/ \
     /root/NRL-Predict/tasks/ \
@@ -72,7 +67,6 @@ restic -r "$RESTIC_REPOSITORY" backup \
     /root/ceo-board/ \
     /tmp/crontab-backup.txt \
     /etc/systemd/system/atlas-*.service \
-    /etc/systemd/system/cronus-*.service \
     /etc/systemd/system/nrl-*.service \
     2>&1 | tee -a "$LOG_FILE"
 

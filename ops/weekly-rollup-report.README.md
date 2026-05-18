@@ -24,14 +24,6 @@ Errors logged: X
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-🟠 CRONUS PAPER TRADING
-
-Active positions: X
-Paper PnL: $X.XX
-Service status: 🟢 Running
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-
 🏉 NRL-PREDICT
 
 Tips accuracy: N/A
@@ -45,7 +37,6 @@ Last run: YYYY-MM-DD
 Service restarts: X
 Failed services: X
 Disk usage: XX%
-IB Gateway disconnections: X
 Backup snapshots: X
 Backup size: X.X GB
 
@@ -55,9 +46,7 @@ Backup size: X.X GB
 
 • Deploy backup script
 • Push all repos to GitHub
-• Implement IB Gateway auto-restart
 • Add log rotation
-• Review Cronus paper trading results
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -71,13 +60,11 @@ Generated: YYYY-MM-DD HH:MM AEST
 | Atlas Equity | Latest positions JSON | `/root/atlas/data/position_monitor/positions.json` |
 | Atlas Trades | Trade ledger | `/root/atlas/journal/trade_ledger.json` |
 | Atlas Errors | Log files (7 days) | `/root/atlas/logs/*.log` |
-| Cronus Positions | Paper trading DB | `/root/_archive/cronus-2026-05-18/data/cronus_paper_state.db` |
-| Cronus Status | Systemd service | `systemctl status cronus-trader.service` |
+
 | NRL Submit | Cron logs | `/root/NRL-Predict/logs/nrl-cron-tips.log.1` |
 | Service Restarts | Journal (7 days) | `journalctl --since "$START_DATE"` |
 | Failed Services | Systemd | `systemctl list-units --state=failed` |
 | Disk Usage | Filesystem | `df -h /` |
-| IB Disconnections | Cronus logs (7 days) | `/root/_archive/cronus-2026-05-18/logs/*.log` |
 | Backup Status | Restic (if configured) | `restic snapshots` |
 | Action Items | Task file | `/root/tasks/portfolio-gap-analysis-2026-q1.md` |
 

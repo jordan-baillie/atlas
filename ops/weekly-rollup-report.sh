@@ -54,34 +54,6 @@ get_atlas_sp500_data() {
     echo "$equity|$pnl|$trades_this_week|$errors_this_week|$total_trades"
 }
 
-get_cronus_data() {
-    local active_positions=0
-    local paper_pnl="N/A"
-    local service_status="Unknown"
-    
-    # Check if paper trading DB exists
-    if [[ -f /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db ]]; then
-        # Count open positions in paper trading
-        active_positions=$(sqlite3 /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db \
-            "SELECT COUNT(*) FROM positions WHERE status='open';" 2>/dev/null || echo "0")
-        
-        # Get paper PnL (if available)
-        paper_pnl=$(sqlite3 /root/_archive/cronus-2026-05-18/data/cronus_paper_state.db \
-            "SELECT ROUND(SUM(unrealized_pnl), 2) FROM positions WHERE status='open';" 2>/dev/null || echo "N/A")
-    fi
-    
-    # Check service status
-    if systemctl is-active --quiet cronus-trader.service; then
-        service_status="🟢 Running"
-    elif systemctl is-enabled --quiet cronus-trader.service; then
-        service_status="🟡 Enabled but stopped"
-    else
-        service_status="🔴 Disabled"
-    fi
-    
-    echo "$active_positions|$paper_pnl|$service_status"
-}
-
 get_nrl_data() {
     local tips_accuracy="N/A"
     local auto_submit_status="Unknown"
@@ -109,18 +81,10 @@ get_infrastructure_data() {
     local disk_usage=$(df -h / | awk 'NR==2 {print $5}')
     local backup_count=0
     local backup_size="N/A"
-    local ib_disconnections=0
     
     # Count service restarts this week
     service_restarts=$(journalctl --since "$START_DATE" --no-pager | \
         grep -ci 'Started\|Stopped\|Restarted' || echo "0")
-    
-    # Check for IB Gateway disconnections in logs
-    if [[ -d /root/_archive/cronus-2026-05-18/logs ]]; then
-        ib_disconnections=$(find /root/_archive/cronus-2026-05-18/logs -name "*.log" -type f \
-            -newermt "$START_DATE" -exec grep -ci 'disconnected\|connection lost' {} + 2>/dev/null | \
-            awk '{sum+=$1} END {print sum+0}')
-    fi
     
     # Check backup status (if restic is configured)
     if command -v restic &>/dev/null && [[ -n "${RESTIC_REPOSITORY:-}" ]]; then
@@ -130,7 +94,7 @@ get_infrastructure_data() {
         backup_count="Not configured"
     fi
     
-    echo "$service_restarts|$disk_usage|$backup_count|$backup_size|$ib_disconnections"
+    echo "$service_restarts|$disk_usage|$backup_count|$backup_size"
 }
 
 get_open_tasks() {
@@ -166,7 +130,6 @@ get_failed_services() {
 build_message() {
     # Collect all data
     local atlas_data=$(get_atlas_sp500_data)
-    local cronus_data=$(get_cronus_data)
     local nrl_data=$(get_nrl_data)
     local infra_data=$(get_infrastructure_data)
     local open_tasks=$(get_open_tasks)
@@ -174,9 +137,8 @@ build_message() {
     
     # Parse data
     IFS='|' read -r atlas_equity atlas_pnl atlas_trades atlas_errors atlas_total <<< "$atlas_data"
-    IFS='|' read -r cronus_positions cronus_pnl cronus_status <<< "$cronus_data"
     IFS='|' read -r nrl_accuracy nrl_submit nrl_last_run <<< "$nrl_data"
-    IFS='|' read -r infra_restarts infra_disk infra_backups infra_backup_size infra_ib_disc <<< "$infra_data"
+    IFS='|' read -r infra_restarts infra_disk infra_backups infra_backup_size <<< "$infra_data"
     IFS='|' read -r failed_count failed_list <<< "$failed_data"
     
     # Format equity/PnL
@@ -200,14 +162,6 @@ Week ${WEEK_NUM} | ${START_DATE} → ${END_DATE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-🟠 <b>CRONUS PAPER TRADING</b>
-
-<b>Active positions:</b> ${cronus_positions}
-<b>Paper PnL:</b> ${cronus_pnl}
-<b>Service status:</b> ${cronus_status}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-
 🏉 <b>NRL-PREDICT</b>
 
 <b>Tips accuracy:</b> ${nrl_accuracy}
@@ -221,7 +175,6 @@ Week ${WEEK_NUM} | ${START_DATE} → ${END_DATE}
 <b>Service restarts:</b> ${infra_restarts}
 <b>Failed services:</b> ${failed_count}
 <b>Disk usage:</b> ${infra_disk}
-<b>IB Gateway disconnections:</b> ${infra_ib_disc}
 <b>Backup snapshots:</b> ${infra_backups}
 <b>Backup size:</b> ${infra_backup_size}
 

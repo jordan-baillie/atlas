@@ -110,7 +110,6 @@ check_large_logs() {
     local count=0
     local log_dirs=(
         "/root/atlas/logs"
-        "/root/_archive/cronus-2026-05-18/logs"
         "/tmp"
         "/var/log"
     )
@@ -139,10 +138,8 @@ check_nrl_cron() {
 get_atlas_equity() {
     # Read from portfolio snapshots JSONL
     local sp500_snapshots="/root/atlas/logs/portfolio_snapshots.jsonl"
-    local asx_snapshots="/root/_archive/cronus-2026-05-18/logs/portfolio_snapshots.jsonl"
     
     local sp500_equity="N/A"
-    local asx_equity="N/A"
     
     if [[ -f "$sp500_snapshots" ]]; then
         sp500_equity=$(tail -1 "$sp500_snapshots" 2>/dev/null | jq -r '.equity // "N/A"' 2>/dev/null || echo "N/A")
@@ -153,16 +150,7 @@ get_atlas_equity() {
         fi
     fi
     
-    if [[ -f "$asx_snapshots" ]]; then
-        asx_equity=$(tail -1 "$asx_snapshots" 2>/dev/null | jq -r '.equity // "N/A"' 2>/dev/null || echo "N/A")
-        if [[ "$asx_equity" != "N/A" ]] && [[ "$asx_equity" =~ ^[0-9.]+$ ]]; then
-            asx_equity=$(printf '$%.0f' "$asx_equity")
-        else
-            asx_equity="N/A"
-        fi
-    fi
-    
-    echo "${sp500_equity}|${asx_equity}"
+    echo "${sp500_equity}"
 }
 
 # Collect all status checks
@@ -172,20 +160,13 @@ ATLAS_DASHBOARD=$(check_service "atlas-dashboard")
 ATLAS_REFRESH=$(check_service "atlas-dashboard-refresh")
 ATLAS_TELEGRAM=$(check_service "atlas-telegram-bot")
 
-CRONUS_TRADER=$(check_service "cronus-trader")
-CRONUS_RISK=$(check_service "cronus-risk-guardian")
-CRONUS_ALERT=$(check_service "cronus-alert-sender")
-CRONUS_TIMERS=$(count_active_timers "cronus")
-
 DATA_FRESH=$(check_data_freshness)
 DISK=$(check_disk_usage)
 BACKUP=$(check_backup)
 LARGE_LOGS=$(check_large_logs)
 NRL_CRON=$(check_nrl_cron)
 
-EQUITY=$(get_atlas_equity)
-SP500_EQUITY=$(echo "$EQUITY" | cut -d'|' -f1)
-ASX_EQUITY=$(echo "$EQUITY" | cut -d'|' -f2)
+SP500_EQUITY=$(get_atlas_equity)
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M AEST')
 
@@ -196,13 +177,6 @@ MESSAGE="🏥 <b>System Health Report</b>
 <b>Atlas SP500</b>
 ${ATLAS_DASHBOARD} dashboard | ${ATLAS_REFRESH} refresh | ${ATLAS_TELEGRAM} telegram-bot
 💰 Equity: ${SP500_EQUITY}
-
-<b>Atlas ASX</b>
-💰 Equity: ${ASX_EQUITY}
-
-<b>Cronus</b>
-${CRONUS_TRADER} trader | ${CRONUS_RISK} risk-guardian | ${CRONUS_ALERT} alert-sender
-⏱️  ${CRONUS_TIMERS} timers active
 
 <b>SuperCoach</b>
 ${SUPERCOACH_API} API

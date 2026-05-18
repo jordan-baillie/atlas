@@ -382,57 +382,6 @@ send_message('🚨 <b>Hourly watchdog agent crashed</b> (exit $PI_EXIT).\nCheck:
     fi
 fi
 
-
-# ── Cronus heartbeat liveness check ───────────────────────────────────────────
-# Cronus services emit heartbeats every <45s to a SQLite table. Their journald
-# INFO logs have been quieted, so the old journald-silence check fired false
-# positives. Use the heartbeat table (same source cronus-watchdog uses) —
-# alert if the last heartbeat is >5 minutes old.
-CRONUS_DB="/root/_archive/cronus-2026-05-18/data/cronus_paper_state.db"
-CRONUS_HB_STALE_SECS=300   # 5 minutes — matches cronus-watchdog convention
-
-check_cronus_hb() {
-    local svc="$1" agent="$2"
-    if ! systemctl is-active --quiet "$svc" 2>/dev/null; then
-        return 0
-    fi
-    if [ ! -r "$CRONUS_DB" ]; then
-        log "WARN: $svc heartbeat check skipped — cronus DB not readable at $CRONUS_DB"
-        return 0
-    fi
-    # Query latest heartbeat timestamp (local ISO, no tz). Compute age in seconds.
-    local age_secs
-    age_secs=$(sqlite3 "$CRONUS_DB" \
-        "SELECT CAST((julianday('now','localtime') - julianday(timestamp)) * 86400 AS INTEGER) \
-         FROM agent_heartbeats WHERE agent_name='${agent}' \
-         ORDER BY timestamp DESC LIMIT 1;" 2>/dev/null)
-    if [ -z "$age_secs" ]; then
-        log "WARNING: $svc has no heartbeat rows in $CRONUS_DB (agent='${agent}')"
-        # fall through to alert
-        age_secs=999999
-    fi
-    if [ "$age_secs" -gt "$CRONUS_HB_STALE_SECS" ]; then
-        local age_min=$(( age_secs / 60 ))
-        log "WARNING: $svc heartbeat stale (${age_min}m old, agent='${agent}')"
-        if [ -f /root/.atlas-secrets.json ]; then
-            _tok=$(jq -r '.telegram_bot_token // empty' /root/.atlas-secrets.json 2>/dev/null)
-            _chat=$(jq -r '.telegram_chat_id // empty' /root/.atlas-secrets.json 2>/dev/null)
-            if [ -n "$_tok" ] && [ -n "$_chat" ]; then
-                _msg="⚠️ <b>${svc} stale heartbeat</b>%0ALast heartbeat ${age_min}m ago (threshold 5m).%0AService is <code>active</code> but may be hung.%0Aagent=<code>${agent}</code>%0Ahost: <code>$(hostname)</code>"
-                curl -s -X POST "https://api.telegram.org/bot${_tok}/sendMessage" \
-                    -d "chat_id=${_chat}" \
-                    -d "text=${_msg}" \
-                    -d "parse_mode=HTML" >/dev/null 2>&1 || true
-            fi
-        fi
-    else
-        log "OK: $svc heartbeat ${age_secs}s old (agent='${agent}')"
-    fi
-}
-
-check_cronus_hb cronus-trader trader
-check_cronus_hb cronus-risk-guardian risk_guardian
-
 # ── Stale lock cleanup ───────────────────────────────────────
 # Cron jobs use flock(1) advisory locks on /tmp/*.lock files.
 # If a job crashes or times out, the kernel releases the flock,
