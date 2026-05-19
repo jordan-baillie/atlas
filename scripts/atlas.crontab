@@ -110,6 +110,15 @@ TZ=Australia/Brisbane
 # TZ=Australia/Brisbane: 09:25 AEST = 23:25 UTC Mon-Fri; */4 UTC = 00:00/04:00/08:00/12:00/16:00/20:00 daily
 25 9 * * 2-6 /usr/bin/flock -n /tmp/sync_broker_orders.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/sync_broker_orders.py' >> /root/atlas/logs/sync_broker_orders.log 2>&1
 0 */4 * * * /usr/bin/flock -n /tmp/sync_broker_orders.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/sync_broker_orders.py --days 7' >> /root/atlas/logs/sync_broker_orders.log 2>&1
+# ── sync_paper_orders: every 5 min during US RTH to catch paper fill-by-LIMIT (#unblock paper validation)
+# US RTH in AEST (UTC+10/11): approx 23:00-07:00 AEST Mon(eve)-Sat(morn)
+# Cron times in UTC (system): */5 23:00-07:59 UTC Mon-Fri (Tue-Sat in UTC calendar)
+*/5 23 * * 1-5 /usr/bin/flock -n /tmp/sync_paper_orders.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_paper_orders.py --days 7' >> /root/atlas/logs/sync_paper_orders.log 2>&1
+*/5 0-7 * * 2-6 /usr/bin/flock -n /tmp/sync_paper_orders.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/sync_paper_orders.py --days 7' >> /root/atlas/logs/sync_paper_orders.log 2>&1
+# Off-hours catch-up: once at start of each weekday morning AEST (08:30 AEST = 22:30 UTC Mon-Fri)
+30 22 * * 1-5 /usr/bin/flock -n /tmp/sync_paper_orders.lock bash -c 'cd /root/atlas && timeout 10m python3 scripts/sync_paper_orders.py --days 14' >> /root/atlas/logs/sync_paper_orders.log 2>&1
+# ── Hourly — paper validation health check (alerts if PAPER state has zero trades)
+15 * * * * /usr/bin/flock -n /tmp/healthcheck_paper_executor.lock bash -c 'cd /root/atlas && timeout 3m python3 scripts/healthcheck_paper_executor.py' >> /root/atlas/logs/healthcheck_paper_executor.log 2>&1
 # cleanup research locks + papers TTL: 07:00 AEST daily
 0 7 * * * /root/atlas/scripts/cleanup_research_locks.sh >> /root/atlas/logs/cleanup_research_locks.log 2>&1
 # cleanup stale plans: 17:00 AEST daily (= 07:00 UTC)
@@ -138,6 +147,9 @@ TZ=Australia/Brisbane
 # Monday 08:00 AEST (Sun 22:00 UTC) — auto-promote PAPER strategies to LIVE
 # (22:00 UTC Sunday = 08:00 AEST Monday with TZ=Australia/Brisbane)
 0 8 * * 1 /root/atlas/scripts/pi-cron.sh auto_promote_paper
+
+# ── Sun 22:00 UTC (Mon 08:00 AEST) — weekly paper-promotion progress digest
+0 22 * * 0 /usr/bin/flock -n /tmp/paper_progress_digest.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/paper_progress_cli.py --markdown --telegram' >> /root/atlas/logs/paper_progress.log 2>&1
 
 # ── Operational sediment cleanup + doc staleness check ─────────────────────────
 # sediment cleanup: 14:00 AEST daily (= 04:00 UTC) — delete incident snapshots >14d old (outside top-3)
