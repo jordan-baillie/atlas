@@ -20,7 +20,7 @@ import sys
 import os
 import argparse
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -144,6 +144,8 @@ def main():
 
     market_id = args.market
     trade_date = args.date or datetime.now().strftime("%Y-%m-%d")
+    # Capture start time for broker_orders cross-check (Fix 3).
+    run_start_iso = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
 
     log.info("Execute approved plan: market=%s date=%s dry_run=%s",
              market_id, trade_date, args.dry_run)
@@ -155,6 +157,8 @@ def main():
     mode = config.get("trading", {}).get("mode", "")
     policy = BrokerRoutingPolicy(config, market_id=market_id)
     if policy.should_skip():
+        _skip_msg = f"[execute_approved] SKIP: market={market_id} date={trade_date} reason=policy.should_skip mode={policy.mode} live_enabled={policy.live_enabled}"
+        print(_skip_msg, flush=True)
         log.info("policy.should_skip() True (mode=%s, live_enabled=%s) — skipping",
                  policy.mode, policy.live_enabled)
         return
@@ -164,6 +168,8 @@ def main():
     plan = plan_gen.load_plan(trade_date, market_id=market_id)
 
     if not plan:
+        _skip_msg = f"[execute_approved] SKIP: market={market_id} date={trade_date} reason=no_plan_found"
+        print(_skip_msg, flush=True)
         log.info("No plan found for %s — nothing to execute", trade_date)
         return
 
@@ -191,6 +197,8 @@ def main():
             # Best-effort Telegram notification
             _notify_auto_approve(market_id, trade_date, _n_entries, _n_exits)
         if status != "APPROVED":
+            _skip_msg = f"[execute_approved] SKIP: market={market_id} date={trade_date} reason=status_not_approved status={status}"
+            print(_skip_msg, flush=True)
             log.info("Plan status is '%s' (need APPROVED) — skipping", status)
             return
 
@@ -199,6 +207,8 @@ def main():
     log.info("Plan has %d entries, %d exits", len(entries), len(exits))
 
     if not entries and not exits:
+        _skip_msg = f"[execute_approved] SKIP: market={market_id} date={trade_date} reason=empty_plan"
+        print(_skip_msg, flush=True)
         log.info("Empty plan — nothing to execute")
         return
 
@@ -338,15 +348,102 @@ def main():
     report = live_report or paper_report or {}
 
     if not args.dry_run and report:
-        plan["status"] = "EXECUTED"
+        # ── Fix 1: enrich entries/exits with broker_mode tag ─────────────
+        live_entries_detail = _enrich_entries_with_broker_mode(
+            (live_report or {}).get("entries", []), "live"
+        )
+        paper_entries_detail = _enrich_entries_with_broker_mode(
+            (paper_report or {}).get("entries", []), "paper"
+        )
+        all_entries_detail = live_entries_detail + paper_entries_detail
+
+        live_exits_detail = _enrich_entries_with_broker_mode(
+            (live_report or {}).get("exits", []), "live"
+        )
+        paper_exits_detail = _enrich_entries_with_broker_mode(
+            (paper_report or {}).get("exits", []), "paper"
+        )
+        all_exits_detail = live_exits_detail + paper_exits_detail
+
+        live_ok = (live_report or {}).get("successful_entries", 0)
+        paper_ok = (paper_report or {}).get("successful_entries", 0)
+        live_total = (live_report or {}).get("total_entries", 0)
+        paper_total = (paper_report or {}).get("total_entries", 0)
+        total_attempted = live_total + paper_total
+        total_ok = live_ok + paper_ok
+
+        # ── Fix 2: status taxonomy ────────────────────────────────────────
+        # EXECUTED         — at least one LIVE submission succeeded
+        # EXECUTED_PAPER   — all submissions went to PAPER (zero live attempted)
+        # FAILED           — non-empty plan but every submission failed
+        # EXECUTED_PARTIAL — some attempted but not full success
+        if total_attempted == 0:
+            new_status = "EXECUTED"        # nothing to do — preserve prior semantics
+        elif total_ok == 0:
+            new_status = "FAILED"
+        elif live_ok > 0 and paper_ok == 0:
+            new_status = "EXECUTED"        # pure live — preserve prior semantics
+        elif live_ok == 0 and paper_ok > 0:
+            new_status = "EXECUTED_PAPER"
+        elif live_ok > 0 and paper_ok > 0:
+            new_status = "EXECUTED"        # mixed; LIVE dominant naming
+        else:
+            new_status = "EXECUTED_PARTIAL"
+
+        plan["status"] = new_status
         plan["executed_at"] = datetime.now().isoformat()
         plan["execution_report"] = {
-            "successful_entries": report.get("successful_entries", 0),
-            "successful_exits": report.get("successful_exits", 0),
-            "total_entries": report.get("total_entries", 0),
-            "total_exits": report.get("total_exits", 0),
+            "successful_entries": live_ok + paper_ok,
+            "successful_exits": (
+                (live_report or {}).get("successful_exits", 0)
+                + (paper_report or {}).get("successful_exits", 0)
+            ),
+            "total_entries": live_total + paper_total,
+            "total_exits": (
+                (live_report or {}).get("total_exits", 0)
+                + (paper_report or {}).get("total_exits", 0)
+            ),
+            # NEW: broker_mode breakdown
+            "live_submitted": live_ok,
+            "paper_submitted": paper_ok,
+            "live_total": live_total,
+            "paper_total": paper_total,
+            # NEW: per-entry detail (order IDs + broker mode + status)
+            "entries": [_entry_summary(e) for e in all_entries_detail],
+            "exits": [_entry_summary(e) for e in all_exits_detail],
         }
+        # Top-level routing summary — operator-visible at a glance
+        plan["routing_summary"] = {
+            "live_submitted": live_ok,
+            "paper_submitted": paper_ok,
+            "live_total": live_total,
+            "paper_total": paper_total,
+        }
+
         plan_gen._save_plan(plan, trade_date)
+
+        # ── Fix 3: cross-check sanity assertion ──────────────────────────
+        _verify_ok, _verify_msg = _verify_broker_submissions(
+            plan["execution_report"], market_id, trade_date, run_start_iso
+        )
+        if not _verify_ok:
+            log.error("EXECUTE_APPROVED INTEGRITY VIOLATION: %s", _verify_msg)
+            plan["status"] = "EXECUTED_VERIFY_FAILED"
+            plan["execution_report"]["verify_error"] = _verify_msg
+            plan_gen._save_plan(plan, trade_date)
+            try:
+                from utils.telegram import send_message, tg_escape as _tge
+                send_message(
+                    "\U0001F6A8 <b>EXECUTE_APPROVED INTEGRITY VIOLATION</b> "
+                    f"({market_id.upper()} {trade_date})\n\n"
+                    f"<pre>{_verify_msg[:500]}</pre>\n\n"
+                    "Plan status set to EXECUTED_VERIFY_FAILED.  Investigate "
+                    "before next run."
+                )
+            except Exception as _tg_e:
+                log.warning("Verify-fail Telegram alert failed: %s", _tg_e)
+        else:
+            log.info("execute_approved integrity check: %s", _verify_msg)
 
     # ── Summary ──────────────────────────────────────────────────────────
     if report:
@@ -361,13 +458,99 @@ def main():
         )
 
         if not args.dry_run:
-            _notify_execution(market_id, trade_date, report)
+            _live_ok_s = (live_report or {}).get("successful_entries", 0)
+            _paper_ok_s = (paper_report or {}).get("successful_entries", 0)
+            _live_tot_s = (live_report or {}).get("total_entries", 0)
+            _paper_tot_s = (paper_report or {}).get("total_entries", 0)
+            _notify_execution(
+                market_id, trade_date, report,
+                live_ok=_live_ok_s, paper_ok=_paper_ok_s,
+                live_total=_live_tot_s, paper_total=_paper_tot_s,
+            )
     else:
         log.info("No executor produced a report (empty plan or connection failures)")
 
+    # ── Fix 4: Final stdout summary for cron-redirected log ──────────────
+    _final_summary = (
+        f"[execute_approved] market={market_id} date={trade_date} "
+        f"status={plan.get('status', '?')} "
+        f"live={plan.get('execution_report', {}).get('live_submitted', 0)}/"
+        f"{plan.get('execution_report', {}).get('live_total', 0)} "
+        f"paper={plan.get('execution_report', {}).get('paper_submitted', 0)}/"
+        f"{plan.get('execution_report', {}).get('paper_total', 0)} "
+        f"executed_at={plan.get('executed_at', '?')}"
+    )
+    print(_final_summary, flush=True)
+    log.info(_final_summary)
 
-def _notify_execution(market_id: str, trade_date: str, report: dict):
-    """Send Telegram summary of executed orders."""
+
+
+def _enrich_entries_with_broker_mode(entries: list, broker_mode: str) -> list:
+    """Tag each entry result dict with which broker it was submitted to."""
+    out = []
+    for e in entries:
+        e2 = dict(e)
+        e2["broker_mode"] = broker_mode  # "live" or "paper"
+        out.append(e2)
+    return out
+
+
+def _entry_summary(e: dict) -> dict:
+    """Return a minimal per-entry summary suitable for plan JSON storage."""
+    return {
+        "ticker": e.get("ticker", ""),
+        "side": e.get("side", ""),
+        "qty": e.get("qty", 0),
+        "price": e.get("price", 0),
+        "success": bool(e.get("success", False)),
+        "broker_mode": e.get("broker_mode", "unknown"),
+        "order_id": e.get("order_id") or e.get("alpaca_order_id") or "",
+        "status": e.get("status", ""),
+        "reason": (e.get("reason", "") or e.get("message", "") or "")[:200],
+    }
+
+
+def _verify_broker_submissions(
+    execution_report: dict,
+    market_id: str,
+    trade_date: str,
+    window_start_iso: str,
+) -> tuple[bool, str]:
+    """Cross-reference plan's claimed LIVE submissions vs broker_orders table.
+
+    Paper submissions are trusted from the in-process report (paper account
+    sync is out-of-scope for live-trading integrity).
+
+    Returns (ok, message).  Fail-OPEN on DB error — a broken sanity check
+    must never itself block order execution.
+    """
+    live_claimed = execution_report.get("live_submitted", 0)
+    if live_claimed == 0:
+        return True, "no live submissions claimed — nothing to verify"
+    try:
+        from db.atlas_db import get_db
+        with get_db() as _db:
+            rows = _db.execute(
+                "SELECT order_id, symbol, status FROM broker_orders "
+                "WHERE submitted_at >= ? AND side = 'buy' "
+                "AND (parent_id IS NULL OR parent_id = '')",
+                (window_start_iso,),
+            ).fetchall()
+        live_actual = len(rows)
+        if live_actual < live_claimed:
+            return False, (
+                f"VERIFY MISMATCH: plan claims {live_claimed} live submissions "
+                f"but broker_orders has {live_actual} since {window_start_iso}. "
+                f"Symbols seen: {[r[1] for r in rows]}"
+            )
+        return True, f"verified {live_actual} live submissions in broker_orders"
+    except Exception as _e:
+        log.warning("sanity check DB query failed (fail-open): %s", _e)
+        return True, f"sanity check skipped due to DB error: {_e}"
+
+
+def _notify_execution(market_id: str, trade_date: str, report: dict, *, live_ok: int = 0, paper_ok: int = 0, live_total: int = 0, paper_total: int = 0):  # noqa: E501
+    """Send Telegram summary of executed orders (Fix 5: broker-mode-aware header)."""
     ok_entries = report.get("successful_entries", 0)
     ok_exits = report.get("successful_exits", 0)
     total_entries = report.get("total_entries", 0)
@@ -385,31 +568,39 @@ def _notify_execution(market_id: str, trade_date: str, report: dict):
     try:
         from utils.telegram import send_message, tg_escape as _tge
 
-        lines = [
-            f"🚀 <b>Orders Submitted</b> ({market_id.upper()} {trade_date})",
-            f"  Entries: {ok_entries}/{total_entries} | Exits: {ok_exits}/{total_exits}",
-            "",
-        ]
+        # Fix 5: broker-mode-aware header
+        if live_ok > 0 and paper_ok > 0:
+            header_tag, header_emoji = "[LIVE+PAPER]", "🚀"
+        elif live_ok > 0:
+            header_tag, header_emoji = "[LIVE]", "🚀"
+        elif paper_ok > 0:
+            header_tag, header_emoji = "[PAPER]", "📝"
+        else:
+            header_tag, header_emoji = "", "🚀"
 
-        # Entry details
+        lines = [
+            f"{header_emoji} <b>Orders Submitted {_tge(header_tag)}</b>"
+            f" ({_tge(market_id.upper())} {_tge(trade_date)})",
+            f"  Entries: {ok_entries}/{total_entries} | Exits: {ok_exits}/{total_exits}",
+        ]
+        if live_total > 0 or paper_total > 0:
+            lines.append(f"  Live: {live_ok}/{live_total}  Paper: {paper_ok}/{paper_total}")
+        lines.append("")
+
         for e in report.get("entries", []):
-            ticker = e.get("ticker", "?")
-            price = e.get("price", 0)
-            qty = e.get("qty", 0)
-            emoji = "✅" if e.get("success") else "❌"
-            tag = _format_reason_tag(e)
-            lines.append(f"  {emoji} BUY {_tge(ticker)} {qty}x @ ${price:.2f} {_tge(tag)}")
+            _bm = e.get("broker_mode", "")
+            _bmt = f" [{_bm.upper()}]" if _bm else ""
+            _t, _q, _p = e.get("ticker", "?"), e.get("qty", 0), e.get("price", 0)
+            _em = "✅" if e.get("success") else "❌"
+            lines.append(f"  {_em} BUY {_tge(_t)} {_q}x @ ${_p:.2f}{_tge(_bmt)} {_tge(_format_reason_tag(e))}")
 
         vol_gate = report.get("volatility_gate", {})
         if vol_gate.get("action") not in (None, "none"):
             lines.append(f"\n⚠️ Vol gate: {_tge(vol_gate.get('action', ''))} — {_tge(vol_gate.get('message', ''))}")
-
         lines.append("\n⏰ Market opens in ~15 min. Fills will be reconciled at sync.")
         send_message("\n".join(lines))
     except Exception as e:
         log.warning("Telegram notification failed (non-fatal): %s", e)
-
-
 def _notify_auto_approve(
     market_id: str,
     trade_date: str,
