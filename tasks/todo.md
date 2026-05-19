@@ -1157,3 +1157,48 @@ When `_build_summary()` would emit a label starting with "Broadly bullish" or "B
 1. Re-run fresh research seeded from peak parameters identified in standings report (peak Sharpe 1.0849 simultaneous across universes 2026-04-20 for mean_reversion)
 2. If current market conditions still support 1.0+ Sharpe → consider promotion path (which requires the prerequisite work above)
 3. If degradation continues → re-classify as research-only retention
+
+
+---
+
+## 2026-05-19 — Prereq 2: mean_reversion falling-knife guard (backtest comparison)
+
+### Backtest comparison results
+
+4 solo backtests run for `mean_reversion/sp500`:
+
+| Variant   | Sharpe | CAGR    | MaxDD    | Trades | WinRate | ProfitFactor | Rejection† |
+|-----------|-------:|--------:|---------:|-------:|--------:|-------------:|-----------:|
+| Baseline  | -0.599 |   0.08% |   10.82% |    195 |  50.3%  |        1.004 |          0 |
+| Option A  | -0.035 |   3.05% |   13.34% |    135 |  54.8%  |        1.421 |         60 |
+| Option B  | -0.042 |   2.97% |   12.89% |    142 |  53.5%  |        1.261 |         53 |
+| Option C  | -0.441 |   1.63% |   14.28% |     97 |  53.6%  |        1.371 |         98 |
+
+† Rejection proxy = trade-count delta vs Baseline (entries blocked by guard). Not a direct signal-level count.
+
+Comparison JSON: `data/mean_reversion_guard_comparison_20260519T131116.json`
+
+### Decision
+
+**Baseline Sharpe = -0.5989 (≤0)** → applied rule: pick highest Sharpe.
+
+**Chosen variant: Option A** (SMA-200 trend filter, `sma200_filter=True`).
+
+**Rationale**: Baseline Sharpe is negative (-0.60), meaning mean_reversion is currently a net loser on the sp500 window. Option A reduces trade count from 195 to 135 (60 rejections) and lifts Sharpe from -0.60 to -0.04 — an 84% reduction in Sharpe loss. Win rate improves 50.3% → 54.8% and profit factor 1.004 → 1.421. Option B (roc_60 floor, RS penalty -0.30) is a close second (Sharpe -0.042) but Option A provides a harder filter (binary entry gate vs confidence soft-penalty) with slightly better Sharpe and profit factor. Option C over-filters and degrades Sharpe (-0.44 vs -0.04).
+
+### Files modified
+
+- `scripts/backtest_mean_reversion_guard_comparison.py` — new comparison script
+- `data/mean_reversion_guard_comparison_20260519T131116.json` — results output
+- `config/active/sp500.json` — `sma200_filter` true, `version` v3.2.4
+- `tests/test_mean_reversion_falling_knife_guard.py` — 12 regression tests (all pass)
+
+### Constraints confirmed
+
+- `mean_reversion.enabled` remains `false` (lifecycle=PAPER, not promoted)
+- No live execution paths modified
+- No lifecycle state changes
+
+### Commit refs
+
+To be added after commit.
