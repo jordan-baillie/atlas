@@ -12,6 +12,7 @@ import { CHART_GRID, CHART_TICK, CHART_ANIM, CHART_CURSOR } from '../../lib/char
 import { fmtNum, fmtPct, fmtDateShort, fmtRelativeTime } from '../../lib/format'
 import type { StrategyDetail, Experiment, BrainParam, Discovery, UniverseInfo, LeaderboardEntry, DailyCount } from '../../api/research-types'
 import { CoverageMatrix } from './CoverageMatrix'
+import { PaperProgressPanel } from './PaperProgressPanel'
 import { PendingPromotionsWidget } from './PendingPromotionsWidget'
 
 // ── Keep Rate Ring SVG ──────────────────────────────────────────
@@ -731,6 +732,12 @@ export function ResearchTab() {
           </SectionBoundary>
         </div>
       )}
+
+      <div className="animate-in">
+        <SectionBoundary title="Paper Trading Progress">
+          <PaperProgressPanel />
+        </SectionBoundary>
+      </div>
     </div>
   )
 }

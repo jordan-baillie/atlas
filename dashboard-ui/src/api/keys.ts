@@ -38,6 +38,7 @@ export const qk = {
     brain: () => [...qk.research.all(), 'brain'] as const,
     discoveries: () => [...qk.research.all(), 'discoveries'] as const,
     coverage: () => [...qk.research.all(), 'coverage'] as const,
+    paperProgress: () => [...qk.research.all(), 'paper-progress'] as const,
   },
   promotions: {
     pending: () => ['promotions', 'pending'] as const,

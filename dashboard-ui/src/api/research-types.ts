@@ -221,3 +221,35 @@ export interface PendingPromotionsResponse {
   pending: PendingPromotion[]
   count: number
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/strategies/paper-progress
+// ---------------------------------------------------------------------------
+export interface PaperProgressGates {
+  days_pass: boolean
+  trades_pass: boolean
+  sharpe_pass: boolean
+  delta_pass: boolean
+  all_pass: boolean
+}
+
+export interface PaperProgressStrategy {
+  strategy: string
+  universe: string
+  paper_start_date: string | null
+  days_in_paper: number
+  trade_count: number
+  win_rate: number | null
+  profit_factor: number | null
+  sharpe: number | null
+  research_sharpe: number | null
+  sharpe_delta: number | null
+  gates: PaperProgressGates
+  status: 'ready' | 'progressing' | 'failing' | 'insufficient_data'
+}
+
+export interface PaperProgressResponse {
+  strategies: PaperProgressStrategy[]
+  generated_at: string
+  error?: string
+}

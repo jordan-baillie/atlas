@@ -12,6 +12,7 @@ import type {
   ResearchLeaderboard,
   ResearchCoverage,
   PendingPromotionsResponse,
+  PaperProgressResponse,
 } from './research-types'
 
 const STALE_5MIN = 5 * 60_000
@@ -120,5 +121,14 @@ export function usePendingPromotions() {
     queryFn: () => get<PendingPromotionsResponse>('/api/promotions/pending'),
     refetchInterval: 60_000,
     staleTime: 30_000,
+  })
+}
+
+export function usePaperProgress() {
+  return useQuery({
+    queryKey: qk.research.paperProgress(),
+    queryFn: () => get<PaperProgressResponse>('/api/strategies/paper-progress'),
+    staleTime: STALE_5MIN,
+    placeholderData: keepPreviousData,
   })
 }
