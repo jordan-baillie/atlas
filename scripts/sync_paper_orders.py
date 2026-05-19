@@ -663,7 +663,15 @@ def sync_paper_orders(
             len(rows), stats["filled_count"],
         )
 
-        # ── Upsert into paper_broker_orders + write back to paper_trades ──
+        # ── Upsert into paper_broker_orders ────────────────────────────────
+        # IMPORTANT: split into two separate `with get_db()` blocks.
+        # _upsert_rows holds a write transaction; record_paper_trade_entry
+        # (called inside _record_newly_filled_paper_trades) opens a second
+        # write connection.  SQLite only allows one writer at a time — even
+        # in WAL mode, a nested write from the same process blocks for the
+        # full busy_timeout (30 s) then raises "database is locked".
+        # Splitting the blocks ensures the upsert commits before the
+        # paper_trades write begins.
         if rows:
             with atlas_db.get_db() as db:
                 upserted = _upsert_rows(db, rows, dry_run=dry_run)
@@ -678,8 +686,12 @@ def sync_paper_orders(
                         count, upserted,
                     )
                     stats["total_in_table"] = count
+            # <-- upsert committed; write lock released
 
-                # Write back fills to paper_trades (the core unblocking logic)
+            # ── Write back fills to paper_trades ─────────────────────────
+            # Fresh connection: only reads (idempotency/strategy lookups)
+            # so record_paper_trade_entry's own write connection is free.
+            with atlas_db.get_db() as db:
                 fill_stats = _record_newly_filled_paper_trades(
                     db, raw_orders, dry_run=dry_run
                 )
