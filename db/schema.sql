@@ -491,6 +491,34 @@ CREATE INDEX IF NOT EXISTS idx_broker_orders_status ON broker_orders(status);
 CREATE INDEX IF NOT EXISTS idx_broker_orders_submitted_at ON broker_orders(submitted_at);
 CREATE INDEX IF NOT EXISTS idx_broker_orders_parent_id ON broker_orders(parent_id);
 
+-- ═══════════════════════════════════════════════════════════
+-- PAPER BROKER ORDERS CACHE (2026-05-19)
+-- Mirror of broker_orders for the Alpaca PAPER account.
+-- Populated by scripts/sync_paper_orders.py every 5 min
+-- during US RTH.  Enables paper_trades write-back for
+-- PAPER-lifecycle strategies (unblocks paper→live validation).
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS paper_broker_orders (
+    order_id           TEXT PRIMARY KEY,           -- Alpaca paper order UUID
+    symbol             TEXT NOT NULL,              -- ticker (Atlas format)
+    side               TEXT NOT NULL,              -- buy | sell
+    qty                REAL NOT NULL,              -- requested qty
+    filled_qty         REAL,                       -- actually filled (NULL if not filled)
+    fill_price         REAL,                       -- avg fill price (NULL if not filled)
+    status             TEXT NOT NULL,              -- new | filled | canceled | rejected | etc
+    submitted_at       TEXT NOT NULL,              -- ISO timestamp
+    filled_at          TEXT,                       -- ISO timestamp (NULL if not filled)
+    order_class        TEXT,                       -- simple | bracket | oco | oto
+    parent_id          TEXT,                       -- parent order ID for bracket children
+    raw_alpaca_json    TEXT NOT NULL,              -- full Alpaca order JSON for forensic
+    last_synced_at     TEXT NOT NULL               -- when this row was last upserted
+);
+CREATE INDEX IF NOT EXISTS idx_paper_broker_orders_symbol       ON paper_broker_orders(symbol);
+CREATE INDEX IF NOT EXISTS idx_paper_broker_orders_status       ON paper_broker_orders(status);
+CREATE INDEX IF NOT EXISTS idx_paper_broker_orders_submitted_at ON paper_broker_orders(submitted_at);
+CREATE INDEX IF NOT EXISTS idx_paper_broker_orders_parent_id    ON paper_broker_orders(parent_id);
+
 -- ── Position Protective Orders ────────────────────────────────────────────────
 -- Single canonical row per open position tracking stop+TP order IDs from broker
 -- truth. Eliminates multi-writer drift on trades.stop_order_id.
