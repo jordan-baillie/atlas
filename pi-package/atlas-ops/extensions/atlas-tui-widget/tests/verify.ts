@@ -345,6 +345,43 @@ test("isDelegationTool: Read → false", () => {
   assert.ok(!isDelegationTool("Read"));
 });
 
+test("isDelegationTool: atlas_elastic_run → true (elastic burst counts as delegation)", () => {
+  assert.ok(isDelegationTool("atlas_elastic_run"));
+});
+
+test("renderWidget uses → for running atlas_elastic_run tool", () => {
+  const state = createState();
+  state.delegations = 1;
+  state.activeTools.set("er1", {
+    toolCallId: "er1",
+    toolName: "atlas_elastic_run",
+    args: "review authentication module",
+    status: "running",
+    startMs: Date.now() - 2000,
+  });
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns).join("\n");
+  assert.ok(rendered.includes("→"), `Expected '→' for atlas_elastic_run in:\n${rendered}`);
+  assert.ok(rendered.includes("atlas_elastic_ru"), `Expected tool name in feed:\n${rendered}`);
+});
+
+test("header counts atlas_elastic_run as active delegation agent", () => {
+  const state = createState();
+  state.delegations = 1;
+  state.activeTools.set("er1", {
+    toolCallId: "er1",
+    toolName: "atlas_elastic_run",
+    args: "verify code",
+    status: "running",
+    startMs: Date.now(),
+  });
+  const header = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  // Should show '1/1' — 1 active delegation, 1 total
+  assert.ok(
+    /agents\s+1\/1/.test(header),
+    `Expected 'agents 1/1' in header: "${header}"`
+  );
+});
+
 test("renderWidget includes ✓ for a success entry", () => {
   const state = createState();
   state.toolSuccess = 1;

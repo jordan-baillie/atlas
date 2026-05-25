@@ -35,6 +35,7 @@ import {
   WIDGET_ID,
   capActiveTools,
   createState,
+  isDelegationTool,
   pushBounded,
   renderWidget,
   summarizeArgs,
@@ -147,12 +148,9 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
     // Defensive cap: prevent unbounded growth if tool_execution_end is missed.
     capActiveTools(state);
 
-    // Count delegation tools (subagent, swarm, delegate*)
-    if (
-      event.toolName === "subagent" ||
-      event.toolName === "swarm" ||
-      event.toolName.startsWith("delegate")
-    ) {
+    // Count delegation tools (subagent, swarm, delegate*, atlas_elastic_run, etc.)
+    // Uses isDelegationTool() from core.ts so this list stays in sync with the renderer.
+    if (isDelegationTool(event.toolName)) {
       state.delegations++;
     }
 

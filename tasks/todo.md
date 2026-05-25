@@ -1262,3 +1262,44 @@ Consolidated all TUI elements into one dashboard + clean footer:
 - Footer: context% · tokens · model · thinking only
 
 **Verification:** `npm run verify-tui` passes (52/52).
+
+---
+
+## Task #351: Elastic Parallel-Agent Orchestrator MVP — 2026-05-26
+
+**Status**: COMPLETED (Phases 1–2 MVP).
+
+Delivered end-to-end governed elastic-agent orchestrator as a Pi extension. All 114 tests pass (expanded from 58 after reviewer fixes).
+
+**What's built:**
+
+1. **Policy config** (`config/agent-scale-policy.yaml`) — 4 risk classes, global caps, per-role rules, protected file patterns, kill switch.
+
+2. **Policy loader/validator** (`extensions/atlas-elastic-agents/src/policy.ts`) — typed accessors, protected file matching (prefix/exact), kill switch, max concurrency.
+
+3. **Dry-run planner** (`src/planner.ts`) — classifies task risk (read_only/planning/write_bounded/live_trading_ops), generates phase DAG (scout→builder(s)→reviewer), evaluates safety gates, checks `git status --short`, detects protected files. Deterministic and testable.
+
+4. **Audit logger** (`src/audit.ts`) — JSONL append to `.pi/elastic-agents/audit.jsonl`, roundtrip read, makeAuditEntry factory.
+
+5. **Execution gate** (`src/executor.ts`) — live_trading_ops always blocked; write_bounded requires clean tree + human confirm; read_only returns OAuth-only pi CLI commands; kill switch respected. Ownership overlap detector. API key safety grep.
+
+6. **Extension entry** (`src/index.ts`) — registers `/elastic-plan`, `/elastic-run`, `/elastic-status` commands and `atlas_elastic_plan`, `atlas_elastic_run` tools with TypeBox schemas. All UI calls gated on `ctx.hasUI`.
+
+7. **Skill** (`skills/atlas-elastic-planner/SKILL.md`) — usage guide, risk class table, workflow, safety rules, examples, references.
+
+8. **Tests** (`tests/verify.ts`) — 114/114 pass: policy validation (10), protected file matching (7), task classification (19, incl. live-trading regex + broker over-trigger fix + sentence-initial add), DAG generation (10), real dirty-tree gate rejection (4), executor gates (7), OAuth command safety (3), audit roundtrip (7, incl. cwd field), ownership overlap (4), API key safety grep (4, incl. TS SDK + apiKey patterns). **Proves write gate rejects on real dirty atlas repo.**
+
+9. **Registration** (`package.json`) — extension added to `pi.extensions`, `verify-elastic-agents` script added.
+
+10. **Spec updated** (`docs/elastic-parallel-agent-orchestrator.md`) — MVP status table added.
+
+**Commands/tools added:**
+- `/elastic-plan`, `/elastic-run`, `/elastic-status`
+- `atlas_elastic_plan` (tool), `atlas_elastic_run` (tool)
+
+**Verification:** `cd /root/atlas/pi-package/atlas-ops && npm run verify-elastic-agents` → 114/114 ✓ | `npm run verify-tui` → 57/57 ✓
+
+**Limitations / Phase 3+ follow-up:**
+- Write builder orchestration: recommends swarm plan but doesn't auto-dispatch (Phase 3)
+- TUI live agent dashboard: audit log readable via /elastic-status; full dashboard Phase 5
+- Read-only burst: returns pi CLI commands for review; actual parallel subprocess management is coordinator's responsibility (Phase 2 full completion)

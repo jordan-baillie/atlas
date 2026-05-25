@@ -117,11 +117,15 @@ export function summarizeArgs(args: Record<string, unknown>): string {
 /**
  * Returns true if the tool is a delegation (agent dispatch) tool.
  * These are shown with a distinct icon and colour in the activity feed.
+ *
+ * Includes atlas_elastic_run because it spawns parallel pi CLI agents
+ * (read-only burst) or queues write agent dispatch — both are delegation activities.
  */
 export function isDelegationTool(toolName: string): boolean {
   return (
     toolName === "subagent" ||
     toolName === "swarm" ||
+    toolName === "atlas_elastic_run" ||
     toolName.startsWith("delegate")
   );
 }

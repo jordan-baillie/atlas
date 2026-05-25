@@ -8,7 +8,8 @@
   "scripts": {
     "build": "echo 'No build step (Pi loads TS via jiti)'",
     "check": "echo 'Add tsc/eslint later when implementation solidifies'",
-    "verify-tui": "npx tsx extensions/atlas-tui-widget/tests/verify.ts"
+    "verify-tui": "npx tsx extensions/atlas-tui-widget/tests/verify.ts",
+    "verify-elastic-agents": "npx tsx extensions/atlas-elastic-agents/tests/verify.ts"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
@@ -25,7 +26,8 @@
       "./extensions/atlas-safety-gates/src",
       "./extensions/atlas-state/src",
       "./extensions/atlas-status-dashboard/src",
-      "./extensions/atlas-tui-widget/src"
+      "./extensions/atlas-tui-widget/src",
+      "./extensions/atlas-elastic-agents/src"
     ],
     "skills": ["./skills"]
   }

@@ -1,0 +1,169 @@
+# config/agent-scale-policy.yaml
+# Elastic Parallel-Agent Orchestrator — Scale Policy
+# Board decision: CONDITIONAL ACCEPT (2026-05-25, vote 5-0)
+# Schema version: 1.0
+
+version: "1.0"
+
+# Global hard caps
+global:
+  max_concurrent_agents: 16
+  max_write_agents: 4
+  max_parallel_builders_per_file: 1
+  kill_switch: false
+  budget_tokens_per_task: 100000
+
+# Risk class definitions
+risk_classes:
+
+  read_only:
+    type: "read_only"
+    default_concurrency: 12
+    roles: ["scout", "researcher"]
+    gates: []
+    examples:
+      - "codebase search"
+      - "incident triage"
+      - "docs review"
+      - "dependency audit"
+
+  planning:
+    type: "planning"
+    default_concurrency: 3
+    roles: ["planner", "spec_writer"]
+    gates: []
+    examples:
+      - "spec writing"
+      - "risk assessment"
+      - "DAG generation"
+      - "architecture review"
+
+  review_qa:
+    type: "review_qa"
+    default_concurrency: 3
+    roles: ["reviewer", "test-runner", "security-reviewer"]
+    gates: []
+    examples:
+      - "code review"
+      - "security scan"
+      - "test analysis"
+      - "lint checks"
+      - "QA verification"
+
+  write_bounded:
+    type: "write_bounded"
+    default_concurrency: 4
+    max_builders: 2
+    roles: ["builder", "reviewer"]
+    gates:
+      - clean_working_tree: true
+      - file_ownership_table_required: true
+    examples:
+      - "refactoring"
+      - "multi-file feature"
+      - "test suite addition"
+      - "migration"
+
+  live_trading_ops:
+    type: "live_trading_ops"
+    default_concurrency: 1
+    roles: ["executor"]
+    gates:
+      - explicit_human_approval: true
+      - trading_halt_check: true
+      - config_validation: true
+    examples:
+      - "broker mutation"
+      - "config promotion"
+      - "portfolio rebalance"
+      - "live position change"
+
+# Per-agent concurrency rules
+agent_roles:
+
+  scout:
+    risk_class: read_only
+    concurrency_cap: 8
+    timeout_sec: 300
+    can_spawn: ["scout", "researcher"]
+    cannot_spawn: ["builder", "executor"]
+
+  researcher:
+    risk_class: read_only
+    concurrency_cap: 6
+    timeout_sec: 600
+    can_spawn: ["scout", "researcher"]
+    cannot_spawn: ["builder", "executor"]
+
+  planner:
+    risk_class: planning
+    concurrency_cap: 2
+    timeout_sec: 120
+    can_spawn: ["scout", "researcher"]
+    cannot_spawn: ["builder", "executor"]
+
+  spec_writer:
+    risk_class: planning
+    concurrency_cap: 2
+    timeout_sec: 180
+    can_spawn: ["scout", "researcher"]
+    cannot_spawn: ["builder", "executor"]
+
+  builder:
+    risk_class: write_bounded
+    concurrency_cap: 2
+    timeout_sec: 1200
+    can_spawn: []
+    cannot_spawn: ["executor"]
+    isolation: worktree
+    owned_files_required: true
+
+  test-runner:
+    risk_class: review_qa
+    concurrency_cap: 2
+    timeout_sec: 300
+    can_spawn: []
+    cannot_spawn: ["builder", "executor"]
+
+  security-reviewer:
+    risk_class: review_qa
+    concurrency_cap: 2
+    timeout_sec: 300
+    can_spawn: []
+    cannot_spawn: ["builder", "executor"]
+
+  reviewer:
+    risk_class: read_only
+    concurrency_cap: 4
+    timeout_sec: 300
+    can_spawn: []
+    cannot_spawn: ["builder", "executor"]
+
+  executor:
+    risk_class: live_trading_ops
+    concurrency_cap: 1
+    timeout_sec: 60
+    can_spawn: []
+    cannot_spawn: ["builder"]
+    gates: ["explicit_approval", "trading_halt_check", "config_validation"]
+
+# Files that require special gates — no automatic write permitted
+# Supports glob-like prefix matching: "config/live_" matches "config/live_anything.yaml"
+protected_files:
+  - "scripts/deploy_config.py"
+  - "config/live_"
+  - "config/active_config.json"
+  - "config/active/"
+  - "services/broker_"
+  - "brokers/state/"
+  - ".git/"
+  - "secrets/"
+  - ".env"
+
+# Approval thresholds per risk class
+approval_gates:
+  live_trading_ops: "explicit"         # always require human sign-off
+  write_bounded: "auto_if_tests_pass"  # auto-approve if verification passes
+  planning: "auto"                     # no approval needed
+  read_only: "auto"                    # no approval needed
+  review_qa: "auto"                    # no approval needed (read-only execution)

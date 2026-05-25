@@ -1,9 +1,53 @@
 # Elastic Parallel-Agent Orchestrator — Implementation Spec
 
-**Status**: Phase 1 Planning  
+**Status**: Phase 1–2 MVP Delivered (2026-05-26)
 **Board Decision**: Conditional Accept (2026-05-25, vote 5-0)  
 **Doc**: Supersedes exploratory notes; governs Phases 1–5 rollout  
 **Review Date**: After Phase 2 read-only burst mode on 5+ real tasks without runaway spawning
+
+## MVP Implementation (2026-05-26)
+
+Phases 1–2 delivered as a Pi extension at `pi-package/atlas-ops/extensions/atlas-elastic-agents/`.
+
+### What's implemented
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Policy config | ✅ | `config/agent-scale-policy.yaml` — YAML, validated at load time via Python |
+| Policy loader/validator | ✅ | `policy.ts` — typed accessors, kill switch, protected file matching |
+| Dry-run planner | ✅ | `planner.ts` — classifies task, generates DAG, evaluates all gates |
+| Audit logging | ✅ | `audit.ts` — JSONL to `.pi/elastic-agents/audit.jsonl` |
+| Execution gate | ✅ | `executor.ts` — live_trading always blocked; write requires human confirm |
+| Read-only burst support | ✅ | Gated stub: returns OAuth-only pi CLI commands for coordinator use |
+| Commands | ✅ | `/elastic-plan`, `/elastic-run`, `/elastic-status` |
+| Tools | ✅ | `atlas_elastic_plan`, `atlas_elastic_run` |
+| Skill | ✅ | `skills/atlas-elastic-planner/SKILL.md` |
+| Tests | ✅ | 114/114 elastic-agent tests pass; proves dirty-tree gate rejects on real atlas repo |
+| Write builder orchestration | 🔲 | Delegates to swarm coordinator with plan+recommendation (Phase 3) |
+| TUI live agent dashboard | 🔲 | Phase 5; audit log readable via `/elastic-status` now |
+
+### Usage
+
+```bash
+# Plan a task (dry-run, no agents spawned)
+/elastic-plan refactor authentication module -- src/auth.py tests/test_auth.py
+
+# Check execution gate
+/elastic-run search codebase for deprecated calls
+
+# View audit log
+/elastic-status
+```
+
+### Key safety properties proven by tests
+
+- `live_trading_ops` tasks: **always blocked** by executor gate
+- `write_bounded` tasks: **blocked** on dirty working tree (verified on real dirty atlas repo)
+- `read_only` tasks: **allowed**, returns OAuth-only `pi` CLI commands (no API key)
+- Protected files (broker state, live config, `.git/`, secrets): detected and flagged
+- Kill switch (`global.kill_switch: true`): blocks all new spawns
+- No `Anthropic(api_key=...)` usage in any extension source file
+- Audit trail written for every plan/run attempt
 
 ---
 
@@ -311,7 +355,7 @@ approval_gates:
 - **Concurrency caps**: Respect per-agent and global caps; queue excess agents; never exceed limits
 - **Kill switch**: If `agent-scale-policy.yaml:global.kill_switch` is `true`, no new agent spawns (in-flight agents complete)
 - **OAuth-only**: All LLM calls via `pi` subprocess with `--system-prompt` flag; no Anthropic API key usage
-- **Audit trail**: Every agent spawn logged to `~/.pi/agent-audit.log` with timestamp, task, role, and plan hash
+- **Audit trail**: Every agent spawn logged to `.pi/elastic-agents/audit.jsonl` with timestamp, task, role, and plan hash
 
 ### Acceptance Criteria for Phase 1
 
@@ -322,7 +366,7 @@ approval_gates:
 - [ ] Planner is tested against 3 historical task types: small bugfix, multi-file refactor, live-trading config change
 - [ ] All planner outputs pass `jsonschema` validation
 - [ ] Coordinator can read policy, validate plan against policy, and reject unsafe plans with clear reasoning
-- [ ] Audit log is written to `~/.pi/agent-audit.log` (stub in Phase 1, real in Phase 2)
+- [x] Audit log is written to `.pi/elastic-agents/audit.jsonl` (implemented in Phase 2)
 - [ ] No agents spawned in Phase 1 (dry-run only)
 
 ---
@@ -489,7 +533,7 @@ Detailed roadmap in `/root/atlas/docs/phases-2-5-roadmap.md` (to be created post
 
 ### Kill Switch
 
-If `config/agent-scale-policy.yaml:global.kill_switch` is set to `true`, no new agents spawn. In-flight agents complete, but no new tasks are dispatched. Coordinator logs reason to `~/.pi/agent-audit.log`.
+If `config/agent-scale-policy.yaml:global.kill_switch` is set to `true`, no new agents spawn. In-flight agents complete, but no new tasks are dispatched. Coordinator logs reason to `.pi/elastic-agents/audit.jsonl`.
 
 ---
 
