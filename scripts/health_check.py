@@ -185,8 +185,24 @@ def main(argv: list | None = None) -> int:
     print(f"Baseline: CAGR={BASELINE['cagr']:.2f}% Sh={BASELINE['sharpe']:.4f} PF={BASELINE['profit_factor']:.4f}")
 
     # Load config
-    with open(cfg_path) as f:
-        cfg = json.load(f)
+    try:
+        with open(cfg_path) as f:
+            cfg = json.load(f)
+    except FileNotFoundError:
+        universe = cfg_path.stem
+        print(f"Universe {universe} decommissioned (config absent at {cfg_path}), skipping")
+        report = {
+            'date': today,
+            'status': 'SKIPPED',
+            'message': f'Universe {universe} decommissioned (config absent at {cfg_path})',
+            'config_path': str(cfg_path),
+            'report_path': str(report_path),
+            'runtime_s': round(time.time() - t0, 1),
+        }
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(report_path, 'w') as f:
+            json.dump(report, f, indent=2)
+        sys.exit(0)
     print(f"Config: {cfg.get('version', 'unknown')}")
     print(f"Config path: {cfg_path}")
 
