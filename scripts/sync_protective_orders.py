@@ -62,7 +62,7 @@ from brokers.pdt_state import (  # noqa: E402
 )
 
 # Markets supported by this script
-_MARKETS = ("asx", "sp500", "commodity_etfs", "sector_etfs")
+_MARKETS = ("asx", "sp500")
 # Default broker per market (overridden by config)
 _DEFAULT_BROKER: dict[str, str] = {
     "sp500": "alpaca",

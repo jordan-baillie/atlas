@@ -1202,3 +1202,21 @@ Comparison JSON: `data/mean_reversion_guard_comparison_20260519T131116.json`
 ### Commit refs
 
 To be added after commit.
+
+---
+
+## Decommissioned 2026-05-25
+
+- `sector_etfs` and `commodity_etfs` universes archived (live_enabled=False since 2026-05-07 consolidation, 0 open positions verified).
+- State files moved to `brokers/state/archive/`:
+  - `live_sector_etfs.json.archived-20260525`
+  - `live_commodity_etfs.json.archived-20260525`
+- Configs moved to `config/active/archive/`:
+  - `sector_etfs.json.archived-20260525`
+  - `commodity_etfs.json.archived-20260525`
+- `_MARKETS` tuples pruned in 4 operational files:
+  - `scripts/reconcile_positions.py` → `("asx", "sp500")`
+  - `scripts/sync_protective_orders.py` → `("asx", "sp500")`
+  - `scripts/reset_per_market_hwm.py` → `("sp500",)`
+  - `monitor/evaluator.py` inline loop → `("sp500", "asx")`
+  - `scripts/healthz_hourly.sh` loop → `for MKT in sp500`

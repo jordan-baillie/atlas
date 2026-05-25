@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger("reset_per_market_hwm")
 
 # ── Markets to reset ──────────────────────────────────────────────────────────
-_MARKETS = ("sp500", "sector_etfs", "commodity_etfs")
+_MARKETS = ("sp500",)
 
 _STATE_DIR = _ATLAS_ROOT / "brokers" / "state"
 _DB_PATH = _ATLAS_ROOT / "data" / "atlas.db"

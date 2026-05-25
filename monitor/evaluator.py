@@ -330,7 +330,7 @@ def _fetch_broker_positions() -> Dict[str, Dict]:
         from brokers.registry import get_broker
 
         result = {}
-        for market_id in ("sp500", "commodity_etfs", "asx"):
+        for market_id in ("sp500", "asx"):
             try:
                 config = get_active_config(market_id)
                 broker = get_broker(market_id, config)

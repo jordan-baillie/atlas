@@ -57,7 +57,7 @@ def _health_log(level, message, detail=None):
 
 
 # Markets supported
-_MARKETS = ("asx", "sp500", "commodity_etfs", "sector_etfs")
+_MARKETS = ("asx", "sp500")
 _DEFAULT_BROKER = {
     "sp500": "alpaca",
     "commodity_etfs": "alpaca",
