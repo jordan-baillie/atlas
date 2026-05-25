@@ -2,13 +2,20 @@
  * Atlas TUI Widget — Pi Extension Entry Point
  *
  * Renders a compact live-activity dashboard above the Pi editor.
- * Dashboard Pro style: dense, data-first, status-color coded.
+ * This is the SINGLE consolidated persistent dashboard for the workspace.
  *
  * Display:
- *   ◆ ATLAS  │  tools 17  ✓ 15  │  ✗ 2  │  ⏱ 02:34
- *   ──────────────────────────────────────────────────
- *     ✓ Read              memory/SUMMARY.md     200ms
- *     ⟳ atlas_jobs_run    health_check          1.2s…
+ *   ◆ idle  │  agents 0  │  tools 17  │  errors 0  │  elapsed 02:34
+ *   ◆ working  │  agents 1/2  │  tools 5  │  errors 0  │  elapsed 00:12
+ *   ──────────────────────────────────────────────────────────────────
+ *     ✓ Read              memory/SUMMARY.md                      200ms
+ *     ✓ Bash              git status --short                      89ms
+ *     → subagent          researcher — deep analysis task         1.2s…
+ *     ✗ Write             tasks/todo.md                           12ms
+ *
+ * Phase shows "working" when tools are in-flight, "idle" otherwise.
+ * Agents shows active/total delegation tool calls (e.g., "1/2"); "0" when none.
+ * Delegation tools (subagent/swarm) use "→" while running.
  *
  * Commands:
  *   /atlas-tui         — Toggle widget on/off
@@ -29,7 +36,6 @@ import {
   capActiveTools,
   createState,
   pushBounded,
-  renderStatus,
   renderWidget,
   summarizeArgs,
   type ActivityEntry,
@@ -44,8 +50,6 @@ const piWidthFns: WidthFns = {
   truncate: truncateToWidth,
   visible: visibleWidth,
 };
-
-const STATUS_ID = WIDGET_ID;
 
 // ─── Extension entry point ────────────────────────────────────────────────────
 
@@ -71,7 +75,6 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
           | undefined,
         opts?: { placement?: string },
       ) => void;
-      setStatus: (id: string, text: string | undefined) => void;
       theme: Theme;
     };
   };
@@ -91,24 +94,13 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
       },
       { placement: "aboveEditor" },
     );
-
-    ctx.ui.setStatus(STATUS_ID, renderStatus(state, ctx.ui.theme));
   }
 
   function unmountWidget(ctx: {
-    ui: { setWidget(id: string, f: undefined): void; setStatus(id: string, t: undefined): void };
+    ui: { setWidget(id: string, f: undefined): void };
   }) {
     ctx.ui.setWidget(WIDGET_ID, undefined);
-    ctx.ui.setStatus(STATUS_ID, undefined);
     requestRender = undefined;
-  }
-
-  function refreshStatus(ctx: {
-    ui: { setStatus(id: string, text: string): void; theme: Theme };
-  }) {
-    if (!state.enabled) return;
-    ctx.ui.setStatus(STATUS_ID, renderStatus(state, ctx.ui.theme));
-    requestRender?.();
   }
 
   // ── Session lifecycle ───────────────────────────────────────────────────────
@@ -128,12 +120,12 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
 
   pi.on("agent_start", async (_event, ctx) => {
     if (!ctx.hasUI || !state.enabled) return;
-    refreshStatus(ctx);
+    requestRender?.();
   });
 
   pi.on("agent_end", async (_event, ctx) => {
     if (!ctx.hasUI || !state.enabled) return;
-    refreshStatus(ctx);
+    requestRender?.();
   });
 
   // ── Tool lifecycle ──────────────────────────────────────────────────────────
@@ -155,7 +147,7 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
     // Defensive cap: prevent unbounded growth if tool_execution_end is missed.
     capActiveTools(state);
 
-    // Delegation tools (subagent, swarm, delegate*)
+    // Count delegation tools (subagent, swarm, delegate*)
     if (
       event.toolName === "subagent" ||
       event.toolName === "swarm" ||
@@ -164,7 +156,7 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
       state.delegations++;
     }
 
-    refreshStatus(ctx);
+    requestRender?.();
   });
 
   pi.on("tool_execution_end", async (event, ctx) => {
@@ -185,7 +177,7 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
       pushBounded(state.recentActivity, entry, MAX_ACTIVITY);
     }
 
-    refreshStatus(ctx);
+    requestRender?.();
   });
 
   // ── Toggle command ──────────────────────────────────────────────────────────

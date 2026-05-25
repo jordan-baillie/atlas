@@ -207,4 +207,7 @@ When adding a redesigned Pi TUI, audit existing `ctx.ui.setStatus`, `setWidget`,
 and footer/status extensions. The user wants one clean surface; stacking the new
 activity widget above the editor while leaving the old equity/P&L panel below the
 input creates clutter. Rule: retire or gate the old UI in the same change that
-introduces the replacement.
+introduces the replacement. For Pi footer clutter specifically, search global
+extensions too: `[EQUITY] [PNL] [OK] [TASKS]` came from
+`/root/.pi/agent/extensions/projects/footer.ts` (`registerFooter()` leftParts),
+not from Atlas package `atlas-status-dashboard`.

@@ -2,22 +2,40 @@
 
 ## Overview
 
-The `atlas-tui-widget` Pi extension renders a compact live-activity dashboard above the Pi editor. It uses the Dashboard Pro visual style: dense, data-first, monochrome with status colors.
+The `atlas-tui-widget` Pi extension is the **single consolidated dashboard** — it renders
+a compact live-activity panel above the Pi editor. Clean, phase-aware, orchestrator-ready.
 
 ```
-◆ ATLAS  │  tools 17  ✓ 15  │  ✗ 2  │  ⏱ 02:34  │  ⟳ 3 delegated
-──────────────────────────────────────────────────────────────────────
-  ✓ Read              memory/SUMMARY.md                          200ms
-  ✓ Bash              git status --short                          89ms
-  ⟳ atlas_jobs_run    health_check                               1.2s…
-  ✗ Write             tasks/todo.md                               12ms
+◆ idle  │  agents 0  │  tools 17  │  errors 0  │  elapsed 02:34
+──────────────────────────────────────────────────────────────────
+  ✓ Read              memory/SUMMARY.md                      200ms
+  ✓ Bash              git status --short                      89ms
+  → subagent          researcher — deep analysis              1.2s…
+  ✗ Write             tasks/todo.md                           12ms
 ```
 
-The footer status bar also shows a compact one-liner:
+Header fields:
+- **phase** — `idle` (no in-flight tools) or `working` (tools running)
+- **agents** — number of currently active delegation tools (`subagent` / `swarm`)
+- **tools** — total tool calls this session
+- **errors** — total errors this session
+- **elapsed** — session wall-clock time
 
-```
-◆ atlas │ ⟳ 1 running │ ✓14 / ✗1 │ ⏱ 02:34
-```
+Activity feed uses `→` for running delegation (agent) tools vs `⟳` for regular tools.
+
+Footer shows only: **context%  ·  tokens  ·  model  ·  thinking** — no extra clutter.
+
+---
+
+## What was consolidated (2026-05-25)
+
+This widget replaces three previously separate TUI pieces:
+- **`ceo-dashboard`** widget (`ceo-context/index.ts`) — removed; state tracking continues for context injection
+- **`ceo-board-status`** footer entry (`ceo-context/index.ts`) — removed
+- **`atlas-tui` setStatus** footer entry (`atlas-tui-widget/index.ts`) — removed
+- **`[AGENTS]` footer counter** (`projects/footer.ts`) — removed
+
+One dashboard above the editor. Footer stays clean.
 
 ---
 
@@ -33,7 +51,8 @@ The footer status bar also shows a compact one-liner:
 
 ## Enable / Disable
 
-The widget auto-mounts on `session_start`. If you want it permanently disabled, remove the extension from the pi-package registration (see **Package Wiring** below).
+The widget auto-mounts on `session_start`. If you want it permanently disabled, remove the
+extension from the pi-package registration (see **Package Wiring** below).
 
 To hide for the current session only, run `/atlas-tui`.
 
@@ -73,7 +92,8 @@ atlas-tui-widget/
 |---|---|
 | `createState()` | Fresh `TuiState` with session timer started |
 | `renderWidget(state, theme, width, widthFns)` | Returns `string[]`, each line ≤ `width`; `widthFns` is injected so tests can mock ANSI-aware truncation |
-| `renderStatus(state, theme)` | One-line footer string |
+| `isDelegationTool(toolName)` | True for `subagent`, `swarm`, `delegate*` |
+| `rowIcon(status, isDelegation)` | `→` for running delegation, otherwise `✓`/`✗`/`⟳` |
 | `summarizeArgs(args)` | Extract relevant arg from tool call params |
 | `fmtDuration(ms)` | Human-readable duration |
 | `statusColor(status)` | Map status → theme color name |
@@ -84,14 +104,17 @@ atlas-tui-widget/
 | Event | Action |
 |---|---|
 | `session_start` | Reset state, mount widget |
-| `session_shutdown` | Unmount widget + status |
-| `agent_start` / `agent_end` | Refresh footer status |
+| `session_shutdown` | Unmount widget |
+| `agent_start` / `agent_end` | Request re-render |
 | `tool_execution_start` | Add running entry, increment totals |
 | `tool_execution_end` | Move to completed, record duration |
 
-**Delegation detection:** `subagent`, `swarm`, and any tool starting with `delegate` increment the delegation counter.
+**Delegation detection:** `subagent`, `swarm`, and any tool starting with `delegate` increment
+the `delegations` counter and receive `→` icon while running.
 
-**Memory bounds:** `recentActivity` is capped at `MAX_ACTIVITY = 5` entries (oldest evicted via `shift()`). `activeTools` is defensively capped by `capActiveTools()` (default `4 × MAX_ACTIVITY = 20` entries, evicting oldest in Map insertion order) to guard against missed `tool_execution_end` events in aborted sessions. The rendered feed is always capped at `MAX_ACTIVITY = 5` rows regardless of how many tools are concurrently in-flight.
+**Memory bounds:** `recentActivity` is capped at `MAX_ACTIVITY = 5` entries (oldest evicted via
+`shift()`). `activeTools` is defensively capped by `capActiveTools()` (default `4 × MAX_ACTIVITY`
+entries) to guard against missed `tool_execution_end` events. Rendered feed always capped at 5 rows.
 
 ---
 
@@ -107,14 +130,15 @@ npm run verify-tui
 npx tsx extensions/atlas-tui-widget/tests/verify.ts
 ```
 
-Tests cover:
+Tests cover (52 total):
 1. **Width-safety** — every rendered line ≤ requested width, for widths 40–120
-2. **Status/color** — `statusColor()` and `statusIcon()` mappings; widget content includes correct icons
-3. **Bounded memory** — `recentActivity` never exceeds `MAX_ACTIVITY`; rendered feed capped at `MAX_ACTIVITY` rows even when more tools are concurrently in-flight
-4. **FIFO eviction** — oldest entries dropped first
-5. **summarizeArgs** — path priority, newline stripping, fallback
-6. **fmtDuration** — ms/s/m:ss formatting
-7. **`capActiveTools`** — evicts oldest `activeTools` entries when the map exceeds the limit; no-op when under the limit; safe on empty map
+2. **Header format** — phase idle/working, agents count, tools, errors, elapsed labels
+3. **Status/color** — `statusColor()`, `statusIcon()`, `rowIcon()`, `isDelegationTool()` mappings; widget content includes correct icons
+4. **Bounded memory** — `recentActivity` never exceeds `MAX_ACTIVITY`; feed capped at `MAX_ACTIVITY` rows
+5. **FIFO eviction** — oldest entries dropped first
+6. **summarizeArgs** — path priority, newline stripping, fallback
+7. **fmtDuration** — ms/s/m:ss formatting
+8. **`capActiveTools`** — evicts oldest entries when limit exceeded; no-op under limit
 
 ---
 
@@ -142,6 +166,6 @@ Extensions load via jiti (no compilation step), but tsc catches type errors earl
 
 ## Future Improvements
 
-- Token / cost metrics from `ctx.sessionManager.getBranch()` (requires iterating message usage)
+- Elastic agent orchestrator: show total-delegated alongside active agents (`agents 2/5`)
+- Token / cost metrics from `ctx.sessionManager.getBranch()`
 - Collapsible widget (keyboard shortcut to hide without `/atlas-tui`)
-- Atlas equity / service health inline (re-use `atlas-status-dashboard` data)

@@ -115,6 +115,18 @@ export function summarizeArgs(args: Record<string, unknown>): string {
 }
 
 /**
+ * Returns true if the tool is a delegation (agent dispatch) tool.
+ * These are shown with a distinct icon and colour in the activity feed.
+ */
+export function isDelegationTool(toolName: string): boolean {
+  return (
+    toolName === "subagent" ||
+    toolName === "swarm" ||
+    toolName.startsWith("delegate")
+  );
+}
+
+/**
  * Select the theme color name for a given activity status.
  *   running → "warning"   (amber)
  *   success → "success"   (green)
@@ -135,6 +147,15 @@ export function statusIcon(status: ActivityStatus): string {
     case "success": return "✓";
     case "error":   return "✗";
   }
+}
+
+/**
+ * Row icon for an activity entry.
+ * Delegation tools running use "→" to distinguish from regular tool "⟳".
+ */
+export function rowIcon(status: ActivityStatus, isDelegation: boolean): string {
+  if (isDelegation && status === "running") return "→";
+  return statusIcon(status);
 }
 
 /** Push an entry into a bounded list, evicting the oldest when full. */
@@ -167,6 +188,21 @@ export function capActiveTools(
 /**
  * Render the widget lines for the given state and terminal width.
  *
+ * Layout:
+ *   ◆ idle  │  agents 0  │  tools 17  │  errors 0  │  elapsed 02:34
+ *   ───────────────────────────────────────────────────────────────────
+ *     ✓ Read              memory/SUMMARY.md                      200ms
+ *     → subagent          researcher — deep analysis             1.2s…
+ *
+ * Phase:   "idle" when no tools in-flight; "working" when active tools exist.
+ * Agents:  "active/total" delegation tools when any have run this session
+ *           (e.g., "1/2"); plain "0" when none have run.
+ * Tools:   total tool calls this session.
+ * Errors:  total errors this session.
+ * Elapsed: session wall-clock time.
+ *
+ * Delegation tools (subagent/swarm) use "→" while running (vs "⟳" for tools).
+ *
  * @param widthFns - Width utilities (injected so tests can mock them).
  *
  * Every line is guaranteed to be ≤ width via `widthFns.truncate()`.
@@ -192,28 +228,41 @@ export function renderWidget(
   const lines: string[] = [];
 
   // ── Header / metrics bar ───────────────────────────────────────────────────
-  const sep         = dim(" │ ");
-  const elapsedStr  = fmtElapsed(state.sessionStartMs);
+  const sep        = dim(" │ ");
+  const elapsedStr = fmtElapsed(state.sessionStartMs);
 
-  const toolBlock =
-    `${accent("◆ ATLAS")}${sep}` +
-    `${dim("tools")} ${state.toolTotal}${sep}` +
-    `${success("✓")} ${state.toolSuccess}${sep}` +
-    `${state.toolError > 0 ? err("✗ " + state.toolError) : dim("✗ 0")}` +
-    `${sep}${dim("⏱")} ${dim(elapsedStr)}` +
-    (state.delegations > 0
-      ? `${sep}${warning("⟳")} ${muted(String(state.delegations) + " delegated")}`
-      : "");
+  // Phase: working whenever any tool is in-flight
+  const isWorking = state.activeTools.size > 0;
+  const phaseStr  = isWorking ? warning("working") : dim("idle");
 
-  lines.push(truncate(toolBlock, width));
+  // Agents: active in-flight / total this session
+  const agentsActive = [...state.activeTools.values()].filter(
+    (e) => isDelegationTool(e.toolName),
+  ).length;
+  const agentsTotal = state.delegations;
+  const agentsStr =
+    agentsTotal === 0
+      ? dim("0")
+      : agentsActive > 0
+        ? warning(String(agentsActive)) + dim(`/${agentsTotal}`)
+        : dim(`0/${agentsTotal}`);
+
+  const headerLine =
+    `${accent("◆")} ${phaseStr}${sep}` +
+    `${dim("agents")} ${agentsStr}${sep}` +
+    `${dim("tools")} ${muted(String(state.toolTotal))}${sep}` +
+    `${state.toolError > 0 ? err("errors " + state.toolError) : dim("errors 0")}${sep}` +
+    `${dim("elapsed")} ${dim(elapsedStr)}`;
+
+  lines.push(truncate(headerLine, width));
 
   // ── Thin separator ─────────────────────────────────────────────────────────
-  // Wrapped with truncate() to honour the width-safety contract (§ doc-comment).
+  // Wrapped with truncate() to honour the width-safety contract.
   lines.push(truncate(border("─".repeat(width)), width));
 
   // ── Activity feed ──────────────────────────────────────────────────────────
-  // Running tools first (most urgent), then completed in reverse-chronological order.
-  const runningEntries  = Array.from(state.activeTools.values());
+  // Running tools first (most urgent), then completed in reverse-chronological.
+  const runningEntries   = Array.from(state.activeTools.values());
   const completedEntries = [...state.recentActivity].reverse();
   const feed: ActivityEntry[] = [...runningEntries, ...completedEntries].slice(0, MAX_ACTIVITY);
 
@@ -221,8 +270,10 @@ export function renderWidget(
     lines.push(truncate(dim("  idle"), width));
   } else {
     for (const entry of feed) {
-      const color = statusColor(entry.status);
-      const icon  = statusIcon(entry.status);
+      const isAgent  = isDelegationTool(entry.toolName);
+      const icon     = rowIcon(entry.status, isAgent);
+      const iconColor =
+        isAgent && entry.status === "running" ? "accent" : statusColor(entry.status);
 
       //
       // Row layout (visible widths):
@@ -239,7 +290,7 @@ export function renderWidget(
       const argsCol  = Math.max(8, width - FIXED_W);
 
       const toolTrunc = truncate(entry.toolName, TOOL_W);
-      const toolPad   = " ".repeat(Math.max(0, TOOL_W - visible(entry.toolName)));
+      const toolPad   = " ".repeat(Math.max(0, TOOL_W - visible(toolTrunc)));
 
       const argsTrunc = truncate(entry.args, argsCol, "…");
       const argsPad   = " ".repeat(Math.max(0, argsCol - visible(argsTrunc)));
@@ -249,12 +300,13 @@ export function renderWidget(
         : fmtElapsed(entry.startMs) + "…";
       const durTrunc  = truncate(durRaw, DUR_W);
       const durPadStr = " ".repeat(Math.max(0, DUR_W - visible(durTrunc)));
-      const dur = (entry.durationMs !== undefined ? dim(durTrunc) : warning(durTrunc)) + durPadStr;
+      const dur =
+        (entry.durationMs !== undefined ? dim(durTrunc) : warning(durTrunc)) + durPadStr;
 
       const row =
         " ".repeat(INDENT) +
-        theme.fg(color, icon) + " " +
-        accent(toolTrunc) + toolPad + " ".repeat(COL_SEP) +
+        theme.fg(iconColor, icon) + " " +
+        (isAgent ? warning(toolTrunc) : accent(toolTrunc)) + toolPad + " ".repeat(COL_SEP) +
         muted(argsTrunc) + argsPad + " ".repeat(COL_SEP) +
         dur;
 
@@ -263,32 +315,4 @@ export function renderWidget(
   }
 
   return lines;
-}
-
-/**
- * Render a compact one-line status string for the footer status bar.
- * No truncation needed — caller may truncate to terminal width if desired.
- */
-export function renderStatus(state: TuiState, theme: Theme): string {
-  const dim     = (t: string) => theme.fg("dim",     t);
-  const accent  = (t: string) => theme.fg("accent",  t);
-  const success = (t: string) => theme.fg("success", t);
-  const err     = (t: string) => theme.fg("error",   t);
-  const warning = (t: string) => theme.fg("warning", t);
-
-  const running = state.activeTools.size;
-  const elapsed = fmtElapsed(state.sessionStartMs);
-  const parts: string[] = [accent("◆ atlas")];
-
-  if (running > 0) {
-    parts.push(warning(`⟳ ${running} running`));
-  }
-  parts.push(
-    `${success("✓")}${state.toolSuccess} ${dim("/")} ${
-      state.toolError > 0 ? err("✗" + state.toolError) : dim("✗0")
-    }`
-  );
-  parts.push(dim(`⏱ ${elapsed}`));
-
-  return parts.join(dim(" │ "));
 }

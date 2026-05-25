@@ -1246,3 +1246,19 @@ Implemented Dashboard Pro style Pi TUI widget. Mounts automatically on `session_
 - `docs/atlas-tui-widget.md` (new)
 
 **Verification:** `cd /root/atlas/pi-package/atlas-ops && npm run verify-tui` passes (38/38).
+
+---
+
+## TUI Consolidation — 2026-05-25
+
+**Status**: COMPLETED.
+
+Consolidated all TUI elements into one dashboard + clean footer:
+- Removed `ceo-dashboard` widget and `ceo-board-status` footer from `ceo-context/index.ts`
+- Removed `[AGENTS]` left-side counter and dead code from `projects/footer.ts`
+- Removed `setStatus` footer entry from `atlas-tui-widget/index.ts`
+- Redesigned `atlas-tui-widget` header: `◆ phase │ agents N │ tools T │ errors E │ elapsed`
+- Added `isDelegationTool()` + `rowIcon()` — delegation tools (subagent/swarm) show `→` while running
+- Footer: context% · tokens · model · thinking only
+
+**Verification:** `npm run verify-tui` passes (52/52).

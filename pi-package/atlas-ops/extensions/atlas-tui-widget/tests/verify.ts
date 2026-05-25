@@ -9,10 +9,14 @@
  *   # or from atlas-ops dir:
  *   npm run verify-tui
  *
- * Three test categories:
+ * Test categories:
  *   1. Width-safety: every rendered line ≤ requested width
- *   2. Status/color correctness: statusColor() and statusIcon() mappings
- *   3. Bounded memory: recentActivity never exceeds MAX_ACTIVITY
+ *   2. Header format: phase, agents, tools, errors, elapsed labels
+ *   3. Status/color correctness: statusColor(), statusIcon(), rowIcon() mappings
+ *   4. Bounded memory: recentActivity never exceeds MAX_ACTIVITY
+ *   5. summarizeArgs: argument extraction priority
+ *   6. fmtDuration: ms/s/m:ss formatting
+ *   7. Non-interactive guard + capActiveTools
  */
 
 import { strict as assert } from "node:assert";
@@ -22,9 +26,10 @@ import {
   capActiveTools,
   createState,
   fmtDuration,
+  isDelegationTool,
   pushBounded,
-  renderStatus,
   renderWidget,
+  rowIcon,
   statusColor,
   statusIcon,
   summarizeArgs,
@@ -174,15 +179,115 @@ test("separator line is exactly `width` chars", () => {
   const lines = renderWidget(state, mockTheme, 80, mockWidthFns);
   // Line at index 1 is the separator "─".repeat(width) + possible theme.fg wrapper.
   // With mockTheme (identity), it should be exactly "─".repeat(80).
-  // NOTE: The box-drawing character "─" (U+2500) is treated as 1 column here.
-  // Real terminals use wcwidth() for East-Asian widths; mockWidthFns.visible()
-  // counts bytes/codepoints, which matches since U+2500 is narrow (wcwidth=1).
   assert.strictEqual(lines[1], "─".repeat(80), "Separator should fill exactly width");
 });
 
-// ─── 2. Status / color correctness ───────────────────────────────────────────
+// ─── 2. Header format ────────────────────────────────────────────────────────
 
-console.log("\n── 2. Status/color correctness ──");
+console.log("\n── 2. Header format ──");
+
+test("header contains '◆' accent marker", () => {
+  const state = createState();
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns).join("\n");
+  assert.ok(rendered.includes("◆"), `Expected '◆' in header:\n${rendered}`);
+});
+
+test("header shows 'idle' when no active tools", () => {
+  const state = createState();
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("idle"), `Expected 'idle' in header: "${rendered}"`);
+  assert.ok(!rendered.includes("working"), `Expected no 'working' in idle header: "${rendered}"`);
+});
+
+test("header shows 'working' when tools are active", () => {
+  const state = createState();
+  state.activeTools.set("r1", {
+    toolCallId: "r1",
+    toolName: "Bash",
+    args: "sleep 1",
+    status: "running",
+    startMs: Date.now(),
+  });
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("working"), `Expected 'working' in header: "${rendered}"`);
+  assert.ok(!rendered.includes("idle"), `Expected no 'idle' in working header: "${rendered}"`);
+});
+
+test("header shows 'agents' label", () => {
+  const state = createState();
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("agents"), `Expected 'agents' label in header: "${rendered}"`);
+});
+
+test("header shows 'tools' label", () => {
+  const state = createState();
+  state.toolTotal = 5;
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("tools"), `Expected 'tools' label in header: "${rendered}"`);
+  assert.ok(rendered.includes("5"), `Expected tool count '5' in header: "${rendered}"`);
+});
+
+test("header shows 'errors' label with count", () => {
+  const state = createState();
+  state.toolError = 3;
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("errors"), `Expected 'errors' label in header: "${rendered}"`);
+  assert.ok(rendered.includes("3"), `Expected error count '3' in header: "${rendered}"`);
+});
+
+test("header shows 'elapsed' label", () => {
+  const state = createState();
+  const rendered = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(rendered.includes("elapsed"), `Expected 'elapsed' in header: "${rendered}"`);
+});
+
+test("header shows 'agents 0' when no delegations have run", () => {
+  const state = createState();
+  // state.delegations = 0 by default — no delegation tools ran yet
+  const header = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(
+    /agents\s+0(?!\/)/.test(header),
+    `Expected 'agents 0' (no slash) in header: "${header}"`,
+  );
+});
+
+test("header shows active/total when delegation tools exist", () => {
+  const state = createState();
+  state.delegations = 3; // 3 total this session
+  // 2 currently in-flight delegation tools + 1 regular tool
+  state.activeTools.set("a1", {
+    toolCallId: "a1", toolName: "subagent", args: "scout",
+    status: "running", startMs: Date.now(),
+  });
+  state.activeTools.set("a2", {
+    toolCallId: "a2", toolName: "swarm", args: "build",
+    status: "running", startMs: Date.now(),
+  });
+  state.activeTools.set("t1", {
+    toolCallId: "t1", toolName: "Bash", args: "ls",
+    status: "running", startMs: Date.now(),
+  });
+  const header = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  // "agents 2/3" — 2 active delegation tools, 3 total (Bash excluded)
+  assert.ok(
+    /agents\s+2\/3/.test(header),
+    `Expected 'agents 2/3' in header: "${header}"`,
+  );
+});
+
+test("header shows '0/N' when delegations ran but none currently active", () => {
+  const state = createState();
+  state.delegations = 2; // 2 total, none in-flight right now
+  const header = renderWidget(state, mockTheme, 80, mockWidthFns)[0];
+  assert.ok(
+    /agents\s+0\/2/.test(header),
+    `Expected 'agents 0/2' in header: "${header}"`,
+  );
+});
+
+// ─── 3. Status / color correctness ───────────────────────────────────────────
+
+console.log("\n── 3. Status/color correctness ──");
 
 test("statusColor(running) → 'warning'", () => {
   assert.strictEqual(statusColor("running"), "warning");
@@ -206,6 +311,38 @@ test("statusIcon(success) → '✓'", () => {
 
 test("statusIcon(error) → '✗'", () => {
   assert.strictEqual(statusIcon("error"), "✗");
+});
+
+test("rowIcon: delegation + running → '→'", () => {
+  assert.strictEqual(rowIcon("running", true), "→");
+});
+
+test("rowIcon: delegation + success → '✓' (not '→')", () => {
+  assert.strictEqual(rowIcon("success", true), "✓");
+});
+
+test("rowIcon: non-delegation + running → '⟳'", () => {
+  assert.strictEqual(rowIcon("running", false), "⟳");
+});
+
+test("isDelegationTool: subagent → true", () => {
+  assert.ok(isDelegationTool("subagent"));
+});
+
+test("isDelegationTool: swarm → true", () => {
+  assert.ok(isDelegationTool("swarm"));
+});
+
+test("isDelegationTool: delegate_scout → true (prefix match)", () => {
+  assert.ok(isDelegationTool("delegate_scout"));
+});
+
+test("isDelegationTool: Bash → false", () => {
+  assert.ok(!isDelegationTool("Bash"));
+});
+
+test("isDelegationTool: Read → false", () => {
+  assert.ok(!isDelegationTool("Read"));
 });
 
 test("renderWidget includes ✓ for a success entry", () => {
@@ -240,7 +377,7 @@ test("renderWidget includes ✗ for an error entry", () => {
   assert.ok(rendered.includes("✗"), `Expected '✗' in:\n${rendered}`);
 });
 
-test("renderWidget includes ⟳ for a running entry", () => {
+test("renderWidget includes ⟳ for a running non-delegation tool", () => {
   const state = createState();
   state.activeTools.set("run1", {
     toolCallId: "run1",
@@ -253,35 +390,22 @@ test("renderWidget includes ⟳ for a running entry", () => {
   assert.ok(rendered.includes("⟳"), `Expected '⟳' in:\n${rendered}`);
 });
 
-test("renderStatus includes '◆ atlas' prefix", () => {
+test("renderWidget uses → for running delegation tool (subagent)", () => {
   const state = createState();
-  const status = renderStatus(state, mockTheme);
-  assert.ok(status.includes("◆ atlas"), `Expected '◆ atlas' in: "${status}"`);
-});
-
-test("renderStatus shows 'running' count when active tools exist", () => {
-  const state = createState();
-  state.activeTools.set("r1", {
-    toolCallId: "r1",
-    toolName: "Bash",
-    args: "sleep 5",
+  state.activeTools.set("del1", {
+    toolCallId: "del1",
+    toolName: "subagent",
+    args: "researcher — analysis",
     status: "running",
-    startMs: Date.now(),
+    startMs: Date.now() - 1000,
   });
-  const status = renderStatus(state, mockTheme);
-  assert.ok(status.includes("running"), `Expected 'running' in: "${status}"`);
-});
-
-test("renderWidget shows delegation count when > 0", () => {
-  const state = createState();
-  state.delegations = 2;
   const rendered = renderWidget(state, mockTheme, 80, mockWidthFns).join("\n");
-  assert.ok(rendered.includes("delegated"), `Expected 'delegated' in:\n${rendered}`);
+  assert.ok(rendered.includes("→"), `Expected '→' for running delegation in:\n${rendered}`);
 });
 
-// ─── 3. Bounded memory ────────────────────────────────────────────────────────
+// ─── 4. Bounded memory ────────────────────────────────────────────────────────
 
-console.log("\n── 3. Bounded memory ──");
+console.log("\n── 4. Bounded memory ──");
 
 test(`pushBounded never exceeds MAX_ACTIVITY (${MAX_ACTIVITY})`, () => {
   const state = createState();
@@ -363,9 +487,9 @@ test("createState produces a fresh state with zeroed counters", () => {
   assert.ok(s2.enabled, "New state should be enabled");
 });
 
-// ─── 4. summarizeArgs ────────────────────────────────────────────────────────
+// ─── 5. summarizeArgs ────────────────────────────────────────────────────────
 
-console.log("\n── 4. summarizeArgs ──");
+console.log("\n── 5. summarizeArgs ──");
 
 test("prefers path over other fields", () => {
   const result = summarizeArgs({ path: "foo/bar.ts", command: "echo hi" });
@@ -399,9 +523,9 @@ test("handles non-object args gracefully", () => {
   assert.strictEqual(result, "");
 });
 
-// ─── 5. fmtDuration ──────────────────────────────────────────────────────────
+// ─── 6. fmtDuration ──────────────────────────────────────────────────────────
 
-console.log("\n── 5. fmtDuration ──");
+console.log("\n── 6. fmtDuration ──");
 
 test("< 1 s → milliseconds", () => {
   assert.strictEqual(fmtDuration(450), "450ms");
@@ -423,20 +547,19 @@ test("59.9 s → '59.9s' (not minutes)", () => {
   assert.strictEqual(fmtDuration(59_900), "59.9s");
 });
 
-test("sub-millisecond rounds to whole ms", () => {
+test("0 ms → '0ms' (edge: zero input)", () => {
   assert.strictEqual(fmtDuration(0), "0ms");
 });
 
-// ─── 6. Non-interactive guard + capActiveTools ───────────────────────────────────────────────────────────────
+// ─── 7. Non-interactive guard + capActiveTools ────────────────────────────────
 
 // NOTE: The /atlas-tui command handler lives in index.ts, which imports
 // @mariozechner/pi-coding-agent and @mariozechner/pi-tui — neither of which
-// is available in this test runner context. Mocking those modules would add
-// more fragile scaffolding than the simple guard warrants. The fix is verified
-// by code review: the handler now early-returns without touching ctx.ui when
-// ctx.hasUI is false.
+// is available in this test runner context. The guard is verified by code
+// review: the handler early-returns without touching ctx.ui when ctx.hasUI
+// is false.
 
-console.log("\n── 6. Non-interactive guard + capActiveTools ──");
+console.log("\n── 7. Non-interactive guard + capActiveTools ──");
 
 test("capActiveTools evicts oldest entries when limit exceeded", () => {
   const state = createState();
