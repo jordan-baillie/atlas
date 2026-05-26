@@ -133,7 +133,7 @@ export interface ElasticRunResult {
 // ─── OAuth-only command builder ───────────────────────────────────────────────
 
 const SYSTEM_PROMPT = "You are Claude Code, Anthropic's official CLI for Claude.";
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const DEFAULT_MODEL = "claude-opus-4-7";
 /**
  * Fallback timeout when a role has no entry in policy.agent_roles.
  * 300s is safe for read-only burst agents (no write side-effects).
