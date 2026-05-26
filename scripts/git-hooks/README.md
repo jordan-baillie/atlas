@@ -25,12 +25,13 @@ pre-commit install
 2. **Credential pattern scan** — blocks obvious credential patterns in staged Python/JSON/YAML
 3. **Bash syntax check** — runs `bash -n` on staged `.sh` files
 4. **Python syntax check** — runs `python3 -m py_compile` on staged `.py` files
-5. **Config/active research gate** _(added 2026-05-06, Rec 1.6; fixed #319 2026-05-11)_ — blocks
+5. **Runtime artifact guard** _(added 2026-05-26 Repo Reset)_ — blocks mutable Atlas runtime/state/backup/research artifacts from being re-tracked. Use `python3 scripts/git-hooks/check_no_runtime_artifacts.py --all-tracked` to audit the index.
+6. **Config/active research gate** _(added 2026-05-06, Rec 1.6; fixed #319 2026-05-11)_ — blocks
    direct edits to `config/active/*.json` unless:
    - A matching `auto_promote()` log entry exists within the last 24h, OR
    - `BYPASS_RESEARCH_GATE` env var is set (see below), OR
    - You pass `--no-verify` (git-traced override)
-6. **Strategy lifecycle guard** _(added lifecycle-1.6, 2026-05-14)_ — blocks enabling a strategy
+7. **Strategy lifecycle guard** _(added lifecycle-1.6, 2026-05-14)_ — blocks enabling a strategy
    in `config/active/*.json` unless `strategy_lifecycle` has a `LIVE` or `PAPER` row for that
    `(strategy, universe)` pair. See details below.
 
@@ -66,6 +67,7 @@ Bypass (use with caution): git commit --no-verify
 |------|---------|
 | `scripts/git-hooks/pre-commit-lifecycle-guard.sh` | Bash entry point (finds staged files, calls Python helper) |
 | `scripts/git-hooks/check_lifecycle_for_enabled.py` | Python logic (diffs HEAD vs staged, queries SQLite) |
+| `scripts/git-hooks/check_no_runtime_artifacts.py` | Repo hygiene guard for generated runtime artifacts |
 | `.pre-commit-config.yaml` hook `lifecycle-enabled-guard` | Pre-commit framework registration |
 
 ### Install / re-install

@@ -31,6 +31,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: no-runtime-artifacts
+        name: Repo hygiene - block generated runtime artifacts
+        entry: python3 scripts/git-hooks/check_no_runtime_artifacts.py
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: lifecycle-enabled-guard
         name: Lifecycle guard — block enabling strategies without LIVE/PAPER row
         entry: python3 scripts/git-hooks/check_lifecycle_for_enabled.py data/atlas.db

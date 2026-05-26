@@ -250,7 +250,7 @@ function resolveJobCommand(job: AtlasJobName, rawArgs?: RunArgs) {
       // that exits 0 so callers (e.g. postclose cron) do not exit 2.
       assertNoExtraArgs(job, args);
       return buildPythonScriptInvocation("-c", [
-        "import sys; print("[dashboard_generate_data] retired 2026-05-18 — dashboard served from FastAPI (services/api/dashboard.py); no-op"); sys.exit(0)"
+        `import sys; print("[dashboard_generate_data] retired 2026-05-18 — dashboard served from FastAPI (services/api/dashboard.py); no-op"); sys.exit(0)`
       ]);
     case "cli_ingest":
       return buildCliInvocation("ingest", args);

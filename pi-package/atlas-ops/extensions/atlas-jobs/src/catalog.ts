@@ -149,7 +149,7 @@ export const ATLAS_JOB_CATALOG: AtlasJobSpec[] = [
     // with a 30 s in-process cache.  This entry is kept for catalog stability
     // (external callers that reference this job name get a no-op exit 0).
     summary: "[RETIRED 2026-05-18] No-op stub — dashboard is now served live from FastAPI (services/api/dashboard.py). Kept for backward compatibility; exits 0 with a log message.",
-    commandPreview: "python -c "print('[dashboard_generate_data] retired — no-op'); sys.exit(0)"",
+    commandPreview: `python -c "print('[dashboard_generate_data] retired — no-op'); sys.exit(0)"`,
     estimatedRuntimeSec: 5,
     reads: [],
     writes: [],

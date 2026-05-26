@@ -7,6 +7,12 @@
 RED='\033[0;31m'
 NC='\033[0m'
 
+# Block generated runtime/state artifacts from being re-tracked.
+RUNTIME_GUARD="$(git rev-parse --show-toplevel)/scripts/git-hooks/check_no_runtime_artifacts.py"
+if [ -f "$RUNTIME_GUARD" ]; then
+    python3 "$RUNTIME_GUARD" || exit 1
+fi
+
 # Block exact secret filenames (not partials like .env.example)
 BLOCKED_PATTERNS='^\.env$|\.secrets\.json$|atlas-secrets'
 MATCHES=$(git diff --cached --name-only | grep -E "$BLOCKED_PATTERNS" || true)
