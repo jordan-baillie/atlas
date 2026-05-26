@@ -239,7 +239,7 @@ def run_llm_loop(
     try:
         output = call_pi(
             prompt,
-            model="claude-sonnet-4-6",
+            model="claude-opus-4-7",
             timeout=timeout_s,
             mode="json",
             extra_args=["--tools", "bash,read"],
@@ -288,7 +288,7 @@ def run_llm_loop(
         runtime_s = time.time() - start
         err_msg = str(e)
         if "timed out" in err_msg:
-            logger.error("Pi CLI timed out after %ds", timeout_s, extra={"timeout_s": timeout_s, "model": "claude-sonnet-4-6"})
+            logger.error("Pi CLI timed out after %ds", timeout_s, extra={"timeout_s": timeout_s, "model": "claude-opus-4-7"})
             with open(log_path, "w") as f:
                 f.write(f"=== LLM Loop TIMEOUT {date_str} ===\nTimeout after {timeout_s}s\n")
             return {"status": "timeout", "runtime_s": round(runtime_s, 1), "log_path": str(log_path)}

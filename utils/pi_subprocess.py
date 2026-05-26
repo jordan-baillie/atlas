@@ -8,7 +8,7 @@ Usage:
     from utils.pi_subprocess import call_pi, call_pi_structured, call_pi_exec, call_pi_vision
 
     # Capture output (default — JSON mode)
-    raw = call_pi("Summarise this: ...", model="claude-sonnet-4-6")
+    raw = call_pi("Summarise this: ...", model="claude-opus-4-7")
     data = call_pi_structured("Extract JSON: ...")
 
     # Streaming — output goes directly to terminal, prompt passed as positional arg
@@ -33,7 +33,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 DEFAULT_SYSTEM_PROMPT = "You are Claude Code, Anthropic's official CLI for Claude."
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "claude-opus-4-7"
 DEFAULT_TIMEOUT = 1800
 
 

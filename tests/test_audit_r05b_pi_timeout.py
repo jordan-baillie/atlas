@@ -142,7 +142,7 @@ def test_probe_called_before_main_call(monkeypatch: pytest.MonkeyPatch, tmp_path
         call_log.append(model)
         if model == "claude-haiku-4-5":
             return "probe ok"
-        # Main sonnet call — return minimal valid JSON
+        # Main opus call — return minimal valid JSON
         return '{"result": "done", "cost_usd": 0.001, "num_turns": 2}'
 
     monkeypatch.setattr(pi_mod, "call_pi", _ordered_call_pi)
@@ -156,8 +156,8 @@ def test_probe_called_before_main_call(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert call_log[0] == "claude-haiku-4-5", (
         f"First call must be the haiku probe, got: {call_log[0]!r}"
     )
-    assert call_log[1] == "claude-sonnet-4-6", (
-        f"Second call must be the sonnet main call, got: {call_log[1]!r}"
+    assert call_log[1] == "claude-opus-4-7", (
+        f"Second call must be the opus main call, got: {call_log[1]!r}"
     )
     # Confirm the loop completed successfully after the probe passed
     assert result.get("status") == "complete", f"Expected complete, got: {result}"
