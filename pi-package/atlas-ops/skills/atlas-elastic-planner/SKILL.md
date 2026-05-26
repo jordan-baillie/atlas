@@ -88,6 +88,7 @@ or `atlas_elastic_run` with `execute_read_only: true`
   - `--mode json` (structured output)
   - `--system-prompt "You are Claude Code..."` (Claude Max OAuth)
   - Default concurrency: **4 agents** (hard safe default)
+  - **Per-agent timeout**: from `policy.agent_roles[role].timeout_sec` (e.g. reviewer/test-runner/security-reviewer → 300s, researcher → 600s). Fallback: 300s. Pass `timeoutMs` to override all agents.
   - Audit: `read_only_started` → `read_only_complete` or `dispatch_rejected`
 
 **For `write_bounded`** — Requires human confirmation:
@@ -139,6 +140,7 @@ No additional persistent widgets are added. Use `/elastic-status` for history.
 5. **Kill switch** — if `config/agent-scale-policy.yaml:global.kill_switch=true`, all spawning blocked
 6. **No overlapping ownership** — `validateOwnershipTable()` run before write dispatch
 7. **Burst concurrency cap** — default 4 agents max; capped at `policy.global.max_concurrent_agents`
+10. **Per-agent timeout** — each burst agent uses `policy.agent_roles[role].timeout_sec` (300s for reviewer/test-runner/security-reviewer, 600s for researcher). Fallback 300s. Configurable via `timeoutMs` option to override all agents.
 8. **Read-only tools only for burst** — `--tools read,grep,find,ls` enforces no write access
 9. **No shell interpolation** — subprocess args passed as arrays; objectives sent via stdin
 
@@ -153,9 +155,21 @@ global:
   max_concurrent_agents: 16   # hard ceiling for all spawning
   max_write_agents: 4         # write-phase cap
   kill_switch: false          # set true to halt all spawning
+
+agent_roles:
+  reviewer:
+    timeout_sec: 300           # burst timeout for reviewer agents
+  test-runner:
+    timeout_sec: 300           # burst timeout for test-runner agents
+  security-reviewer:
+    timeout_sec: 300           # burst timeout for security-reviewer agents
+  researcher:
+    timeout_sec: 600           # longer timeout for deep research
 ```
 
 Change `kill_switch: true` to instantly stop all new agent spawns.
+
+`agent_roles[role].timeout_sec` drives per-agent burst timeouts. If a role is missing, the fallback is 300s.
 
 ---
 

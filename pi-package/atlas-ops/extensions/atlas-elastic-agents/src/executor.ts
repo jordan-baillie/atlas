@@ -66,6 +66,8 @@ export interface BurstAgentResult {
   output?: string;
   error?: string;
   duration_ms: number;
+  /** Timeout applied to this agent (ms). Visible in results and audit for diagnostics. */
+  timeout_ms?: number;
 }
 
 export interface BurstRunResult {
@@ -105,7 +107,12 @@ export interface ElasticRunOptions {
   confirmed?: boolean;
   /** Custom runner function (injectable for testing). Default: defaultBurstRunner. */
   runner?: BurstRunnerFn;
-  /** Per-agent timeout in ms. Default: 120_000 (2 minutes). */
+  /**
+   * Per-agent timeout override in ms.
+   * When omitted, each agent uses its role's timeout_sec from policy.agent_roles
+   * (e.g. reviewer/test-runner/security-reviewer → 300s, researcher → 600s).
+   * Falls back to DEFAULT_BURST_TIMEOUT_MS (300s) for roles not in policy.
+   */
   timeoutMs?: number;
   /**
    * Max concurrent agents. Default: 4 (hard safe default).
@@ -127,8 +134,37 @@ export interface ElasticRunResult {
 
 const SYSTEM_PROMPT = "You are Claude Code, Anthropic's official CLI for Claude.";
 const DEFAULT_MODEL = "claude-sonnet-4-6";
-const DEFAULT_BURST_TIMEOUT_MS = 120_000; // 2 minutes per agent
+/**
+ * Fallback timeout when a role has no entry in policy.agent_roles.
+ * 300s is safe for read-only burst agents (no write side-effects).
+ * Per-role overrides from policy.agent_roles[role].timeout_sec take precedence.
+ */
+const DEFAULT_BURST_TIMEOUT_MS = 300_000; // 5 minutes — read-only burst fallback
 const DEFAULT_MAX_CONCURRENT = 4;         // hard safe default cap
+
+// ─── Per-role timeout resolver ───────────────────────────────────────────────
+
+/**
+ * Resolve the effective timeout for a single burst agent.
+ *
+ * Priority:
+ *   1. `overrideMs` — explicit caller override (timeoutMs option); always wins.
+ *   2. `policy.agent_roles[role].timeout_sec * 1000` — per-role policy value.
+ *   3. `DEFAULT_BURST_TIMEOUT_MS` (300s) — safe fallback for unmapped roles.
+ *
+ * This ensures review_qa roles (reviewer/test-runner/security-reviewer) get
+ * their configured 300s from policy instead of the old 120s hard default.
+ */
+export function resolveAgentTimeoutMs(
+  role: string,
+  policy: AgentScalePolicy,
+  overrideMs?: number
+): number {
+  if (overrideMs !== undefined) return overrideMs;
+  const roleConfig = policy.agent_roles[role];
+  if (roleConfig?.timeout_sec) return roleConfig.timeout_sec * 1000;
+  return DEFAULT_BURST_TIMEOUT_MS;
+}
 
 /**
  * Build a pi CLI command string for display purposes.
@@ -226,6 +262,7 @@ export const defaultBurstRunner: BurstRunnerFn = (
         success: false,
         error: `Timeout after ${timeoutMs}ms`,
         duration_ms: Date.now() - startMs,
+        timeout_ms: timeoutMs,
       });
     }, timeoutMs);
 
@@ -236,7 +273,7 @@ export const defaultBurstRunner: BurstRunnerFn = (
       const errText = stderr.join("").trim();
 
       if (code === 0) {
-        resolve({ agent_id: agentId, role, objective, success: true, output, duration_ms });
+        resolve({ agent_id: agentId, role, objective, success: true, output, duration_ms, timeout_ms: timeoutMs });
       } else {
         resolve({
           agent_id: agentId,
@@ -246,6 +283,7 @@ export const defaultBurstRunner: BurstRunnerFn = (
           output: output || undefined,
           error: errText || `Process exited with code ${String(code)}`,
           duration_ms,
+          timeout_ms: timeoutMs,
         });
       }
     });
@@ -259,6 +297,7 @@ export const defaultBurstRunner: BurstRunnerFn = (
         success: false,
         error: err.message,
         duration_ms: Date.now() - startMs,
+        timeout_ms: timeoutMs,
       });
     });
   });
@@ -287,7 +326,6 @@ export async function runReadOnlyBurst(
   } = {}
 ): Promise<BurstRunResult> {
   const runner = opts.runner ?? defaultBurstRunner;
-  const timeoutMs = opts.timeoutMs ?? DEFAULT_BURST_TIMEOUT_MS;
   const policyMax = policy.global.max_concurrent_agents;
   const rawMax = opts.maxConcurrent ?? DEFAULT_MAX_CONCURRENT;
   // Clamp: at least 1, at most the global policy cap
@@ -296,8 +334,10 @@ export async function runReadOnlyBurst(
   const agents = plan.proposed_dag.phases.flatMap((p) => p.agents);
   const startedAt = new Date().toISOString();
 
+  // Each agent gets its own timeout: policy role timeout → fallback default.
+  // opts.timeoutMs acts as a global override when explicitly provided.
   const tasks = agents.map(
-    (a) => () => runner(a.id, a.role, a.objective, timeoutMs)
+    (a) => () => runner(a.id, a.role, a.objective, resolveAgentTimeoutMs(a.role, policy, opts.timeoutMs))
   );
 
   const results = await runBounded(tasks, maxConcurrent);

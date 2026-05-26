@@ -65,6 +65,7 @@ import {
   runReadOnlyBurst,
   validateOwnershipTable,
   checkForbiddenApiKeyUsage,
+  resolveAgentTimeoutMs,
   type BurstRunnerFn,
   type BurstAgentResult,
 } from "../src/executor.js";
@@ -986,6 +987,168 @@ await testAsync("runReadOnlyBurst: works for read_only plan with mock runner", a
   const result = await runReadOnlyBurst(plan, POLICY, { runner: mockSuccessRunner });
   assert.ok(result.agents_run > 0);
   assert.strictEqual(result.agents_succeeded, result.agents_run);
+});
+
+// ─── 11b. Timeout selection: per-role policy lookup ──────────────────────────
+
+console.log("\n── 11b. Timeout selection: per-role policy lookup ──");
+
+// Policy fixture with agent_roles for timeout tests (reuse POLICY which has agent_roles: {})
+// Use a richer policy fixture that has actual role timeouts.
+const TIMEOUT_POLICY: AgentScalePolicy = {
+  ...POLICY,
+  agent_roles: {
+    reviewer: {
+      risk_class: "review_qa",
+      concurrency_cap: 4,
+      timeout_sec: 300,
+      can_spawn: [],
+      cannot_spawn: ["builder", "executor"],
+    },
+    "test-runner": {
+      risk_class: "review_qa",
+      concurrency_cap: 2,
+      timeout_sec: 300,
+      can_spawn: [],
+      cannot_spawn: ["builder", "executor"],
+    },
+    "security-reviewer": {
+      risk_class: "review_qa",
+      concurrency_cap: 2,
+      timeout_sec: 300,
+      can_spawn: [],
+      cannot_spawn: ["builder", "executor"],
+    },
+    scout: {
+      risk_class: "read_only",
+      concurrency_cap: 8,
+      timeout_sec: 300,
+      can_spawn: ["scout", "researcher"],
+      cannot_spawn: ["builder", "executor"],
+    },
+    researcher: {
+      risk_class: "read_only",
+      concurrency_cap: 6,
+      timeout_sec: 600,
+      can_spawn: ["scout", "researcher"],
+      cannot_spawn: ["builder", "executor"],
+    },
+  },
+};
+
+test("resolveAgentTimeoutMs: uses policy timeout_sec for known role (reviewer → 300s)", () => {
+  const ms = resolveAgentTimeoutMs("reviewer", TIMEOUT_POLICY);
+  assert.strictEqual(ms, 300_000, `Expected 300000ms for reviewer, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: uses policy timeout_sec for test-runner (300s)", () => {
+  const ms = resolveAgentTimeoutMs("test-runner", TIMEOUT_POLICY);
+  assert.strictEqual(ms, 300_000, `Expected 300000ms for test-runner, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: uses policy timeout_sec for security-reviewer (300s)", () => {
+  const ms = resolveAgentTimeoutMs("security-reviewer", TIMEOUT_POLICY);
+  assert.strictEqual(ms, 300_000, `Expected 300000ms for security-reviewer, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: researcher gets 600s from policy", () => {
+  const ms = resolveAgentTimeoutMs("researcher", TIMEOUT_POLICY);
+  assert.strictEqual(ms, 600_000, `Expected 600000ms for researcher, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: unknown role falls back to DEFAULT_BURST_TIMEOUT_MS (300s)", () => {
+  // 'unknown-role' is not in TIMEOUT_POLICY.agent_roles → should return 300_000
+  const ms = resolveAgentTimeoutMs("unknown-role", TIMEOUT_POLICY);
+  assert.strictEqual(ms, 300_000, `Expected default 300000ms for unknown role, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: unknown role with empty agent_roles falls back to default", () => {
+  // POLICY.agent_roles is {} — no roles defined → fallback
+  const ms = resolveAgentTimeoutMs("reviewer", POLICY);
+  assert.strictEqual(ms, 300_000, `Expected fallback 300000ms when agent_roles empty, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: explicit overrideMs always wins over policy", () => {
+  // Override of 60_000 should beat policy's 300s for reviewer
+  const ms = resolveAgentTimeoutMs("reviewer", TIMEOUT_POLICY, 60_000);
+  assert.strictEqual(ms, 60_000, `Expected override 60000ms, got ${ms}`);
+});
+
+test("resolveAgentTimeoutMs: explicit overrideMs wins even for unknown role", () => {
+  const ms = resolveAgentTimeoutMs("no-such-role", TIMEOUT_POLICY, 42_000);
+  assert.strictEqual(ms, 42_000, `Expected override 42000ms, got ${ms}`);
+});
+
+// Burst runner that captures timeout_ms passed to it
+const captureTimeoutRunner: BurstRunnerFn = async (
+  agentId: string,
+  role: string,
+  objective: string,
+  timeoutMs: number
+): Promise<BurstAgentResult> => ({
+  agent_id: agentId,
+  role,
+  objective,
+  success: true,
+  output: `timeout=${timeoutMs}`,
+  duration_ms: 1,
+  timeout_ms: timeoutMs,
+});
+
+await testAsync("runReadOnlyBurst: review_qa agents get 300s timeout from policy (not 120s)", async () => {
+  const plan = generatePlan({ objective: "review the code", cwd: FAKE_CWD }, TIMEOUT_POLICY);
+  assert.strictEqual(plan.risk_class, "review_qa");
+  const result = await runReadOnlyBurst(plan, TIMEOUT_POLICY, { runner: captureTimeoutRunner });
+  assert.ok(result.agents_run > 0, "Expected at least 1 agent");
+  for (const r of result.results) {
+    assert.strictEqual(
+      r.timeout_ms,
+      300_000,
+      `Agent ${r.agent_id} (${r.role}) got timeout ${String(r.timeout_ms)}ms, expected 300000ms`
+    );
+  }
+});
+
+await testAsync("runReadOnlyBurst: read_only scout agents get 300s timeout from policy", async () => {
+  const plan = generatePlan({ objective: "search the codebase", cwd: FAKE_CWD }, TIMEOUT_POLICY);
+  assert.strictEqual(plan.risk_class, "read_only");
+  const result = await runReadOnlyBurst(plan, TIMEOUT_POLICY, { runner: captureTimeoutRunner });
+  assert.ok(result.agents_run > 0, "Expected at least 1 agent");
+  for (const r of result.results) {
+    assert.strictEqual(
+      r.timeout_ms,
+      300_000,
+      `Scout agent ${r.agent_id} got ${String(r.timeout_ms)}ms, expected 300000ms`
+    );
+  }
+});
+
+await testAsync("runReadOnlyBurst: opts.timeoutMs override applies to all agents", async () => {
+  const plan = generatePlan({ objective: "review authentication code", cwd: FAKE_CWD }, TIMEOUT_POLICY);
+  const result = await runReadOnlyBurst(plan, TIMEOUT_POLICY, {
+    runner: captureTimeoutRunner,
+    timeoutMs: 60_000, // explicit override — should beat policy's 300s
+  });
+  for (const r of result.results) {
+    assert.strictEqual(
+      r.timeout_ms,
+      60_000,
+      `Expected override 60000ms for ${r.agent_id}, got ${String(r.timeout_ms)}ms`
+    );
+  }
+});
+
+await testAsync("runReadOnlyBurst: review_qa with empty agent_roles falls back to 300s default", async () => {
+  // POLICY has agent_roles: {} — no role config → falls back to DEFAULT_BURST_TIMEOUT_MS (300s)
+  const plan = generatePlan({ objective: "security scan on auth", cwd: FAKE_CWD }, POLICY);
+  const result = await runReadOnlyBurst(plan, POLICY, { runner: captureTimeoutRunner });
+  for (const r of result.results) {
+    assert.strictEqual(
+      r.timeout_ms,
+      300_000,
+      `Expected fallback 300000ms for ${r.agent_id}, got ${String(r.timeout_ms)}ms`
+    );
+  }
 });
 
 // ─── 12. Write dispatch: buildWriteDispatchMessage ────────────────────────────
