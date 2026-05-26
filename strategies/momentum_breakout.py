@@ -346,6 +346,7 @@ class MomentumBreakout(BaseStrategy):
 
                 trailing_stop = highest_since_entry - (self.trailing_stop_atr_mult * current_atr)
 
+                # Priority 1: hard stop (always checked first)
                 if today_close <= stop_price:
                     exits.append({
                         "ticker": ticker,
@@ -356,8 +357,10 @@ class MomentumBreakout(BaseStrategy):
                             f"Close=${today_close:.2f}, held {days_held} days."
                         ),
                     })
-                # Check take-profit (before trailing stop)
-                elif self.profit_target_atr_mult > 0:
+                    continue
+
+                # Priority 2: take profit (only if configured and price reached target)
+                if self.profit_target_atr_mult > 0:
                     take_profit = pos.get("take_profit")
                     if take_profit and today_close >= take_profit:
                         exits.append({
@@ -366,8 +369,10 @@ class MomentumBreakout(BaseStrategy):
                             "exit_price": take_profit,
                             "details": f"TP hit at {take_profit:.2f} ({self.profit_target_atr_mult}x ATR)"
                         })
-                        continue  # Skip other checks for this position
-                elif today_close <= trailing_stop:
+                        continue
+
+                # Priority 3: trailing stop (runs independently of TP config)
+                if today_close <= trailing_stop:
                     exits.append({
                         "ticker": ticker,
                         "reason": "trailing_stop",
@@ -378,7 +383,10 @@ class MomentumBreakout(BaseStrategy):
                             f"Held {days_held} days."
                         ),
                     })
-                elif days_held >= self.max_hold_days:
+                    continue
+
+                # Priority 4: time exit / max hold (runs independently of TP and trailing stop)
+                if days_held >= self.max_hold_days:
                     exits.append({
                         "ticker": ticker,
                         "reason": "time_exit",
