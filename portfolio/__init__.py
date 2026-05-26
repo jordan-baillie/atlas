@@ -22,7 +22,7 @@ Typical usage
 """
 from portfolio.constructor import ConstructedPortfolio, PortfolioConstructor
 from portfolio.correlation import CORRELATION_GROUPS, check_correlation_conflicts
-from portfolio.limits import UNIVERSE_LIMITS
+from portfolio.limits import UNIVERSE_LIMITS, get_limit, resolve_universe_limits
 
 __all__ = [
     "PortfolioConstructor",
@@ -30,4 +30,6 @@ __all__ = [
     "UNIVERSE_LIMITS",
     "CORRELATION_GROUPS",
     "check_correlation_conflicts",
+    "get_limit",
+    "resolve_universe_limits",
 ]

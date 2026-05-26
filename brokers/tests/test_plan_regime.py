@@ -88,6 +88,7 @@ def _make_regime_classification(
     enabled_strategies: list = None,
     sizing: float = 1.0,
     max_positions: int = 5,
+    date: str = "2026-01-01",
 ) -> MagicMock:
     """Build a MagicMock that quacks like RegimeClassification."""
     rc = MagicMock()
@@ -98,6 +99,8 @@ def _make_regime_classification(
     rc.sizing_multiplier = sizing
     rc.max_positions = max_positions
     rc.reasoning = f"Test reasoning for {state}"
+    # Real string so brokers.plan's regime_gate strptime() succeeds.
+    rc.date = date
     return rc
 
 
@@ -314,7 +317,11 @@ class TestRegimeEnabled:
                 equity=10_000.0,
             )
 
-            inst.classify_current.assert_called_once()
+            # classify_current() is called at least once.  In production it
+            # is invoked by both the regime_gate staleness check and the
+            # downstream _run_regime_aware_plan path; this test only cares
+            # that the model is consulted, not the exact call count.
+            assert inst.classify_current.call_count >= 1
 
     def test_active_universes_passed_to_build_multi_universe(self):
         gen = TradePlanGenerator(_make_portfolio(), _make_config(regime_enabled=True))
@@ -548,7 +555,10 @@ class TestRegimeEnabled:
             inst.classify_and_record.assert_called_once()
 
     def test_portfolio_constructor_receives_regime_classification(self):
-        """PortfolioConstructor must be instantiated with the regime classification."""
+        """PortfolioConstructor must be instantiated with the regime classification
+        and with universe_limits resolved from the active config (task #358)."""
+        from portfolio.limits import resolve_universe_limits
+
         gen = TradePlanGenerator(_make_portfolio(), _make_config(regime_enabled=True))
         regime = _make_regime_classification()
 
@@ -569,7 +579,20 @@ class TestRegimeEnabled:
                 equity=10_000.0,
             )
 
-        mock_ctor_cls.assert_called_once_with(regime_classification=regime)
+        # Constructor is instantiated exactly once.
+        mock_ctor_cls.assert_called_once()
+        kwargs = mock_ctor_cls.call_args.kwargs
+        # Regime classification is passed through.
+        assert kwargs.get("regime_classification") is regime
+        # Task #358: universe_limits must be passed and equal to the result of
+        # resolve_universe_limits() applied to the generator's own config.
+        # This guarantees the regime-aware plan path consults config-driven
+        # caps rather than the bare hardcoded UNIVERSE_LIMITS.
+        assert "universe_limits" in kwargs, (
+            "PortfolioConstructor must receive universe_limits in the "
+            "regime-aware plan path (task #358)."
+        )
+        assert kwargs["universe_limits"] == resolve_universe_limits(gen.config)
 
     def test_strategies_run_on_each_universe(self):
         """A strategy must be called once per universe, not just once globally."""

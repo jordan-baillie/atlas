@@ -186,6 +186,108 @@ function enabledStrategyCount(config: JsonRecord): number {
   }).length;
 }
 
+// ---------------------------------------------------------------------------
+// risk.universe_limits diffing (task #358)
+//
+// Per-universe deployment caps can now be tuned via
+// ``risk.universe_limits.<universe>.{max_positions,max_pct_equity}`` in the
+// active config (see portfolio/limits.py).  Increasing either field raises
+// live capital deployment, so the promotion gate must flag those deltas for
+// human review even when every other guardrail passes.
+//
+// Behavior:
+//  * Brand-new override on a universe (no active block) that raises the cap
+//    above the prior live value emits a warning.  If only one side is known
+//    (e.g. active had no override, candidate adds {max_positions: 8}), we
+//    treat the missing side as "undefined" and skip that comparison — the
+//    Python validator owns default-handling; this gate only diffs explicit
+//    config fields so the message stays unambiguous for a reviewer.
+//  * Decreases / unchanged values are silent.
+//  * Removing an existing override emits a warning so reviewers notice
+//    that a previously-tightened cap reverts to the hardcoded default.
+// ---------------------------------------------------------------------------
+type UniverseLimitOverride = {
+  max_positions?: number;
+  max_pct_equity?: number;
+};
+
+function extractUniverseLimits(config: JsonRecord): Record<string, UniverseLimitOverride> {
+  const risk = asRecord(config.risk) ?? {};
+  const block = asRecord(risk.universe_limits);
+  if (!block) return {};
+  const out: Record<string, UniverseLimitOverride> = {};
+  for (const [universe, raw] of Object.entries(block)) {
+    const rec = asRecord(raw);
+    if (!rec) continue;
+    out[universe] = {
+      max_positions: asNumber(rec.max_positions),
+      max_pct_equity: asNumber(rec.max_pct_equity)
+    };
+  }
+  return out;
+}
+
+function diffUniverseLimits(
+  active: Record<string, UniverseLimitOverride>,
+  candidate: Record<string, UniverseLimitOverride>
+): { warnings: string[]; diff: Record<string, { active: UniverseLimitOverride | null; candidate: UniverseLimitOverride | null; changes: string[] }> } {
+  const warnings: string[] = [];
+  const diff: Record<string, { active: UniverseLimitOverride | null; candidate: UniverseLimitOverride | null; changes: string[] }> = {};
+  const universes = new Set<string>([...Object.keys(active), ...Object.keys(candidate)]);
+  for (const universe of universes) {
+    const a = active[universe] ?? null;
+    const c = candidate[universe] ?? null;
+    const changes: string[] = [];
+
+    if (a && !c) {
+      // Override removed entirely — caps fall back to the hardcoded defaults
+      // in portfolio/limits.py.  Flag for review since a prior tightening is
+      // being undone.
+      warnings.push(
+        `risk.universe_limits.${universe} override removed; caps will fall back to hardcoded defaults.`
+      );
+      changes.push("removed");
+    } else if (!a && c) {
+      // Brand-new override.  Without an explicit prior value we can't tell if
+      // the new number is a raise vs. the default — surface it as a warning
+      // so the reviewer eyeballs it.
+      const parts: string[] = [];
+      if (typeof c.max_positions === "number") parts.push(`max_positions=${c.max_positions}`);
+      if (typeof c.max_pct_equity === "number") parts.push(`max_pct_equity=${c.max_pct_equity}`);
+      warnings.push(
+        `risk.universe_limits.${universe} adds new override (${parts.join(", ") || "empty"}); confirm this matches intent vs. the hardcoded default.`
+      );
+      changes.push("added");
+    } else if (a && c) {
+      if (
+        typeof a.max_positions === "number" &&
+        typeof c.max_positions === "number" &&
+        c.max_positions > a.max_positions
+      ) {
+        warnings.push(
+          `risk.universe_limits.${universe}.max_positions increased ${a.max_positions} -> ${c.max_positions}.`
+        );
+        changes.push(`max_positions ${a.max_positions}->${c.max_positions}`);
+      }
+      if (
+        typeof a.max_pct_equity === "number" &&
+        typeof c.max_pct_equity === "number" &&
+        c.max_pct_equity > a.max_pct_equity
+      ) {
+        warnings.push(
+          `risk.universe_limits.${universe}.max_pct_equity increased ${a.max_pct_equity} -> ${c.max_pct_equity}.`
+        );
+        changes.push(`max_pct_equity ${a.max_pct_equity}->${c.max_pct_equity}`);
+      }
+    }
+
+    if (changes.length > 0) {
+      diff[universe] = { active: a, candidate: c, changes };
+    }
+  }
+  return { warnings, diff };
+}
+
 function evaluateConfigPromotionGate(
   activeConfig: JsonRecord,
   candidateConfig: JsonRecord,
@@ -270,6 +372,12 @@ function evaluateConfigPromotionGate(
     warnings.push(`Candidate max_open_positions increased ${activeMaxPositions} -> ${candidateMaxPositions}.`);
   }
 
+  // Task #358 — surface per-universe deployment-cap raises for review.
+  const activeUniverseLimits = extractUniverseLimits(activeConfig);
+  const candidateUniverseLimits = extractUniverseLimits(candidateConfig);
+  const ulDiff = diffUniverseLimits(activeUniverseLimits, candidateUniverseLimits);
+  for (const w of ulDiff.warnings) warnings.push(w);
+
   const activeStrategies = enabledStrategyCount(activeConfig);
   const candidateStrategies = enabledStrategyCount(candidateConfig);
   if (candidateStrategies !== activeStrategies) {
@@ -288,7 +396,8 @@ function evaluateConfigPromotionGate(
       approval_required: activeApproval ?? null,
       max_risk_per_trade_pct: activeRiskPerTrade ?? null,
       max_open_positions: activeMaxPositions ?? null,
-      enabled_strategies: activeStrategies
+      enabled_strategies: activeStrategies,
+      universe_limits: activeUniverseLimits
     },
     candidate: {
       version: candidateVersion ?? null,
@@ -296,8 +405,10 @@ function evaluateConfigPromotionGate(
       approval_required: candidateApproval ?? null,
       max_risk_per_trade_pct: candidateRiskPerTrade ?? null,
       max_open_positions: candidateMaxPositions ?? null,
-      enabled_strategies: candidateStrategies
-    }
+      enabled_strategies: candidateStrategies,
+      universe_limits: candidateUniverseLimits
+    },
+    universe_limits_diff: ulDiff.diff
   };
 }
 

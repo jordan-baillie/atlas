@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from portfolio.correlation import check_correlation_conflicts
-from portfolio.limits import UNIVERSE_LIMITS, get_limit
+from portfolio.limits import get_limit
 
 logger = logging.getLogger(__name__)
 
@@ -100,15 +100,28 @@ class PortfolioConstructor:
         Dict from the AI overlay (Phase 4).  Keys are ticker symbols; values
         are dicts with optional ``sizing_scale`` (float) and ``veto`` (bool).
         Pass *None* (default) to skip overlay processing entirely.
+    universe_limits:
+        Optional fully-resolved per-universe limits dict (see
+        :func:`portfolio.limits.resolve_universe_limits`).  When *None*
+        (default) the constructor falls back to the hardcoded
+        ``UNIVERSE_LIMITS`` table — preserving current production behavior.
+        The plan generator passes ``resolve_universe_limits(active_config)``
+        so that ``risk.universe_limits`` config overrides take effect for a
+        given universe only (task #358).
     """
 
     def __init__(
         self,
         regime_classification=None,
         overlay_adjustments: Optional[dict] = None,
+        universe_limits: Optional[dict] = None,
     ) -> None:
         self._regime = regime_classification
         self._overlay = overlay_adjustments or {}
+        # When no overrides are supplied, the construct() loop falls back
+        # to the hardcoded UNIVERSE_LIMITS via get_limit().  When supplied,
+        # the dict is used as a fully resolved per-universe mapping.
+        self._universe_limits = universe_limits
 
         if regime_classification is not None:
             self._active_universes: list[str] = list(regime_classification.active_universes)
@@ -205,7 +218,7 @@ class PortfolioConstructor:
 
         limit_filtered: list[Any] = []
         for universe, u_signals in by_universe.items():
-            limit = get_limit(universe)
+            limit = get_limit(universe, overrides=self._universe_limits)
             max_pos = limit["max_positions"]
             max_pct = limit["max_pct_equity"]
             already_open = existing_by_universe.get(universe, 0)

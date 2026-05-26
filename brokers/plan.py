@@ -729,6 +729,7 @@ class TradePlanGenerator:
         from regime.model import RegimeModel
         from universe.builder import build_multi_universe
         from portfolio.constructor import PortfolioConstructor
+        from portfolio.limits import resolve_universe_limits
 
         # a. Classify current regime.
         model = RegimeModel()
@@ -862,7 +863,15 @@ class TradePlanGenerator:
             self.portfolio.positions
             if hasattr(self.portfolio, "positions") else []
         )
-        constructor = PortfolioConstructor(regime_classification=regime)
+        # Task #358: per-universe deployment limits can be tuned via
+        # ``risk.universe_limits`` in the active config.  When the block is
+        # absent or malformed, resolve_universe_limits() returns the
+        # hardcoded UNIVERSE_LIMITS defaults — i.e. behavior is unchanged.
+        resolved_universe_limits = resolve_universe_limits(self.config)
+        constructor = PortfolioConstructor(
+            regime_classification=regime,
+            universe_limits=resolved_universe_limits,
+        )
         constructed = constructor.construct(
             all_signals, equity=equity, existing_positions=portfolio_positions
         )
