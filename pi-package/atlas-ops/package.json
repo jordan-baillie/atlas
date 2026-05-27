@@ -9,7 +9,8 @@
     "build": "echo 'No build step (Pi loads TS via jiti)'",
     "check": "echo 'Add tsc/eslint later when implementation solidifies'",
     "verify-tui": "npx tsx extensions/atlas-tui-widget/tests/verify.ts",
-    "verify-elastic-agents": "npx tsx extensions/atlas-elastic-agents/tests/verify.ts"
+    "verify-elastic-agents": "npx tsx extensions/atlas-elastic-agents/tests/verify.ts",
+    "verify-atlas-jobs": "npx tsx extensions/atlas-jobs/tests/verify.ts"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",

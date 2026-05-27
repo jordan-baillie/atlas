@@ -1,0 +1,5 @@
+# Local install artifacts. atlas-ops declares peer deps that are resolved by
+# the Pi runtime via jiti aliases; any node_modules here is a transient dev
+# convenience (e.g. symlinking @sinclair/typebox so verify scripts can load
+# the real factory entrypoint).
+node_modules/

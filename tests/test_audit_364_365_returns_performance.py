@@ -15,6 +15,10 @@
       retired JSON ledger file.
   T7  pi-package atlas-jobs buildCliInvocation does NOT forward --days to
       the `backtest` subcommand (CLI argparse has no --days for backtest).
+  T7c Runtime probe: loading the atlas-jobs factory the same way the Pi
+      jiti loader does and dry-running cli_backtest with days=252 produces
+      a command without --days. Catches regressions the source-grep T7
+      cannot (e.g. someone reorders consumeArg vs allowlist check).
 
 All tests are local & deterministic \u2014 no broker connection, no live mutation.
 """
@@ -346,4 +350,54 @@ def test_cli_backtest_subcommand_has_no_days_argument():
     )
     assert "unrecognized" in (result.stderr + result.stdout).lower() or "error" in result.stderr.lower(), (
         f"expected argparse rejection; stderr: {result.stderr[:300]}"
+    )
+
+
+def test_atlas_jobs_runtime_strips_days_e2e():
+    """T7c \u2014 runtime-level regression.
+
+    Loads the default-exported factory from
+    `pi-package/atlas-ops/extensions/atlas-jobs/src/index.ts` via `npx tsx`
+    (mirroring the jiti-based path Pi's extension loader uses) and asserts
+    that `atlas_jobs_run` dry-running cli_backtest with days=252 produces
+    `python3 scripts/cli.py -m sp500 backtest` (no --days).
+
+    Skipped when the local dev environment cannot resolve typebox or tsx
+    (CI may not install peer deps). The source-grep T7 test still covers
+    those paths.
+    """
+    import shutil
+    import subprocess
+
+    if shutil.which("npx") is None:
+        pytest.skip("npx not available; runtime probe requires tsx + typebox")
+
+    atlas_ops = PROJECT_ROOT / "pi-package" / "atlas-ops"
+    verify_script = atlas_ops / "extensions" / "atlas-jobs" / "tests" / "verify.ts"
+    typebox_paths = [
+        atlas_ops / "node_modules" / "@sinclair" / "typebox",
+        Path("/root/pi-mono/node_modules/typebox"),
+    ]
+    if not any(p.exists() for p in typebox_paths):
+        pytest.skip(
+            "@sinclair/typebox not resolvable for tsx; install or symlink "
+            "pi-package/atlas-ops/node_modules/@sinclair/typebox -> typebox"
+        )
+    assert verify_script.exists(), f"missing verify script: {verify_script}"
+
+    result = subprocess.run(
+        ["npx", "-y", "tsx", str(verify_script)],
+        cwd=str(atlas_ops),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    combined = (result.stdout + "\n" + result.stderr)
+    assert result.returncode == 0, (
+        "atlas-jobs verify script must pass.\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert "python3 scripts/cli.py -m sp500 backtest" in combined
+    assert "--days" not in combined.split("cli_backtest \u2192")[-1].splitlines()[0], (
+        f"cli_backtest line still contains --days: {combined}"
     )
