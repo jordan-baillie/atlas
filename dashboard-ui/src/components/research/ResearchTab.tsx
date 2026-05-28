@@ -1,546 +1,728 @@
-import { useState, useMemo } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { ChartGate } from '../shared/ChartGate'
-import { useResearchSummary, useResearchStrategies, useResearchTimeline, useResearchExperiments, useResearchBrain, useResearchDiscoveries, useResearchOverview, useResearchLeaderboard } from '../../api/research-queries'
+/**
+ * ResearchTab -- "Funnel Analytics" (Variant D) rewrite.
+ *
+ * Replaces the Phase-pre experiment-centric research tab.  Treats the
+ * research pipeline as a funnel (papers → filtered → specs → strategies)
+ * and surfaces knowledge-layer signals (claims, contradictions, sources,
+ * lifecycle transitions) alongside it.
+ *
+ * Drill-in stage selection is URL-synced via ?stage=<key>.
+ *
+ * Charts all go through the shared <Chart> wrapper (Chart.js).  See
+ * design history in dashboard-ui/research-mockups/variant-d-funnel-analytics/.
+ */
+
+import { useMemo } from 'react'
+import { Chart } from '../shared/Chart'
+import { Sparkline } from '../shared/Sparkline'
 import { Skeleton } from '../layout/Skeleton'
-import { SectionBoundary } from '../layout/SectionBoundary'
-import { ChartTooltip } from '../shared/ChartTooltip'
 import { Badge } from '../shared/Badge'
-import type { BadgeVariant } from '../shared/Badge'
-import { StatusDot } from '../shared/StatusDot'
-import { CHART_GRID, CHART_TICK, CHART_ANIM, CHART_CURSOR } from '../../lib/chart-palette'
-import { fmtNum, fmtPct, fmtDateShort, fmtRelativeTime } from '../../lib/format'
-import type { StrategyDetail, Experiment, BrainParam, Discovery, UniverseInfo, LeaderboardEntry, DailyCount } from '../../api/research-types'
-import { CoverageMatrix } from './CoverageMatrix'
-import { PaperProgressPanel } from './PaperProgressPanel'
-import { PendingPromotionsWidget } from './PendingPromotionsWidget'
+import { SectionBoundary } from '../layout/SectionBoundary'
+import { fmtRelativeTime, fmtNum, fmtPct } from '../../lib/format'
+import { useUrlState } from '../../hooks/useUrlState'
+import { FunnelChart, STAGE_DEFS, type StageKey } from './FunnelChart'
 
-// ── Keep Rate Ring SVG ──────────────────────────────────────────
-function KeepRateRing({ rate, size = 40 }: { rate: number; size?: number }) {
-  const r = (size - 4) / 2
-  const circ = 2 * Math.PI * r
-  const offset = circ * (1 - Math.min(rate, 100) / 100)
-  const color = rate > 15 ? 'var(--color-green)' : rate > 10 ? 'var(--color-amber, #f59e0b)' : 'var(--color-red)'
-  return (
-    <svg width={size} height={size} className="transform -rotate-90">
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--color-border)" strokeWidth={3} />
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={3}
-        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-        className="transition-all duration-700" />
-    </svg>
-  )
-}
+import {
+  useOpenContradictions,
+  useResolveContradiction,
+  useKnowledgeSources,
+  useContradictionsTimeline,
+  useDigestHistory,
+  useExtractionConfidence,
+  useStrategySummaries,
+  useDiscoveryFunnel,
+  useQueueHealth,
+} from '../../api/knowledge-queries'
 
-// ── Summary Cards ───────────────────────────────────────────────
-function SummaryCards({ data }: { data: { total_experiments?: number; keep_rate?: number; strategies_count?: number; experiments_7d?: number; last_research_ts?: string } }) {
-  const cards = [
-    { label: 'Total Experiments', value: (data.total_experiments ?? 0).toLocaleString() },
-    { label: 'Keep Rate', value: fmtPct(data.keep_rate), color: (data.keep_rate ?? 0) > 15 ? 'var(--color-green)' : (data.keep_rate ?? 0) > 10 ? 'var(--color-amber, #f59e0b)' : 'var(--color-red)' },
-    { label: 'Strategies', value: String(data.strategies_count ?? 0) },
-    { label: 'Last 7 Days', value: String(data.experiments_7d ?? 0) },
-    { label: 'Last Run', value: fmtRelativeTime(data.last_research_ts) },
-  ]
+import type {
+  DiscoveryFunnelDay,
+  OpenContradiction,
+  Severity,
+} from '../../api/knowledge-types'
+import type { ChartData, ChartOptions } from 'chart.js'
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Sticky pipeline header -- last digest, queue health, source counts
+// ──────────────────────────────────────────────────────────────────────────────
+
+function PipelineHeader() {
+  const digestQ = useDigestHistory(30)
+  const queueQ = useQueueHealth()
+  const sourcesQ = useKnowledgeSources({ limit: 1 })  // total only
+
+  const last = digestQ.data?.rows?.[digestQ.data.rows.length - 1]
+  const lastTs = last?.sent_at
+  const active = queueQ.data?.active ?? 0
+  const queueBreakdown = queueQ.data?.by_status ?? {}
+  const sourcesTotal = sourcesQ.data?.total ?? 0
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-      {cards.map((c) => (
-        <div key={c.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-1">{c.label}</div>
-          <div className="text-2xl font-mono font-semibold" style={c.color ? { color: c.color } : undefined}>{c.value}</div>
+    <div className="sticky top-0 z-10 -mx-2 px-4 py-2 bg-[var(--color-bg)]/85 backdrop-blur border-b border-[var(--color-border)]">
+      <div className="flex items-center justify-between gap-4 flex-wrap text-xs">
+        <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
+          <span>
+            <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-green)] mr-2" />
+            last digest <span className="font-mono text-[var(--color-text)]">{lastTs ? fmtRelativeTime(lastTs) : '—'}</span>
+          </span>
+          <span>
+            <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-accent)] mr-2" />
+            queue <span className="font-mono text-[var(--color-text)]">{active}</span>
+            {Object.entries(queueBreakdown).length > 0 && (
+              <span className="ml-2 text-[10px] text-[var(--color-text-muted)] font-mono">
+                {Object.entries(queueBreakdown)
+                  .filter(([s]) => ['queued', 'running', 'evaluating'].includes(s))
+                  .map(([s, n]) => `${s[0]}${n}`)
+                  .join(' ')}
+              </span>
+            )}
+          </span>
+          <span className="text-[var(--color-text-muted)]">
+            sources <span className="font-mono text-[var(--color-text)]">{sourcesTotal}</span>
+          </span>
         </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Sharpe Timeline Chart ───────────────────────────────────────
-const PERIODS = [
-  { key: '7d', days: 7 },
-  { key: '30d', days: 30 },
-  { key: '90d', days: 90 },
-  { key: 'ALL', days: 365 },
-] as const
-
-function SharpeChart() {
-  const [days, setDays] = useState(30)
-  const timeline = useResearchTimeline(days, true)
-
-  const chartData = useMemo(() => {
-    if (!timeline.data?.dates || !timeline.data?.series) return []
-    const series = timeline.data.series
-    return timeline.data.dates.map((date) => {
-      let totalSharpe = 0, count = 0, totalExperiments = 0
-      for (const pts of Object.values(series)) {
-        const pt = (pts as Array<{ date?: string; best_sharpe?: number; experiments?: number }>).find((p) => p.date === date)
-        if (pt) {
-          if (pt.best_sharpe != null) { totalSharpe += pt.best_sharpe; count++ }
-          totalExperiments += pt.experiments ?? 0
-        }
-      }
-      return { date, avgSharpe: count > 0 ? +(totalSharpe / count).toFixed(4) : 0, experiments: totalExperiments }
-    })
-  }, [timeline.data])
-
-  if (!timeline.data) return <Skeleton className="h-64" />
-
-  return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 dash-card">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">Sharpe Trajectory</h3>
-        <div className="flex gap-1">
-          {PERIODS.map(({ key, days: d }) => (
-            <button key={key} onClick={() => setDays(d)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-medium tracking-wide transition-colors ${
-                days === d ? 'bg-[var(--color-accent)] text-white' : 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
-              }`}>{key}</button>
-          ))}
+        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+          Pipeline · Funnel Analytics
         </div>
       </div>
-      <ChartGate className="h-[200px] md:h-[260px]">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="sharpeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="var(--color-accent, #6366f1)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...CHART_GRID} />
-            <XAxis dataKey="date" tickFormatter={(v) => fmtDateShort(v as string)} axisLine={false} tickLine={false}
-              tick={CHART_TICK} minTickGap={40} />
-            <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={CHART_TICK} width={50}
-              tickFormatter={(v) => (v as number).toFixed(2)} />
-            <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={CHART_TICK} width={40} />
-            <Tooltip cursor={CHART_CURSOR} content={<ChartTooltip labelFormatter={(l) => fmtDateShort(l)} formatter={(v, n) => n === 'Experiments' ? String(v) : (v as number).toFixed(4)} />} />
-            <Area yAxisId="left" dataKey="avgSharpe" name="Avg Sharpe" stroke="var(--color-accent, #6366f1)" strokeWidth={2} fill="url(#sharpeGrad)" dot={{ r: 3, fill: 'var(--color-accent, #6366f1)' }} {...CHART_ANIM} />
-            <Area yAxisId="right" dataKey="experiments" name="Experiments" stroke="none" fill="var(--color-text-muted)" fillOpacity={0.1} {...CHART_ANIM} />
-          </AreaChart>
-        </ResponsiveContainer>
-      </ChartGate>
     </div>
   )
 }
 
-// ── Strategy Grid ───────────────────────────────────────────────
-function StrategyCard({ s }: { s: StrategyDetail }) {
-  const keepRate = (s.total_experiments ?? 0) > 0 ? ((s.kept_count ?? 0) / (s.total_experiments ?? 1)) * 100 : 0
+// ──────────────────────────────────────────────────────────────────────────────
+// Stage health row -- 7d vs 30d pass-rate per stage with arrows
+// ──────────────────────────────────────────────────────────────────────────────
+
+function passRate(numerator: number, denominator: number): number | null {
+  if (!denominator) return null
+  return (numerator / denominator) * 100
+}
+
+function StageHealthRow({ funnel }: { funnel: DiscoveryFunnelDay[] }) {
+  const stats = useMemo(() => {
+    const last7 = funnel.slice(-7)
+    const prior23 = funnel.slice(-30, -7)
+    const sum = (xs: DiscoveryFunnelDay[], k: keyof DiscoveryFunnelDay) =>
+      xs.reduce((acc, r) => acc + (r[k] as number || 0), 0)
+
+    const stages: Array<{ label: string; key: keyof DiscoveryFunnelDay; prev?: keyof DiscoveryFunnelDay }> = [
+      { label: 'FOUND',  key: 'papers_found' },
+      { label: 'FILTER', key: 'papers_filtered',     prev: 'papers_found' },
+      { label: 'SPECS',  key: 'specs_extracted',     prev: 'papers_filtered' },
+      { label: 'STRAT',  key: 'strategies_generated', prev: 'specs_extracted' },
+    ]
+    return stages.map((s) => {
+      const v7  = sum(last7,    s.key)
+      const v23 = sum(prior23,  s.key)
+      const dailyAvg = last7.length > 0 ? v7 / last7.length : 0
+      let rate7: number | null = null
+      let rate30: number | null = null
+      if (s.prev) {
+        rate7  = passRate(v7,  sum(last7,   s.prev))
+        rate30 = passRate(v23, sum(prior23, s.prev))
+      }
+      const delta = (rate7 != null && rate30 != null) ? rate7 - rate30 : null
+      return { ...s, v7, v23, dailyAvg, rate7, rate30, delta }
+    })
+  }, [funnel])
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
+      {stats.map((s) => {
+        const arrow = s.delta == null ? '→' : s.delta > 2 ? '↗' : s.delta < -2 ? '↘' : '→'
+        const arrowColor = s.delta == null
+          ? 'var(--color-text-muted)'
+          : s.delta > 2
+            ? 'var(--color-green)'
+            : s.delta < -2
+              ? 'var(--color-red)'
+              : 'var(--color-text-muted)'
+
+        return (
+          <div key={s.label} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-3">
+            <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-mono mb-1">
+              {s.label}
+            </div>
+            <div className="font-mono font-semibold text-lg">
+              {s.rate7 != null ? `${s.rate7.toFixed(0)}%` : `${s.v7}`}
+            </div>
+            <div className="text-[10px] text-[var(--color-text-muted)] mt-1">
+              <span style={{ color: arrowColor }}>{arrow}</span>{' '}
+              {s.rate7 != null
+                ? `vs ${s.rate30?.toFixed(0) ?? '—'}% (30d)`
+                : `${s.dailyAvg.toFixed(1)}/day`}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Funnel timeseries -- 30d stacked area, optional stage highlight
+// ──────────────────────────────────────────────────────────────────────────────
+
+function FunnelTimeseries({
+  funnel,
+  highlightStage,
+}: {
+  funnel: DiscoveryFunnelDay[]
+  highlightStage: StageKey | null
+}) {
+  const data = useMemo<ChartData<'line'>>(() => {
+    const series: Array<{ key: keyof DiscoveryFunnelDay; label: string; color: string }> = [
+      { key: 'papers_found',         label: 'Found',    color: '#3b82f6' },
+      { key: 'papers_filtered',      label: 'Filtered', color: '#14b8a6' },
+      { key: 'specs_extracted',      label: 'Specs',    color: '#6366f1' },
+      { key: 'strategies_generated', label: 'Strategies', color: '#a855f7' },
+    ]
+    return {
+      labels: funnel.map((r) => r.date),
+      datasets: series.map((s) => {
+        const isHighlight = highlightStage === null || highlightStage === s.key
+        return {
+          label: s.label,
+          data: funnel.map((r) => (r[s.key] as number) ?? 0),
+          borderColor: s.color,
+          backgroundColor: `${s.color}33`,
+          borderWidth: isHighlight ? 2 : 1,
+          fill: false,
+          tension: 0.25,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          spanGaps: true,
+          ...(isHighlight ? {} : { borderColor: `${s.color}55`, backgroundColor: `${s.color}11` }),
+        }
+      }),
+    }
+  }, [funnel, highlightStage])
+
+  const options = useMemo<ChartOptions<'line'>>(() => ({
+    plugins: { legend: { display: true } },
+    scales: {
+      x: {
+        ticks: {
+          color: 'var(--color-text-muted)',
+          font: { size: 10 },
+          autoSkipPadding: 24,
+          maxRotation: 0,
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: 'var(--color-text-muted)', font: { size: 10 } },
+      },
+    },
+    animation: { duration: 500 },
+  }), [])
+
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center flex-wrap gap-1">
-            <span className="font-medium text-sm truncate">{(s.strategy ?? '').replace(/_/g, ' ')}</span>
-            {s.is_solo === false && (
-              <span className="text-xs px-2 py-0.5 rounded bg-yellow-700/40 text-yellow-200" title={s.contamination_note || ''}>
-                🟡 PORTFOLIO-CONTAMINATED
-              </span>
-            )}
-            {s.is_solo === true && (
-              <span className="text-xs px-2 py-0.5 rounded bg-emerald-800/40 text-emerald-200">
-                🟢 SOLO
-              </span>
-            )}
-          </div>
-          <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-            {s.total_experiments ?? 0} experiments · {s.kept_count ?? 0} kept
-          </div>
-        </div>
-        <div className="relative flex-shrink-0">
-          <KeepRateRing rate={keepRate} size={44} />
-          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-bold">{Math.round(keepRate)}%</span>
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">
+          Funnel — 30-day timeseries
+        </h3>
+        <span className="text-[10px] text-[var(--color-text-muted)]">
+          {highlightStage ? `Highlighting ${highlightStage}` : 'All stages · click a funnel stage above to isolate'}
+        </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 mt-3">
-        <div>
-          <div className="text-[9px] uppercase text-[var(--color-text-muted)]">Best Sharpe</div>
-          <div className="font-mono text-sm font-semibold">{fmtNum(s.best_sharpe, 4)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] uppercase text-[var(--color-text-muted)]">Best CAGR</div>
-          <div className="font-mono text-sm font-semibold">{fmtPct(s.best_cagr, 1)}</div>
-        </div>
+      <Chart
+        kind="line"
+        data={data as ChartData<'line' | 'bar' | 'doughnut'>}
+        options={options as ChartOptions<'line' | 'bar' | 'doughnut'>}
+        height={260}
+      />
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Contradictions over time + Resolution velocity (two-up row)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function ContradictionsChartsRow() {
+  const tQ = useContradictionsTimeline(30)
+
+  const stackedData = useMemo<ChartData<'line'>>(() => {
+    const timeline = tQ.data?.timeline ?? []
+    return {
+      labels: timeline.map((t) => t.date),
+      datasets: [
+        { label: 'Critical', data: timeline.map((t) => t.critical), borderColor: '#ef4444', backgroundColor: '#ef444433', fill: true, tension: 0.2, pointRadius: 0 },
+        { label: 'Major',    data: timeline.map((t) => t.major),    borderColor: '#f59e0b', backgroundColor: '#f59e0b33', fill: true, tension: 0.2, pointRadius: 0 },
+        { label: 'Minor',    data: timeline.map((t) => t.minor),    borderColor: '#8b929d', backgroundColor: '#8b929d33', fill: true, tension: 0.2, pointRadius: 0 },
+      ],
+    }
+  }, [tQ.data])
+
+  const stackedOpts = useMemo<ChartOptions<'line'>>(() => ({
+    plugins: { legend: { display: true } },
+    scales: {
+      x: { ticks: { color: 'var(--color-text-muted)', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 16 } },
+      y: { stacked: true, beginAtZero: true, ticks: { color: 'var(--color-text-muted)', font: { size: 10 } } },
+    },
+    animation: { duration: 400 },
+  }), [])
+
+  const velocityData = useMemo<ChartData<'bar'>>(() => {
+    const timeline = tQ.data?.timeline ?? []
+    // 4 weekly buckets ending today
+    const buckets: Array<{ label: string; resolved: number }> = []
+    const now = new Date()
+    for (let w = 3; w >= 0; w--) {
+      const end = new Date(now); end.setDate(now.getDate() - w * 7)
+      const start = new Date(end); start.setDate(end.getDate() - 6)
+      const startStr = start.toISOString().slice(0, 10)
+      const endStr = end.toISOString().slice(0, 10)
+      const resolved = timeline
+        .filter((t) => t.date >= startStr && t.date <= endStr)
+        .reduce((s, t) => s + (t.resolved ?? 0), 0)
+      buckets.push({ label: `wk -${w}`, resolved })
+    }
+    return {
+      labels: buckets.map((b) => b.label),
+      datasets: [
+        {
+          label: 'Resolved',
+          data: buckets.map((b) => b.resolved),
+          backgroundColor: '#22c55e',
+        },
+      ],
+    }
+  }, [tQ.data])
+
+  const velocityOpts = useMemo<ChartOptions<'bar'>>(() => ({
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: 'var(--color-text-muted)', font: { size: 10 } } },
+      y: { beginAtZero: true, ticks: { color: 'var(--color-text-muted)', font: { size: 10 } } },
+    },
+    animation: { duration: 400 },
+  }), [])
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
+        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">
+          Contradictions over time (by severity)
+        </h3>
+        <Chart
+          kind="line"
+          data={stackedData as ChartData<'line' | 'bar' | 'doughnut'>}
+          options={stackedOpts as ChartOptions<'line' | 'bar' | 'doughnut'>}
+          height={220}
+        />
       </div>
-      {s.best_params && Object.keys(s.best_params).length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {Object.entries(s.best_params).slice(0, 4).map(([k, v]) => (
-            <span key={k} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]">
-              {k}={String(v)}
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
+        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">
+          Resolution velocity — last 4 weeks
+        </h3>
+        <Chart
+          kind="bar"
+          data={velocityData as ChartData<'line' | 'bar' | 'doughnut'>}
+          options={velocityOpts as ChartOptions<'line' | 'bar' | 'doughnut'>}
+          height={220}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Drill-in panel -- view depends on selected stage
+// ──────────────────────────────────────────────────────────────────────────────
+
+function StageDrillIn({
+  stage,
+  onClearStage,
+  funnel,
+}: {
+  stage: StageKey | null
+  onClearStage: () => void
+  funnel: DiscoveryFunnelDay[]
+}) {
+  const digestQ = useDigestHistory(14)
+  const sourcesQ = useKnowledgeSources({ limit: 8 }, stage === 'specs_extracted' || stage === null)
+  const strategiesQ = useStrategySummaries(stage === 'strategies_generated')
+
+  const last7 = funnel.slice(-7)
+  const last30 = funnel.slice(-30)
+
+  let pill = 'DIGEST'
+  let heading = 'Discovery digest — recent days'
+  let body: React.ReactNode = null
+
+  if (stage === null) {
+    body = (
+      <div className="space-y-2 text-xs">
+        {digestQ.data?.rows?.slice(-7).reverse().map((d) => (
+          <div key={d.id} className="flex items-center justify-between border-b border-[var(--color-border)]/50 pb-1">
+            <span className="text-[var(--color-text-muted)] font-mono">{d.sent_at.slice(0, 10)}</span>
+            <span className="flex gap-3 font-mono">
+              <span title="papers">📄 {d.new_papers}</span>
+              <span title="contradictions">⚠ {d.new_contradictions}</span>
+              <span title="lifecycle">🔁 {d.lifecycle_transitions}</span>
+              <Badge variant={d.delivery_status === 'ok' ? 'success' : 'danger'} size="xs">{d.delivery_status ?? '—'}</Badge>
             </span>
-          ))}
+          </div>
+        ))}
+      </div>
+    )
+  } else if (stage === 'papers_found' || stage === 'papers_filtered') {
+    pill = stage === 'papers_found' ? 'FOUND' : 'FILTER'
+    heading = stage === 'papers_found'
+      ? 'Fetcher activity — last 7 / 30 days'
+      : 'Filter pass rate — last 7 / 30 days'
+    body = (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        <Stat label="7d found"   value={last7.reduce((s, r) => s + r.papers_found, 0)} />
+        <Stat label="7d filtered" value={last7.reduce((s, r) => s + r.papers_filtered, 0)} />
+        <Stat label="30d found"  value={last30.reduce((s, r) => s + r.papers_found, 0)} />
+        <Stat label="30d filtered" value={last30.reduce((s, r) => s + r.papers_filtered, 0)} />
+      </div>
+    )
+  } else if (stage === 'specs_extracted') {
+    pill = 'SPECS'
+    heading = 'Most recent ingested sources'
+    body = (
+      <div className="space-y-1 text-xs max-h-[300px] overflow-y-auto">
+        {sourcesQ.data?.rows?.slice(0, 10).map((s) => (
+          <div key={s.id} className="flex items-center justify-between border-b border-[var(--color-border)]/40 py-1">
+            <span className="truncate mr-2">
+              {s.url ? <a href={s.url} className="text-[var(--color-accent)] hover:underline" target="_blank" rel="noreferrer">{s.title}</a> : s.title}
+            </span>
+            <span className="flex gap-3 font-mono flex-shrink-0">
+              <span title="claims">{s.claim_count}c</span>
+              <span title="open contradictions" style={{ color: s.open_contradictions > 0 ? 'var(--color-amber, #f59e0b)' : 'var(--color-text-muted)' }}>{s.open_contradictions}⚠</span>
+              <span className="text-[var(--color-text-muted)] text-[10px]">{fmtRelativeTime(s.ingested_at)}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  } else if (stage === 'strategies_generated') {
+    pill = 'STRAT'
+    heading = 'Top strategies by open contradictions'
+    body = (
+      <div className="space-y-1 text-xs max-h-[300px] overflow-y-auto">
+        {strategiesQ.data?.rows?.slice(0, 10).map((s) => (
+          <div key={`${s.strategy}-${s.universe}`} className="flex items-center justify-between border-b border-[var(--color-border)]/40 py-1">
+            <span>
+              <span className="font-medium">{s.strategy}</span>
+              <Badge variant="neutral" size="xs" className="ml-2">{s.universe}</Badge>
+              {s.lifecycle_state && (
+                <Badge variant="neutral" size="xs" className="ml-1">{s.lifecycle_state}</Badge>
+              )}
+            </span>
+            <span className="font-mono flex gap-3">
+              <span>sharpe {s.solo_sharpe != null ? s.solo_sharpe.toFixed(2) : '—'}</span>
+              <span style={{ color: s.open_contradictions > 0 ? 'var(--color-amber, #f59e0b)' : 'var(--color-text-muted)' }}>
+                {s.open_contradictions}⚠
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <Badge variant="neutral" size="xs">{pill}</Badge>
+          <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">
+            {heading}
+          </h3>
         </div>
-      )}
-    </div>
-  )
-}
-
-function StrategyGrid({ strategies }: { strategies: StrategyDetail[] }) {
-  const sorted = useMemo(() => [...strategies].sort((a, b) => (b.best_sharpe ?? 0) - (a.best_sharpe ?? 0)), [strategies])
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {sorted.map((s) => <StrategyCard key={s.strategy} s={s} />)}
-    </div>
-  )
-}
-
-// ── Status Badge ────────────────────────────────────────────────
-function StatusBadge({ status }: { status?: string }) {
-  const s = status ?? 'unknown'
-  const variant: BadgeVariant =
-    s === 'kept' ? 'success'
-    : s === 'discarded' ? 'danger'
-    : s === 'discard_solo' ? 'warning'
-    : s === 'running' ? 'info'
-    : 'neutral'
-  return <Badge variant={variant} size="xs">{s}</Badge>
-}
-
-// ── Experiments Table ───────────────────────────────────────────
-function ExperimentsTable() {
-  const [limit, setLimit] = useState(30)
-  const [filterStrategy, setFilterStrategy] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const summary = useResearchSummary(true)
-  const experiments = useResearchExperiments(
-    { limit, strategy: filterStrategy || undefined, status: filterStatus || undefined }, true
-  )
-
-  const strategyOptions = useMemo(() => {
-    const items = summary.data?.by_strategy ?? []
-    return items.map((s: { strategy?: string }) => s.strategy ?? '').filter(Boolean).sort()
-  }, [summary.data])
-
-  if (!experiments.data) return <Skeleton className="h-48" />
-
-  const rows = experiments.data.experiments ?? []
-
-  return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
-      <div className="p-4 flex flex-wrap gap-2 border-b border-[var(--color-border)]">
-        <select value={filterStrategy} onChange={(e) => setFilterStrategy(e.target.value)}
-          className="text-xs bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[var(--color-text)]">
-          <option value="">All Strategies</option>
-          {strategyOptions.map((s: string) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="text-xs bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-[var(--color-text)]">
-          <option value="">All Statuses</option>
-          <option value="kept">Kept</option>
-          <option value="discarded">Discarded</option>
-          <option value="discard_solo">Discard Solo</option>
-        </select>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--color-border)]">
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Strategy</th>
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2 hidden md:table-cell">Description</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Sharpe</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2 hidden md:table-cell">Trades</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2 hidden lg:table-cell">Max DD</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2 hidden lg:table-cell">PF</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2 hidden md:table-cell">CAGR</th>
-              <th className="text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Status</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((e: Experiment) => (
-              <tr key={e.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-colors">
-                <td className="px-4 py-2 font-medium text-xs">{(e.strategy ?? '').replace(/_/g, ' ')}</td>
-                <td className="px-4 py-2 text-xs text-[var(--color-text-muted)] truncate max-w-[200px] hidden md:table-cell">{e.description ?? ''}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs">{fmtNum(e.sharpe, 4)}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs hidden md:table-cell">{e.trades ?? '—'}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs hidden lg:table-cell">{fmtPct(e.max_dd_pct, 1)}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs hidden lg:table-cell">{fmtNum(e.profit_factor, 2)}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs hidden md:table-cell">{fmtPct(e.cagr_pct, 1)}</td>
-                <td className="px-4 py-2 text-center"><StatusBadge status={e.status} /></td>
-                <td className="px-4 py-2 text-right text-xs text-[var(--color-text-muted)]">{fmtDateShort(e.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length >= limit && (
-        <div className="p-3 text-center border-t border-[var(--color-border)]">
-          <button onClick={() => setLimit((l) => l + 50)}
-            className="text-xs px-4 py-1.5 bg-[var(--color-surface-alt)] hover:bg-[var(--color-border)] rounded-lg transition-colors">
-            Show More
+        {stage != null && (
+          <button
+            onClick={onClearStage}
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] underline-offset-2 hover:underline"
+          >
+            Reset selection
           </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Brain Knowledge ─────────────────────────────────────────────
-function BrainTable({ params }: { params: BrainParam[] }) {
-  const sorted = useMemo(() => [...params].sort((a, b) => (b.tests ?? 0) - (a.tests ?? 0)), [params])
-  return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--color-border)]">
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Parameter</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Tests</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Strategies</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Improved</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Avg Δ Sharpe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((p: BrainParam) => (
-              <tr key={p.param_name} className="border-b border-[var(--color-border)]">
-                <td className="px-4 py-2 font-mono text-xs">{p.param_name}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs">{p.tests ?? 0}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs">{p.strategies_tested ?? 0}</td>
-                <td className="px-4 py-2 text-right font-mono text-xs">{p.improved ?? 0}</td>
-                <td className={`px-4 py-2 text-right font-mono text-xs ${(p.avg_sharpe_delta ?? 0) > 0 ? 'text-[var(--color-green)]' : 'text-[var(--color-red)]'}`}>
-                  {(p.avg_sharpe_delta ?? 0) > 0 ? '+' : ''}{fmtNum(p.avg_sharpe_delta, 4)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        )}
       </div>
+      {body}
     </div>
   )
 }
 
-// ── Discovery Cards ─────────────────────────────────────────────
-function DiscoveryCards({ discoveries }: { discoveries: Discovery[] }) {
-  if (!discoveries.length) return <div className="text-sm text-[var(--color-text-muted)]">No discoveries yet</div>
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {discoveries.map((d: Discovery) => (
-        <div key={d.id} className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-          <div className="flex justify-between items-start mb-2">
-            <div className="text-sm font-medium">{d.run_date}</div>
-            <StatusBadge status={d.status} />
-          </div>
-          <div className="grid grid-cols-4 gap-2 text-center mb-3">
-            {[
-              { label: 'Found', value: d.papers_found },
-              { label: 'Filtered', value: d.papers_filtered },
-              { label: 'Specs', value: d.specs_extracted },
-              { label: 'Strategies', value: d.strategies_generated },
-            ].map((item) => (
-              <div key={item.label}>
-                <div className="text-lg font-mono font-semibold">{item.value ?? 0}</div>
-                <div className="text-[9px] uppercase text-[var(--color-text-muted)]">{item.label}</div>
-              </div>
-            ))}
-          </div>
-          {d.paper_titles && d.paper_titles.length > 0 && (
-            <div className="text-[10px] text-[var(--color-text-muted)]">
-              {d.paper_titles.slice(0, 3).map((t: string, i: number) => <div key={i} className="truncate">📄 {t}</div>)}
-            </div>
-          )}
-        </div>
-      ))}
+    <div className="bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-md p-2">
+      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-mono">{label}</div>
+      <div className="text-base font-mono font-semibold">{typeof value === 'number' ? fmtNum(value) : value}</div>
     </div>
   )
 }
 
-// ── Engine Status Hero ──────────────────────────────────────────
-function EngineHero({ engine }: { engine: { status?: string; total_experiments_all_time?: number; experiments_today?: number; kept_all_time?: number; daily_counts?: DailyCount[] } }) {
-  const status = engine.status ?? 'unknown'
-  const isRunning = status === 'running'
+// ──────────────────────────────────────────────────────────────────────────────
+// Pipeline diagnostics -- text callouts computed from data
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface Callout { tone: 'ok' | 'warn' | 'info'; text: string }
+
+function PipelineDiagnostics({ funnel }: { funnel: DiscoveryFunnelDay[] }) {
+  const extractionQ = useExtractionConfidence()
+  const tQ = useContradictionsTimeline(30)
+  const queueQ = useQueueHealth()
+  const digestQ = useDigestHistory(7)
+
+  const callouts: Callout[] = useMemo(() => {
+    const out: Callout[] = []
+    const last7  = funnel.slice(-7)
+    const prior23 = funnel.slice(-30, -7)
+    const sum = (xs: DiscoveryFunnelDay[], k: keyof DiscoveryFunnelDay) =>
+      xs.reduce((acc, r) => acc + (r[k] as number || 0), 0)
+
+    const foundAvg = last7.length > 0 ? sum(last7, 'papers_found') / last7.length : 0
+    out.push({ tone: foundAvg >= 5 ? 'ok' : 'warn',
+      text: `Fetcher avg: ${foundAvg.toFixed(1)} papers/day over the last 7 days.` })
+
+    // Filter pass rate delta
+    const filtRate7  = passRate(sum(last7,   'papers_filtered'), sum(last7,   'papers_found'))
+    const filtRate30 = passRate(sum(prior23, 'papers_filtered'), sum(prior23, 'papers_found'))
+    if (filtRate7 != null && filtRate30 != null) {
+      const delta = filtRate7 - filtRate30
+      if (Math.abs(delta) >= 5) {
+        out.push({
+          tone: delta < 0 ? 'warn' : 'ok',
+          text: `Filter pass-rate ${delta < 0 ? 'dropped' : 'rose'}: ${filtRate7.toFixed(0)}% this week vs ${filtRate30.toFixed(0)}% prior 23 days.`,
+        })
+      } else {
+        out.push({ tone: 'ok', text: `Filter pass-rate stable around ${filtRate7.toFixed(0)}%.` })
+      }
+    }
+
+    // Zero-spec days
+    const zeroSpecDays = last7.filter((r) => r.specs_extracted === 0).map((r) => r.date)
+    if (zeroSpecDays.length === 1) {
+      out.push({ tone: 'info', text: `One day with 0 specs (${zeroSpecDays[0]}) — likely an arxiv rate-limit or all-off-topic batch.` })
+    } else if (zeroSpecDays.length > 1) {
+      out.push({ tone: 'warn', text: `${zeroSpecDays.length} days with 0 specs in the last 7 — investigate filter or fetch.` })
+    }
+
+    // Critical contradictions
+    const criticalTotal = (tQ.data?.timeline ?? []).reduce((s, t) => s + t.critical, 0)
+    if (criticalTotal > 0) {
+      out.push({ tone: 'warn', text: `${criticalTotal} critical contradictions opened in the last 30 days.` })
+    }
+
+    // Extraction confidence
+    const conf = extractionQ.data
+    if (conf && conf.total > 0) {
+      const lowPct = (conf.histogram.low / conf.total) * 100
+      if (lowPct > 25) {
+        out.push({ tone: 'warn', text: `${lowPct.toFixed(0)}% of extracted claims marked low-confidence — prompt may need tuning.` })
+      } else {
+        out.push({ tone: 'ok', text: `Extraction confidence: ${conf.histogram.high}H / ${conf.histogram.medium}M / ${conf.histogram.low}L over ${conf.total} claims.` })
+      }
+    }
+
+    // Queue depth
+    const qActive = queueQ.data?.active ?? 0
+    if (qActive > 25) {
+      out.push({ tone: 'warn', text: `Queue depth ${qActive} — backtester may be falling behind.` })
+    } else if (qActive > 0) {
+      out.push({ tone: 'ok', text: `Queue depth ${qActive} (${queueQ.data?.source}) — backtester keeping pace.` })
+    }
+
+    // Digest delivery
+    const recentDigests = digestQ.data?.rows ?? []
+    const failed = recentDigests.filter((d) => d.delivery_status && d.delivery_status !== 'ok')
+    if (failed.length > 0) {
+      out.push({ tone: 'warn', text: `${failed.length} digest delivery failure${failed.length === 1 ? '' : 's'} in the last 7 days.` })
+    }
+
+    return out
+  }, [funnel, extractionQ.data, tQ.data, queueQ.data, digestQ.data])
+
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 dash-card">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <StatusDot status={isRunning ? 'green' : 'gray'} size="md" pulse={isRunning} />
-            <span className="font-medium text-sm">
-              Research Engine — {isRunning ? 'Running' : 'Idle'}
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
+      <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">
+        Pipeline diagnostics
+      </h3>
+      <div className="space-y-1.5 text-xs">
+        {callouts.map((c, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span
+              className="font-mono w-4 flex-shrink-0"
+              style={{
+                color: c.tone === 'ok' ? 'var(--color-green)'
+                  : c.tone === 'warn' ? 'var(--color-amber, #f59e0b)'
+                  : 'var(--color-accent)',
+              }}
+            >
+              {c.tone === 'ok' ? '✓' : c.tone === 'warn' ? '⚠' : 'ℹ'}
             </span>
-            {isRunning && <Badge variant="success" size="xs">live</Badge>}
+            <span>{c.text}</span>
           </div>
-          <div className="flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
-            <span><span className="font-mono font-semibold text-[var(--color-text)] text-base">{(engine.total_experiments_all_time ?? 0).toLocaleString()}</span> experiments all-time</span>
-            <span className="text-[var(--color-border)]">·</span>
-            <span><span className="font-mono font-semibold text-[var(--color-text)] text-base">{engine.experiments_today ?? 0}</span> today</span>
-            <span className="text-[var(--color-border)]">·</span>
-            <span><span className="font-mono font-semibold text-[var(--color-green)] text-base">{(engine.kept_all_time ?? 0).toLocaleString()}</span> kept</span>
-          </div>
-        </div>
-        {engine.daily_counts && engine.daily_counts.length > 0 && (
-          <DailySparkline data={engine.daily_counts} />
+        ))}
+        {callouts.length === 0 && (
+          <div className="text-[var(--color-text-muted)]">No diagnostics yet — collecting data.</div>
         )}
       </div>
     </div>
   )
 }
 
-function DailySparkline({ data }: { data: DailyCount[] }) {
-  const recent = data.slice(-14)
-  const maxCount = Math.max(...recent.map(d => d.count ?? 0), 1)
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-end gap-[2px] h-10">
-        {recent.map((d, i) => {
-          const h = Math.max(((d.count ?? 0) / maxCount) * 36, 2)
-          const keptH = (d.count ?? 0) > 0 && (d.kept ?? 0) > 0 ? ((d.kept ?? 0) / (d.count ?? 1)) * h : 0
-          return (
-            <div key={i} className="relative" style={{ width: 8, height: 36 }}>
-              <div className="absolute bottom-0 w-full rounded-sm bg-[var(--color-text-muted)]/20" style={{ height: h }} />
-              {keptH > 0 && <div className="absolute bottom-0 w-full rounded-sm bg-[var(--color-green)]/70" style={{ height: keptH }} />}
-            </div>
-          )
-        })}
-      </div>
-      <span className="text-[9px] text-[var(--color-text-muted)]">14-day activity</span>
-    </div>
-  )
+// ──────────────────────────────────────────────────────────────────────────────
+// Top contradictions table + Source inventory (two-up bottom row)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function severityColor(s: Severity): string {
+  return s === 'critical' ? 'var(--color-red)' : s === 'major' ? 'var(--color-amber, #f59e0b)' : 'var(--color-text-muted)'
 }
 
-// ── Universe Cards ──────────────────────────────────────────────
-function sharpeGaugeColor(s: number | null | undefined): string {
-  if (s == null || s < 0) return '#ef4444'
-  if (s < 0.3) return '#eab308'
-  if (s < 0.6) return '#22c55e'
-  return '#3b82f6'
-}
-
-function UniverseCard({ u }: { u: UniverseInfo }) {
-  const title = (u.id ?? '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-  const isLive = u.mode === 'live'
-  const priKey = u.priority ?? 'low'
-  const priStars = priKey === 'high' ? '★★★' : priKey === 'medium' ? '★★' : '★'
-  const sharpe = u.best_sharpe ?? 0
-  const gaugeW = Math.min(Math.max(sharpe / 1.0 * 100, 0), 100)
-  const gaugeColor = sharpeGaugeColor(u.best_sharpe)
-  const keepRate = u.keep_rate ?? 0
-  const stratKeys = u.strategies ? Object.keys(u.strategies) : []
-
-  return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <span className="font-medium text-sm truncate">{title}</span>
-        <div className="flex gap-1.5 flex-shrink-0">
-          <Badge variant={isLive ? 'success' : 'neutral'} size="xs">
-            {isLive ? 'LIVE' : 'PASSIVE'}
-          </Badge>
-          <Badge variant={priKey === 'high' ? 'warning' : 'neutral'} size="xs">
-            {priStars} {priKey.toUpperCase()}
-          </Badge>
-        </div>
-      </div>
-      <div className="mb-3">
-        <div className="h-1.5 w-full bg-[var(--color-surface-alt)] rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-700" style={{ width: `${gaugeW}%`, background: gaugeColor }} />
-        </div>
-        <div className="flex justify-between mt-1">
-          <span className="font-mono text-sm font-semibold">{u.best_sharpe != null ? u.best_sharpe.toFixed(4) : '—'}</span>
-          <span className="text-[9px] uppercase text-[var(--color-text-muted)]">Best Sharpe</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="font-mono text-sm font-semibold">{(u.total_experiments ?? 0).toLocaleString()}</div>
-          <div className="text-[9px] uppercase text-[var(--color-text-muted)]">Experiments</div>
-        </div>
-        <div>
-          <div className="font-mono text-sm font-semibold">{u.experiments_today ?? 0}</div>
-          <div className="text-[9px] uppercase text-[var(--color-text-muted)]">Today</div>
-        </div>
-        <div>
-          <div className="font-mono text-sm font-semibold">{keepRate.toFixed(1)}%</div>
-          <div className="text-[9px] uppercase text-[var(--color-text-muted)]">Keep Rate</div>
-        </div>
-      </div>
-      {stratKeys.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {stratKeys.slice(0, 6).map(k => (
-            <Badge key={k} variant="neutral" size="xs">{k.replace(/_/g, ' ')}</Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function UniverseGrid({ universes }: { universes: UniverseInfo[] }) {
-  if (!universes.length) return <div className="text-sm text-[var(--color-text-muted)]">No universes configured</div>
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {universes.map(u => <UniverseCard key={u.id} u={u} />)}
-    </div>
-  )
-}
-
-// ── Strategy × Universe Heatmap ─────────────────────────────────
-function sharpeHeatColor(s: number | null | undefined): string {
-  if (s == null) return 'transparent'
-  if (s < 0) return 'rgba(239,68,68,0.2)'
-  if (s < 0.3) return 'rgba(234,179,8,0.2)'
-  if (s < 0.6) return 'rgba(34,197,94,0.2)'
-  return 'rgba(59,130,246,0.3)'
-}
-
-function SharpeHeatmap({ universes, leaderboard }: { universes: UniverseInfo[]; leaderboard: LeaderboardEntry[] }) {
-  const { strats, unis, lookup } = useMemo(() => {
-    const stratSet = new Set<string>()
-    const uniSet = new Set<string>()
-    const lk: Record<string, Record<string, number>> = {}
-
-    for (const u of universes) {
-      if (u.id) uniSet.add(u.id)
-      if (u.strategies) {
-        for (const [s, info] of Object.entries(u.strategies)) {
-          stratSet.add(s)
-          if (!lk[s]) lk[s] = {}
-          if (info.best_sharpe != null) lk[s][u.id!] = info.best_sharpe
-        }
-      }
-    }
-    for (const row of leaderboard) {
-      if (row.strategy) stratSet.add(row.strategy)
-      if (row.universe) uniSet.add(row.universe)
-      if (row.strategy && row.universe && row.sharpe != null) {
-        if (!lk[row.strategy]) lk[row.strategy] = {}
-        if (lk[row.strategy][row.universe] == null || row.sharpe > lk[row.strategy][row.universe]) {
-          lk[row.strategy][row.universe] = row.sharpe
-        }
-      }
-    }
-    return { strats: [...stratSet].sort(), unis: [...uniSet].sort(), lookup: lk }
-  }, [universes, leaderboard])
-
-  if (!strats.length || !unis.length) return null
+function TopContradictionsTable() {
+  const q = useOpenContradictions({ limit: 10 })
+  const resolveMut = useResolveContradiction()
+  const rows = q.data?.rows ?? []
 
   return (
     <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
-      <div className="p-4 border-b border-[var(--color-border)]">
-        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">🧬 Sharpe Heatmap — strategy × universe</h3>
+      <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">
+          Top open contradictions
+        </h3>
+        <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{q.data?.count ?? 0}</span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
+      <div className="overflow-x-auto max-h-[420px]">
+        <table className="w-full text-xs">
+          <thead className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
             <tr className="border-b border-[var(--color-border)]">
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-3 py-2">Strategy</th>
-              {unis.map(u => (
-                <th key={u} className="text-center text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-2 py-2 whitespace-nowrap">
-                  {u.replace(/_/g, ' ')}
-                </th>
-              ))}
+              <th className="text-left px-3 py-2 font-medium">Sev</th>
+              <th className="text-left px-3 py-2 font-medium">Strategy</th>
+              <th className="text-left px-3 py-2 font-medium">Metric</th>
+              <th className="text-right px-3 py-2 font-medium">Claimed</th>
+              <th className="text-right px-3 py-2 font-medium">Measured</th>
+              <th className="text-right px-3 py-2 font-medium">Δ</th>
+              <th className="text-left px-3 py-2 font-medium">Source</th>
+              <th className="text-right px-3 py-2 font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
-            {strats.map(s => (
-              <tr key={s} className="border-b border-[var(--color-border)]">
-                <td className="px-3 py-2 text-xs whitespace-nowrap">{s.replace(/_/g, ' ')}</td>
-                {unis.map(u => {
-                  const val = lookup[s]?.[u] ?? null
-                  return (
-                    <td key={u} className="px-2 py-2 text-center font-mono text-xs" style={{ background: sharpeHeatColor(val) }}>
-                      {val != null ? val.toFixed(2) : '—'}
-                    </td>
-                  )
-                })}
+            {rows.map((row) => (
+              <ContradictionRow
+                key={row.contradiction_id}
+                row={row}
+                onResolve={(resolution, note) =>
+                  resolveMut.mutate({ id: row.contradiction_id, resolution, note })
+                }
+              />
+            ))}
+            {!q.isLoading && rows.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-3 py-6 text-center text-[var(--color-text-muted)]">
+                  Inbox zero. No open contradictions.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ContradictionRow({ row, onResolve }: {
+  row: OpenContradiction
+  onResolve: (resolution: 'retested' | 'claim_rejected' | 'measurement_corrected' | 'deferred', note?: string) => void
+}) {
+  return (
+    <tr className="border-b border-[var(--color-border)]/40 hover:bg-[var(--color-surface-alt)]">
+      <td className="px-3 py-2">
+        <span className="font-mono text-[10px]" style={{ color: severityColor(row.severity) }}>
+          {row.severity.toUpperCase()}
+        </span>
+      </td>
+      <td className="px-3 py-2">
+        <span className="font-medium">{row.strategy}</span>
+        <Badge variant="neutral" size="xs" className="ml-2">{row.universe}</Badge>
+      </td>
+      <td className="px-3 py-2 font-mono text-[var(--color-text-muted)]">{row.metric}</td>
+      <td className="px-3 py-2 text-right font-mono">{row.claimed_value?.toFixed(2) ?? '—'}</td>
+      <td className="px-3 py-2 text-right font-mono">{row.measured_value?.toFixed(2) ?? '—'}</td>
+      <td className="px-3 py-2 text-right font-mono" style={{ color: severityColor(row.severity) }}>
+        {row.delta != null ? (row.delta > 0 ? '+' : '') + row.delta.toFixed(2) : '—'}
+      </td>
+      <td className="px-3 py-2 max-w-[240px] truncate">
+        {row.source_url ? (
+          <a href={row.source_url} target="_blank" rel="noreferrer" className="text-[var(--color-accent)] hover:underline">
+            {row.source_title ?? row.source_id}
+          </a>
+        ) : (
+          row.source_title ?? row.source_id ?? '—'
+        )}
+      </td>
+      <td className="px-3 py-2 text-right">
+        <select
+          className="text-[10px] bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded px-1 py-0.5 cursor-pointer"
+          onChange={(e) => {
+            const v = e.target.value
+            if (v) {
+              onResolve(v as 'retested' | 'claim_rejected' | 'measurement_corrected' | 'deferred')
+              e.target.value = ''
+            }
+          }}
+          defaultValue=""
+        >
+          <option value="">Resolve…</option>
+          <option value="retested">Retested</option>
+          <option value="claim_rejected">Reject claim</option>
+          <option value="measurement_corrected">Correct measurement</option>
+          <option value="deferred">Defer</option>
+        </select>
+      </td>
+    </tr>
+  )
+}
+
+function SourceInventoryTable() {
+  const q = useKnowledgeSources({ limit: 10 })
+  const rows = q.data?.rows ?? []
+  return (
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
+      <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
+        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">
+          Source inventory — recent
+        </h3>
+        <span className="text-[10px] text-[var(--color-text-muted)] font-mono">{q.data?.total ?? 0} total</span>
+      </div>
+      <div className="overflow-x-auto max-h-[420px]">
+        <table className="w-full text-xs">
+          <thead className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+            <tr className="border-b border-[var(--color-border)]">
+              <th className="text-left px-3 py-2 font-medium">Title</th>
+              <th className="text-left px-3 py-2 font-medium">Venue</th>
+              <th className="text-right px-3 py-2 font-medium">Claims</th>
+              <th className="text-right px-3 py-2 font-medium">Open ⚠</th>
+              <th className="text-right px-3 py-2 font-medium">Ingested</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s) => (
+              <tr key={s.id} className="border-b border-[var(--color-border)]/40 hover:bg-[var(--color-surface-alt)]">
+                <td className="px-3 py-2 max-w-[280px] truncate">
+                  {s.url ? (
+                    <a href={s.url} target="_blank" rel="noreferrer" className="text-[var(--color-accent)] hover:underline">
+                      {s.title}
+                    </a>
+                  ) : s.title}
+                </td>
+                <td className="px-3 py-2 text-[var(--color-text-muted)]">{s.venue ?? '—'}</td>
+                <td className="px-3 py-2 text-right font-mono">{s.claim_count}</td>
+                <td className="px-3 py-2 text-right font-mono" style={{ color: s.open_contradictions > 0 ? 'var(--color-amber, #f59e0b)' : 'var(--color-text-muted)' }}>
+                  {s.open_contradictions}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-[var(--color-text-muted)] text-[10px]">{fmtRelativeTime(s.ingested_at)}</td>
               </tr>
             ))}
+            {!q.isLoading && rows.length === 0 && (
+              <tr><td colSpan={5} className="px-3 py-6 text-center text-[var(--color-text-muted)]">No sources ingested yet.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -548,196 +730,98 @@ function SharpeHeatmap({ universes, leaderboard }: { universes: UniverseInfo[]; 
   )
 }
 
-// ── Leaderboard ─────────────────────────────────────────────────
-function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
-  if (!entries.length) return <div className="text-sm text-[var(--color-text-muted)]">No leaderboard data yet</div>
+// ──────────────────────────────────────────────────────────────────────────────
+// KPI strip (small) -- digest sparkline + counts
+// ──────────────────────────────────────────────────────────────────────────────
+
+function KpiStrip() {
+  const digestQ = useDigestHistory(30)
+  const openQ = useOpenContradictions({ limit: 1 })
+  const sourcesQ = useKnowledgeSources({ limit: 1 })
+  const strategiesQ = useStrategySummaries()
+
+  const sparkData = (digestQ.data?.rows ?? []).map((d) => d.new_contradictions)
+  const claimsWithMetrics = strategiesQ.data?.rows?.reduce((s, r) => s + (r.active_claims ?? 0), 0) ?? 0
+
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
-      <div className="p-4 border-b border-[var(--color-border)]">
-        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">🏆 Leaderboard — best combos by Sharpe</h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--color-border)]">
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">#</th>
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Strategy</th>
-              <th className="text-left text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Universe</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Sharpe</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Trades</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Max DD</th>
-              <th className="text-right text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium px-4 py-2">Experiments</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((row, i) => {
-              const s = row.sharpe ?? 0
-              const color = s >= 0.5 ? 'var(--color-green)' : s >= 0.3 ? 'var(--color-amber, #eab308)' : 'var(--color-red)'
-              return (
-                <tr key={`${row.strategy}-${row.universe}`} data-testid="leaderboard-row" className="border-b border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-colors">
-                  <td className="px-4 py-2 font-mono text-xs text-[var(--color-text-muted)]">{i + 1}</td>
-                  <td className="px-4 py-2 text-xs font-medium">{(row.strategy ?? '').replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-2">
-                    <Badge variant="neutral" size="xs">{row.universe ?? '—'}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-right font-mono text-xs font-semibold" style={{ color }}>{row.sharpe != null ? row.sharpe.toFixed(4) : '—'}</td>
-                  <td className="px-4 py-2 text-right font-mono text-xs">{row.trades ?? '—'}</td>
-                  <td className="px-4 py-2 text-right font-mono text-xs">{row.max_dd_pct != null ? `${row.max_dd_pct.toFixed(1)}%` : '—'}</td>
-                  <td className="px-4 py-2 text-right font-mono text-xs">{row.total_experiments ?? '—'}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <KpiCard label="Open contradictions" value={openQ.data?.count ?? 0} color="amber" />
+      <KpiCard label="Sources" value={sourcesQ.data?.total ?? 0} />
+      <KpiCard label="Active claims" value={claimsWithMetrics} />
+      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 dash-card">
+        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Contradictions opened (30d)</div>
+        <Sparkline data={sparkData} height={42} />
       </div>
     </div>
   )
 }
 
-// ── Live Feed ───────────────────────────────────────────────────
-function LiveFeed({ experiments }: { experiments: Experiment[] }) {
-  const items = experiments.slice(0, 30)
-  if (!items.length) return <div className="text-sm text-[var(--color-text-muted)]">No recent experiments</div>
+function KpiCard({ label, value, color }: { label: string; value: number | string; color?: 'amber' | 'red' }) {
+  const tone = color === 'amber' ? 'var(--color-amber, #f59e0b)' : color === 'red' ? 'var(--color-red)' : undefined
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl dash-card overflow-hidden">
-      <div className="p-4 border-b border-[var(--color-border)]">
-        <h3 className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium">🧪 Live Feed — recent experiments</h3>
-      </div>
-      <div className="max-h-[400px] overflow-y-auto">
-        {items.map((e) => {
-          const isKept = (e.status ?? '').includes('kept')
-          return (
-            <div key={e.id} className={`flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] text-xs hover:bg-[var(--color-surface-alt)] transition-colors ${isKept ? 'bg-[var(--color-green)]/5' : ''}`}>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${isKept ? 'bg-[var(--color-green)]' : 'bg-[var(--color-red)]'}`} />
-                <span className="font-medium truncate">{(e.strategy ?? '').replace(/_/g, ' ')}</span>
-                {e.universe && (
-                  <Badge variant="neutral" size="xs" className="flex-shrink-0">{e.universe}</Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                <span className="font-mono font-semibold">{e.sharpe != null ? e.sharpe.toFixed(4) : '—'}</span>
-                <span className="text-[var(--color-text-muted)]">{fmtRelativeTime(e.created_at)}</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 dash-card">
+      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">{label}</div>
+      <div className="text-2xl font-mono font-semibold" style={tone ? { color: tone } : undefined}>{value}</div>
     </div>
   )
 }
 
-// ── Main Tab ────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// Main composition
+// ──────────────────────────────────────────────────────────────────────────────
+
 export function ResearchTab() {
-  const overview = useResearchOverview(true)
-  const leaderboard = useResearchLeaderboard(true)
-  const summary = useResearchSummary(true)
-  const strategies = useResearchStrategies(true)
-  const brain = useResearchBrain(true)
-  const discoveries = useResearchDiscoveries(true)
-  const experiments = useResearchExperiments({ limit: 50 }, true)
+  const funnelQ = useDiscoveryFunnel(30)
+  const [stage, setStage] = useUrlState<StageKey | null>('stage', null)
 
-  if (!summary.data && !overview.data) return <Skeleton className="h-96" />
+  const funnel = funnelQ.data?.funnel ?? []
 
-  const universes = overview.data?.universes ?? []
-  const engine = overview.data?.engine
-  const lbEntries = leaderboard.data?.leaderboard ?? []
-  const expRows = experiments.data?.experiments ?? []
+  if (funnelQ.isLoading && funnel.length === 0) {
+    return <Skeleton className="h-96" />
+  }
 
   return (
     <div className="space-y-4 md:space-y-6 stagger">
-      <div className="animate-in">
-        <PendingPromotionsWidget />
-      </div>
+      <SectionBoundary name="pipeline-header">
+        <PipelineHeader />
+      </SectionBoundary>
 
-      {engine && (
-        <div className="animate-in">
-          <EngineHero engine={engine} />
+      <SectionBoundary name="kpis">
+        <KpiStrip />
+      </SectionBoundary>
+
+      <SectionBoundary name="funnel">
+        <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card animate-in">
+          <FunnelChart funnel={funnel} selected={stage} onSelect={setStage} />
+          <StageHealthRow funnel={funnel} />
         </div>
-      )}
+      </SectionBoundary>
 
-      {!engine && summary.data && (
-        <div className="animate-in">
-          <SectionBoundary title="Summary">
-            <SummaryCards data={summary.data} />
-          </SectionBoundary>
+      <SectionBoundary name="funnel-timeseries">
+        <FunnelTimeseries funnel={funnel} highlightStage={stage} />
+      </SectionBoundary>
+
+      <SectionBoundary name="contradictions-charts">
+        <ContradictionsChartsRow />
+      </SectionBoundary>
+
+      <SectionBoundary name="drill-in">
+        <StageDrillIn stage={stage} onClearStage={() => setStage(null)} funnel={funnel} />
+      </SectionBoundary>
+
+      <SectionBoundary name="diagnostics">
+        <PipelineDiagnostics funnel={funnel} />
+      </SectionBoundary>
+
+      <SectionBoundary name="bottom-tables">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TopContradictionsTable />
+          <SourceInventoryTable />
         </div>
-      )}
-
-      <div className="animate-in">
-        <SectionBoundary title="Coverage">
-          <CoverageMatrix enabled={true} />
-        </SectionBoundary>
-      </div>
-
-      {universes.length > 0 && (
-        <div className="animate-in">
-          <SectionBoundary title="🔬 Universes">
-            <UniverseGrid universes={universes} />
-          </SectionBoundary>
-        </div>
-      )}
-
-      {universes.length > 0 && lbEntries.length > 0 && (
-        <div className="animate-in">
-          <SharpeHeatmap universes={universes} leaderboard={lbEntries} />
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {lbEntries.length > 0 && (
-          <div className="animate-in">
-            <LeaderboardTable entries={lbEntries} />
-          </div>
-        )}
-        {expRows.length > 0 && (
-          <div className="animate-in">
-            <LiveFeed experiments={expRows} />
-          </div>
-        )}
-      </div>
-
-      <div className="animate-in">
-        <SectionBoundary title="Sharpe Trajectory">
-          <SharpeChart />
-        </SectionBoundary>
-      </div>
-
-      {strategies.data?.strategies && strategies.data.strategies.length > 0 && (
-        <div className="animate-in">
-          <SectionBoundary title="Strategy Breakdown">
-            <StrategyGrid strategies={strategies.data.strategies} />
-          </SectionBoundary>
-        </div>
-      )}
-
-      <div className="animate-in">
-        <SectionBoundary title="Experiments">
-          <ExperimentsTable />
-        </SectionBoundary>
-      </div>
-
-      {brain.data?.params && brain.data.params.length > 0 && (
-        <div className="animate-in">
-          <SectionBoundary title="Brain — Parameters Tested">
-            <BrainTable params={brain.data.params} />
-          </SectionBoundary>
-        </div>
-      )}
-
-      {discoveries.data?.discoveries && discoveries.data.discoveries.length > 0 && (
-        <div className="animate-in">
-          <SectionBoundary title="Paper Discoveries">
-            <DiscoveryCards discoveries={discoveries.data.discoveries} />
-          </SectionBoundary>
-        </div>
-      )}
-
-      <div className="animate-in">
-        <SectionBoundary title="Paper Trading Progress">
-          <PaperProgressPanel />
-        </SectionBoundary>
-      </div>
+      </SectionBoundary>
     </div>
   )
 }
+
+// Suppress unused-import lint for fmtPct which may be needed by future polishes.
+void fmtPct

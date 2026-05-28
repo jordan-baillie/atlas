@@ -5,7 +5,7 @@ import { TabBar } from './components/layout/TabBar'
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
 
 // Rule: bundle-dynamic-imports — lazy-load BOTH tabs so the initial bundle
-// only includes the shell (Header + TabBar + App). Each tab's recharts and
+// only includes the shell (Header + TabBar + App). Each tab's chart.js and
 // heavy deps load on demand via its dedicated chunk.
 const PortfolioTab = lazy(() =>
   import('./components/portfolio/PortfolioTab').then((m) => ({ default: m.PortfolioTab })),

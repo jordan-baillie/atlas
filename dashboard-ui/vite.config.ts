@@ -20,8 +20,8 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // recharts + all d3 deps — heaviest dep, must be isolated
-            if (id.includes('recharts') || id.includes('d3-')) return 'recharts'
+            // Chart.js + react-chartjs-2 -- heaviest dep, isolate.
+            if (id.includes('chart.js') || id.includes('react-chartjs-2')) return 'chartjs'
             // TanStack Query
             if (id.includes('@tanstack')) return 'tanstack'
             // React runtime + react-dom + scheduler

@@ -6,8 +6,8 @@
  * win via deep-merge.
  *
  * Semantic colour tokens (categorical / portfolio / benchmark / grid)
- * still mirror the values in chart-palette.ts so a stepwise migration
- * doesn't break visual identity.
+ * are the canonical source; the previous chart-palette.ts was removed in
+ * Track 3 of the Recharts -> Chart.js consolidation.
  */
 
 import type { ChartOptions } from 'chart.js'

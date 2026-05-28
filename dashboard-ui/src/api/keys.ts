@@ -39,6 +39,25 @@ export const qk = {
     discoveries: () => [...qk.research.all(), 'discoveries'] as const,
     coverage: () => [...qk.research.all(), 'coverage'] as const,
     paperProgress: () => [...qk.research.all(), 'paper-progress'] as const,
+    // Track 3a: Variant-D dashboard endpoints
+    discoveryFunnel: (days: number) => [...qk.research.all(), 'discovery-funnel', days] as const,
+    queueHealth: () => [...qk.research.all(), 'queue-health'] as const,
+  },
+  knowledge: {
+    all: () => [...qk.all, 'knowledge'] as const,
+    openContradictions: (params: Record<string, unknown> = {}) =>
+      [...qk.knowledge.all(), 'contradictions', 'open', params] as const,
+    sources: (params: Record<string, unknown> = {}) =>
+      [...qk.knowledge.all(), 'sources', params] as const,
+    sourceById: (id: string) => [...qk.knowledge.all(), 'sources', id] as const,
+    strategySummary: (strategy: string, params: Record<string, unknown> = {}) =>
+      [...qk.knowledge.all(), 'strategy', strategy, 'summary', params] as const,
+    contradictionsTimeline: (days: number) =>
+      [...qk.knowledge.all(), 'contradictions-timeline', days] as const,
+    digestHistory: (limit: number) =>
+      [...qk.knowledge.all(), 'digest-history', limit] as const,
+    extractionConfidence: () => [...qk.knowledge.all(), 'extraction-confidence'] as const,
+    strategySummaries: () => [...qk.knowledge.all(), 'strategy-summaries'] as const,
   },
   promotions: {
     pending: () => ['promotions', 'pending'] as const,
