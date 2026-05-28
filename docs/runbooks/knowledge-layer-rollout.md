@@ -265,6 +265,20 @@ EOF
 
 **Purpose**: prove the extractor reads papers accurately before scaling up.
 
+First run a dry-run pre-check:
+
+```bash
+python3 scripts/extract_paper_metrics.py
+```
+
+If the output has `would_process == 0`, this is **not an error**. It means
+there are no shell claims yet (for example, discovery was rate-limited and
+produced no specs). Skip Steps 7-9 entirely, tell the operator the rollout is
+being completed in **installed-but-quiet** mode, and proceed to Step 10. The
+Step 11 cron will pick up shell claims as soon as discovery produces specs.
+
+Only when `would_process > 0`, run the decision-gate extraction:
+
 ```bash
 python3 scripts/extract_paper_metrics.py --apply --limit 5
 ```
@@ -318,6 +332,9 @@ The agent MUST pause and surface this output. The operator will hand-verify
 ---
 
 ## Step 8 — Full LLM extraction
+
+Skip this step if Step 7 found `would_process == 0`. There is no backlog to
+drain; the Step 11 cron handles extraction as data arrives.
 
 **Purpose**: now that the prompt is trusted, drain the backlog.
 
