@@ -26,6 +26,25 @@ _SEEN_URLS_FILE = _DISCOVERY_DIR / "seen_urls.txt"
 
 _PAPERS_DIR.mkdir(parents=True, exist_ok=True)
 
+# ─── ArXiv q-fin subcategories ────────────────────────────────────────────────
+# The previous query `cat:q-fin.* {query}` did NOT work — arxiv's search API
+# treats `q-fin.*` literally (no glob/regex expansion) and silently falls back
+# to keyword-only search, polluting results with off-topic papers. Enumerate
+# the full subcategory list (from https://arxiv.org/archive/q-fin, May 2026)
+# and OR them together explicitly.
+QFIN_CATEGORIES = (
+    "q-fin.CP",  # Computational Finance
+    "q-fin.EC",  # Economics
+    "q-fin.GN",  # General Finance
+    "q-fin.MF",  # Mathematical Finance
+    "q-fin.PM",  # Portfolio Management
+    "q-fin.PR",  # Pricing of Securities
+    "q-fin.RM",  # Risk Management
+    "q-fin.ST",  # Statistical Finance
+    "q-fin.TR",  # Trading and Market Microstructure
+)
+_QFIN_CAT_CLAUSE = " OR ".join(f"cat:{c}" for c in QFIN_CATEGORIES)
+
 
 # ─── Dedup helpers ────────────────────────────────────────────────────────────
 
@@ -97,8 +116,9 @@ def fetch_new_papers(
     client = arxiv.Client()
 
     for query in queries:
-        # Scope to quantitative finance category
-        scoped_query = f"cat:q-fin.* {query}"
+        # Scope to quantitative finance subcategories. `cat:q-fin.*` is NOT a
+        # valid arxiv search expression — see QFIN_CATEGORIES above.
+        scoped_query = f"({_QFIN_CAT_CLAUSE}) AND ({query})"
         logger.info("ArXiv query: %s", scoped_query)
 
         search = arxiv.Search(
@@ -142,6 +162,7 @@ def fetch_new_papers(
                     "published": published_dt.strftime("%Y-%m-%d"),
                     "source": "arxiv",
                     "local_pdf": local_pdf,
+                    "primary_category": paper.primary_category,
                 }
                 results.append(record)
                 logger.info("Found: %s — %s", record["published"], paper.title[:80])
@@ -173,3 +194,11 @@ if __name__ == "__main__":
         since_days=30,
     )
     print(json.dumps(papers, indent=2, default=str))
+
+    # Validate category scoping: every returned paper must be primary-q-fin.
+    off_topic = [p for p in papers if not str(p.get("primary_category", "")).startswith("q-fin")]
+    assert not off_topic, (
+        f"category-scoping regression: {len(off_topic)}/{len(papers)} papers are not q-fin: "
+        + ", ".join(f"{p['url']} ({p.get('primary_category')})" for p in off_topic)
+    )
+    print(f"\nOK — all {len(papers)} papers have a q-fin.* primary category.")
