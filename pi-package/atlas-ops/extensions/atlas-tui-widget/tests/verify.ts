@@ -260,7 +260,7 @@ test("header shows active/total when delegation tools exist", () => {
     status: "running", startMs: Date.now(),
   });
   state.activeTools.set("a2", {
-    toolCallId: "a2", toolName: "swarm", args: "build",
+    toolCallId: "a2", toolName: "delegate_worker", args: "build",
     status: "running", startMs: Date.now(),
   });
   state.activeTools.set("t1", {
@@ -329,8 +329,8 @@ test("isDelegationTool: subagent → true", () => {
   assert.ok(isDelegationTool("subagent"));
 });
 
-test("isDelegationTool: swarm → true", () => {
-  assert.ok(isDelegationTool("swarm"));
+test("isDelegationTool: retired tool name → false", () => {
+  assert.ok(!isDelegationTool("retired_parallel_tool"));
 });
 
 test("isDelegationTool: delegate_scout → true (prefix match)", () => {

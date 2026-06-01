@@ -15,7 +15,7 @@
  *
  * Phase shows "working" when tools are in-flight, "idle" otherwise.
  * Agents shows active/total delegation tool calls (e.g., "1/2"); "0" when none.
- * Delegation tools (subagent/swarm) use "→" while running.
+ * Delegation tools (subagent/delegate*) use "→" while running.
  *
  * Commands:
  *   /atlas-tui         — Toggle widget on/off
@@ -148,7 +148,7 @@ export default function atlasTuiWidget(pi: ExtensionAPI) {
     // Defensive cap: prevent unbounded growth if tool_execution_end is missed.
     capActiveTools(state);
 
-    // Count delegation tools (subagent, swarm, delegate*, atlas_elastic_run, etc.)
+    // Count delegation tools (subagent, delegate*, atlas_elastic_run, etc.)
     // Uses isDelegationTool() from core.ts so this list stays in sync with the renderer.
     if (isDelegationTool(event.toolName)) {
       state.delegations++;

@@ -514,7 +514,7 @@ export function generatePlan(
       const allGatesSatisfied = gates.every((g) => g.status === "optional" || g.satisfied);
       summary = `Write-bounded: 1 scout → ${builders.length} builder(s) → 1 reviewer. Gates: ${allGatesSatisfied ? "✓ all satisfied" : "✗ some gates unmet"}.`;
       nextStep = allGatesSatisfied
-        ? "All gates satisfied. Review plan and confirm to dispatch via swarm or subagent coordinator."
+        ? "All gates satisfied. Review plan and confirm before manual or focused-agent execution."
         : "Gates NOT satisfied. Resolve warnings before dispatching write agents. Run plan again after clean tree.";
       break;
     }

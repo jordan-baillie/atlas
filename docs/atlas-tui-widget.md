@@ -16,7 +16,7 @@ a compact live-activity panel above the Pi editor. Clean, phase-aware, orchestra
 
 Header fields:
 - **phase** — `idle` (no in-flight tools) or `working` (tools running)
-- **agents** — number of currently active delegation tools (`subagent` / `swarm`)
+- **agents** — number of currently active delegation tools (`subagent` / `delegate*`)
 - **tools** — total tool calls this session
 - **errors** — total errors this session
 - **elapsed** — session wall-clock time
@@ -92,7 +92,7 @@ atlas-tui-widget/
 |---|---|
 | `createState()` | Fresh `TuiState` with session timer started |
 | `renderWidget(state, theme, width, widthFns)` | Returns `string[]`, each line ≤ `width`; `widthFns` is injected so tests can mock ANSI-aware truncation |
-| `isDelegationTool(toolName)` | True for `subagent`, `swarm`, `delegate*` |
+| `isDelegationTool(toolName)` | True for `subagent`, `delegate*` |
 | `rowIcon(status, isDelegation)` | `→` for running delegation, otherwise `✓`/`✗`/`⟳` |
 | `summarizeArgs(args)` | Extract relevant arg from tool call params |
 | `fmtDuration(ms)` | Human-readable duration |
@@ -109,7 +109,7 @@ atlas-tui-widget/
 | `tool_execution_start` | Add running entry, increment totals |
 | `tool_execution_end` | Move to completed, record duration |
 
-**Delegation detection:** `subagent`, `swarm`, and any tool starting with `delegate` increment
+**Delegation detection:** `subagent` and any tool starting with `delegate` increment
 the `delegations` counter and receive `→` icon while running.
 
 **Memory bounds:** `recentActivity` is capped at `MAX_ACTIVITY = 5` entries (oldest evicted via

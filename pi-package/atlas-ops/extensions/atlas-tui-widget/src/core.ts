@@ -124,7 +124,6 @@ export function summarizeArgs(args: Record<string, unknown>): string {
 export function isDelegationTool(toolName: string): boolean {
   return (
     toolName === "subagent" ||
-    toolName === "swarm" ||
     toolName === "atlas_elastic_run" ||
     toolName.startsWith("delegate")
   );
@@ -205,7 +204,7 @@ export function capActiveTools(
  * Errors:  total errors this session.
  * Elapsed: session wall-clock time.
  *
- * Delegation tools (subagent/swarm) use "→" while running (vs "⟳" for tools).
+ * Delegation tools (subagent/delegate*) use "→" while running (vs "⟳" for tools).
  *
  * @param widthFns - Width utilities (injected so tests can mock them).
  *

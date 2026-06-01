@@ -23,7 +23,7 @@
  *   9.  Ownership: overlap detection
  *  10.  API key safety: no forbidden Anthropic(api_key) usage in source
  *  11.  Burst runner: mock injection, bounded concurrency, timeout shape
- *  12.  Write dispatch: buildWriteDispatchMessage pure helper
+ *  12.  Write plan: buildWriteDispatchMessage pure helper
  *  13.  executeElasticRun: all branches (read_only burst, write dispatch, blockers)
  */
 
@@ -1151,9 +1151,9 @@ await testAsync("runReadOnlyBurst: review_qa with empty agent_roles falls back t
   }
 });
 
-// ─── 12. Write dispatch: buildWriteDispatchMessage ────────────────────────────
+// ─── 12. Write plan: buildWriteDispatchMessage ────────────────────────────
 
-console.log("\n── 12. Write dispatch: buildWriteDispatchMessage ──");
+console.log("\n── 12. Write plan: buildWriteDispatchMessage ──");
 
 test("buildWriteDispatchMessage: returns a non-empty string", () => {
   const plan = generatePlan(

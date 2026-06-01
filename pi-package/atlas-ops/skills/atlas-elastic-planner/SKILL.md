@@ -16,7 +16,7 @@
 | `/elastic-plan <objective> -- file1 file2` | Plan with specific files affected |
 | `/elastic-run <objective>` | Gate evaluation + command hints (plan/gate only) |
 | `/elastic-run <objective> --execute-read-only` | Gate + **actually run** burst agents (read_only/planning/review_qa) |
-| `/elastic-run <objective> -- file1 --confirm` | Gate + queue swarm dispatch message (write_bounded, gates must pass) |
+| `/elastic-run <objective> -- file1 --confirm` | Gate + return manual write-plan message (write_bounded, gates must pass) |
 | `/elastic-status` | Show last 20 audit entries |
 
 ### Tools (LLM-callable)
@@ -30,7 +30,7 @@
 - `objective` — task objective
 - `files_affected` — optional file list
 - `execute_read_only` — `true` to actually run burst agents (read_only/planning/review_qa only)
-- `confirmed` — `true` to queue swarm dispatch message (write_bounded only, all gates must pass)
+- `confirmed` — `true` to return a manual write-plan message (write_bounded only, all gates must pass)
 
 ---
 
@@ -98,8 +98,8 @@ or `atlas_elastic_run` with `execute_read_only: true`
 ```
 or `atlas_elastic_run` with `confirmed: true`
 
-→ Validates gates (clean tree required), then **queues** a swarm dispatch message with:
-  - Copy-pasteable swarm objective
+→ Validates gates (clean tree required), then **returns** a manual write-plan message with:
+  - Copy-pasteable task objective
   - Full file ownership table (builder → files, exclusive)
   - Explicit warning: queued, not auto-executed
   - Audit: `dispatch_requested`
@@ -199,8 +199,8 @@ Each entry contains:
 | Risk classification + DAG | ✅ Actual | Pure function, runs always |
 | Gate evaluation | ✅ Actual | Git check runs in real repo |
 | Read-only burst (pi CLI) | ✅ Actual | execute_read_only=true required |
-| Write dispatch message | ✅ Actual (queued) | confirmed=true generates message; swarm tool call is NOT automatic |
-| Auto-swarm on write tasks | ❌ Never | User must call swarm tool manually with ownership table |
+| Write-plan message | ✅ Actual | confirmed=true generates a plan message; execution is NOT automatic |
+| Automatic write execution | ❌ Never | User must execute manually or use a focused agent with explicit scope |
 | Live trading auto-execute | ❌ Never | Use atlas_risk_check_plan_gate |
 
 ---
@@ -255,4 +255,4 @@ Each entry contains:
 - Policy: `config/agent-scale-policy.yaml`
 - Audit log: `.pi/elastic-agents/audit.jsonl`
 - Extension: `pi-package/atlas-ops/extensions/atlas-elastic-agents/`
-- Swarm rules: `/root/AGENTS.md` (Swarm Coordination section)
+- Parallel work rules: `/root/AGENTS.md` (Parallel Work and Long-Running Tasks section)

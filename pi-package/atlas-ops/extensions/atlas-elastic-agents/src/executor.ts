@@ -9,7 +9,7 @@
  *
  * For write_bounded:
  *   - Blocked if dirty tree or gates unsatisfied
- *   - With confirmed=true + gates passed: queues swarm dispatch message (no auto-execute)
+ *   - With confirmed=true + gates passed: returns a manual write-plan message (no auto-execute)
  *
  * For live_trading_ops: ALWAYS blocked; use atlas_risk_check_plan_gate.
  *
@@ -102,7 +102,7 @@ export interface ElasticRunOptions {
   execute_read_only?: boolean;
   /**
    * When true for write_bounded tasks with all gates satisfied, generate a
-   * swarm dispatch follow-up message. Does NOT execute the swarm automatically.
+   * manual write-plan follow-up message. Does NOT execute automatically.
    */
   confirmed?: boolean;
   /** Custom runner function (injectable for testing). Default: defaultBurstRunner. */
@@ -133,7 +133,7 @@ export interface ElasticRunResult {
 // ─── OAuth-only command builder ───────────────────────────────────────────────
 
 const SYSTEM_PROMPT = "You are Claude Code, Anthropic's official CLI for Claude.";
-const DEFAULT_MODEL = "claude-opus-4-7";
+const DEFAULT_MODEL = "claude-opus-4-8";
 /**
  * Fallback timeout when a role has no entry in policy.agent_roles.
  * 300s is safe for read-only burst agents (no write side-effects).
@@ -359,25 +359,25 @@ export async function runReadOnlyBurst(
 // ─── Write dispatch message builder ──────────────────────────────────────────
 
 /**
- * Build a user-facing swarm dispatch follow-up message for a write_bounded plan.
+ * Build a user-facing manual write-plan follow-up message for a write_bounded plan.
  * Pure function — no side effects, no subprocess calls.
  * Generated only when confirmed=true AND all gates pass.
  *
  * The message contains:
  *   - Summary and context
- *   - Copy-pasteable swarm objective
+ *   - Copy-pasteable task objective
  *   - File ownership table (builder → files, exclusive)
  *   - Warning: queues, does NOT auto-execute
  */
 export function buildWriteDispatchMessage(plan: AgentPlan): string {
   const lines: string[] = [
-    `## 🚀 Swarm Dispatch Ready`,
+    `## 🚀 Write Plan Ready`,
     ``,
     `**Task**: ${plan.summary}`,
     `**Risk class**: \`${plan.risk_class}\``,
     `**Total agents**: ${plan.concurrency_summary.total_agents} (scout → builder(s) → reviewer)`,
     ``,
-    `All safety gates are satisfied. To dispatch this work via the swarm tool, use:`,
+    `All safety gates are satisfied. Use the plan below for manual or focused-agent execution:`,
     ``,
     `\`\`\``,
     `objective: "${plan.task_id}"`,
@@ -403,8 +403,8 @@ export function buildWriteDispatchMessage(plan: AgentPlan): string {
 
   lines.push(
     ``,
-    `> **⚠️ Important**: This queues the dispatch — it does NOT execute automatically.`,
-    `> Verify the ownership table is correct and the working tree is clean before calling \`swarm\`.`
+    `> **⚠️ Important**: This is a plan only — it does NOT execute automatically.`,
+    `> Verify the ownership table is correct and the working tree is clean before making changes.`
   );
 
   return lines.join("\n");
@@ -482,7 +482,7 @@ export function evaluateExecutionGate(
         warnings,
         next_action:
           "Resolve all blockers (clean working tree, build ownership table). " +
-          "Then call with confirmed=true to queue a swarm dispatch message.",
+          "Then call with confirmed=true to return a manual write-plan message.",
       };
     }
 
@@ -493,7 +493,7 @@ export function evaluateExecutionGate(
       blockers: [],
       warnings,
       next_action:
-        "All gates satisfied. Call atlas_elastic_run with confirmed=true to queue a swarm dispatch. " +
+        "All gates satisfied. Call atlas_elastic_run with confirmed=true to return a manual write-plan message. " +
         "DO NOT auto-dispatch write agents without user consent.",
     };
   }
@@ -610,7 +610,7 @@ export async function executeElasticRun(
       };
     }
 
-    // Gates passed — generate dispatch message (queue only, no swarm call)
+    // Gates passed — generate manual write-plan message only
     const dispatchMessage = buildWriteDispatchMessage(plan);
     return {
       gate,

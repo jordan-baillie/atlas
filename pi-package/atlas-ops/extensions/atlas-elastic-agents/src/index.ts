@@ -16,7 +16,7 @@
  *
  * /elastic-run flags:
  *   --execute-read-only  Actually run burst agents (read_only/planning/review_qa only)
- *   --confirm            Queue swarm dispatch message for write_bounded when gates pass
+ *   --confirm            Produce a manual write-plan message for write_bounded when gates pass
  *
  * atlas_elastic_run params:
  *   execute_read_only  Boolean — same as --execute-read-only
@@ -25,7 +25,7 @@
  * Safety invariants:
  *   - live_trading_ops: always blocked; use atlas_risk_check_plan_gate
  *   - write_bounded: blocked if dirty tree or missing ownership;
- *     confirmed=true queues dispatch message only (no auto swarm)
+ *     confirmed=true returns a manual write-plan message only (no auto execution)
  *   - read_only / planning / review_qa: execute_read_only=true runs burst via pi CLI
  *   - All burst agents use Claude Max OAuth (--system-prompt, --no-session, --mode json)
  *   - No API key (Anthropic() client never instantiated)
@@ -299,8 +299,8 @@ const ElasticRunSchema = Type.Object({
   confirmed: Type.Optional(
     Type.Boolean({
       description:
-        "When true for write_bounded tasks with all gates satisfied, generate a swarm dispatch " +
-        "follow-up message with ownership table. Does NOT execute the swarm automatically. " +
+        "When true for write_bounded tasks with all gates satisfied, generate a manual write-plan " +
+        "follow-up message with ownership table. Does NOT execute automatically. " +
         "If working tree is dirty, still rejects.",
     })
   ),
@@ -362,7 +362,7 @@ export default function atlasElasticAgents(pi: ExtensionAPI) {
     description:
       "Evaluate gates + optionally dispatch elastic agents. " +
       "Flags: --execute-read-only (run burst for read_only/planning/review_qa), " +
-      "--confirm (queue swarm dispatch for write_bounded when gates pass). " +
+      "--confirm (return manual write-plan message for write_bounded when gates pass). " +
       "live_trading_ops: always blocked. " +
       "Usage: /elastic-run <objective> [-- file1 file2 ...] [--execute-read-only] [--confirm]",
     handler: async (args, ctx) => {
@@ -507,7 +507,7 @@ export default function atlasElasticAgents(pi: ExtensionAPI) {
       "For read-only tasks: returns OAuth-only pi CLI commands for coordinator use. " +
       "With execute_read_only=true: actually runs bounded-concurrency burst for read_only/planning/review_qa. " +
       "For write_bounded tasks: verifies clean tree + gates; ALWAYS requires human confirmation. " +
-      "With confirmed=true: generates swarm dispatch message (does NOT auto-execute). " +
+      "With confirmed=true: generates a manual write-plan message (does NOT auto-execute). " +
       "For live_trading_ops: always blocked; use atlas_risk_check_plan_gate instead. " +
       "Audit entries written to .pi/elastic-agents/audit.jsonl. " +
       "Counts as delegation activity in TUI widget.",

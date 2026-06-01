@@ -23,7 +23,7 @@ Phases 1–2 delivered as a Pi extension at `pi-package/atlas-ops/extensions/atl
 | Tools | ✅ | `atlas_elastic_plan`, `atlas_elastic_run` |
 | Skill | ✅ | `skills/atlas-elastic-planner/SKILL.md` |
 | Tests | ✅ | 114/114 elastic-agent tests pass; proves dirty-tree gate rejects on real atlas repo |
-| Write builder orchestration | 🔲 | Delegates to swarm coordinator with plan+recommendation (Phase 3) |
+| Write builder orchestration | 🔲 | Returns a gated manual write plan with ownership guidance (Phase 3) |
 | TUI live agent dashboard | 🔲 | Phase 5; audit log readable via `/elastic-status` now |
 
 ### Usage
@@ -113,8 +113,8 @@ Enable Pi to spawn elastic parallel agents (scouts, builders, reviewers, researc
 | Component | Responsibility | Lives where |
 |-----------|-----------------|-------------|
 | **Planner** | Classify risk, produce DAG, propose concurrency | `pi-package/atlas-ops/skills/atlas-elastic-planner/` |
-| **Coordinator** | Spawn agents by role, track ownership, enforce gates | CEO layer / `subagent`/`swarm` dispatch |
-| **Execution Engine** | Run agents in isolated worktrees, aggregate outputs | `pi-swarm/skills/swarm/` (enhanced) |
+| **Coordinator** | Spawn agents by role, track ownership, enforce gates | CEO layer / focused-agent dispatch |
+| **Execution Engine** | Run agents in isolated worktrees, aggregate outputs | manual execution or focused-agent workflow |
 | **Verifier** | Parallel testing, code review, safety checks | `atlas-incident` skill (extended) |
 | **TUI** | Live agent dashboard, controls, audit log | `/root/.pi/tui/` (Phase 5) |
 | **Policy Store** | Agent concurrency rules, risk thresholds, gates | `config/agent-scale-policy.yaml` |
@@ -395,7 +395,7 @@ approval_gates:
 
 ---
 
-## Phase 3: Elastic Builder Swarm
+## Phase 3: Elastic Builder Workflow
 
 **Objective**: Prove multi-file changes merge cleanly with strict ownership.
 
@@ -412,12 +412,12 @@ approval_gates:
 - [ ] Builders own code + tests; tests run post-build
 - [ ] Failed builders re-dispatched with tighter scope; eventually succeed
 - [ ] Merge conflicts detected and escalated to coordinator
-- [ ] `swarm_cleanup` removes all stale worktrees and branches post-merge
+- [ ] cleanup removes stale worktrees and branches post-merge
 - [ ] 0 regressions vs. sequential execution
 
 ---
 
-## Phase 4: Verification Swarm
+## Phase 4: Verification Workflow
 
 **Objective**: Parallel testing + review ensure quality before merge.
 
@@ -463,7 +463,7 @@ approval_gates:
 
 1. **No unbounded write agents.** Max 4 concurrent writers, each owns exclusive files.
 2. **No live-trading mutation without explicit approval.** Every `live_trading_ops` task requires human sign-off.
-3. **No dirty-tree spawns.** `git status --short` must be empty; swarms refuse to start otherwise.
+3. **No dirty-tree spawns.** `git status --short` must be empty; write execution is refused otherwise.
 4. **No overlapping file ownership.** Coordinator rejects plans where two builders touch the same file.
 5. **No API-key Anthropic usage.** All LLM calls via Claude Max OAuth (`pi` subprocess with `--system-prompt`).
 6. **No hidden background agents.** Every spawn logged and visible in TUI.
@@ -617,7 +617,7 @@ Validation enforced at load time; invalid configs cause immediate agent spawn re
 - Board memo: `/root/ceo-board/memos/2026-05-25-parallel-agent-scaling/memo.md`
 - CEO journal: `/root/.pi/agent/ceo-journal.md` (2026-05-25 entry)
 - Atlas architecture: `/root/atlas/docs/ARCHITECTURE.md`
-- Swarm coordination: `/root/AGENTS.md` (Swarm Coordination section)
+- Parallel work rules: `/root/AGENTS.md` (Parallel Work and Long-Running Tasks section)
 - TUI commit: `2e5b3660`
 
 ---
