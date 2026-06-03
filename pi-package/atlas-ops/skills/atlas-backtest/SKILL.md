@@ -155,9 +155,18 @@ Params: {
 
 ---
 
-## OOS Validation Pipeline
+## OOS Validation Pipeline (Cross-OOS battery)
 
-Required before any config promotion (lesson #6). Three tests must ALL pass:
+Required before any config promotion (lesson #6). As of 2026-06, `scripts/validate_oos.py`
+is a **strategy-agnostic cross-OOS battery** (ported from Midas #102) that REPLACES the old
+hand-rolled 3-test heuristic. The authoritative verdict is a declarative hard-gate table
+(`research/cross_oos/adapter.py::ATLAS_DEFAULT_GATES`) where a **missing measurement == FAIL**
+(you cannot pass a battery you didn't run). It reuses the existing BacktestEngine output — it
+does not replace the backtester.
+
+`make_strategies()` is now driven by `scripts.strategy_evaluator.STRATEGY_REGISTRY`, so the
+battery validates **any enabled strategy** in the config (momentum_breakout, mtf_momentum,
+connors_rsi2, sector_rotation, short_term_mr, …), not just the four originally hardcoded.
 
 ### Running OOS Validation
 
@@ -171,39 +180,45 @@ Params: {
   }
 }
 ```
+CLI: `python3 scripts/validate_oos.py --config-path <cfg> --output-path <out> --grid-size 10`
 
-### Three-Test Suite
+### The battery (4 axes + multiple-testing control)
 
-| Test | What | Pass Criteria |
-|------|------|--------------|
-| **Test 1: Time-Period Split** | Split data into in-sample (70%) and out-of-sample (30%). Run backtest on both. | OOS Sharpe > 0, CAGR degradation < 50% |
-| **Test 2: Perturbation** | Perturb all strategy params ±15%, run 10+ trials. | `robust=true` (no collapses), low variance |
-| **Test 3: Walk-Forward Consistency** | Run walk-forward with 63-day windows. | Window win rate > 50% |
+| Axis / control | What | Default gate |
+|---|---|---|
+| **CPCV (cross-TIME)** | Combinatorial Purged CV (purge+embargo) over the daily return series → distribution of OOS Sharpes | median ann. Sharpe ≥ 0.5; ≥ 55% of paths net-positive |
+| **PBO (cross-CONFIG)** | Probability of Backtest Overfitting via CSCV over a grid of `--grid-size` perturbed configs | PBO ≤ 0.50 |
+| **DSR** | Deflated Sharpe vs the best-of-N noise bar (N = grid size) | DSR ≥ 0.90 |
+| **Leave-one-ticker-group-out (cross-TICKER)** | Drop each of 5 random ticker groups; remaining book must stay positive + concentration | top ticker < 50% of net; LOO net Sharpe > 0 on all holdouts |
+| **Regime stratification (cross-REGIME)** | Stratify trade PnL by each trade's `entry_regime` | min regime Sharpe ≥ −0.5; ≤ 60% of PnL from one regime |
+| **Forward holdout** | IS/OOS time split (last 20%) | OOS net PnL > 0; CAGR degradation ≤ 50% |
 
-### Interpreting OOS Results
+> Equities note: the crypto-specific 10 bps/side cost-stress gate is dropped — Atlas backtests
+> already run net of realistic commissions, so the whole battery runs on net returns.
+
+### Interpreting results
 
 ```python
-# Read the OOS validation artifact
 import json
 v = json.load(open('backtest/results/oos_<label>.json'))
 
-# Test 1
-oos = v['test1_time_period_split']['out_of_sample']
-print(f"OOS Sharpe: {oos['sharpe']:.3f}")
-print(f"OOS CAGR: {oos.get('cagr_pct', 'N/A')}")
-deg = v['test1_time_period_split']['degradation_pct']
-print(f"CAGR degradation: {deg.get('cagr_pct', 'N/A')}%")
+# Authoritative section
+co = v['cross_oos']
+print('verdict:', co['verdict'])                 # 'PASS' | 'FAIL'
+print('gates:', {k: g['status'] for k, g in co['gate_checks'].items()})
+b = co['bundle']
+print('CPCV median Sharpe:', b['median_cpcv_sharpe'], '| PBO:', b['pbo'], '| DSR:', b['dsr'])
+print('top_ticker_frac:', b['top_group_frac'], '| min_regime_sharpe:', b['min_regime_sharpe'])
 
-# Test 2
-t2 = v['test2_perturbation']
-print(f"Robust: {t2['robust']}, Collapses: {t2.get('collapse_count', 0)}")
-
-# Test 3
-t3 = v['test3_walkforward_consistency']['window_analysis']
-print(f"Win rate: {t3['win_rate_windows_pct']}%")
+# summary.overall_verdict == 'PASS' iff the battery passes.
+print(v['summary']['overall_verdict'])
 ```
 
-Or use `atlas_risk_check_reopt_promotion` tool for automated gate checking.
+**Back-compat:** the legacy keys `test1_time_period_split`, `test2_perturbation` (now
+`robust` is projected from PBO+DSR), `test3_walkforward_consistency`, and
+`summary.overall_verdict` are still emitted so `research/promoter.py`,
+`scripts/auto_reoptimize.py`, and `atlas_risk_check_reopt_promotion` keep working.
+Use `atlas_risk_check_reopt_promotion` for automated gate checking.
 
 ---
 

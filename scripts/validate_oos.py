@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
-"""Atlas v9.2 Out-of-Sample Validation Script
+"""Atlas Out-of-Sample Validation — Cross-OOS battery (replaces the legacy 3-test suite).
 
-Three validation tests:
-  1. Time-Period Split (IS vs OOS at 2025-06-01)
-  2. Parameter Perturbation / Robustness (10 trials, ±10-20%)
-  3. Walk-Forward Window Consistency Analysis
+The AUTHORITATIVE verdict is now the strategy-agnostic cross-OOS battery
+(``research.cross_oos``): CPCV path distribution, PBO (CSCV), Deflated Sharpe,
+leave-one-ticker-group-out + concentration, and regime stratification, scored against
+the equities-tuned ``adapter.ATLAS_DEFAULT_GATES`` (missing measurement == FAIL).
 
-Expected runtime: ~60-90 minutes (each backtest ~280-360s)
+The battery reuses the existing BacktestEngine output — it does not replace the
+backtester. The full-period run supplies the daily return series + trade attribution;
+a grid of config variants supplies the PBO/DSR matrix; an IS/OOS time split supplies
+the forward-holdout + degradation gates.
+
+Back-compat: the legacy JSON keys (``test1_time_period_split``, ``test2_perturbation``,
+``test3_walkforward_consistency``, ``summary.overall_verdict``) are still emitted as
+derived projections so existing consumers (research/promoter.py, scripts/auto_reoptimize.py,
+and the compiled TS risk-gate + artifact-summarizer extensions) keep working unchanged.
+  - test1 (time split) and test3 (walk-forward windows) are REAL measurements.
+  - test2.robust is projected from the modern overfitting controls (PBO + DSR).
+  - summary.overall_verdict == 'PASS' iff the cross-OOS gate battery passes.
+
+Expected runtime: ~60-90 minutes (full + IS + OOS + grid backtests, ~280-360s each).
 """
 import json, sys, time, copy, random, datetime, argparse
 from pathlib import Path
@@ -17,10 +30,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from backtest.engine import BacktestEngine
-from strategies.mean_reversion import MeanReversion
-from strategies.trend_following import TrendFollowing
-from strategies.bb_squeeze import BBSqueeze
-from strategies.opening_gap import OpeningGap
+# Strategies are instantiated via scripts.strategy_evaluator.STRATEGY_REGISTRY inside
+# make_strategies() so validation covers any enabled strategy in the config.
+from research.cross_oos import adapter
 
 # ============================================================
 # CONSTANTS
@@ -98,6 +110,14 @@ def parse_args():
             'Market identifier (e.g. asx, sp500). '
             'Defaults to value in config JSON, then to market inferred from --config-path.'
         ),
+    )
+    parser.add_argument(
+        '--grid-size',
+        type=int,
+        default=N_PERTURBATION_TRIALS,
+        help=('Number of perturbed config variants to run for the PBO/DSR config grid '
+              f'(default {N_PERTURBATION_TRIALS}). The grid doubles as the legacy '
+              'perturbation projection.'),
     )
     return parser.parse_args()
 
@@ -178,17 +198,29 @@ def extract_perturbable_params(cfg):
 
 
 def make_strategies(cfg):
-    """Instantiate only enabled strategies from config."""
+    """Instantiate every enabled strategy from config using the canonical registry.
+
+    Uses scripts.strategy_evaluator.STRATEGY_REGISTRY (the same name->class map the
+    live/research paths use) so validation covers ANY enabled strategy — including
+    momentum_breakout, mtf_momentum, connors_rsi2, sector_rotation, short_term_mr —
+    not just the four originally hardcoded here. A strategy is included when its
+    config section is missing an 'enabled' flag (treated as enabled) or has
+    enabled=True; enabled=False is skipped.
+    """
+    from scripts.strategy_evaluator import STRATEGY_REGISTRY
     strategies = []
     strats = cfg.get('strategies', {})
-    if strats.get('mean_reversion', {}).get('enabled', True):
-        strategies.append(MeanReversion(cfg))
-    if strats.get('trend_following', {}).get('enabled', True):
-        strategies.append(TrendFollowing(cfg))
-    if strats.get('bb_squeeze', {}).get('enabled', True):
-        strategies.append(BBSqueeze(cfg))
-    if strats.get('opening_gap', {}).get('enabled', True):
-        strategies.append(OpeningGap(cfg))
+    for name, strat_cfg in strats.items():
+        if not isinstance(strat_cfg, dict):
+            continue
+        if not strat_cfg.get('enabled', True):
+            continue
+        cls = STRATEGY_REGISTRY.get(name)
+        if cls is None:
+            print(f"  [warn] strategy '{name}' enabled in config but not in "
+                  f"STRATEGY_REGISTRY {list(STRATEGY_REGISTRY.keys())}; skipping")
+            continue
+        strategies.append(cls(cfg))
     return strategies
 
 
@@ -323,10 +355,16 @@ def analyze_walk_forward_windows(result):
     return analysis
 
 
+def result_daily_returns(result):
+    """Daily fractional returns from a BacktestResult's mark-to-market equity curve."""
+    return adapter.daily_returns(getattr(result, 'equity_curve', None))
+
+
 def main():
     args = parse_args()
     config_path = resolve_path(args.config_path, DEFAULT_CONFIG_PATH)
     output_path = resolve_path(args.output_path, DEFAULT_OUTPUT_PATH)
+    grid_size = max(2, int(getattr(args, 'grid_size', N_PERTURBATION_TRIALS)))
     overall_start = time.time()
 
     # ----------------------------------------------------------
@@ -336,7 +374,7 @@ def main():
     market = detect_market(args.market, config_path, cfg)
 
     print("=" * 70)
-    print(f"ATLAS {market.upper()} OUT-OF-SAMPLE VALIDATION")
+    print(f"ATLAS {market.upper()} CROSS-OOS VALIDATION (battery)")
     print("=" * 70)
     print(f"\nLoading data from {DATA_DIR / market}...")
     data_all = load_data(market=market)
@@ -351,36 +389,45 @@ def main():
     SPLIT_DATE, WARMUP_DATE = compute_split_dates(data_all)
     print(f"Split date (80/20): {SPLIT_DATE}")
     print(f"Warmup date for OOS (split - 90d): {WARMUP_DATE}")
-    print(f"Perturbation trials: {N_PERTURBATION_TRIALS}")
+    print(f"PBO/DSR config grid size: {grid_size}")
 
-    # Extract perturbable params from config (not hardcoded)
     optimized_params = extract_perturbable_params(cfg)
     print(f"Perturbable strategy params: {list(optimized_params.keys())}")
 
     results = {
-        'validation_type': 'v9.2_oos_validation',
+        'validation_type': 'cross_oos_battery_v1',
         'timestamp': datetime.datetime.now().isoformat(),
-        'config_version': 'unknown',
+        'config_version': cfg.get('version', 'unknown'),
         'config_path': str(config_path),
         'output_path': str(output_path),
         'market': market,
         'split_date': SPLIT_DATE,
         'warmup_date': WARMUP_DATE,
-        'n_perturbation_trials': N_PERTURBATION_TRIALS,
+        'grid_size': grid_size,
+        'n_perturbation_trials': grid_size,  # legacy alias
         'perturbation_range': [PERTURB_MIN, PERTURB_MAX],
+        'gate_table': 'adapter.ATLAS_DEFAULT_GATES',
     }
 
-    # config_version already set inside results dict above; no-op here
-    # Filter to minimally viable series once
     data_all = {k: v for k, v in data_all.items() if len(v) >= MIN_ROWS}
 
     # ----------------------------------------------------------
-    # Test 1: Time-period split (IS / OOS / Full)
+    # Full-period primary run (supplies the daily return series + trade attribution)
     # ----------------------------------------------------------
     print("\n" + "-" * 70)
-    print("TEST 1: Time-Period Split (IS vs OOS)")
+    print("PRIMARY: Full-period walk-forward backtest")
     print("-" * 70)
+    result_full, t_full = run_backtest(cfg, data_all, label='FULL')
+    m_full = extract_metrics(result_full)
+    primary_returns = result_daily_returns(result_full)
+    print(f"  primary daily-return observations: {len(primary_returns)}")
 
+    # ----------------------------------------------------------
+    # Time split (forward holdout + IS->OOS degradation gates)
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print("TIME SPLIT: in-sample vs out-of-sample (forward holdout)")
+    print("-" * 70)
     split_ts = pd.Timestamp(SPLIT_DATE)
     warmup_ts = pd.Timestamp(WARMUP_DATE)
     data_is = {
@@ -391,26 +438,83 @@ def main():
         k: v[v.index >= warmup_ts] for k, v in data_all.items()
         if len(v[v.index >= warmup_ts]) >= MIN_ROWS
     }
-
     print(f"In-sample tickers: {len(data_is)} | OOS tickers (warmup incl.): {len(data_oos)}")
-
     result_is, t_is = run_backtest(cfg, data_is, label='IS')
     result_oos, t_oos = run_backtest(cfg, data_oos, label='OOS')
-    result_full, t_full = run_backtest(cfg, data_all, label='FULL')
-
     m_is = extract_metrics(result_is)
     m_oos = extract_metrics(result_oos)
-    m_full = extract_metrics(result_full)
 
     degradation = {}
     for key in ('cagr_pct', 'sharpe', 'profit_factor', 'win_rate_pct'):
-        full_val = m_is.get(key, 0)  # degradation from IS to OOS
+        is_val = m_is.get(key, 0)
         oos_val = m_oos.get(key, 0)
-        if full_val and abs(full_val) > 1e-9:
-            degradation[key] = round(((oos_val - full_val) / abs(full_val)) * 100, 2)
+        if is_val and abs(is_val) > 1e-9:
+            degradation[key] = round(((oos_val - is_val) / abs(is_val)) * 100, 2)
         else:
             degradation[key] = None
 
+    # ----------------------------------------------------------
+    # Config grid (cross-CONFIG axis: PBO + DSR). Doubles as the legacy
+    # perturbation projection. cfg0 == primary (unperturbed).
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print(f"CONFIG GRID: {grid_size} perturbed variants for PBO / DSR")
+    print("-" * 70)
+    random.seed(RANDOM_SEED)
+    grid_returns = {'cfg0_primary': primary_returns}
+    grid_metrics = []
+    for i in range(grid_size):
+        seed = RANDOM_SEED + i
+        cfg_perturbed, perturbation_log = perturb_params(cfg, seed, params_dict=optimized_params)
+        result_p, elapsed_p = run_backtest(cfg_perturbed, data_all, label=f'GRID-{i+1}')
+        grid_returns[f'cfg{i+1}'] = result_daily_returns(result_p)
+        m_p = extract_metrics(result_p)
+        m_p['trial'] = i + 1
+        m_p['seed'] = seed
+        m_p['runtime_s'] = round(elapsed_p, 1)
+        m_p['perturbation_log'] = perturbation_log
+        grid_metrics.append(m_p)
+
+    # ----------------------------------------------------------
+    # Cross-OOS battery (AUTHORITATIVE verdict)
+    # ----------------------------------------------------------
+    print("\n" + "-" * 70)
+    print("CROSS-OOS BATTERY: CPCV / PBO / DSR / leave-one-group-out / regime")
+    print("-" * 70)
+    forward_net = m_oos.get('total_pnl', 0.0)
+    oos_cagr_deg = degradation.get('cagr_pct')
+    battery = adapter.assemble_bundle(
+        primary_returns,
+        getattr(result_full, 'trades', []) or [],
+        grid_returns=grid_returns,
+        forward_net=forward_net,
+        oos_cagr_degradation_pct=oos_cagr_deg,
+    )
+    gate_report = adapter.evaluate(battery['bundle'])
+    overall_pass = bool(gate_report['overall_pass'])
+
+    results['cross_oos'] = {
+        'bundle': battery['bundle'],
+        'diagnostics': battery['diagnostics'],
+        'gate_checks': {
+            g.name: {
+                'value': g.value, 'threshold': g.threshold,
+                'comparator': g.comparator, 'status': g.status,
+                'description': g.description,
+            } for g in gate_report['gates']
+        },
+        'gate_summary': {
+            'pass': gate_report['n_pass'], 'fail': gate_report['n_fail'],
+            'missing': gate_report['n_missing'],
+        },
+        'verdict': 'PASS' if overall_pass else 'FAIL',
+    }
+
+    # ----------------------------------------------------------
+    # Legacy projections (back-compat for existing consumers)
+    # test1 (time split) and test3 (walk-forward) are REAL measurements;
+    # test2.robust is projected from the PBO + DSR overfitting controls.
+    # ----------------------------------------------------------
     results['test1_time_period_split'] = {
         'in_sample': m_is,
         'out_of_sample': m_oos,
@@ -419,28 +523,15 @@ def main():
         'runtime_s': round(t_is + t_oos + t_full, 1),
     }
 
-    # ----------------------------------------------------------
-    # Test 2: Parameter perturbation robustness
-    # ----------------------------------------------------------
-    print("\n" + "-" * 70)
-    print("TEST 2: Parameter Perturbation / Robustness")
-    print("-" * 70)
-    random.seed(RANDOM_SEED)
-
-    perturb_trials = []
-    for i in range(N_PERTURBATION_TRIALS):
-        seed = RANDOM_SEED + i
-        cfg_perturbed, perturbation_log = perturb_params(cfg, seed, params_dict=optimized_params)
-        result_p, elapsed_p = run_backtest(cfg_perturbed, data_all, label=f'PERTURB-{i+1}')
-        m_p = extract_metrics(result_p)
-        m_p['trial'] = i + 1
-        m_p['seed'] = seed
-        m_p['runtime_s'] = round(elapsed_p, 1)
-        m_p['perturbation_log'] = perturbation_log
-        perturb_trials.append(m_p)
+    window_analysis = analyze_walk_forward_windows(result_full)
+    results['test3_walkforward_consistency'] = {
+        'full_metrics': m_full,
+        'window_analysis': window_analysis,
+        'runtime_s': round(t_full, 1),
+    }
 
     def summarize_numeric(field):
-        vals = [t[field] for t in perturb_trials if isinstance(t.get(field), (int, float))]
+        vals = [t[field] for t in grid_metrics if isinstance(t.get(field), (int, float))]
         if not vals:
             return {'mean': None, 'std': None, 'min': None, 'max': None}
         return {
@@ -457,36 +548,27 @@ def main():
         'max_drawdown_pct': summarize_numeric('max_drawdown_pct'),
         'total_trades': summarize_numeric('total_trades'),
     }
-    collapse_count = sum(1 for t in perturb_trials if (t.get('cagr_pct') or 0) < 0)
-    robust = (
-        (perturb_summary['cagr_pct']['mean'] or 0) > 0
-        and collapse_count < max(3, int(N_PERTURBATION_TRIALS * 0.3))
-    )
-
+    collapse_count = sum(1 for t in grid_metrics if (t.get('cagr_pct') or 0) < 0)
+    pbo_val = battery['bundle'].get('pbo')
+    dsr_val = battery['bundle'].get('dsr')
+    pbo_ok = isinstance(pbo_val, (int, float)) and pbo_val == pbo_val and pbo_val <= 0.50
+    dsr_ok = isinstance(dsr_val, (int, float)) and dsr_val == dsr_val and dsr_val >= 0.90
+    robust = bool(pbo_ok and dsr_ok
+                  and collapse_count < max(3, int(grid_size * 0.3)))
     results['test2_perturbation'] = {
         'summary': perturb_summary,
-        'trials': perturb_trials,
+        'trials': grid_metrics,
         'collapse_count': collapse_count,
         'robust': robust,
+        'pbo': pbo_val,
+        'deflated_sharpe': dsr_val,
+        'note': ('robust projected from PBO+DSR overfitting controls; replaces the legacy '
+                 'perturbation-collapse heuristic. Grid runs double as the PBO/DSR config grid.'),
     }
 
     # ----------------------------------------------------------
-    # Test 3: Walk-forward consistency
+    # Verdicts (authoritative = cross-OOS battery)
     # ----------------------------------------------------------
-    print("\n" + "-" * 70)
-    print("TEST 3: Walk-Forward Window Consistency")
-    print("-" * 70)
-    window_analysis = analyze_walk_forward_windows(result_full)
-    results['test3_walkforward_consistency'] = {
-        'full_metrics': m_full,
-        'window_analysis': window_analysis,
-        'runtime_s': round(t_full, 1),
-    }
-
-    # ----------------------------------------------------------
-    # Summary verdicts
-    # ----------------------------------------------------------
-    oos_cagr = m_oos.get('cagr_pct', 0) or 0
     oos_sharpe = m_oos.get('sharpe', 0) or 0
     oos_pf = m_oos.get('profit_factor', 0) or 0
     cagr_deg = degradation.get('cagr_pct')
@@ -496,28 +578,22 @@ def main():
         or oos_pf < 1.0
     )
     test1_verdict = 'FAIL - significant OOS degradation' if test1_fail else 'PASS'
-    test2_verdict = 'PASS' if robust else 'FAIL - perturbation instability'
-
-    win_rate_windows = None
-    if isinstance(window_analysis, dict):
-        win_rate_windows = window_analysis.get('win_rate_windows_pct')
+    test2_verdict = 'PASS' if robust else 'FAIL - overfitting controls (PBO/DSR) not satisfied'
+    win_rate_windows = window_analysis.get('win_rate_windows_pct') if isinstance(window_analysis, dict) else None
     test3_pass = isinstance(win_rate_windows, (int, float)) and win_rate_windows >= 50
     test3_verdict = 'PASS - majority profitable' if test3_pass else 'FAIL - inconsistent windows'
 
-    verdicts = [test1_verdict.startswith('PASS'), test2_verdict.startswith('PASS'), test3_verdict.startswith('PASS')]
-    if all(verdicts):
-        overall = 'PASS'
-    elif any(verdicts):
-        overall = 'MIXED - review individual tests'
-    else:
-        overall = 'FAIL - validation did not pass'
+    # The battery is authoritative: overall PASS iff every enforced gate passes.
+    overall_verdict = 'PASS' if overall_pass else 'FAIL'
 
     total_runtime_s = round(time.time() - overall_start, 1)
     results['summary'] = {
+        'overall_verdict': overall_verdict,
+        'cross_oos_verdict': results['cross_oos']['verdict'],
+        'gate_summary': results['cross_oos']['gate_summary'],
         'test1_verdict': test1_verdict,
         'test2_verdict': test2_verdict,
         'test3_verdict': test3_verdict,
-        'overall_verdict': overall,
         'total_runtime_s': total_runtime_s,
         'total_runtime_min': round(total_runtime_s / 60, 1),
     }
@@ -527,12 +603,19 @@ def main():
         json.dump(results, f, indent=2, default=str)
 
     print("\n" + "=" * 70)
-    print("VALIDATION SUMMARY")
+    print("CROSS-OOS VALIDATION SUMMARY")
     print("=" * 70)
-    print(f"Test1: {test1_verdict}")
-    print(f"Test2: {test2_verdict}")
-    print(f"Test3: {test3_verdict}")
-    print(f"Overall: {overall}")
+    b = battery['bundle']
+    print("  gates:", {k: v['status'] for k, v in results['cross_oos']['gate_checks'].items()})
+    print(f"  CPCV median Sharpe: {b.get('median_cpcv_sharpe')}, "
+          f"frac+ : {b.get('frac_paths_positive')}")
+    print(f"  PBO: {b.get('pbo')} | DSR: {b.get('dsr')} | "
+          f"top_ticker_frac: {b.get('top_group_frac')}")
+    print(f"  min regime Sharpe: {b.get('min_regime_sharpe')} | "
+          f"max regime PnL frac: {b.get('max_regime_pnl_frac')}")
+    print(f"  forward_net: {b.get('forward_net')} | loo_group_ok: {b.get('loo_group_ok')}")
+    print(f"  AUTHORITATIVE VERDICT: {overall_verdict}")
+    print(f"  (legacy projections) test1={test1_verdict} test2={test2_verdict} test3={test3_verdict}")
     print(f"Saved: {output_path}")
     print(f"Runtime: {total_runtime_s:.1f}s ({total_runtime_s/60:.1f} min)")
     return 0

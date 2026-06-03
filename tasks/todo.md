@@ -23,25 +23,48 @@ consumers keep working without a simultaneous TS recompile:
 - [x] Verify 32 tests green under Atlas stack (np 2.4.2 / pd 3.0.1 / scipy 1.17.1)
 - [x] Re-docstring __init__ to Atlas context
 
-## Phase 2 — Atlas adapter + replace validate_oos (IN PROGRESS)
-- [ ] research/cross_oos/adapter.py:
-      - equity_curve -> per-period return series
-      - trades -> per-ticker / per-sector daily PnL attribution
-      - regime labels from benchmark (SPY) series via splitters.regime_labels
-      - config grid -> (obs x config) PBO matrix (reuse perturbation grid)
-      - ATLAS_DEFAULT_GATES (equities-tuned thresholds)
-      - run_cross_oos_battery(result, config, market, grid_results) -> bundle+gates
-- [ ] Rewrite scripts/validate_oos.py around the battery as authoritative verdict,
-      keeping legacy keys as derived projections (back-compat contract above)
-- [ ] Adapter unit tests (synthetic edge PASS / noise FAIL; back-compat keys present)
-- [ ] End-to-end smoke run against config/active/sp500.json; verify promotion-gate
-      tool still parses the artifact
-- [ ] Update atlas-backtest skill doc to describe the new battery
+## Phase 2 — Atlas adapter + replace validate_oos (DONE)
+- [x] research/cross_oos/adapter.py: daily_returns, group_daily_pnl (ticker/regime),
+      leave_one_ticker_group_out (5 seeded groups), top_group_frac, regime_attribution
+      (uses each trade's entry_regime), build_pbo_matrix, assemble_bundle, evaluate,
+      ATLAS_DEFAULT_GATES (equities-tuned, 252-day annualisation, cost-stress gate dropped)
+- [x] Rewrite scripts/validate_oos.py: cross-OOS battery is the authoritative verdict;
+      legacy keys (test1/test2.robust<-PBO+DSR/test3/summary.overall_verdict) retained as
+      derived projections (test1+test3 are REAL; test2.robust projected). --grid-size added.
+- [x] Adapter unit tests (7) + smoke test of validate_oos orchestration (back-compat
+      contract asserted) — 40/40 cross_oos tests green; promoter_oos_floors test green.
+- [x] Real-engine integration verified against config/active/sp500.json (momentum_breakout):
+      310 trades, regimes stratify, CPCV median 0.64 / 93% paths +ve / LOO ok.
+- [x] FIXED pre-existing bug: make_strategies() hardcoded 4 strategies (none enabled in the
+      live config) -> 0 trades / meaningless validation. Now driven by STRATEGY_REGISTRY so
+      ANY enabled strategy is validated ("backtest more strategies in a similar way").
+- [x] Update atlas-backtest skill doc to describe the new battery
 
 ## Phase 3+ (follow-up, not now)
 - [ ] Migrate Python consumers + TS extensions to native cross_oos schema; drop shim
 - [ ] Pre-registration template + comparative scorecard generator
 - [ ] Optional dedicated atlas_jobs_run job `validate_cross_oos`
 
-## Review
-(to be filled in after Phase 2)
+## Review (Phase 1 + 2)
+
+**Shipped.** Atlas now has the Midas-style strategy-agnostic cross-OOS battery as the
+authoritative OOS validator, reusing the existing BacktestEngine.
+
+- Phase 1: ported research/cross_oos (cpcv, overfitting, splitters, metrics, gates) +
+  32 tests verbatim. Pure functions; green under np2.4.2/pd3.0.1/scipy1.17.1. (commit 6e66b1e6)
+- Phase 2: adapter.py bridges BacktestResult -> battery; validate_oos.py rewritten around it.
+  Verdict = declarative gate table (missing==FAIL). Legacy JSON keys kept as derived
+  projections => zero consumer/TS-extension breakage (no recompile needed this phase).
+- Bonus fix: make_strategies() is now registry-driven, repairing OOS validation for the
+  live momentum_breakout config (previously 0 trades).
+
+**Tests:** 40 cross_oos tests + existing promoter_oos_floors pass. One unrelated pre-existing
+failure (test_canary_promote_top3: research-DB solo_sharpe state, needs a re-sweep/migration).
+
+**Divergences from Midas (documented):** 252-day annualisation; cross-VENUE axis replaced by
+leave-one-ticker-group-out; 10bps cost-stress gate dropped (Atlas runs net-of-fees).
+
+**Next (Phase 3, not started):** migrate Python consumers + TS extensions to the native
+cross_oos schema and drop the shim; PRE_REGISTRATION template + comparative scorecard;
+optional dedicated validate_cross_oos job. Tune ATLAS_DEFAULT_GATES thresholds after a few
+real runs (current values are reasonable defaults, not calibrated to a target hit-rate).
