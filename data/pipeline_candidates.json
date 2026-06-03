@@ -1,0 +1,33 @@
+{
+  "candidates": {
+    "csm@default": {
+      "name": "cross_sectional_momentum",
+      "params": {},
+      "label": "csm@default",
+      "stage": "paper",
+      "battery_tier": "SCREEN",
+      "battery_artifact": "backtest/results/battery_csm_newgate_20260604_082630.json",
+      "forward_verdict": "INSUFFICIENT",
+      "notes": "pre-registered default; SCREEN (DSR 0.77); low-turnover -> accumulate forward",
+      "updated_at": "2026-06-03T23:37:47.083954+00:00"
+    },
+    "csm@fast": {
+      "name": "cross_sectional_momentum",
+      "params": {
+        "mom_lookback": 63,
+        "vol_lookback": 63,
+        "max_hold_days": 20,
+        "exit_rank": 40,
+        "top_n": 30,
+        "w_qual": 0.5
+      },
+      "label": "csm@fast",
+      "stage": "queued",
+      "battery_tier": null,
+      "battery_artifact": null,
+      "forward_verdict": null,
+      "notes": "high-turnover preset (3-mo mom, 20d max-hold) to generate forward evidence in weeks",
+      "updated_at": "2026-06-03T23:37:47.084286+00:00"
+    }
+  }
+}
