@@ -62,8 +62,11 @@ def test_regime_attribution_keys():
     reg = adapter.regime_attribution(trades)
     assert set(reg["regime_sharpe"].keys()) == {"bull", "bear"}
     assert reg["regime_net"]["bull"] > 0 > reg["regime_net"]["bear"]
-    # two regimes, neither should be 100% of abs PnL
     assert 0.0 <= reg["max_regime_pnl_frac"] <= 1.0
+    assert reg["regime_counts"]["bull"] > 0 and reg["regime_counts"]["bear"] > 0
+    # bear regime is net-negative -> per-regime expectancy floor must fail
+    assert reg["per_regime_expectancy_ok"] is False
+    assert reg["regime_concentration_ratio"] == reg["regime_concentration_ratio"]  # finite/NaN-safe
 
 
 def _make_grid(signal_mu, n=500, n_cfg=8, seed=10):
@@ -116,7 +119,7 @@ def test_evaluate_tiers_promote_screen_fail():
     base = {
         "median_cpcv_sharpe": 1.0, "frac_paths_positive": 0.8, "pbo": 0.1,
         "top_group_frac": 0.2, "loo_group_ok": True, "min_regime_sharpe": 0.3,
-        "max_regime_pnl_frac": 0.4,
+        "regime_concentration_ratio": 1.2, "per_regime_expectancy_ok": True,
     }
     # DSR above promote bar -> PROMOTE
     r = adapter.evaluate_tiers({**base, "dsr": 0.95})
@@ -152,12 +155,31 @@ def test_assemble_bundle_uses_search_burden_for_dsr():
     assert res["bundle"]["dsr"] <= res["diagnostics"]["dsr_grid"] + 1e-9
 
 
+def test_momentum_breakout_still_fails_under_new_regime_gate():
+    """Integrity regression (board memo 2026-06-03 regime-concentration-gate-calibration):
+    the regime-gate replacement must NOT rescue the retired live strategy. momentum_breakout's
+    authoritative search-history effective-N DSR was ~0.25 (< 0.70 SCREEN) -> FAIL regardless
+    of the regime metric."""
+    bundle = {
+        "median_cpcv_sharpe": 0.62, "frac_paths_positive": 0.73, "pbo": 0.34,
+        "dsr": 0.25,  # real momentum_breakout effective-N DSR
+        "top_group_frac": 0.10, "loo_group_ok": True, "min_regime_sharpe": 0.60,
+        # even if the NEW regime gates were to pass, DSR alone must keep it failing:
+        "regime_concentration_ratio": 1.3, "per_regime_expectancy_ok": True,
+        "forward_net": 4.5, "oos_cagr_degradation_ok": True,
+    }
+    rep = adapter.evaluate_tiers(bundle)
+    assert rep["tier"] == "FAIL"
+    dsr_gate = next(g for g in rep["screen"]["gates"] if g.name == "dsr")
+    assert dsr_gate.status == "fail"
+
+
 def test_evaluate_drops_unmeasured_timesplit_gates():
     # bundle without forward_net / oos_cagr_degradation_ok must not FAIL on them as 'missing'
     bundle = {
         "median_cpcv_sharpe": 1.0, "frac_paths_positive": 0.8, "pbo": 0.1, "dsr": 0.99,
         "top_group_frac": 0.2, "loo_group_ok": True, "min_regime_sharpe": 0.3,
-        "max_regime_pnl_frac": 0.4,
+        "regime_concentration_ratio": 1.2, "per_regime_expectancy_ok": True,
     }
     rep = adapter.evaluate(bundle)
     names = {g.name for g in rep["gates"]}

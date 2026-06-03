@@ -44,8 +44,11 @@ ATLAS_DEFAULT_GATES: dict[str, tuple[str, str, float, str]] = {
                      "Leave-one-ticker-group-out: net Sharpe stays positive on all holdouts"),
     "min_regime_sharpe": ("min_regime_sharpe", ">=", -0.5,
                           "No catastrophic regime (min regime Sharpe >= -0.5)"),
-    "max_regime_pnl_frac": ("max_regime_pnl_frac", "<=", 0.60,
-                            "<=60% of net PnL from any one regime"),
+    "regime_concentration_ratio": ("regime_concentration_ratio", "<=", 2.0,
+                                   "Regime profit-share/time-share ratio <= 2.0 "
+                                   "(frequency-weighted; replaces flat PnL-share cap per board)"),
+    "per_regime_expectancy_ok": ("per_regime_expectancy_ok", "is_true", 1.0,
+                                 "Net-positive expectancy in every regime with >= min trades"),
     "oos_cagr_degradation_ok": ("oos_cagr_degradation_ok", "is_true", 1.0,
                                 "OOS CAGR degradation <= 50% vs in-sample"),
     "forward_net": ("forward_net", ">", 0.0, "OOS (forward holdout) net PnL > 0"),
@@ -56,7 +59,8 @@ ATLAS_DEFAULT_GATES: dict[str, tuple[str, str, float, str]] = {
 # has IS/OOS results.
 CORE_GATE_KEYS = (
     "median_cpcv_sharpe", "frac_paths_positive", "pbo", "dsr",
-    "top_group_frac", "loo_group_ok", "min_regime_sharpe", "max_regime_pnl_frac",
+    "top_group_frac", "loo_group_ok", "min_regime_sharpe",
+    "regime_concentration_ratio", "per_regime_expectancy_ok",
 )
 
 # Two-tier Deflated-Sharpe bars. SCREEN = "promising, keep researching / paper";
@@ -166,27 +170,54 @@ def leave_one_ticker_group_out(group_pnl: pd.DataFrame, n_groups: int = 5,
     return {"ok": ok, "sharpes": sharpes, "n_groups": int(n_groups)}
 
 
-def regime_attribution(trades, periods: int = TRADING_DAYS) -> dict:
-    """Stratify trade PnL by ``entry_regime`` and compute per-regime Sharpe + PnL fraction.
+def regime_attribution(trades, periods: int = TRADING_DAYS,
+                       min_regime_trades: int = 5) -> dict:
+    """Stratify trade PnL by ``entry_regime`` and compute regime-robustness measures.
 
-    Returns {"regime_sharpe": {regime: ann_sharpe}, "regime_net": {regime: net_pnl},
-             "min_regime_sharpe": float, "max_regime_pnl_frac": float}.
+    Board memo 2026-06-03 (regime-concentration-gate-calibration): the old flat
+    ``max_regime_pnl_frac`` cap measured the (bull-heavy) sample mix, not fragility. It is
+    replaced by two frequency-aware measures (and kept only as a diagnostic):
+      - regime_concentration_ratio = max_r( profit_share_r / time_share_r ), where time_share
+        is the regime's share of trades. ~1.0 means profit tracks regime frequency; a regime
+        that is a small share of activity but a large share of profit scores high. Gate <= 2.0.
+      - per_regime_expectancy_ok = every regime with >= ``min_regime_trades`` trades has
+        net-positive PnL (penalises genuine fragility, not mere upside concentration).
     """
     reg_pnl = group_daily_pnl(trades, group_key="entry_regime")
-    if reg_pnl is None or reg_pnl.empty:
-        return {"regime_sharpe": {}, "regime_net": {}, "min_regime_sharpe": float("nan"),
-                "max_regime_pnl_frac": float("nan")}
+    counts: dict = {}
+    for t in (trades or []):
+        counts[str(t.get("entry_regime", "?"))] = counts.get(str(t.get("entry_regime", "?")), 0) + 1
+    total_ct = sum(counts.values())
+    if reg_pnl is None or reg_pnl.empty or total_ct == 0:
+        return {"regime_sharpe": {}, "regime_net": {}, "regime_counts": {},
+                "regime_timeshare": {}, "min_regime_sharpe": float("nan"),
+                "max_regime_pnl_frac": float("nan"),
+                "regime_concentration_ratio": float("nan"), "per_regime_expectancy_ok": False}
     regime_sharpe = {str(r): float(cm.annualized_sharpe(reg_pnl[r].to_numpy(dtype=float), periods))
                      for r in reg_pnl.columns}
     regime_net = {str(r): float(reg_pnl[r].sum()) for r in reg_pnl.columns}
     finite_sr = [v for v in regime_sharpe.values() if v == v]
     total_abs = sum(abs(v) for v in regime_net.values()) + 1e-12
     max_frac = max((abs(v) / total_abs for v in regime_net.values()), default=float("nan"))
+    timeshare = {r: counts.get(r, 0) / total_ct for r in regime_net}
+    total_pos = sum(max(v, 0.0) for v in regime_net.values())
+    ratios = []
+    for r, net in regime_net.items():
+        ts = timeshare.get(r, 0.0)
+        ps = (max(net, 0.0) / total_pos) if total_pos > 0 else 0.0
+        ratios.append((ps / ts) if ts > 0 else float("inf"))
+    concentration_ratio = max(ratios) if ratios else float("nan")
+    per_regime_ok = all(net > 0 for r, net in regime_net.items()
+                        if counts.get(r, 0) >= min_regime_trades)
     return {
         "regime_sharpe": regime_sharpe,
         "regime_net": regime_net,
+        "regime_counts": counts,
+        "regime_timeshare": timeshare,
         "min_regime_sharpe": min(finite_sr) if finite_sr else float("nan"),
         "max_regime_pnl_frac": float(max_frac),
+        "regime_concentration_ratio": float(concentration_ratio),
+        "per_regime_expectancy_ok": bool(per_regime_ok),
     }
 
 
@@ -294,7 +325,8 @@ def assemble_bundle(
         "top_group_frac": top_frac,
         "loo_group_ok": bool(loo["ok"]),
         "min_regime_sharpe": reg["min_regime_sharpe"],
-        "max_regime_pnl_frac": reg["max_regime_pnl_frac"],
+        "regime_concentration_ratio": reg["regime_concentration_ratio"],
+        "per_regime_expectancy_ok": bool(reg["per_regime_expectancy_ok"]),
     }
     if forward_net is not None:
         bundle["forward_net"] = float(forward_net)

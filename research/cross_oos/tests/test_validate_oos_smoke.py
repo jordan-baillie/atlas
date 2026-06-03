@@ -108,7 +108,8 @@ def test_validate_oos_emits_battery_and_legacy_contract(tmp_path, monkeypatch):
     co = d["cross_oos"]
     assert set(co["bundle"]).issuperset({
         "median_cpcv_sharpe", "frac_paths_positive", "pbo", "dsr",
-        "top_group_frac", "loo_group_ok", "min_regime_sharpe", "max_regime_pnl_frac",
+        "top_group_frac", "loo_group_ok", "min_regime_sharpe",
+        "regime_concentration_ratio", "per_regime_expectancy_ok",
         "forward_net", "oos_cagr_degradation_ok",
     })
     assert co["verdict"] in {"PROMOTE", "SCREEN", "FAIL"}
