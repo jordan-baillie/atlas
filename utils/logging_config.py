@@ -130,9 +130,66 @@ class TelegramErrorCollector(logging.Handler):
             for h in hints:
                 lines.append(f"  → {h}")
 
+        # Cross-run throttle: a script that errors every cron run would otherwise flood
+        # Telegram. Suppress a repeat of the SAME error set within the throttle window
+        # (new/different errors still alert immediately; the SQLite errors table still
+        # records every occurrence for the dashboard).
+        _sig = _error_batch_signature(records, script)
+        if not _telegram_throttle_ok(_sig):
+            print(f"[TelegramErrorCollector] throttled duplicate error alert ({_sig})",
+                  file=sys.stderr)
+            return
         send_message("\n".join(lines))
 
 
+
+
+# ═══════════════════════════════════════════════════════════════
+# Cross-run Telegram throttle — stop a recurring error from flooding
+# ═══════════════════════════════════════════════════════════════
+
+TELEGRAM_ERROR_THROTTLE_SEC = 4 * 3600  # same error-set alerts at most once per 4h
+
+
+def _error_batch_signature(records, script: str) -> str:
+    """Stable signature for a batch of error records (script + distinct logger|message set)."""
+    import hashlib
+    sigs = sorted({f"{r.name}|{r.getMessage()[:120]}" for r in records})
+    h = hashlib.sha1(("||".join(sigs)).encode("utf-8", "replace")).hexdigest()[:16]
+    return f"{script}:{h}"
+
+
+def _telegram_throttle_ok(signature: str, window_sec: int = TELEGRAM_ERROR_THROTTLE_SEC) -> bool:
+    """True if this error signature has NOT been Telegram-alerted within window_sec.
+
+    Persists last-sent timestamps in data/.telegram_error_throttle.json. Fail-open:
+    any error in the throttle logic returns True (send) so real alerts are never lost.
+    """
+    import json as _json
+    import time as _time
+    try:
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "data", ".telegram_error_throttle.json")
+        now = _time.time()
+        state = {}
+        try:
+            with open(path) as _f:
+                state = _json.load(_f)
+        except Exception:
+            state = {}
+        last = float(state.get(signature, 0) or 0)
+        if now - last < window_sec:
+            return False
+        state[signature] = now
+        # prune entries older than 7 days to keep the file small
+        state = {k: v for k, v in state.items() if now - float(v or 0) < 7 * 86400}
+        tmp = path + ".tmp"
+        with open(tmp, "w") as _f:
+            _json.dump(state, _f)
+        os.replace(tmp, path)
+        return True
+    except Exception:
+        return True  # fail-open: never suppress a real alert due to a throttle bug
 
 
 # ═══════════════════════════════════════════════════════════════

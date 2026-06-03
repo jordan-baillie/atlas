@@ -711,12 +711,19 @@ def record_paper_trade_exit(
     exit_price: float,
     exit_reason: str,
     regime_at_exit: Optional[str] = None,
+    paper_account_id: Optional[str] = None,
 ) -> None:
     """Close the most recent open paper trade for (ticker, strategy).
 
     Mirrors :func:`record_trade_exit`.  Applies the same ghost-trade guard,
     duplicate-close guard (via superseded flag), and MAE/MFE computation —
     all against the `paper_trades` table.
+
+    ``paper_account_id`` is accepted for interface symmetry with
+    :func:`record_paper_trade_entry` (callers in brokers/live_executor.py pass it).
+    Matching is already unique by (ticker, strategy, status='open') for the single
+    paper account, so it is recorded at entry and not needed to disambiguate the exit;
+    accepting it here fixes the TypeError that was crashing the reconcile path.
     """
     now = datetime.now().isoformat()
     with _adb.get_db() as db:
