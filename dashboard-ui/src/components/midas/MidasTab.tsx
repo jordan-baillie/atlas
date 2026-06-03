@@ -27,6 +27,7 @@ interface Demo {
   capital_usd?: number
   inception_date?: string
   last_run_ts?: string
+  updated_at?: string
   equity_usd?: number
   pnl_usd?: number
   realized_pnl_usd?: number
@@ -247,7 +248,9 @@ export function MidasTab() {
                 <span>{demo.endpoint?.replace('https://', '')}</span>
                 <span>demo cap {usd0(demo.capital_usd)}</span>
                 <span>since {demo.inception_date ?? '—'}</span>
-                <span>as of {demo.as_of ?? '—'}</span>
+                {demo.updated_at
+                  ? <span className="text-sky-400">live {new Date(demo.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · marks every 5m</span>
+                  : <span>as of {demo.as_of ?? '—'}</span>}
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
