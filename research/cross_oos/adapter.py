@@ -59,6 +59,12 @@ CORE_GATE_KEYS = (
     "top_group_frac", "loo_group_ok", "min_regime_sharpe", "max_regime_pnl_frac",
 )
 
+# Two-tier Deflated-Sharpe bars. SCREEN = "promising, keep researching / paper";
+# PROMOTE = "clears the multiple-testing bar, may authorize a live config promotion".
+# Only a PROMOTE pass maps to summary.overall_verdict == "PASS".
+SCREEN_DSR = 0.70
+PROMOTE_DSR = 0.90  # == ATLAS_DEFAULT_GATES['dsr'] threshold
+
 
 # ---------------------------------------------------------------------------
 # Return-series helpers (cross-TIME axis)
@@ -194,6 +200,7 @@ def assemble_bundle(
     *,
     forward_net: float | None = None,
     oos_cagr_degradation_pct: float | None = None,
+    search_burden: dict | None = None,
     n_groups: int = 6,
     k_test: int = 2,
     periods: int = TRADING_DAYS,
@@ -237,6 +244,21 @@ def assemble_bundle(
                     skew=cm.skewness(pr.to_numpy()), kurtosis=cm.kurtosis(pr.to_numpy()),
                 )
 
+    # Authoritative DSR: deflate by the REAL research search burden when available
+    # (n_trials = distinct configs tried; sr_variance from the experiment log). The grid
+    # DSR above (dsr_grid) is a local proxy that under-counts the search and is gameable.
+    dsr_grid = dsr_val
+    dsr_source = "grid"
+    if search_burden and search_burden.get("n_trials", 0) >= 2 \
+            and search_burden.get("sr_variance_pp", 0) > 0 and len(pr) >= 2:
+        dsr_val = overfitting.deflated_sharpe_ratio(
+            sr=cm.sharpe(pr.to_numpy(), 1), n_obs=len(pr),
+            n_trials=int(search_burden["n_trials"]),
+            sr_variance=float(search_burden["sr_variance_pp"]),
+            skew=cm.skewness(pr.to_numpy()), kurtosis=cm.kurtosis(pr.to_numpy()),
+        )
+        dsr_source = "search_history"
+
     # Ticker concentration + leave-one-ticker-group-out
     tkr_pnl = group_daily_pnl(trades, group_key="ticker")
     top_frac = top_group_frac(tkr_pnl)
@@ -271,6 +293,9 @@ def assemble_bundle(
         },
         "pbo": {"value": pbo_val, **pbo_detail},
         "dsr": dsr_val,
+        "dsr_grid": dsr_grid,
+        "dsr_source": dsr_source,
+        "search_burden": search_burden,
         "ticker_concentration": {"top_group_frac": top_frac, "n_tickers": int(tkr_pnl.shape[1]) if not tkr_pnl.empty else 0},
         "leave_one_ticker_group_out": loo,
         "regime": reg,
@@ -295,9 +320,41 @@ def evaluate(bundle: dict, thresholds: dict | None = None) -> dict:
     return gates.evaluate_gates(bundle, thresholds=table)
 
 
+def _gates_with_dsr(dsr_threshold: float) -> dict:
+    """Copy of ATLAS_DEFAULT_GATES with the DSR threshold overridden."""
+    g = dict(ATLAS_DEFAULT_GATES)
+    key, comp, _thr, _desc = g["dsr"]
+    g["dsr"] = (key, comp, dsr_threshold,
+                f"Deflated Sharpe Ratio >= {dsr_threshold} (search-history deflated)")
+    return g
+
+
+def evaluate_tiers(bundle: dict, *, screen_dsr: float = SCREEN_DSR,
+                   promote_dsr: float = PROMOTE_DSR) -> dict:
+    """Two-tier evaluation. Every gate is identical between tiers except the DSR bar.
+
+    Returns {tier, promote, screen} where tier is:
+      - "PROMOTE": clears the strict DSR bar -> may authorize a live config promotion.
+      - "SCREEN":  clears every gate at the looser DSR bar -> promising, keep researching.
+      - "FAIL":    fails a non-DSR gate, or DSR below the screen bar.
+    Only "PROMOTE" should map to summary.overall_verdict == "PASS".
+    """
+    promote = evaluate(bundle, _gates_with_dsr(promote_dsr))
+    screen = evaluate(bundle, _gates_with_dsr(screen_dsr))
+    if promote["overall_pass"]:
+        tier = "PROMOTE"
+    elif screen["overall_pass"]:
+        tier = "SCREEN"
+    else:
+        tier = "FAIL"
+    return {"tier": tier, "promote": promote, "screen": screen,
+            "screen_dsr": screen_dsr, "promote_dsr": promote_dsr}
+
+
 __all__ = [
     "TRADING_DAYS", "ATLAS_DEFAULT_GATES", "CORE_GATE_KEYS",
     "daily_returns", "cpcv_path_sharpes", "build_pbo_matrix",
     "group_daily_pnl", "top_group_frac", "leave_one_ticker_group_out",
-    "regime_attribution", "assemble_bundle", "evaluate",
+    "regime_attribution", "assemble_bundle", "evaluate", "evaluate_tiers",
+    "SCREEN_DSR", "PROMOTE_DSR",
 ]

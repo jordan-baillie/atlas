@@ -33,6 +33,7 @@ from backtest.engine import BacktestEngine
 # Strategies are instantiated via scripts.strategy_evaluator.STRATEGY_REGISTRY inside
 # make_strategies() so validation covers any enabled strategy in the config.
 from research.cross_oos import adapter
+from research.cross_oos import search_history
 
 # ============================================================
 # CONSTANTS
@@ -483,31 +484,48 @@ def main():
     print("-" * 70)
     forward_net = m_oos.get('total_pnl', 0.0)
     oos_cagr_deg = degradation.get('cagr_pct')
+    enabled_strats = [n for n, c in cfg.get('strategies', {}).items()
+                      if isinstance(c, dict) and c.get('enabled', True)]
+    burden = search_history.search_burden(enabled_strats)
+    if burden:
+        print(f"  search burden: {burden['n_trials']} distinct configs "
+              f"({burden['n_experiments']} experiments) across {burden['strategies_found']}; "
+              f"sr_var(ann)={burden['sr_variance_ann']:.3f} -> DSR deflated by real history")
+    else:
+        print("  search burden: no experiment history -> DSR falls back to the config grid (proxy)")
     battery = adapter.assemble_bundle(
         primary_returns,
         getattr(result_full, 'trades', []) or [],
         grid_returns=grid_returns,
         forward_net=forward_net,
         oos_cagr_degradation_pct=oos_cagr_deg,
+        search_burden=burden,
     )
-    gate_report = adapter.evaluate(battery['bundle'])
-    overall_pass = bool(gate_report['overall_pass'])
+    tiers = adapter.evaluate_tiers(battery['bundle'])
+    tier = tiers['tier']  # PROMOTE | SCREEN | FAIL
+    overall_pass = (tier == 'PROMOTE')
+    promote_report = tiers['promote']
+
+    def _gate_dict(report):
+        return {g.name: {'value': g.value, 'threshold': g.threshold,
+                         'comparator': g.comparator, 'status': g.status,
+                         'description': g.description} for g in report['gates']}
 
     results['cross_oos'] = {
         'bundle': battery['bundle'],
         'diagnostics': battery['diagnostics'],
-        'gate_checks': {
-            g.name: {
-                'value': g.value, 'threshold': g.threshold,
-                'comparator': g.comparator, 'status': g.status,
-                'description': g.description,
-            } for g in gate_report['gates']
-        },
+        'tier': tier,
+        'screen_dsr': tiers['screen_dsr'],
+        'promote_dsr': tiers['promote_dsr'],
+        'gate_checks': _gate_dict(promote_report),          # strict (promote) tier
+        'gate_checks_screen': _gate_dict(tiers['screen']),  # looser (screen) tier
         'gate_summary': {
-            'pass': gate_report['n_pass'], 'fail': gate_report['n_fail'],
-            'missing': gate_report['n_missing'],
+            'promote': {'pass': promote_report['n_pass'], 'fail': promote_report['n_fail'],
+                        'missing': promote_report['n_missing']},
+            'screen': {'pass': tiers['screen']['n_pass'], 'fail': tiers['screen']['n_fail'],
+                       'missing': tiers['screen']['n_missing']},
         },
-        'verdict': 'PASS' if overall_pass else 'FAIL',
+        'verdict': tier,
     }
 
     # ----------------------------------------------------------
@@ -552,7 +570,7 @@ def main():
     pbo_val = battery['bundle'].get('pbo')
     dsr_val = battery['bundle'].get('dsr')
     pbo_ok = isinstance(pbo_val, (int, float)) and pbo_val == pbo_val and pbo_val <= 0.50
-    dsr_ok = isinstance(dsr_val, (int, float)) and dsr_val == dsr_val and dsr_val >= 0.90
+    dsr_ok = isinstance(dsr_val, (int, float)) and dsr_val == dsr_val and dsr_val >= adapter.PROMOTE_DSR
     robust = bool(pbo_ok and dsr_ok
                   and collapse_count < max(3, int(grid_size * 0.3)))
     results['test2_perturbation'] = {
@@ -583,12 +601,14 @@ def main():
     test3_pass = isinstance(win_rate_windows, (int, float)) and win_rate_windows >= 50
     test3_verdict = 'PASS - majority profitable' if test3_pass else 'FAIL - inconsistent windows'
 
-    # The battery is authoritative: overall PASS iff every enforced gate passes.
-    overall_verdict = 'PASS' if overall_pass else 'FAIL'
+    # Authoritative: only a PROMOTE-tier pass yields 'PASS' (authorizes a live config
+    # promotion). 'SCREEN' = promising but not promotable; 'FAIL' = a non-DSR gate failed.
+    overall_verdict = 'PASS' if tier == 'PROMOTE' else tier  # PASS | SCREEN | FAIL
 
     total_runtime_s = round(time.time() - overall_start, 1)
     results['summary'] = {
         'overall_verdict': overall_verdict,
+        'tier': tier,
         'cross_oos_verdict': results['cross_oos']['verdict'],
         'gate_summary': results['cross_oos']['gate_summary'],
         'test1_verdict': test1_verdict,
@@ -606,14 +626,16 @@ def main():
     print("CROSS-OOS VALIDATION SUMMARY")
     print("=" * 70)
     b = battery['bundle']
-    print("  gates:", {k: v['status'] for k, v in results['cross_oos']['gate_checks'].items()})
+    diag = battery['diagnostics']
+    print("  gates (promote tier):", {k: v['status'] for k, v in results['cross_oos']['gate_checks'].items()})
     print(f"  CPCV median Sharpe: {b.get('median_cpcv_sharpe')}, "
           f"frac+ : {b.get('frac_paths_positive')}")
-    print(f"  PBO: {b.get('pbo')} | DSR: {b.get('dsr')} | "
-          f"top_ticker_frac: {b.get('top_group_frac')}")
+    print(f"  PBO: {b.get('pbo')} | DSR(auth/{diag.get('dsr_source')}): {b.get('dsr')} | "
+          f"DSR(grid proxy): {diag.get('dsr_grid')} | top_ticker_frac: {b.get('top_group_frac')}")
     print(f"  min regime Sharpe: {b.get('min_regime_sharpe')} | "
           f"max regime PnL frac: {b.get('max_regime_pnl_frac')}")
     print(f"  forward_net: {b.get('forward_net')} | loo_group_ok: {b.get('loo_group_ok')}")
+    print(f"  TIER: {tier}  (screen DSR>={tiers['screen_dsr']}, promote DSR>={tiers['promote_dsr']})")
     print(f"  AUTHORITATIVE VERDICT: {overall_verdict}")
     print(f"  (legacy projections) test1={test1_verdict} test2={test2_verdict} test3={test3_verdict}")
     print(f"Saved: {output_path}")

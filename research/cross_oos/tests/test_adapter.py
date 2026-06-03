@@ -112,6 +112,40 @@ def test_battery_flags_noise_via_pbo():
     assert rep["overall_pass"] is False
 
 
+def test_evaluate_tiers_promote_screen_fail():
+    base = {
+        "median_cpcv_sharpe": 1.0, "frac_paths_positive": 0.8, "pbo": 0.1,
+        "top_group_frac": 0.2, "loo_group_ok": True, "min_regime_sharpe": 0.3,
+        "max_regime_pnl_frac": 0.4,
+    }
+    # DSR above promote bar -> PROMOTE
+    r = adapter.evaluate_tiers({**base, "dsr": 0.95})
+    assert r["tier"] == "PROMOTE" and r["promote"]["overall_pass"]
+    # DSR between screen and promote -> SCREEN
+    r = adapter.evaluate_tiers({**base, "dsr": 0.80})
+    assert r["tier"] == "SCREEN" and not r["promote"]["overall_pass"] and r["screen"]["overall_pass"]
+    # DSR below screen bar -> FAIL
+    r = adapter.evaluate_tiers({**base, "dsr": 0.50})
+    assert r["tier"] == "FAIL"
+    # A failing NON-DSR gate -> FAIL even with perfect DSR
+    r = adapter.evaluate_tiers({**base, "dsr": 0.99, "pbo": 0.9})
+    assert r["tier"] == "FAIL"
+
+
+def test_assemble_bundle_uses_search_burden_for_dsr():
+    grid = _make_grid(signal_mu=0.0009, n=600, n_cfg=10, seed=2)
+    primary = grid["cfg0"]
+    # A heavy search burden (many distinct trials) must deflate DSR below the grid DSR.
+    burden = {"n_trials": 471, "sr_variance_pp": (0.39 ** 2) / 252,
+              "sr_variance_ann": 0.39 ** 2, "n_experiments": 5449,
+              "strategies_found": ["x"], "source": "test"}
+    res = adapter.assemble_bundle(primary, trades=[], grid_returns=grid, search_burden=burden)
+    assert res["diagnostics"]["dsr_source"] == "search_history"
+    assert res["diagnostics"]["search_burden"]["n_trials"] == 471
+    # search-history DSR (authoritative) should be <= the grid proxy DSR here
+    assert res["bundle"]["dsr"] <= res["diagnostics"]["dsr_grid"] + 1e-9
+
+
 def test_evaluate_drops_unmeasured_timesplit_gates():
     # bundle without forward_net / oos_cagr_degradation_ok must not FAIL on them as 'missing'
     bundle = {

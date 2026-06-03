@@ -111,8 +111,10 @@ def test_validate_oos_emits_battery_and_legacy_contract(tmp_path, monkeypatch):
         "top_group_frac", "loo_group_ok", "min_regime_sharpe", "max_regime_pnl_frac",
         "forward_net", "oos_cagr_degradation_ok",
     })
-    assert co["verdict"] in {"PASS", "FAIL"}
-    assert {"pass", "fail", "missing"} <= set(co["gate_summary"])
+    assert co["verdict"] in {"PROMOTE", "SCREEN", "FAIL"}
+    assert co["tier"] == co["verdict"]
+    assert {"promote", "screen"} <= set(co["gate_summary"])
+    assert "dsr_source" in co["diagnostics"]
 
     # --- Legacy back-compat contract read by atlas_risk_check_reopt_promotion (TS) ---
     t1 = d["test1_time_period_split"]
@@ -124,9 +126,9 @@ def test_validate_oos_emits_battery_and_legacy_contract(tmp_path, monkeypatch):
         d["test3_walkforward_consistency"]["window_analysis"]["win_rate_windows_pct"],
         (int, float),
     )
-    assert d["summary"]["overall_verdict"] in {"PASS", "FAIL"}
-    # Authoritative verdict must agree with the battery verdict.
-    assert d["summary"]["overall_verdict"] == co["verdict"]
+    assert d["summary"]["overall_verdict"] in {"PASS", "SCREEN", "FAIL"}
+    # Only a PROMOTE-tier pass maps to overall_verdict == 'PASS'.
+    assert (d["summary"]["overall_verdict"] == "PASS") == (co["tier"] == "PROMOTE")
 
 
 if __name__ == "__main__":
