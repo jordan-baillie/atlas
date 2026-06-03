@@ -38,6 +38,8 @@ class Candidate:
     battery_tier: str | None = None    # SCREEN | PROMOTE | FAIL
     battery_artifact: str | None = None
     forward_verdict: str | None = None # PASS | INSUFFICIENT | FAIL
+    forward_start: str = ""            # ISO date when forward (paper) accrual began
+    forward_days: int = 0              # forward trading days accrued so far
     notes: str = ""
     updated_at: str = ""
 

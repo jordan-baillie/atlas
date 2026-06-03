@@ -9,7 +9,9 @@
       "battery_artifact": "backtest/results/battery_csm_newgate_20260604_082630.json",
       "forward_verdict": "INSUFFICIENT",
       "notes": "pre-registered default; SCREEN (DSR 0.77); low-turnover -> accumulate forward",
-      "updated_at": "2026-06-03T23:37:47.083954+00:00"
+      "updated_at": "2026-06-03T23:46:06.301287+00:00",
+      "forward_start": "2026-06-04",
+      "forward_days": 0
     },
     "csm@fast": {
       "name": "cross_sectional_momentum",
