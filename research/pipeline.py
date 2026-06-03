@@ -5,7 +5,7 @@ JSON registry. It does NOT run backtests or trade; it records state and computes
 action from the existing gates:
 
     queued -> battery -> screen -> paper -> microlive_gate -> microlive -> scale
-                                                  \-> failed (any stage)
+                                                  (any stage -> failed)
 
 Stage gates:
   battery  : research.cross_oos battery -> tier SCREEN or PROMOTE (else failed).
