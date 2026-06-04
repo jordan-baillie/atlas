@@ -27,14 +27,14 @@ TRADING_DAYS = 252
 DEFAULTS = {
     "min_days": 20,        # minimum forward trading days before any PASS/FAIL
     "min_sharpe": 0.5,     # annualised forward Sharpe floor
-    "min_t": 1.8,          # t-stat of daily net returns (~one-sided 96%)
-    "min_eff_obs": 30,     # alternative power route: enough independent observations
+    "min_t": 1.8,          # t-stat of net returns (~one-sided 96%)
+    "min_eff_obs": 30,     # alternative power route: enough INDEPENDENT observations
     "max_clv_required": True,  # require CLV >= 0 when a CLV figure is supplied
 }
 
 
 def _t_stat(returns: np.ndarray) -> float:
-    """t-stat of mean daily net return vs zero (mean / standard error)."""
+    """t-stat of mean net return vs zero (mean / standard error)."""
     r = np.asarray(returns, dtype=float)
     r = r[np.isfinite(r)]
     if r.size < 3:
@@ -45,10 +45,65 @@ def _t_stat(returns: np.ndarray) -> float:
     return float(r.mean() / (sd / np.sqrt(r.size)))
 
 
+def _iact(returns: np.ndarray, maxlag: int | None = None) -> float:
+    """Integrated autocorrelation time (Geyer initial-positive-sequence estimator).
+
+    #424: a slow strategy holds positions for many days, so consecutive daily returns are
+    autocorrelated and a raw day count OVER-states independent information (a low-turnover
+    strategy could otherwise 'pass' the power check on a short lucky 30-day window). IACT ~ 1
+    for i.i.d./high-turnover returns; > 1 when returns are serially correlated. The number of
+    independent observations is n / IACT.
+    """
+    x = np.asarray(returns, dtype=float)
+    x = x[np.isfinite(x)]
+    n = x.size
+    if n < 8:
+        return 1.0
+    x = x - x.mean()
+    v = float((x * x).mean())
+    if v == 0:
+        return 1.0
+    if maxlag is None:
+        maxlag = min(n // 2, 50)
+    band = 2.0 / np.sqrt(n)  # white-noise 95% band: ignore lags within sampling noise
+    tau = 1.0
+    for k in range(1, maxlag):
+        ac = float(np.sum(x[:-k] * x[k:]) / (n * v))
+        if ac <= band:       # stop once autocorrelation is statistically indistinguishable from 0
+            break
+        tau += 2.0 * ac
+    return max(tau, 1.0)
+
+
+def _effective_obs(returns: np.ndarray) -> float:
+    """Autocorrelation-adjusted independent observation count: n / IACT."""
+    n = int(np.size(np.asarray(returns)[np.isfinite(np.asarray(returns, dtype=float))]))
+    return n / _iact(returns) if n else 0.0
+
+
+def _cohort_means(trade_returns, trade_cohorts):
+    """Cluster trades into independent bets. Simultaneously-opened positions (same cohort key,
+    e.g. entry date/month) share a common factor and are NOT independent, so we average each
+    cohort into a single bet. Returns the per-cohort mean-return array (the independent bets).
+    """
+    tr = np.asarray(trade_returns, dtype=float)
+    mask = np.isfinite(tr)
+    tr = tr[mask]
+    if tr.size == 0:
+        return np.array([])
+    if trade_cohorts is None:
+        return tr
+    keys = np.asarray(list(trade_cohorts))[mask]
+    means = [tr[keys == k].mean() for k in pd.unique(keys)]
+    return np.asarray(means, dtype=float)
+
+
 def evaluate_forward(
     returns_daily,
     *,
     clv: float | None = None,
+    trade_returns=None,
+    trade_cohorts=None,
     min_days: int = DEFAULTS["min_days"],
     min_sharpe: float = DEFAULTS["min_sharpe"],
     min_t: float = DEFAULTS["min_t"],
@@ -61,6 +116,15 @@ def evaluate_forward(
     ----------
     returns_daily : per-period (daily) NET-OF-COST fractional returns from paper/micro-live.
     clv           : optional Closing-Line-Value figure (>=0 required if supplied).
+    trade_returns : optional per-closed-trade net-of-cost returns. Enables a cluster-adjusted
+                    independent-bet power route (#424) that legitimately gives a cross-sectional
+                    strategy faster credit for many independent bets than the daily series does.
+    trade_cohorts : optional cohort key per trade (e.g. entry month) aligned to trade_returns;
+                    simultaneously-opened trades are averaged into one bet (not independent).
+
+    Power (#424): the gate counts INDEPENDENT information, not raw days. The daily route uses an
+    autocorrelation-adjusted observation count (n / IACT) so a low-turnover strategy cannot pass
+    on a short, serially-correlated window; the optional trade route uses cluster-adjusted bets.
 
     Returns a dict with verdict (PASS|INSUFFICIENT|FAIL), per-check booleans, and metrics.
     """
@@ -75,8 +139,17 @@ def evaluate_forward(
     cum = float(np.sum(arr))                       # additive net return (board convention)
     sharpe = cm.annualized_sharpe(arr, periods)
     t = _t_stat(arr)
-    eff_obs = n                                    # daily obs proxy (independent-ish)
-    power_ok = (t == t and t >= min_t) or (eff_obs >= min_eff_obs)
+    eff_obs = _effective_obs(arr)                  # #424: autocorrelation-adjusted (n / IACT)
+    iact = _iact(arr)
+
+    # Optional cluster-adjusted independent-bet route (#424).
+    bets = _cohort_means(trade_returns, trade_cohorts) if trade_returns is not None else np.array([])
+    n_bets = int(bets.size)
+    trade_t = _t_stat(bets) if n_bets >= 3 else float("nan")
+
+    power_ok = ((t == t and t >= min_t)
+                or (trade_t == trade_t and trade_t >= min_t)
+                or (eff_obs >= min_eff_obs))
     clv_ok = (clv is None) or (clv >= 0)
 
     checks = {
@@ -104,7 +177,9 @@ def evaluate_forward(
         "cum_return": round(cum, 6),
         "sharpe": None if sharpe != sharpe else round(float(sharpe), 4),
         "t_stat": None if t != t else round(float(t), 3),
-        "eff_obs": eff_obs, "clv": clv, "checks": checks,
+        "eff_obs": round(float(eff_obs), 1), "iact": round(float(iact), 2),
+        "n_bets": n_bets, "trade_t": None if trade_t != trade_t else round(float(trade_t), 3),
+        "clv": clv, "checks": checks,
         "thresholds": {"min_days": min_days, "min_sharpe": min_sharpe,
                        "min_t": min_t, "min_eff_obs": min_eff_obs},
     }

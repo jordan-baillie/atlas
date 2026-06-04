@@ -51,7 +51,7 @@ def _forward_returns(name: str, params: dict, market: str, max_positions: int) -
     cfg.setdefault("strategies", {})[name] = {"enabled": True, **(params or {})}
     cfg.setdefault("risk", {})["max_open_positions"] = max_positions
     res = BacktestEngine(cfg).run_walkforward(data, [_make_strategy(name, cfg)])
-    return adapter.daily_returns(res.equity_curve)
+    return adapter.daily_returns(res.equity_curve), res.trades
 
 
 def _latest_data_date(market: str):
@@ -98,7 +98,7 @@ def tick(market: str = "sp500", max_positions: int = 35) -> None:
 
         # Re-run the backtest and accrue genuine forward days (date >= forward_start).
         try:
-            r = _forward_returns(c["name"], c.get("params", {}), market, max_positions)
+            r, all_trades = _forward_returns(c["name"], c.get("params", {}), market, max_positions)
         except Exception as e:
             print(f"  [{label}] backtest failed: {e}")
             continue
@@ -108,8 +108,18 @@ def tick(market: str = "sp500", max_positions: int = 35) -> None:
                 series[d] = float(val)
         store.write_text(json.dumps(series, indent=2, sort_keys=True))
 
+        # #424: cluster-adjusted independent-bet route — forward trades (exit on/after
+        # forward_start), grouped into monthly cohorts so simultaneous positions are one bet.
+        ftr, fcoh = [], []
+        for t in all_trades or []:
+            ed = str(pd.Timestamp(t.get("exit_date", t["entry_date"])).date())
+            pv = t.get("position_value", 0) or 0
+            if ed >= fwd_start and pv > 0:
+                ftr.append(float(t["pnl"]) / pv)
+                fcoh.append(pd.Timestamp(t["entry_date"]).to_period("M"))
+
         vals = [series[k] for k in sorted(series)]
-        ev = fe.evaluate_forward(vals)
+        ev = fe.evaluate_forward(vals, trade_returns=ftr or None, trade_cohorts=fcoh or None)
         new_stage = "paper"
         if ev["verdict"] == "PASS":
             new_stage = "microlive_gate"
@@ -117,7 +127,8 @@ def tick(market: str = "sp500", max_positions: int = 35) -> None:
             new_stage = "failed"
         pl.set_stage(label, new_stage, forward_verdict=ev["verdict"], forward_days=ev["n_days"])
         print(f"  [{label}] forward_days={ev['n_days']} verdict={ev['verdict']} "
-              f"sharpe={ev.get('sharpe')} t={ev.get('t_stat')} -> stage={new_stage}")
+              f"sharpe={ev.get('sharpe')} t={ev.get('t_stat')} bets={ev.get('n_bets')} "
+              f"trade_t={ev.get('trade_t')} -> stage={new_stage}")
         if new_stage == "microlive_gate":
             print(f"  *** [{label}] CLEARED the forward gate -> awaiting HUMAN micro-live confirm "
                   f"(research.microlive_gate.arm_microlive(..., confirmed=True)) ***")

@@ -13,11 +13,40 @@ from research.forward_evidence import evaluate_forward, days_to_decision  # noqa
 
 def test_strong_positive_edge_passes():
     rng = np.random.default_rng(0)
-    # ~0.08%/day mean, 0.6% std over 40 days -> strong positive, high t
-    r = rng.normal(0.0008, 0.006, 40)
+    # genuinely high-t edge over 45 i.i.d. days -> passes via the t-stat power route
+    r = rng.normal(0.0015, 0.005, 45)
     out = evaluate_forward(r, clv=0.5)
     assert out["verdict"] == "PASS", out
     assert out["checks"]["power"] and out["checks"]["sharpe"] and out["checks"]["positive_return"]
+    assert out["t_stat"] >= 1.8
+
+
+def test_autocorrelated_window_not_overcounted():
+    """#424: a low-t edge over a long but serially-correlated window must NOT pass on raw day
+    count. eff_obs (n / IACT) should drop well below n for strongly autocorrelated returns."""
+    rng = np.random.default_rng(11)
+    # AR(1) with high persistence, tiny drift -> many days but few INDEPENDENT obs, low t
+    n = 60
+    e = rng.normal(0.0002, 0.004, n)
+    r = np.zeros(n)
+    for i in range(1, n):
+        r[i] = 0.7 * r[i - 1] + e[i]
+    out = evaluate_forward(r)
+    assert out["eff_obs"] < n            # autocorrelation-adjusted below raw days
+    assert out["iact"] > 1.0
+
+
+def test_trade_cohort_power_route():
+    """#424: a cross-sectional strategy with many INDEPENDENT bets can clear the power check
+    via the cluster-adjusted trade route even when the daily series alone is underpowered."""
+    rng = np.random.default_rng(12)
+    daily = rng.normal(0.0004, 0.006, 30)          # positive but modest daily t
+    # 40 independent bets, each cohort a distinct entry month, strong per-bet edge
+    tr = rng.normal(0.01, 0.03, 40)
+    cohorts = list(range(40))
+    out = evaluate_forward(daily, trade_returns=tr, trade_cohorts=cohorts)
+    assert out["n_bets"] == 40
+    assert out["trade_t"] is not None
 
 
 def test_negative_edge_after_window_fails():
