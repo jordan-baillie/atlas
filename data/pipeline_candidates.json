@@ -35,14 +35,14 @@
       "name": "short_horizon_mr",
       "params": {},
       "label": "shmr@default",
-      "stage": "battery",
-      "battery_tier": null,
-      "battery_artifact": null,
+      "stage": "failed",
+      "battery_tier": "FAIL",
+      "battery_artifact": "backtest/results/battery_shmr_20260604_103030.json",
       "forward_verdict": null,
       "forward_start": "",
       "forward_days": 0,
-      "notes": "RSI2 short-horizon mean-reversion; high-turnover fast-edge candidate for rapid pipeline.",
-      "updated_at": "2026-06-04T00:30:49.595355+00:00"
+      "notes": "RSI2 MR, full universe: REAL high-turnover edge (754 trades, PF 1.13, frac+ 0.80, positive in ALL regimes, +forward holdout, robust to LOO/ticker-conc). But NEAR-MISS FAIL: CPCV 0.455 (<0.50), DSR 0.650 (<0.70 SCREEN), regime_concentration 5.16 (>2.0 -> profit concentrated in mean-reverting regime), OOS degradation. Pre-registered default judged (did NOT cherry-pick cfg1 CPCV 0.819). Edge is regime-dependent, not all-weather.",
+      "updated_at": "2026-06-04T00:39:31.448238+00:00"
     }
   }
 }
