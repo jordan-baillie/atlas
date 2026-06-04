@@ -30,6 +30,19 @@
       "forward_verdict": null,
       "notes": "High-turnover preset (3-mo mom, 20d hold): 200+ trades but NO edge \u2014 CPCV -0.16, DSR 0.15, frac+ 0.40, loses in a regime (min_regime -1.17, per_regime_expectancy FAIL), forward -$38. Edge lives in the SLOWER 6-mo signal. Battery correctly rejected; does not reach paper.",
       "updated_at": "2026-06-03T23:57:58.478289+00:00"
+    },
+    "shmr@default": {
+      "name": "short_horizon_mr",
+      "params": {},
+      "label": "shmr@default",
+      "stage": "battery",
+      "battery_tier": null,
+      "battery_artifact": null,
+      "forward_verdict": null,
+      "forward_start": "",
+      "forward_days": 0,
+      "notes": "RSI2 short-horizon mean-reversion; high-turnover fast-edge candidate for rapid pipeline.",
+      "updated_at": "2026-06-04T00:30:49.595355+00:00"
     }
   }
 }
