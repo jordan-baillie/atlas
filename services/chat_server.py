@@ -175,11 +175,9 @@ async def add_security_headers(request: Request, call_next):
 from services.api.finance import router as _finance_router  # noqa: E402
 from services.api.up_webhook import router as _up_webhook_router  # noqa: E402
 from services.api.regime import router as _regime_router   # noqa: E402
-from services.api.error_remediation import router as _error_remediation_router  # noqa: E402
 from services.api.portfolio import router as _portfolio_router  # noqa: E402
 from services.api.health import router as _health_router       # noqa: E402
 from services.api.risk import router as _risk_router           # noqa: E402
-from services.api.research import router as _research_router   # noqa: E402
 from services.api.knowledge import router as _knowledge_router  # noqa: E402
 from services.api.promotions import router as _promotions_router  # noqa: E402
 from services.api.dashboard import router as _dashboard_router  # noqa: E402
@@ -189,7 +187,6 @@ from services.api.monitor_legacy import router as _monitor_legacy_router  # noqa
 from services.ws.chat import router as _ws_chat_router  # noqa: E402
 from services.api.admin import router as _admin_router  # noqa: E402
 from services.api.lifecycle import router as _lifecycle_router  # noqa: E402
-from services.api.research_matrix import router as _research_matrix_router  # noqa: E402
 from services.api.paper_progress import router as _paper_progress_router  # noqa: E402
 from services.api.midas import router as _midas_router  # noqa: E402
 from services.api.forge import router as _forge_router  # noqa: E402
@@ -212,11 +209,9 @@ from services.auth import check_auth  # noqa: F401 — re-exported for backward 
 app.include_router(_finance_router)
 app.include_router(_up_webhook_router)
 app.include_router(_regime_router)
-app.include_router(_error_remediation_router)
 app.include_router(_portfolio_router)
 app.include_router(_health_router)
 app.include_router(_risk_router)
-app.include_router(_research_router)
 app.include_router(_knowledge_router)
 app.include_router(_promotions_router)
 app.include_router(_dashboard_router)
@@ -230,7 +225,6 @@ app.include_router(_admin_router)
 # Future routers MUST be mounted here via app.include_router() and live under
 # services/api/ (or services/ws/ for WebSocket routers).
 app.include_router(_lifecycle_router)
-app.include_router(_research_matrix_router)
 app.include_router(_midas_router)
 app.include_router(_forge_router)
 app.include_router(_paper_progress_router)

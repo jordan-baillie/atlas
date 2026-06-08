@@ -220,7 +220,7 @@ def test_total_pnl_pct_under_50() -> None:
 # Test 6 — all four tabs load without new console errors
 # ---------------------------------------------------------------------------
 
-TABS = ["Portfolio", "Finance", "Research", "Remediation"]
+TABS = ["Portfolio", "Finance", "Forge", "Midas", "Controls"]
 
 
 @pytest.mark.parametrize("tab_name", TABS)
@@ -271,8 +271,6 @@ KEY_ENDPOINTS = [
     "/api/regime/current",
     "/api/risk/ruin",
     "/api/positions/risk",
-    "/api/research/overview",
-    "/api/research/leaderboard",
     "/api/macro/gauges",
     "/api/signals/ev",
     "/api/signals/vix_term_structure",
