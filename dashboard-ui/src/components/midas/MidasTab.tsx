@@ -10,6 +10,7 @@ import { StatCard } from '../shared/StatCard'
 import { Chart } from '../shared/Chart'
 import { DataTable, type Column } from '../shared/DataTable'
 import { Skeleton } from '../layout/Skeleton'
+import { SectionLabel, StatusStrip, Pill, StatusBadge } from '../ui/kit'
 
 interface Stats {
   n?: number
@@ -126,17 +127,7 @@ function useMidas() {
 const clock = (ts: number) =>
   new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 py-2">
-      <div className="h-px flex-1 bg-[var(--color-border)]" />
-      <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)] font-semibold">
-        {children}
-      </span>
-      <div className="h-px flex-1 bg-[var(--color-border)]" />
-    </div>
-  )
-}
+
 
 const holdingCols: Column<Holding>[] = [
   { key: 'symbol', label: 'Symbol', render: (r) => <span className="font-mono">{r.symbol.replace(/USDT$/, '')}</span> },
@@ -199,33 +190,26 @@ export function MidasTab() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-base font-semibold text-[var(--color-text)]">{data.strategy}</div>
-            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">{data.venue_data}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            {updatedAt != null && (
-              <span
-                className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] font-mono"
-                title={`Auto-refreshes every ${Math.round(REFRESH_MS / 1000)}s`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                updated {clock(updatedAt)}
-              </span>
-            )}
-            <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
-              {data.mode}
-            </span>
-          </div>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-[var(--color-text-muted)] font-mono">
-          <span>as of {data.as_of ?? '—'}</span>
-          <span>inception {data.inception ?? '—'}</span>
-          <span>{data.universe_names_latest ?? '—'} names ({data.positions?.n_long ?? 0}L / {data.positions?.n_short ?? 0}S)</span>
-        </div>
-      </div>
+      <StatusStrip
+        icon="🪙"
+        glow={!!demo?.running}
+        title={data.strategy}
+        badge={<Pill color="#f59e0b">{data.mode}</Pill>}
+        meta={
+          <span className="flex flex-wrap gap-x-4 gap-y-0.5 font-mono">
+            <span>{data.venue_data}</span>
+            <span>as of {data.as_of ?? '—'}</span>
+            <span>inception {data.inception ?? '—'}</span>
+            <span>{data.universe_names_latest ?? '—'} names ({data.positions?.n_long ?? 0}L / {data.positions?.n_short ?? 0}S)</span>
+          </span>
+        }
+        chips={updatedAt != null ? (
+          <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] font-mono" title={`Auto-refreshes every ${Math.round(REFRESH_MS / 1000)}s`}>
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-green)] animate-pulse" />
+            updated {clock(updatedAt)}
+          </span>
+        ) : undefined}
+      />
 
       {/* Live demo execution (Bybit api-demo, zero real capital) */}
       {demo?.running && (
@@ -234,15 +218,9 @@ export function MidasTab() {
           <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  ● Live Demo
-                </span>
-                {demo.kill_present && (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/30">KILL active</span>
-                )}
-                {!!demo.n_errors && !demo.kill_present && (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30">{demo.n_errors} errors</span>
-                )}
+                <StatusBadge on={true} labelOn="● LIVE DEMO" labelOff="IDLE" colorOn="#38bdf8" />
+                {demo.kill_present && <Pill color="#ef4444" tone={0.18}>KILL active</Pill>}
+                {!!demo.n_errors && !demo.kill_present && <Pill color="#f59e0b" tone={0.18}>{demo.n_errors} errors</Pill>}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--color-text-muted)] font-mono">
                 <span>{demo.endpoint?.replace('https://', '')}</span>

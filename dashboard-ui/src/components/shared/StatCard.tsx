@@ -6,8 +6,8 @@ interface StatCardProps {
   sub?: string | ReactNode
   /** When true, renders value as larger (text-3xl) bold hero number */
   hero?: boolean
-  /** Top accent stripe color — use CSS var or hex. When provided, renders a 1px
-   *  full-width stripe at the top edge to visually signal sign (green/red). */
+  /** Sign accent — when provided, the value number is rendered in this colour
+   *  (the Forge convention: coloured hero numbers, no top stripe). */
   accent?: string
   /** Drives the sub-chip color to communicate direction:
    *  - 'positive' → green tint (use for +% gains, positive P&L deltas)
@@ -19,8 +19,8 @@ interface StatCardProps {
 }
 
 const SUB_COLOR_CLASSES: Record<NonNullable<StatCardProps['subColor']>, string> = {
-  positive: 'bg-green-500/10 text-green-400',
-  negative: 'bg-red-500/10 text-red-400',
+  positive: 'bg-[var(--color-green)]/10 text-[var(--color-green)]',
+  negative: 'bg-[var(--color-red)]/10 text-[var(--color-red)]',
   neutral:  'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]',
 }
 
@@ -38,28 +38,21 @@ export function StatCard({
       data-testid="stat-card"
       className={`relative overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 md:p-4 dash-card ${className}`}
     >
-      {/* 1px top accent stripe — full width, strong sign signal */}
-      {accent && (
-        <div
-          className="absolute top-0 left-0 right-0 h-px"
-          style={{ backgroundColor: accent }}
-        />
-      )}
-
       {/* Label — 10px uppercase tracking */}
       <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5 font-semibold">
         {label}
       </div>
 
-      {/* Value — mono + tabular-nums for all numeric content
+      {/* Value — mono + tabular-nums; accent colours the number (Forge convention)
        *  hero=true  → text-3xl bold  (KPI dashboard hero number)
        *  hero=false → text-xl semibold (standard stat) */}
       <div
-        className={`font-mono tabular-nums text-[var(--color-text)] ${
+        className={`font-mono tabular-nums ${
           hero
             ? 'text-3xl font-bold leading-none'
             : 'text-xl font-semibold leading-tight'
         }`}
+        style={{ color: accent || 'var(--color-text)' }}
       >
         {value}
       </div>
