@@ -41,23 +41,20 @@ fi
 # It cannot be `systemctl enable`d directly — it is triggered by
 # atlas-discovery.timer, which IS enabled below. Same pattern for
 # atlas-silent-failure-watchdog.service.
+# RETIRED 2026-06-08 — durable disable (survives a reinstall):
+#   * Legacy research pipeline (atlas-director, atlas-discovery,
+#     atlas-research-window@*) is SUPERSEDED by the Hephaestus forge
+#     (/root/hephaestus → hephaestus-cycle.timer).
+#   * Nothing trades live (board closed retail edge-hunting; Atlas paper parked
+#     to 2026-08-01), so atlas-canary-check + atlas-universe-rebuild are off.
+#   * Per-service watchdogs (heartbeat / silent-failure) + atlas-fred-health
+#     disabled; system health is covered by unified-healthcheck.timer.
+#   These were `systemctl disable`d on the host and removed here so a reinstall
+#   does NOT silently re-enable them. Unit files are kept under version control
+#   for deliberate revival: `systemctl enable --now <unit>`.
 TIMERS_TO_ENABLE=(
-    atlas-heartbeat-watchdog.timer
-    atlas-silent-failure-watchdog.timer
-    atlas-research-window@sp500.timer
-    atlas-research-window@commodity_etfs.timer
-    atlas-research-window@sector_etfs.timer
-    atlas-research-window@gold_etfs.timer
-    atlas-research-window@treasury_etfs.timer
-    atlas-research-window@defensive_etfs.timer
-    atlas-research-window@crypto.timer
-    atlas-director.timer
-    atlas-discovery.timer
     atlas-backup.timer
-    atlas-fred-health.timer
     unified-healthcheck.timer
-    atlas-canary-check.timer
-    atlas-universe-rebuild.timer
 )
 
 changed=0
