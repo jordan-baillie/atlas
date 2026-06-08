@@ -192,6 +192,7 @@ from services.api.lifecycle import router as _lifecycle_router  # noqa: E402
 from services.api.research_matrix import router as _research_matrix_router  # noqa: E402
 from services.api.paper_progress import router as _paper_progress_router  # noqa: E402
 from services.api.midas import router as _midas_router  # noqa: E402
+from services.api.forge import router as _forge_router  # noqa: E402
 from services.api.static_serve import router as _static_serve_router  # noqa: E402
 
 # ── Re-export shims (backward-compat for tests importing from chat_server) ────
@@ -231,6 +232,7 @@ app.include_router(_admin_router)
 app.include_router(_lifecycle_router)
 app.include_router(_research_matrix_router)
 app.include_router(_midas_router)
+app.include_router(_forge_router)
 app.include_router(_paper_progress_router)
 # IMPORTANT: static_serve router must be LAST — contains /{path:path} catch-all
 app.include_router(_static_serve_router)

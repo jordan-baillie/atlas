@@ -62,6 +62,10 @@ export const qk = {
   promotions: {
     pending: () => ['promotions', 'pending'] as const,
   },
+  forge: {
+    all: () => [...qk.all, 'forge'] as const,
+    state: () => [...qk.forge.all(), 'state'] as const,
+  },
   pnl: {
     filterOptions: () => [...qk.all, 'pnl', 'filter-options'] as const,
     trades: (filters: Record<string, string>) => [...qk.all, 'pnl', 'trades', filters] as const,

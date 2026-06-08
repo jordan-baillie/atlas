@@ -9,6 +9,7 @@
 
 export const preloadPortfolioTab = () => import('../components/portfolio/PortfolioTab')
 export const preloadFinanceTab = () => import('../components/finance/FinanceTab')
-export const preloadResearchTab = () => import('../components/research/ResearchTab')
+export const preloadForgeTab = () => import('../components/forge/ForgeTab')
 export const preloadRemediationTab = () => import('../components/error_remediation/RemediationTab')
 export const preloadControlsTab = () => import('../components/controls/ControlsTab')
+export const preloadMidasTab = () => import('../components/midas/MidasTab')

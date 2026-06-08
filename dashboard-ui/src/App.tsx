@@ -14,18 +14,23 @@ const FinanceTab = lazy(() =>
   import('./components/finance/FinanceTab').then((m) => ({ default: m.FinanceTab })),
 )
 
-// Re-export preload helpers from standalone module (avoids circular ESM dep
-// with TabBar.tsx, which imported them from here and caused TDZ in Chromium).
-export { preloadPortfolioTab, preloadFinanceTab, preloadResearchTab, preloadRemediationTab, preloadControlsTab } from './lib/preloaders'
+// Preload helpers now live in their sole consumer's import path
+// (src/lib/preloaders.ts).  TabBar imports them directly from there.
+// Re-exporting them from App.tsx would mix non-component exports with the
+// default component export and break Fast Refresh
+// (react-refresh/only-export-components).
 
-const ResearchTab = lazy(() =>
-  import('./components/research/ResearchTab').then((m) => ({ default: m.ResearchTab })),
+const ForgeTab = lazy(() =>
+  import('./components/forge/ForgeTab').then((m) => ({ default: m.ForgeTab })),
 )
 const RemediationTab = lazy(() =>
   import('./components/error_remediation/RemediationTab').then((m) => ({ default: m.RemediationTab })),
 )
 const ControlsTab = lazy(() =>
   import('./components/controls/ControlsTab').then((m) => ({ default: m.ControlsTab })),
+)
+const MidasTab = lazy(() =>
+  import('./components/midas/MidasTab').then((m) => ({ default: m.MidasTab })),
 )
 
 // Skeleton matching the tab content shape — prevents layout shift during
@@ -41,7 +46,7 @@ function TabFallback() {
 
 export default function App() {
   useTheme()
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'research' | 'remediation' | 'controls'>('portfolio')
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'forge' | 'remediation' | 'controls' | 'midas'>('portfolio')
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
@@ -54,8 +59,9 @@ export default function App() {
               <div key={activeTab} className="animate-in">
                 {activeTab === 'portfolio' ? <PortfolioTab />
                  : activeTab === 'finance' ? <FinanceTab />
-                 : activeTab === 'research' ? <ResearchTab />
+                 : activeTab === 'forge' ? <ForgeTab />
                  : activeTab === 'remediation' ? <RemediationTab />
+                 : activeTab === 'midas' ? <MidasTab />
                  : <ControlsTab />}
               </div>
             </Suspense>
