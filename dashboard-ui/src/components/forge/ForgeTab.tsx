@@ -1,85 +1,98 @@
 /**
- * ForgeTab — live "mission control" for the Hephaestus autonomous research loop.
+ * ForgeTab — live mission-control for the Hephaestus autonomous research loop.
  *
- * Ships FOUR selectable design variants (A/B/C/D) behind a segmented switcher so
- * the operator can compare them live and pick one. After selection, drop the
- * three unused variant files + the switcher and render the winner directly.
+ * Layout: a slim status strip (no countdown — the loop fires nightly at a fixed
+ * time), the six-station forge line with per-stage stats, then a list of recent
+ * runs that each expand to a full per-run summary (hypothesis + data + verdict).
  */
-import { useState } from 'react'
 import { useForgeState } from '../../api/forge-queries'
-import { useUrlState } from '../../hooks/useUrlState'
+import { fmtRelativeTime } from '../../lib/format'
 import { Skeleton } from '../layout/Skeleton'
-import { VariantForge } from './VariantForge'
-import { VariantMissionControl } from './VariantMissionControl'
-import { VariantGauntlet } from './VariantGauntlet'
-import { VariantNotebook } from './VariantNotebook'
+import { C, Card } from './shared'
+import { ForgeLine } from './ForgeLine'
+import { RunCard } from './RunCard'
+import type { ForgeStatus } from '../../api/forge-types'
 
-type Variant = 'A' | 'B' | 'C' | 'D'
+function Chip({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
+  return (
+    <div className="px-3 py-1.5 rounded-lg bg-[var(--color-surface-alt)] text-center">
+      <div className="text-[9px] uppercase tracking-wide text-[var(--color-text-muted)]">{label}</div>
+      <div className="text-sm font-bold tabular-nums leading-tight" style={{ color: color || 'var(--color-text)' }}>{value}</div>
+    </div>
+  )
+}
 
-const VARIANTS: Array<{ id: Variant; label: string; emoji: string; desc: string }> = [
-  { id: 'A', label: 'The Forge', emoji: '⚒️', desc: 'Live pipeline in motion' },
-  { id: 'B', label: 'Mission Control', emoji: '🛰️', desc: 'Telemetry gauges + countdown' },
-  { id: 'C', label: 'The Gauntlet', emoji: '🪜', desc: 'Hypotheses falling through the gates' },
-  { id: 'D', label: 'Lab Notebook', emoji: '📓', desc: 'The knowledge story' },
-]
+function scheduleText(status: ForgeStatus): string {
+  const m = status.next_run_str?.match(/(\d{2}:\d{2}):\d{2}\s*(\w+)?/)
+  if (m) return `nightly ${m[1]}${m[2] ? ' ' + m[2] : ''}`
+  return 'nightly 03:30'
+}
 
 export function ForgeTab() {
-  const [urlVariant, setUrlVariant] = useUrlState<string | null>('forge', 'A')
-  const initial = (['A', 'B', 'C', 'D'].includes(urlVariant || '') ? urlVariant : 'A') as Variant
-  const [variant, setVariant] = useState<Variant>(initial)
   const q = useForgeState()
 
-  const select = (v: Variant) => { setVariant(v); setUrlVariant(v) }
+  if (q.isLoading && !q.data) {
+    return <div className="space-y-4"><Skeleton className="h-16" /><Skeleton className="h-56" /><Skeleton className="h-64" /></div>
+  }
+  if (q.isError || !q.data) {
+    return (
+      <div className="p-6 text-center text-sm text-[var(--color-negative)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl">
+        Couldn’t load forge state — <code className="text-xs">/api/forge/state</code>
+      </div>
+    )
+  }
+
+  const { status, summary, pipeline, cycles } = q.data
+  const running = status.running
 
   return (
     <div className="space-y-4">
-      {/* Variant switcher — temporary, for picking */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--color-text)]">🔥 Forge Monitor</span>
-          <span className="text-[11px] text-[var(--color-text-muted)] hidden md:inline">— pick a design below</span>
+      {/* ── Slim status strip ── */}
+      <Card glow={running} className="px-5 py-3.5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className={`text-2xl ${running ? 'forge-glow' : ''}`}>{running ? '🔥' : '🧊'}</span>
+            <div>
+              <div className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2">
+                Hephaestus Forge
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide inline-flex items-center gap-1"
+                  style={{ background: running ? 'rgba(34,197,94,0.15)' : 'rgba(113,113,122,0.15)', color: running ? C.green : C.iron }}>
+                  <span className="w-1.5 h-1.5 rounded-full forge-blink" style={{ background: running ? C.green : C.iron }} />
+                  {running ? 'RUNNING' : 'HALTED'}
+                </span>
+              </div>
+              <div className="text-[11px] text-[var(--color-text-muted)]">
+                {scheduleText(status)} · last run {fmtRelativeTime(status.last_cycle_ts)}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <Chip label="cycles" value={summary.cycles} />
+            <Chip label="pass rate" value={summary.pass_rate} color={summary.passes > 0 ? C.gold : undefined} />
+            <Chip label="families" value={summary.families} />
+            <Chip label="FDR bar" value={summary.fdr_bar.toFixed(3)} color={C.indigo} />
+            <Chip label="best holdout" value={summary.best_holdout_sharpe != null ? summary.best_holdout_sharpe.toFixed(2) : '—'} />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-1 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg">
-          {VARIANTS.map((v) => {
-            const active = variant === v.id
-            return (
-              <button
-                key={v.id}
-                onClick={() => select(v.id)}
-                title={v.desc}
-                className={[
-                  'px-2.5 py-1.5 rounded-md text-xs transition-all inline-flex items-center gap-1.5',
-                  active
-                    ? 'bg-[var(--color-surface-alt)] text-[var(--color-text)] font-semibold ring-1 ring-[var(--color-amber)]/40'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]',
-                ].join(' ')}
-              >
-                <span>{v.emoji}</span>
-                <span className="hidden sm:inline">{v.id} · {v.label}</span>
-                <span className="sm:hidden">{v.id}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      </Card>
 
-      {q.isLoading && !q.data ? (
-        <div className="space-y-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-80" />
+      {/* ── Forge line with per-stage stats ── */}
+      <ForgeLine pipeline={pipeline} running={running} />
+
+      {/* ── Recent runs — click any to expand the full summary ── */}
+      <div>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)]">Recent runs — click to expand</div>
+          <div className="text-[11px] text-[var(--color-text-muted)]">{cycles.length} shown</div>
         </div>
-      ) : q.isError ? (
-        <div className="p-6 text-center text-sm text-[var(--color-negative)] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl">
-          Couldn’t load forge state. Is the loop wired? <code className="text-xs">/api/forge/state</code>
-        </div>
-      ) : q.data ? (
-        <div key={variant} className="forge-rise">
-          {variant === 'A' ? <VariantForge state={q.data} />
-            : variant === 'B' ? <VariantMissionControl state={q.data} />
-              : variant === 'C' ? <VariantGauntlet state={q.data} />
-                : <VariantNotebook state={q.data} />}
-        </div>
-      ) : null}
+        {cycles.length === 0 ? (
+          <Card className="p-6 text-center text-sm text-[var(--color-text-muted)]">No runs yet — the forge fires tonight.</Card>
+        ) : (
+          <div className="space-y-2">
+            {cycles.map((c, i) => <RunCard key={c.id || i} cycle={c} />)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

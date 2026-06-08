@@ -1,7 +1,7 @@
 """Forge monitor API — aggregates live Hephaestus autonomous-research-loop state.
 
 Single read endpoint GET /api/forge/state. Reads (best-effort, never 500s) from:
-  - /root/hephaestus/agent/run_log.jsonl       (per-cycle outcomes)
+  - /root/hephaestus/agent/run_log.jsonl       (per-cycle outcomes — full proposal + verdict)
   - /root/research-wiki/.registry/*.jsonl       (FDR family registry + rising bar)
   - /root/research-wiki/candidates.md           (scout candidate queue)
   - /root/research-wiki/experiments|sources/    (counts)
@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import glob
 import json
-import os
 import re
 import subprocess
 from datetime import datetime
@@ -23,7 +22,7 @@ from fastapi.security import HTTPBasicCredentials
 
 try:
     from services.auth import check_auth
-except Exception:  # pragma: no cover - auth optional in some test harnesses
+except Exception:  # pragma: no cover
     def check_auth():  # type: ignore
         return None
 
@@ -44,41 +43,39 @@ def _read_jsonl(path: Path) -> list[dict]:
         with open(path) as fh:
             for line in fh:
                 line = line.strip()
-                if not line:
-                    continue
-                try:
-                    out.append(json.loads(line))
-                except Exception:
-                    continue
+                if line:
+                    try:
+                        out.append(json.loads(line))
+                    except Exception:
+                        pass
     except FileNotFoundError:
         pass
     return out
 
 
+def _num(v):
+    return v if isinstance(v, (int, float)) else None
+
+
+def _clip(v, n=400):
+    return (str(v)[:n] if v is not None else None)
+
+
 def _systemctl_status() -> dict:
-    info = {"enabled": False, "next_run_ms": None, "next_run_str": None, "last_trigger_str": None}
+    info = {"enabled": False, "next_run_str": None, "last_trigger_str": None}
     try:
-        en = subprocess.run(
-            ["systemctl", "is-enabled", "hephaestus-cycle.timer"],
-            capture_output=True, text=True, timeout=4,
-        )
+        en = subprocess.run(["systemctl", "is-enabled", "hephaestus-cycle.timer"],
+                            capture_output=True, text=True, timeout=4)
         info["enabled"] = en.stdout.strip() == "enabled"
         show = subprocess.run(
             ["systemctl", "show", "hephaestus-cycle.timer",
              "-p", "NextElapseUSecRealtime", "-p", "LastTriggerUSec"],
-            capture_output=True, text=True, timeout=4,
-        ).stdout
+            capture_output=True, text=True, timeout=4).stdout
         for ln in show.splitlines():
             if ln.startswith("NextElapseUSecRealtime="):
                 info["next_run_str"] = ln.split("=", 1)[1].strip() or None
             elif ln.startswith("LastTriggerUSec="):
                 info["last_trigger_str"] = ln.split("=", 1)[1].strip() or None
-        # parse "Tue 2026-06-09 03:30:00 AEST" -> local-naive epoch ms (server runs AEST)
-        if info["next_run_str"]:
-            m = re.search(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", info["next_run_str"])
-            if m:
-                dt = datetime.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")
-                info["next_run_ms"] = int(dt.timestamp() * 1000)
     except Exception:
         pass
     return info
@@ -88,68 +85,83 @@ def _parse_cycles(rows: list[dict]) -> list[dict]:
     cycles = []
     for o in rows:
         v = o.get("verdict") or {}
-        prop = o.get("proposal") or {}
+        p = o.get("proposal") or {}
         ran = bool(o.get("ran"))
-        passed = bool(o.get("passed_all"))
+        passed = bool(o.get("passed_all") or v.get("PASSED_ALL_GATES"))
         tier = v.get("tier") or ("PASS" if passed else None)
         status = "pass" if passed else ("fail" if ran else "error")
+        ss, hs = _num(v.get("search_sharpe")), _num(v.get("holdout_sharpe"))
+        degradation = None
+        if ss not in (None, 0) and hs is not None:
+            degradation = round((hs / ss - 1) * 100, 1)
         cycles.append({
             "ts": o.get("ts"),
             "id": o.get("id"),
-            "title": o.get("title") or prop.get("title") or "(untitled)",
-            "premium": (prop.get("premium") or "")[:160],
-            "market": (prop.get("market") or "")[:120],
+            "title": o.get("title") or p.get("title") or "(untitled)",
+            "status": status,
             "ran": ran,
             "tier": tier,
             "passed_all": passed,
-            "holdout_pass": v.get("holdout_pass"),
-            "dsr": v.get("dsr"),
-            "status": status,
+            "family": v.get("family"),
+            "premium": _clip(p.get("premium"), 240),
+            "market": _clip(p.get("market"), 200),
+            "hypothesis": {
+                "signal_approach": _clip(p.get("signal_approach"), 600),
+                "why_not_duplicate": _clip(p.get("why_not_duplicate"), 500),
+                "pairs_with": _clip(p.get("pairs_with"), 300),
+                "prior": _clip(p.get("prior"), 60),
+            },
+            "data": {
+                "free_or_owned": _clip(p.get("free_or_owned"), 200),
+                "data_source": _clip(p.get("data_source"), 300),
+                "gate0_data_check": _clip(p.get("gate0_data_check"), 500),
+            },
+            "metrics": {
+                "search_sharpe": ss,
+                "holdout_sharpe": hs,
+                "degradation_pct": degradation,
+                "holdout_pass": v.get("holdout_pass"),
+                "holdout_reasons": v.get("holdout_reasons") or [],
+                "full_sharpe": _num(v.get("full_sharpe")),
+                "full_maxdd": _num(v.get("full_maxdd")),
+                "n_trades": _num(v.get("n_trades")),
+                "dsr": _num(v.get("dsr")),
+                "median_cpcv": _num(v.get("median_cpcv")),
+                "pbo": _num(v.get("pbo")),
+                "deployment_passed": v.get("deployment_passed"),
+                "promote_bar": _num(v.get("promote_bar")),
+                "n_families": _num(v.get("n_families")),
+            },
         })
-    cycles.reverse()  # newest first
+    cycles.reverse()
     return cycles
 
 
 def _parse_registry(rows: list[dict]) -> dict:
-    families = []
-    history = []
-    seen = set()
+    families, history, seen = [], [], set()
     bar = 0.90
     for r in rows:
-        pd = r.get("promote_dsr")
-        if isinstance(pd, (int, float)):
-            history.append(round(float(pd), 4))
-            bar = max(bar, float(pd))
+        pd = _num(r.get("promote_dsr"))
+        if pd is not None:
+            history.append(round(pd, 4))
+            bar = max(bar, pd)
         fam = r.get("family")
         if fam and fam not in seen:
             seen.add(fam)
-            families.append({
-                "family": fam,
-                "tier": r.get("tier"),
-                "dsr": r.get("dsr"),
-                "promote_dsr": r.get("promote_dsr"),
-                "n_families": r.get("n_families"),
-                "passed_all": bool(r.get("passed_all")),
-            })
-    return {
-        "bar": round(bar, 4),
-        "n_families": len(seen),
-        "families": families,
-        "history": history,
-    }
+            families.append({"family": fam, "tier": r.get("tier"),
+                             "dsr": _num(r.get("dsr")), "passed_all": bool(r.get("passed_all"))})
+    return {"bar": round(bar, 4), "n_families": len(seen), "families": families, "history": history}
 
 
 _CAND_RE = re.compile(r"^- \*\*(.+?)\*\*\s*\((.*?)\)\s*[—-]\s*(.*)$")
 
 
 def _parse_candidates(path: Path) -> list[dict]:
-    out: list[dict] = []
-    seen: set[str] = set()
+    out, seen = [], set()
     try:
         lines = path.read_text().splitlines()
     except FileNotFoundError:
         return out
-    # newest blocks are appended at the bottom -> walk in reverse so newest wins dedup
     for ln in reversed(lines):
         m = _CAND_RE.match(ln.strip())
         if not m:
@@ -159,31 +171,29 @@ def _parse_candidates(path: Path) -> list[dict]:
         if key in seen:
             continue
         seen.add(key)
-        data_m = re.search(r"\[data:\s*(.*?)\]", rest)
-        data_note = (data_m.group(1) if data_m else "").strip()
+        dm = re.search(r"\[data:\s*(.*?)\]", rest)
+        data_note = (dm.group(1) if dm else "").strip()
         free = bool(re.search(r"\b(free|owned)\b", data_note, re.I))
-        summary = rest.split("[data:")[0].split(" src:")[0].strip()
-        out.append({
-            "title": title,
-            "tags": tags,
-            "summary": summary[:320],
-            "data_note": data_note[:140],
-            "free": free,
-        })
+        out.append({"title": title, "tags": tags,
+                    "summary": rest.split("[data:")[0].split(" src:")[0].strip()[:320],
+                    "data_note": data_note[:140], "free": free})
     return out
 
 
-def _count_glob(pattern: str) -> int:
+def _count(pattern: str) -> int:
     try:
         return len(glob.glob(pattern))
     except Exception:
         return 0
 
 
+def _pct(a: int, b: int) -> str:
+    return f"{round(100 * a / b)}%" if b else "—"
+
+
 @router.get("/state")
 def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
-    rows = _read_jsonl(RUN_LOG)
-    cycles = _parse_cycles(rows)
+    cycles = _parse_cycles(_read_jsonl(RUN_LOG))
     reg_rows: list[dict] = []
     for p in sorted(glob.glob(REGISTRY_GLOB)):
         reg_rows.extend(_read_jsonl(Path(p)))
@@ -192,58 +202,73 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
 
     status = _systemctl_status()
     status["running"] = not LOOP_DISABLED.exists()
-    last_cycle_ts = cycles[0]["ts"] if cycles else None
-    status["last_cycle_ts"] = last_cycle_ts
+    status["last_cycle_ts"] = cycles[0]["ts"] if cycles else None
 
-    n_experiments = _count_glob(str(WIKI / "experiments" / "*.md"))
-    n_sources = _count_glob(str(WIKI / "sources" / "*.md"))
-    n_premia = _count_glob(str(WIKI / "premia" / "*.md"))
-    n_patterns = _count_glob(str(WIKI / "patterns" / "*.md"))
-    n_passes = sum(1 for c in cycles if c["passed_all"])
+    n_exp = _count(str(WIKI / "experiments" / "*.md"))
+    n_src = _count(str(WIKI / "sources" / "*.md"))
+    n_premia = _count(str(WIKI / "premia" / "*.md"))
+    n_pat = _count(str(WIKI / "patterns" / "*.md"))
+    wiki_pages = n_exp + n_src + n_premia + n_pat
+
+    n_cycles = len(cycles)
     n_ran = sum(1 for c in cycles if c["ran"])
+    n_pass = sum(1 for c in cycles if c["passed_all"])
+    n_err = sum(1 for c in cycles if c["status"] == "error")
+    n_fail = n_cycles - n_pass - n_err
+    free_cand = sum(1 for c in candidates if c["free"])
+    # nearest miss = best holdout sharpe across runs (how close anything got)
+    best_h = max((c["metrics"]["holdout_sharpe"] for c in cycles
+                  if c["metrics"]["holdout_sharpe"] is not None), default=None)
 
-    counts = {
-        "cycles": len(cycles),
-        "ran": n_ran,
-        "passes": n_passes,
-        "experiments": n_experiments,
-        "sources": n_sources,
-        "candidates": len(candidates),
-        "families": fdr["n_families"],
-        "wiki_pages": n_experiments + n_sources + n_premia + n_patterns,
-    }
-
-    # pipeline stages (Variant A) — counts that flow through the loop
     pipeline = [
-        {"key": "scout", "label": "Scout", "icon": "telescope", "count": n_sources,
-         "sub": "web research runs"},
-        {"key": "propose", "label": "Propose", "icon": "lightbulb", "count": len(candidates),
-         "sub": "candidates queued"},
-        {"key": "codegen", "label": "Codegen", "icon": "code", "count": n_ran,
-         "sub": "strategies written"},
-        {"key": "run", "label": "Rails", "icon": "shield", "count": len(cycles),
-         "sub": "cycles tested"},
-        {"key": "record", "label": "Record", "icon": "book", "count": n_experiments,
-         "sub": "experiments logged"},
-        {"key": "alert", "label": "Alert", "icon": "bell", "count": n_passes,
-         "sub": "full-gate passes"},
+        {"key": "scout", "label": "Scout", "icon": "🔭", "count": n_src, "accent": False,
+         "stats": [{"label": "research runs", "value": n_src},
+                   {"label": "candidates found", "value": len(candidates)},
+                   {"label": "free-data", "value": _pct(free_cand, len(candidates))}]},
+        {"key": "propose", "label": "Propose", "icon": "💡", "count": len(candidates), "accent": False,
+         "stats": [{"label": "queued", "value": len(candidates)},
+                   {"label": "free", "value": free_cand},
+                   {"label": "data-gated", "value": len(candidates) - free_cand}]},
+        {"key": "codegen", "label": "Codegen", "icon": "⚙️", "count": n_ran, "accent": False,
+         "stats": [{"label": "coded", "value": n_ran},
+                   {"label": "build-success", "value": _pct(n_ran, max(n_cycles, 1))},
+                   {"label": "self-repair", "value": "on"}]},
+        {"key": "run", "label": "Rails", "icon": "🛡️", "count": n_cycles, "accent": False,
+         "stats": [{"label": "tested", "value": n_cycles},
+                   {"label": "failed", "value": n_fail + n_err},
+                   {"label": "passed", "value": n_pass}]},
+        {"key": "record", "label": "Record", "icon": "📖", "count": n_exp, "accent": False,
+         "stats": [{"label": "experiments", "value": n_exp},
+                   {"label": "FDR families", "value": fdr["n_families"]},
+                   {"label": "wiki pages", "value": wiki_pages}]},
+        {"key": "alert", "label": "Alert", "icon": "🔔", "count": n_pass, "accent": n_pass > 0,
+         "stats": [{"label": "passes", "value": n_pass},
+                   {"label": "alerts sent", "value": n_pass},
+                   {"label": "best holdout Sh", "value": (f"{best_h:.2f}" if best_h is not None else "—")}]},
     ]
 
-    # log tail
+    summary = {
+        "cycles": n_cycles, "ran": n_ran, "passes": n_pass, "fails": n_fail, "errors": n_err,
+        "pass_rate": _pct(n_pass, max(n_cycles, 1)),
+        "experiments": n_exp, "sources": n_src, "candidates": len(candidates),
+        "families": fdr["n_families"], "wiki_pages": wiki_pages,
+        "fdr_bar": fdr["bar"], "best_holdout_sharpe": best_h,
+    }
+
     log_tail: list[str] = []
     try:
         if CYCLE_LOG.exists():
-            log_tail = CYCLE_LOG.read_text(errors="replace").splitlines()[-40:]
+            log_tail = CYCLE_LOG.read_text(errors="replace").splitlines()[-30:]
     except Exception:
         pass
 
     return {
         "generated_at": datetime.now().isoformat(),
         "status": status,
-        "counts": counts,
+        "summary": summary,
         "fdr": fdr,
         "pipeline": pipeline,
-        "cycles": cycles[:40],
+        "cycles": cycles[:50],
         "candidates": candidates[:14],
         "log_tail": log_tail,
     }
