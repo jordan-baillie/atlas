@@ -23,9 +23,6 @@ const FinanceTab = lazy(() =>
 const ForgeTab = lazy(() =>
   import('./components/forge/ForgeTab').then((m) => ({ default: m.ForgeTab })),
 )
-const RemediationTab = lazy(() =>
-  import('./components/error_remediation/RemediationTab').then((m) => ({ default: m.RemediationTab })),
-)
 const ControlsTab = lazy(() =>
   import('./components/controls/ControlsTab').then((m) => ({ default: m.ControlsTab })),
 )
@@ -46,7 +43,7 @@ function TabFallback() {
 
 export default function App() {
   useTheme()
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'forge' | 'remediation' | 'controls' | 'midas'>('portfolio')
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'finance' | 'forge' | 'controls' | 'midas'>('portfolio')
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
@@ -60,7 +57,6 @@ export default function App() {
                 {activeTab === 'portfolio' ? <PortfolioTab />
                  : activeTab === 'finance' ? <FinanceTab />
                  : activeTab === 'forge' ? <ForgeTab />
-                 : activeTab === 'remediation' ? <RemediationTab />
                  : activeTab === 'midas' ? <MidasTab />
                  : <ControlsTab />}
               </div>
