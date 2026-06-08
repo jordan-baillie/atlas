@@ -35,4 +35,9 @@ All 3 rails (holdout quarantine + FDR-aware promote bar + deployment-sanity). Gr
 
 **KILL** (→ CLOSE the Atlas equity edge-search; the combine-the-learnings swing exhausted) if ANY fails.
 
+## VERDICT 2026-06-08: TIER = FAIL → KILL (equity edge-search CLOSED)
+Primary (default w_mom 0.34): CPCV median **0.347** (the BEST primary of any of the 24 families — diversification helped, exactly as theory predicts — but still < 0.5), DSR eff-N **0.635** (< 0.90), PBO **0.656** (high → overfit-prone), frac+ 0.80. Best grid cfg7 (w_mom 0.34, top_pct 0.2) cpcv 0.315. Holdout NOT burned (failed in-search tier). Artifact: `backtest/results/search/battery_cross_sectional_value_momentum_shm.json`.
+
+**The diversified composite of all our real-but-weak orthogonal signals (value+quality+momentum) is the strongest result obtained — and it still fails the bar.** This is the cleanest possible confirmation of the failure diagnostic (`research/brain/hypotheses/edge_bound_diagnostic_2026-06-08.md`): we are EDGE-bound, not gate-bound, across every signal axis AND their best combination. Atlas equity edge-search is honestly exhausted at this scale. Attention to Hermes.
+
 **Honest prior:** LOW. After 24 nulls the FDR bar is ~0.98; combining two weak signals improves robustness but rarely manufactures a strong edge where the components were weak. This run's value is decisive closure either way — it is the LAST principled equity probe, not the start of a scour. If it fails, the disciplined conclusion is "no deployable equity edge at this scale," and attention stays on Hermes.
