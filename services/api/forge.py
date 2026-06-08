@@ -156,6 +156,23 @@ def _parse_registry(rows: list[dict]) -> dict:
 _CAND_RE = re.compile(r"^- \*\*(.+?)\*\*\s*\((.*?)\)\s*[—-]\s*(.*)$")
 
 
+def _work_queue() -> dict:
+    """The ACTUAL Phase-3 multi-agent claim queue (research-wiki/.queue/queue.jsonl) — distinct from
+    the scout candidate list. status: queued -> claimed -> done."""
+    p = WIKI / ".queue" / "queue.jsonl"
+    out = {"queued": 0, "claimed": 0, "done": 0}
+    try:
+        for line in p.read_text().splitlines():
+            line = line.strip()
+            if line:
+                st = json.loads(line).get("status")
+                if st in out:
+                    out[st] += 1
+    except FileNotFoundError:
+        pass
+    return out
+
+
 def _parse_candidates(path: Path) -> list[dict]:
     out, seen = [], set()
     try:
@@ -199,6 +216,7 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
         reg_rows.extend(_read_jsonl(Path(p)))
     fdr = _parse_registry(reg_rows)
     candidates = _parse_candidates(CANDIDATES)
+    work_q = _work_queue()  # the ACTUAL Phase-3 claim queue (DISTINCT from scout candidates)
 
     status = _systemctl_status()
     status["running"] = not LOOP_DISABLED.exists()
@@ -226,12 +244,12 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
                    {"label": "candidates found", "value": len(candidates)},
                    {"label": "free-data", "value": _pct(free_cand, len(candidates))}]},
         {"key": "propose", "label": "Propose", "icon": "💡", "count": len(candidates), "accent": False,
-         "stats": [{"label": "queued", "value": len(candidates)},
+         "stats": [{"label": "scout ideas", "value": len(candidates)},
                    {"label": "free", "value": free_cand},
                    {"label": "data-gated", "value": len(candidates) - free_cand}]},
         {"key": "codegen", "label": "Codegen", "icon": "⚙️", "count": n_ran, "accent": False,
-         "stats": [{"label": "coded", "value": n_ran},
-                   {"label": "build-success", "value": _pct(n_ran, max(n_cycles, 1))},
+         "stats": [{"label": "work queue", "value": work_q["queued"] + work_q["claimed"]},
+                   {"label": "coded", "value": n_ran},
                    {"label": "self-repair", "value": "on"}]},
         {"key": "run", "label": "Rails", "icon": "🛡️", "count": n_cycles, "accent": False,
          "stats": [{"label": "tested", "value": n_cycles},
@@ -253,6 +271,7 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
         "experiments": n_exp, "sources": n_src, "candidates": len(candidates),
         "families": fdr["n_families"], "wiki_pages": wiki_pages,
         "fdr_bar": fdr["bar"], "best_holdout_sharpe": best_h,
+        "work_queue": work_q["queued"] + work_q["claimed"], "scout_ideas": len(candidates),
     }
 
     log_tail: list[str] = []
