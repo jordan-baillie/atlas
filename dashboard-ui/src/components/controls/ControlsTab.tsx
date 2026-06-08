@@ -13,8 +13,11 @@ import type { LifecycleRow } from '../../api/lifecycle'
 
 function SectionHeader({ children }: { children: string }) {
   return (
-    <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold mb-3">
-      {children}
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-0.5 h-3.5 rounded-full bg-[var(--color-border)]" />
+      <span className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] font-semibold">
+        {children}
+      </span>
     </div>
   )
 }

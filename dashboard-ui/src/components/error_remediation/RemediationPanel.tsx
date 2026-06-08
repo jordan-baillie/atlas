@@ -121,7 +121,7 @@ export function RemediationPanel() {
       <div className={`bg-[var(--color-surface)] border rounded-xl p-5 ${health.ok ? 'border-[var(--color-border)]' : 'border-[var(--color-red)]'}`}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Auto-Remediation Status</div>
+            <div className="flex items-center gap-2 mb-2"><span className="w-0.5 h-3.5 rounded-full bg-[var(--color-border)]" /><span className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] font-semibold">Auto-Remediation Status</span></div>
             <div className="flex items-center gap-2 mb-1.5">
               <StatusDot
                 status={health.halt_active ? 'red' : summary.dry_run ? 'amber' : 'green'}
@@ -165,7 +165,7 @@ export function RemediationPanel() {
 
       {/* Health diagnostics */}
       <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
-        <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-medium mb-3">Health Diagnostics</div>
+        <div className="flex items-center gap-2 mb-3"><span className="w-0.5 h-3.5 rounded-full bg-[var(--color-border)]" /><span className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] font-semibold">Health Diagnostics</span></div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Backlog</div>
