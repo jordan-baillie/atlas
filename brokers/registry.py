@@ -51,6 +51,11 @@ def _register_defaults():
         _BROKER_FACTORIES["ib"] = _make_ib_broker
     except Exception as e:
         logger.debug(f"ib broker not available (install: pip install ib_insync): {e}")
+    try:
+        from brokers.ib_web.broker import IBWebBroker  # noqa: F401
+        _BROKER_FACTORIES["ib_web"] = _make_ib_web_broker
+    except Exception as e:
+        logger.debug(f"ib_web broker not available: {e}")
 
 
 def available_brokers() -> list[str]:
@@ -63,7 +68,7 @@ def available_brokers() -> list[str]:
 # Public API
 # ═══════════════════════════════════════════════════════════════
 
-_KNOWN_BROKERS = ("alpaca", "ib")
+_KNOWN_BROKERS = ("alpaca", "ib", "ib_web")
 
 
 def get_broker(market_id: str, config: Dict[str, Any]) -> Optional[BrokerAdapter]:
@@ -196,3 +201,10 @@ def _make_ib_broker(
 ) -> BrokerAdapter:
     from brokers.ib.broker import IBBroker
     return IBBroker(config)
+
+
+def _make_ib_web_broker(
+    market_id: str, config: Dict[str, Any], live: bool = False, **kwargs,
+) -> BrokerAdapter:
+    from brokers.ib_web.broker import IBWebBroker
+    return IBWebBroker(config)
