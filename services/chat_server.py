@@ -172,24 +172,14 @@ async def add_security_headers(request: Request, call_next):
 
 
 # ── Sub-package routers (Phase 1 extraction — docs/phase-c-god-file-decomposition.md) ──
-from services.api.finance import router as _finance_router  # noqa: E402
-from services.api.up_webhook import router as _up_webhook_router  # noqa: E402
-from services.api.regime import router as _regime_router   # noqa: E402
 from services.api.portfolio import router as _portfolio_router  # noqa: E402
 from services.api.health import router as _health_router       # noqa: E402
-from services.api.risk import router as _risk_router           # noqa: E402
-from services.api.knowledge import router as _knowledge_router  # noqa: E402
-from services.api.promotions import router as _promotions_router  # noqa: E402
 from services.api.dashboard import router as _dashboard_router  # noqa: E402
-from services.api.approvals import router as _approvals_router  # noqa: E402
 from services.api.chat_sessions import router as _chat_sessions_router  # noqa: E402
-from services.api.monitor_legacy import router as _monitor_legacy_router  # noqa: E402
 from services.ws.chat import router as _ws_chat_router  # noqa: E402
-from services.api.admin import router as _admin_router  # noqa: E402
-from services.api.lifecycle import router as _lifecycle_router  # noqa: E402
-from services.api.paper_progress import router as _paper_progress_router  # noqa: E402
 from services.api.midas import router as _midas_router  # noqa: E402
 from services.api.forge import router as _forge_router  # noqa: E402
+from services.api.live import router as _live_router  # noqa: E402
 from services.api.static_serve import router as _static_serve_router  # noqa: E402
 
 # ── Re-export shims (backward-compat for tests importing from chat_server) ────
@@ -198,36 +188,20 @@ from services.api.dashboard import (  # noqa: F401
     _calc_tiingo_daily_pnl,
     _build_dashboard_data,
 )
-from services.api.approvals import (  # noqa: F401
-    _approve_and_execute,
-    _execute_live,
-    _reject_plan,
-    PlanRequest,
-)
 from services.auth import check_auth  # noqa: F401 — re-exported for backward compat (tests)
 
-app.include_router(_finance_router)
-app.include_router(_up_webhook_router)
-app.include_router(_regime_router)
 app.include_router(_portfolio_router)
 app.include_router(_health_router)
-app.include_router(_risk_router)
-app.include_router(_knowledge_router)
-app.include_router(_promotions_router)
 app.include_router(_dashboard_router)
-app.include_router(_approvals_router)
 app.include_router(_chat_sessions_router)
-app.include_router(_monitor_legacy_router)
 app.include_router(_ws_chat_router)
-app.include_router(_admin_router)
 # Note: lifecycle endpoints live exclusively in services/api/lifecycle.py.
 # An orphan strategy_lifecycle.py was deleted 2026-05-14 (commit edfe6efa).
 # Future routers MUST be mounted here via app.include_router() and live under
 # services/api/ (or services/ws/ for WebSocket routers).
-app.include_router(_lifecycle_router)
 app.include_router(_midas_router)
 app.include_router(_forge_router)
-app.include_router(_paper_progress_router)
+app.include_router(_live_router)
 # IMPORTANT: static_serve router must be LAST — contains /{path:path} catch-all
 app.include_router(_static_serve_router)
 
