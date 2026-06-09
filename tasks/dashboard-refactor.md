@@ -41,3 +41,16 @@ useShowAllUniverses + `api/lifecycle.ts`.
 2. Frontend: delete dead components/hooks/queries; slim PortfolioTab; build LiveTab; update TabBar/App.
 3. `npm run build` green → restart atlas-dashboard → HTTP 200 → smoke each tab.
 4. Delete dead tests; commit in reviewable steps.
+
+---
+## DONE (2026-06-09) — review
+Executed in 3 verified commits (backend → frontend → cleanup), build + dashboard 200 throughout.
+- **Backend:** API ~50 → **15 routes**. Deleted 11 dead swing routers (regime, risk, knowledge, promotions,
+  approvals, monitor_legacy, admin, lifecycle, paper_progress, finance, up_webhook) + their tests; stripped dead
+  endpoints from portfolio.py/health.py; retired `registry.get_live_executor`; **NEW `/api/live`**.
+- **Frontend:** 5 mostly-dead tabs → **4 clean tabs** (Forge · Portfolio-slim · Live[NEW] · Midas). Deleted
+  Finance(18)+Controls(8)+10 swing Portfolio comps + 3 lifecycle hooks/modals + api/lifecycle.ts + 7 orphans;
+  slimmed queries.ts/PortfolioTab/Header/DataFreshnessChip; trimmed keys.ts. **NEW LiveTab** = kill-switch +
+  deployed strategies + latest shadow run (`/api/live`). src ~70 → **47 files**.
+- **Left intact:** dormant chat router/ws (not swing) + types.ts (type-only, erased at compile).
+- **Remaining (optional):** visual smoke of the 4 tabs via Playwright; trim types.ts dead defs.
