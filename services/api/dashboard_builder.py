@@ -542,6 +542,11 @@ def build_orders_section(orders_info: list) -> list:
 
 # ── Equity curve section ──────────────────────────────────────────────────────
 
+# Paper Book reset baseline — the equity curve + return % reflect ONLY the forge era, not the retired swing
+# system that previously traded this paper account. Pre-inception (swing-era) Alpaca history is ignored.
+PAPER_BOOK_INCEPTION = "2026-06-09"
+
+
 def build_equity_curve_section(
     portfolio_history_raw: list,
     live_equity: float,
@@ -609,6 +614,8 @@ def build_equity_curve_section(
                 last_row["equity"] = live_equity
                 last_row["value"] = live_equity
 
+    # Paper Book: ignore the retired swing era — keep only forge-era points (>= inception).
+    portfolio_history = [p for p in portfolio_history if str(p.get("date", "")) >= PAPER_BOOK_INCEPTION]
     return portfolio_history
 
 
@@ -835,11 +842,14 @@ def build_pnl_summary(
         "max_positions": config.get("risk", {}).get("max_open_positions", 10),
     }
 
-    # Portfolio return_pct from first to last equity curve point
+    # Portfolio return_pct from first to last equity curve point.
+    # Set 0.0 explicitly for a just-started Paper Book (<2 points) so the UI does NOT fall back to the
+    # legacy total_pnl_pct (which is computed vs the retired swing system's tiny allocated starting_equity).
     if len(portfolio_history) >= 2:
         _first_eq = portfolio_history[0].get("equity") or 0
         _last_eq = portfolio_history[-1].get("equity") or 0
-        if _first_eq > 0:
-            summary["return_pct"] = round((_last_eq / _first_eq - 1) * 100, 2)
+        summary["return_pct"] = round((_last_eq / _first_eq - 1) * 100, 2) if _first_eq > 0 else 0.0
+    else:
+        summary["return_pct"] = 0.0
 
     return summary
