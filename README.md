@@ -2,7 +2,15 @@
 
 # ⚡ Atlas
 
-**Macro-adaptive, multi-asset portfolio engine. Quantitative regime model → multi-asset strategies → AI tighten-only overlay.**
+**Live-execution PLATFORM for the forge→live system** (broker substrate + reconciliation + kill-switch + dashboard).
+
+> ⚠️ **2026-06-09 — "old Atlas is no more".** The original equity-research + swing-trading system (regime model,
+> strategies, backtest engine, overlay, research loop) was REMOVED. Atlas is now an execution-only platform:
+> strategy DISCOVERY lives in the forge (`/root/hephaestus`), the rails in `/root/shared/research_integrity`.
+> **Read `memory/SUMMARY.md` first.** Plan: `tasks/ATLAS_REFACTOR_PLAN.md` + `tasks/LIVE_INTEGRATION_MAP.md`.
+> Docs below this banner describe the PRE-refactor system and are being updated.
+
+<sub>(historical) Macro-adaptive, multi-asset portfolio engine. Quantitative regime model → multi-asset strategies → AI tighten-only overlay.</sub>
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Architecture](https://img.shields.io/badge/architecture-v2.0_three--layer-7C4DFF?style=flat-square)](docs/ARCHITECTURE.md)
