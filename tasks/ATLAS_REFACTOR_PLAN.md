@@ -33,11 +33,10 @@ approvals.py` (50), `core/reconcile.py` (2), `monitor/health_writer.py` (1), `co
 `risk/cross_universe_guard.py`. → Replaced by the new **target_executor** + a simpler target-rebalance approval flow.
 
 ## Staged execution (small reviewable commits; verify services stay up at each step)
-- **Phase 0 — clean baseline.** Commit/clear the 608 pending changes so the refactor is isolated + revertible.
-  Tag `pre-refactor`.
-- **Phase 1 — Tier 1 deletion (the big safe win).** Remove the research/swing cluster + their scripts/tests +
-  fix the utils/helpers indicators leak. Verify: substrate imports clean, the 4 running services + dashboard +
-  reconcile-shadow + risk-precompute still start. Commit per-subsystem.
+- **Phase 0 — clean baseline. ✅ DONE** (commit 690e573, tag `pre-refactor`).
+- **Phase 1 — Tier 1 deletion. ✅ DONE** (commit c3a6178). Removed the 8-dir cluster + ~20 old scripts + 43
+  broken tests + stragglers + indicators TA re-exports. Source .py 493→320. Verified: imports clean, dashboard
+  HTTP 200, telegram/dashboard active, reconcile-shadow + risk-precompute timer scripts intact.
 - **Phase 2 — build the new pieces (additive, separate milestone).** `brokers/target_executor.py`,
   `brokers/ib/` adapter, `live/track_expectation.py` (Phase-4 tasks #5/#6/#8).
 - **Phase 3 — Tier 2 replacement.** Once target_executor works: retire plan.py + live_executor.py, replace the
