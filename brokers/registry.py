@@ -162,8 +162,9 @@ def get_live_executor(config: Dict[str, Any]) -> Optional["LiveExecutor"]:
         )
         return None
 
-    from brokers.live_executor import LiveExecutor
-    return LiveExecutor(config)
+    # Tier-2 LiveExecutor retired 2026-06-09 (replaced by brokers/target_executor.py + live/daily.py).
+    logger.debug("get_live_executor: Tier-2 executor retired; use TargetExecutor/live.daily")
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════
