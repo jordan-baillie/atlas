@@ -1,3 +1,6 @@
+> ⚠️ **PRE-REFACTOR (2026-06-09).** This describes the OLD three-layer research/strategy/overlay Atlas, now
+> removed. Atlas is an execution-only platform — see `memory/SUMMARY.md` + `tasks/LIVE_INTEGRATION_MAP.md`.
+
 # Atlas — Three-Layer Adaptive Architecture
 
 **Version:** 2.0
