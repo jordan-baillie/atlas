@@ -1,6 +1,6 @@
-import { preloadPortfolioTab, preloadForgeTab, preloadLiveTab, preloadMidasTab } from '../../lib/preloaders'
+import { preloadPortfolioTab, preloadForgeTab, preloadLiveTab } from '../../lib/preloaders'
 
-type TabId = 'forge' | 'portfolio' | 'live' | 'midas'
+type TabId = 'forge' | 'portfolio' | 'live'
 
 interface TabBarProps {
   activeTab: TabId
@@ -11,7 +11,6 @@ const preloaders: Record<string, () => void> = {
   forge: preloadForgeTab,
   portfolio: preloadPortfolioTab,
   live: preloadLiveTab,
-  midas: preloadMidasTab,
 }
 
 export function TabBar({ activeTab, onChange }: TabBarProps) {
@@ -19,7 +18,6 @@ export function TabBar({ activeTab, onChange }: TabBarProps) {
     { id: 'forge', label: '🔥 Forge' },
     { id: 'portfolio', label: 'Paper Book' },
     { id: 'live', label: 'Live' },
-    { id: 'midas', label: 'Midas' },
   ]
 
   return (

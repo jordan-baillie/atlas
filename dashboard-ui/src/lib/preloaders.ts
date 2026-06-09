@@ -4,4 +4,3 @@
 export const preloadPortfolioTab = () => import('../components/portfolio/PortfolioTab')
 export const preloadForgeTab = () => import('../components/forge/ForgeTab')
 export const preloadLiveTab = () => import('../components/live/LiveTab')
-export const preloadMidasTab = () => import('../components/midas/MidasTab')

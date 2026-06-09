@@ -177,7 +177,6 @@ from services.api.health import router as _health_router       # noqa: E402
 from services.api.dashboard import router as _dashboard_router  # noqa: E402
 from services.api.chat_sessions import router as _chat_sessions_router  # noqa: E402
 from services.ws.chat import router as _ws_chat_router  # noqa: E402
-from services.api.midas import router as _midas_router  # noqa: E402
 from services.api.forge import router as _forge_router  # noqa: E402
 from services.api.live import router as _live_router  # noqa: E402
 from services.api.static_serve import router as _static_serve_router  # noqa: E402
@@ -199,7 +198,6 @@ app.include_router(_ws_chat_router)
 # An orphan strategy_lifecycle.py was deleted 2026-05-14 (commit edfe6efa).
 # Future routers MUST be mounted here via app.include_router() and live under
 # services/api/ (or services/ws/ for WebSocket routers).
-app.include_router(_midas_router)
 app.include_router(_forge_router)
 app.include_router(_live_router)
 # IMPORTANT: static_serve router must be LAST — contains /{path:path} catch-all

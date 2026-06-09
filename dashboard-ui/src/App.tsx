@@ -14,9 +14,6 @@ const ForgeTab = lazy(() =>
 const LiveTab = lazy(() =>
   import('./components/live/LiveTab').then((m) => ({ default: m.LiveTab })),
 )
-const MidasTab = lazy(() =>
-  import('./components/midas/MidasTab').then((m) => ({ default: m.MidasTab })),
-)
 
 function TabFallback() {
   return (
@@ -29,7 +26,7 @@ function TabFallback() {
 
 export default function App() {
   useTheme()
-  const [activeTab, setActiveTab] = useState<'forge' | 'portfolio' | 'live' | 'midas'>('forge')
+  const [activeTab, setActiveTab] = useState<'forge' | 'portfolio' | 'live'>('forge')
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
@@ -42,8 +39,7 @@ export default function App() {
               <div key={activeTab} className="animate-in">
                 {activeTab === 'forge' ? <ForgeTab />
                  : activeTab === 'portfolio' ? <PortfolioTab />
-                 : activeTab === 'live' ? <LiveTab />
-                 : <MidasTab />}
+                 : <LiveTab />}
               </div>
             </Suspense>
           </ErrorBoundary>
