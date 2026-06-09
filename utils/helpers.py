@@ -143,20 +143,6 @@ def format_pct(value: float, decimals: int = 2, multiply: bool = True) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Technical Indicators (relocated to indicators.technical 2026-05-11)
-# ---------------------------------------------------------------------------
-# Re-exported for backward compatibility. New code should import from
-# indicators directly: `from indicators import calc_atr, calc_rsi, ...`
-from indicators.technical import (  # noqa: F401, E402
-    calc_atr,
-    calc_rsi,
-    calc_zscore,
-    calc_volume_ratio,
-    calc_wvf,
-    calc_ibs,
-)
-
-# ---------------------------------------------------------------------------
 # Position Sizing
 # ---------------------------------------------------------------------------
 
@@ -305,23 +291,6 @@ if __name__ == "__main__":
     print(f"  format_pct(0.0523)     = {format_pct(0.0523)}")
     print(f"  format_pct(-0.032)     = {format_pct(-0.032)}")
     print(f"  format_pct(5.23, multiply=False) = {format_pct(5.23, multiply=False)}")
-
-    # Technical indicators with synthetic data
-    print("\n--- Technical Indicators ---")
-    np.random.seed(42)
-    n = 100
-    prices = pd.Series(50 + np.cumsum(np.random.randn(n) * 0.5))
-    highs = prices + np.random.rand(n) * 1.0
-    lows = prices - np.random.rand(n) * 1.0
-
-    atr = calc_atr(highs, lows, prices, period=14)
-    print(f"  ATR(14) last 5: {atr.tail().values.round(4)}")
-
-    rsi = calc_rsi(prices, period=14)
-    print(f"  RSI(14) last 5: {rsi.tail().values.round(2)}")
-
-    zs = calc_zscore(prices, lookback=20)
-    print(f"  Z-score(20) last 5: {zs.tail().values.round(4)}")
 
     # Position sizing
     print("\n--- Position Sizing ---")

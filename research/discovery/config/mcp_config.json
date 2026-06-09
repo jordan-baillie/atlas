@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "computer-use": {
-      "command": "node",
-      "args": ["/root/atlas/research/discovery/mcp_server/server.js"],
-      "env": {"DISPLAY": ":99"}
-    }
-  }
-}
