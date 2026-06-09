@@ -1,7 +1,0 @@
-{
-  "holdout_start": "2025-01-01",
-  "created_at": "2026-06-05",
-  "locked": true,
-  "rationale": "Rail 1 write-once OOS holdout (research/INTEGRITY_RAILS_SPEC.md). All battery search runs are quarantined to data < holdout_start; a candidate is evaluated on the holdout exactly ONCE, at promotion, via research/cross_oos/holdout.evaluate_holdout (single-use ledger). The ~17-month window 2025-01 .. present is never optimized against. Rotate only when materially more data exists, logged, and NEVER to rescue a candidate.",
-  "warmup_days": 400
-}
