@@ -41,7 +41,18 @@ from telegram.ext import (
 )
 
 from utils.config import get_active_config
-from brokers.plan import TradePlanGenerator
+# Tier-2 entry+stop plan flow retired 2026-06-09 - replaced by the forge->live shadow loop
+# (live/daily.py + brokers/target_executor.py). Legacy /plan handlers degrade to a notice.
+_TIER2_RETIRED = ("Tier-2 entry+stop plan flow retired. The forge->live shadow loop "
+                  "(live/daily.py) replaces it; approve deployed strategies with "
+                  "`python3 -m live.registry approve NAME`.")
+
+
+class TradePlanGenerator:  # retirement stub - keeps legacy handlers importable; all ops no-op
+    def __init__(self, *a, **k): pass
+    def load_plan(self, *a, **k): return None
+    def approve_plan(self, *a, **k): return None
+    def _save_plan(self, *a, **k): pass
 from utils.telegram import _load_credentials, _esc, _build_portfolio_snapshot
 from utils.notification_tags import REASON_TAGS, format_reason_tag as _format_reason_tag
 
@@ -358,155 +369,12 @@ def _do_approve_and_execute(trade_date: str, market_id: str) -> str:
 
 
 def _execute_live(plan: dict, trade_date: str, config: dict, market_id: str) -> str:
-    """Execute plan through LiveExecutor against the real broker.
+    """Tier-2 live entry+stop execution - RETIRED 2026-06-09.
 
-    $X allocation tracking stays in sync with actual broker fills.
+    Replaced by the forge->live shadow loop (live/daily.py + brokers/target_executor.py). Stub so legacy
+    callers fail safe rather than run the old long-only entry+stop+bracket path.
     """
-    from brokers.live_executor import LiveExecutor
-    from brokers.live_portfolio import LivePortfolio
-
-    dry_run = config.get("trading", {}).get("live_safety", {}).get("dry_run_first", True)
-    executor = LiveExecutor(config)
-
-    if not executor.connect():
-        broker_name = config.get("trading", {}).get("broker", "unknown")
-        return f"❌ Failed to connect to {broker_name} broker"
-
-    live_pf = LivePortfolio(config, market_id=market_id)
-    live_pf._broker = executor._broker
-    live_pf._connected = True
-    live_pf._refresh_from_broker()
-
-    if not live_pf.broker_data_valid:
-        executor.disconnect()
-        return "❌ Broker returned zeroed data (likely offline). Execution aborted to protect state."
-
-    try:
-        report = executor.execute_plan(plan, trade_date)
-
-        # Record closed trades from successful exits with full metrics
-        for exit_result in report.get("exits", []):
-            if exit_result.get("success"):
-                ticker = exit_result.get("ticker", "")
-                pre_pos = next((p for p in live_pf.positions if p.ticker == ticker), None)
-                exit_price = exit_result.get("fill_price", exit_result.get("price", 0))
-                # Safety: if fill_price is 0 (order not yet filled when checked),
-                # fall back to the limit price. A fill at limit-1% is better than
-                # recording exit_price=0 which makes P&L show -100%.
-                if exit_price == 0:
-                    exit_price = exit_result.get("price", 0)
-                    logger.warning("Exit fill_price=0 for %s, using limit price $%.2f",
-                                   ticker, exit_price)
-                entry_price = pre_pos.entry_price if pre_pos else 0
-                shares = exit_result.get("qty", pre_pos.shares if pre_pos else 0)
-                entry_value = round(entry_price * shares, 2)
-                exit_value = round(exit_price * shares, 2)
-                # Approximate commissions from config
-                comm_flat = config.get("fees", {}).get("commission_per_trade", 1.10)
-                comm_pct = config.get("fees", {}).get("commission_pct", 0.0)
-                entry_comm = round(max(comm_flat, entry_value * comm_pct), 2)
-                exit_comm = round(max(comm_flat, exit_value * comm_pct), 2)
-                pnl = round(exit_value - entry_value - entry_comm - exit_comm, 2)
-                pnl_pct = round(pnl / entry_value * 100, 2) if entry_value > 0 else 0
-                holding = pre_pos.holding_days(trade_date) if pre_pos else 0
-                trade_record = {
-                    "ticker": ticker,
-                    "strategy": pre_pos.strategy if pre_pos else "unknown",
-                    "entry_date": pre_pos.entry_date if pre_pos else "unknown",
-                    "exit_date": trade_date,
-                    "entry_price": entry_price,
-                    "exit_price": exit_price,
-                    "shares": shares,
-                    "entry_value": entry_value,
-                    "exit_value": exit_value,
-                    "entry_commission": entry_comm,
-                    "exit_commission": exit_comm,
-                    "pnl": pnl,
-                    "pnl_pct": pnl_pct,
-                    "mae": round(pre_pos.mae * 100, 2) if pre_pos else 0,
-                    "mfe": round(pre_pos.mfe * 100, 2) if pre_pos else 0,
-                    "holding_days": holding,
-                    "exit_reason": exit_result.get("reason", "signal_exit"),
-                    "confidence": pre_pos.confidence if pre_pos else 0,
-                    "sector": pre_pos.sector if pre_pos else "Unknown",
-                    "stop_price": pre_pos.stop_price if pre_pos else 0,
-                    "take_profit": pre_pos.take_profit if pre_pos else None,
-                    "market_id": market_id,
-                    "dry_run": exit_result.get("dry_run", False),
-                    "order_id": exit_result.get("order_id", ""),
-                }
-                live_pf.record_closed_trade(trade_record)
-
-        live_pf.record_equity(trade_date)
-
-        # Mark plan as EXECUTED on disk (prevents re-execution)
-        if not report.get("error"):
-            try:
-                plan["status"] = "EXECUTED"
-                plan["executed_at"] = datetime.now().isoformat()
-                plan_gen = TradePlanGenerator(None, config)
-                plan_gen._save_plan(plan, trade_date)
-            except Exception as _e:
-                logger.warning("Failed to mark plan as EXECUTED: %s", _e)
-    finally:
-        executor.disconnect()
-
-    # Format result
-    n_entries = report.get("successful_entries", 0)
-    n_exits = report.get("successful_exits", 0)
-    total_entries = report.get("total_entries", 0)
-    total_exits = report.get("total_exits", 0)
-    errors = report.get("errors", [])
-
-    prefix = "🔶 DRY RUN" if dry_run else "🔴 LIVE"
-    lines = [
-        f"{prefix} <b>Execution Complete — {trade_date}</b>",
-        "",
-        f"  Entries: {n_entries}/{total_entries} successful",
-        f"  Exits:   {n_exits}/{total_exits} successful",
-    ]
-
-    for entry in report.get("entries", []):
-        ticker = entry.get("ticker", "?")
-        qty = entry.get("qty", 0)
-        price = entry.get("price", 0)
-        ok = "✅" if entry.get("success") else "❌"
-        msg = entry.get("message", "")
-        oid = entry.get("order_id", "")
-        detail = f"  {ok} BUY {_esc(ticker)} {qty}× @ ${price:.2f}"
-        if oid:
-            detail += f" (#{oid})"
-        if not entry.get("success"):
-            _tag = _format_reason_tag(entry)
-            detail += f" {_esc(_tag)}" if _tag != "[?]" or not msg else f" — {_esc(msg)}"
-        lines.append(detail)
-
-    for exit_ in report.get("exits", []):
-        ticker = exit_.get("ticker", "?")
-        qty = exit_.get("qty", 0)
-        price = exit_.get("price", 0)
-        ok = "✅" if exit_.get("success") else "❌"
-        reason = exit_.get("reason", "")
-        msg = exit_.get("message", "")
-        detail = f"  {ok} SELL {_esc(ticker)} {qty}× @ ${price:.2f}"
-        if reason:
-            detail += f" [{_esc(reason)}]"
-        if not exit_.get("success"):
-            detail += f" — {_esc(msg)}"
-        lines.append(detail)
-
-    if errors:
-        lines.append("")
-        lines.append("<b>Errors:</b>")
-        for e in errors:
-            lines.append(f"  ⚠️ {_esc(str(e))}")
-
-    return "\n".join(lines)
-
-
-# ═══════════════════════════════════════════════════════════════
-# Bot handlers
-# ═══════════════════════════════════════════════════════════════
+    return "⛔ " + _TIER2_RETIRED
 
 async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Handle /status command — show portfolio snapshot.
@@ -540,61 +408,15 @@ async def cmd_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_plan(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """Handle /plan command — show today's plan with approval buttons.
-
-    Usage: /plan [market]   e.g. /plan asx
-    Without argument, shows plans for all markets.
-    """
+    """/plan - RETIRED. Tier-2 entry+stop plan flow replaced by the forge->live shadow loop."""
     if not _authorized(update.effective_chat.id):
         return
-
-    trade_date = datetime.now().strftime("%Y-%m-%d")
-    args = (update.message.text or "").split()
-    markets = [args[1].lower()] if len(args) > 1 else ALL_MARKETS
-
-    found_any = False
-    for market_id in markets:
-        config_path = PROJECT_ROOT / "config" / "active" / f"{market_id}.json"
-        if not config_path.exists():
-            continue
-
-        config = get_active_config(market_id)
-        plan_gen = TradePlanGenerator(None, config)
-        plan = plan_gen.load_plan(trade_date, market_id=market_id)
-        if not plan:
-            continue
-
-        found_any = True
-        msg = format_plan_message(plan, market_id)
-
-        if plan.get("status") == "APPROVED":
-            await update.message.reply_text(
-                msg + "\n\n✅ <b>Already approved</b>", parse_mode="HTML",
-            )
-        elif plan.get("status") == "EXECUTED":
-            await update.message.reply_text(
-                msg + "\n\n✅ <b>Already executed</b>", parse_mode="HTML",
-            )
-        else:
-            entries = plan.get("proposed_entries", [])
-            exits = plan.get("proposed_exits", [])
-            if not entries and not exits:
-                await update.message.reply_text(
-                    msg + "\n\n💤 No trades today — nothing to approve.",
-                    parse_mode="HTML",
-                )
-            else:
-                await update.message.reply_text(
-                    msg, parse_mode="HTML",
-                    reply_markup=approval_keyboard(trade_date, market_id),
-                )
-
-    if not found_any:
-        await update.message.reply_text(
-            f"📊 No plan found for {trade_date}.\nRun pre-market first.",
-            parse_mode="HTML",
-        )
-
+    await update.message.reply_text(
+        "⛔ <b>/plan retired.</b>\n" + _esc(_TIER2_RETIRED) +
+        "\n\nShadow runs daily via <code>atlas-live-shadow.timer</code>; "
+        "list with <code>python3 -m live.registry list</code>.",
+        parse_mode="HTML",
+    )
 
 async def cmd_halt(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Handle /halt command — emergency halt."""
