@@ -36,6 +36,7 @@ class StrategyRunResult:
     dry_run: bool = True
     track_status: Optional[str] = None
     blocked: Optional[str] = None
+    awaiting_approval: bool = False
     error: Optional[str] = None
 
 
@@ -105,24 +106,56 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
             track = evaluate(_realized_returns(s.name), Expectation(**s.expectation))
 
         _record_run(s, asof, rep, track)
+        # a canary/live strategy with orders but no human approval is held (executed as dry_run) -> flag it
+        awaiting = s.state in ("canary", "live") and not s.approved and rep.n_orders > 0
         return StrategyRunResult(s.name, s.state, s.broker, rep.n_orders, rep.turnover_notional,
-                                 len(rep.executed), rep.dry_run, (track.status if track else None), rep.blocked)
+                                 len(rep.executed), rep.dry_run, (track.status if track else None),
+                                 rep.blocked, awaiting)
     except Exception as e:
         logger.exception("run_strategy %s failed", s.name)
         return StrategyRunResult(s.name, s.state, s.broker, error=str(e))
 
 
-def run_daily(mode: str = "shadow", asof: Optional[str] = None, strategies=None) -> DailyReport:
+def _send_telegram(text: str) -> None:
+    """Best-effort Telegram digest (no-op if secrets/requests unavailable)."""
+    try:
+        import requests
+        sec = json.loads((Path.home() / ".atlas-secrets.json").read_text())
+        tok, chat = sec.get("telegram_bot_token"), sec.get("telegram_chat_id")
+        if tok and chat:
+            requests.post(f"https://api.telegram.org/bot{tok}/sendMessage",
+                          json={"chat_id": chat, "text": text, "parse_mode": "HTML"}, timeout=10)
+    except Exception as e:
+        logger.debug("telegram digest skipped: %s", e)
+
+
+def _digest(report: DailyReport) -> str:
+    lines = [f"\U0001f9ed <b>Live {report.mode} {report.date}</b> — {report.n_strategies} strateg" +
+             ("y" if report.n_strategies == 1 else "ies")]
+    for r in report.results:
+        tag = "⛔HALT" if r.blocked else ("⚠️DIVERGING" if r.track_status == "diverging" else "✅")
+        appr = " \U0001f7e1AWAITING APPROVAL" if r.awaiting_approval else ""
+        err = f" err={r.error}" if r.error else ""
+        lines.append(f"• {r.name} [{r.state}/{r.broker}] {tag} orders={r.n_orders} exec={r.executed} "
+                     f"dry={r.dry_run} track={r.track_status}{appr}{err}")
+    return "\n".join(lines)
+
+
+def run_daily(mode: str = "shadow", asof: Optional[str] = None, strategies=None, notify: bool = True) -> DailyReport:
+    import live.providers  # noqa: F401  (register target-portfolio providers)
     asof = asof or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     strategies = strategies if strategies is not None else registry.deployed()
     report = DailyReport(asof, mode, [run_strategy(s, asof, mode) for s in strategies])
     if not strategies:
         logger.info("daily(%s): no deployed strategies — nothing to do", mode)
-    # persist the day's report for the dashboard
     out = LIVE_DATA / "daily"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{asof}.json").write_text(json.dumps(
         {"date": asof, "mode": mode, "results": [asdict(r) for r in report.results]}, indent=2))
+    # monitoring: digest only when there's something to report (a strategy ran, halted, diverged, or awaits approval)
+    if notify and (strategies and any(r.n_orders or r.blocked or r.awaiting_approval or r.error or
+                                      r.track_status == "diverging" for r in report.results)):
+        _send_telegram(_digest(report))
     return report
 
 

@@ -1,0 +1,7 @@
+[Unit]
+Description=Atlas live/shadow daily loop (Mon-Fri 22:00 UTC, after US close)
+[Timer]
+OnCalendar=Mon..Fri *-*-* 22:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target

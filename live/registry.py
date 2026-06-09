@@ -63,3 +63,46 @@ def save(strategies: list[DeployedStrategy]) -> None:
 def deployed(state: Optional[str] = None) -> list[DeployedStrategy]:
     out = load()
     return [s for s in out if state is None or s.state == state]
+
+
+# ── lifecycle mutations (human-gated; board 2026-06-09) ───────────────────────
+def upsert(strategy: DeployedStrategy) -> None:
+    items = [s for s in load() if s.name != strategy.name] + [strategy]
+    save(items)
+
+
+def update(name: str, **changes) -> bool:
+    items, found = load(), False
+    for s in items:
+        if s.name == name:
+            for k, v in changes.items():
+                setattr(s, k, v)
+            found = True
+    if found:
+        save(items)
+    return found
+
+
+def approve(name: str) -> bool:
+    """Human-approve a strategy for real-money execution (board: approval on every go-live/scale-up)."""
+    return update(name, approved=True)
+
+
+def set_state(name: str, state: str) -> bool:
+    """Move a strategy through shadow -> canary -> live."""
+    assert state in ("shadow", "canary", "live")
+    return update(name, state=state)
+
+
+if __name__ == "__main__":   # tiny CLI: python3 -m live.registry [list|approve NAME|state NAME shadow|canary|live]
+    import sys
+    a = sys.argv[1:]
+    if not a or a[0] == "list":
+        for s in load():
+            print(f"  {s.name:24s} state={s.state:7s} approved={s.approved} broker={s.broker} cap=${s.capital:.0f} provider={s.provider}")
+    elif a[0] == "approve" and len(a) == 2:
+        print("approved" if approve(a[1]) else "not found")
+    elif a[0] == "state" and len(a) == 3:
+        print("updated" if set_state(a[1], a[2]) else "not found")
+    else:
+        print("usage: python3 -m live.registry [list | approve NAME | state NAME shadow|canary|live]")
