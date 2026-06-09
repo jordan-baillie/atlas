@@ -37,6 +37,9 @@ approvals.py` (50), `core/reconcile.py` (2), `monitor/health_writer.py` (1), `co
 - **Phase 1 — Tier 1 deletion. ✅ DONE** (commit c3a6178). Removed the 8-dir cluster + ~20 old scripts + 43
   broken tests + stragglers + indicators TA re-exports. Source .py 493→320. Verified: imports clean, dashboard
   HTTP 200, telegram/dashboard active, reconcile-shadow + risk-precompute timer scripts intact.
+- **Phase 4a/4b — prune + docs. ✅ DONE** (commits 2dd5f96, 344bdc7). Removed 27 old systemd units + 33
+  old-research scripts + scripts/archive/. Rewrote memory/SUMMARY.md (execution-platform) + README banner.
+  Source .py 320->286; scripts 160->74. Services + dashboard green.
 - **Phase 2 — build the new pieces (additive, separate milestone).** `brokers/target_executor.py`,
   `brokers/ib/` adapter, `live/track_expectation.py` (Phase-4 tasks #5/#6/#8).
 - **Phase 3 — Tier 2 replacement.** Once target_executor works: retire plan.py + live_executor.py, replace the
