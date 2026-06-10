@@ -12,8 +12,11 @@ export interface ForgeSummary {
   cycles: number
   ran: number
   passes: number
+  near_misses?: number
   fails: number
   errors: number
+  deployed?: number
+  deployed_names?: string[]
   pass_rate: string
   experiments: number
   sources: number
@@ -52,7 +55,7 @@ export interface ForgeStage {
   stats: StageStat[]
 }
 
-export type CycleStatus = 'pass' | 'fail' | 'error'
+export type CycleStatus = 'pass' | 'near_miss' | 'fail' | 'error'
 
 export interface CycleMetrics {
   search_sharpe: number | null

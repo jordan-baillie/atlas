@@ -86,7 +86,16 @@ def _parse_cycles(rows: list[dict]) -> list[dict]:
         ran = bool(o.get("ran"))
         passed = bool(o.get("passed_all") or v.get("PASSED_ALL_GATES"))
         tier = v.get("tier") or ("PASS" if passed else None)
-        status = "pass" if passed else ("fail" if ran else "error")
+        # near-miss = cleared the FDR bar (tier PROMOTE) but failed a later gate
+        # (e.g. generalization breadth) — distinct from a plain FAIL.
+        if passed:
+            status = "pass"
+        elif ran and tier == "PROMOTE":
+            status = "near_miss"
+        elif ran:
+            status = "fail"
+        else:
+            status = "error"
         ss, hs = _num(v.get("search_sharpe")), _num(v.get("holdout_sharpe"))
         degradation = None
         if ss not in (None, 0) and hs is not None:
@@ -228,8 +237,20 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
     n_cycles = len(cycles)
     n_ran = sum(1 for c in cycles if c["ran"])
     n_pass = sum(1 for c in cycles if c["passed_all"])
+    n_near = sum(1 for c in cycles if c["status"] == "near_miss")
     n_err = sum(1 for c in cycles if c["status"] == "error")
-    n_fail = n_cycles - n_pass - n_err
+    n_fail = n_cycles - n_pass - n_near - n_err
+
+    # strategies deployed to paper (live registry) — the evidence-gate route for
+    # clean near-misses; renders the "deployed on probation" middle tier visible.
+    n_deployed = 0
+    deployed_names: list[str] = []
+    try:
+        _reg = json.loads(Path("/root/atlas/config/live_strategies.json").read_text())
+        deployed_names = [s.get("name", "?") for s in _reg]
+        n_deployed = len(_reg)
+    except Exception:
+        pass
     free_cand = sum(1 for c in candidates if c["free"])
     # nearest miss = best holdout sharpe across runs (how close anything got)
     best_h = max((c["metrics"]["holdout_sharpe"] for c in cycles
@@ -251,19 +272,22 @@ def forge_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
         {"key": "run", "label": "Rails", "icon": "🛡️", "count": n_cycles, "accent": False,
          "stats": [{"label": "tested", "value": n_cycles},
                    {"label": "failed", "value": n_fail + n_err},
+                   {"label": "near-miss", "value": n_near},
                    {"label": "passed", "value": n_pass}]},
         {"key": "record", "label": "Record", "icon": "📖", "count": n_exp, "accent": False,
          "stats": [{"label": "experiments", "value": n_exp},
                    {"label": "FDR families", "value": fdr["n_families"]},
                    {"label": "wiki pages", "value": wiki_pages}]},
-        {"key": "alert", "label": "Alert", "icon": "🔔", "count": n_pass, "accent": n_pass > 0,
+        {"key": "alert", "label": "Alert", "icon": "🔔", "count": n_pass + n_deployed,
+         "accent": n_pass > 0 or n_deployed > 0,
          "stats": [{"label": "passes", "value": n_pass},
-                   {"label": "alerts sent", "value": n_pass},
+                   {"label": "deployed to paper", "value": n_deployed},
                    {"label": "best holdout Sh", "value": (f"{best_h:.2f}" if best_h is not None else "—")}]},
     ]
 
     summary = {
-        "cycles": n_cycles, "ran": n_ran, "passes": n_pass, "fails": n_fail, "errors": n_err,
+        "cycles": n_cycles, "ran": n_ran, "passes": n_pass, "near_misses": n_near,
+        "fails": n_fail, "errors": n_err, "deployed": n_deployed, "deployed_names": deployed_names,
         "pass_rate": _pct(n_pass, max(n_cycles, 1)),
         "experiments": n_exp, "sources": n_src, "candidates": len(candidates),
         "families": fdr["n_families"], "wiki_pages": wiki_pages,

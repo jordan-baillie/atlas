@@ -28,7 +28,7 @@ export function RunCard({ cycle }: { cycle: ForgeCycle }) {
   const [open, setOpen] = useState(false)
   const m = cycle.metrics
   const sc = statusColor(cycle.status)
-  const icon = cycle.status === 'pass' ? '★' : cycle.status === 'error' ? '✕' : '·'
+  const icon = cycle.status === 'pass' ? '★' : cycle.status === 'near_miss' ? '◐' : cycle.status === 'error' ? '✕' : '·'
   const deg = m.degradation_pct
 
   return (
@@ -36,7 +36,7 @@ export function RunCard({ cycle }: { cycle: ForgeCycle }) {
       {/* collapsed row */}
       <button onClick={() => setOpen((v) => !v)} className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors">
         <span className="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold border"
-          style={{ borderColor: sc, color: sc, background: cycle.status === 'pass' ? 'rgba(251,191,36,0.15)' : 'transparent' }}>{icon}</span>
+          style={{ borderColor: sc, color: sc, background: cycle.status === 'pass' ? 'rgba(251,191,36,0.15)' : cycle.status === 'near_miss' ? 'rgba(245,158,11,0.10)' : 'transparent' }}>{icon}</span>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-[var(--color-text)] truncate">{cycle.title}</div>
           <div className="text-[11px] text-[var(--color-text-muted)] flex items-center gap-2 flex-wrap">

@@ -96,6 +96,7 @@ def _build_dashboard_data() -> dict:
                 broker_state["raw_acct"],
                 positions,
                 config_dir,
+                broker_state["open_orders"],
             )
             orders = build_orders_section(broker_state["orders_info"])
 

@@ -16,6 +16,7 @@ export interface Account {
   halted?: boolean
   halt_reason?: string
   margin_usage_pct?: number
+  open_orders?: number
 }
 
 export interface Position {

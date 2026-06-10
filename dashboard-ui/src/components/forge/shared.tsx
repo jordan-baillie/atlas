@@ -7,10 +7,14 @@ export const C = {
 } as const
 
 export function statusColor(s: CycleStatus): string {
-  return s === 'pass' ? C.gold : s === 'error' ? C.red : C.iron
+  if (s === 'pass') return C.gold
+  if (s === 'near_miss') return C.ember
+  if (s === 'error') return C.red
+  return C.iron
 }
 export function statusLabel(s: CycleStatus, tier: string | null): string {
   if (s === 'pass') return 'PASS'
+  if (s === 'near_miss') return 'NEAR-MISS'
   if (s === 'error') return 'ERROR'
   return tier || 'FAIL'
 }

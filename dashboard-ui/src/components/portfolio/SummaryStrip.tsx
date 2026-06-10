@@ -46,8 +46,30 @@ export function SummaryStrip({ account, todayPnl, positionsCount, asOf }: Props)
         hero
         accent={todayAccent}
       />
-      <StatCard label="POSITIONS" value={<span className="tabular-nums">{count}/10</span>} />
-      <StatCard label="MARGIN USED" value={<span className="tabular-nums">{fmtPct(account.margin_usage_pct)}</span>} />
+      <StatCard
+        label="POSITIONS"
+        value={
+          <span className="tabular-nums">
+            {count}/10
+            {(account.open_orders ?? 0) > 0 && (
+              <span className="ml-1.5 text-[11px] text-[var(--color-amber)]" title="Pending orders awaiting fill (reserve margin until executed)">
+                +{account.open_orders} pending
+              </span>
+            )}
+          </span>
+        }
+      />
+      <StatCard
+        label="MARGIN USED"
+        value={
+          <span className="tabular-nums">
+            {fmtPct(account.margin_usage_pct)}
+            {(account.open_orders ?? 0) > 0 && (account.margin_usage_pct ?? 0) > 0 && (
+              <span className="ml-1.5 text-[10px] text-[var(--color-text-muted)]">incl. pending</span>
+            )}
+          </span>
+        }
+      />
     </div>
   )
 }

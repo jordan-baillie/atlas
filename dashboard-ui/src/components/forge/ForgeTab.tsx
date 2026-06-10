@@ -66,10 +66,11 @@ export function ForgeTab() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             <Chip label="cycles" value={summary.cycles} />
             <Chip label="pass rate" value={summary.pass_rate} color={summary.passes > 0 ? C.gold : undefined} />
-            <Chip label="families" value={summary.families} />
+            <Chip label="near-miss" value={summary.near_misses ?? 0} color={(summary.near_misses ?? 0) > 0 ? C.ember : undefined} />
+            <Chip label="paper-deployed" value={summary.deployed ?? 0} color={(summary.deployed ?? 0) > 0 ? C.green : undefined} />
             <Chip label="FDR bar" value={summary.fdr_bar.toFixed(3)} color={C.indigo} />
             <Chip label="best holdout" value={summary.best_holdout_sharpe != null ? summary.best_holdout_sharpe.toFixed(2) : '—'} />
           </div>

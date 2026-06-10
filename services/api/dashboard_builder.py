@@ -343,6 +343,7 @@ def build_account_section(
     raw_acct,
     positions: list,
     config_dir: Path,
+    open_orders: list | None = None,
 ) -> dict:
     """Build the 'account' subsection: equity, margin_usage_pct, total_pnl, etc.
 
@@ -372,6 +373,10 @@ def build_account_section(
 
     # AccountInfo.num_positions is never set by the Alpaca adapter — use count
     account["num_positions"] = len(positions)
+
+    # Open (pending) orders — explains margin reserved with zero positions (e.g. 50 market
+    # orders queued after-hours by the forward-paper run reserve initial_margin until fill).
+    account["open_orders"] = len(open_orders or [])
 
     # Bug-1 fix: aggregate starting_equity across ALL enabled markets
     _total_starting = 0.0
