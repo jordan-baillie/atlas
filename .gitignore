@@ -185,3 +185,5 @@ backups-pre-batch-LATEST.txt
 
 # Sharadar bulk vendor data (download-and-own; 600MB+ zips — never commit)
 data/sharadar/
+research/discovery/papers/
+research/discovery/archived/
