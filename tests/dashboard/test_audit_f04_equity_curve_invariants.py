@@ -179,8 +179,11 @@ def test_portfolio_api_positions_value_positive_or_zero() -> None:
         with _adb.get_db() as db:
             db.execute(_MARKET_EQUITY_HISTORY_DDL)
             db.execute(
-                "INSERT OR REPLACE INTO market_equity_history VALUES (?,?,?,?,?,?,?,?)",
-                ("2026-05-11", "sp500", 5211.19, 5211.19, 897.45, 4313.32, 4313.32, None),
+                "INSERT OR REPLACE INTO market_equity_history "
+                "(date, market_id, broker_equity, allocated_equity, position_mv, "
+                "cash_attributed, broker_cash, snapshot_time) VALUES (?,?,?,?,?,?,?,?)",
+                ("2026-05-11", "sp500", 5211.19, 5211.19, 897.45, 4313.32, 4313.32,
+                 "2026-05-11T00:00:00"),
             )
             db.commit()
 

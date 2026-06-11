@@ -233,7 +233,7 @@
     "_credentials": "Managed via ~/.atlas-secrets.json"
   },
   "alpaca": {
-    "paper": false,
+    "paper": true,
     "data_feed": "iex",
     "_credentials": "Managed via ~/.atlas-secrets.json (ALPACA_API_KEY, ALPACA_SECRET_KEY)"
   },
