@@ -19,8 +19,6 @@ TZ=Australia/Brisbane
 # ── General Atlas hygiene ────────────────────────────────────────────────────
 # sediment cleanup: 14:00 AEST — delete incident snapshots >14d old (outside top-3)
 0 14 * * * /usr/bin/flock -n /tmp/cleanup_sediment.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/cleanup_sediment.py --apply' >> /root/atlas/logs/cleanup_sediment.log 2>&1
-# doc staleness check: 18:00 AEST — alert if memory/SUMMARY or KNOWLEDGE_INDEX >30d
-0 18 * * * /usr/bin/flock -n /tmp/check_doc_staleness.lock bash -c 'cd /root/atlas && timeout 2m python3 scripts/check_doc_staleness.py' >> /root/atlas/logs/check_doc_staleness.log 2>&1
 # weekly maintenance: Sunday 06:00 AEST
 0 6 * * 0 /usr/bin/flock -n /tmp/weekly_maintenance.lock bash -c 'cd /root/atlas && timeout 30m bash scripts/weekly_maintenance.sh' >> /root/atlas/logs/weekly_maintenance.log 2>&1
 

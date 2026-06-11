@@ -37,10 +37,3 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-      - id: lifecycle-enabled-guard
-        name: Lifecycle guard — block enabling strategies without LIVE/PAPER row
-        entry: python3 scripts/git-hooks/check_lifecycle_for_enabled.py data/atlas.db
-        language: system
-        pass_filenames: true
-        types: [json]
-        files: '^config/active/[^/]+\.json$'

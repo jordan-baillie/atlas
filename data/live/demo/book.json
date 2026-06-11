@@ -1,0 +1,8 @@
+{
+  "cash": 0.0,
+  "positions": {
+    "AAA": 50,
+    "BBB": 100
+  },
+  "capital_base": 10000.0
+}
