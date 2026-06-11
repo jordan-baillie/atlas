@@ -8,7 +8,7 @@ enables the active schedule.
 | Unit | Schedule | Runs |
 |---|---|---|
 | `atlas-dashboard.service` | always-on | `uvicorn atlas.dashboard.app:app` :8899 |
-| `atlas-live-shadow.{service,timer}` | Mon–Fri 22:00 UTC | `ops/forward-paper.sh` — the forge→live daily cycle (blocked by `data/HALT`) |
+| `atlas-live-shadow.{service,timer}` | Tue–Sat 00:30 UTC (19:30–20:30 ET, inside the Alpaca OPG submission window) | `ops/forward-paper.sh` — the forge→live daily cycle (blocked by `data/HALT`) |
 | `atlas-backup.{service,timer}` | daily 04:00 AEST | restic backup of all projects |
 | `unified-healthcheck.{service,timer}` | every 6 h | cross-project health → Telegram |
 | `atlas-weekly-maintenance.{service,timer}` | Sun 06:00 AEST | log rotation, cache purge, DB ANALYZE |

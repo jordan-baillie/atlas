@@ -48,8 +48,9 @@ def forge_strategy_provider(name: str):
     return fn
 
 
-def deploy_pass(name: str, *, capital: float = 10000.0, broker: str = "alpaca",
-                expectation: dict | None = None, strategy_path: str = "") -> DeployedStrategy:
+def deploy_pass(name: str, *, capital: float = 5000.0, broker: str = "alpaca",
+                expectation: dict | None = None, strategy_path: str = "",
+                tif: str = "opg") -> DeployedStrategy:
     """Register a forge PASS into the Paper Book as a paper-traded (shadow) strategy.
 
     state='shadow' => the daily loop places REAL paper orders on live data (the forward-paper gate). No real
@@ -57,7 +58,8 @@ def deploy_pass(name: str, *, capital: float = 10000.0, broker: str = "alpaca",
     """
     register_provider(name)(forge_strategy_provider(name))
     s = DeployedStrategy(name=name, provider=name, state="shadow", broker=broker,
-                         capital=capital, approved=False, expectation=expectation or {})
+                         capital=capital, approved=False, expectation=expectation or {},
+                         tif=tif)
     upsert(s)
     d = LIVE_DATA / name
     d.mkdir(parents=True, exist_ok=True)

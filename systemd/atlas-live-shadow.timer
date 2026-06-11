@@ -1,7 +1,7 @@
 [Unit]
-Description=Atlas live/shadow daily loop (Mon-Fri 22:00 UTC, after US close)
+Description=Atlas live/shadow daily loop (Tue-Sat 00:30 UTC = 19:30-20:30 ET, inside Alpaca OPG window 19:00-09:28 ET)
 [Timer]
-OnCalendar=Mon..Fri *-*-* 22:00:00 UTC
+OnCalendar=Tue..Sat *-*-* 00:30:00 UTC
 Persistent=true
 [Install]
 WantedBy=timers.target
