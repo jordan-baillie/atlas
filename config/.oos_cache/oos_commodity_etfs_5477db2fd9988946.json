@@ -1,0 +1,17 @@
+{
+  "pass": false,
+  "reason": "OOS trades 8 < 30 floor (audit 2026-05-06)",
+  "sharpe_oos": 4.0462,
+  "profit_factor_oos": 57.2864,
+  "cagr_degradation_pct": -233.0,
+  "perturbation_pass_rate": 1.0,
+  "raw": {
+    "test1_verdict": "PASS",
+    "test2_verdict": "PASS",
+    "test3_verdict": "FAIL - inconsistent windows",
+    "overall_verdict": "MIXED - review individual tests",
+    "total_runtime_s": 67.6,
+    "total_runtime_min": 1.1
+  },
+  "cached_at": "2026-05-20T14:13:23.997854+00:00"
+}

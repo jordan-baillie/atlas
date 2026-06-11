@@ -1,0 +1,2 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-06-05T01:38:37	0.0096	3255				long_short_default	dead_end	PhaseA long-short vs long-only baseline +1.67; LS@0bps +0.01 (incr -1.66) @50bps -0.01; DSR 0.17 PBO 0.04 per_regime_ok False; verdict KILL; KILL=['net-of-cost (worst borrow) Sharpe < 0.30', 'short leg adds NO incremental net OOS Sharpe over long-only', 'does not beat long-only after worst-case borrow', 'edge only survives at $0 borrow']

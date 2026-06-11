@@ -1,0 +1,17 @@
+{
+  "sp500": {
+    "universe": "sp500",
+    "status": "ok",
+    "returncode": 0
+  },
+  "commodity_etfs": {
+    "universe": "commodity_etfs",
+    "status": "no_keeps",
+    "returncode": 0
+  },
+  "sector_etfs": {
+    "universe": "sector_etfs",
+    "status": "no_keeps",
+    "returncode": 0
+  }
+}

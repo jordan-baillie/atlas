@@ -1,0 +1,52 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-06-04",
+  "plan_status": "HALTED",
+  "halt_reason": "daily_drawdown 75.92% on sp500",
+  "n_entries": 0,
+  "n_approved": 0,
+  "n_exits": 0,
+  "total_risk_pct": 0.0,
+  "total_position_value": 0.0,
+  "leverage_pct": 0.0,
+  "summary_lines": [],
+  "rejection_reason": null,
+  "halt_diagnostics": {
+    "hwm": 5216.84,
+    "hwm_date": "2026-06-03",
+    "current_eq_estimate": 1336.04,
+    "dd_pct": 75.92,
+    "dd_limit_pct": 2.0,
+    "snap_allocated_equity": 5208.06,
+    "snap_position_mv": 827.81,
+    "snap_cash_attributed": 4378.94,
+    "snap_broker_equity": 5208.06,
+    "snap_date": "2026-06-02"
+  },
+  "trading_mode": "paper",
+  "open_positions_full": [
+    {
+      "ticker": "F",
+      "shares": 32,
+      "entry_price": 14.88,
+      "current_price": 16.15,
+      "unrealized_pnl": 40.64,
+      "unrealized_pnl_pct": 0.0,
+      "stop_price": null,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "FSLR",
+      "shares": 1,
+      "entry_price": 269.87,
+      "current_price": 311.01,
+      "unrealized_pnl": 41.14,
+      "unrealized_pnl_pct": 0.0,
+      "stop_price": null,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    }
+  ],
+  "written_at": "2026-06-04T09:11:34.042052+00:00"
+}

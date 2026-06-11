@@ -1,0 +1,27 @@
+{
+  "strategy": "rsi_divergence",
+  "market": "sp500",
+  "params": {},
+  "metrics": {
+    "total_trades": 86,
+    "sharpe": -1.3967,
+    "max_drawdown_pct": 0.0,
+    "cagr_pct": 0.0,
+    "win_rate_pct": 0.0,
+    "profit_factor": 0.0,
+    "edge_p_value": 1.0,
+    "edge_significant": false
+  },
+  "description": "quick_check_failed",
+  "is_solo": true,
+  "solo_fraction": null,
+  "quick_check_status": "failed",
+  "p_value": 1.0,
+  "universe": "sp500_top50 (198 full universe tickers)",
+  "date_range": "2020-07-27 to 2026-05-15",
+  "runner_notes": "quick_check_failed: solo_sharpe=-1.3967 < -0.3. Task #251 2026-05-18",
+  "experiments_run": 0,
+  "experiments_kept": 0,
+  "updated_at": "2026-05-18T12:02:19.091802+00:00",
+  "task": "#251"
+}

@@ -76,3 +76,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# ── Downloaded third-party papers (re-fetchable by arXiv id; 2.7GB) ─
+research/discovery/papers/*.pdf
+research/discovery/archived/**/papers/*.pdf

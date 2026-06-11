@@ -1,0 +1,87 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "sector_etfs",
+  "params": {
+    "atr_stop_mult": 0.29,
+    "max_hold_days": 15,
+    "lookback_days": 8,
+    "atr_period": 25,
+    "trend_ma_period": 25,
+    "breakout_period": 10
+  },
+  "metrics": {
+    "total_trades": 235,
+    "cagr_pct": 21.2645,
+    "cagr_full_period_pct": 17.7779,
+    "sharpe": 0.4735,
+    "sortino": 1.9281,
+    "max_drawdown_pct": 18.2372,
+    "win_rate_pct": 32.77,
+    "profit_factor": 2.6921,
+    "total_pnl": 6871.47,
+    "avg_trade": 29.24,
+    "final_equity": 10084.24,
+    "expectancy_r": 2.5659,
+    "avg_r": 2.5659,
+    "r_count": 235,
+    "edge_p_value": 0.037899,
+    "edge_significant": true,
+    "var_95_pct": 1.344,
+    "cvar_95_pct": 2.028,
+    "calmar": 1.166,
+    "mc_p95_drawdown_pct": 21.11,
+    "mc_fragile": false,
+    "windows_configured": 69,
+    "windows_used": 69,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 166,
+        "total_pnl": 6634.58,
+        "win_rate_pct": 25.3
+      },
+      "mean_reversion": {
+        "trades": 69,
+        "total_pnl": 236.89,
+        "win_rate_pct": 50.7
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 14,
+        "win_rate_pct": 50.0,
+        "avg_trade": 17.8,
+        "total_pnl": 249.26,
+        "profit_factor": 2.927,
+        "sharpe_approx": 0.2242,
+        "avg_r": 1.4754
+      },
+      "bull": {
+        "trades": 62,
+        "win_rate_pct": 32.3,
+        "avg_trade": 89.78,
+        "total_pnl": 5566.3,
+        "profit_factor": 6.3869,
+        "sharpe_approx": 0.1811,
+        "avg_r": 7.9991
+      },
+      "neutral": {
+        "trades": 159,
+        "win_rate_pct": 31.4,
+        "avg_trade": 6.64,
+        "total_pnl": 1055.91,
+        "profit_factor": 1.3643,
+        "sharpe_approx": 0.0867,
+        "avg_r": 0.5433
+      }
+    },
+    "solo_sharpe": 0.5206,
+    "runtime_s": 20.2
+  },
+  "description": "atr_stop_mult: 0.38 \u2192 0.29",
+  "experiments_run": 0,
+  "experiments_kept": 17,
+  "updated_at": "2026-05-23T15:18:24.021903+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.6582
+}

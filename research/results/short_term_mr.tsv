@@ -1,0 +1,372 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-10T16:14:03	0.3976	585	6.37	3.5373	42.08		keep	baseline
+2026-03-10T16:16:31	0.4194	329	8.26	9.0619	49.53	rsi_period=4	discard	rsi_period: None→4
+2026-03-10T16:16:31	0.4213	298	8.61	11.0858	50.32	rsi_period=5	discard	rsi_period: None→5
+2026-03-10T16:16:31	0.3982	412	6.12	5.3217	42.40	rsi_period=3	discard	rsi_period: None→3
+2026-03-10T16:16:31	0.3976	585	6.37	3.5373	42.08	rsi_period=2	discard	rsi_period: None→2
+2026-03-10T16:19:09	0.5091	728	6.74	6.1706	76.50	rsi_oversold=20	keep	rsi_oversold: None→20 (best of 4)
+2026-03-10T16:19:09	0.3976	585	6.37	3.5373	42.08	rsi_oversold=10	discard	rsi_oversold: None→10
+2026-03-10T16:19:09	0.4135	665	8.09	3.3147	47.32	rsi_oversold=15	discard	rsi_oversold: None→15
+2026-03-10T16:19:09	0.5082	754	7.45	5.7484	75.93	rsi_oversold=25	discard	rsi_oversold: None→25
+2026-03-10T16:21:52	0.5091	728	6.74	6.1706	76.50	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-10T16:21:52	0.4190	665	6.23	3.5137	49.54	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-10T16:21:52	0.3790	853	7.72	1.5966	11.57	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-10T16:21:52	0.3417	790	8.25	1.5530	10.70	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-10T16:24:30	0.4785	671	4.53	4.7599	48.58	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-10T16:24:30	0.4822	685	5.54	4.3519	56.01	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-10T16:24:30	0.5091	728	6.74	6.1706	76.50	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-10T16:58:33	0.5091	728	6.74	6.1706	76.50		keep	baseline
+2026-03-10T17:02:11	0.5091	728	6.74	6.1706	76.50		keep	baseline
+2026-03-10T17:05:27	0.5091	728	6.74	6.1706	76.50		keep	baseline
+2026-03-10T17:07:58	0.4131	555	8.20	3.6104	47.22	rsi_period=3	discard	RSI period 3: slightly smoother signal
+2026-03-10T17:10:32	0.4182	441	7.23	5.9169	49.08	rsi_period=4	discard	RSI period 4: mid-ground between 2 and 7
+2026-03-10T17:13:11	0.5071	768	8.37	5.8548	75.60	profit_target_atr_mult=0.5	discard	Tighter profit target 0.5x ATR: faster exits
+2026-03-10T17:15:48	0.5083	743	7.79	6.0068	76.18	profit_target_atr_mult=0.75	discard	Profit target 0.75x ATR: between default and tight
+2026-03-10T17:18:26	0.5089	718	6.84	6.1224	76.43	profit_target_atr_mult=1.5	discard	Wider profit target 1.5x ATR: let winners run
+2026-03-10T17:21:05	0.5089	716	6.84	6.2104	76.39	profit_target_atr_mult=2.0	discard	Wide profit target 2.0x ATR: big moves only
+2026-03-10T17:23:47	0.5108	786	5.64	6.0726	76.80	sma_period=3	discard	Shorter SMA 3: tighter mean-reversion anchor
+2026-03-10T17:26:24	0.5231	690	7.52	7.1558	82.92	sma_period=7	discard	Longer SMA 7: more room for entries
+2026-03-10T17:29:00	0.5221	681	5.81	7.2075	82.39	sma_period=10	discard	SMA 10: much wider mean-reversion band
+2026-03-10T17:31:41	0.5078	783	6.41	5.9980	75.82	rsi_overbought_exit=50	discard	Lower overbought exit 50: take profits earlier
+2026-03-10T17:34:18	0.5077	738	6.47	6.0487	75.80	rsi_overbought_exit=60	discard	Overbought exit 60: moderate early exit
+2026-03-10T17:36:58	0.5117	723	6.70	6.2878	77.66	rsi_overbought_exit=80	discard	Higher overbought exit 80: let bounce play out
+2026-03-10T17:39:31	0.4860	616	11.65	2.3144	30.67	ibs_oversold=0.1	discard	Tighter IBS 0.1: only extreme candles
+2026-03-10T17:42:13	0.5084	767	7.39	5.5817	76.08	ibs_oversold=0.3	discard	Wider IBS 0.3: more IBS-triggered entries
+2026-03-10T17:44:48	0.0646	676	10.12	1.2372	5.05	ibs_oversold=0.15	discard	IBS 0.15: between default and tight
+2026-03-10T17:47:27	0.5269	723	7.12	5.2268	70.24	atr_period=7	discard	Shorter ATR 7: faster-reacting stops
+2026-03-10T17:50:04	0.5172	724	6.74	5.7977	73.69	atr_period=10	discard	ATR 10: between 7 and 14
+2026-03-10T17:52:43	0.5007	733	6.43	6.5750	79.15	atr_period=21	discard	Longer ATR 21: smoother volatility estimate
+2026-03-10T17:55:16	0.4125	706	8.56	3.1625	46.97	rsi_oversold=18	discard	RSI oversold 18: between sweep points 15 and 20
+2026-03-10T17:57:54	0.5103	735	6.76	6.3256	77.15	rsi_oversold=22	discard	RSI oversold 22: between sweep points 20 and 25
+2026-03-10T18:00:34	0.5082	754	7.45	5.7484	75.93	rsi_oversold=25	discard	RSI oversold 25: wider entry threshold (re-test with current best)
+2026-03-10T18:03:19	0.4168	754	7.03	3.1416	48.68	max_hold_days=4	discard	Max hold 4: between sweep points 3 and 5
+2026-03-10T18:05:58	0.4214	683	5.37	3.5731	50.52	max_hold_days=6	discard	Max hold 6: between sweep points 5 and 7
+2026-03-10T18:08:32	0.1059	292	4.34	1.8473	5.69	ibs_oversold=0.0	discard	Disable IBS filter entirely (RSI-only entries)
+2026-03-10T18:11:09	0.1076	330	4.59	1.7616	5.71	rsi_oversold=30, ibs_oversold=0.0	discard	RSI-only with loose threshold 30
+2026-03-10T18:13:49	0.3938	607	11.40	3.4819	40.64	rsi_oversold=5, ibs_oversold=0.5	discard	Extreme RSI=5 + wide IBS=0.5: IBS-driven
+2026-03-10T18:16:28	0.5053	773	6.05	5.3064	74.89	earnings_blackout={'enabled': False}	discard	Disable earnings blackout entirely
+2026-03-10T18:19:04	0.4242	681	7.24	1.9426	25.22	volume={'min_ratio': 0.0, 'surge_threshold': 99.0}	discard	Effectively disable volume filters
+2026-03-10T20:17:12	0.5091	728	6.74	6.1706	76.50		keep	baseline
+2026-03-10T20:19:44	0.4182	441	7.23	5.9169	49.08	rsi_period=4	discard	rsi_period: None→4
+2026-03-10T20:19:44	0.4209	382	7.12	6.9896	50.16	rsi_period=5	discard	rsi_period: None→5
+2026-03-10T20:19:44	0.4131	555	8.20	3.6104	47.22	rsi_period=3	discard	rsi_period: None→3
+2026-03-10T20:19:44	0.5091	728	6.74	6.1706	76.50	rsi_period=2	discard	rsi_period: None→2
+2026-03-10T20:22:15	0.3976	585	6.37	3.5373	42.08	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-10T20:22:15	0.4135	665	8.09	3.3147	47.32	rsi_oversold=15	discard	rsi_oversold: 20→15
+2026-03-10T20:22:15	0.5082	754	7.45	5.7484	75.93	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-10T20:24:58	0.3790	853	7.72	1.5966	11.57	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-10T20:24:58	0.3417	790	8.25	1.5530	10.70	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-10T20:24:58	0.5091	728	6.74	6.1706	76.50	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-10T20:24:58	0.4190	665	6.23	3.5137	49.54	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-10T20:27:29	0.4822	685	5.54	4.3519	56.01	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-10T20:27:29	0.5091	728	6.74	6.1706	76.50	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-10T20:27:29	0.4785	671	4.53	4.7599	48.58	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-10T21:03:41	0.3918	876	12.61	2.7009	39.88		keep	baseline
+2026-03-10T21:14:48	-0.9952	833	10.73	0.9966	-0.23	sma_period=7	discard	SMA 7: previously 0.5231, wrongly discarded
+2026-03-10T21:25:47	0.3839	861	13.63	2.5388	34.54	atr_period=7	discard	ATR period 7: previously best single-param at 0.5269
+2026-03-11T01:33:08	0.5091	728	6.74	6.1706	76.50		keep	baseline
+2026-03-11T01:35:51	0.4209	382	7.12	6.9896	50.16	rsi_period=5	discard	rsi_period: None→5
+2026-03-11T01:35:51	0.4131	555	8.20	3.6104	47.22	rsi_period=3	discard	rsi_period: None→3
+2026-03-11T01:35:51	0.4182	441	7.23	5.9169	49.08	rsi_period=4	discard	rsi_period: None→4
+2026-03-11T01:35:51	0.5091	728	6.74	6.1706	76.50	rsi_period=2	discard	rsi_period: None→2
+2026-03-11T01:38:37	0.3976	585	6.37	3.5373	42.08	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-11T01:38:37	0.4135	665	8.09	3.3147	47.32	rsi_oversold=15	discard	rsi_oversold: 20→15
+2026-03-11T01:38:37	0.5082	754	7.45	5.7484	75.93	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-11T01:41:31	0.3417	790	8.25	1.5530	10.70	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-11T01:41:31	0.3790	853	7.72	1.5966	11.57	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-11T01:41:31	0.4190	665	6.23	3.5137	49.54	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-11T01:41:31	0.5091	728	6.74	6.1706	76.50	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-11T01:44:16	0.4822	685	5.54	4.3519	56.01	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-11T01:44:16	0.5091	728	6.74	6.1706	76.50	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-11T01:44:16	0.4785	671	4.53	4.7599	48.58	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-11T14:18:06	0.4197	620	6.06	3.7538	49.85		keep	baseline
+2026-03-11T14:18:31	0.4242	288	3.86	11.4549	51.49	rsi_period=5	discard	rsi_period: None→5
+2026-03-11T14:18:31	0.4182	455	6.49	4.6073	49.29	rsi_period=3	discard	rsi_period: None→3
+2026-03-11T14:18:31	0.4210	354	6.49	8.5398	50.19	rsi_period=4	discard	rsi_period: None→4
+2026-03-11T14:18:31	0.4197	620	6.06	3.7538	49.85	rsi_period=2	discard	rsi_period: None→2
+2026-03-11T14:18:53	0.4257	487	5.63	5.6989	52.27	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-11T14:18:53	0.4193	550	5.46	4.0533	49.66	rsi_oversold=15	discard	rsi_oversold: 20→15
+2026-03-11T14:18:53	0.4157	661	7.01	3.4072	48.22	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-11T14:19:20	0.4203	579	6.20	3.7897	50.09	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-11T14:19:20	0.3997	671	9.06	1.7295	11.95	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-11T14:19:20	0.3634	717	9.38	1.6388	11.08	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-11T14:19:20	0.4197	620	6.06	3.7538	49.85	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-11T14:19:42	0.3878	573	5.08	4.4432	32.20	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-11T14:19:42	0.4197	620	6.06	3.7538	49.85	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-11T14:19:42	0.3923	589	7.04	3.7733	36.18	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-11T23:48:37	0.4197	620	6.06	3.7538	49.85		keep	baseline
+2026-03-11T23:48:58	0.4242	288	3.86	11.4549	51.49	rsi_period=5	discard	rsi_period: None→5
+2026-03-11T23:48:58	0.4210	354	6.49	8.5398	50.19	rsi_period=4	discard	rsi_period: None→4
+2026-03-11T23:48:58	0.4182	455	6.49	4.6073	49.29	rsi_period=3	discard	rsi_period: None→3
+2026-03-11T23:48:58	0.4197	620	6.06	3.7538	49.85	rsi_period=2	discard	rsi_period: None→2
+2026-03-11T23:49:20	0.4257	487	5.63	5.6989	52.27	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-11T23:49:20	0.4193	550	5.46	4.0533	49.66	rsi_oversold=15	discard	rsi_oversold: 20→15
+2026-03-11T23:49:20	0.4157	661	7.01	3.4072	48.22	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-11T23:49:42	0.4203	579	6.20	3.7897	50.09	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-11T23:49:42	0.3997	671	9.06	1.7295	11.95	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-11T23:49:42	0.3634	717	9.38	1.6388	11.08	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-11T23:49:42	0.4197	620	6.06	3.7538	49.85	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-11T23:50:03	0.3878	573	5.08	4.4432	32.20	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-11T23:50:03	0.3923	589	7.04	3.7733	36.18	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-11T23:50:03	0.4197	620	6.06	3.7538	49.85	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T05:39:10	0.4101	616	6.52	3.9041	39.47		keep	baseline
+2026-03-12T05:39:34	0.4172	282	2.57	12.1271	41.26	rsi_period=5	discard	rsi_period: None→5
+2026-03-12T05:39:34	0.4125	350	4.41	9.0464	39.99	rsi_period=4	discard	rsi_period: None→4
+2026-03-12T05:39:34	0.4089	449	4.59	4.9600	39.14	rsi_period=3	discard	rsi_period: None→3
+2026-03-12T05:39:34	0.4101	616	6.52	3.9041	39.47	rsi_period=2	discard	rsi_period: None→2
+2026-03-12T05:39:58	0.4174	478	3.92	5.8224	41.35	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-12T05:39:58	0.4083	544	5.75	4.1827	38.97	rsi_oversold=15	discard	rsi_oversold: 20→15
+2026-03-12T05:39:58	0.4063	656	6.75	3.6330	38.44	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-12T05:40:24	0.4118	572	6.86	3.9603	39.88	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T05:40:24	0.2363	706	6.93	1.6469	7.61	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-12T05:40:24	0.4101	616	6.52	3.9041	39.47	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T05:40:24	0.2520	660	7.64	1.6961	7.83	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T05:40:46	0.3700	549	3.48	5.1663	25.14	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T05:40:46	0.3806	577	4.78	4.5150	29.16	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T05:40:46	0.4101	616	6.52	3.9041	39.47	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T10:32:15	0.4098	613	6.43	3.8380	39.33		keep	baseline
+2026-03-12T10:32:37	0.3918	350	3.06	6.9644	35.12	rsi_period=4	discard	rsi_period: None→4
+2026-03-12T10:32:37	0.3945	281	2.68	9.1664	35.82	rsi_period=5	discard	rsi_period: None→5
+2026-03-12T10:32:37	0.4077	449	4.57	4.7381	38.78	rsi_period=3	discard	rsi_period: None→3
+2026-03-12T10:32:37	0.4098	613	6.43	3.8380	39.33	rsi_period=2	discard	rsi_period: None→2
+2026-03-12T10:46:12	0.5036	543	4.29	5.4345	59.80	rsi_oversold=15	keep	rsi_oversold: 20→15 (best of 3)
+2026-03-12T10:46:12	0.4166	470	4.17	5.5726	41.12	rsi_oversold=10	discard	rsi_oversold: 20→10
+2026-03-12T10:46:12	0.4044	659	6.98	3.5248	37.90	rsi_oversold=25	discard	rsi_oversold: 20→25
+2026-03-12T10:46:34	0.5017	513	4.54	5.2620	59.34	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T10:46:34	0.4168	633	6.11	2.4728	20.35	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-12T10:46:34	0.4132	591	6.95	2.4390	20.11	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T10:46:34	0.5036	543	4.29	5.4345	59.80	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T10:46:55	0.5036	543	4.29	5.4345	59.80	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T10:46:55	0.4752	509	3.72	5.6585	44.34	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T10:46:55	0.4650	497	3.25	6.7670	37.50	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T13:20:07	0.5079	492	3.09	7.2974	61.18		keep	baseline
+2026-03-12T13:20:32	0.3917	189	2.22	16.4845	35.13	rsi_period=5	discard	rsi_period: None→5
+2026-03-12T13:20:32	0.3931	232	2.52	11.6532	35.47	rsi_period=4	discard	rsi_period: None→4
+2026-03-12T13:20:32	0.4140	333	3.86	8.5065	40.42	rsi_period=3	discard	rsi_period: None→3
+2026-03-12T13:20:32	0.5079	492	3.09	7.2974	61.18	rsi_period=2	discard	rsi_period: None→2
+2026-03-12T13:20:56	0.4177	420	3.67	7.1509	41.38	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-12T13:20:56	0.4153	559	3.38	4.8007	40.76	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-12T13:20:56	0.4155	617	3.91	4.3799	40.81	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-12T13:21:21	0.5067	465	4.24	7.3625	60.86	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T13:21:21	0.4280	569	3.46	3.0318	20.98	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-12T13:21:21	0.4231	530	3.73	2.9633	20.60	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T13:21:21	0.5079	492	3.09	7.2974	61.18	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T13:21:46	0.5079	492	3.09	7.2974	61.18	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T13:21:46	0.4674	450	2.63	8.2670	37.89	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T13:21:46	0.4795	462	3.20	7.3933	45.33	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T23:49:30	0.5079	492	3.09	7.2974	61.18		keep	baseline
+2026-03-12T23:49:55	0.3917	189	2.22	16.4845	35.13	rsi_period=5	discard	rsi_period: None→5
+2026-03-12T23:49:55	0.3931	232	2.52	11.6532	35.47	rsi_period=4	discard	rsi_period: None→4
+2026-03-12T23:49:55	0.5079	492	3.09	7.2687	61.18	rsi_period=2	discard	rsi_period: None→2
+2026-03-12T23:49:55	0.4140	333	3.86	8.5065	40.42	rsi_period=3	discard	rsi_period: None→3
+2026-03-12T23:50:22	0.4177	420	3.67	7.1509	41.38	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-12T23:50:22	0.4153	559	3.38	4.7731	40.76	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-12T23:50:22	0.4155	617	3.91	4.3575	40.81	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-12T23:50:47	0.5067	465	4.24	7.3328	60.86	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T23:50:47	0.4231	530	3.73	2.9510	20.60	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T23:50:47	0.4280	569	3.46	3.0192	20.98	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-12T23:50:47	0.5079	492	3.09	7.2687	61.18	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T23:51:11	0.4674	450	2.63	8.2072	37.89	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T23:51:11	0.4795	462	3.20	7.3358	45.33	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T23:51:11	0.5079	492	3.09	7.2687	61.18	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T02:50:23	0.5079	492	3.09	7.2974	61.18		keep	baseline
+2026-03-13T02:50:47	0.3917	189	2.22	16.4845	35.13	rsi_period=5	discard	rsi_period: None→5
+2026-03-13T02:50:47	0.4140	333	3.86	8.5065	40.42	rsi_period=3	discard	rsi_period: None→3
+2026-03-13T02:50:47	0.3931	232	2.52	11.6532	35.47	rsi_period=4	discard	rsi_period: None→4
+2026-03-13T02:50:47	0.5079	492	3.09	7.2687	61.18	rsi_period=2	discard	rsi_period: None→2
+2026-03-13T02:51:13	0.4177	420	3.67	7.1509	41.38	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-13T02:51:13	0.4153	559	3.38	4.7731	40.76	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-13T02:51:13	0.4155	617	3.91	4.3575	40.81	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-13T02:51:38	0.5079	492	3.09	7.2687	61.18	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-13T02:51:38	0.4280	569	3.46	3.0192	20.98	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-13T02:51:38	0.4231	530	3.73	2.9510	20.60	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-13T02:51:38	0.5067	465	4.24	7.3328	60.86	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-13T02:52:03	0.4795	462	3.20	7.3358	45.33	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-13T02:52:03	0.5079	492	3.09	7.2687	61.18	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T02:52:03	0.4674	450	2.63	8.2072	37.89	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-13T05:32:26	0.5137	490	2.42	7.6776	63.16		keep	baseline
+2026-03-13T05:32:51	0.3940	190	2.01	17.6419	35.68	rsi_period=5	discard	rsi_period: None→5
+2026-03-13T05:32:51	0.3968	233	2.25	12.5138	36.39	rsi_period=4	discard	rsi_period: None→4
+2026-03-13T05:32:51	0.4187	332	2.90	9.2695	41.68	rsi_period=3	discard	rsi_period: None→3
+2026-03-13T05:32:51	0.5137	490	2.42	7.6174	63.16	rsi_period=2	discard	rsi_period: None→2
+2026-03-13T05:33:17	0.4241	421	2.91	7.8643	43.15	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-13T05:33:17	0.4242	560	2.51	5.1703	43.17	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-13T05:33:17	0.4245	617	3.06	4.7168	43.21	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-13T05:33:41	0.4545	528	2.70	3.2823	22.56	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-13T05:33:41	0.5122	462	3.44	7.5945	62.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-13T05:33:41	0.5137	490	2.42	7.6174	63.16	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-13T05:33:41	0.4569	567	2.78	3.3835	22.88	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-13T05:34:06	0.5137	490	2.42	7.6174	63.16	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T05:34:06	0.4882	459	2.66	7.9625	47.08	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-13T05:34:06	0.4955	449	2.18	9.0381	42.36	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-13T23:00:37	0.5137	490	2.42	7.5714	63.16		keep	baseline
+2026-03-13T23:01:00	0.3940	190	2.01	17.6419	35.68	rsi_period=5	discard	rsi_period: None→5
+2026-03-13T23:01:00	0.3968	233	2.25	12.5138	36.39	rsi_period=4	discard	rsi_period: None→4
+2026-03-13T23:01:00	0.4187	332	2.90	9.1887	41.68	rsi_period=3	discard	rsi_period: None→3
+2026-03-13T23:01:00	0.5137	490	2.42	7.5926	63.16	rsi_period=2	discard	rsi_period: None→2
+2026-03-13T23:01:27	0.4241	421	2.91	7.8043	43.15	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-13T23:01:27	0.4245	617	3.06	4.6999	43.21	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-13T23:01:27	0.4242	560	2.51	5.1494	43.17	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-13T23:01:52	0.5137	490	2.42	7.5926	63.16	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-13T23:01:52	0.5122	462	3.44	7.5695	62.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-13T23:01:52	0.4569	567	2.78	3.3813	22.88	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-13T23:01:52	0.4545	528	2.70	3.2801	22.56	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-13T23:02:17	0.4882	459	2.66	7.9617	47.08	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-13T23:02:17	0.5137	490	2.42	7.5926	63.16	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T23:02:17	0.4955	449	2.18	9.0308	42.36	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-14T02:00:34	0.5137	490	2.42	7.5714	63.16		keep	baseline
+2026-03-14T02:00:59	0.3968	233	2.25	12.5138	36.39	rsi_period=4	discard	rsi_period: None→4
+2026-03-14T02:00:59	0.3940	190	2.01	17.6419	35.68	rsi_period=5	discard	rsi_period: None→5
+2026-03-14T02:00:59	0.4187	332	2.90	9.1887	41.68	rsi_period=3	discard	rsi_period: None→3
+2026-03-14T02:00:59	0.5137	490	2.42	7.5926	63.16	rsi_period=2	discard	rsi_period: None→2
+2026-03-14T02:01:27	0.4241	421	2.91	7.8043	43.15	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-14T02:01:27	0.4242	560	2.51	5.1494	43.17	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-14T02:01:27	0.4245	617	3.06	4.6999	43.21	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-14T02:01:52	0.5122	462	3.44	7.5695	62.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-14T02:01:52	0.4545	528	2.70	3.2801	22.56	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-14T02:01:52	0.4569	567	2.78	3.3813	22.88	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-14T02:01:52	0.5137	490	2.42	7.5926	63.16	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-14T02:02:18	0.4955	449	2.18	9.0308	42.36	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-14T02:02:18	0.4882	459	2.66	7.9617	47.08	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-14T02:02:18	0.5137	490	2.42	7.5926	63.16	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-14T23:00:33	0.5137	490	2.42	7.5714	63.16		keep	baseline
+2026-03-14T23:00:56	0.3940	190	2.01	17.6419	35.68	rsi_period=5	discard	rsi_period: None→5
+2026-03-14T23:00:56	0.3968	233	2.25	12.5138	36.39	rsi_period=4	discard	rsi_period: None→4
+2026-03-14T23:00:56	0.4187	332	2.90	9.1887	41.68	rsi_period=3	discard	rsi_period: None→3
+2026-03-14T23:00:56	0.5137	490	2.42	7.5498	63.16	rsi_period=2	discard	rsi_period: None→2
+2026-03-14T23:01:22	0.4241	421	2.91	7.8043	43.15	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-14T23:01:22	0.4242	560	2.51	5.1068	43.17	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-14T23:01:22	0.4245	617	3.06	4.6652	43.21	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-14T23:01:48	0.4545	528	2.70	3.2597	22.56	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-14T23:01:48	0.5122	462	3.44	7.5261	62.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-14T23:01:48	0.4569	567	2.78	3.3599	22.88	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-14T23:01:48	0.5137	490	2.42	7.5498	63.16	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-14T23:02:12	0.4882	459	2.66	7.8697	47.08	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-14T23:02:12	0.4955	449	2.18	8.9452	42.36	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-14T23:02:12	0.5137	490	2.42	7.5498	63.16	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-15T23:30:38	0.4965	876	6.27	4.4387	59.67		keep	baseline
+2026-03-15T23:31:06	0.4521	781	6.77	2.1882	18.99	rsi_period=5	discard	rsi_period: None→5
+2026-03-15T23:31:06	0.4393	784	6.61	2.1148	18.39	rsi_period=4	discard	rsi_period: None→4
+2026-03-15T23:31:06	0.4657	817	5.75	2.2167	19.49	rsi_period=3	discard	rsi_period: None→3
+2026-03-15T23:31:06	0.4965	876	6.27	4.4387	59.67	rsi_period=2	discard	rsi_period: None→2
+2026-03-15T23:31:34	0.4949	852	6.51	4.5817	59.19	rsi_oversold=10	discard	rsi_oversold: 15→10
+2026-03-15T23:31:34	0.4954	890	6.93	4.2343	59.30	rsi_oversold=20	discard	rsi_oversold: 15→20
+2026-03-15T23:31:34	0.4982	913	6.71	4.4051	60.27	rsi_oversold=25	discard	rsi_oversold: 15→25
+2026-03-15T23:32:03	0.4350	965	6.01	2.2995	26.83	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-15T23:32:03	0.4980	809	6.50	4.4345	60.14	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-15T23:32:03	0.4965	876	6.27	4.4387	59.67	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-15T23:32:03	0.4339	1067	5.99	2.2528	27.04	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-15T23:32:30	0.4142	826	5.37	4.3751	35.11	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-15T23:32:30	0.4965	876	6.27	4.4387	59.67	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-15T23:32:30	0.3817	793	4.09	4.7849	26.74	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-04-19T14:35:44	0.3554	1014	36.48	1.1766	10.61		keep	baseline
+2026-04-21T14:27:30	0.3554	1014	36.48	1.1766	10.61		keep	baseline
+2026-04-21T14:30:19	0.3381	1021	36.48	1.1782	10.20	profit_target_atr_mult=2.0	discard	profit_target=2.0 ATR (let winners run)
+2026-04-21T14:32:55	0.3381	1021	36.48	1.1782	10.20	profit_target_atr_mult=1.5	discard	profit_target=1.5 ATR
+2026-04-22T14:47:25	0.3554	1014	36.48	1.1766	10.61		keep	baseline
+2026-04-22T14:50:36	0.3554	1014	36.48	1.1766	10.61		keep	baseline
+2026-04-25T14:16:25	0.5728	1022	33.74	1.2465	15.81		keep	baseline
+2026-04-25T14:21:24	0.5728	1022	33.74	1.2465	15.81		keep	baseline
+2026-04-25T14:24:20	0.5512	1030	33.74	1.2400	15.26	profit_target_atr_mult=2.0	discard	bigger profit target: allow 2x ATR gain vs 1x
+2026-04-25T14:27:17	0.5512	1030	33.74	1.2400	15.26	profit_target_atr_mult=3.0	discard	aggressive profit target: allow 3x ATR before exit
+2026-04-25T14:31:00	0.5728	1022	33.74	1.2465	15.81		keep	baseline
+2026-04-25T14:33:53	0.5512	1030	33.74	1.2400	15.26	rsi_overbought_exit=80	discard	hold longer: exit when RSI(2)>80 not 70
+2026-04-25T14:36:49	0.5240	1028	33.79	1.2256	14.65	atr_stop_mult=1.0	discard	tighter stop: cut losses faster at 1x ATR
+2026-04-27T14:35:40	0.5728	1022	33.74	1.2465	15.81		keep	baseline
+2026-04-27T14:38:37	0.5512	1030	33.74	1.2400	15.26	profit_target_atr_mult=1.5	discard	profit_target 1.0->1.5 [let winners run]
+2026-05-01T19:02:33	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-02T19:02:33	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-03T23:33:38	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-04T19:02:17	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-05T14:39:05	0.9345	284	27.41	1.4669	25.70		keep	baseline
+2026-05-05T14:40:42	0.9345	284	27.41	1.4669	25.70		keep	baseline
+2026-05-05T14:41:56	0.9215	286	27.41	1.5044	25.25	profit_target_atr_mult=1.5	discard	larger profit target: let winners run more
+2026-05-05T14:43:09	0.8870	309	27.04	1.4150	24.44	atr_stop_mult=1.0	discard	tighter stop: cut losses faster
+2026-05-05T14:44:23	1.0750	295	25.70	1.5702	28.52	atr_stop_mult=2.0	keep	wider stop: avoid whipsaw
+2026-05-05T14:45:37	0.9600	292	24.00	1.5122	25.90	max_hold_days=3	discard	shorter hold: mean reversion completes faster
+2026-05-05T14:47:10	1.0900	293	25.70	1.5298	29.04		keep	baseline
+2026-05-05T14:48:24	1.1834	277	24.99	1.7097	31.74	atr_stop_mult=2.5	keep	even wider stop to avoid whipsaw
+2026-05-05T14:49:38	1.1834	277	24.99	1.7097	31.74	profit_target_atr_mult=2.0	discard	bigger target: let winners run with wider stop
+2026-05-05T14:50:52	1.0770	274	29.05	1.6178	28.54	max_hold_days=7	discard	longer hold: more time for mean reversion to play out
+2026-05-05T14:52:10	1.2238	280	24.39	1.7341	33.37	ibs_oversold=0.3	keep	less restrictive IBS filter: more trades
+2026-05-05T14:53:26	0.9896	291	23.79	1.5163	26.51	rsi_overbought_exit=80	discard	exit at higher overbought: let bounce play out more
+2026-05-05T14:54:59	1.2402	278	24.39	1.6843	33.99		keep	baseline
+2026-05-05T14:56:15	1.1197	295	29.98	1.6300	29.79	atr_stop_mult=3.0	discard	even wider stop: trend whipsaw protection
+2026-05-05T14:57:33	1.2726	294	24.88	1.7134	34.89	ibs_oversold=0.4	keep	more permissive IBS: capture more entries
+2026-05-05T14:58:51	1.2781	292	24.88	1.7227	35.05	rsi_oversold=12	discard	more selective RSI: higher quality entries
+2026-05-05T15:00:16	1.2497	295	24.88	1.6754	34.25	rsi_oversold=20	discard	less selective RSI: more opportunities
+2026-05-05T19:02:22	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-06T14:13:37	1.1939	277	29.92	1.5475	32.30		keep	baseline
+2026-05-06T14:15:50	1.1780	279	29.92	1.5887	31.72	profit_target_atr_mult=1.5	discard	wider profit target: let winners run to 1.5x ATR
+2026-05-06T14:18:17	1.1939	277	29.92	1.5475	32.30		keep	baseline
+2026-05-06T14:20:31	1.1780	279	29.92	1.5887	31.72	profit_target_atr_mult=1.5	discard	wider profit target: 1.5x ATR
+2026-05-06T14:23:07	1.1939	277	29.92	1.5475	32.30		keep	baseline
+2026-05-06T14:25:23	1.1780	279	29.92	1.5887	31.72	profit_target_atr_mult=2.0	discard	wider PT: 2.0x ATR - let big winners run
+2026-05-06T14:27:40	1.1780	280	29.92	1.5887	31.72	profit_target_atr_mult=0.75	discard	tighter PT: 0.75x ATR - faster exits
+2026-05-06T14:29:53	1.1780	279	29.92	1.5887	31.72	profit_target_atr_mult=1.25	discard	moderate PT: 1.25x ATR
+2026-05-06T14:32:13	1.3637	302	30.03	1.6670	39.31	max_hold_days=3	keep	shorter hold: 3 days - very short term
+2026-05-06T14:34:28	1.4896	274	27.73	1.7732	43.18	max_hold_days=7	keep	longer hold: 7 days
+2026-05-06T14:35:10	1.0578	289	26.05	1.5572	28.03		keep	baseline
+2026-05-06T14:36:27	1.0380	314	20.10	1.5766	26.68		keep	baseline
+2026-05-06T14:36:47	1.5112	270	28.79	1.7765	43.60	max_hold_days=10	keep	longer hold: 10 days
+2026-05-06T14:37:42	1.0111	317	22.43	1.5594	26.44		keep	baseline
+2026-05-06T14:38:34	0.9979	318	20.23	1.6062	26.04	profit_target_atr_mult=0.5	discard	profit_target_atr_mult: 1.0->0.5 (tighter exits)
+2026-05-06T14:39:06	1.4849	264	29.04	1.7687	42.40	rsi_overbought_exit=65	discard	earlier overbought exit at RSI 65
+2026-05-06T14:39:28	0.9953	319	22.43	1.6121	25.97	profit_target_atr_mult=1.5	discard	profit_target_atr_mult: 1.0->1.5 (wider exits)
+2026-05-06T14:40:19	0.9953	319	22.43	1.6121	25.97	profit_target_atr_mult=2.0	discard	profit_target_atr_mult: 1.0->2.0 (much wider exits)
+2026-05-06T14:41:10	1.0119	314	22.14	1.6678	26.59	max_hold_days=3	discard	max_hold_days: 5->3 (faster exit)
+2026-05-06T14:42:00	1.0228	316	20.10	1.6236	26.20	max_hold_days=7	keep	max_hold_days: 5->7 (hold longer)
+2026-05-06T14:42:52	0.9953	319	22.43	1.6121	25.97	max_hold_days=10	discard	max_hold_days: 5->10 (much longer hold)
+2026-05-06T14:44:06	1.0380	314	20.10	1.5766	26.68		keep	baseline
+2026-05-06T14:44:59	1.1967	304	26.52	1.6280	31.81	max_hold_days=6	keep	max_hold_days: 7->6 (between 5 and 7)
+2026-05-06T14:45:52	0.9947	320	22.45	1.6107	25.93	max_hold_days=8	discard	max_hold_days: 7->8 (just beyond 7)
+2026-05-06T14:46:44	1.0115	315	20.23	1.6194	26.22	max_hold_days=9	discard	max_hold_days: 7->9 (try 9)
+2026-05-06T14:47:38	1.1971	303	23.99	1.6341	31.88	rsi_overbought_exit=60	discard	rsi_overbought_exit: 70->60 (exit sooner)
+2026-05-06T14:48:31	1.2135	302	23.76	1.6600	32.04	rsi_overbought_exit=65	discard	rsi_overbought_exit: 70->65 (slightly sooner)
+2026-05-06T14:49:23	1.2928	297	26.22	1.7468	34.78	rsi_overbought_exit=75	keep	rsi_overbought_exit: 70->75 (hold more bounce)
+2026-05-06T14:50:17	1.0293	303	22.96	1.5306	27.89	rsi_overbought_exit=80	discard	rsi_overbought_exit: 70->80 (hold more bounce)
+2026-05-06T14:51:31	1.3100	295	26.22	1.6968	35.43		keep	baseline
+2026-05-06T14:52:25	1.2668	299	26.36	1.7201	33.86	rsi_overbought_exit=72	discard	rsi_overbought_exit: 75->72
+2026-05-06T14:53:20	1.2653	298	26.22	1.7217	33.89	rsi_overbought_exit=73	discard	rsi_overbought_exit: 75->73
+2026-05-06T14:54:14	1.1819	290	23.26	1.6203	32.52	rsi_overbought_exit=77	discard	rsi_overbought_exit: 75->77
+2026-05-06T14:55:09	1.1320	307	23.97	1.5573	30.33	sma_period=3	discard	sma_period: 5->3 (faster MA reference)
+2026-05-06T14:56:03	1.1185	305	25.83	1.6716	29.02	sma_period=4	discard	sma_period: 5->4 (slightly faster)
+2026-05-06T14:56:54	1.2712	289	22.98	1.8034	34.70	sma_period=7	discard	sma_period: 5->7 (slower MA reference)
+2026-05-06T14:57:46	1.1293	290	19.68	1.6489	29.51	sma_period=10	discard	sma_period: 5->10 (longer MA)
+2026-05-06T14:59:09	1.3100	295	26.22	1.6968	35.43		keep	baseline
+2026-05-06T15:00:04	1.2798	287	20.65	1.7698	34.13	rsi_period=3	discard	rsi_period: 2->3 (slightly more stable signal)
+2026-05-06T19:02:22	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-07T19:02:22	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-08T14:05:02	1.4146	268	27.40	1.6781	40.16		keep	baseline
+2026-05-08T14:07:12	1.4146	268	27.40	1.6781	40.16		keep	baseline
+2026-05-08T14:09:25	1.4146	268	27.40	1.6781	40.16		keep	baseline
+2026-05-08T14:11:29	1.4162	262	27.78	1.7867	39.47	rsi_oversold=12	discard	rsi_oversold: 15->12
+2026-05-08T14:14:01	1.4146	268	27.40	1.6781	40.16		keep	baseline
+2026-05-08T14:16:06	1.4260	263	26.91	1.8060	39.79	rsi_oversold=10	keep	rsi_oversold=10
+2026-05-08T14:18:08	1.4162	262	27.78	1.7867	39.47	rsi_oversold=12	discard	rsi_oversold=12
+2026-05-08T14:20:15	1.4001	270	27.34	1.7302	39.51	rsi_oversold=18	discard	rsi_oversold=18
+2026-05-08T14:22:22	1.3994	270	27.34	1.7302	39.50	rsi_oversold=20	discard	rsi_oversold=20
+2026-05-08T14:24:26	1.4386	263	26.86	1.8104	39.81	rsi_oversold=8	keep	rsi_oversold=8
+2026-05-08T14:26:39	1.3694	258	20.79	1.8124	38.56	rsi_oversold=25	discard	rsi_oversold=25
+2026-05-08T14:28:43	1.2940	260	23.14	1.7564	35.47	atr_stop_mult=2.0	discard	atr_stop_mult=2.0
+2026-05-08T14:30:51	1.3569	265	26.47	1.7937	36.97	atr_stop_mult=2.25	discard	atr_stop_mult=2.25
+2026-05-08T19:02:37	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-09T19:02:22	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-10T14:26:23	1.4572	261	26.86	1.7570	40.55		keep	baseline
+2026-05-10T14:28:46	1.4572	261	26.86	1.7570	40.55		keep	baseline
+2026-05-10T14:30:46	1.4239	263	26.25	1.8087	39.30	rsi_oversold=5	discard	rsi_oversold 8→5: require extreme oversold, higher quality entries
+2026-05-10T19:02:23	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-11T14:15:05	1.4572	261	26.86	1.7570	40.55		keep	baseline
+2026-05-11T14:18:34	1.4572	261	26.86	1.7570	40.55		keep	baseline
+2026-05-11T14:20:30	0.7551	282	27.61	1.5218	19.48	atr_stop_mult=2.75	discard	atr_stop_mult=2.75: only lower values tried, test wider stop direction
+2026-05-11T14:22:23	0.7490	295	30.15	1.4584	18.60	ibs_oversold=0.35	discard	ibs_oversold=0.35: tighter IBS filter, more selective entries — never tried
+2026-05-11T14:24:18	1.4367	264	26.48	1.8140	39.76	ibs_oversold=0.45	discard	ibs_oversold=0.45: looser IBS, more trades — never tried
+2026-05-11T14:26:42	1.4572	261	26.86	1.7570	40.55		keep	baseline
+2026-05-11T14:28:41	1.3314	273	29.29	1.7052	37.13	max_hold_days=5	discard	max_hold_days=5: shorter hold, quicker exits on mean reversion — untested
+2026-05-11T14:30:43	1.4436	264	27.23	1.7953	40.31	max_hold_days=7	discard	max_hold_days=7: slightly longer hold — untested
+2026-05-11T14:32:42	1.4367	266	26.47	1.8122	39.72	rsi_overbought_exit=70	discard	rsi_overbought_exit=70: tighter overbought exit, lock in gains faster
+2026-05-11T19:02:18	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-12T19:02:21	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-13T19:02:22	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-25T14:32:47	1.4215	261	26.37	1.7487	39.50		keep	baseline
+2026-05-26T14:20:39	0.5389	469	27.26	1.2457	14.99		keep	baseline

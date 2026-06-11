@@ -1,0 +1,78 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-06-03",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 2,
+  "n_approved": 2,
+  "n_exits": 0,
+  "total_risk_pct": 1.73,
+  "total_position_value": 599.2,
+  "leverage_pct": 106.8,
+  "summary_lines": [
+    "CSCO \u00d7 3 @ $128.00 \u2192 stop $123.68",
+    "FCX \u00d7 3 @ $71.73 \u2192 stop $68.35"
+  ],
+  "entries_full": [
+    {
+      "ticker": "CSCO",
+      "side": "BUY",
+      "qty": 3,
+      "entry_price": 128.0,
+      "stop_price": 123.677,
+      "take_profit": 149.6148,
+      "risk_amount": 12.97,
+      "position_value": 384.0,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "FCX",
+      "side": "BUY",
+      "qty": 3,
+      "entry_price": 71.735,
+      "stop_price": 68.3514,
+      "take_profit": 88.6531,
+      "risk_amount": 10.15,
+      "position_value": 215.2,
+      "strategy": "momentum_breakout",
+      "sector": "Basic Materials",
+      "confidence": 1.0
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "F",
+      "shares": 32,
+      "entry_price": 14.88,
+      "current_price": 16.165,
+      "unrealized_pnl": 41.12,
+      "unrealized_pnl_pct": 8.64,
+      "stop_price": 14.6,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "FSLR",
+      "shares": 1,
+      "entry_price": 269.87,
+      "current_price": 311.65,
+      "unrealized_pnl": 41.78,
+      "unrealized_pnl_pct": 15.48,
+      "stop_price": 291.59,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 1337.16,
+    "cash": 4378.93,
+    "total_pnl": 366.16,
+    "total_pnl_pct": 37.71
+  },
+  "trading_mode": "live",
+  "rejection_reason": null,
+  "written_at": "2026-06-03T09:12:14.606664+00:00"
+}

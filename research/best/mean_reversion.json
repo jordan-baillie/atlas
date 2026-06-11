@@ -1,0 +1,128 @@
+{
+  "strategy": "mean_reversion",
+  "market": "sp500",
+  "params": {
+    "rsi_period": 10,
+    "rsi_oversold": 35,
+    "zscore_lookback": 20,
+    "zscore_entry": -0.9,
+    "atr_period": 20,
+    "atr_stop_mult": 1.35,
+    "profit_target_atr_mult": 2.5,
+    "max_hold_days": 25,
+    "sma200_filter": false,
+    "ibs_max": 0.7,
+    "volume": {
+      "lookback": 20,
+      "min_ratio": 0.5,
+      "surge_threshold": 1.5,
+      "surge_boost": 0.0,
+      "dry_penalty": 0.0
+    },
+    "earnings_blackout": {
+      "enabled": true,
+      "days_before": 5,
+      "days_after": 1
+    },
+    "breadth": {
+      "enabled": true,
+      "metric": "pct_above_50ma",
+      "low_threshold": 48.0,
+      "high_threshold": 58.0,
+      "low_boost": 0.015,
+      "high_penalty": 0.015
+    },
+    "relative_strength": {
+      "enabled": false
+    },
+    "cointegration_filter": {
+      "enabled": false
+    }
+  },
+  "metrics": {
+    "total_trades": 1142,
+    "cagr_pct": 33.4163,
+    "cagr_full_period_pct": 27.9489,
+    "sharpe": 1.0215,
+    "sortino": 1.3764,
+    "max_drawdown_pct": 37.2144,
+    "win_rate_pct": 39.75,
+    "profit_factor": 1.3296,
+    "total_pnl": 24543.35,
+    "avg_trade": 21.49,
+    "final_equity": 28387.83,
+    "expectancy_r": 0.3044,
+    "avg_r": 0.3044,
+    "r_count": 1142,
+    "edge_p_value": 8.9e-05,
+    "edge_significant": true,
+    "var_95_pct": 2.539,
+    "cvar_95_pct": 3.961,
+    "calmar": 0.8979,
+    "mc_p95_drawdown_pct": 59.58,
+    "mc_fragile": false,
+    "windows_configured": 70,
+    "windows_used": 70,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 206,
+        "total_pnl": 14091.35,
+        "win_rate_pct": 27.2
+      },
+      "connors_rsi2": {
+        "trades": 3,
+        "total_pnl": -96.19,
+        "win_rate_pct": 66.7
+      },
+      "sector_rotation": {
+        "trades": 881,
+        "total_pnl": 9165.12,
+        "win_rate_pct": 41.4
+      },
+      "mean_reversion": {
+        "trades": 52,
+        "total_pnl": 1383.07,
+        "win_rate_pct": 59.6
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 14,
+        "win_rate_pct": 57.1,
+        "avg_trade": 30.36,
+        "total_pnl": 425.09,
+        "profit_factor": 2.0907,
+        "sharpe_approx": 0.2061,
+        "avg_r": 0.9337
+      },
+      "bull": {
+        "trades": 376,
+        "win_rate_pct": 39.6,
+        "avg_trade": 33.68,
+        "total_pnl": 12664.47,
+        "profit_factor": 1.4006,
+        "sharpe_approx": 0.1253,
+        "avg_r": 0.266
+      },
+      "neutral": {
+        "trades": 752,
+        "win_rate_pct": 39.5,
+        "avg_trade": 15.23,
+        "total_pnl": 11453.79,
+        "profit_factor": 1.2697,
+        "sharpe_approx": 0.0729,
+        "avg_r": 0.3119
+      }
+    },
+    "solo_sharpe": 0.0703,
+    "runtime_s": 137.9
+  },
+  "description": "rsi_oversold: 39 \u2192 35 (less selective entry)",
+  "experiments_run": 989,
+  "experiments_kept": 37,
+  "updated_at": "2026-04-28T14:40:31.851863+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.0455,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: sector_rotation (77.1%). True solo performance unknown \u2014 see task #327."
+}

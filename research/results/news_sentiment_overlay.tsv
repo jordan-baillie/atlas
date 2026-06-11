@@ -1,0 +1,2 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-06-05T02:18:14	1.1679	1260				sent_w0.25	dead_end	A2 sentiment tilt; base +1.16; best w=0.25 +1.17 (incr +0.01); lag0 +1.16 la_only False; DSR 0.96; verdict KILL; KILL=['incremental +0.013 < required +0.10 Sharpe']

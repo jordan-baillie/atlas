@@ -1,0 +1,100 @@
+{
+  "strategy": "trend_following",
+  "market": "sp500",
+  "params": {
+    "fast_ma": 15,
+    "slow_ma": 20,
+    "pullback_pct": 0.06,
+    "atr_period": 14,
+    "atr_stop_mult": 2.0,
+    "trailing_stop_atr_mult": 3.5,
+    "max_hold_days": 15,
+    "volume": {
+      "lookback": 20,
+      "min_ratio": 0.5,
+      "boost_threshold": 1.5,
+      "boost_amount": 0.1,
+      "penalty_amount": 0.05
+    },
+    "breadth": {
+      "enabled": false,
+      "metric": "pct_above_50ma",
+      "low_threshold": 48.0,
+      "high_threshold": 58.0,
+      "low_boost": 0.03,
+      "high_penalty": 0.03
+    },
+    "relative_strength": {
+      "enabled": false,
+      "metric": "rs_percentile",
+      "low_threshold": 50.0,
+      "high_threshold": 60.0,
+      "low_penalty": 0.05,
+      "high_boost": 0.0
+    },
+    "sma200_filter": true
+  },
+  "metrics": {
+    "total_trades": 32,
+    "cagr_pct": 0.8833,
+    "cagr_full_period_pct": 0.754,
+    "sharpe": -1.1695,
+    "sortino": -1.5228,
+    "max_drawdown_pct": 5.7393,
+    "win_rate_pct": 43.75,
+    "profit_factor": 1.3053,
+    "total_pnl": 52.54,
+    "avg_trade": 1.64,
+    "final_equity": 1024.46,
+    "expectancy_r": 0.1961,
+    "avg_r": 0.1961,
+    "r_count": 32,
+    "edge_p_value": 0.495715,
+    "edge_significant": false,
+    "var_95_pct": 0.295,
+    "cvar_95_pct": 0.565,
+    "calmar": 0.1539,
+    "mc_p95_drawdown_pct": 8.75,
+    "mc_fragile": false,
+    "windows_configured": 71,
+    "windows_used": 71,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "trend_following": {
+        "trades": 32,
+        "total_pnl": 52.54,
+        "win_rate_pct": 43.8
+      }
+    },
+    "regime_metrics": {
+      "bull": {
+        "trades": 8,
+        "win_rate_pct": 50.0,
+        "avg_trade": 5.13,
+        "total_pnl": 41.02,
+        "profit_factor": 2.0084,
+        "sharpe_approx": 0.2919,
+        "avg_r": 0.6564
+      },
+      "neutral": {
+        "trades": 24,
+        "win_rate_pct": 41.7,
+        "avg_trade": 0.48,
+        "total_pnl": 11.52,
+        "profit_factor": 1.0877,
+        "sharpe_approx": 0.0386,
+        "avg_r": 0.0427
+      }
+    },
+    "solo_sharpe": -1.1695,
+    "runtime_s": 63.7
+  },
+  "description": "continue winning dir: trailing 3.0 -> 3.5",
+  "experiments_run": 360,
+  "experiments_kept": 24,
+  "updated_at": "2026-06-03T13:49:01.348207+00:00",
+  "_fix_note": "Reset to live v2.2 params (Sharpe ~0.50). Previous best had inverted fast/slow MA.",
+  "sharpe": 0.5,
+  "is_solo": true,
+  "solo_fraction": 1.0
+}

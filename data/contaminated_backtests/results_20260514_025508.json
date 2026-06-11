@@ -1,0 +1,906 @@
+[
+  {
+    "strategy": "connors_rsi2",
+    "market": "sp500",
+    "started_at": "2026-05-14T02:55:08.082495+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 977,
+      "cagr_pct": 2.0495,
+      "cagr_full_period_pct": 1.7334,
+      "sharpe": -0.2433,
+      "sortino": -0.3011,
+      "max_drawdown_pct": 12.9053,
+      "win_rate_pct": 60.29,
+      "profit_factor": 1.0491,
+      "total_pnl": 111.67,
+      "avg_trade": 0.11,
+      "final_equity": 1095.14,
+      "expectancy_r": 0.0452,
+      "avg_r": 0.0452,
+      "r_count": 977,
+      "edge_p_value": 0.143114,
+      "edge_significant": false,
+      "var_95_pct": 0.928,
+      "cvar_95_pct": 1.486,
+      "calmar": 0.1588,
+      "mc_p95_drawdown_pct": 25.53,
+      "mc_fragile": true,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "connors_rsi2": {
+          "trades": 977,
+          "total_pnl": 111.67,
+          "win_rate_pct": 60.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 11,
+          "win_rate_pct": 63.6,
+          "avg_trade": -1.86,
+          "total_pnl": -20.45,
+          "profit_factor": 0.5482,
+          "sharpe_approx": -0.1787,
+          "avg_r": -0.0238
+        },
+        "bull": {
+          "trades": 337,
+          "win_rate_pct": 63.2,
+          "avg_trade": 0.54,
+          "total_pnl": 181.84,
+          "profit_factor": 1.2182,
+          "sharpe_approx": 0.0663,
+          "avg_r": 0.0886
+        },
+        "neutral": {
+          "trades": 629,
+          "win_rate_pct": 58.7,
+          "avg_trade": -0.08,
+          "total_pnl": -49.72,
+          "profit_factor": 0.9643,
+          "sharpe_approx": -0.0136,
+          "avg_r": 0.0231
+        }
+      }
+    },
+    "elapsed_s": 124.1,
+    "n_tickers": 199,
+    "finished_at": "2026-05-14T02:57:12.189077+00:00"
+  },
+  {
+    "strategy": "consecutive_down_days",
+    "market": "sp500",
+    "started_at": "2026-05-14T02:55:08.082558+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 1304,
+      "cagr_pct": 1.2457,
+      "cagr_full_period_pct": 1.0542,
+      "sharpe": -0.4754,
+      "sortino": -0.6101,
+      "max_drawdown_pct": 12.1138,
+      "win_rate_pct": 61.27,
+      "profit_factor": 1.0379,
+      "total_pnl": 75.96,
+      "avg_trade": 0.06,
+      "final_equity": 1044.97,
+      "expectancy_r": 0.0124,
+      "avg_r": 0.0124,
+      "r_count": 1304,
+      "edge_p_value": 0.414775,
+      "edge_significant": false,
+      "var_95_pct": 0.75,
+      "cvar_95_pct": 1.098,
+      "calmar": 0.1028,
+      "mc_p95_drawdown_pct": 22.15,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "consecutive_down_days": {
+          "trades": 1304,
+          "total_pnl": 75.96,
+          "win_rate_pct": 61.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 14,
+          "win_rate_pct": 71.4,
+          "avg_trade": -0.18,
+          "total_pnl": -2.53,
+          "profit_factor": 0.8963,
+          "sharpe_approx": -0.0332,
+          "avg_r": -0.0073
+        },
+        "bull": {
+          "trades": 507,
+          "win_rate_pct": 60.9,
+          "avg_trade": 0.11,
+          "total_pnl": 53.84,
+          "profit_factor": 1.0728,
+          "sharpe_approx": 0.0231,
+          "avg_r": 0.0156
+        },
+        "neutral": {
+          "trades": 783,
+          "win_rate_pct": 61.3,
+          "avg_trade": 0.03,
+          "total_pnl": 24.65,
+          "profit_factor": 1.0199,
+          "sharpe_approx": 0.0068,
+          "avg_r": 0.0106
+        }
+      }
+    },
+    "elapsed_s": 246.2,
+    "n_tickers": 199,
+    "finished_at": "2026-05-14T02:59:14.307655+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "sp500",
+    "started_at": "2026-05-14T02:57:12.200659+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 351,
+      "cagr_pct": 7.5434,
+      "cagr_full_period_pct": 6.3541,
+      "sharpe": 0.2933,
+      "sortino": 0.3859,
+      "max_drawdown_pct": 11.545,
+      "win_rate_pct": 57.26,
+      "profit_factor": 1.2535,
+      "total_pnl": 484.7,
+      "avg_trade": 1.38,
+      "final_equity": 1494.57,
+      "expectancy_r": 0.2016,
+      "avg_r": 0.2016,
+      "r_count": 351,
+      "edge_p_value": 0.01004,
+      "edge_significant": true,
+      "var_95_pct": 0.967,
+      "cvar_95_pct": 1.508,
+      "calmar": 0.6534,
+      "mc_p95_drawdown_pct": 22.55,
+      "mc_fragile": true,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 351,
+          "total_pnl": 484.7,
+          "win_rate_pct": 57.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 7,
+          "win_rate_pct": 57.1,
+          "avg_trade": 1.66,
+          "total_pnl": 11.62,
+          "profit_factor": 1.6113,
+          "sharpe_approx": 0.1933,
+          "avg_r": 0.2325
+        },
+        "bull": {
+          "trades": 120,
+          "win_rate_pct": 54.2,
+          "avg_trade": 0.76,
+          "total_pnl": 91.45,
+          "profit_factor": 1.1106,
+          "sharpe_approx": 0.0457,
+          "avg_r": 0.1422
+        },
+        "neutral": {
+          "trades": 224,
+          "win_rate_pct": 58.9,
+          "avg_trade": 1.7,
+          "total_pnl": 381.63,
+          "profit_factor": 1.3577,
+          "sharpe_approx": 0.1268,
+          "avg_r": 0.2324
+        }
+      }
+    },
+    "elapsed_s": 125.3,
+    "n_tickers": 199,
+    "finished_at": "2026-05-14T02:59:17.453451+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "crypto",
+    "started_at": "2026-05-14T02:59:17.467853+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 0,
+      "cagr_pct": 0.0,
+      "cagr_full_period_pct": 0.0,
+      "sharpe": 0.0,
+      "sortino": 0.0,
+      "max_drawdown_pct": 0.0,
+      "win_rate_pct": 0.0,
+      "profit_factor": 0.0,
+      "total_pnl": 0,
+      "avg_trade": 0.0,
+      "final_equity": 0.0,
+      "expectancy_r": 0.0,
+      "avg_r": 0.0,
+      "r_count": 0,
+      "edge_p_value": 1.0,
+      "edge_significant": false,
+      "var_95_pct": 0.0,
+      "cvar_95_pct": 0.0,
+      "calmar": 0.0,
+      "mc_p95_drawdown_pct": 0.0,
+      "mc_fragile": false,
+      "windows_configured": 79,
+      "windows_used": 0,
+      "window_coverage_pct": 0.0
+    },
+    "elapsed_s": 1.0,
+    "n_tickers": 8,
+    "finished_at": "2026-05-14T02:59:18.450060+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "commodity_etfs",
+    "started_at": "2026-05-14T02:59:14.320477+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 130,
+      "cagr_pct": 17.161,
+      "cagr_full_period_pct": 14.3838,
+      "sharpe": 0.9692,
+      "sortino": 1.5579,
+      "max_drawdown_pct": 14.6615,
+      "win_rate_pct": 41.54,
+      "profit_factor": 2.0789,
+      "total_pnl": 1561.75,
+      "avg_trade": 12.01,
+      "final_equity": 2562.75,
+      "expectancy_r": 2.5803,
+      "avg_r": 2.5803,
+      "r_count": 130,
+      "edge_p_value": 0.006128,
+      "edge_significant": true,
+      "var_95_pct": 0.96,
+      "cvar_95_pct": 1.725,
+      "calmar": 1.1705,
+      "mc_p95_drawdown_pct": 25.22,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 130,
+          "total_pnl": 1561.75,
+          "win_rate_pct": 41.5
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 12,
+          "win_rate_pct": 25.0,
+          "avg_trade": 9.52,
+          "total_pnl": 114.19,
+          "profit_factor": 1.5235,
+          "sharpe_approx": 0.1464,
+          "avg_r": 1.0603
+        },
+        "bull": {
+          "trades": 10,
+          "win_rate_pct": 50.0,
+          "avg_trade": 24.65,
+          "total_pnl": 246.46,
+          "profit_factor": 3.3461,
+          "sharpe_approx": 0.3597,
+          "avg_r": 2.9196
+        },
+        "neutral": {
+          "trades": 108,
+          "win_rate_pct": 42.6,
+          "avg_trade": 11.12,
+          "total_pnl": 1201.1,
+          "profit_factor": 2.0682,
+          "sharpe_approx": 0.2476,
+          "avg_r": 2.7177
+        }
+      }
+    },
+    "elapsed_s": 5.8,
+    "n_tickers": 10,
+    "finished_at": "2026-05-14T02:59:20.079805+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "defensive_etfs",
+    "started_at": "2026-05-14T02:59:18.450637+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 12,
+      "cagr_pct": 2.7814,
+      "cagr_full_period_pct": 1.1566,
+      "sharpe": -0.6801,
+      "sortino": -1.0141,
+      "max_drawdown_pct": 3.0048,
+      "win_rate_pct": 58.33,
+      "profit_factor": 2.8444,
+      "total_pnl": 81.34,
+      "avg_trade": 6.78,
+      "final_equity": 1052.34,
+      "expectancy_r": 0.8779,
+      "avg_r": 0.8779,
+      "r_count": 12,
+      "edge_p_value": 0.106759,
+      "edge_significant": false,
+      "var_95_pct": 0.102,
+      "cvar_95_pct": 0.445,
+      "calmar": 0.9257,
+      "mc_p95_drawdown_pct": 3.59,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 12,
+          "total_pnl": 81.34,
+          "win_rate_pct": 58.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 4,
+          "win_rate_pct": 75.0,
+          "avg_trade": 8.95,
+          "total_pnl": 35.8,
+          "profit_factor": 7.3701,
+          "sharpe_approx": 0.8172,
+          "avg_r": 1.357
+        },
+        "neutral": {
+          "trades": 8,
+          "win_rate_pct": 50.0,
+          "avg_trade": 5.69,
+          "total_pnl": 45.54,
+          "profit_factor": 2.1835,
+          "sharpe_approx": 0.3298,
+          "avg_r": 0.6384
+        }
+      }
+    },
+    "elapsed_s": 2.2,
+    "n_tickers": 7,
+    "finished_at": "2026-05-14T02:59:20.652618+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "gold_etfs",
+    "started_at": "2026-05-14T02:59:20.081103+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 12,
+      "cagr_pct": 2.7814,
+      "cagr_full_period_pct": 1.1566,
+      "sharpe": -0.6801,
+      "sortino": -1.0141,
+      "max_drawdown_pct": 3.0048,
+      "win_rate_pct": 58.33,
+      "profit_factor": 2.8444,
+      "total_pnl": 81.34,
+      "avg_trade": 6.78,
+      "final_equity": 1052.34,
+      "expectancy_r": 0.8779,
+      "avg_r": 0.8779,
+      "r_count": 12,
+      "edge_p_value": 0.106759,
+      "edge_significant": false,
+      "var_95_pct": 0.102,
+      "cvar_95_pct": 0.445,
+      "calmar": 0.9257,
+      "mc_p95_drawdown_pct": 3.59,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 12,
+          "total_pnl": 81.34,
+          "win_rate_pct": 58.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 5,
+          "win_rate_pct": 80.0,
+          "avg_trade": 12.07,
+          "total_pnl": 60.35,
+          "profit_factor": 11.7384,
+          "sharpe_approx": 1.0251,
+          "avg_r": 1.602
+        },
+        "neutral": {
+          "trades": 7,
+          "win_rate_pct": 42.9,
+          "avg_trade": 3.0,
+          "total_pnl": 20.99,
+          "profit_factor": 1.5455,
+          "sharpe_approx": 0.1793,
+          "avg_r": 0.3608
+        }
+      }
+    },
+    "elapsed_s": 1.9,
+    "n_tickers": 4,
+    "finished_at": "2026-05-14T02:59:21.944520+00:00"
+  },
+  {
+    "strategy": "mean_reversion",
+    "market": "treasury_etfs",
+    "started_at": "2026-05-14T02:59:20.653517+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 12,
+      "cagr_pct": 2.7814,
+      "cagr_full_period_pct": 1.1566,
+      "sharpe": -0.6801,
+      "sortino": -1.0141,
+      "max_drawdown_pct": 3.0048,
+      "win_rate_pct": 58.33,
+      "profit_factor": 2.8444,
+      "total_pnl": 81.34,
+      "avg_trade": 6.78,
+      "final_equity": 1052.34,
+      "expectancy_r": 0.8779,
+      "avg_r": 0.8779,
+      "r_count": 12,
+      "edge_p_value": 0.106759,
+      "edge_significant": false,
+      "var_95_pct": 0.102,
+      "cvar_95_pct": 0.445,
+      "calmar": 0.9257,
+      "mc_p95_drawdown_pct": 3.59,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "mean_reversion": {
+          "trades": 12,
+          "total_pnl": 81.34,
+          "win_rate_pct": 58.3
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 7,
+          "win_rate_pct": 71.4,
+          "avg_trade": 10.34,
+          "total_pnl": 72.37,
+          "profit_factor": 6.5541,
+          "sharpe_approx": 0.8143,
+          "avg_r": 1.3691
+        },
+        "neutral": {
+          "trades": 5,
+          "win_rate_pct": 40.0,
+          "avg_trade": 1.79,
+          "total_pnl": 8.97,
+          "profit_factor": 1.2887,
+          "sharpe_approx": 0.0998,
+          "avg_r": 0.1903
+        }
+      }
+    },
+    "elapsed_s": 1.9,
+    "n_tickers": 6,
+    "finished_at": "2026-05-14T02:59:22.564787+00:00"
+  },
+  {
+    "strategy": "momentum_breakout",
+    "market": "defensive_etfs",
+    "started_at": "2026-05-14T02:59:22.565466+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 14,
+      "cagr_pct": 8.6546,
+      "cagr_full_period_pct": 3.5406,
+      "sharpe": 0.6022,
+      "sortino": 0.7817,
+      "max_drawdown_pct": 4.4008,
+      "win_rate_pct": 42.86,
+      "profit_factor": 4.8911,
+      "total_pnl": 301.6,
+      "avg_trade": 21.54,
+      "final_equity": 1238.57,
+      "expectancy_r": 2.1356,
+      "avg_r": 2.1356,
+      "r_count": 14,
+      "edge_p_value": 0.050762,
+      "edge_significant": false,
+      "var_95_pct": 0.584,
+      "cvar_95_pct": 0.987,
+      "calmar": 1.9666,
+      "mc_p95_drawdown_pct": 5.33,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 14,
+          "total_pnl": 301.6,
+          "win_rate_pct": 42.9
+        }
+      },
+      "regime_metrics": {
+        "bull": {
+          "trades": 12,
+          "win_rate_pct": 33.3,
+          "avg_trade": 15.13,
+          "total_pnl": 181.6,
+          "profit_factor": 3.3429,
+          "sharpe_approx": 0.3998,
+          "avg_r": 1.4364
+        },
+        "neutral": {
+          "trades": 2,
+          "win_rate_pct": 100.0,
+          "avg_trade": 60.0,
+          "total_pnl": 120.0,
+          "profit_factor": Infinity,
+          "sharpe_approx": 12.6646,
+          "avg_r": 6.3307
+        }
+      }
+    },
+    "elapsed_s": 2.1,
+    "n_tickers": 7,
+    "finished_at": "2026-05-14T02:59:24.630185+00:00"
+  },
+  {
+    "strategy": "momentum_breakout",
+    "market": "gold_etfs",
+    "started_at": "2026-05-14T02:59:24.630995+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 14,
+      "cagr_pct": 8.6546,
+      "cagr_full_period_pct": 3.5406,
+      "sharpe": 0.6022,
+      "sortino": 0.7817,
+      "max_drawdown_pct": 4.4008,
+      "win_rate_pct": 42.86,
+      "profit_factor": 4.8911,
+      "total_pnl": 301.6,
+      "avg_trade": 21.54,
+      "final_equity": 1238.57,
+      "expectancy_r": 2.1356,
+      "avg_r": 2.1356,
+      "r_count": 14,
+      "edge_p_value": 0.050762,
+      "edge_significant": false,
+      "var_95_pct": 0.584,
+      "cvar_95_pct": 0.987,
+      "calmar": 1.9666,
+      "mc_p95_drawdown_pct": 5.33,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 14,
+          "total_pnl": 301.6,
+          "win_rate_pct": 42.9
+        }
+      },
+      "regime_metrics": {
+        "bull": {
+          "trades": 10,
+          "win_rate_pct": 50.0,
+          "avg_trade": 27.21,
+          "total_pnl": 272.09,
+          "profit_factor": 7.2306,
+          "sharpe_approx": 0.6944,
+          "avg_r": 2.6748
+        },
+        "neutral": {
+          "trades": 4,
+          "win_rate_pct": 25.0,
+          "avg_trade": 7.38,
+          "total_pnl": 29.51,
+          "profit_factor": 1.872,
+          "sharpe_approx": 0.195,
+          "avg_r": 0.7876
+        }
+      }
+    },
+    "elapsed_s": 1.6,
+    "n_tickers": 4,
+    "finished_at": "2026-05-14T02:59:26.193387+00:00"
+  },
+  {
+    "strategy": "momentum_breakout",
+    "market": "treasury_etfs",
+    "started_at": "2026-05-14T02:59:26.193916+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 14,
+      "cagr_pct": 8.6546,
+      "cagr_full_period_pct": 3.5406,
+      "sharpe": 0.6022,
+      "sortino": 0.7817,
+      "max_drawdown_pct": 4.4008,
+      "win_rate_pct": 42.86,
+      "profit_factor": 4.8911,
+      "total_pnl": 301.6,
+      "avg_trade": 21.54,
+      "final_equity": 1238.57,
+      "expectancy_r": 2.1356,
+      "avg_r": 2.1356,
+      "r_count": 14,
+      "edge_p_value": 0.050762,
+      "edge_significant": false,
+      "var_95_pct": 0.584,
+      "cvar_95_pct": 0.987,
+      "calmar": 1.9666,
+      "mc_p95_drawdown_pct": 5.33,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 33,
+      "window_coverage_pct": 47.83,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 14,
+          "total_pnl": 301.6,
+          "win_rate_pct": 42.9
+        }
+      },
+      "regime_metrics": {
+        "bull": {
+          "trades": 10,
+          "win_rate_pct": 20.0,
+          "avg_trade": 2.25,
+          "total_pnl": 22.49,
+          "profit_factor": 1.2902,
+          "sharpe_approx": 0.0869,
+          "avg_r": 0.4885
+        },
+        "neutral": {
+          "trades": 4,
+          "win_rate_pct": 100.0,
+          "avg_trade": 69.78,
+          "total_pnl": 279.11,
+          "profit_factor": Infinity,
+          "sharpe_approx": 9.0179,
+          "avg_r": 6.2534
+        }
+      }
+    },
+    "elapsed_s": 1.7,
+    "n_tickers": 6,
+    "finished_at": "2026-05-14T02:59:27.895959+00:00"
+  },
+  {
+    "strategy": "momentum_breakout",
+    "market": "commodity_etfs",
+    "started_at": "2026-05-14T02:59:21.945213+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 288,
+      "cagr_pct": 13.899,
+      "cagr_full_period_pct": 11.6758,
+      "sharpe": 0.7473,
+      "sortino": 0.9755,
+      "max_drawdown_pct": 15.4758,
+      "win_rate_pct": 24.65,
+      "profit_factor": 1.5738,
+      "total_pnl": 1243.15,
+      "avg_trade": 4.32,
+      "final_equity": 2167.29,
+      "expectancy_r": 1.0438,
+      "avg_r": 1.0438,
+      "r_count": 288,
+      "edge_p_value": 0.001211,
+      "edge_significant": true,
+      "var_95_pct": 1.159,
+      "cvar_95_pct": 1.766,
+      "calmar": 0.8981,
+      "mc_p95_drawdown_pct": 27.41,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "momentum_breakout": {
+          "trades": 288,
+          "total_pnl": 1243.15,
+          "win_rate_pct": 24.7
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 5,
+          "win_rate_pct": 0.0,
+          "avg_trade": -7.82,
+          "total_pnl": -39.1,
+          "profit_factor": 0.0,
+          "sharpe_approx": -1.7965,
+          "avg_r": -1.9461
+        },
+        "bull": {
+          "trades": 67,
+          "win_rate_pct": 26.9,
+          "avg_trade": 4.95,
+          "total_pnl": 331.47,
+          "profit_factor": 1.5689,
+          "sharpe_approx": 0.1441,
+          "avg_r": 1.0849
+        },
+        "neutral": {
+          "trades": 216,
+          "win_rate_pct": 24.5,
+          "avg_trade": 4.4,
+          "total_pnl": 950.78,
+          "profit_factor": 1.6154,
+          "sharpe_approx": 0.1614,
+          "avg_r": 1.1003
+        }
+      }
+    },
+    "elapsed_s": 6.9,
+    "n_tickers": 10,
+    "finished_at": "2026-05-14T02:59:28.886685+00:00"
+  },
+  {
+    "strategy": "opening_gap",
+    "market": "sp500",
+    "started_at": "2026-05-14T02:59:27.896502+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 928,
+      "cagr_pct": 1.581,
+      "cagr_full_period_pct": 1.3376,
+      "sharpe": -0.2575,
+      "sortino": -0.301,
+      "max_drawdown_pct": 19.6031,
+      "win_rate_pct": 61.42,
+      "profit_factor": 1.0217,
+      "total_pnl": 58.68,
+      "avg_trade": 0.06,
+      "final_equity": 1065.66,
+      "expectancy_r": 0.0434,
+      "avg_r": 0.0434,
+      "r_count": 928,
+      "edge_p_value": 0.274377,
+      "edge_significant": false,
+      "var_95_pct": 1.016,
+      "cvar_95_pct": 1.67,
+      "calmar": 0.0807,
+      "mc_p95_drawdown_pct": 32.46,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "opening_gap": {
+          "trades": 928,
+          "total_pnl": 58.68,
+          "win_rate_pct": 61.4
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 10,
+          "win_rate_pct": 80.0,
+          "avg_trade": 0.68,
+          "total_pnl": 6.81,
+          "profit_factor": 1.3613,
+          "sharpe_approx": 0.0971,
+          "avg_r": 0.2775
+        },
+        "bull": {
+          "trades": 323,
+          "win_rate_pct": 58.8,
+          "avg_trade": -0.19,
+          "total_pnl": -60.34,
+          "profit_factor": 0.9307,
+          "sharpe_approx": -0.0235,
+          "avg_r": -0.0135
+        },
+        "neutral": {
+          "trades": 595,
+          "win_rate_pct": 62.5,
+          "avg_trade": 0.19,
+          "total_pnl": 112.21,
+          "profit_factor": 1.062,
+          "sharpe_approx": 0.023,
+          "avg_r": 0.0703
+        }
+      }
+    },
+    "elapsed_s": 103.3,
+    "n_tickers": 199,
+    "finished_at": "2026-05-14T03:01:11.211540+00:00"
+  },
+  {
+    "strategy": "short_term_mr",
+    "market": "sp500",
+    "started_at": "2026-05-14T02:59:28.887573+00:00",
+    "status": "ok",
+    "metrics": {
+      "total_trades": 825,
+      "cagr_pct": 0.7984,
+      "cagr_full_period_pct": 0.6759,
+      "sharpe": -0.7818,
+      "sortino": -1.0522,
+      "max_drawdown_pct": 12.2232,
+      "win_rate_pct": 62.18,
+      "profit_factor": 1.0324,
+      "total_pnl": 38.99,
+      "avg_trade": 0.05,
+      "final_equity": 1017.89,
+      "expectancy_r": 0.0031,
+      "avg_r": 0.0031,
+      "r_count": 825,
+      "edge_p_value": 0.87324,
+      "edge_significant": false,
+      "var_95_pct": 0.495,
+      "cvar_95_pct": 0.771,
+      "calmar": 0.0653,
+      "mc_p95_drawdown_pct": 16.33,
+      "mc_fragile": false,
+      "windows_configured": 69,
+      "windows_used": 69,
+      "window_coverage_pct": 100.0,
+      "strategy_breakdown": {
+        "short_term_mr": {
+          "trades": 825,
+          "total_pnl": 38.99,
+          "win_rate_pct": 62.2
+        }
+      },
+      "regime_metrics": {
+        "bear": {
+          "trades": 7,
+          "win_rate_pct": 85.7,
+          "avg_trade": -2.18,
+          "total_pnl": -15.24,
+          "profit_factor": 0.2698,
+          "sharpe_approx": -0.2635,
+          "avg_r": -0.3131
+        },
+        "bull": {
+          "trades": 283,
+          "win_rate_pct": 62.2,
+          "avg_trade": 0.23,
+          "total_pnl": 65.99,
+          "profit_factor": 1.2079,
+          "sharpe_approx": 0.0712,
+          "avg_r": 0.0388
+        },
+        "neutral": {
+          "trades": 535,
+          "win_rate_pct": 61.9,
+          "avg_trade": -0.02,
+          "total_pnl": -11.76,
+          "profit_factor": 0.9864,
+          "sharpe_approx": -0.005,
+          "avg_r": -0.0116
+        }
+      }
+    },
+    "elapsed_s": 172.6,
+    "n_tickers": 199,
+    "finished_at": "2026-05-14T03:02:21.475020+00:00"
+  }
+]

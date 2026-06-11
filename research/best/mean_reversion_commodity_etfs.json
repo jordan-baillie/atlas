@@ -1,0 +1,113 @@
+{
+  "strategy": "mean_reversion",
+  "market": "commodity_etfs",
+  "params": {
+    "weight": 0.3,
+    "rsi_period": 16,
+    "rsi_oversold": 35,
+    "zscore_lookback": 24,
+    "zscore_entry": -1.8,
+    "atr_period": 8,
+    "atr_stop_mult": 0.09,
+    "profit_target_atr_mult": 2.11,
+    "max_hold_days": 20,
+    "sma200_filter": false,
+    "ibs_max": 1.05,
+    "volume": {
+      "lookback": 20,
+      "min_ratio": 0.5,
+      "surge_threshold": 1.5,
+      "surge_boost": 0.0,
+      "dry_penalty": 0.0
+    },
+    "earnings_blackout": {
+      "enabled": false,
+      "days_before": 5,
+      "days_after": 1
+    },
+    "breadth": {
+      "enabled": false
+    }
+  },
+  "metrics": {
+    "total_trades": 564,
+    "cagr_pct": 23.9292,
+    "cagr_full_period_pct": 19.9753,
+    "sharpe": 1.1407,
+    "sortino": 1.6758,
+    "max_drawdown_pct": 17.9251,
+    "win_rate_pct": 39.89,
+    "profit_factor": 1.6804,
+    "total_pnl": 2644.05,
+    "avg_trade": 4.69,
+    "final_equity": 3576.69,
+    "expectancy_r": 0.9669,
+    "avg_r": 0.9669,
+    "r_count": 564,
+    "edge_p_value": 0.001391,
+    "edge_significant": true,
+    "var_95_pct": 1.41,
+    "cvar_95_pct": 2.21,
+    "calmar": 1.335,
+    "mc_p95_drawdown_pct": 29.68,
+    "mc_fragile": false,
+    "windows_configured": 69,
+    "windows_used": 69,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "connors_rsi2": {
+        "trades": 232,
+        "total_pnl": -79.26,
+        "win_rate_pct": 52.2
+      },
+      "momentum_breakout": {
+        "trades": 238,
+        "total_pnl": 1549.55,
+        "win_rate_pct": 27.3
+      },
+      "mean_reversion": {
+        "trades": 94,
+        "total_pnl": 1173.76,
+        "win_rate_pct": 41.5
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 16,
+        "win_rate_pct": 18.8,
+        "avg_trade": 12.98,
+        "total_pnl": 207.6,
+        "profit_factor": 2.0902,
+        "sharpe_approx": 0.171,
+        "avg_r": -0.6241
+      },
+      "bull": {
+        "trades": 108,
+        "win_rate_pct": 38.9,
+        "avg_trade": 7.28,
+        "total_pnl": 785.75,
+        "profit_factor": 1.7082,
+        "sharpe_approx": 0.1669,
+        "avg_r": 1.0738
+      },
+      "neutral": {
+        "trades": 440,
+        "win_rate_pct": 40.9,
+        "avg_trade": 3.75,
+        "total_pnl": 1650.7,
+        "profit_factor": 1.6383,
+        "sharpe_approx": 0.1401,
+        "avg_r": 0.9985
+      }
+    },
+    "solo_sharpe": 1.2496,
+    "runtime_s": 18.7
+  },
+  "description": "zscore_lookback: 16 \u2192 24",
+  "experiments_run": 0,
+  "experiments_kept": 26,
+  "updated_at": "2026-05-20T14:03:08.710927+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.1322,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: momentum_breakout (46.6%). True solo performance unknown \u2014 see task #327."
+}

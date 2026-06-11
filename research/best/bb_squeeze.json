@@ -1,0 +1,91 @@
+{
+  "strategy": "bb_squeeze",
+  "market": "sp500",
+  "params": {
+    "bb_period": 10,
+    "max_hold_days": 18,
+    "kc_period": 4,
+    "atr_stop_mult": 2.0,
+    "bb_std": 1.8
+  },
+  "metrics": {
+    "total_trades": 304,
+    "cagr_pct": 35.8879,
+    "cagr_full_period_pct": 29.7488,
+    "sharpe": 1.2953,
+    "sortino": 2.0432,
+    "max_drawdown_pct": 22.0198,
+    "win_rate_pct": 36.18,
+    "profit_factor": 1.5917,
+    "total_pnl": 5351.89,
+    "avg_trade": 17.6,
+    "final_equity": 6142.0,
+    "expectancy_r": 0.8204,
+    "avg_r": 0.8204,
+    "r_count": 304,
+    "edge_p_value": 0.001562,
+    "edge_significant": true,
+    "var_95_pct": 1.941,
+    "cvar_95_pct": 2.813,
+    "calmar": 1.6298,
+    "mc_p95_drawdown_pct": 100.13,
+    "mc_fragile": true,
+    "windows_configured": 70,
+    "windows_used": 70,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 207,
+        "total_pnl": 4772.76,
+        "win_rate_pct": 25.6
+      },
+      "connors_rsi2": {
+        "trades": 52,
+        "total_pnl": 237.69,
+        "win_rate_pct": 67.3
+      },
+      "bb_squeeze": {
+        "trades": 45,
+        "total_pnl": 341.44,
+        "win_rate_pct": 48.9
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 6,
+        "win_rate_pct": 66.7,
+        "avg_trade": 65.23,
+        "total_pnl": 391.36,
+        "profit_factor": 4.3674,
+        "sharpe_approx": 0.419,
+        "avg_r": 1.9532
+      },
+      "bull": {
+        "trades": 74,
+        "win_rate_pct": 28.4,
+        "avg_trade": 30.62,
+        "total_pnl": 2266.19,
+        "profit_factor": 1.5981,
+        "sharpe_approx": 0.148,
+        "avg_r": 0.7764
+      },
+      "neutral": {
+        "trades": 224,
+        "win_rate_pct": 37.9,
+        "avg_trade": 12.03,
+        "total_pnl": 2694.34,
+        "profit_factor": 1.5242,
+        "sharpe_approx": 0.1146,
+        "avg_r": 0.8046
+      }
+    },
+    "solo_sharpe": -0.4496,
+    "runtime_s": 89.4
+  },
+  "description": "max_hold_days=18: longer hold captures more",
+  "experiments_run": 91,
+  "experiments_kept": 17,
+  "updated_at": "2026-05-16T14:27:35.792212+00:00",
+  "is_solo": true,
+  "solo_fraction": 1.0
+}

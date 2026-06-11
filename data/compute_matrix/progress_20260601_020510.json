@@ -1,0 +1,7 @@
+{
+  "sp500": {
+    "universe": "sp500",
+    "status": "benchmark_unavailable",
+    "returncode": 0
+  }
+}

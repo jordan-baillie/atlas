@@ -1,0 +1,23 @@
+{
+  "/root/atlas/backtest/engine.py": "26823e46ea331eec8bc90c736040517f282eb4a45066864ed31eae7cd28d6e16",
+  "/root/atlas/backtest/metrics.py": "2b716df74bab888d89f97afcfefb243215526e7116cb4d57ec5416b4b93008d2",
+  "/root/atlas/backtest/filters.py": "4009896a5ae27070c460e2636a5cc1883ccd8f5572252b581bd1391739822aa6",
+  "/root/atlas/backtest/enrichment.py": "31eea221f06b61bb68ceb5be6fb9f61e9095dc0f66db35b106cc70ce51891038",
+  "/root/atlas/backtest/pipeline.py": "f458fc76ad0e9bb8d1c4238d1f4bf9cd5725e6171ec50e2727e5d1ee6591e5b8",
+  "/root/atlas/backtest/vol_scaling.py": "8561efedc15fe27f93e32554f640e9ce1fea43c0b82f8cf5cc76128bd7508fd2",
+  "/root/atlas/strategies/base.py": "3ea219cb2e14fb139c8ba7b1d82ecfe03a93243ae1a85f00a5c0d4752f26028e",
+  "/root/atlas/utils/helpers.py": "3c321c4c149c8e069ee686da75be82da49dfbdc57900ee77e54b193790d56ca7",
+  "/root/atlas/utils/allocation.py": "6fd7b2ea0b5f406ed14c597732f13462af62839acf5379508cdb05209020151a",
+  "/root/atlas/scripts/strategy_evaluator.py": "cfb73062783abd173d281702fc59753cec8ec714ad3b1a6d804541789bb8a799",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/CCJ.parquet": "a7d7eafb433894c9896620d4538641a27278aec8b0f5275a31ca6a9ed4921748",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/CORN.parquet": "18f534baacbee9fe6d0b0d1c1730a7f3b4ce9b9e0bfa262ed1f4f7d68c3e2db7",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/DBA.parquet": "1a1ab215ae9d41e6e2c40c5f60d907ebb6fb8d0fed35c60a2db9f474376ebb0d",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/DBB.parquet": "c1ac986ed0c14126869e970ff0b6d1ee157b518e781df4a6db7bc2612187d611",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/DBC.parquet": "98b85d1f60939b2614821c22460962bcf3a04ed5766726daf50ef31d558072e1",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/FCX.parquet": "258f762acbc2a9dddae7043878a89669940f4cccb4edd1c50c46ba6942cf3e51",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/GLD.parquet": "a8a33013296ca9a85626e8d8db6dd29fe9c752a04c3b779f2b1b3fc0c1dd7f88",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/SLV.parquet": "87302165b20f8461c9cecda50fabe5debc372e110e74bcb4e72a91abb1147c12",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/UNG.parquet": "2051efdea2deb846efb6cc490354e149627e9fe21564ac977275fe4fa1b95617",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/USO.parquet": "bec57d5680f67616ef03fc16752ae6ef03d4fcc0b69093fe272d50a059d63dcf",
+  "/root/atlas/data/snapshots/commodity_etfs_20260417_7yr/XOP.parquet": "7a7b0e9a0a4fdeaf3520559934390905c506aa40c4dc4d2735a14d664b123f46"
+}

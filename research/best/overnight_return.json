@@ -1,0 +1,85 @@
+{
+  "strategy": "overnight_return",
+  "market": "sp500",
+  "params": {
+    "ibs_min": 0.3,
+    "momentum_min": 0.0,
+    "atr_stop_mult": 1.5,
+    "max_hold_days": 1,
+    "sma200_filter": true
+  },
+  "metrics": {
+    "total_trades": 1122,
+    "cagr_pct": 1.3219,
+    "cagr_full_period_pct": 0.9654,
+    "sharpe": -0.369,
+    "sortino": -0.4939,
+    "max_drawdown_pct": 17.6029,
+    "win_rate_pct": 51.52,
+    "profit_factor": 1.0311,
+    "total_pnl": 60.52,
+    "avg_trade": 0.05,
+    "final_equity": 1033.65,
+    "expectancy_r": 0.0223,
+    "avg_r": 0.0223,
+    "r_count": 1122,
+    "edge_p_value": 0.345041,
+    "edge_significant": false,
+    "var_95_pct": 0.808,
+    "cvar_95_pct": 1.274,
+    "calmar": 0.0751,
+    "mc_p95_drawdown_pct": 21.0,
+    "mc_fragile": false,
+    "windows_configured": 55,
+    "windows_used": 55,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "overnight_return": {
+        "trades": 1122,
+        "total_pnl": 60.52,
+        "win_rate_pct": 51.5
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 8,
+        "win_rate_pct": 37.5,
+        "avg_trade": -0.65,
+        "total_pnl": -5.21,
+        "profit_factor": 0.294,
+        "sharpe_approx": -0.4986,
+        "avg_r": -0.1794
+      },
+      "bull": {
+        "trades": 475,
+        "win_rate_pct": 53.5,
+        "avg_trade": 0.2,
+        "total_pnl": 94.28,
+        "profit_factor": 1.1299,
+        "sharpe_approx": 0.045,
+        "avg_r": 0.067
+      },
+      "neutral": {
+        "trades": 639,
+        "win_rate_pct": 50.2,
+        "avg_trade": -0.04,
+        "total_pnl": -28.55,
+        "profit_factor": 0.9764,
+        "sharpe_approx": -0.0085,
+        "avg_r": -0.0083
+      }
+    }
+  },
+  "description": "task251_sweep_result",
+  "is_solo": true,
+  "solo_fraction": null,
+  "quick_check_status": "passed",
+  "p_value": 0.345041,
+  "universe": "sp500 top-100 (198 tickers in full universe)",
+  "date_range": "2020-07-27 to 2026-05-15",
+  "runner_notes": "Task #251. quick_check=pass, baseline_sharpe=0.2597, sweep_best=-0.3690 (4 expts, 1 kept), combined_sharpe=0.3889. Run 2026-05-18",
+  "experiments_run": 0,
+  "experiments_kept": 0,
+  "updated_at": "2026-05-18T12:08:15.985391+00:00",
+  "task": "#251"
+}

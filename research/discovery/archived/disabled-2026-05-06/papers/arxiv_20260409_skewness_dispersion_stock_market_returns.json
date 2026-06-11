@@ -1,0 +1,9 @@
+{
+  "title": "Skewness Dispersion and Stock Market Returns",
+  "url": "http://arxiv.org/abs/2604.07870v1",
+  "abstract": "Cross-sectional dispersion in firm-level realized skewness is significantly and negatively related to future stock market returns, offering a concrete volatility-derived timing signal. The predictive power is robust to in-sample and out-of-sample estimation and is incremental over a broad set of existing predictors. Skewness dispersion delivers substantial economic gains in portfolio allocation. Notably, its forecasting power is concentrated in months with monetary policy announcements — a calendar-effect pattern — reflecting gradual incorporation of macro news driven by variation in aggregate risk and valuation adjustments.",
+  "source": "arXiv",
+  "published_date": "2026-04-09",
+  "authors": "Mykola Babiak & Jozef Barunik & Josef Kurka",
+  "body": "Cross-sectional dispersion in firm-level realized skewness is significantly and negatively related to future stock market returns. The predictive power of skewness dispersion is robust to in-sample and out-of-sample estimation and is incremental over a broad set of existing predictors, with only a few alternatives retaining independent explanatory ability. Skewness dispersion also delivers substantial economic gains in portfolio allocation. Its forecasting power is concentrated in months with monetary policy announcements, reflecting an information-based mechanism. The empirical evidence suggests that skewness dispersion captures the gradual incorporation of macro news into prices, which is driven by variation in aggregate risk and valuation adjustments."
+}

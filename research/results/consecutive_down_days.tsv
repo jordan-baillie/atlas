@@ -1,0 +1,259 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-11T11:44:50	0.0000	0	0.00	0.0000	0.00		keep	baseline
+2026-03-11T11:48:18	0.0000	0	0.00	0.0000	0.00		keep	baseline
+2026-03-11T12:16:24	-0.1090	93	1.23	4.9706	3.67		keep	baseline
+2026-03-11T12:40:49	-0.1090	93	1.23	4.9706	3.67		keep	baseline
+2026-03-11T12:49:48	-0.1090	93	1.23	4.9706	3.67		keep	baseline
+2026-03-11T12:54:08	-0.1090	93	1.23	4.9706	3.67		keep	baseline
+2026-03-11T12:55:45	-0.1090	93	1.23	4.9706	3.67		keep	baseline
+2026-03-11T13:11:30	0.1080	222	1.78	3.2642	5.70	min_down_days=2	keep	min_down_days: None→2 (best of 4)
+2026-03-11T13:11:30	-7.5324	39	0.71	1.4451	0.19	min_down_days=4	discard	min_down_days: None→4
+2026-03-11T13:11:30	-17.8821	16	0.98	0.8591	-0.03	min_down_days=5	discard	min_down_days: None→5
+2026-03-11T13:11:30	-0.1090	93	1.23	4.9706	3.67	min_down_days=3	discard	min_down_days: None→3
+2026-03-11T13:30:05	0.4078	524	5.32	5.6703	40.54	ibs_threshold=1.0	keep	ibs_threshold: None→1.0 (best of 4)
+2026-03-11T13:30:05	0.1080	222	1.78	3.2642	5.70	ibs_threshold=0.3	discard	ibs_threshold: None→0.3
+2026-03-11T13:30:05	0.1095	138	0.95	5.4967	5.72	ibs_threshold=0.2	discard	ibs_threshold: None→0.2
+2026-03-11T13:30:05	-0.0569	359	2.88	1.8334	4.10	ibs_threshold=0.5	discard	ibs_threshold: None→0.5
+2026-03-11T13:30:13	0.4058	503	4.35	6.9111	37.45	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-11T13:30:13	0.4126	551	7.56	5.0474	49.55	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-11T13:30:13	0.3993	488	3.33	7.8534	32.30	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-11T13:30:13	0.4078	524	5.32	5.6703	40.54	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-11T13:30:22	0.4080	512	5.31	5.9096	40.60	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-11T13:30:22	0.4078	513	5.31	5.7978	40.54	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-11T13:30:22	0.4080	548	4.96	5.5034	40.60	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-11T13:30:22	0.4078	524	5.32	5.6703	40.54	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-11T13:30:30	0.4078	524	5.32	5.6703	40.54	sma200_filter=True	discard	sma200_filter: None→True
+2026-03-11T13:30:30	0.4075	666	6.56	4.4180	40.41	sma200_filter=False	discard	sma200_filter: None→False
+2026-03-12T00:42:37	0.4008	1219	8.30	2.9828	40.37		keep	baseline
+2026-03-12T00:43:16	-3.0369	206	2.81	1.1531	0.36	min_down_days=5	discard	min_down_days: 2→5
+2026-03-12T00:43:16	-2.0834	457	3.27	1.0145	0.21	min_down_days=4	discard	min_down_days: 2→4
+2026-03-12T00:43:16	0.4136	845	5.31	3.9053	44.20	min_down_days=3	discard	min_down_days: 2→3
+2026-03-12T00:43:58	0.0328	470	4.16	1.6874	4.75	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-12T00:43:58	-1.6230	666	8.29	0.9851	0.09	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-12T00:43:58	-0.1612	1004	5.78	1.2156	3.02	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-12T00:44:46	0.3906	1178	5.36	3.6552	30.27	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-12T00:44:46	0.4008	1219	8.30	2.9828	40.37	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T00:44:46	0.4055	1260	12.23	2.6616	44.95	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T00:44:46	0.3978	1201	7.32	3.3192	34.83	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T00:45:33	0.4008	1219	8.30	2.9828	40.37	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T00:45:33	0.3982	1277	8.21	2.7959	39.47	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T00:45:33	0.3989	1198	8.85	2.9689	39.72	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-12T00:45:33	0.3993	1203	8.65	2.9808	39.89	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T01:05:53	0.5775	1388	8.47	5.9187	83.84	sma200_filter=False	keep	sma200_filter: None→False (best of 2)
+2026-03-12T01:05:53	0.4008	1219	8.30	2.9828	40.37	sma200_filter=True	discard	sma200_filter: None→True
+2026-03-12T07:04:47	0.5743	1379	6.17	4.4556	65.27		keep	baseline
+2026-03-12T07:05:36	-3.1535	345	1.94	1.1446	0.43	min_down_days=5	discard	min_down_days: 2→5
+2026-03-12T07:05:36	-2.6225	628	3.99	0.9757	-0.05	min_down_days=4	discard	min_down_days: 2→4
+2026-03-12T07:05:36	0.5215	1040	4.73	4.6364	56.09	min_down_days=3	discard	min_down_days: 2→3
+2026-03-12T07:06:29	0.3502	663	5.05	3.1810	19.62	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-12T07:06:29	0.3689	893	7.47	2.5670	21.26	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-12T07:06:29	0.3680	1188	6.10	2.2868	21.19	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-12T07:07:25	0.5553	1322	5.03	5.0660	47.56	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-12T07:07:25	0.5709	1422	6.75	5.6430	82.43	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T07:07:25	0.5743	1379	6.17	4.4556	65.27	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T07:07:25	0.5609	1344	6.44	4.6135	56.44	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T07:08:23	0.5736	1440	6.38	4.2051	65.08	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T07:08:23	0.5726	1349	6.37	4.4508	64.83	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-12T07:08:23	0.5728	1356	6.15	4.4730	64.85	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T07:08:23	0.5743	1379	6.17	4.4556	65.27	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T07:09:14	0.3908	1202	6.41	3.5567	32.62	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-12T13:55:42	0.5741	1375	7.08	4.3977	65.15		keep	baseline
+2026-03-12T13:56:27	-3.1320	349	2.47	1.1662	0.48	min_down_days=5	discard	min_down_days: 2→5
+2026-03-12T13:56:27	-2.5891	630	3.81	1.0038	0.02	min_down_days=4	discard	min_down_days: 2→4
+2026-03-12T13:56:27	0.5216	1043	5.03	4.7016	55.99	min_down_days=3	discard	min_down_days: 2→3
+2026-03-12T13:57:17	0.3528	661	4.90	3.2086	19.94	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-12T13:57:17	0.3294	893	7.25	2.2072	13.75	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-12T13:57:17	0.3729	1196	6.60	2.3282	21.68	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-12T13:58:10	0.5712	1424	7.64	5.6552	82.44	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-12T13:58:10	0.5612	1339	7.25	4.5591	56.44	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-12T13:58:10	0.5552	1314	5.86	5.0005	47.42	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-12T13:58:10	0.5741	1375	7.08	4.3977	65.15	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-12T13:59:04	0.5731	1435	6.84	4.1886	64.84	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-12T13:59:04	0.5718	1338	7.49	4.4607	64.49	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-12T13:59:04	0.5726	1347	7.59	4.4238	64.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-12T13:59:04	0.5741	1375	7.08	4.3977	65.15	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-12T13:59:51	0.3884	1192	6.37	3.4660	32.09	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-13T00:24:36	0.5741	1375	7.08	4.3977	65.15		keep	baseline
+2026-03-13T00:25:18	-3.1320	349	2.47	1.1662	0.48	min_down_days=5	discard	min_down_days: 2→5
+2026-03-13T00:25:18	-2.5891	630	3.81	1.0038	0.02	min_down_days=4	discard	min_down_days: 2→4
+2026-03-13T00:25:18	0.5216	1043	5.03	4.7016	55.99	min_down_days=3	discard	min_down_days: 2→3
+2026-03-13T00:26:06	0.3528	661	4.90	3.2086	19.94	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-13T00:26:06	0.3294	893	7.25	2.2072	13.75	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-13T00:26:06	0.3729	1196	6.60	2.3282	21.68	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-13T00:26:57	0.5552	1314	5.86	5.0005	47.42	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-13T00:26:57	0.5712	1424	7.64	5.6552	82.44	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T00:26:57	0.5741	1375	7.08	4.3977	65.15	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-13T00:26:57	0.5612	1339	7.25	4.5591	56.44	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-13T00:27:48	0.5741	1375	7.08	4.3977	65.15	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-13T00:27:48	0.5731	1435	6.84	4.1886	64.84	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-13T00:27:48	0.5718	1338	7.49	4.4607	64.49	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-13T00:27:48	0.5726	1347	7.59	4.4238	64.69	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-13T00:28:34	0.3884	1192	6.37	3.4660	32.09	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-13T03:25:46	0.5902	1368	4.63	4.9148	69.53		keep	baseline
+2026-03-13T03:26:30	-2.5518	346	1.71	1.5246	1.32	min_down_days=5	discard	min_down_days: 2→5
+2026-03-13T03:26:30	-1.8700	627	1.68	1.2781	1.39	min_down_days=4	discard	min_down_days: 2→4
+2026-03-13T03:26:30	0.5332	1039	3.81	5.2574	59.34	min_down_days=3	discard	min_down_days: 2→3
+2026-03-13T03:27:19	0.3700	653	2.56	3.6262	21.37	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-13T03:27:19	0.3814	888	3.31	2.5841	15.99	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-13T03:27:19	0.4054	1186	3.40	2.6620	24.73	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-13T03:28:12	0.5842	1422	5.69	6.4523	88.26	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-13T03:28:12	0.5720	1303	3.68	5.5874	50.31	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-13T03:28:12	0.5902	1368	4.63	4.9148	69.53	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-13T03:28:12	0.5749	1333	4.68	5.0491	59.43	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-13T03:29:03	0.5885	1331	4.94	4.9984	69.12	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-13T03:29:03	0.5884	1340	4.93	4.9433	69.09	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-13T03:29:03	0.5902	1368	4.63	4.9148	69.53	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-13T03:29:03	0.5913	1429	4.52	4.7102	69.88	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-13T03:29:48	0.4059	1192	3.58	3.9575	35.80	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-15T10:01:00	0.4925	726	3.10	6.3941	48.51		keep	baseline
+2026-03-15T10:01:45	-3.8331	244	1.88	1.2990	0.57	min_down_days=5	discard	min_down_days: 2→5
+2026-03-15T10:01:45	-3.1943	404	1.59	1.1757	0.60	min_down_days=4	discard	min_down_days: 2→4
+2026-03-15T10:01:45	0.3214	603	2.71	3.1747	13.40	min_down_days=3	discard	min_down_days: 2→3
+2026-03-15T10:02:34	0.3669	567	2.03	3.4392	15.30	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-15T10:02:34	0.3708	628	2.59	3.2850	15.47	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-15T10:02:34	0.4920	681	2.99	6.7834	48.38	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-15T10:03:34	0.3069	686	2.07	3.2316	10.97	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-15T10:03:34	0.4925	726	3.10	6.3941	48.51	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-15T10:03:34	0.4803	702	2.78	7.5279	42.45	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-15T10:03:34	0.4979	756	3.71	5.8277	62.72	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-15T10:04:32	0.4925	726	3.10	6.3941	48.51	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-15T10:04:32	0.4884	704	3.57	6.3959	47.67	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-15T10:04:32	0.4908	712	3.08	6.3788	48.08	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-15T10:04:32	0.4925	756	3.46	5.9611	48.51	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-15T10:05:17	-0.2612	663	3.62	1.5168	3.11	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-16T00:53:42	0.4925	726	3.10	6.3941	48.51		keep	baseline
+2026-03-16T00:54:31	-3.8331	244	1.88	1.2990	0.57	min_down_days=5	discard	min_down_days: 2→5
+2026-03-16T00:54:31	-3.1943	404	1.59	1.1757	0.60	min_down_days=4	discard	min_down_days: 2→4
+2026-03-16T00:54:31	0.3214	603	2.71	3.1747	13.40	min_down_days=3	discard	min_down_days: 2→3
+2026-03-16T00:55:23	0.3669	567	2.03	3.4392	15.30	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-16T00:55:23	0.3708	628	2.59	3.2850	15.47	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-16T00:55:23	0.4920	681	2.99	6.7834	48.38	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-16T00:56:22	0.4803	702	2.78	7.5279	42.45	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T00:56:22	0.4979	756	3.71	5.8277	62.72	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T00:56:22	0.4925	726	3.10	6.3941	48.51	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T00:56:22	0.3069	686	2.07	3.2316	10.97	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T00:57:19	0.4884	704	3.57	6.3959	47.67	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T00:57:19	0.4908	712	3.08	6.3788	48.08	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T00:57:19	0.4925	756	3.46	5.9611	48.51	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T00:57:19	0.4925	726	3.10	6.3941	48.51	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T00:58:09	-0.2612	663	3.62	1.5168	3.11	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-16T02:37:35	0.4925	726	3.10	6.3941	48.51		keep	baseline
+2026-03-16T02:38:21	-3.8331	244	1.88	1.2990	0.57	min_down_days=5	discard	min_down_days: 2→5
+2026-03-16T02:38:21	-3.1943	404	1.59	1.1757	0.60	min_down_days=4	discard	min_down_days: 2→4
+2026-03-16T02:38:21	0.3214	603	2.71	3.1747	13.40	min_down_days=3	discard	min_down_days: 2→3
+2026-03-16T02:39:13	0.3669	567	2.03	3.4392	15.30	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-16T02:39:13	0.3708	628	2.59	3.2850	15.47	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-16T02:39:13	0.4920	681	2.99	6.7834	48.38	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-16T02:40:09	0.3069	686	2.07	3.2316	10.97	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T02:40:09	0.4803	702	2.78	7.5279	42.45	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T02:40:09	0.4925	726	3.10	6.3941	48.51	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T02:40:09	0.4979	756	3.71	5.8277	62.72	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T02:41:03	0.4908	712	3.08	6.3788	48.08	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T02:41:03	0.4884	704	3.57	6.3959	47.67	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T02:41:03	0.4925	726	3.10	6.3941	48.51	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T02:41:03	0.4925	756	3.46	5.9611	48.51	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T02:41:49	-0.2612	663	3.62	1.5168	3.11	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-16T05:37:02	0.4933	734	3.07	6.4126	48.67		keep	baseline
+2026-03-16T05:37:46	-3.6188	249	1.89	1.3416	0.66	min_down_days=5	discard	min_down_days: 2→5
+2026-03-16T05:37:46	-2.9128	410	1.54	1.2174	0.75	min_down_days=4	discard	min_down_days: 2→4
+2026-03-16T05:37:46	0.3281	613	2.74	3.1845	13.66	min_down_days=3	discard	min_down_days: 2→3
+2026-03-16T05:38:36	0.3714	572	1.99	3.4924	15.67	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-16T05:38:36	0.3748	636	2.26	3.2949	15.65	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-16T05:38:36	0.4939	688	3.00	6.8131	48.83	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-16T05:39:32	0.3113	694	2.07	3.2211	11.08	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T05:39:32	0.4988	765	3.52	5.8709	63.07	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T05:39:32	0.4829	711	2.59	7.4974	42.90	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T05:39:32	0.4933	734	3.07	6.4126	48.67	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T05:40:27	0.4916	720	3.08	6.4007	48.26	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T05:40:27	0.4913	713	3.49	6.3752	48.21	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T05:40:27	0.4935	765	3.40	5.9846	48.73	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T05:40:27	0.4933	734	3.07	6.4126	48.67	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T05:41:16	-0.2407	672	3.20	1.5310	3.23	sma200_filter=True	discard	sma200_filter: False→True
+2026-03-16T13:12:54	0.9228	730	13.28	2.3917	44.57		keep	baseline
+2026-03-16T13:13:51	-1.2154	275	2.87	1.4324	1.83	min_down_days=5	discard	min_down_days: 2→5
+2026-03-16T13:13:51	-0.6988	446	3.32	1.3583	2.62	min_down_days=4	discard	min_down_days: 2→4
+2026-03-16T13:13:51	0.3911	623	4.98	2.4396	20.41	min_down_days=3	discard	min_down_days: 2→3
+2026-03-16T13:14:53	0.4449	582	4.44	2.8716	28.66	ibs_threshold=0.2	discard	ibs_threshold: 1.0→0.2
+2026-03-16T13:14:53	0.4428	638	4.71	2.6960	28.48	ibs_threshold=0.3	discard	ibs_threshold: 1.0→0.3
+2026-03-16T13:14:53	0.5133	694	3.13	9.3505	82.14	ibs_threshold=0.5	discard	ibs_threshold: 1.0→0.5
+2026-03-16T13:16:01	0.4923	737	5.43	7.1096	75.87	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T13:16:01	0.5049	729	4.63	7.1301	72.51	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T13:16:01	0.4916	762	6.22	10.4419	96.23	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T13:16:01	0.5050	724	3.54	6.3044	62.16	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T13:17:09	0.4945	776	5.39	6.8716	77.15	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T13:17:09	0.4923	737	5.43	7.1096	75.87	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T13:17:09	0.4915	725	5.14	7.2542	75.42	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T13:17:09	0.4906	720	5.85	7.1717	75.09	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T13:18:09	0.2420	687	5.51	1.5668	7.50	sma200_filter=True	discard	sma200_filter: False→True
+2026-04-19T14:20:25	0.3629	1021	37.70	1.1773	10.75		keep	baseline
+2026-04-19T14:23:55	0.3629	1021	37.70	1.1773	10.75		keep	baseline
+2026-04-19T14:28:08	0.3629	1021	37.70	1.1773	10.75		keep	baseline
+2026-04-21T14:42:48	0.3629	1021	37.70	1.1773	10.75		keep	baseline
+2026-04-23T14:21:11	0.8626	921	38.75	1.3326	23.17		keep	baseline
+2026-04-23T14:23:52	0.8626	921	38.75	1.3326	23.17		keep	baseline
+2026-04-23T14:27:39	0.8626	921	38.75	1.3326	23.17		keep	baseline
+2026-04-23T14:33:48	0.8626	921	38.75	1.3326	23.17		keep	baseline
+2026-04-23T14:36:31	0.8503	930	38.75	1.3318	22.76	profit_target_atr_mult=1.5	discard	enable profit target at 1.5x ATR for faster exits
+2026-04-23T14:39:37	0.8626	921	38.75	1.3326	23.17		keep	baseline
+2026-04-23T14:42:34	0.8503	930	38.75	1.3318	22.76	atr_stop_mult=1.0	discard	tighter atr stop 2.0 → 1.0: reduce DD for mean-reversion exits
+2026-04-25T14:28:36	0.6526	237	16.34	1.5125	11.73		keep	baseline
+2026-04-25T14:29:27	0.6986	234	16.34	1.5146	12.37	min_down_days=3	keep	min_down_days 2→3: require more consecutive down days for higher quality entries
+2026-04-25T14:30:38	0.7081	232	16.34	1.5374	12.52		keep	baseline
+2026-04-25T14:31:25	0.6986	234	16.34	1.5146	12.37	min_down_days=4	discard	min_down_days 3→4: even more selective entry
+2026-04-25T14:32:15	0.6986	234	16.34	1.5146	12.37	max_down_days=5	discard	max_down_days 8→5: cut off deep downtrend entries earlier
+2026-04-25T14:33:05	0.6986	234	16.34	1.5146	12.37	max_down_days=6	discard	max_down_days 8→6: moderate cutoff
+2026-04-25T14:33:53	0.6986	234	16.34	1.5146	12.37	ibs_threshold=0.5	discard	ibs_threshold=0.5: enable IBS selling exhaustion filter
+2026-04-25T14:34:41	0.6986	234	16.34	1.5146	12.37	ibs_threshold=0.3	discard	ibs_threshold=0.3: strict IBS filter for max selling exhaustion
+2026-04-25T14:35:32	0.6986	234	16.34	1.5146	12.37	atr_stop_mult=1.5	discard	atr_stop_mult 2.0→1.5: tighter stop to reduce drawdown
+2026-04-25T14:36:23	0.6986	234	16.34	1.5146	12.37	atr_stop_mult=2.5	discard	atr_stop_mult 2.0→2.5: wider stop to let trades breathe
+2026-04-25T14:37:15	0.6986	234	16.34	1.5146	12.37	max_hold_days=7	discard	max_hold_days 5→7: allow more time for reversion
+2026-04-25T14:38:05	0.6986	234	16.34	1.5146	12.37	max_hold_days=3	discard	max_hold_days 5→3: faster exit
+2026-04-29T14:16:08	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:19:42	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:20:52	0.5844	779	32.20	1.3013	15.85	min_down_days=2	discard	fewer required down days → more entries, test signal quality
+2026-04-29T14:24:07	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:28:15	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:30:09	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:32:27	0.5844	779	32.20	1.3013	15.85	ibs_threshold=0.8	discard	tighten IBS to 0.8 - filter out days where stock closed near highs
+2026-04-29T14:36:32	0.5844	779	32.20	1.3013	15.85	ibs_threshold=0.6	discard	very tight IBS=0.6: stock must close near bottom 60% of range
+2026-04-29T14:39:37	0.6391	772	32.20	1.3172	17.16		keep	baseline
+2026-04-29T14:44:24	0.5844	779	32.20	1.3013	15.85	min_down_days=2	discard	min_down_days=2: more entry signals
+2026-04-30T14:21:27	0.7697	272	23.87	1.4048	20.18		keep	baseline
+2026-04-30T14:23:29	0.7697	272	23.87	1.4048	20.18		keep	baseline
+2026-04-30T14:25:12	0.7570	274	23.87	1.4415	19.81	min_down_days=2	discard	min_down_days 3->2: earlier entry, more trades for MR
+2026-04-30T14:26:34	0.7570	274	23.87	1.4415	19.81	min_down_days=4	discard	min_down_days 3->4: stricter filter, higher quality setups
+2026-04-30T14:28:04	0.7570	274	23.87	1.4415	19.81	atr_stop_mult=1.5	discard	atr_stop_mult 2.0->1.5: tighter stop, quicker loss cut
+2026-04-30T14:29:32	0.7570	274	23.87	1.4415	19.81	atr_stop_mult=1.0	discard	atr_stop_mult 2.0->1.0: very tight stop
+2026-05-01T14:14:38	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:18:09	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:24:45	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:31:23	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:36:47	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:36:56	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:40:02	0.7322	295	20.35	1.4977	19.21	atr_stop_mult=1.5	discard	tighter stop: 1.5x ATR - reduce DD
+2026-05-01T14:40:20	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:45:23	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-01T14:48:40	0.8683	304	21.52	1.4683	22.86		keep	baseline
+2026-05-01T14:50:16	0.8683	304	21.52	1.4683	22.86		keep	baseline
+2026-05-01T14:51:35	0.8544	306	21.52	1.5146	22.45	max_hold_days=7	discard	hold longer 5→7: more time to revert
+2026-05-01T14:52:55	0.8544	306	21.52	1.5146	22.45	max_hold_days=10	discard	hold longer 5→10: full recovery window
+2026-05-01T14:54:15	0.8544	306	21.52	1.5146	22.45	max_hold_days=3	discard	hold shorter 5→3: quick snap-back exit
+2026-05-01T14:55:35	0.8544	306	21.52	1.5146	22.45	atr_stop_mult=1.5	discard	tighter stop 2.0→1.5: cut losers faster
+2026-05-01T14:56:58	0.8544	306	21.52	1.5146	22.45	atr_stop_mult=2.5	discard	looser stop 2.0→2.5: avoid whipsaw
+2026-05-01T14:59:32	0.8683	304	21.52	1.4683	22.86		keep	baseline
+2026-05-09T14:06:11	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-09T14:09:32	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-09T14:12:54	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-09T14:19:18	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-09T14:22:38	0.7322	295	20.35	1.4977	19.21	min_down_days=2	discard	min_down_days 3→2: more entry signals
+2026-05-09T14:27:54	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-10T14:17:23	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-10T14:21:03	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-10T14:23:55	0.7322	295	20.35	1.4977	19.21	ibs_threshold=0.5	discard	ibs_threshold 1.0→0.5: add oversold filter, should improve quality
+2026-05-13T14:10:06	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-13T14:13:02	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-13T14:16:26	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-13T14:22:39	0.7418	293	20.35	1.4491	19.50		keep	baseline
+2026-05-13T14:25:18	0.7322	295	20.35	1.4977	19.21	min_down_days=4	discard	min_down_days 3→4: higher conviction, expect higher quality trades
+2026-05-13T14:28:04	0.7322	295	20.35	1.4977	19.21	ibs_threshold=0.3	discard	ibs_threshold 1.0→0.3: strict exhaustion filter
+2026-05-13T14:30:49	0.7322	295	20.35	1.4977	19.21	sma200_filter=True	discard	sma200_filter False→True: only buy above 200-day SMA

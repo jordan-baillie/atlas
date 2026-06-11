@@ -1,0 +1,31 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-11T11:49:03	0.0000	0	0.00	0.0000	0.00		keep	baseline
+2026-03-11T12:16:27	-7.1823	26	1.33	1.4048	0.17		keep	baseline
+2026-03-11T12:41:50	-7.1823	26	1.33	1.4048	0.17		keep	baseline
+2026-03-11T12:50:49	-7.1823	26	1.33	1.4048	0.17		keep	baseline
+2026-03-16T03:59:39	-4.7215	107	1.90	1.2932	0.39		keep	baseline
+2026-03-16T03:59:53	-9.1651	39	0.70	2.0997	0.30	gap_threshold=0.05	discard	gap_threshold: None→0.05
+2026-03-16T03:59:53	-5.3863	71	1.32	2.1598	0.74	gap_threshold=0.03	discard	gap_threshold: None→0.03
+2026-03-16T03:59:53	-7.3242	51	0.68	2.6357	0.53	gap_threshold=0.04	discard	gap_threshold: None→0.04
+2026-03-16T03:59:53	-4.7215	107	1.90	1.2932	0.39	gap_threshold=0.02	discard	gap_threshold: None→0.02
+2026-03-16T04:23:14	-2.9695	113	2.29	1.5088	0.91	atr_stop_mult=1.5	keep	atr_stop_mult: None→1.5 (best of 4)
+2026-03-16T04:23:14	-6.1317	93	1.40	1.3251	0.33	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T04:23:14	-8.0610	81	0.97	1.2822	0.21	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T04:23:14	-4.7215	107	1.90	1.2932	0.39	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T11:01:24	0.9666	726	13.28	2.4427	47.64		keep	baseline
+2026-03-16T11:01:47	-2.6418	57	1.41	2.3107	1.16	gap_threshold=0.04	discard	gap_threshold: None→0.04
+2026-03-16T11:01:47	-4.3014	46	1.55	1.5439	0.44	gap_threshold=0.05	discard	gap_threshold: None→0.05
+2026-03-16T11:01:47	-1.8771	80	2.54	2.0925	1.65	gap_threshold=0.03	discard	gap_threshold: None→0.03
+2026-03-16T11:01:47	-1.3694	122	3.86	1.6657	1.90	gap_threshold=0.02	discard	gap_threshold: None→0.02
+2026-03-16T11:02:10	-1.3694	122	3.86	1.6657	1.90	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T11:02:10	-2.1294	122	3.08	1.5729	1.34	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T11:02:10	-2.7675	120	2.51	1.5655	1.08	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T11:02:10	-0.8924	123	4.87	1.6233	2.37	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T11:02:33	-0.8849	117	3.17	2.0638	2.86	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T11:02:33	-1.1856	120	3.81	1.8217	2.25	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T11:02:33	-1.4039	133	3.83	1.6003	1.86	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T11:02:33	-1.3694	122	3.86	1.6657	1.90	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T11:02:56	-1.3694	122	3.86	1.6657	1.90	sma200_filter=True	discard	sma200_filter: None→True
+2026-03-16T11:02:56	-1.2518	144	3.98	1.5279	1.94	sma200_filter=False	discard	sma200_filter: None→False
+2026-04-28T14:03:28	0.6494	1134	28.21	1.2383	21.13		keep	baseline
+2026-05-18T11:12:13	0.7418	293	20.35	1.4491	19.50		keep	baseline

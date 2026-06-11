@@ -1,0 +1,33 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-11T12:16:13	-58.2065	1	0.28	0.0000	-0.02		keep	baseline
+2026-03-11T12:41:27	-58.2065	1	0.28	0.0000	-0.02		keep	baseline
+2026-03-11T12:50:27	-58.2065	1	0.28	0.0000	-0.02		keep	baseline
+2026-03-15T11:52:23	0.1498	227	5.75	2.9290	6.49		keep	baseline
+2026-03-16T03:07:01	0.1498	227	5.75	2.9290	6.49		keep	baseline
+2026-03-16T03:31:54	0.2242	262	3.71	2.7461	7.90	nr_lookback=5	keep	nr_lookback: None→5 (best of 3)
+2026-03-16T03:31:54	-2.5268	194	2.90	1.2836	0.88	nr_lookback=10	discard	nr_lookback: None→10
+2026-03-16T03:31:54	0.1498	227	5.75	2.9290	6.49	nr_lookback=7	discard	nr_lookback: None→7
+2026-03-16T03:56:43	0.2501	272	5.39	2.3727	9.11	atr_stop_mult=1.5	keep	atr_stop_mult: None→1.5 (best of 4)
+2026-03-16T03:56:43	0.1106	246	1.66	3.1276	5.74	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T03:56:43	0.1643	256	2.61	2.8988	6.58	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T03:56:43	0.2242	262	3.71	2.7461	7.90	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T03:57:07	-2.0315	220	5.26	0.9803	0.18	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T03:57:07	0.1919	316	5.51	2.1823	7.62	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T03:57:07	0.2501	272	5.39	2.3727	9.11	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T03:57:07	-1.6117	165	6.21	1.2101	0.95	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T03:57:30	0.1416	300	6.81	2.0322	6.33	sma200_filter=False	discard	sma200_filter: None→False
+2026-03-16T03:57:30	0.2501	272	5.39	2.3727	9.11	sma200_filter=True	discard	sma200_filter: None→True
+2026-03-16T10:52:34	0.9832	728	9.78	2.4579	48.67		keep	baseline
+2026-03-16T10:53:08	-2.2439	239	9.00	0.8491	-0.86	nr_lookback=10	discard	nr_lookback: None→10
+2026-03-16T10:53:08	0.1035	267	12.01	1.7936	5.56	nr_lookback=7	discard	nr_lookback: None→7
+2026-03-16T10:53:08	0.0533	287	10.46	1.5330	4.51	nr_lookback=5	discard	nr_lookback: None→5
+2026-03-16T10:53:41	0.2305	254	7.86	2.8096	8.65	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T10:53:41	0.1035	267	12.01	1.7936	5.56	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T10:53:41	0.1863	277	15.65	1.8650	7.58	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T10:53:41	0.0525	254	9.86	1.8951	4.74	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T10:54:17	-1.8430	167	10.11	0.9154	-0.46	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T10:54:17	-1.4896	217	8.55	1.0162	0.23	max_hold_days=7	discard	max_hold_days: None→7
+2026-03-16T10:54:17	0.2940	313	9.05	2.4172	11.82	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T10:54:17	0.1035	267	12.01	1.7936	5.56	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T10:54:50	0.1628	289	9.20	1.8833	6.81	sma200_filter=False	discard	sma200_filter: None→False
+2026-03-16T10:54:50	0.1035	267	12.01	1.7936	5.56	sma200_filter=True	discard	sma200_filter: None→True

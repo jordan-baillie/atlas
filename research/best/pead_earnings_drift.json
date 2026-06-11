@@ -1,0 +1,85 @@
+{
+  "strategy": "pead_earnings_drift",
+  "market": "sp500",
+  "params": {
+    "min_jump_pct": 0.02,
+    "max_days_after_event": 1,
+    "atr_stop_mult": 1.5,
+    "max_hold_days": 20,
+    "sma200_filter": false
+  },
+  "metrics": {
+    "total_trades": 199,
+    "cagr_pct": 10.4615,
+    "cagr_full_period_pct": 7.5506,
+    "sharpe": 0.5575,
+    "sortino": 0.7496,
+    "max_drawdown_pct": 14.2152,
+    "win_rate_pct": 47.74,
+    "profit_factor": 1.5018,
+    "total_pnl": 601.23,
+    "avg_trade": 3.02,
+    "final_equity": 1559.38,
+    "expectancy_r": 0.3312,
+    "avg_r": 0.3312,
+    "r_count": 199,
+    "edge_p_value": 0.013493,
+    "edge_significant": true,
+    "var_95_pct": 0.963,
+    "cvar_95_pct": 1.448,
+    "calmar": 0.7359,
+    "mc_p95_drawdown_pct": 19.07,
+    "mc_fragile": false,
+    "windows_configured": 55,
+    "windows_used": 55,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "pead_earnings_drift": {
+        "trades": 199,
+        "total_pnl": 601.23,
+        "win_rate_pct": 47.7
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 6,
+        "win_rate_pct": 16.7,
+        "avg_trade": -5.86,
+        "total_pnl": -35.17,
+        "profit_factor": 0.2891,
+        "sharpe_approx": -0.4183,
+        "avg_r": -0.6983
+      },
+      "bull": {
+        "trades": 83,
+        "win_rate_pct": 45.8,
+        "avg_trade": 3.75,
+        "total_pnl": 311.31,
+        "profit_factor": 1.5597,
+        "sharpe_approx": 0.1661,
+        "avg_r": 0.3648
+      },
+      "neutral": {
+        "trades": 110,
+        "win_rate_pct": 50.9,
+        "avg_trade": 2.96,
+        "total_pnl": 325.09,
+        "profit_factor": 1.5488,
+        "sharpe_approx": 0.167,
+        "avg_r": 0.3621
+      }
+    }
+  },
+  "description": "task251_sweep_result",
+  "is_solo": true,
+  "solo_fraction": null,
+  "quick_check_status": "passed",
+  "p_value": 0.013493,
+  "universe": "sp500 top-100 (198 tickers in full universe)",
+  "date_range": "2020-07-27 to 2026-05-15",
+  "runner_notes": "Task #251. quick_check=pass, baseline_sharpe=0.5699, sweep_best=0.5575 (10 expts, 2 kept), combined_sharpe=0.3889. Run 2026-05-18",
+  "experiments_run": 0,
+  "experiments_kept": 0,
+  "updated_at": "2026-05-18T12:03:53.231709+00:00",
+  "task": "#251"
+}

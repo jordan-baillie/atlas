@@ -1,0 +1,56 @@
+{
+  "sp500": {
+    "universe": "sp500",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe sp500 --market sp500 --hours 1.0 --workers 3",
+    "log": "/root/atlas/data/compute_matrix/sp500_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.955615+00:00",
+    "hours_budget": 1.0,
+    "workers": 3,
+    "status": "dry_run"
+  },
+  "commodity_etfs": {
+    "universe": "commodity_etfs",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe commodity_etfs --market commodity_etfs --hours 0.5 --workers 2",
+    "log": "/root/atlas/data/compute_matrix/commodity_etfs_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.955917+00:00",
+    "hours_budget": 0.5,
+    "workers": 2,
+    "status": "dry_run"
+  },
+  "sector_etfs": {
+    "universe": "sector_etfs",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe sector_etfs --market sector_etfs --hours 0.25 --workers 1",
+    "log": "/root/atlas/data/compute_matrix/sector_etfs_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.956199+00:00",
+    "hours_budget": 0.25,
+    "workers": 1,
+    "status": "dry_run"
+  },
+  "gold_etfs": {
+    "universe": "gold_etfs",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe gold_etfs --market gold_etfs --hours 0.25 --workers 1",
+    "log": "/root/atlas/data/compute_matrix/gold_etfs_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.956571+00:00",
+    "hours_budget": 0.25,
+    "workers": 1,
+    "status": "dry_run"
+  },
+  "treasury_etfs": {
+    "universe": "treasury_etfs",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe treasury_etfs --market treasury_etfs --hours 0.25 --workers 1",
+    "log": "/root/atlas/data/compute_matrix/treasury_etfs_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.956929+00:00",
+    "hours_budget": 0.25,
+    "workers": 1,
+    "status": "dry_run"
+  },
+  "defensive_etfs": {
+    "universe": "defensive_etfs",
+    "cmd": "/usr/bin/python3 /root/atlas/research/autoresearch_nightly.py --universe defensive_etfs --market defensive_etfs --hours 0.25 --workers 1",
+    "log": "/root/atlas/data/compute_matrix/defensive_etfs_20260514_025457.log",
+    "started_at": "2026-05-14T02:54:57.957295+00:00",
+    "hours_budget": 0.25,
+    "workers": 1,
+    "status": "dry_run"
+  }
+}

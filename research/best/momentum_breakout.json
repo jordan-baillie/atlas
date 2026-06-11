@@ -1,0 +1,83 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "sp500",
+  "params": {
+    "atr_stop_mult": 0.81,
+    "max_hold_days": 15,
+    "lookback_days": 22,
+    "atr_period": 22,
+    "trend_ma_period": 30,
+    "breakout_period": 10,
+    "profit_target_atr_mult": 2.2
+  },
+  "metrics": {
+    "total_trades": 490,
+    "cagr_pct": 23.0698,
+    "cagr_full_period_pct": 19.4493,
+    "sharpe": 1.0101,
+    "sortino": 1.4364,
+    "max_drawdown_pct": 23.0642,
+    "win_rate_pct": 43.06,
+    "profit_factor": 1.3628,
+    "total_pnl": 2533.35,
+    "avg_trade": 5.17,
+    "final_equity": 3440.67,
+    "expectancy_r": 0.3941,
+    "avg_r": 0.3941,
+    "r_count": 490,
+    "edge_p_value": 0.000635,
+    "edge_significant": true,
+    "var_95_pct": 1.51,
+    "cvar_95_pct": 2.368,
+    "calmar": 1.0002,
+    "mc_p95_drawdown_pct": 49.46,
+    "mc_fragile": true,
+    "windows_configured": 71,
+    "windows_used": 71,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "momentum_breakout": {
+        "trades": 490,
+        "total_pnl": 2533.35,
+        "win_rate_pct": 43.1
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 5,
+        "win_rate_pct": 40.0,
+        "avg_trade": -20.2,
+        "total_pnl": -100.98,
+        "profit_factor": 0.3041,
+        "sharpe_approx": -0.3293,
+        "avg_r": -0.5911
+      },
+      "bull": {
+        "trades": 146,
+        "win_rate_pct": 45.9,
+        "avg_trade": 13.48,
+        "total_pnl": 1967.81,
+        "profit_factor": 1.8195,
+        "sharpe_approx": 0.2458,
+        "avg_r": 0.7074
+      },
+      "neutral": {
+        "trades": 339,
+        "win_rate_pct": 41.9,
+        "avg_trade": 1.97,
+        "total_pnl": 666.52,
+        "profit_factor": 1.1502,
+        "sharpe_approx": 0.0536,
+        "avg_r": 0.2737
+      }
+    },
+    "solo_sharpe": 1.0101,
+    "runtime_s": 56.4
+  },
+  "description": "profit_target_atr_mult: 0 -> 2.2 (manual override DSR: doubles Sharpe)",
+  "experiments_run": 710,
+  "experiments_kept": 31,
+  "updated_at": "2026-05-28T13:49:37.835712+00:00",
+  "is_solo": true,
+  "solo_fraction": 0.72
+}

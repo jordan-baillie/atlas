@@ -1,0 +1,24 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-11T11:49:07	0.0000	0	0.00	0.0000	0.00		keep	baseline
+2026-03-11T12:17:35	-8.1794	13	1.33	1.6587	0.18		keep	baseline
+2026-03-11T12:43:02	-8.1794	13	1.33	1.6587	0.18		keep	baseline
+2026-03-11T12:51:56	-8.1794	13	1.33	1.6587	0.18		keep	baseline
+2026-03-16T11:50:32	0.9664	725	13.25	2.4409	47.57		keep	baseline
+2026-03-16T11:51:10	0.1489	129	4.90	2.3263	6.50	macd_fast=12	discard	macd_fast: None→12
+2026-03-16T11:51:10	0.1560	119	3.74	2.5146	6.64	macd_fast=16	discard	macd_fast: None→16
+2026-03-16T11:51:10	0.1208	141	5.96	2.0192	5.93	macd_fast=8	discard	macd_fast: None→8
+2026-03-16T11:51:50	0.1652	134	4.31	2.2495	6.83	macd_slow=20	discard	macd_slow: None→20
+2026-03-16T11:51:50	0.1489	129	4.90	2.3263	6.50	macd_slow=26	discard	macd_slow: None→26
+2026-03-16T11:51:50	0.1671	127	4.62	2.4545	6.87	macd_slow=30	discard	macd_slow: None→30
+2026-03-16T11:52:34	0.1573	133	4.17	2.2691	6.67	macd_signal=7	discard	macd_signal: None→7
+2026-03-16T11:52:34	0.1489	129	4.90	2.3263	6.50	macd_signal=9	discard	macd_signal: None→9
+2026-03-16T11:52:34	0.1682	124	4.73	2.5072	6.89	macd_signal=11	discard	macd_signal: None→11
+2026-03-16T11:53:17	0.1760	138	8.46	2.0034	7.25	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T11:53:17	0.1192	130	4.13	2.6478	5.91	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T11:53:17	0.1489	129	4.90	2.3263	6.50	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T11:53:17	0.0619	124	3.52	2.8886	5.11	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T11:54:00	0.1489	129	4.90	2.3263	6.50	max_hold_days=10	discard	max_hold_days: None→10
+2026-03-16T11:54:00	0.1609	119	4.81	2.2452	6.72	max_hold_days=15	discard	max_hold_days: None→15
+2026-03-16T11:54:00	-1.0280	170	3.54	1.5965	2.25	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T11:54:00	-2.6612	146	8.37	0.9711	-0.18	max_hold_days=7	discard	max_hold_days: None→7
+2026-04-28T15:27:50	0.6494	1134	28.21	1.2383	21.13		keep	baseline

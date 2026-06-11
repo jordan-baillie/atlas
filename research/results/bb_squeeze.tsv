@@ -1,0 +1,227 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-10T16:44:53	0.3935	166	12.12	4.9220	40.01		keep	baseline
+2026-03-10T16:47:29	0.4786	245	14.90	3.0449	24.90	bb_period=10	keep	bb_period: None→10 (best of 4)
+2026-03-10T16:47:29	-1.8361	73	8.29	0.9352	-0.22	bb_period=30	discard	bb_period: None→30
+2026-03-10T16:47:29	0.3935	166	12.12	4.9220	40.01	bb_period=20	discard	bb_period: None→20
+2026-03-10T16:47:29	0.3940	207	14.02	4.4155	40.11	bb_period=15	discard	bb_period: None→15
+2026-03-10T16:49:58	-0.8567	206	7.40	1.2226	1.69	bb_std=2.5	discard	bb_std: None→2.5
+2026-03-10T16:49:58	0.4786	245	14.90	3.0449	24.90	bb_std=2.0	discard	bb_std: None→2.0
+2026-03-10T16:49:58	0.4330	265	7.59	3.0510	32.46	bb_std=1.5	discard	bb_std: None→1.5
+2026-03-10T16:52:30	0.4786	245	14.90	3.0449	24.90	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-10T16:52:30	0.4521	225	8.11	4.0028	18.35	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-10T16:52:30	0.4733	235	9.75	3.5731	21.46	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-10T16:52:30	-0.4764	257	11.49	1.1552	2.15	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-10T16:54:58	0.4956	321	9.52	2.9082	26.05	max_hold_days=10	keep	max_hold_days: None→10 (best of 3)
+2026-03-10T16:54:58	0.2283	457	8.17	1.8428	8.52	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-10T16:54:58	0.4721	283	9.57	2.9121	24.47	max_hold_days=15	discard	max_hold_days: None→15
+2026-03-10T17:35:41	0.4956	321	9.52	2.9082	26.05		keep	baseline
+2026-03-10T17:38:14	0.3389	407	6.31	2.0428	15.90	kc_period=10	discard	kc_period=10: match bb_period
+2026-03-10T17:40:45	0.2058	360	7.80	1.6979	7.25	kc_period=15	discard	kc_period=15: slightly faster KC
+2026-03-10T17:43:15	0.0349	400	6.35	1.3795	4.58	kc_period=12	discard	kc_period=12: between default 20 and bb_period 10
+2026-03-10T17:45:44	-0.8716	311	10.69	1.0703	0.75	momentum_period=10	discard	momentum_period=10: match bb_period for faster confirm
+2026-03-10T17:48:14	-1.0352	328	15.54	0.9958	-0.04	momentum_period=14	discard	momentum_period=14: medium-speed momentum
+2026-03-10T17:50:48	-0.8334	343	9.46	1.0879	0.97	momentum_period=7	discard	momentum_period=7: very fast momentum
+2026-03-10T17:53:27	-1.3855	160	9.71	1.1146	0.57	kc_atr_mult=1.0	discard	kc_atr_mult=1.0: tight keltner = more squeeze detections
+2026-03-10T17:55:53	0.4244	373	8.33	2.6676	31.19	kc_atr_mult=2.0	discard	kc_atr_mult=2.0: wide keltner = fewer stronger squeezes
+2026-03-10T17:58:22	-1.1864	244	8.88	1.0905	0.70	kc_atr_mult=1.2	discard	kc_atr_mult=1.2: slightly tighter than default 1.5
+2026-03-10T18:00:52	0.4926	322	9.47	2.8934	25.84	trailing_stop_atr_mult=2.0	discard	trailing_stop=2.0: tighter trail
+2026-03-10T18:03:22	0.4956	321	9.52	2.9082	26.05	trailing_stop_atr_mult=3.0	discard	trailing_stop=3.0: looser trail
+2026-03-10T18:05:55	0.4953	325	8.64	2.9786	26.08	trailing_stop_atr_mult=1.5	discard	trailing_stop=1.5: very tight trail
+2026-03-10T18:08:28	0.4961	322	10.34	2.8917	26.06	atr_period=10	discard	atr_period=10: match bb_period
+2026-03-10T18:10:56	0.4977	320	10.66	2.8821	25.67	atr_period=7	discard	atr_period=7: fast ATR
+2026-03-10T18:13:29	0.4842	335	11.86	2.7187	25.19	vol_surge_threshold=1.2	discard	vol_surge=1.2: lower bar for volume confirm
+2026-03-10T18:16:02	0.4981	321	9.91	2.8532	26.23	vol_surge_threshold=2.0	discard	vol_surge=2.0: only strong volume surges
+2026-03-10T18:18:36	-0.2826	354	19.49	1.0901	1.28	bb_period=8	discard	bb_period=8: tighter than 10
+2026-03-10T18:21:04	0.2516	339	9.19	1.9639	9.14	bb_period=9	discard	bb_period=9: between 8 and 10
+2026-03-10T18:23:30	-1.4238	286	13.12	0.9981	-0.02	bb_period=12	discard	bb_period=12: between 10 and 15
+2026-03-10T18:26:00	0.4795	386	9.41	2.9617	25.27	max_hold_days=7	discard	max_hold=7: between 5 and 10
+2026-03-10T18:28:32	0.4884	358	6.79	2.8939	25.58	max_hold_days=8	discard	max_hold=8: between 5 and 10
+2026-03-10T18:31:04	0.5016	306	7.86	2.9836	26.56	max_hold_days=12	discard	max_hold=12: between 10 and 15
+2026-03-10T18:33:39	0.3217	344	10.60	2.0084	13.51	kc_period=10, momentum_period=10	discard	all-fast: kc=10 + momentum=10
+2026-03-10T18:36:13	0.3386	408	6.30	2.0426	15.85	kc_period=10, trailing_stop_atr_mult=2.0	discard	fast-kc + tight-trail
+2026-03-10T18:38:44	-0.9061	311	10.70	1.0567	0.61	momentum_period=10, trailing_stop_atr_mult=2.0	discard	fast-mom + tight-trail
+2026-03-10T18:41:19	0.1854	412	9.30	1.5676	6.93	bb_period=8, kc_period=8	discard	ultra-fast: bb=8 + kc=8
+2026-03-10T18:43:50	0.2114	277	6.14	1.9398	7.34	kc_atr_mult=1.0, kc_period=10	discard	tight-squeeze + fast-kc
+2026-03-10T18:46:25	-0.1612	402	18.28	1.2011	2.45	bb_period=8, max_hold_days=8	discard	bb=8 + hold=8 fast combo
+2026-03-10T18:48:56	0.0382	350	9.41	1.3774	4.64	bb_std=1.0	discard	radical: bb_std=1.0 — extremely tight bands
+2026-03-10T18:51:28	0.5866	406	8.46	2.1976	15.94	bb_period=5, kc_period=5	keep	radical: 5-day ultra-short periods
+2026-03-10T18:54:00	0.3981	781	11.09	1.7005	11.63	max_hold_days=3	discard	radical: 3-day scalp
+2026-03-10T18:56:34	0.6435	485	14.18	2.1115	27.80	atr_stop_mult=1.0	keep	radical: very tight stop
+2026-03-10T18:59:09	-0.9267	530	28.98	0.8668	-3.78	momentum_period=5	discard	radical: 5-bar instant momentum
+2026-03-10T19:01:48	0.4451	445	15.49	1.7779	17.75	kc_atr_mult=0.8	discard	radical: very tight keltner = many squeezes
+2026-03-10T20:48:21	0.6435	485	14.18	2.1115	27.80		keep	baseline
+2026-03-10T20:50:56	-2.1957	46	11.00	0.6514	-1.14	bb_period=30	discard	bb_period: 5→30
+2026-03-10T20:50:56	0.3486	459	17.49	1.5156	12.82	bb_period=10	discard	bb_period: 5→10
+2026-03-10T20:50:56	-0.8653	333	15.75	0.9182	-1.55	bb_period=15	discard	bb_period: 5→15
+2026-03-10T20:50:56	-1.1679	148	15.17	0.8978	-1.01	bb_period=20	discard	bb_period: 5→20
+2026-03-10T20:53:34	0.4996	492	19.24	1.5234	18.55	bb_std=2.5	discard	bb_std: None→2.5
+2026-03-10T20:53:34	0.4299	475	10.41	5.6444	67.86	bb_std=1.5	discard	bb_std: None→1.5
+2026-03-10T20:53:34	0.6435	485	14.18	2.1115	27.80	bb_std=2.0	discard	bb_std: None→2.0
+2026-03-10T20:56:16	0.6868	427	10.24	2.1251	22.41	atr_stop_mult=1.5	keep	atr_stop_mult: 1.0→1.5 (best of 4)
+2026-03-10T20:56:16	0.5832	404	7.67	2.5117	15.06	atr_stop_mult=2.5	discard	atr_stop_mult: 1.0→2.5
+2026-03-10T20:56:16	0.5866	406	8.46	2.1976	15.94	atr_stop_mult=2.0	discard	atr_stop_mult: 1.0→2.0
+2026-03-10T20:56:16	0.4389	393	7.68	2.3328	10.97	atr_stop_mult=3.0	discard	atr_stop_mult: 1.0→3.0
+2026-03-10T20:58:52	0.3897	367	10.17	1.7036	12.07	max_hold_days=15	discard	max_hold_days: 10→15
+2026-03-10T20:58:52	0.5265	675	10.81	1.8133	17.14	max_hold_days=5	discard	max_hold_days: 10→5
+2026-03-10T21:40:43	0.3389	465	9.61	1.6916	10.01		keep	baseline
+2026-03-10T21:51:41	0.2333	483	15.79	1.3949	8.33	bb_period=4	discard	bb_period=4: even faster squeeze detection
+2026-03-10T22:02:48	0.3564	478	11.98	1.6899	11.90	bb_period=3	keep	bb_period=3: ultra-fast squeeze detection
+2026-03-10T22:13:43	0.3947	469	18.66	1.7600	14.85	kc_period=3	keep	kc_period=3: ultra-tight keltner channel
+2026-03-10T22:24:32	0.5468	470	16.02	2.0305	18.66	kc_period=4	keep	kc_period=4: slightly tighter keltner
+2026-03-10T22:35:27	0.2739	486	10.12	1.4868	9.12	kc_period=7	discard	kc_period=7: slight mismatch with bb_period=5
+2026-03-10T22:46:24	0.5816	499	16.00	1.9515	22.87	atr_stop_mult=1.2	keep	atr_stop_mult=1.2: tighter than 1.5
+2026-03-10T22:57:20	0.5499	495	13.89	1.8951	20.49	atr_stop_mult=1.3	discard	atr_stop_mult=1.3: between 1.2 and 1.5
+2026-03-10T23:08:25	0.2577	466	15.69	1.4245	8.85	atr_stop_mult=1.7	discard	atr_stop_mult=1.7: slightly wider than 1.5
+2026-03-10T23:19:25	0.2734	459	12.70	1.4949	9.05	atr_stop_mult=1.8	discard	atr_stop_mult=1.8: between 1.5 and 2.0
+2026-03-10T23:30:28	0.4165	516	21.30	1.8087	15.12	max_hold_days=9	discard	max_hold_days=9: just under optimal
+2026-03-10T23:41:23	0.5897	460	16.70	2.0070	23.15	max_hold_days=11	discard	max_hold_days=11: just over optimal
+2026-03-10T23:52:13	-0.7095	469	16.24	0.9759	-0.46	momentum_period=25	discard	momentum_period=25: slower momentum confirm
+2026-03-11T00:03:32	0.3938	460	15.66	1.5102	14.17	momentum_period=30	discard	momentum_period=30: long momentum confirm
+2026-03-11T00:14:20	0.3818	515	22.63	1.8755	13.98	momentum_period=15	discard	momentum_period=15: medium momentum (was bad at 14 before, but params have changed)
+2026-03-11T00:25:09	0.4773	507	17.88	1.7482	17.74	bb_period=4, kc_period=4	discard	bb=4 kc=4: ultra-fast matching periods
+2026-03-11T00:35:48	0.5913	494	15.03	2.0224	22.07	bb_period=4, kc_period=6	discard	bb=4 kc=6: bb faster than kc
+2026-03-11T00:46:38	0.5824	488	17.91	1.7294	19.59	bb_period=5, kc_period=7	discard	bb=5 kc=7: slight kc lag
+2026-03-11T00:57:33	0.3545	571	31.47	1.7290	15.70	atr_stop_mult=1.2, max_hold_days=8	discard	tight stop + short hold: fast exit combo
+2026-03-11T01:08:35	0.5105	417	10.37	2.0795	16.13	atr_stop_mult=1.7, max_hold_days=12	discard	wide stop + long hold: let winners run
+2026-03-11T01:19:29	0.5499	495	13.89	1.8951	20.49	atr_stop_mult=1.3, max_hold_days=10	discard	atr=1.3 hold=10: tighter stop, same hold
+2026-03-11T01:30:20	0.2634	509	13.51	1.4735	8.84	bb_std=1.5, bb_period=5	discard	bb_std=1.5 bb=5: tighter bands on fast period
+2026-03-11T01:41:35	0.2471	493	13.68	1.4384	8.53	bb_std=2.5, bb_period=5	discard	bb_std=2.5 bb=5: wider bands on fast period
+2026-03-11T01:52:28	0.4177	495	11.76	1.7621	15.18	bb_std=1.8	discard	bb_std=1.8: slightly tighter than default 2.0
+2026-03-11T02:03:47	-0.4014	487	11.98	1.0803	1.89	bb_std=2.2	discard	bb_std=2.2: slightly wider than default 2.0
+2026-03-11T02:04:15	0.2727	470	17.86	1.4299	9.73		keep	baseline
+2026-03-11T02:06:57	0.3133	443	13.31	1.5237	10.78	bb_period=10	keep	bb_period: 3→10 (best of 4)
+2026-03-11T02:06:57	0.1676	145	9.73	2.0998	6.86	bb_period=20	discard	bb_period: 3→20
+2026-03-11T02:06:57	-2.8295	51	9.72	0.5241	-1.38	bb_period=30	discard	bb_period: 3→30
+2026-03-11T02:06:57	-0.4906	316	10.36	1.1035	1.64	bb_period=15	discard	bb_period: 3→15
+2026-03-11T02:09:40	0.3887	389	10.57	1.6991	12.99	bb_std=2.5	keep	bb_std: None→2.5 (best of 3)
+2026-03-11T02:09:40	0.3133	443	13.31	1.5237	10.78	bb_std=2.0	discard	bb_std: None→2.0
+2026-03-11T02:09:40	-0.6783	484	20.65	0.9941	-0.02	bb_std=1.5	discard	bb_std: None→1.5
+2026-03-11T02:12:33	0.2265	375	10.55	1.4995	8.10	atr_stop_mult=1.5	discard	atr_stop_mult: 1.2→1.5
+2026-03-11T02:12:33	0.1592	362	7.03	1.5885	6.51	atr_stop_mult=2.0	discard	atr_stop_mult: 1.2→2.0
+2026-03-11T02:12:33	0.0156	351	7.18	1.5118	4.55	atr_stop_mult=2.5	discard	atr_stop_mult: 1.2→2.5
+2026-03-11T02:12:33	-0.0351	341	6.43	1.6134	4.21	atr_stop_mult=3.0	discard	atr_stop_mult: 1.2→3.0
+2026-03-11T02:15:11	0.4626	345	9.74	1.7791	15.04	max_hold_days=15	keep	max_hold_days: 10→15 (best of 2)
+2026-03-11T02:15:11	-0.4767	519	9.69	1.0742	1.71	max_hold_days=5	discard	max_hold_days: 10→5
+2026-03-11T02:15:21	-0.4287	503	12.29	1.0674	1.73	kc_atr_mult=1.3	discard	kc_atr_mult=1.3: slightly tighter keltner
+2026-03-11T02:26:23	0.4380	490	18.65	1.7361	16.00	kc_atr_mult=1.7	discard	kc_atr_mult=1.7: slightly wider keltner
+2026-03-11T02:37:35	0.3860	483	11.68	1.6053	11.69	kc_atr_mult=2.0, kc_period=5	discard	kc_atr=2.0 kc=5: wider keltner with fast period
+2026-03-11T02:49:05	0.5290	472	17.08	1.9795	18.07	trailing_stop_atr_mult=2.0, atr_stop_mult=1.5	discard	tighter trail with current stop
+2026-03-11T03:00:10	0.5499	495	13.89	1.8951	20.49	trailing_stop_atr_mult=3.0, atr_stop_mult=1.3	discard	loose trail, tight stop
+2026-03-11T03:11:22	0.5419	501	19.69	1.8974	21.18	trailing_stop_atr_mult=2.0, atr_stop_mult=1.2	discard	both tight: fast entry/exit
+2026-03-11T03:22:25	0.5816	499	16.00	1.9515	22.87	trailing_stop_atr_mult=100.0	discard	disable trailing stop: rely on signal exit + time + hard stop only
+2026-03-11T03:33:55	-0.1152	440	12.01	1.2017	3.91	momentum_period=50	discard	momentum_period=50: only enter during strong long-term trends
+2026-03-11T03:45:15	0.3034	771	27.22	1.3637	11.76	bb_period=3, kc_period=3, max_hold_days=5, atr_stop_mult=1.0, trailing_stop_atr_mult=1.5	discard	ultra-scalp: 3-period bb/kc, 5-day hold, tight stops
+2026-03-11T03:56:22	0.5418	358	8.92	3.2515	20.26	bb_period=7, kc_period=7, max_hold_days=15, atr_stop_mult=2.0, trailing_stop_atr_mult=3.0	discard	swing: 7-period bb/kc, 15-day hold, wide stops
+2026-03-11T04:07:39	0.5118	487	10.10	1.9008	18.60	vol_surge_threshold=2.5	discard	vol_surge=2.5: only strongest volume surges
+2026-03-11T04:19:26	0.0631	502	22.14	1.2398	4.63	vol_surge_threshold=1.0	discard	vol_surge=1.0: include weak volume (more trades)
+2026-03-11T04:31:16	0.3481	487	16.43	1.5533	11.14	atr_period=5	discard	atr_period=5: match bb_period for consistent timeframe
+2026-03-11T04:42:58	0.5410	503	18.59	1.9102	21.96	atr_period=21	discard	atr_period=21: monthly ATR for stops
+2026-03-11T14:20:16	0.3793	300	13.37	1.8668	12.65		keep	baseline
+2026-03-11T14:20:47	-0.8726	135	17.98	1.1065	0.82	bb_period=15	discard	bb_period: 10→15
+2026-03-11T14:20:47	-2.3895	30	3.34	1.0484	0.09	bb_period=20	discard	bb_period: 10→20
+2026-03-11T14:20:47	-7.6678	6	1.98	0.4489	-0.14	bb_period=30	discard	bb_period: 10→30
+2026-03-11T14:37:16	0.4210	362	18.99	5.4312	62.28	bb_std=1.5	keep	bb_std: 2.5→1.5 (best of 2)
+2026-03-11T14:37:16	0.2576	334	14.76	1.5441	9.28	bb_std=2.0	discard	bb_std: 2.5→2.0
+2026-03-11T14:53:38	0.4859	331	9.67	7.8184	68.77	atr_stop_mult=2.0	keep	atr_stop_mult: 1.2→2.0 (best of 4)
+2026-03-11T14:53:38	0.4816	316	10.04	7.2686	58.20	atr_stop_mult=2.5	discard	atr_stop_mult: 1.2→2.5
+2026-03-11T14:53:38	0.4757	304	9.40	7.1989	50.79	atr_stop_mult=3.0	discard	atr_stop_mult: 1.2→3.0
+2026-03-11T14:53:38	0.4234	346	12.89	5.4172	57.73	atr_stop_mult=1.5	discard	atr_stop_mult: 1.2→1.5
+2026-03-11T14:54:08	0.4025	395	8.91	2.3737	19.65	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-11T14:54:08	0.3232	547	9.62	1.7594	9.74	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-11T23:50:35	0.4859	331	9.67	7.8184	68.77		keep	baseline
+2026-03-11T23:51:06	-3.5102	63	8.92	0.5885	-1.04	bb_period=30	discard	bb_period: 10→30
+2026-03-11T23:51:06	0.3894	167	12.03	6.6472	38.57	bb_period=20	discard	bb_period: 10→20
+2026-03-11T23:51:06	0.3566	264	13.06	2.8578	22.54	bb_period=15	discard	bb_period: 10→15
+2026-03-11T23:51:38	-0.4141	266	6.56	1.3865	3.23	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-11T23:51:38	0.4588	306	8.85	3.1888	22.99	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-11T23:52:12	0.4816	316	10.04	7.2686	58.20	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-11T23:52:12	0.4234	346	12.89	5.4172	57.73	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-11T23:52:12	0.4757	304	9.40	7.1989	50.79	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-11T23:52:43	0.4025	395	8.91	2.3737	19.65	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-11T23:52:43	0.3232	547	9.62	1.7594	9.74	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-12T05:41:23	0.4763	323	7.99	7.0692	52.86		keep	baseline
+2026-03-12T05:41:55	0.3812	160	9.69	8.6782	32.06	bb_period=20	discard	bb_period: 10→20
+2026-03-12T05:41:55	0.3357	256	10.08	3.4095	17.84	bb_period=15	discard	bb_period: 10→15
+2026-03-12T05:41:55	-4.8513	59	5.17	0.6585	-0.52	bb_period=30	discard	bb_period: 10→30
+2026-03-12T05:42:30	0.3902	303	5.70	3.1233	15.65	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-12T05:42:30	-0.8794	263	4.84	1.4508	2.48	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-12T05:43:08	0.4680	309	8.76	8.0547	44.25	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-12T05:43:08	0.4170	340	11.88	5.2238	46.04	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-12T05:43:08	0.4602	300	7.84	8.7791	38.59	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-12T05:43:40	0.3985	384	5.97	2.8694	16.13	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-12T05:43:40	0.2027	532	6.08	1.8074	6.93	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-12T10:47:31	0.4101	318	5.22	3.1117	16.46		keep	baseline
+2026-03-12T10:48:04	0.3992	156	8.69	11.9215	35.96	bb_period=20	discard	bb_period: 10→20
+2026-03-12T10:48:04	-4.7950	59	4.68	0.6704	-0.43	bb_period=30	discard	bb_period: 10→30
+2026-03-12T10:48:04	0.3859	260	8.75	4.7921	21.94	bb_period=15	discard	bb_period: 10→15
+2026-03-12T10:48:36	-1.0852	256	4.04	1.3667	1.93	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-12T10:48:36	0.3135	302	5.66	2.6978	12.53	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-12T10:49:08	0.3327	291	2.83	3.4444	11.34	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-12T10:49:08	0.1333	333	9.08	1.6358	6.07	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-12T10:49:08	0.3640	302	4.13	3.3521	13.14	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-12T10:49:40	0.3903	380	5.72	2.9262	15.76	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-12T10:49:40	0.2297	528	6.25	1.8947	7.29	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-12T13:22:22	0.4101	318	5.22	3.1117	16.46		keep	baseline
+2026-03-12T13:22:53	0.3992	156	8.69	11.9215	35.96	bb_period=20	discard	bb_period: 10→20
+2026-03-12T13:22:53	-4.7950	59	4.68	0.6704	-0.43	bb_period=30	discard	bb_period: 10→30
+2026-03-12T13:22:53	0.3859	260	8.75	4.7921	21.94	bb_period=15	discard	bb_period: 10→15
+2026-03-12T13:23:27	-1.0852	256	4.04	1.3667	1.93	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-12T13:23:27	0.3135	302	5.66	2.6978	12.53	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-12T13:24:00	0.1333	333	9.08	1.6358	6.07	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-12T13:24:00	0.3640	302	4.13	3.3521	13.14	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-12T13:24:00	0.3327	291	2.83	3.4444	11.34	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-12T13:24:35	0.3903	380	5.72	2.9262	15.76	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-12T13:24:35	0.2297	528	6.25	1.8947	7.29	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-12T23:51:46	0.4101	318	5.22	3.1117	16.46		keep	baseline
+2026-03-12T23:52:19	-4.7950	59	4.68	0.6704	-0.43	bb_period=30	discard	bb_period: 10→30
+2026-03-12T23:52:19	0.3859	260	8.75	4.7921	21.94	bb_period=15	discard	bb_period: 10→15
+2026-03-12T23:52:19	0.3992	156	8.69	11.9215	35.96	bb_period=20	discard	bb_period: 10→20
+2026-03-12T23:52:52	-1.0852	256	4.04	1.3667	1.93	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-12T23:52:52	0.3135	302	5.66	2.6978	12.53	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-12T23:53:27	0.3640	302	4.13	3.3521	13.14	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-12T23:53:27	0.1333	333	9.08	1.6358	6.07	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-12T23:53:27	0.3327	291	2.83	3.4444	11.34	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-12T23:54:00	0.2297	528	6.25	1.8947	7.29	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-12T23:54:00	0.3903	380	5.72	2.9262	15.76	max_hold_days=10	discard	max_hold_days: 15→10
+2026-03-13T02:52:40	0.4101	318	5.22	3.1117	16.46		keep	baseline
+2026-03-13T02:53:12	0.3992	156	8.69	11.9215	35.96	bb_period=20	discard	bb_period: 10→20
+2026-03-13T02:53:12	-4.7950	59	4.68	0.6704	-0.43	bb_period=30	discard	bb_period: 10→30
+2026-03-13T02:53:12	0.3859	260	8.75	4.7921	21.94	bb_period=15	discard	bb_period: 10→15
+2026-03-13T02:53:43	-1.0852	256	4.04	1.3667	1.93	bb_std=2.5	discard	bb_std: 1.5→2.5
+2026-03-13T02:53:43	0.3135	302	5.66	2.6978	12.53	bb_std=2.0	discard	bb_std: 1.5→2.0
+2026-03-13T02:54:17	0.1333	333	9.08	1.6358	6.07	atr_stop_mult=1.5	discard	atr_stop_mult: 2.0→1.5
+2026-03-13T02:54:17	0.3327	291	2.83	3.4444	11.34	atr_stop_mult=3.0	discard	atr_stop_mult: 2.0→3.0
+2026-03-13T02:54:17	0.3640	302	4.13	3.3521	13.14	atr_stop_mult=2.5	discard	atr_stop_mult: 2.0→2.5
+2026-03-13T02:54:51	0.2297	528	6.25	1.8947	7.29	max_hold_days=5	discard	max_hold_days: 15→5
+2026-03-13T02:54:51	0.3903	380	5.72	2.9262	15.76	max_hold_days=10	discard	max_hold_days: 15→10
+2026-05-01T19:03:35	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-02T19:03:44	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-03T23:34:48	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-04T19:03:27	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-05T19:03:32	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-06T19:03:33	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-07T19:03:33	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-08T19:03:35	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-09T19:03:33	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-10T19:03:32	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-11T19:03:29	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-12T19:03:31	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-13T19:03:32	0.0000	0	nan	0.0000	0.00		keep	baseline
+2026-05-14T14:26:23	0.5478	294	26.10	1.3361	14.42		keep	baseline
+2026-05-14T14:28:45	0.9158	282	21.85	1.6638	23.97	bb_std=1.8	keep	wider BB std=1.8: higher quality squeeze entries
+2026-05-16T14:11:05	1.0859	304	25.65	1.5885	29.71		keep	baseline
+2026-05-16T14:12:42	1.0859	304	25.65	1.5885	29.71		keep	baseline
+2026-05-16T14:14:10	0.7945	305	25.25	1.4326	20.75	bb_std=1.6	discard	bb_std=1.6: slightly tighter bands
+2026-05-16T14:15:40	0.8001	307	24.65	1.4251	20.67	bb_std=1.7	discard	bb_std=1.7: narrower than current best 1.8
+2026-05-16T14:17:27	1.0859	304	25.65	1.5885	29.71		keep	baseline
+2026-05-16T14:18:53	0.6817	296	25.23	1.3719	18.09	bb_std=1.9	discard	bb_std=1.9: slightly wider than best 1.8
+2026-05-16T14:20:22	1.0101	309	25.03	1.5333	27.61	bb_std=2.0	discard	bb_std=2.0: back to old value, compare with 1.8
+2026-05-16T14:21:51	1.0604	307	26.41	1.5719	28.95	atr_stop_mult=1.5	discard	atr_stop_mult=1.5: tighter stop
+2026-05-16T14:24:33	1.0859	304	25.65	1.5885	29.71		keep	baseline
+2026-05-16T14:26:06	0.9199	307	28.43	1.4759	24.05	max_hold_days=12	discard	max_hold_days=12: shorter hold with tighter bb_std
+2026-05-16T14:27:35	1.2953	304	22.02	1.5917	35.89	max_hold_days=18	keep	max_hold_days=18: longer hold captures more
+2026-05-16T14:29:06	1.0633	311	26.16	1.4557	28.65	kc_period=3	discard	kc_period=3: faster KC detection
+2026-05-16T14:30:41	0.9139	303	28.47	1.4213	24.07	kc_period=6	discard	kc_period=6: slightly slower KC
+2026-05-16T14:32:30	1.3520	300	22.02	1.6351	37.71		keep	baseline
+2026-05-16T14:34:02	1.0416	312	25.52	1.4942	27.78	max_hold_days=20	discard	max_hold_days=20: push beyond 18
+2026-05-16T14:35:33	1.0546	305	26.62	1.5200	27.86	max_hold_days=22	discard	max_hold_days=22: even longer

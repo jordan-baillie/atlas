@@ -1,0 +1,25 @@
+timestamp	sharpe	trades	max_dd_pct	pf	cagr_pct	params_changed	status	description
+2026-03-11T11:49:11	0.0000	0	0.00	0.0000	0.00		keep	baseline
+2026-03-11T12:17:44	-1.2437	421	3.88	1.1653	1.23		keep	baseline
+2026-03-11T12:43:10	-1.2437	421	3.88	1.1653	1.23		keep	baseline
+2026-03-11T12:52:04	-1.2437	421	3.88	1.1653	1.23		keep	baseline
+2026-03-16T11:57:11	0.9272	735	13.33	2.3961	45.06		keep	baseline
+2026-03-16T11:58:14	-1.3292	490	7.67	1.0051	0.36	ibs_min=0.6	discard	ibs_min: None→0.6
+2026-03-16T11:58:14	-1.3452	517	10.77	1.0294	0.52	ibs_min=0.4	discard	ibs_min: None→0.4
+2026-03-16T11:58:14	-1.6731	508	9.84	0.9514	-0.44	ibs_min=0.5	discard	ibs_min: None→0.5
+2026-03-16T11:58:14	-1.4249	523	11.16	1.0143	0.34	ibs_min=0.3	discard	ibs_min: None→0.3
+2026-03-16T11:59:11	-1.6731	508	9.84	0.9514	-0.44	momentum_min=0.0	discard	momentum_min: None→0.0
+2026-03-16T11:59:11	-1.6757	505	9.15	0.9368	-0.57	momentum_min=0.005	discard	momentum_min: None→0.005
+2026-03-16T11:59:11	-1.6272	495	8.56	0.9428	-0.49	momentum_min=0.01	discard	momentum_min: None→0.01
+2026-03-16T11:59:11	-1.5833	480	8.84	0.9720	-0.13	momentum_min=0.015	discard	momentum_min: None→0.015
+2026-03-16T12:00:15	-2.1223	503	6.08	0.9828	0.01	atr_stop_mult=3.0	discard	atr_stop_mult: None→3.0
+2026-03-16T12:00:15	-1.1834	517	10.92	0.9880	0.05	atr_stop_mult=1.5	discard	atr_stop_mult: None→1.5
+2026-03-16T12:00:15	-1.8622	506	6.96	0.9755	-0.11	atr_stop_mult=2.5	discard	atr_stop_mult: None→2.5
+2026-03-16T12:00:15	-1.6731	508	9.84	0.9514	-0.44	atr_stop_mult=2.0	discard	atr_stop_mult: None→2.0
+2026-03-16T12:01:14	-1.1132	419	6.37	1.0734	0.83	max_hold_days=3	discard	max_hold_days: None→3
+2026-03-16T12:01:14	-1.6731	508	9.84	0.9514	-0.44	max_hold_days=2	discard	max_hold_days: None→2
+2026-03-16T12:01:14	-1.2725	346	8.23	1.0012	0.19	max_hold_days=5	discard	max_hold_days: None→5
+2026-03-16T12:01:14	-0.0112	650	4.38	1.2781	4.45	max_hold_days=1	discard	max_hold_days: None→1
+2026-03-16T12:02:17	-1.6731	508	9.84	0.9514	-0.44	sma200_filter=True	discard	sma200_filter: None→True
+2026-03-16T12:02:17	-1.5111	535	10.42	0.9497	-0.56	sma200_filter=False	discard	sma200_filter: None→False
+2026-04-28T15:49:49	0.6494	1134	28.21	1.2383	21.13		keep	baseline

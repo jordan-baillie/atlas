@@ -1,0 +1,93 @@
+{
+  "strategy": "momentum_breakout",
+  "market": "commodity_etfs",
+  "params": {
+    "atr_stop_mult": 1.09,
+    "max_hold_days": 15,
+    "lookback_days": 18,
+    "atr_period": 22,
+    "trend_ma_period": 40,
+    "breakout_period": 10
+  },
+  "metrics": {
+    "total_trades": 501,
+    "cagr_pct": 22.9468,
+    "cagr_full_period_pct": 19.1631,
+    "sharpe": 1.3047,
+    "sortino": 1.8833,
+    "max_drawdown_pct": 17.6097,
+    "win_rate_pct": 44.51,
+    "profit_factor": 1.7377,
+    "total_pnl": 2312.03,
+    "avg_trade": 4.61,
+    "final_equity": 3405.87,
+    "expectancy_r": 0.8125,
+    "avg_r": 0.8125,
+    "r_count": 501,
+    "edge_p_value": 1.7e-05,
+    "edge_significant": true,
+    "var_95_pct": 1.148,
+    "cvar_95_pct": 1.767,
+    "calmar": 1.3031,
+    "mc_p95_drawdown_pct": 23.62,
+    "mc_fragile": false,
+    "windows_configured": 69,
+    "windows_used": 69,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "connors_rsi2": {
+        "trades": 229,
+        "total_pnl": -10.08,
+        "win_rate_pct": 54.1
+      },
+      "momentum_breakout": {
+        "trades": 203,
+        "total_pnl": 1558.86,
+        "win_rate_pct": 33.5
+      },
+      "mean_reversion": {
+        "trades": 69,
+        "total_pnl": 763.25,
+        "win_rate_pct": 44.9
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 20,
+        "win_rate_pct": 35.0,
+        "avg_trade": 2.37,
+        "total_pnl": 47.39,
+        "profit_factor": 1.2447,
+        "sharpe_approx": 0.0683,
+        "avg_r": 0.9481
+      },
+      "bull": {
+        "trades": 103,
+        "win_rate_pct": 45.6,
+        "avg_trade": 9.51,
+        "total_pnl": 979.26,
+        "profit_factor": 2.0826,
+        "sharpe_approx": 0.2302,
+        "avg_r": 0.9222
+      },
+      "neutral": {
+        "trades": 378,
+        "win_rate_pct": 44.7,
+        "avg_trade": 3.4,
+        "total_pnl": 1285.38,
+        "profit_factor": 1.6313,
+        "sharpe_approx": 0.1555,
+        "avg_r": 0.7755
+      }
+    },
+    "solo_sharpe": 0.8379,
+    "runtime_s": 20.1
+  },
+  "description": "atr_period: 24 \u2192 22",
+  "experiments_run": 0,
+  "experiments_kept": 31,
+  "updated_at": "2026-05-22T14:05:38.461944+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.4684,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: connors_rsi2 (41.4%). True solo performance unknown \u2014 see task #327."
+}

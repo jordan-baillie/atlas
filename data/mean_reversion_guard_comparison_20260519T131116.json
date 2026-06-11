@@ -1,0 +1,298 @@
+{
+  "run_at": "2026-05-19T03:11:16.256025+00:00",
+  "n_tickers": 198,
+  "variants": [
+    {
+      "variant": "Baseline",
+      "description": "No guard (sma200=false, RS=false) -- current config",
+      "started_at": "2026-05-19T03:04:30.112210+00:00",
+      "status": "ok",
+      "metrics": {
+        "total_trades": 195,
+        "cagr_pct": 0.119,
+        "cagr_full_period_pct": 0.0821,
+        "sharpe": -0.5989,
+        "sortino": -0.7667,
+        "max_drawdown_pct": 10.8151,
+        "win_rate_pct": 50.26,
+        "profit_factor": 1.004,
+        "total_pnl": 3.22,
+        "avg_trade": 0.02,
+        "final_equity": 976.52,
+        "expectancy_r": 0.0421,
+        "avg_r": 0.0421,
+        "r_count": 195,
+        "edge_p_value": 0.702969,
+        "edge_significant": false,
+        "var_95_pct": 0.76,
+        "cvar_95_pct": 1.147,
+        "calmar": 0.011,
+        "mc_p95_drawdown_pct": 20.63,
+        "mc_fragile": true,
+        "windows_configured": 55,
+        "windows_used": 55,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "mean_reversion": {
+            "trades": 195,
+            "total_pnl": 3.22,
+            "win_rate_pct": 50.3
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 2,
+            "win_rate_pct": 100.0,
+            "avg_trade": 7.06,
+            "total_pnl": 14.12,
+            "profit_factor": Infinity,
+            "sharpe_approx": 1.8982,
+            "avg_r": 1.3224
+          },
+          "bull": {
+            "trades": 74,
+            "win_rate_pct": 51.4,
+            "avg_trade": -0.53,
+            "total_pnl": -38.93,
+            "profit_factor": 0.8827,
+            "sharpe_approx": -0.0491,
+            "avg_r": -0.026
+          },
+          "neutral": {
+            "trades": 119,
+            "win_rate_pct": 48.7,
+            "avg_trade": 0.24,
+            "total_pnl": 28.03,
+            "profit_factor": 1.0585,
+            "sharpe_approx": 0.0241,
+            "avg_r": 0.0628
+          }
+        }
+      },
+      "elapsed_s": 102.5,
+      "finished_at": "2026-05-19T03:06:12.567650+00:00",
+      "_rejection_proxy": 0
+    },
+    {
+      "variant": "Option A",
+      "description": "SMA-200 trend filter only (sma200_filter=True)",
+      "started_at": "2026-05-19T03:06:12.567708+00:00",
+      "status": "ok",
+      "metrics": {
+        "total_trades": 135,
+        "cagr_pct": 4.4515,
+        "cagr_full_period_pct": 3.0498,
+        "sharpe": -0.0355,
+        "sortino": -0.0508,
+        "max_drawdown_pct": 13.3423,
+        "win_rate_pct": 54.81,
+        "profit_factor": 1.4206,
+        "total_pnl": 246.87,
+        "avg_trade": 1.83,
+        "final_equity": 1195.03,
+        "expectancy_r": 0.221,
+        "avg_r": 0.221,
+        "r_count": 135,
+        "edge_p_value": 0.10344,
+        "edge_significant": false,
+        "var_95_pct": 0.659,
+        "cvar_95_pct": 1.068,
+        "calmar": 0.3336,
+        "mc_p95_drawdown_pct": 13.0,
+        "mc_fragile": false,
+        "windows_configured": 55,
+        "windows_used": 55,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "mean_reversion": {
+            "trades": 135,
+            "total_pnl": 246.87,
+            "win_rate_pct": 54.8
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "avg_trade": -0.19,
+            "total_pnl": -0.75,
+            "profit_factor": 0.9722,
+            "sharpe_approx": -0.0113,
+            "avg_r": 0.3717
+          },
+          "bull": {
+            "trades": 55,
+            "win_rate_pct": 58.2,
+            "avg_trade": 3.3,
+            "total_pnl": 181.71,
+            "profit_factor": 1.8387,
+            "sharpe_approx": 0.2611,
+            "avg_r": 0.374
+          },
+          "neutral": {
+            "trades": 76,
+            "win_rate_pct": 52.6,
+            "avg_trade": 0.87,
+            "total_pnl": 65.91,
+            "profit_factor": 1.192,
+            "sharpe_approx": 0.0654,
+            "avg_r": 0.1023
+          }
+        }
+      },
+      "elapsed_s": 97.4,
+      "finished_at": "2026-05-19T03:07:50.015050+00:00",
+      "_rejection_proxy": 60
+    },
+    {
+      "variant": "Option B",
+      "description": "ROC-60 momentum floor guard (RS penalty -0.30 when roc_60 < -0.20)",
+      "started_at": "2026-05-19T03:07:50.015120+00:00",
+      "status": "ok",
+      "metrics": {
+        "total_trades": 142,
+        "cagr_pct": 4.3323,
+        "cagr_full_period_pct": 2.9686,
+        "sharpe": -0.0423,
+        "sortino": -0.0578,
+        "max_drawdown_pct": 12.8935,
+        "win_rate_pct": 53.52,
+        "profit_factor": 1.2606,
+        "total_pnl": 182.72,
+        "avg_trade": 1.29,
+        "final_equity": 1188.54,
+        "expectancy_r": 0.2496,
+        "avg_r": 0.2496,
+        "r_count": 142,
+        "edge_p_value": 0.070282,
+        "edge_significant": false,
+        "var_95_pct": 0.679,
+        "cvar_95_pct": 1.183,
+        "calmar": 0.336,
+        "mc_p95_drawdown_pct": 15.65,
+        "mc_fragile": false,
+        "windows_configured": 55,
+        "windows_used": 55,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "mean_reversion": {
+            "trades": 142,
+            "total_pnl": 182.72,
+            "win_rate_pct": 53.5
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 4,
+            "win_rate_pct": 50.0,
+            "avg_trade": 0.77,
+            "total_pnl": 3.09,
+            "profit_factor": 1.2029,
+            "sharpe_approx": 0.0715,
+            "avg_r": 0.2152
+          },
+          "bull": {
+            "trades": 50,
+            "win_rate_pct": 60.0,
+            "avg_trade": 3.28,
+            "total_pnl": 163.97,
+            "profit_factor": 1.664,
+            "sharpe_approx": 0.2219,
+            "avg_r": 0.4696
+          },
+          "neutral": {
+            "trades": 88,
+            "win_rate_pct": 50.0,
+            "avg_trade": 0.18,
+            "total_pnl": 15.66,
+            "profit_factor": 1.0357,
+            "sharpe_approx": 0.0141,
+            "avg_r": 0.1262
+          }
+        }
+      },
+      "elapsed_s": 105.3,
+      "finished_at": "2026-05-19T03:09:35.340445+00:00",
+      "_rejection_proxy": 53
+    },
+    {
+      "variant": "Option C",
+      "description": "Both: SMA-200 + ROC-60 floor",
+      "started_at": "2026-05-19T03:09:35.340520+00:00",
+      "status": "ok",
+      "metrics": {
+        "total_trades": 97,
+        "cagr_pct": 2.3701,
+        "cagr_full_period_pct": 1.6289,
+        "sharpe": -0.4413,
+        "sortino": -0.6672,
+        "max_drawdown_pct": 14.2838,
+        "win_rate_pct": 53.61,
+        "profit_factor": 1.3711,
+        "total_pnl": 135.45,
+        "avg_trade": 1.4,
+        "final_equity": 1085.7,
+        "expectancy_r": 0.1703,
+        "avg_r": 0.1703,
+        "r_count": 97,
+        "edge_p_value": 0.295083,
+        "edge_significant": false,
+        "var_95_pct": 0.505,
+        "cvar_95_pct": 0.808,
+        "calmar": 0.1659,
+        "mc_p95_drawdown_pct": 10.47,
+        "mc_fragile": false,
+        "windows_configured": 55,
+        "windows_used": 55,
+        "window_coverage_pct": 100.0,
+        "strategy_breakdown": {
+          "mean_reversion": {
+            "trades": 97,
+            "total_pnl": 135.45,
+            "win_rate_pct": 53.6
+          }
+        },
+        "regime_metrics": {
+          "bear": {
+            "trades": 3,
+            "win_rate_pct": 66.7,
+            "avg_trade": 4.1,
+            "total_pnl": 12.3,
+            "profit_factor": 2.5356,
+            "sharpe_approx": 0.387,
+            "avg_r": 0.7649
+          },
+          "bull": {
+            "trades": 33,
+            "win_rate_pct": 57.6,
+            "avg_trade": 3.43,
+            "total_pnl": 113.35,
+            "profit_factor": 2.2611,
+            "sharpe_approx": 0.3398,
+            "avg_r": 0.4122
+          },
+          "neutral": {
+            "trades": 61,
+            "win_rate_pct": 50.8,
+            "avg_trade": 0.16,
+            "total_pnl": 9.8,
+            "profit_factor": 1.0367,
+            "sharpe_approx": 0.013,
+            "avg_r": 0.0103
+          }
+        }
+      },
+      "elapsed_s": 100.9,
+      "finished_at": "2026-05-19T03:11:16.255903+00:00",
+      "_rejection_proxy": 98
+    }
+  ],
+  "decision": {
+    "baseline_sharpe": -0.5989,
+    "rule_applied": "baseline_sharpe_le_0__pick_highest",
+    "chosen": "Option A",
+    "rationale": "Baseline Sharpe=-0.5989 (<=0). Applied rule: pick highest Sharpe. Option A has Sharpe=-0.0355 and rejection proxy=60. Proxy: trade-count delta vs Baseline (Baseline=195 trades).",
+    "rejection_waived": false,
+    "rejection_note": "Proxy: trade-count delta vs Baseline (Baseline=195 trades)."
+  }
+}

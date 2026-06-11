@@ -1,0 +1,78 @@
+{
+  "market_id": "sp500",
+  "trade_date": "2026-06-02",
+  "plan_status": "APPROVED",
+  "halt_reason": null,
+  "n_entries": 2,
+  "n_approved": 2,
+  "n_exits": 0,
+  "total_risk_pct": 1.55,
+  "total_position_value": 941.3,
+  "leverage_pct": 132.23,
+  "summary_lines": [
+    "ACN \u00d7 2 @ $196.63 \u2192 stop $192.18",
+    "ADBE \u00d7 2 @ $274.02 \u2192 stop $268.06"
+  ],
+  "entries_full": [
+    {
+      "ticker": "ACN",
+      "side": "BUY",
+      "qty": 2,
+      "entry_price": 196.63,
+      "stop_price": 192.1765,
+      "take_profit": 240.4348,
+      "risk_amount": 8.91,
+      "position_value": 393.26,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    },
+    {
+      "ticker": "ADBE",
+      "side": "BUY",
+      "qty": 2,
+      "entry_price": 274.02,
+      "stop_price": 268.0636,
+      "take_profit": 332.6078,
+      "risk_amount": 11.91,
+      "position_value": 548.04,
+      "strategy": "momentum_breakout",
+      "sector": "Technology",
+      "confidence": 1.0
+    }
+  ],
+  "exits_full": [],
+  "open_positions_full": [
+    {
+      "ticker": "F",
+      "shares": 32,
+      "entry_price": 14.88,
+      "current_price": 16.64,
+      "unrealized_pnl": 56.32,
+      "unrealized_pnl_pct": 11.83,
+      "stop_price": 14.6,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    },
+    {
+      "ticker": "FSLR",
+      "shares": 1,
+      "entry_price": 269.87,
+      "current_price": 303.015,
+      "unrealized_pnl": 33.14,
+      "unrealized_pnl_pct": 12.28,
+      "stop_price": 291.59,
+      "take_profit": null,
+      "strategy": "momentum_breakout"
+    }
+  ],
+  "equity_snapshot": {
+    "equity": 1343.72,
+    "cash": 4380.73,
+    "total_pnl": 372.72,
+    "total_pnl_pct": 38.39
+  },
+  "trading_mode": "live",
+  "rejection_reason": null,
+  "written_at": "2026-06-02T09:11:00.569202+00:00"
+}

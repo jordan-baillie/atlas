@@ -1,0 +1,92 @@
+{
+  "strategy": "opening_gap",
+  "market": "sp500",
+  "params": {
+    "gap_threshold": -0.0,
+    "ibs_confirm": 0.6,
+    "rsi14_max": 44,
+    "vol_surge_threshold": 0.68,
+    "atr_period": 28,
+    "atr_stop_mult": 1.0,
+    "sma_exit_period": 7,
+    "ibs_exit_threshold": 0.8,
+    "max_hold_days": 12,
+    "sma200_filter": false,
+    "earnings_blackout": {
+      "enabled": false,
+      "days_before": 5,
+      "days_after": 1
+    }
+  },
+  "metrics": {
+    "total_trades": 714,
+    "cagr_pct": 10.2355,
+    "cagr_full_period_pct": 8.6732,
+    "sharpe": 0.4926,
+    "sortino": 0.6538,
+    "max_drawdown_pct": 12.4124,
+    "win_rate_pct": 63.03,
+    "profit_factor": 1.2987,
+    "total_pnl": 782.27,
+    "avg_trade": 1.1,
+    "final_equity": 1758.51,
+    "expectancy_r": 0.1357,
+    "avg_r": 0.1357,
+    "r_count": 714,
+    "edge_p_value": 0.001513,
+    "edge_significant": true,
+    "var_95_pct": 1.117,
+    "cvar_95_pct": 1.7,
+    "calmar": 0.8246,
+    "mc_p95_drawdown_pct": 21.4,
+    "mc_fragile": false,
+    "windows_configured": 71,
+    "windows_used": 71,
+    "window_coverage_pct": 100.0,
+    "strategy_breakdown": {
+      "opening_gap": {
+        "trades": 714,
+        "total_pnl": 782.27,
+        "win_rate_pct": 63.0
+      }
+    },
+    "regime_metrics": {
+      "bear": {
+        "trades": 7,
+        "win_rate_pct": 71.4,
+        "avg_trade": 3.57,
+        "total_pnl": 24.99,
+        "profit_factor": 2.1196,
+        "sharpe_approx": 0.2969,
+        "avg_r": 0.3884
+      },
+      "bull": {
+        "trades": 232,
+        "win_rate_pct": 62.9,
+        "avg_trade": 0.84,
+        "total_pnl": 195.39,
+        "profit_factor": 1.1696,
+        "sharpe_approx": 0.0607,
+        "avg_r": 0.0874
+      },
+      "neutral": {
+        "trades": 475,
+        "win_rate_pct": 62.9,
+        "avg_trade": 1.18,
+        "total_pnl": 561.89,
+        "profit_factor": 1.3889,
+        "sharpe_approx": 0.122,
+        "avg_r": 0.1556
+      }
+    },
+    "solo_sharpe": 0.4926,
+    "runtime_s": 49.4
+  },
+  "description": "ibs_confirm 0.60 (re-apply prior win as new base)",
+  "experiments_run": 411,
+  "experiments_kept": 27,
+  "updated_at": "2026-06-07T13:16:09.765077+00:00",
+  "is_solo": false,
+  "solo_fraction": 0.0018,
+  "contamination_note": "Headline metrics are portfolio-contaminated. Dominant strategy: sector_rotation (81.9%). True solo performance unknown \u2014 see task #327."
+}
