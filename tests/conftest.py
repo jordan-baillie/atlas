@@ -150,7 +150,9 @@ def _isolate_price_arbiter_throttle(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def _isolate_live_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     try:
         import atlas.execution.daily as _daily
+        import atlas.execution.gates as _gates
         import atlas.execution.providers as _prov
+        import atlas.execution.record_fills as _rf
         import atlas.execution.record_returns as _rr
         import atlas.execution.virtual_book as _vb
         import atlas.execution.registry as _reg
@@ -159,7 +161,7 @@ def _isolate_live_data(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         return
     live_tmp = tmp_path / "live"
     live_tmp.mkdir(exist_ok=True)
-    for mod in (_daily, _prov, _rr, _vb):
+    for mod in (_daily, _gates, _prov, _rf, _rr, _vb):
         monkeypatch.setattr(mod, "LIVE_DATA", live_tmp)
     monkeypatch.setattr(_reg, "REGISTRY_PATH", tmp_path / "live_strategies.json")
     # provider registrations must not leak between tests

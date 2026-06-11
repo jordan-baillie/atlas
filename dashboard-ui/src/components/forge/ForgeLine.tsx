@@ -1,15 +1,17 @@
 /** The forge line — six stations of the autonomous loop, each with live stats. */
 import type { ForgeStage } from '../../api/forge-types'
+import { AnimatedNumber } from '../ui/AnimatedNumber'
+import { CornerBrackets } from '../ui/hud'
 import { C, Card } from './shared'
 
 function Embers({ active }: { active: boolean }) {
   if (!active) return null
   return (
     <div className="absolute inset-x-0 -bottom-1 h-10 pointer-events-none overflow-visible">
-      {[0, 1, 2].map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <span key={i} className="forge-ember absolute bottom-0 rounded-full"
           style={{
-            left: `${28 + i * 22}%`, width: 3, height: 3, background: i % 2 ? C.gold : C.hot,
+            left: `${14 + i * 18}%`, width: 3, height: 3, background: i % 2 ? C.gold : C.hot,
             ['--ex' as string]: `${(i % 2 ? 1 : -1) * (4 + i * 2)}px`, animationDelay: `${i * 0.5}s`,
           }} />
       ))}
@@ -44,10 +46,13 @@ export function ForgeLine({ pipeline, running }: { pipeline: ForgeStage[]; runni
                     background: hot ? 'rgba(251,191,36,0.12)' : 'var(--color-surface-alt)',
                     borderColor: hot ? C.gold : 'var(--color-border)',
                   }}>
+                  {hot && <CornerBrackets size={8} />}
                   <span className={running ? 'forge-glow' : ''} style={{ animationDelay: `${i * 0.3}s` }}>{s.icon}</span>
                   <Embers active={running} />
                 </div>
-                <div className="mt-2 text-2xl font-bold tabular-nums" style={{ color: hot ? C.gold : 'var(--color-text)' }}>{s.count}</div>
+                <div className="mt-2 text-2xl font-bold tabular-nums" style={{ color: hot ? C.gold : 'var(--color-text)' }}>
+                  <AnimatedNumber value={s.count} />
+                </div>
                 <div className="text-xs font-semibold text-[var(--color-text)]">{s.label}</div>
 
                 {/* per-stage stats */}

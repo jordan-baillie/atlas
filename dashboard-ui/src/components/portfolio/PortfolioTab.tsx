@@ -10,9 +10,16 @@ import { PositionsGrid } from './PositionsGrid'
 import { OrdersTable } from './OrdersTable'
 import { SystemHealth } from './SystemHealth'
 import { SectionLabel } from '../ui/kit'
+import { HudPanel, StreamDivider, Beacon } from '../ui/hud'
+import { GlyphBook } from '../ui/glyphs'
 
 function GroupDivider({ label }: { label: string }) {
-  return <SectionLabel>{label}</SectionLabel>
+  return (
+    <div>
+      <SectionLabel>{label}</SectionLabel>
+      <StreamDivider className="mt-1" />
+    </div>
+  )
 }
 
 const STATE_COLOR: Record<string, string> = {
@@ -43,8 +50,11 @@ function DeployedStrategies({ rows }: { rows: LiveDeployed[] }) {
           {rows.map((s) => (
             <tr key={s.name} className="border-b border-[var(--color-border)]/40">
               <td className="py-2 pr-4 text-[var(--color-text)]">{s.name}</td>
-              <td className="py-2 pr-4" style={{ color: STATE_COLOR[s.state] ?? 'var(--color-text)' }}>
-                {s.state === 'shadow' ? 'paper' : s.state}
+              <td className="py-2 pr-4">
+                <span className="inline-flex items-center gap-1.5" style={{ color: STATE_COLOR[s.state] ?? 'var(--color-text)' }}>
+                  <Beacon color={STATE_COLOR[s.state] ?? 'var(--color-text-muted)'} on={s.state !== 'shadow'} size={3.5} />
+                  {s.state === 'shadow' ? 'paper' : s.state}
+                </span>
               </td>
               <td className="py-2 pr-4 text-right tabular-nums">${s.capital.toLocaleString()}</td>
               <td className="py-2 pr-4">{s.approved ? '\u2705' : '\u2014'}</td>
@@ -78,10 +88,15 @@ export function PortfolioTab() {
   const live = useLiveState()
 
   return (
-    <div className="space-y-4 md:space-y-6 stagger">
+    <div className="space-y-4 md:space-y-6 stagger-pop" data-section="paper">
       <div className="animate-in">
         <SectionBoundary title="Deployed strategies">
-          {live.data ? <DeployedStrategies rows={live.data.deployed} /> : <Skeleton className="h-20" />}
+          <HudPanel
+            title={<span className="flex items-center gap-1.5"><GlyphBook size={12} /> Forge Deployments</span>}
+            brackets
+          >
+            {live.data ? <DeployedStrategies rows={live.data.deployed} /> : <Skeleton className="h-20" />}
+          </HudPanel>
         </SectionBoundary>
       </div>
 
@@ -93,6 +108,7 @@ export function PortfolioTab() {
               todayPnl={portfolio.data.summary?.today_pnl}
               positionsCount={portfolio.data.positions?.length ?? 0}
               asOf={portfolio.data.timestamp}
+              marketOpen={portfolio.data.market_clock?.is_open === true}
             />
           ) : (
             <Skeleton className="h-28" />

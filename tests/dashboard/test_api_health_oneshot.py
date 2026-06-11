@@ -2,7 +2,7 @@
 
 Covers:
   - _systemctl_status() normalisation logic (11 unit cases)
-  - system_health() endpoint includes atlas-dashboard-refresh
+  - system_health() endpoint reports the live unit set (dashboard + timers)
   - Backward-compat: services dict values are strings, not dicts
 """
 from __future__ import annotations
@@ -140,7 +140,9 @@ class TestSystemctlStatus:
 
 _DEFAULT_OUTPUTS = {
     "atlas-dashboard": "simple\nsuccess\nactive\n",
-    "atlas-dashboard-refresh": "oneshot\nsuccess\ninactive\n",
+    "atlas-live-shadow.timer": "oneshot\nsuccess\ninactive\n",
+    "atlas-backup.timer": "simple\nsuccess\nactive\n",
+    "unified-healthcheck.timer": "simple\nsuccess\nactive\n",
 }
 
 
@@ -179,17 +181,22 @@ def _get_health_json(svc_outputs):
 class TestSystemHealthEndpoint:
     """Integration tests for GET /api/system/health via TestClient."""
 
-    def test_atlas_dashboard_refresh_present(self):
-        """atlas-dashboard-refresh must appear in the services dict."""
+    def test_live_unit_set_present(self):
+        """The live unit set (dashboard + timers) appears; retired units do not."""
         resp = _get_health_json(_DEFAULT_OUTPUTS)
         assert resp.status_code == 200, resp.text
-        assert "atlas-dashboard-refresh" in resp.json()["services"]
+        services = resp.json()["services"]
+        for unit in ("atlas-dashboard", "atlas-live-shadow.timer",
+                     "atlas-backup.timer", "unified-healthcheck.timer"):
+            assert unit in services
+        assert "atlas-dashboard-refresh" not in services
+        assert "atlas-telegram-bot" not in services
 
     def test_oneshot_service_reports_oneshot_success(self):
         """Post-success oneshot unit returns 'oneshot-success'."""
         resp = _get_health_json(_DEFAULT_OUTPUTS)
         assert resp.status_code == 200, resp.text
-        assert resp.json()["services"]["atlas-dashboard-refresh"] == "oneshot-success"
+        assert resp.json()["services"]["atlas-live-shadow.timer"] == "oneshot-success"
 
     def test_services_values_are_strings(self):
         """services dict must contain plain strings for frontend backward-compat."""

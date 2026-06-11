@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- mixed kit file: tokens + components by design */
 /**
  * Forge UI kit — the shared visual language across all dashboard tabs.
  *

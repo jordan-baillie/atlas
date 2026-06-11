@@ -31,11 +31,13 @@ export function RunCard({ cycle }: { cycle: ForgeCycle }) {
   const icon = cycle.status === 'pass' ? '★' : cycle.status === 'near_miss' ? '◐' : cycle.status === 'error' ? '✕' : '·'
   const deg = m.degradation_pct
 
+  const isPass = cycle.status === 'pass'
+
   return (
-    <Card className="overflow-hidden">
+    <Card className={`overflow-hidden ${isPass ? 'mc-glow-after' : ''}`}>
       {/* collapsed row */}
       <button onClick={() => setOpen((v) => !v)} className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-[var(--color-surface-alt)]/40 transition-colors">
-        <span className="w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold border"
+        <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold border ${open ? 'mc-stamp' : ''}`}
           style={{ borderColor: sc, color: sc, background: cycle.status === 'pass' ? 'rgba(251,191,36,0.15)' : cycle.status === 'near_miss' ? 'rgba(245,158,11,0.10)' : 'transparent' }}>{icon}</span>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-[var(--color-text)] truncate">{cycle.title}</div>
@@ -50,8 +52,13 @@ export function RunCard({ cycle }: { cycle: ForgeCycle }) {
         <span className="text-[var(--color-text-muted)] text-xs shrink-0 transition-transform" style={{ transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
       </button>
 
-      {/* expanded summary */}
-      {open && (
+      {/* expanded summary — grid-rows 0fr->1fr for a smooth open */}
+      <div
+        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {open && (
         <div className="px-4 pb-4 pt-1 border-t border-[var(--color-border)] space-y-4 forge-rise">
           {/* verdict metrics */}
           <div>
@@ -97,7 +104,9 @@ export function RunCard({ cycle }: { cycle: ForgeCycle }) {
             </div>
           </div>
         </div>
-      )}
+          )}
+        </div>
+      </div>
     </Card>
   )
 }

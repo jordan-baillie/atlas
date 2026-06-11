@@ -80,7 +80,7 @@ def _book_stats(name: str, capital: float) -> dict:
 @router.get("/api/live")
 def live_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
     out: dict = {"deployed": [], "portfolio": None, "daily": None,
-                 "kill_switch": {"blocked": False, "reason": None}}
+                 "kill_switch": {"blocked": False, "reason": None}, "gates": None}
 
     # deployed strategies + virtual-book stats + portfolio rollup
     try:
@@ -122,5 +122,19 @@ def live_state(_auth: HTTPBasicCredentials = Depends(check_auth)) -> dict:
             out["kill_switch"] = {"blocked": True, "reason": reason, "layer": layer}
     except Exception as e:
         logger.debug("live: kill-switch check skipped: %s", e)
+
+    # go-live gates (G6 slippage / G7 broker errors / track-vs-expectation) — read-only, best-effort
+    try:
+        from atlas.execution import registry
+        from atlas.execution.gates import evaluate_gates, rollup
+        per: dict = {}
+        for s in registry.deployed():
+            try:
+                per[s.name] = evaluate_gates(s.name, s.expectation, base=_LIVE)
+            except Exception as e:
+                logger.warning("live: gates failed for %s: %s", s.name, e)
+        out["gates"] = {"per_strategy": per, "overall": rollup(per)}
+    except Exception as e:
+        logger.warning("live: gates computation failed: %s", e)
 
     return out

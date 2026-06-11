@@ -119,11 +119,14 @@ def system_health(_auth: HTTPBasicCredentials = Depends(check_auth)):
 
         heartbeats = get_heartbeats()
 
-        # Service status via systemd — oneshot-aware (see _systemctl_status helper)
+        # Service status via systemd — oneshot-aware (see _systemctl_status helper).
+        # The post-great-deletion unit set: the dashboard itself + the load-bearing timers.
         services: dict = {}
         for svc in (
             "atlas-dashboard",
-            "atlas-dashboard-refresh",
+            "atlas-live-shadow.timer",
+            "atlas-backup.timer",
+            "unified-healthcheck.timer",
         ):
             info = _systemctl_status(svc)
             services[svc] = info["status"]  # string for API backward-compat

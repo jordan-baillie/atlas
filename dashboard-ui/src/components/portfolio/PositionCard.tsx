@@ -1,6 +1,7 @@
 import type { Position } from '../../api/types'
 import { fmtCcy, fmtSignedCcy, fmtSignedPct, pnlClass, daysHeld } from '../../lib/format'
 import { Badge } from '../shared/Badge'
+import { AnimatedNumber } from '../ui/AnimatedNumber'
 
 interface Props { position: Position }
 
@@ -12,8 +13,7 @@ export function PositionCard({ position }: Props) {
   return (
     <div
       data-testid="position-card"
-      className="bg-[var(--color-surface)] rounded-xl p-3 relative border border-[var(--color-border)]
-                 hover:shadow-md transition-shadow duration-200"
+      className="mc-frame rounded-xl p-3 relative hover:shadow-md transition-shadow duration-200"
       style={{ borderLeftColor: borderColor, borderLeftWidth: 3 }}
     >
       {/* Header row: ticker + strategy badge */}
@@ -37,7 +37,7 @@ export function PositionCard({ position }: Props) {
 
       {/* Primary P&L — bold, mono, signed */}
       <div className={`font-mono font-bold text-xl tabular-nums mb-2.5 ${pnlClass(pnl)}`}>
-        {fmtSignedCcy(pnl)}{' '}
+        <AnimatedNumber value={pnl} format={fmtSignedCcy} flashOnDelta />{' '}
         <span className="text-sm font-semibold tabular-nums">
           {fmtSignedPct(position.unrealized_pnl_pct)}
         </span>
@@ -65,7 +65,7 @@ export function PositionCard({ position }: Props) {
       <div className="mt-2.5 pt-2 border-t border-[var(--color-border)]/50 flex items-center justify-between text-xs">
         <div className={pnlClass(position.intraday_pnl)}>
           <span className="text-[var(--color-text-muted)]">Today </span>
-          <span className="font-mono tabular-nums">{fmtSignedCcy(position.intraday_pnl)}</span>
+          <AnimatedNumber value={position.intraday_pnl} format={fmtSignedCcy} flashOnDelta className="text-xs" />
         </div>
         <div className="text-[var(--color-text-muted)] font-mono tabular-nums">
           Prev: {fmtCcy(position.lastday_price)}

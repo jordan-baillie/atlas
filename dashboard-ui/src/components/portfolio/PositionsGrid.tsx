@@ -19,7 +19,7 @@ function PositionsGridInner({ positions }: Props) {
         />
       ) : (
         // Responsive: 1 col mobile / 2 col tablet (md ≥768px) / 3 col desktop (xl ≥1280px)
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="stagger-pop grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {positions.map((p, i) => <PositionCard key={p.ticker ?? i} position={p} />)}
         </div>
       )}

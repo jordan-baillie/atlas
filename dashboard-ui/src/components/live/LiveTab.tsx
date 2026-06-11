@@ -2,35 +2,21 @@ import { useLiveState } from '../../api/queries'
 import type { LiveDeployed, LiveDailyResult, LivePortfolio } from '../../api/queries'
 import { Skeleton } from '../layout/Skeleton'
 import { SectionBoundary } from '../layout/SectionBoundary'
+import { fmtCcy, fmtSignedCcy } from '../../lib/format'
+import { AnimatedNumber } from '../ui/AnimatedNumber'
+import { HudPanel, Beacon, StreamDivider } from '../ui/hud'
+import { GlyphCheck, GlyphX, GlyphShield, GlyphSignal } from '../ui/glyphs'
+import { GatesPanel } from './GatesPanel'
 
 const STATE_COLOR: Record<string, string> = {
   shadow: 'var(--color-text-muted)',
-  canary: 'var(--color-amber)',
-  live: 'var(--color-green)',
-}
-
-function KillSwitchBanner({ blocked, reason, layer }: { blocked: boolean; reason?: string | null; layer?: string | null }) {
-  const color = blocked ? 'var(--color-red)' : 'var(--color-green)'
-  return (
-    <div className="rounded-lg border px-4 py-3" style={{ borderColor: `${color}33`, background: `${color}0d` }}>
-      <div className="flex items-center gap-3">
-        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-        <span className="text-sm font-semibold" style={{ color }}>
-          Kill-switch: {blocked ? 'HALTED' : 'clear'}
-        </span>
-        {blocked && (
-          <span className="text-xs font-mono text-[var(--color-text-muted)]">
-            {layer ? `[${layer}] ` : ''}{reason}
-          </span>
-        )}
-      </div>
-    </div>
-  )
+  canary: 'var(--color-warning)',
+  live: 'var(--mc-live-hot)',
 }
 
 function pnlColor(v?: number | null): string {
   if (v == null) return 'var(--color-text-muted)'
-  return v >= 0 ? 'var(--color-green)' : 'var(--color-red)'
+  return v >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'
 }
 
 function fmtPct(v?: number | null): string {
@@ -38,7 +24,73 @@ function fmtPct(v?: number | null): string {
   return `${v >= 0 ? '+' : ''}${(v * 100).toFixed(2)}%`
 }
 
-function Sparkline({ curve, base }: { curve: { equity?: number }[]; base?: number | null }) {
+// ── Kill switch ──────────────────────────────────────────────────────────────
+
+function KillSwitchBanner({ blocked, reason, layer }: { blocked: boolean; reason?: string | null; layer?: string | null }) {
+  const color = blocked ? 'var(--mc-live)' : 'var(--color-positive)'
+  return (
+    <HudPanel brackets glow glowPulse={blocked} className="overflow-hidden">
+      <div className="flex items-center gap-4">
+        <Beacon color={color} on size={9} />
+        <div className="leading-tight min-w-0">
+          <div className="display-num text-lg sm:text-xl" style={{ color }}>
+            KILL-SWITCH: {blocked ? 'HALTED' : 'CLEAR'}
+          </div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-text-muted)] flex items-center gap-1 truncate">
+            <GlyphShield size={10} />
+            {blocked ? `${layer ? `[${layer}] ` : ''}${reason ?? ''}` : 'all layers green — orders flow'}
+          </div>
+        </div>
+      </div>
+    </HudPanel>
+  )
+}
+
+// ── Portfolio rollup ─────────────────────────────────────────────────────────
+
+function PortfolioHeader({ p }: { p: LivePortfolio }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <Tile label="Book Equity">
+        <AnimatedNumber value={p.total_equity} format={fmtCcy} flashOnDelta className="display-num text-base" />
+      </Tile>
+      <Tile label="Capital Base">
+        <AnimatedNumber value={p.total_capital_base} format={fmtCcy} className="text-base font-semibold text-[var(--color-text-muted)]" />
+      </Tile>
+      <Tile label="P&L">
+        <AnimatedNumber
+          value={p.total_pnl}
+          format={fmtSignedCcy}
+          flashOnDelta
+          className="text-base font-semibold"
+        />
+      </Tile>
+      <Tile label="Return">
+        <span className="text-base font-mono font-semibold" style={{ color: pnlColor(p.total_return) }}>
+          {fmtPct(p.total_return)}
+        </span>
+      </Tile>
+      <Tile label="Strategies">
+        <span className="text-base font-mono font-semibold">
+          {p.n_tracked}<span className="text-[var(--color-text-muted)]">/{p.n_strategies} tracked</span>
+        </span>
+      </Tile>
+    </div>
+  )
+}
+
+function Tile({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mc-frame px-3 py-2">
+      <div className="text-[9.5px] uppercase tracking-[0.16em] text-[var(--color-text-muted)] mb-0.5">{label}</div>
+      <div className="tabular">{children}</div>
+    </div>
+  )
+}
+
+// ── Deployed strategies ──────────────────────────────────────────────────────
+
+function MiniSparkline({ curve, base }: { curve: { equity?: number }[]; base?: number | null }) {
   const pts = curve.map((c) => c.equity).filter((e): e is number => e != null)
   if (pts.length < 2) return <span className="text-[10px] text-[var(--color-text-muted)]">—</span>
   const w = 96
@@ -50,30 +102,12 @@ function Sparkline({ curve, base }: { curve: { equity?: number }[]; base?: numbe
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${((i / (pts.length - 1)) * w).toFixed(1)},${(h - ((p - min) / span) * h).toFixed(1)}`)
     .join(' ')
   const up = base != null ? pts[pts.length - 1] >= base : pts[pts.length - 1] >= pts[0]
+  const stroke = up ? 'var(--color-positive)' : 'var(--color-negative)'
   return (
     <svg width={w} height={h} className="inline-block align-middle">
-      <path d={path} fill="none" stroke={up ? 'var(--color-green)' : 'var(--color-red)'} strokeWidth="1.5" />
+      <path d={path} fill="none" stroke={stroke} strokeWidth="1.5"
+        style={{ filter: `drop-shadow(0 0 3px ${stroke})` }} />
     </svg>
-  )
-}
-
-function PortfolioHeader({ p }: { p: LivePortfolio }) {
-  const items: [string, string, string][] = [
-    ['Book Equity', `$${p.total_equity.toLocaleString()}`, 'var(--color-text)'],
-    ['Capital Base', `$${p.total_capital_base.toLocaleString()}`, 'var(--color-text-muted)'],
-    ['P&L', `${p.total_pnl >= 0 ? '+' : ''}$${p.total_pnl.toLocaleString()}`, pnlColor(p.total_pnl)],
-    ['Return', fmtPct(p.total_return), pnlColor(p.total_return)],
-    ['Strategies', `${p.n_tracked}/${p.n_strategies} tracked`, 'var(--color-text-muted)'],
-  ]
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-      {items.map(([label, value, color]) => (
-        <div key={label} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">{label}</div>
-          <div className="text-sm font-mono font-semibold tabular-nums" style={{ color }}>{value}</div>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -106,17 +140,18 @@ function DeployedTable({ rows }: { rows: LiveDeployed[] }) {
         <tbody>
           {rows.map((s) => {
             const b = s.book
+            const stateColor = STATE_COLOR[s.state] ?? 'var(--color-text)'
             return (
-              <tr key={s.name} className="border-b border-[var(--color-border)]/40">
-                <td className="py-2 pr-4 text-[var(--color-text)]">
-                  {s.name}
-                  <span className="ml-2 text-[10px]" style={{ color: STATE_COLOR[s.state] ?? 'var(--color-text-muted)' }}>
+              <tr key={s.name} className="border-b border-[var(--color-border)]/40 transition-colors hover:bg-[var(--color-surface-alt)]/40">
+                <td className="py-2 pr-4 text-[var(--color-text)] font-semibold">{s.name}</td>
+                <td className="py-2 pr-4">
+                  <span className="inline-flex items-center gap-1.5" style={{ color: stateColor }}>
+                    <Beacon color={stateColor} on={s.state !== 'shadow'} size={3.5} />
                     {s.state}/{s.broker}
                   </span>
                 </td>
-                <td className="py-2 pr-4" style={{ color: STATE_COLOR[s.state] ?? 'var(--color-text)' }}>{s.state}</td>
                 <td className="py-2 pr-4 text-right tabular-nums">
-                  {b?.book_equity != null ? `$${b.book_equity.toLocaleString()}` : `$${s.capital.toLocaleString()}`}
+                  {b?.book_equity != null ? fmtCcy(b.book_equity) : fmtCcy(s.capital)}
                 </td>
                 <td className="py-2 pr-4 text-right tabular-nums" style={{ color: pnlColor(b?.cum_return) }}>
                   {fmtPct(b?.cum_return)}
@@ -130,8 +165,12 @@ function DeployedTable({ rows }: { rows: LiveDeployed[] }) {
                   {b?.realized_sharpe != null ? b.realized_sharpe.toFixed(2) : '—'}
                   <span className="text-[var(--color-text-muted)]"> / {s.expectation?.sharpe?.toFixed(2) ?? '—'}</span>
                 </td>
-                <td className="py-2 pr-4"><Sparkline curve={b?.equity_curve ?? []} base={b?.capital_base} /></td>
-                <td className="py-2">{s.approved ? '✅' : '—'}</td>
+                <td className="py-2 pr-4"><MiniSparkline curve={b?.equity_curve ?? []} base={b?.capital_base} /></td>
+                <td className="py-2">
+                  {s.approved
+                    ? <GlyphCheck size={12} className="text-[var(--color-positive)]" />
+                    : <span className="text-[var(--color-text-muted)]">—</span>}
+                </td>
               </tr>
             )
           })}
@@ -141,57 +180,80 @@ function DeployedTable({ rows }: { rows: LiveDeployed[] }) {
   )
 }
 
+// ── Daily wire ───────────────────────────────────────────────────────────────
+
 function DailyResults({ results }: { results: LiveDailyResult[] }) {
   if (!results.length) {
     return <div className="text-sm text-[var(--color-text-muted)] py-4 text-center">No runs in the latest report.</div>
   }
   return (
-    <div className="space-y-2">
-      {results.map((r) => {
-        const tag = r.blocked ? '⛔' : r.track_status === 'diverging' ? '⚠️' : '✅'
-        return (
-          <div key={r.name} className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-mono">
-            <span className="text-[var(--color-text)]">{tag} {r.name}</span>
-            <span className="text-[var(--color-text-muted)]">
-              [{r.state}/{r.broker}] orders={r.n_orders} exec={r.executed} dry={String(r.dry_run)} track={r.track_status ?? '—'}
-              {r.awaiting_approval ? '  🟡 AWAITING APPROVAL' : ''}
-              {r.error ? `  err=${r.error}` : ''}
+    <ul className="stagger space-y-1.5">
+      {results.map((r) => (
+        <li key={r.name} className="animate-in flex items-center gap-2.5 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-mono">
+          {r.blocked
+            ? <GlyphX size={12} className="text-[var(--color-negative)] shrink-0" />
+            : r.track_status === 'diverging' || r.error
+              ? <GlyphX size={12} className="text-[var(--color-warning)] shrink-0" />
+              : <GlyphCheck size={12} className="text-[var(--color-positive)] shrink-0" />}
+          <span className="text-[var(--color-text)] font-semibold">{r.name}</span>
+          <span className="text-[var(--color-text-muted)] truncate">
+            [{r.state}/{r.broker}] orders={r.n_orders} exec={r.executed} dry={String(r.dry_run)} track={r.track_status ?? '—'}
+            {r.error ? `  err=${r.error}` : ''}
+          </span>
+          {r.awaiting_approval && (
+            <span className="ml-auto shrink-0 text-[10px] font-bold tracking-[0.08em] text-[var(--color-warning)]">
+              AWAITING APPROVAL
             </span>
-          </div>
-        )
-      })}
-    </div>
+          )}
+          {r.blocked && (
+            <span className="ml-auto shrink-0 text-[10px] font-bold tracking-[0.08em] text-[var(--color-negative)]">
+              BLOCKED {r.blocked}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
+
+// ── Tab ──────────────────────────────────────────────────────────────────────
 
 export function LiveTab() {
   const { data } = useLiveState()
   if (!data) return <Skeleton className="h-64" />
 
   return (
-    <div className="space-y-4 md:space-y-6 stagger">
-      <div className="animate-in">
+    <div className="space-y-4 md:space-y-5 stagger-pop" data-section="live">
+      <SectionBoundary title="Kill switch">
         <KillSwitchBanner {...data.kill_switch} />
-      </div>
+      </SectionBoundary>
+
       {data.portfolio && (
-        <div className="animate-in">
-          <SectionBoundary title="Paper Portfolio">
-            <PortfolioHeader p={data.portfolio} />
-          </SectionBoundary>
-        </div>
-      )}
-      <div className="animate-in">
-        <SectionBoundary title="Deployed Strategies">
-          <DeployedTable rows={data.deployed} />
+        <SectionBoundary title="Paper Portfolio">
+          <PortfolioHeader p={data.portfolio} />
         </SectionBoundary>
-      </div>
-      <div className="animate-in">
-        <SectionBoundary title={`Latest Shadow Run${data.daily ? ` · ${data.daily.date} (${data.daily.mode})` : ''}`}>
+      )}
+
+      <SectionBoundary title="Go-live gates">
+        <GatesPanel gates={data.gates} />
+      </SectionBoundary>
+
+      <SectionBoundary title="Deployed Strategies">
+        <HudPanel title={<span className="flex items-center gap-1.5"><GlyphSignal size={12} /> Deployed Strategies</span>}>
+          <DeployedTable rows={data.deployed} />
+        </HudPanel>
+      </SectionBoundary>
+
+      <SectionBoundary title="Latest shadow run">
+        <HudPanel
+          title={`Latest Shadow Run${data.daily ? ` · ${data.daily.date} (${data.daily.mode})` : ''}`}
+        >
+          <StreamDivider className="mb-3" />
           {data.daily ? <DailyResults results={data.daily.results} /> : (
             <div className="text-sm text-[var(--color-text-muted)] py-4 text-center">No daily report yet.</div>
           )}
-        </SectionBoundary>
-      </div>
+        </HudPanel>
+      </SectionBoundary>
     </div>
   )
 }

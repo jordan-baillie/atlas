@@ -129,11 +129,55 @@ export interface LiveDailyResult {
   awaiting_approval?: boolean
   error?: string | null
 }
+// Go-live gates (G6 slippage / G7 broker errors / track-vs-expectation).
+// All fields defensive-optional: the UI must render "AWAITING DATA" when absent.
+export interface GateSlippage {
+  median_bps?: number | null
+  p75_bps?: number | null
+  worst_bps?: number | null
+  n_fills?: number
+  lookback_days?: number
+  bar_bps?: number
+  pass?: boolean | null
+}
+export interface GateBrokerErrors {
+  n_orders?: number
+  n_errors?: number
+  n_unmatched?: number
+  error_rate_pct?: number | null
+  bar_pct?: number
+  pass?: boolean | null
+}
+export interface GateTrack {
+  status?: string | null
+  n_obs?: number
+  realized_mean?: number | null
+  realized_sharpe?: number | null
+  expected_sharpe?: number | null
+  mean_z?: number | null
+  worst_daily_z?: number | null
+  reasons?: string[]
+  pass?: boolean | null
+}
+export interface GoLiveGates {
+  slippage?: GateSlippage
+  broker_errors?: GateBrokerErrors
+  track?: GateTrack
+  pass?: boolean | null
+}
+export interface GatesOverall {
+  pass?: boolean | null
+  n_strategies?: number
+  n_pass?: number
+  n_fail?: number
+  failing?: string[]
+}
 export interface LiveState {
   deployed: LiveDeployed[]
   portfolio?: LivePortfolio | null
   daily: { date: string; mode: string; results: LiveDailyResult[] } | null
   kill_switch: { blocked: boolean; reason?: string | null; layer?: string | null }
+  gates?: { per_strategy?: Record<string, GoLiveGates>; overall?: GatesOverall } | null
 }
 
 // ---------------------------------------------------------------------------

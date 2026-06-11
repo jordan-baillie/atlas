@@ -2,7 +2,7 @@ import { usePortfolioData } from '../../api/queries'
 import { useMarketClock } from '../../hooks/useMarketClock'
 import { useTheme } from '../../hooks/useTheme'
 import { DataFreshnessChip } from './DataFreshnessChip'
-import { StatusDot } from '../shared/StatusDot'
+import { Beacon } from '../ui/hud'
 
 export function Header() {
   const { data: portfolioData } = usePortfolioData()
@@ -11,18 +11,33 @@ export function Header() {
   const isOpen = portfolioData?.market_clock?.is_open === true
 
   return (
-    <header className="sticky top-0 z-40 h-14 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)] shadow-sm">
+    <header className="sticky top-0 z-40 h-14 bg-[var(--color-surface)]/75 backdrop-blur-md border-b border-[var(--color-border)]">
+      {/* section-tinted hairline */}
+      <div
+        aria-hidden
+        className="absolute bottom-[-1px] left-0 right-0 h-[2px]"
+        style={{
+          background:
+            'linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-section, var(--color-accent)) 55%, transparent), transparent)',
+          transition: 'background 400ms ease',
+        }}
+      />
       <div className="max-w-[1440px] mx-auto h-full px-6 flex items-center gap-3 md:gap-4">
 
-        {/* Logo */}
-        <div className="font-mono font-semibold text-base tracking-[-0.03em] select-none flex items-center gap-1">
-          ▲ Atlas
-          <span className="w-1 h-1 rounded-full bg-[var(--color-accent)] opacity-60 ml-0.5" aria-hidden="true" />
+        {/* Logo + mission caption */}
+        <div className="select-none leading-none">
+          <div className="font-mono font-semibold text-base tracking-[-0.03em] flex items-center gap-1">
+            ▲ Atlas
+            <span className="w-1 h-1 rounded-full bg-[var(--accent-section,var(--color-accent))] opacity-70 ml-0.5" aria-hidden="true" />
+          </div>
+          <div className="hidden sm:block text-[8.5px] tracking-[0.32em] uppercase text-[var(--color-text-muted)] mt-0.5">
+            Mission Control
+          </div>
         </div>
 
         {/* Market Clock */}
-        <span className="text-xs text-[var(--color-text)] font-mono tabular-nums flex items-center gap-1.5">
-          <StatusDot status={isOpen ? 'green' : 'gray'} size="sm" pulse={isOpen} />
+        <span className="text-xs display-num flex items-center gap-1.5">
+          <Beacon color={isOpen ? 'var(--color-positive)' : 'var(--color-muted)'} on={isOpen} size={4} />
           {clockString}
         </span>
 

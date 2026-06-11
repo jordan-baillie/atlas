@@ -1,7 +1,8 @@
 import type { Account } from '../../api/types'
 import { StatCard } from '../shared/StatCard'
 import { AsOfBadge } from '../shared/AsOfBadge'
-import { fmtCcy, fmtSignedCcy, fmtPct, pnlClass } from '../../lib/format'
+import { AnimatedNumber } from '../ui/AnimatedNumber'
+import { fmtCcy, fmtSignedCcy, fmtPct } from '../../lib/format'
 
 interface Props {
   account: Account
@@ -9,27 +10,31 @@ interface Props {
   positionsCount?: number
   /** ISO timestamp of the live broker pull (DashboardData.timestamp). Optional — badge degrades gracefully. */
   asOf?: string
+  /** Glow the live cards while the market is open. */
+  marketOpen?: boolean
 }
 
-export function SummaryStrip({ account, todayPnl, positionsCount, asOf }: Props) {
+export function SummaryStrip({ account, todayPnl, positionsCount, asOf, marketOpen = false }: Props) {
   // num_positions from API is unreliable (returns 0). Prefer explicit positionsCount from positions array.
   const count = positionsCount ?? account.num_positions ?? 0
 
-  // TODAY P&L accent stripe: green for gains, red for losses, none for null
+  // TODAY P&L accent: green for gains, red for losses, none for null
   const todayAccent =
     todayPnl != null
       ? todayPnl >= 0
-        ? 'var(--color-green)'
-        : 'var(--color-red)'
+        ? 'var(--color-positive)'
+        : 'var(--color-negative)'
       : undefined
 
   return (
     <div data-testid="summary-strip" className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
       <StatCard
         label="PORTFOLIO"
+        brackets
+        glow={marketOpen}
         value={
           <span className="flex items-center gap-1.5 flex-wrap tabular-nums">
-            {fmtCcy(account.equity)}
+            <AnimatedNumber value={account.equity} format={fmtCcy} flashOnDelta />
             <AsOfBadge source="live" asOf={asOf} />
           </span>
         }
@@ -38,11 +43,9 @@ export function SummaryStrip({ account, todayPnl, positionsCount, asOf }: Props)
       {/* TODAY P&L — hero card: this is the focal number on the strip */}
       <StatCard
         label="TODAY P&L"
-        value={
-          <span className={`tabular-nums ${pnlClass(todayPnl)}`}>
-            {fmtSignedCcy(todayPnl)}
-          </span>
-        }
+        brackets
+        glow={marketOpen}
+        value={<AnimatedNumber value={todayPnl} format={fmtSignedCcy} flashOnDelta />}
         hero
         accent={todayAccent}
       />

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { CornerBrackets } from '../ui/hud'
 
 interface StatCardProps {
   label: string
@@ -15,6 +16,10 @@ interface StatCardProps {
    *  - 'neutral'  → muted (default; use for durations, labels like "16d held")
    */
   subColor?: 'positive' | 'negative' | 'neutral'
+  /** Mission Control: HUD corner brackets. */
+  brackets?: boolean
+  /** Mission Control: static accent glow halo. */
+  glow?: boolean
   className?: string
 }
 
@@ -31,27 +36,35 @@ export function StatCard({
   hero = false,
   accent,
   subColor = 'neutral',
+  brackets = false,
+  glow = false,
   className = '',
 }: StatCardProps) {
   return (
     <div
       data-testid="stat-card"
-      className={`relative overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3 md:p-4 dash-card ${className}`}
+      className={`mc-frame relative overflow-hidden rounded-xl p-3 md:p-4 ${glow ? 'mc-glow-after' : ''} ${className}`}
     >
-      {/* Label — 10px uppercase tracking */}
-      <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5 font-semibold">
+      {brackets && <CornerBrackets />}
+      {/* Label — accent tick + 10px uppercase tracking */}
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5 font-semibold">
+        <span
+          aria-hidden
+          className="inline-block w-[3px] h-3 rounded-full"
+          style={{ background: 'var(--accent-section, var(--color-accent))' }}
+        />
         {label}
       </div>
 
       {/* Value — mono + tabular-nums; accent colours the number (Forge convention)
-       *  hero=true  → text-3xl bold  (KPI dashboard hero number)
+       *  hero=true  → display-num text-3xl (HUD hero number, glow text-shadow)
        *  hero=false → text-xl semibold (standard stat) */}
       <div
-        className={`font-mono tabular-nums ${
+        className={
           hero
-            ? 'text-3xl font-bold leading-none'
-            : 'text-xl font-semibold leading-tight'
-        }`}
+            ? 'display-num text-3xl leading-none'
+            : 'font-mono tabular-nums text-xl font-semibold leading-tight'
+        }
         style={{ color: accent || 'var(--color-text)' }}
       >
         {value}

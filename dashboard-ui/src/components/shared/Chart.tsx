@@ -20,7 +20,7 @@
  * defaults from chart-defaults.ts.  See that file for what's tunable.
  */
 
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useEffect, useState } from 'react'
 import { Chart as ReactChart } from 'react-chartjs-2'
 import type {
   ChartData,
@@ -33,6 +33,7 @@ import type {
 import { ensureChartRegistered } from '../../lib/chart-setup'
 import {
   defaultChartOptions,
+  drawInAnimation,
   mergeOptions,
   paletteFor,
   textBody,
@@ -70,6 +71,9 @@ interface ChartProps<K extends ChartKind = ChartKind> {
   plugins?: Plugin[]
   /** Strip axes/grid/legend for inline display.  Defaults true when kind='sparkline'. */
   bare?: boolean
+  /** Progressive left->right line draw-in on FIRST render only (poll refetches
+   *  morph instead of redrawing). No-op under prefers-reduced-motion. */
+  drawIn?: boolean
 }
 
 /** Resolve a colour name or hex string to the actual stroke value. */
@@ -200,10 +204,21 @@ export function Chart<K extends ChartKind = ChartKind>({
   className,
   plugins,
   bare,
+  drawIn = false,
 }: ChartProps<K>) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  // drawIn applies only until the first paint completes; subsequent data
+  // updates (polls) use the default morph animation.
+  const [drawInDone, setDrawInDone] = useState(false)
+  useEffect(() => {
+    if (!drawIn || drawInDone) return
+    const id = requestAnimationFrame(() => setDrawInDone(true))
+    return () => cancelAnimationFrame(id)
+  }, [drawIn, drawInDone])
+  const isFirstRender = !drawInDone
 
   // Compose options once per render -- defaults < kind-specific < caller.
+  const pointCount = Array.isArray(data.datasets?.[0]?.data) ? data.datasets[0].data.length : 0
   const mergedOptions = useMemo(() => {
     const base = defaultChartOptions()
     const k = kindOverrides(kind)
@@ -215,8 +230,12 @@ export function Chart<K extends ChartKind = ChartKind>({
         y: { display: false },
       } as ChartOptions<SupportedChartType>['scales']
     }
+    if (drawIn && isFirstRender) {
+      const anim = drawInAnimation(pointCount)
+      ;(stage2 as { animation?: unknown }).animation = anim
+    }
     return stage2
-  }, [kind, options, bare])
+  }, [kind, options, bare, drawIn, isFirstRender, pointCount])
 
   const normalisedData = useMemo(() => normaliseDatasets(kind, data), [kind, data])
 

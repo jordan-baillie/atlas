@@ -60,10 +60,51 @@ export const SEVERITY_CRITICAL = '#ef4444'
 export const SEVERITY_MAJOR    = '#f59e0b'
 export const SEVERITY_MINOR    = '#8b929d'
 
+// ── Motion policy ─────────────────────────────────────────────────────────
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+/**
+ * Progressive line draw-in for hero charts (Mission Control). Per-point delay
+ * so the line sweeps left->right; total ≈ 900ms. Merge into options on the
+ * FIRST render only (Chart.tsx `drawIn` prop) so poll refetches morph instead.
+ */
+export function drawInAnimation(pointCount: number) {
+  if (prefersReducedMotion() || pointCount < 2) return false as const
+  const totalMs = 900
+  const delayPerPoint = totalMs / pointCount
+  type DrawCtx = { type: string; mode?: string; dropped?: boolean; dataIndex?: number }
+  return {
+    x: {
+      type: 'number' as const,
+      easing: 'linear' as const,
+      duration: delayPerPoint,
+      from: NaN, // points start hidden
+      delay(ctx: DrawCtx) {
+        if (ctx.type !== 'data' || ctx.mode !== 'default' || ctx.dropped) return 0
+        ctx.dropped = true
+        return (ctx.dataIndex ?? 0) * delayPerPoint
+      },
+    },
+    y: {
+      type: 'number' as const,
+      easing: 'linear' as const,
+      duration: delayPerPoint,
+      from: 'previous' as const,
+      delay(ctx: DrawCtx) {
+        if (ctx.type !== 'data' || ctx.mode !== 'default' || ctx.dropped) return 0
+        ctx.dropped = true
+        return (ctx.dataIndex ?? 0) * delayPerPoint
+      },
+    },
+  }
+}
+
 // ── Default Chart.js options ──────────────────────────────────────────────
-// Spread into every Chart wrapper render.  Animations OFF by default
-// (ops dashboards prefer "instant" responsiveness; opt back in per-chart
-// with `options.animation = { duration: 300 }`).
+// Spread into every Chart wrapper render.  Animation is motion-aware:
+// smooth 650ms ease on mount/data morphs, OFF entirely under
+// prefers-reduced-motion.
 export function defaultChartOptions(): ChartOptions<'line' | 'bar' | 'doughnut'> {
   const tickColor = textMuted()
   const gridColor = seriesGrid()
@@ -74,7 +115,7 @@ export function defaultChartOptions(): ChartOptions<'line' | 'bar' | 'doughnut'>
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: false,                   // off by default; opt-in per chart
+    animation: prefersReducedMotion() ? false : { duration: 650, easing: 'easeOutQuart' },
     interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: {
