@@ -8,6 +8,8 @@
 import { useForgeState } from '../../api/forge-queries'
 import { fmtRelativeTime } from '../../lib/format'
 import { Skeleton } from '../layout/Skeleton'
+import { useCelebration } from '../../hooks/useCelebration'
+import { AnimatedNumber } from '../ui/AnimatedNumber'
 import { C, Card } from './shared'
 import { ForgeLine } from './ForgeLine'
 import { RunCard } from './RunCard'
@@ -31,6 +33,14 @@ function scheduleText(status: ForgeStatus): string {
 export function ForgeTab() {
   const q = useForgeState()
 
+  // Celebrations — hooks must run unconditionally (before any early return)
+  const latest0 = q.data?.cycles?.[0]
+  const passStamp = latest0 && latest0.status === 'pass' ? `${latest0.id ?? ''}|${latest0.ts ?? ''}` : null
+  const passParty = useCelebration('forge-pass', passStamp)
+  const deployStamp = (q.data?.summary?.deployed ?? 0) > 0 ? (q.data?.summary?.deployed_names ?? []).join(',') : null
+  const deployParty = useCelebration('deploy', deployStamp)
+  const celebrating = passParty.celebrating || deployParty.celebrating
+
   if (q.isLoading && !q.data) {
     return <div className="space-y-4"><Skeleton className="h-16" /><Skeleton className="h-56" /><Skeleton className="h-64" /></div>
   }
@@ -46,15 +56,39 @@ export function ForgeTab() {
   const running = status.running
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-section="forge">
       {/* ── Slim status strip ── */}
-      <Card glow={running} className="px-5 py-3.5">
+      <Card glow={running} brackets className={`px-5 py-3.5 overflow-hidden ${celebrating ? 'mc-celebrate' : ''}`}>
+        {celebrating && !passParty.reduced && (
+          <>
+            <span className="mc-celebrate-beam left-0" aria-hidden />
+            {Array.from({ length: 8 }, (_, i) => (
+              <span
+                key={i}
+                aria-hidden
+                className="mc-ember-once absolute bottom-1 w-1 h-1 rounded-full"
+                style={{
+                  left: `${8 + i * 11}%`,
+                  background: C.gold,
+                  ['--ex' as string]: `${(i % 2 ? 1 : -1) * (6 + i * 2)}px`,
+                  animationDelay: `${i * 110}ms`,
+                }}
+              />
+            ))}
+          </>
+        )}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className={`text-2xl ${running ? 'forge-glow' : ''}`}>{running ? '🔥' : '🧊'}</span>
             <div>
               <div className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2">
                 Hephaestus Forge
+                {celebrating && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mc-stamp"
+                    style={{ background: 'rgba(251,191,36,0.18)', color: C.gold }}>
+                    ★ {passParty.celebrating ? 'NEW PASS' : 'DEPLOYED'}
+                  </span>
+                )}
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide inline-flex items-center gap-1"
                   style={{ background: running ? 'rgba(34,197,94,0.15)' : 'rgba(113,113,122,0.15)', color: running ? C.green : C.iron }}>
                   <span className="w-1.5 h-1.5 rounded-full forge-blink" style={{ background: running ? C.green : C.iron }} />
@@ -67,11 +101,11 @@ export function ForgeTab() {
             </div>
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            <Chip label="cycles" value={summary.cycles} />
+            <Chip label="cycles" value={<AnimatedNumber value={summary.cycles} />} />
             <Chip label="pass rate" value={summary.pass_rate} color={summary.passes > 0 ? C.gold : undefined} />
-            <Chip label="near-miss" value={summary.near_misses ?? 0} color={(summary.near_misses ?? 0) > 0 ? C.ember : undefined} />
-            <Chip label="paper-deployed" value={summary.deployed ?? 0} color={(summary.deployed ?? 0) > 0 ? C.green : undefined} />
-            <Chip label="FDR bar" value={summary.fdr_bar.toFixed(3)} color={C.indigo} />
+            <Chip label="near-miss" value={<AnimatedNumber value={summary.near_misses ?? 0} />} color={(summary.near_misses ?? 0) > 0 ? C.ember : undefined} />
+            <Chip label="paper-deployed" value={<AnimatedNumber value={summary.deployed ?? 0} />} color={(summary.deployed ?? 0) > 0 ? C.green : undefined} />
+            <Chip label="FDR bar" value={<AnimatedNumber value={summary.fdr_bar} format={(v) => v.toFixed(3)} />} color={C.indigo} />
             <Chip label="best holdout" value={summary.best_holdout_sharpe != null ? summary.best_holdout_sharpe.toFixed(2) : '—'} />
           </div>
         </div>

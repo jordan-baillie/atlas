@@ -5,8 +5,26 @@ import { useEquityChartData } from '../../api/queries'
 import { Skeleton } from '../layout/Skeleton'
 import { fmtCcy, fmtDateShort, fmtSignedPct } from '../../lib/format'
 import { useCssVars } from '../../hooks/useCssVar'
+import { useReducedMotion } from '../../hooks/useReducedMotion'
 import { gradientFill } from '../../lib/chart-defaults'
-import type { ChartData, ChartOptions } from 'chart.js'
+import { HudPanel } from '../ui/hud'
+import type { ChartData, ChartOptions, Plugin } from 'chart.js'
+
+// Soft neon glow under the portfolio line (canvas shadow, draw-time only).
+const lineGlowPlugin: Plugin = {
+  id: 'mcLineGlow',
+  beforeDatasetDraw(chart, args) {
+    if (chart.data.datasets[args.index]?.label !== 'Portfolio') return
+    const ctx = chart.ctx
+    ctx.save()
+    ctx.shadowColor = String(chart.data.datasets[args.index].borderColor ?? '')
+    ctx.shadowBlur = 8
+  },
+  afterDatasetDraw(chart, args) {
+    if (chart.data.datasets[args.index]?.label !== 'Portfolio') return
+    chart.ctx.restore()
+  },
+}
 
 // Period selector options
 const PERIODS = [
@@ -47,7 +65,7 @@ function PeriodSelector({ active, onChange }: { active: PeriodKey; onChange: (k:
           onClick={() => onChange(key)}
           className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-medium tracking-wide transition-colors border ${
             active === key
-              ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border-[var(--color-accent)]/30'
+              ? 'bg-[color-mix(in_srgb,var(--accent-section,var(--color-accent))_15%,transparent)] text-[var(--accent-section,var(--color-accent))] border-[color-mix(in_srgb,var(--accent-section,var(--color-accent))_30%,transparent)]'
               : 'bg-transparent border-[var(--color-border)]/40 text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
           }`}
         >
@@ -186,26 +204,32 @@ export function EquityChart() {
     animation: { duration: 600, easing: 'easeOutQuart' },
   }), [isMobile])
 
+  const reduced = useReducedMotion()
+
   if (!query.data) return <Skeleton className="h-96" />
 
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-4 dash-card">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <HudPanel
+      title="Equity Curve"
+      brackets
+      right={
         <div className="flex items-center gap-3">
-          <h3 className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)] font-semibold">Equity Curve</h3>
           <PeriodSelector active={period} onChange={setPeriod} />
+          <EquityReturnBadge
+            portfolioReturnPct={query.data.portfolioReturnPct}
+            alphaVsSpy={query.data.alphaVsSpy}
+          />
         </div>
-        <EquityReturnBadge
-          portfolioReturnPct={query.data.portfolioReturnPct}
-          alphaVsSpy={query.data.alphaVsSpy}
-        />
-      </div>
+      }
+    >
       <Chart
         kind="line"
+        drawIn
         data={chartData as ChartData<'line' | 'bar' | 'doughnut'>}
         options={options as ChartOptions<'line' | 'bar' | 'doughnut'>}
+        plugins={reduced ? undefined : [lineGlowPlugin]}
         height={isMobile ? 280 : 360}
       />
-    </div>
+    </HudPanel>
   )
 }

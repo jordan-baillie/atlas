@@ -1,4 +1,6 @@
+/* eslint-disable react-refresh/only-export-components -- mixed kit file: tokens + components by design */
 import type { CycleStatus } from '../../api/forge-types'
+import { CornerBrackets } from '../ui/hud'
 
 // Forge palette — embers/gold over the dark design tokens.
 export const C = {
@@ -19,9 +21,12 @@ export function statusLabel(s: CycleStatus, tier: string | null): string {
   return tier || 'FAIL'
 }
 
-export function Card({ children, className = '', glow = false }: { children: React.ReactNode; className?: string; glow?: boolean }) {
+export function Card({ children, className = '', glow = false, brackets = false }: {
+  children: React.ReactNode; className?: string; glow?: boolean; brackets?: boolean
+}) {
   return (
-    <div className={`bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl ${glow ? 'forge-pulse' : ''} ${className}`}>
+    <div className={`mc-frame relative rounded-xl ${glow ? 'forge-pulse' : ''} ${className}`}>
+      {brackets && <CornerBrackets />}
       {children}
     </div>
   )

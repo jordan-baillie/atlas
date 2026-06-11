@@ -1,13 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #09090b;
-  --color-surface: #161618;
-  --color-surface-alt: #27272a;
-  --color-border: #2a2a2e;
+  --color-bg: #050507;
+  --color-surface: #0d0d11;
+  --color-surface-alt: #1a1a20;
+  --color-border: #26262e;
   --color-text: #fafafa;
   --color-text-muted: #a1a1aa;
   --color-accent: #6366f1;
+  /* ── Mission Control: per-section accent trios (accent / hot) ── */
+  --mc-command: #6366f1;
+  --mc-command-hot: #818cf8;
+  --mc-forge: #f59e0b;
+  --mc-forge-hot: #fbbf24;
+  --mc-paper: #22c55e;
+  --mc-paper-hot: #4ade80;
+  --mc-live: #f43f5e;
+  --mc-live-hot: #fb7185;
+  /* texture/glow intensity knobs (light mode attenuates these) */
+  --mc-glow-alpha: 22%;
+  --mc-grid-alpha: 0.035;
+  --mc-scanline-alpha: 0.014;
+  --mc-aurora-alpha: 0.07;
   --color-green: #22c55e;
   --color-red: #ef4444;
   --color-amber: #f59e0b;
@@ -52,6 +66,11 @@ html.light {
   --color-border: #e4e4e7;
   --color-text: #09090b;
   --color-text-muted: #52525b;
+  /* Mission Control intensity knobs — heavily attenuated in light mode */
+  --mc-glow-alpha: 8%;
+  --mc-grid-alpha: 0.04;
+  --mc-scanline-alpha: 0;
+  --mc-aurora-alpha: 0.05;
   --color-series-portfolio: #16a34a;
   --color-series-benchmark: #71717a;
   --color-series-grid: #e4e4e7;
@@ -155,7 +174,7 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(
     90deg,
     var(--color-surface-alt) 25%,
-    var(--color-border) 50%,
+    color-mix(in srgb, var(--accent-section, var(--color-accent)) 12%, var(--color-border)) 50%,
     var(--color-surface-alt) 75%
   );
   background-size: 200% 100%;
@@ -262,4 +281,152 @@ h1, h2, h3, h4, h5, h6 {
 .forge-rise     { animation: forge-rise 0.4s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
   .forge-ember, .forge-pulse, .forge-glow, .forge-travel, .forge-scan, .forge-blink, .forge-spin, .forge-rise { animation: none !important; }
+}
+
+/* ═══════════════════════ Mission Control ═══════════════════════
+   Per-section accent plumbing: a [data-section] wrapper sets ONE
+   indirection var that every HUD component reads. Glow intensity
+   always routes through the --mc-*-alpha knobs (light mode attenuates). */
+
+[data-section="command"] { --accent-section: var(--mc-command); --accent-section-hot: var(--mc-command-hot); }
+[data-section="forge"]   { --accent-section: var(--mc-forge);   --accent-section-hot: var(--mc-forge-hot); }
+[data-section="paper"]   { --accent-section: var(--mc-paper);   --accent-section-hot: var(--mc-paper-hot); }
+[data-section="live"]    { --accent-section: var(--mc-live);    --accent-section-hot: var(--mc-live-hot); }
+
+/* HUD hero numerals */
+.display-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--accent-section, var(--color-accent)) var(--mc-glow-alpha), transparent);
+}
+
+/* Backdrop textures — paint-cheap, never over text */
+.mc-grid {
+  background-image:
+    repeating-linear-gradient(0deg,  rgba(128, 140, 180, var(--mc-grid-alpha)) 0 1px, transparent 1px 40px),
+    repeating-linear-gradient(90deg, rgba(128, 140, 180, var(--mc-grid-alpha)) 0 1px, transparent 1px 40px);
+}
+.mc-scanlines {
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, var(--mc-scanline-alpha)) 0 1px, transparent 1px 3px);
+}
+
+/* HUD panel frame: accent-tinted border; glow lives on a pre-rendered
+   ::after whose OPACITY animates (never animate box-shadow). */
+.mc-frame {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--accent-section, var(--color-accent)) 30%, var(--color-border));
+  border-radius: var(--radius-md);
+}
+.mc-glow-after::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 22px 2px color-mix(in srgb, var(--accent-section, var(--color-accent)) var(--mc-glow-alpha), transparent);
+  opacity: 0.55;
+}
+.mc-glow-pulse::after { animation: mc-pulse 2.6s ease-in-out infinite; }
+
+/* Mission Control keyframes */
+@keyframes mc-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes mc-beacon-ring {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes mc-travel {
+  0%   { left: 0%;   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+@keyframes mc-drift-a {
+  from { transform: translate(-8%, -6%) scale(1); }
+  to   { transform: translate(10%, 8%)  scale(1.15); }
+}
+@keyframes mc-drift-b {
+  from { transform: translate(6%, 10%)  scale(1.1); }
+  to   { transform: translate(-10%, -8%) scale(0.95); }
+}
+@keyframes mc-sweep {
+  0%   { transform: translateY(-12vh); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateY(112vh); opacity: 0; }
+}
+@keyframes mc-flash-up {
+  0%   { background-color: color-mix(in srgb, var(--color-positive) 28%, transparent); }
+  100% { background-color: transparent; }
+}
+@keyframes mc-flash-down {
+  0%   { background-color: color-mix(in srgb, var(--color-negative) 28%, transparent); }
+  100% { background-color: transparent; }
+}
+@keyframes mc-celebrate-sweep {
+  0%   { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
+  20%  { opacity: 0.7; }
+  100% { transform: translateX(230%) skewX(-18deg); opacity: 0; }
+}
+@keyframes mc-ember-once {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.95; }
+  100% { transform: translateY(-72px) translateX(var(--ex, 8px)) scale(0.25); opacity: 0; }
+}
+@keyframes mc-stamp {
+  0%   { transform: scale(1.8); opacity: 0; }
+  60%  { transform: scale(0.92); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.mc-beacon-ring { animation: mc-beacon-ring 2s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+.mc-travel      { animation: mc-travel 5s linear infinite; }
+.mc-drift-a     { animation: mc-drift-a 60s ease-in-out infinite alternate; }
+.mc-drift-b     { animation: mc-drift-b 75s ease-in-out infinite alternate; }
+.mc-sweep       { animation: mc-sweep 14s linear infinite; }
+.mc-flash-up    { animation: mc-flash-up 700ms ease-out both; }
+.mc-flash-down  { animation: mc-flash-down 700ms ease-out both; }
+.mc-stamp       { animation: mc-stamp 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+/* Entrance choreography: pop-in with back-out overshoot */
+@keyframes mc-pop {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.stagger-pop > * { animation: mc-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.stagger-pop > :nth-child(1) { animation-delay: 0ms; }
+.stagger-pop > :nth-child(2) { animation-delay: 80ms; }
+.stagger-pop > :nth-child(3) { animation-delay: 160ms; }
+.stagger-pop > :nth-child(4) { animation-delay: 240ms; }
+.stagger-pop > :nth-child(5) { animation-delay: 320ms; }
+.stagger-pop > :nth-child(6) { animation-delay: 400ms; }
+.stagger-pop > :nth-child(7) { animation-delay: 480ms; }
+.stagger-pop > :nth-child(8) { animation-delay: 560ms; }
+
+/* Celebration: 2.6s one-shot gold flare + diagonal light sweep.
+   Apply .mc-celebrate to a relative, overflow-hidden container. */
+.mc-celebrate {
+  border-color: color-mix(in srgb, var(--mc-forge-hot) 70%, var(--color-border)) !important;
+}
+.mc-celebrate::after {
+  opacity: 1 !important;
+}
+.mc-celebrate .mc-celebrate-beam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--mc-forge-hot) 26%, transparent), transparent);
+  animation: mc-celebrate-sweep 1.3s ease-in-out 2 both;
+  pointer-events: none;
+}
+.mc-ember-once { animation: mc-ember-once 1.6s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-beacon-ring, .mc-travel, .mc-drift-a, .mc-drift-b, .mc-sweep,
+  .mc-flash-up, .mc-flash-down, .mc-stamp, .mc-glow-pulse::after,
+  .stagger-pop > *, .mc-celebrate .mc-celebrate-beam, .mc-ember-once {
+    animation: none !important;
+  }
 }

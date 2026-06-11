@@ -10,6 +10,11 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8899',
         changeOrigin: true,
+        // Dev QoL: inject basic auth so the browser never prompts.
+        // Usage: ATLAS_DEV_AUTH=user:pass npm run dev  (never committed/required)
+        headers: process.env.ATLAS_DEV_AUTH
+          ? { Authorization: 'Basic ' + Buffer.from(process.env.ATLAS_DEV_AUTH).toString('base64') }
+          : undefined,
       },
     },
   },

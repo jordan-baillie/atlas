@@ -286,3 +286,33 @@ Sizes: sm=6px (default), md=8px, lg=10px.
 --transition-fast / --transition-normal / --transition-slow  /* 150/250/400ms */
 --space-xs / --space-sm / --space-md / --space-lg / --space-xl  /* 4/8/12/16/24px */
 ```
+
+---
+
+## Mission Control layer (2026-06 redesign)
+
+**Per-section accents** — a `[data-section]` ancestor (command | forge | paper | live) sets
+`--accent-section` / `--accent-section-hot`; every HUD component reads ONLY those vars.
+Trios: command #6366f1/#818cf8 · forge #f59e0b/#fbbf24 · paper #22c55e/#4ade80 · live #f43f5e/#fb7185.
+The live crimson is section identity, NOT P&L semantics — losses stay `--color-negative`.
+
+**Intensity knobs** (light mode attenuates; scanlines off): `--mc-glow-alpha` 22%→8%,
+`--mc-grid-alpha`, `--mc-scanline-alpha` →0, `--mc-aurora-alpha`.
+
+**HUD kit** (`components/ui/hud.tsx`): `HudPanel` (mc-frame + glow ::after whose *opacity*
+pulses — never animate box-shadow), `CornerBrackets`, `Beacon` (transform/opacity ring),
+`StreamDivider`, `GaugeBar` (value vs bar tick), `GateStatusPill` (PASS/FAIL/ACCRUING).
+Glyphs in `components/ui/glyphs.tsx` (stroke=currentColor → tint + drop-shadow glow).
+
+**Animation hooks**: `useCountUp` (mount from 0, polls glide prev→new), `useDeltaFlash`
+(700ms mc-flash-up/down), `useCelebration` (localStorage watermark `atlas-celebrate:<key>`,
+consume-on-fire; keys in use: `forge-pass`, `deploy`), `useReducedMotion`.
+`<AnimatedNumber value format flashOnDelta />` wraps the first two.
+
+**Backdrop** (`layout/MissionControlBackdrop.tsx`): vignette + grid + scanlines (static),
+two aurora blobs (60/75s transform drift) + 14s radar sweep. All skipped under reduced motion.
+
+**Charts**: animation is motion-aware (650ms easeOutQuart, off under reduced motion);
+`<Chart drawIn />` = progressive left→right line draw on FIRST render only.
+
+Every `mc-*` class is listed in the `prefers-reduced-motion` block in index.css.
