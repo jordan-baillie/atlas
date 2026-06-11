@@ -38,6 +38,8 @@ class DeployedStrategy:
     approved: bool = False             # human-approved for real-money execution
     specs: dict = field(default_factory=dict)        # {symbol: {multiplier, lot, min_notional}}
     expectation: dict = field(default_factory=dict)  # {daily_mean, daily_std, sharpe} (modeled backtest)
+    tif: str = ""                                    # order time-in-force: "opg" = market-on-open (fill at
+                                                     # the auction print, no spread cost); "" = broker default
 
     def target_portfolio(self, asof_date) -> dict:
         fn = PROVIDERS.get(self.provider)

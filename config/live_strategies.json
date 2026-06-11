@@ -11,6 +11,7 @@
       "daily_mean": 0.00037654,
       "daily_std": 0.00961749,
       "sharpe": 0.622
-    }
+    },
+    "tif": "opg"
   }
 ]

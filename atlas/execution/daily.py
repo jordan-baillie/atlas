@@ -105,7 +105,7 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
             return StrategyRunResult(s.name, s.state, s.broker, error="broker unavailable")
         weights = s.target_portfolio(asof)
         specs = {k: ContractSpec(**v) for k, v in (s.specs or {}).items()}
-        ex = TargetExecutor(broker, specs=specs)
+        ex = TargetExecutor(broker, specs=specs, tif=(s.tif or None))
         # shadow = Paper Book: place REAL paper orders on live data (the forward-paper gate).
         # canary/live = real capital: held (dry) unless human-approved AND invoked in live mode.
         dry = s.state in ("canary", "live") and (not s.approved or mode != "live")

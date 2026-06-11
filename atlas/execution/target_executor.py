@@ -68,7 +68,7 @@ class TargetExecutor:
     def __init__(self, broker: BrokerAdapter, *, specs: Optional[dict] = None,
                  default_spec: Optional[ContractSpec] = None, min_delta_notional: float = 25.0,
                  max_order_notional: Optional[float] = None, order_type: OrderType = OrderType.MARKET,
-                 db_path: Optional[str] = None):
+                 db_path: Optional[str] = None, tif: Optional[str] = None):
         self.broker = broker
         self.specs = specs or {}
         self.default_spec = default_spec or ContractSpec()
@@ -76,6 +76,11 @@ class TargetExecutor:
         self.max_order_notional = max_order_notional
         self.order_type = order_type
         self.db_path = db_path
+        # tif='opg' = market-on-open: fill at the official opening auction print, crossing
+        # NO spread. The right execution for a daily-rebalance book placed after-hours —
+        # measured 2026-06-11: market orders in thin small-caps paid +145bps median vs the
+        # open (pure spread cost). Broker must support the tif kwarg (Alpaca does).
+        self.tif = tif
 
     def _spec(self, sym: str) -> ContractSpec:
         return self.specs.get(sym, self.default_spec)
@@ -165,10 +170,12 @@ class TargetExecutor:
                 logger.warning("rebalance BLOCKED (%s) — %d orders computed, none placed", blocked, len(orders))
             return report
 
+        tif_kw = {"tif": self.tif} if self.tif else {}
         for o in orders:
             try:
                 res = self.broker.place_order(ticker=o.ticker, side=o.side, qty=o.qty, price=o.ref_price,
-                                              order_type=self.order_type, remark="target_rebalance")
+                                              order_type=self.order_type, remark="target_rebalance",
+                                              **tif_kw)
             except Exception as e:
                 res = OrderResult(success=False, ticker=o.ticker, side=o.side, message=str(e))
             report.results.append(res)
