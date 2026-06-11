@@ -72,7 +72,7 @@ class TestSystemctlStatus:
 
     # Case 1: normal long-running service, active + successful
     def test_simple_active_success(self):
-        result = self._call("simple\nsuccess\nactive\n")
+        result = self._call("Type=simple\nResult=success\nActiveState=active\n")
         assert result["status"] == "active"
         assert result["type"] == "simple"
         assert result["result"] == "success"
@@ -80,7 +80,7 @@ class TestSystemctlStatus:
 
     # Case 2: oneshot unit — post-success, now inactive  ← THE BUG FIX
     def test_oneshot_inactive_success(self):
-        result = self._call("oneshot\nsuccess\ninactive\n")
+        result = self._call("Type=oneshot\nResult=success\nActiveState=inactive\n")
         assert result["status"] == "oneshot-success"
         assert result["type"] == "oneshot"
         assert result["result"] == "success"
@@ -88,17 +88,17 @@ class TestSystemctlStatus:
 
     # Case 3: failed unit (Result=failed)
     def test_result_failed(self):
-        result = self._call("simple\nfailed\nfailed\n")
+        result = self._call("Type=simple\nResult=failed\nActiveState=failed\n")
         assert result["status"] == "failed"
 
     # Case 3b: ActiveState=failed even when Result string is empty
     def test_active_state_failed_wins(self):
-        result = self._call("simple\n\nfailed\n")
+        result = self._call("Type=simple\nResult=\nActiveState=failed\n")
         assert result["status"] == "failed"
 
     # Case 4: service is activating (starting up)
     def test_activating(self):
-        result = self._call("simple\n\nactivating\n")
+        result = self._call("Type=simple\nResult=\nActiveState=activating\n")
         assert result["status"] == "activating"
 
     # Case 5: empty / malformed output → unknown, no crash
@@ -111,7 +111,7 @@ class TestSystemctlStatus:
 
     def test_partial_output_returns_unknown(self):
         # Only 2 lines — missing ActiveState
-        result = self._call("simple\nsuccess")
+        result = self._call("Type=simple\nResult=success\n")
         assert result["status"] == "unknown"
 
     # Case 6: subprocess exception → unknown, no crash
@@ -125,13 +125,25 @@ class TestSystemctlStatus:
 
     # Case 7: oneshot but FAILED — must NOT be treated as success
     def test_oneshot_failed_not_success(self):
-        result = self._call("oneshot\nfailed\nfailed\n")
+        result = self._call("Type=oneshot\nResult=failed\nActiveState=failed\n")
         assert result["status"] == "failed"
 
     # Case 8: simple inactive success → unknown (only oneshot gets the green pass)
     def test_simple_inactive_success_is_unknown(self):
-        result = self._call("simple\nsuccess\ninactive\n")
+        result = self._call("Type=simple\nResult=success\nActiveState=inactive\n")
         assert result["status"] == "unknown"
+
+    # Case 9 (REGRESSION): timer units have NO Type property — systemctl omits
+    # the line entirely. Positional parsing mis-shifted Result into the Type
+    # slot and every timer read "unknown" on the dashboard.
+    def test_timer_unit_no_type_line_active(self):
+        result = self._call("Result=success\nActiveState=active\n")
+        assert result["status"] == "active"
+        assert result["active_state"] == "active"
+
+    def test_timer_unit_no_type_line_failed(self):
+        result = self._call("Result=failed\nActiveState=failed\n")
+        assert result["status"] == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -139,10 +151,11 @@ class TestSystemctlStatus:
 # ---------------------------------------------------------------------------
 
 _DEFAULT_OUTPUTS = {
-    "atlas-dashboard": "simple\nsuccess\nactive\n",
-    "atlas-live-shadow.timer": "oneshot\nsuccess\ninactive\n",
-    "atlas-backup.timer": "simple\nsuccess\nactive\n",
-    "unified-healthcheck.timer": "simple\nsuccess\nactive\n",
+    "atlas-dashboard": "Type=simple\nResult=success\nActiveState=active\n",
+    # Timer units emit NO Type line (realistic systemctl output)
+    "atlas-live-shadow.timer": "Result=success\nActiveState=active\n",
+    "atlas-backup.timer": "Result=success\nActiveState=active\n",
+    "unified-healthcheck.timer": "Result=success\nActiveState=active\n",
 }
 
 
@@ -193,10 +206,26 @@ class TestSystemHealthEndpoint:
         assert "atlas-telegram-bot" not in services
 
     def test_oneshot_service_reports_oneshot_success(self):
-        """Post-success oneshot unit returns 'oneshot-success'."""
-        resp = _get_health_json(_DEFAULT_OUTPUTS)
+        """Post-success oneshot unit returns 'oneshot-success'.
+
+        Uses a oneshot-style fixture (Type=oneshot present). Real .timer units
+        omit the Type line and report 'active' while waiting — covered by
+        test_timer_units_report_active.
+        """
+        outputs = {**_DEFAULT_OUTPUTS,
+                   "atlas-live-shadow.timer": "Type=oneshot\nResult=success\nActiveState=inactive\n"}
+        resp = _get_health_json(outputs)
         assert resp.status_code == 200, resp.text
         assert resp.json()["services"]["atlas-live-shadow.timer"] == "oneshot-success"
+
+    def test_timer_units_report_active(self):
+        """REGRESSION: real timer units (no Type line) must read 'active', not 'unknown'."""
+        resp = _get_health_json(_DEFAULT_OUTPUTS)
+        assert resp.status_code == 200, resp.text
+        services = resp.json()["services"]
+        for unit in ("atlas-live-shadow.timer", "atlas-backup.timer",
+                     "unified-healthcheck.timer"):
+            assert services[unit] == "active", f"{unit} → {services[unit]}"
 
     def test_services_values_are_strings(self):
         """services dict must contain plain strings for frontend backward-compat."""
@@ -215,7 +244,7 @@ class TestSystemHealthEndpoint:
 
     def test_failed_service_reported(self):
         """A crashed service returns 'failed'."""
-        outputs = {**_DEFAULT_OUTPUTS, "atlas-dashboard": "simple\nfailed\nfailed\n"}
+        outputs = {**_DEFAULT_OUTPUTS, "atlas-dashboard": "Type=simple\nResult=failed\nActiveState=failed\n"}
         resp = _get_health_json(outputs)
         assert resp.status_code == 200, resp.text
         assert resp.json()["services"]["atlas-dashboard"] == "failed"

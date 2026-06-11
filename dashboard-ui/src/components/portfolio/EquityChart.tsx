@@ -41,14 +41,15 @@ type PeriodKey = (typeof PERIODS)[number]['key']
 // ---------------------------------------------------------------------------
 interface EquityReturnBadgeProps {
   portfolioReturnPct: number
-  alphaVsSpy: number
+  alphaVsSpy: number | null
 }
 
 function EquityReturnBadge({ portfolioReturnPct, alphaVsSpy }: EquityReturnBadgeProps) {
   const variant = portfolioReturnPct >= 0 ? 'success' : 'danger'
   return (
     <Badge variant={variant} size="sm">
-      {fmtSignedPct(portfolioReturnPct)}&nbsp;({fmtSignedPct(alphaVsSpy)} vs SPY)
+      {fmtSignedPct(portfolioReturnPct)}
+      {alphaVsSpy != null && <>&nbsp;({fmtSignedPct(alphaVsSpy)} vs SPY)</>}
     </Badge>
   )
 }

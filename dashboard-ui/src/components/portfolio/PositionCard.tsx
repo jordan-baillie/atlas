@@ -56,7 +56,7 @@ export function PositionCard({ position }: Props) {
         <div>
           <div className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)]">Stop</div>
           <div className="font-mono text-xs tabular-nums mt-0.5">
-            {position.stop_price != null ? fmtCcy(position.stop_price) : '\u2014'}
+            {position.stop_price ? fmtCcy(position.stop_price) : '\u2014'}
           </div>
         </div>
       </div>

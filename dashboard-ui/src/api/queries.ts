@@ -70,18 +70,20 @@ export interface EquityChartData {
   summary: DashboardData['summary']
   portfolioReturnPct: number
   spyReturnPct: number
-  alphaVsSpy: number
+  /** null when no SPY benchmark series exists for the window (don't claim alpha vs nothing) */
+  alphaVsSpy: number | null
 }
 
 export function buildEquityChartData(data: DashboardData): EquityChartData {
   const portfolioReturnPct = data.summary?.return_pct ?? data.summary?.total_pnl_pct ?? 0
+  const hasBenchmark = data.benchmark?.return_pct != null && (data.benchmark?.curve?.length ?? 0) > 0
   const spyReturnPct = data.benchmark?.return_pct ?? 0
   return {
     chartData: mergeEquitySeries(data),
     summary: data.summary,
     portfolioReturnPct,
     spyReturnPct,
-    alphaVsSpy: portfolioReturnPct - spyReturnPct,
+    alphaVsSpy: hasBenchmark ? portfolioReturnPct - spyReturnPct : null,
   }
 }
 

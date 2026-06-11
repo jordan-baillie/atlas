@@ -14,7 +14,9 @@ export function HeroStrip() {
 
   const blocked = live?.kill_switch?.blocked === true
   const ksColor = blocked ? 'var(--mc-live)' : 'var(--color-positive)'
-  const forgeRunning = forge?.status?.running === true
+  // "HOT" = a cycle is executing right now; "ARMED" = enabled, awaiting nightly run
+  const forgeHot = forge?.status?.cycle_active === true
+  const forgeArmed = forge?.status?.running === true
 
   return (
     <HudPanel brackets glow glowPulse={blocked} className="overflow-hidden">
@@ -54,14 +56,14 @@ export function HeroStrip() {
         <div className="leading-tight" data-section="forge">
           <div
             className="display-num text-base sm:text-lg flex items-center gap-2"
-            style={{ color: forgeRunning ? 'var(--mc-forge-hot)' : undefined }}
+            style={{ color: forgeHot ? 'var(--mc-forge-hot)' : undefined }}
           >
-            <Beacon color="var(--mc-forge)" on={forgeRunning} size={5} />
-            {forgeRunning ? 'FORGE HOT' : 'FORGE IDLE'}
+            <Beacon color="var(--mc-forge)" on={forgeHot} size={5} />
+            {forgeHot ? 'FORGE HOT' : forgeArmed ? 'FORGE ARMED' : 'FORGE IDLE'}
           </div>
           <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-text-muted)] flex items-center gap-1">
             <GlyphFlame size={10} />
-            {forgeRunning ? 'cycle in progress' : forge?.status?.next_run_str ? `next ${forge.status.next_run_str}` : 'nightly schedule'}
+            {forgeHot ? 'cycle in progress' : forge?.status?.next_run_str ? `next ${forge.status.next_run_str}` : 'nightly schedule'}
           </div>
         </div>
       </div>

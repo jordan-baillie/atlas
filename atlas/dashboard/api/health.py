@@ -74,16 +74,25 @@ def _systemctl_status(svc: str) -> dict:
             [
                 "systemctl", "show", svc,
                 "--property=Type,Result,ActiveState",
-                "--no-pager", "--value",
+                "--no-pager",
             ],
             capture_output=True, text=True, timeout=5,
         )
-        # ``--value`` emits each requested property on its own line, in order:
-        # line 0 → Type, line 1 → Result, line 2 → ActiveState
-        lines = [ln.strip() for ln in proc.stdout.strip().splitlines()]
-        if len(lines) < 3:
+        # Parse key=value lines. NOTE: timer units have no Type property —
+        # systemctl simply OMITS the line (it does not emit an empty one), so
+        # positional ``--value`` parsing mis-shifts Result into the Type slot
+        # and every timer reads "unknown". Key=value parsing is order- and
+        # omission-proof.
+        props = {}
+        for ln in proc.stdout.splitlines():
+            if "=" in ln:
+                k, _, v = ln.partition("=")
+                props[k.strip()] = v.strip()
+        if "ActiveState" not in props:
             return {"status": "unknown", "type": "?", "result": "?", "active_state": "?"}
-        unit_type, result, active_state = lines[0], lines[1], lines[2]
+        unit_type = props.get("Type", "")          # "" for timer units
+        result = props.get("Result", "")
+        active_state = props["ActiveState"]
         if result == "failed" or active_state == "failed":
             status = "failed"
         elif active_state == "active" and result == "success":

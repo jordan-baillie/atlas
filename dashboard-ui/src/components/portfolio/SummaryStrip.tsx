@@ -8,13 +8,15 @@ interface Props {
   account: Account
   todayPnl?: number
   positionsCount?: number
+  /** Position cap from active config. Absent when no config strategies are live (cap not applicable). */
+  maxPositions?: number
   /** ISO timestamp of the live broker pull (DashboardData.timestamp). Optional — badge degrades gracefully. */
   asOf?: string
   /** Glow the live cards while the market is open. */
   marketOpen?: boolean
 }
 
-export function SummaryStrip({ account, todayPnl, positionsCount, asOf, marketOpen = false }: Props) {
+export function SummaryStrip({ account, todayPnl, positionsCount, maxPositions, asOf, marketOpen = false }: Props) {
   // num_positions from API is unreliable (returns 0). Prefer explicit positionsCount from positions array.
   const count = positionsCount ?? account.num_positions ?? 0
 
@@ -53,7 +55,7 @@ export function SummaryStrip({ account, todayPnl, positionsCount, asOf, marketOp
         label="POSITIONS"
         value={
           <span className="tabular-nums">
-            {count}/10
+            {count}{maxPositions != null ? `/${maxPositions}` : ''}
             {(account.open_orders ?? 0) > 0 && (
               <span className="ml-1.5 text-[11px] text-[var(--color-amber)]" title="Pending orders awaiting fill (reserve margin until executed)">
                 +{account.open_orders} pending

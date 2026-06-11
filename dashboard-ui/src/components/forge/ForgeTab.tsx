@@ -53,7 +53,8 @@ export function ForgeTab() {
   }
 
   const { status, summary, pipeline, cycles } = q.data
-  const running = status.running
+  const running = status.running          // loop enabled (not halted)
+  const cycleActive = status.cycle_active === true  // executing right now
 
   return (
     <div className="space-y-4" data-section="forge">
@@ -82,7 +83,7 @@ export function ForgeTab() {
             <span className={`text-2xl ${running ? 'forge-glow' : ''}`}>{running ? '🔥' : '🧊'}</span>
             <div>
               <div className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2">
-                Hephaestus Forge
+                Crucible Forge
                 {celebrating && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide mc-stamp"
                     style={{ background: 'rgba(251,191,36,0.18)', color: C.gold }}>
@@ -92,7 +93,7 @@ export function ForgeTab() {
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide inline-flex items-center gap-1"
                   style={{ background: running ? 'rgba(34,197,94,0.15)' : 'rgba(113,113,122,0.15)', color: running ? C.green : C.iron }}>
                   <span className="w-1.5 h-1.5 rounded-full forge-blink" style={{ background: running ? C.green : C.iron }} />
-                  {running ? 'RUNNING' : 'HALTED'}
+                  {cycleActive ? 'RUNNING' : running ? 'ARMED' : 'HALTED'}
                 </span>
               </div>
               <div className="text-[11px] text-[var(--color-text-muted)]">
@@ -112,7 +113,7 @@ export function ForgeTab() {
       </Card>
 
       {/* ── Forge line with per-stage stats ── */}
-      <ForgeLine pipeline={pipeline} running={running} />
+      <ForgeLine pipeline={pipeline} running={cycleActive} />
 
       {/* ── Recent runs — click any to expand the full summary ── */}
       <div>

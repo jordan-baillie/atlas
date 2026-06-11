@@ -150,10 +150,11 @@ class TestTrackGate:
         assert g["n_obs"] == 24
         assert g["expected_sharpe"] == 0.62
 
-    def test_insufficient_is_nan_safe_and_passes(self):
+    def test_insufficient_is_nan_safe_and_accruing(self):
         g = gates.track_gate([0.001, 0.002], EXPECTATION)
         assert g["status"] == "insufficient"
-        assert g["pass"] is True  # TrackVerdict.ok includes insufficient
+        # tri-state honesty: insufficient = ACCRUING (None), never PASS off 2 obs
+        assert g["pass"] is None
         # the whole point: must be valid strict JSON (no NaN)
         json.dumps(g, allow_nan=False)
         assert g["realized_mean"] is None

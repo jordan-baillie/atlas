@@ -138,7 +138,9 @@ export function PaperSystemCard({ onNavigate }: { onNavigate: (t: TabId) => void
         </Metric>
         <Metric label="positions">
           <AnimatedNumber value={data?.summary?.open_positions} />
-          <span className="text-[var(--color-text-muted)] font-mono">/{data?.summary?.max_positions ?? '—'}</span>
+          {data?.summary?.max_positions != null && (
+            <span className="text-[var(--color-text-muted)] font-mono">/{data.summary.max_positions}</span>
+          )}
         </Metric>
       </div>
       {history.length > 1 && (

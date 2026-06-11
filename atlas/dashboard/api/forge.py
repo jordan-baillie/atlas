@@ -74,6 +74,11 @@ def _systemctl_status() -> dict:
                 info["next_run_str"] = ln.split("=", 1)[1].strip() or None
             elif ln.startswith("LastTriggerUSec="):
                 info["last_trigger_str"] = ln.split("=", 1)[1].strip() or None
+        # Is a forge cycle ACTUALLY running right now? (distinct from "enabled":
+        # the nightly run lasts ~25min; the other ~23.5h the service is inactive)
+        act = subprocess.run(["systemctl", "is-active", "crucible-forge.service"],
+                             capture_output=True, text=True, timeout=4)
+        info["cycle_active"] = act.stdout.strip() == "active"
     except Exception:
         pass
     return info

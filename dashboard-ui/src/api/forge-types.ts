@@ -1,7 +1,8 @@
 // Forge API types — match services/api/forge.py (GET /api/forge/state).
 
 export interface ForgeStatus {
-  running: boolean
+  running: boolean          // loop enabled (not disabled via killswitch file)
+  cycle_active?: boolean    // a forge cycle is executing RIGHT NOW (systemd is-active)
   enabled: boolean
   next_run_str: string | null
   last_trigger_str: string | null

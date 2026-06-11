@@ -140,7 +140,11 @@ def track_gate(realized: list, expectation: Optional[dict]) -> dict:
             "realized_mean": _safe(v.realized_mean),
             "realized_sharpe": _safe(v.realized_sharpe),
             "mean_z": _safe(v.mean_z), "worst_daily_z": _safe(v.worst_daily_z),
-            "reasons": list(v.reasons), "pass": v.ok,
+            # Tri-state honesty: "insufficient" is ACCRUING (None), not PASS.
+            # TrackVerdict.ok includes insufficient (it shouldn't HALT the book),
+            # but a go-live gate must not read PASS off 2 observations.
+            "reasons": list(v.reasons),
+            "pass": None if v.status == "insufficient" else v.ok,
         })
     except Exception as e:
         logger.warning("gates: track_gate failed: %s", e)

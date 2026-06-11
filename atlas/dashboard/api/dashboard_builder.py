@@ -845,8 +845,15 @@ def build_pnl_summary(
     summary: dict = {
         "today_pnl": daily_pnl["total_pnl"],
         "today_pnl_detail": daily_pnl["per_position"],
-        "max_positions": config.get("risk", {}).get("max_open_positions", 10),
     }
+
+    # max_positions only applies while the swing config's strategies are live.
+    # With every config strategy disabled (forward-paper book = crucible
+    # strategies with their own sizing), advertising the retired "/10" cap
+    # against a legitimately 50-name book reads as a breach. Omit it instead.
+    _strats = config.get("strategies") or {}
+    if any(v.get("enabled") for v in _strats.values() if isinstance(v, dict)):
+        summary["max_positions"] = config.get("risk", {}).get("max_open_positions", 10)
 
     # Portfolio return_pct from first to last equity curve point.
     # Set 0.0 explicitly for a just-started Paper Book (<2 points) so the UI does NOT fall back to the

@@ -107,6 +107,7 @@ export function PortfolioTab() {
               account={portfolio.data.account}
               todayPnl={portfolio.data.summary?.today_pnl}
               positionsCount={portfolio.data.positions?.length ?? 0}
+              maxPositions={portfolio.data.summary?.max_positions}
               asOf={portfolio.data.timestamp}
               marketOpen={portfolio.data.market_clock?.is_open === true}
             />

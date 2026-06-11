@@ -736,11 +736,22 @@ class TestBuildPnlSummary:
         assert today_row["day_pnl"] == 75.0
 
     def test_max_positions_from_config(self):
+        """max_positions surfaces only while config strategies are live."""
         from atlas.dashboard.api.dashboard_builder import build_pnl_summary
 
-        config = {"risk": {"max_open_positions": 15}}
+        config = {"risk": {"max_open_positions": 15},
+                  "strategies": {"momentum": {"enabled": True}}}
         result = build_pnl_summary([], "sp500", [], config)
         assert result["max_positions"] == 15
+
+    def test_max_positions_omitted_when_no_strategies_enabled(self):
+        """All config strategies disabled (forward-paper book) → cap not applicable."""
+        from atlas.dashboard.api.dashboard_builder import build_pnl_summary
+
+        config = {"risk": {"max_open_positions": 10},
+                  "strategies": {"momentum": {"enabled": False}}}
+        result = build_pnl_summary([], "sp500", [], config)
+        assert "max_positions" not in result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -850,6 +861,8 @@ class TestBuildDashboardDataShape:
         (config_dir / "sp500.json").write_text(json.dumps({
             "market_id": "sp500",
             "risk": {"starting_equity": 5000, "max_open_positions": 8},
+            # max_positions only surfaces while config strategies are live
+            "strategies": {"momentum": {"enabled": True}},
         }))
         monkeypatch.setattr(dash_mod, "_PROJECT_ROOT", tmp_path)
 
