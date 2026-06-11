@@ -22,6 +22,7 @@ or simply: touch data/HALT (trading) / rm data/HALT.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -90,80 +91,77 @@ def check_l4_drawdown(
     *, db_path: Optional[str] = None, threshold_pct: float = DRAWDOWN_HALT_PCT,
     window_days: int = 30,
 ) -> Optional[BlockReason]:
-    """Compute drawdown-from-peak using equity_history over the last window_days.
+    """Drawdown-from-peak per LIVE strategy book over the last window_days.
 
-    Cutover note (2026-04-30, Task #289):
-        The original implementation queried portfolio_snapshots.daily_pnl_pct.
-        That column DOES NOT EXIST in the production schema, so every call raised
-        sqlite3.OperationalError which was swallowed by a bare `except` and returned
-        False (fail-open).  This silently disabled the L4 layer in production.
+    Re-pointed 2026-06-11 (OPERATIONS.md follow-up): the previous source,
+    ``equity_history`` (sqlite), lost its writer with the swing-system retirement —
+    the layer was permanently fail-open against a stale table. The live source of
+    truth is now each deployed book's ``data/live/<name>/returns.jsonl`` (written
+    every cycle by record_returns — the same file the track-vs-expectation gate
+    consumes). The FIRST book in breach trips the layer for the whole executor:
+    correlated books share one broker account, and a halted good book costs hours
+    while an unhalted bad one costs capital.
 
-        The fix derives drawdown from sequential equity values in equity_history:
-            drawdown_pct = (peak_equity - latest_equity) / peak_equity * 100
+    db_path is kept for call/test compatibility and ignored.
 
-        equity_history schema: (market_id TEXT, date TEXT, equity REAL, pnl REAL)
-
-    Fail behaviour:
-        - Schema / DB errors → log ERROR + return None (fail-open, but LOUD)
-        - Empty table → log DEBUG + return None (graceful no-data path)
+    Fail behaviour (all loud, never raising):
+        - no registry / no deployed books → DEBUG + None (graceful no-data path)
+        - unreadable/short returns file   → ERROR + None (fail-open, but LOUD)
     """
-    import sqlite3 as _sqlite3
-
-    path = db_path or str(PROJECT_ROOT / "data" / "atlas.db")
+    del db_path  # legacy parameter — source of truth is now the books
     cutoff_date = (
         datetime.now(timezone.utc) - timedelta(days=window_days)
     ).strftime("%Y-%m-%d")
 
-    logger.debug(
-        "L4 lookback: window_days=%d, effective_start=%s (cutover_floor=%s)",
-        window_days, max(cutoff_date, ATTRIBUTION_CUTOVER_DATE), ATTRIBUTION_CUTOVER_DATE,
-    )
-
     try:
-        with _sqlite3.connect(path, timeout=10) as conn:
-            conn.row_factory = _sqlite3.Row
-            rows = conn.execute(
-                """SELECT date, equity
-                   FROM equity_history
-                   WHERE market_id = 'sp500'
-                     AND date >= ?
-                     AND date >= ?
-                   ORDER BY date ASC""",
-                (cutoff_date, ATTRIBUTION_CUTOVER_DATE),
-            ).fetchall()
-    except (_sqlite3.OperationalError, _sqlite3.DatabaseError) as e:
-        # Explicit, loud log — not the silent bare-except from before.
-        logger.error("L4 drawdown check unavailable (fail-open): %s", e)
+        from atlas.execution import registry
+        books = registry.deployed()
+    except Exception as e:
+        logger.error("L4 drawdown check unavailable (fail-open): registry unreadable: %s", e)
+        return None
+    if not books:
+        logger.debug("L4: no deployed strategies — nothing to check")
         return None
 
-    if not rows:
-        logger.debug("L4: no equity_history rows for sp500 in last %d days (fail-open)", window_days)
-        return None
+    for s in books:
+        rj = PROJECT_ROOT / "data" / "live" / s.name / "returns.jsonl"
+        if not rj.exists():
+            logger.debug("L4: %s has no returns.jsonl yet (new book) — skipping", s.name)
+            continue
+        try:
+            rows = [json.loads(l) for l in rj.read_text().splitlines() if l.strip()]
+        except Exception as e:
+            logger.error("L4: %s returns.jsonl unreadable (fail-open for this book): %s", s.name, e)
+            continue
+        window = [r for r in rows if str(r.get("date", "")) >= cutoff_date
+                  and r.get("equity") is not None]
+        if len(window) < 2:
+            logger.debug("L4: %s has %d datapoints in window — too new to assess", s.name, len(window))
+            continue
 
-    equities = [float(r["equity"]) for r in rows]
-    peak_equity = max(equities)
-    latest_equity = equities[-1]
-    latest_date = str(rows[-1]["date"])
+        equities = [float(r["equity"]) for r in window]
+        peak_equity = max(equities)
+        latest_equity = equities[-1]
+        latest_date = str(window[-1]["date"])
+        if peak_equity <= 0:
+            logger.warning("L4: %s peak_equity <= 0 (%s) — skipping", s.name, peak_equity)
+            continue
 
-    if peak_equity <= 0:
-        logger.warning("L4: peak_equity <= 0 (%s) — skipping drawdown check", peak_equity)
-        return None
-
-    drawdown_pct = (peak_equity - latest_equity) / peak_equity * 100.0
-
-    if drawdown_pct >= threshold_pct:
-        return BlockReason(
-            "L4",
-            f"Drawdown from peak {drawdown_pct:.2f}% >= {threshold_pct}%",
-            {
-                "latest_date": latest_date,
-                "latest_equity": latest_equity,
-                "peak_equity": peak_equity,
-                "drawdown_pct": round(drawdown_pct, 4),
-                "threshold_pct": threshold_pct,
-                "window_days": window_days,
-            },
-        )
+        drawdown_pct = (peak_equity - latest_equity) / peak_equity * 100.0
+        if drawdown_pct >= threshold_pct:
+            return BlockReason(
+                "L4",
+                f"{s.name}: drawdown from peak {drawdown_pct:.2f}% >= {threshold_pct}%",
+                {
+                    "strategy": s.name,
+                    "latest_date": latest_date,
+                    "latest_equity": latest_equity,
+                    "peak_equity": peak_equity,
+                    "drawdown_pct": round(drawdown_pct, 4),
+                    "threshold_pct": threshold_pct,
+                    "window_days": window_days,
+                },
+            )
     return None
 
 
