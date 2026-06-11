@@ -166,10 +166,12 @@ def run_daily(mode: str = "shadow", asof: Optional[str] = None, strategies=None,
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{asof}.json").write_text(json.dumps(
         {"date": asof, "mode": mode, "results": [asdict(r) for r in report.results]}, indent=2))
-    # monitoring: digest only when there's something to report (a strategy ran, halted, diverged, or awaits approval)
-    if notify and (strategies and any(r.n_orders or r.blocked or r.awaiting_approval or r.error or
+    # monitoring: Telegram is CRITICAL-only (operator directive 2026-06-12) — halt,
+    # error, divergence, or orders held for human approval. Routine order flow is NOT
+    # critical; the crucible morning report covers the book daily.
+    if notify and (strategies and any(r.blocked or r.awaiting_approval or r.error or
                                       r.track_status == "diverging" for r in report.results)):
-        _send_telegram(_digest(report))
+        _send_telegram("\U0001f6a8 " + _digest(report))
     return report
 
 

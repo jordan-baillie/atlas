@@ -1,6 +1,8 @@
 #!/bin/bash
-# Unified health check for all trading projects
-# Sends status summary to Telegram
+# Unified health check for all trading projects.
+# Severity-routed (operator directive 2026-06-12: critical-only Telegram):
+# silent when everything is green; sends ONE alert listing only the ❌ lines
+# when something is actually broken. Full status always printed to journal.
 
 set -euo pipefail
 
@@ -40,26 +42,21 @@ count_active_timers() {
 
 
 check_data_freshness() {
-    local snapshots_dir="/root/atlas/data/snapshots"
-    if [[ ! -d "$snapshots_dir" ]]; then
-        echo "⚠️ no data dir"
+    # Post-refactor (2026-06-11): the live data artery is the forward book's
+    # returns.jsonl, not the retired snapshots dir.
+    local rj="/root/atlas/data/live/val_mom_trend_smallcap/returns.jsonl"
+    if [[ ! -f "$rj" ]]; then
+        echo "❌ no returns.jsonl"
         return
     fi
-    
-    local latest=$(find "$snapshots_dir" -type f -name "*.parquet" -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
-    if [[ -z "$latest" ]]; then
-        echo "⚠️ no snapshots"
-        return
-    fi
-    
-    local file_date=$(stat -c %Y "$latest")
+    local file_date=$(stat -c %Y "$rj")
     local now=$(date +%s)
     local age_hours=$(( (now - file_date) / 3600 ))
-    
-    if [[ $age_hours -lt 48 ]]; then
+    # 4 calendar days covers weekend + one missed run; beyond that the daily cycle is dead
+    if [[ $age_hours -lt 96 ]]; then
         echo "✅ ${age_hours}h ago"
     else
-        echo "⚠️ ${age_hours}h ago"
+        echo "❌ ${age_hours}h ago"
     fi
 }
 
@@ -136,28 +133,26 @@ check_nrl_cron() {
 }
 
 get_atlas_equity() {
-    # Read from portfolio snapshots JSONL
-    local sp500_snapshots="/root/atlas/logs/portfolio_snapshots.jsonl"
-    
-    local sp500_equity="N/A"
-    
-    if [[ -f "$sp500_snapshots" ]]; then
-        sp500_equity=$(tail -1 "$sp500_snapshots" 2>/dev/null | jq -r '.equity // "N/A"' 2>/dev/null || echo "N/A")
-        if [[ "$sp500_equity" != "N/A" ]] && [[ "$sp500_equity" =~ ^[0-9.]+$ ]]; then
-            sp500_equity=$(printf '$%.0f' "$sp500_equity")
+    # Post-refactor: live forward book state (the retired swing book's
+    # portfolio_snapshots.jsonl is frozen history).
+    local eq_state="/root/atlas/data/live/val_mom_trend_smallcap/equity_state.json"
+    local eq="N/A"
+    if [[ -f "$eq_state" ]]; then
+        eq=$(jq -r '.equity // "N/A"' "$eq_state" 2>/dev/null || echo "N/A")
+        if [[ "$eq" != "N/A" ]] && [[ "$eq" =~ ^[0-9.]+$ ]]; then
+            eq=$(printf '$%.0f' "$eq")
         else
-            sp500_equity="N/A"
+            eq="N/A"
         fi
     fi
-    
-    echo "${sp500_equity}"
+    echo "${eq}"
 }
 
 # Collect all status checks
 SUPERCOACH_API=$(check_service "supercoach-api")
 
 ATLAS_DASHBOARD=$(check_service "atlas-dashboard")
-ATLAS_REFRESH=$(check_service "atlas-dashboard-refresh")
+# atlas-dashboard-refresh removed in the 2026-06-11 great-deletion refactor
 
 DATA_FRESH=$(check_data_freshness)
 DISK=$(check_disk_usage)
@@ -169,28 +164,24 @@ SP500_EQUITY=$(get_atlas_equity)
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M AEST')
 
-# Build Telegram message
-MESSAGE="🏥 <b>System Health Report</b>
-📅 ${TIMESTAMP}
+# Full status -> journal (always)
+STATUS="Atlas dashboard ${ATLAS_DASHBOARD} | book equity ${SP500_EQUITY}
+SuperCoach API ${SUPERCOACH_API} | NRL cron ${NRL_CRON}
+Disk ${DISK} | Backup ${BACKUP} | Data ${DATA_FRESH} | Logs ${LARGE_LOGS}"
+echo "${TIMESTAMP}"
+echo "${STATUS}"
 
-<b>Atlas SP500</b>
-${ATLAS_DASHBOARD} dashboard | ${ATLAS_REFRESH} refresh
-💰 Equity: ${SP500_EQUITY}
-
-<b>SuperCoach</b>
-${SUPERCOACH_API} API
-
-<b>Infrastructure</b>
-${DISK} Disk | ${BACKUP} Backup
-${DATA_FRESH} Data fresh | ${LARGE_LOGS} Log sizes
-
-<b>NRL-Predict</b>
-${NRL_CRON} Cron active"
-
-# Send to Telegram
-curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
-    -d chat_id="${CHAT_ID}" \
-    -d parse_mode="HTML" \
-    -d text="${MESSAGE}" > /dev/null
-
-echo "Health check sent to Telegram at ${TIMESTAMP}"
+# Telegram ONLY on hard failures (❌). Warnings (⚠️) stay in the journal — the
+# crucible sentinel/morning-report cover drift on the money path.
+FAILURES=$(echo "${STATUS}" | grep '❌' || true)
+if [[ -n "${FAILURES}" ]]; then
+    MESSAGE="🚨 <b>Health check FAILURES</b> — ${TIMESTAMP}
+${FAILURES}"
+    curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+        -d chat_id="${CHAT_ID}" \
+        -d parse_mode="HTML" \
+        -d text="${MESSAGE}" > /dev/null
+    echo "FAILURE alert sent to Telegram"
+else
+    echo "all green — no Telegram (critical-only policy)"
+fi
