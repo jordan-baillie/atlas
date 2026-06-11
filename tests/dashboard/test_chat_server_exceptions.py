@@ -94,12 +94,9 @@ class TestStaticNoBareExcept:
             "PnL calc loop should use narrowed exception types"
         )
 
-    def test_dashboard_ev_stats_exc_info(self):
-        """EV stats handler in dashboard.py must include exc_info=True (latent bug fix)."""
-        src = (PROJECT / "atlas" / "dashboard" / "api" / "dashboard.py").read_text(encoding="utf-8")
-        assert "exc_info=True" in src, (
-            "EV stats handler must log with exc_info=True so exceptions are visible"
-        )
+    # test_dashboard_ev_stats_exc_info removed 2026-06-12: the EV stats
+    # handler it guarded was deleted (dead weight — no frontend consumer,
+    # DB writes during GET).
 
 
 # ──────────────────────────────────────────────────────────────────────────────

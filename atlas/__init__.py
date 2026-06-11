@@ -5,6 +5,5 @@ Packages (dependency direction: kernel <- db <- brokers <- execution <- dashboar
 - atlas.db        -- SQLite access layer for data/atlas.db
 - atlas.brokers   -- venue adapters (alpaca, ib, ib_web) + price plumbing
 - atlas.execution -- the forge->live loop: registry, providers, target executor, kill switch
-- atlas.analytics -- post-hoc analytics (strategy EV)
 - atlas.dashboard -- FastAPI backend (:8899) serving dashboard-ui + chat
 """

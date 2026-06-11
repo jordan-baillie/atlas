@@ -191,23 +191,11 @@ def dashboard_data(_auth: HTTPBasicCredentials = Depends(check_auth)):
     broker dataclasses, exactly as the original handler does.
     """
     try:
-        from atlas.analytics.strategy_ev import (
-            get_latest_ev_stats,
-            compute_all_strategies_ev,
-            persist_strategy_ev,
-        )
         data = _build_dashboard_data()
-        # Inject EV stats into dashboard payload
-        try:
-            ev_stats = get_latest_ev_stats()
-            if not ev_stats:
-                results = compute_all_strategies_ev(min_trades=3)
-                persist_strategy_ev(results)
-                ev_stats = get_latest_ev_stats()
-            data["ev_stats"] = ev_stats
-        except Exception as e:  # noqa: BLE001
-            logger.warning("EV stats failed: %s", e, exc_info=True)
-            data["ev_stats"] = {}
+        # ev_stats removed 2026-06-12: computed from the retired swing system's
+        # trades table, had NO frontend consumer, and did compute+persist DB
+        # WRITES during a GET when stale. Historical signal_ev rows remain in
+        # the DB; atlas/analytics/strategy_ev.py deleted with this (sole caller).
         body = json.dumps(data, default=str)
         return Response(content=body, media_type="application/json")
     except Exception as e:  # noqa: BLE001
