@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # /root/atlas/systemd/install.sh
 # Idempotent installer for Atlas systemd units.
-# Symlinks every *.service/*.timer under this directory into /etc/systemd/system/,
-# runs daemon-reload if anything changed, and enables+starts the timers that are
-# part of the active production schedule.
+#
+# 1. Durably retires units that no longer exist in this directory (disable +
+#    remove stray links) — a reinstall can never silently re-enable them.
+# 2. Symlinks every *.service/*.timer under this directory into /etc/systemd/system/.
+# 3. Enables + starts the active production schedule.
 #
 # Safe to re-run — only prints output when it actually changes something.
 set -euo pipefail
@@ -25,40 +27,64 @@ if [[ ! -f "$ATLAS_CONF" ]]; then
     echo "installed: $ATLAS_CONF (from atlas.conf.template)"
 fi
 
-# Timers enabled+started by this script.
-# Matches current production state (as of 2026-04-20).
-#
-# NOTE: atlas-research-window.timer (legacy multi-phase) was removed 2026-04-28.
-# Use the per-universe atlas-research-window@<universe>.timer set below.
-#
-# NOTE: atlas-research-runner.service is intentionally NOT enabled by
-# this script. It is a queue-based research daemon currently disabled
-# on the host. The unit file is mirrored for version control, but it
-# must be turned on intentionally via `systemctl enable --now
-# atlas-research-runner.service` — never automatically by this installer.
-#
-# NOTE: atlas-discovery.service is a `static` unit (no [Install] section).
-# It cannot be `systemctl enable`d directly — it is triggered by
-# atlas-discovery.timer, which IS enabled below. Same pattern for
-# atlas-silent-failure-watchdog.service.
-# RETIRED 2026-06-08 — durable disable (survives a reinstall):
-#   * Legacy research pipeline (atlas-director, atlas-discovery,
-#     atlas-research-window@*) is SUPERSEDED by the Hephaestus forge
-#     (/root/hephaestus → hephaestus-cycle.timer).
-#   * Nothing trades live (board closed retail edge-hunting; Atlas paper parked
-#     to 2026-08-01), so atlas-canary-check + atlas-universe-rebuild are off.
-#   * Per-service watchdogs (heartbeat / silent-failure) + atlas-fred-health
-#     disabled; system health is covered by unified-healthcheck.timer.
-#   These were `systemctl disable`d on the host and removed here so a reinstall
-#   does NOT silently re-enable them. Unit files are kept under version control
-#   for deliberate revival: `systemctl enable --now <unit>`.
-TIMERS_TO_ENABLE=(
-    atlas-backup.timer
-    unified-healthcheck.timer
+# ── Durable retirement ────────────────────────────────────────────────────────
+# Units removed in the 2026-06 great-deletion refactor. Disabled + unlinked on
+# every install so a host that missed a deploy converges to the same state.
+# (atlas-telegram-bot: command bot retired — outbound notify lives in
+#  atlas.kernel.notify. atlas-dashboard-refresh: host-local unit, retired.)
+RETIRED_UNITS=(
+    atlas-telegram-bot
+    atlas-dashboard-refresh
+    atlas-canary-check
+    atlas-consolidation-closure
+    atlas-director
+    atlas-discovery
+    atlas-error-remediation
+    atlas-fred-health
+    atlas-heartbeat-watchdog
+    atlas-intraday-backfill
+    atlas-orchestrator
+    atlas-reconcile-shadow
+    atlas-risk-precompute
+    atlas-sandbox-9strats
+    atlas-silent-failure-watchdog
+    atlas-universe-rebuild
 )
 
-changed=0
+retired_changed=0
+for unit in "${RETIRED_UNITS[@]}"; do
+    for suffix in service timer; do
+        name="$unit.$suffix"
+        if systemctl list-unit-files "$name" --no-legend 2>/dev/null | grep -q .; then
+            systemctl disable --now "$name" 2>/dev/null || true
+        fi
+        if [[ -e "$DST_DIR/$name" || -L "$DST_DIR/$name" ]]; then
+            rm -f "$DST_DIR/$name"
+            echo "retired: $name"
+            retired_changed=1
+        fi
+    done
+done
+# Templated research-window units
+for f in "$DST_DIR"/atlas-research-window@*; do
+    [[ -e "$f" || -L "$f" ]] || continue
+    systemctl disable --now "$(basename "$f")" 2>/dev/null || true
+    rm -f "$f"
+    echo "retired: $(basename "$f")"
+    retired_changed=1
+done
 
+# Remove dangling symlinks left by deleted unit files.
+for f in "$DST_DIR"/atlas-*.service "$DST_DIR"/atlas-*.timer "$DST_DIR"/unified-healthcheck.*; do
+    if [[ -L "$f" && ! -e "$f" ]]; then
+        rm -f "$f"
+        echo "removed dangling link: $(basename "$f")"
+        retired_changed=1
+    fi
+done
+
+# ── Link current units ────────────────────────────────────────────────────────
+changed=0
 shopt -s nullglob
 for src in "$SRC_DIR"/*.service "$SRC_DIR"/*.timer; do
     base="$(basename "$src")"
@@ -74,7 +100,7 @@ for src in "$SRC_DIR"/*.service "$SRC_DIR"/*.timer; do
     changed=1
 done
 
-if (( changed )); then
+if (( changed || retired_changed )); then
     systemctl daemon-reload
     echo "daemon-reload: done"
 fi
@@ -94,24 +120,36 @@ if (( ${#missing_env[@]} > 0 )); then
     echo "WARNING: the following EnvironmentFile paths referenced by atlas units do not exist on this host:"
     for f in "${missing_env[@]}"; do echo "  - $f"; done
     echo "Services referencing these files will fail at invocation. Provision them before enabling."
-    echo "If any path starts with '-' in the unit, systemd will tolerate its absence."
 else
     echo "✓ All EnvironmentFile paths exist."
 fi
 
-for timer in "${TIMERS_TO_ENABLE[@]}"; do
-    unit_file="$SRC_DIR/$timer"
+# ── Active production schedule ────────────────────────────────────────────────
+SERVICES_TO_ENABLE=(
+    atlas-dashboard.service
+)
+TIMERS_TO_ENABLE=(
+    atlas-live-shadow.timer
+    atlas-backup.timer
+    unified-healthcheck.timer
+    atlas-weekly-maintenance.timer
+    atlas-sediment-cleanup.timer
+    atlas-sp500-flatten.timer    # transitional — delete once the retired SP500 paper account is flat
+)
+
+for unit in "${SERVICES_TO_ENABLE[@]}" "${TIMERS_TO_ENABLE[@]}"; do
+    unit_file="$SRC_DIR/$unit"
     if [[ ! -e "$unit_file" ]]; then
-        echo "install.sh: skipping $timer (not present in $SRC_DIR)" >&2
+        echo "install.sh: skipping $unit (not present in $SRC_DIR)" >&2
         continue
     fi
-    enabled="$(systemctl is-enabled "$timer" 2>/dev/null || true)"
+    enabled="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
     if [[ "$enabled" != "enabled" ]]; then
-        systemctl enable "$timer"
+        systemctl enable "$unit"
     fi
-    active="$(systemctl is-active "$timer" 2>/dev/null || true)"
+    active="$(systemctl is-active "$unit" 2>/dev/null || true)"
     if [[ "$active" != "active" ]]; then
-        systemctl start "$timer"
+        systemctl start "$unit"
     fi
 done
 

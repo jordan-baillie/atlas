@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from brokers import price_arbiter
+from atlas.brokers import price_arbiter
 
 
 @pytest.fixture(autouse=True)
@@ -33,8 +33,8 @@ _SUNDAY_UTC     = _utc(2025, 1, 12, 15, 0)       # 10:00 ET Sun (closed)
 def test_outside_rth_no_telegram_logs_warning(caplog):
     """Pre-market divergence: no Telegram, WARNING logged, ticker still halted."""
     sent = []
-    with patch("brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
-         patch("utils.market_hours.is_rth", return_value=False):
+    with patch("atlas.brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
+         patch("atlas.kernel.market_hours.is_rth", return_value=False):
         with caplog.at_level("WARNING"):
             price = price_arbiter.arbitrate("TEST", tiingo_price=100.0, alpaca_price=110.0)
     assert price == 100.0  # Tiingo authority (Wave B #265)
@@ -46,8 +46,8 @@ def test_outside_rth_no_telegram_logs_warning(caplog):
 def test_inside_rth_telegram_fires_then_throttled():
     """During RTH: first call sends Telegram; second within 6h throttled."""
     sent = []
-    with patch("brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
-         patch("utils.market_hours.is_rth", return_value=True):
+    with patch("atlas.brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
+         patch("atlas.kernel.market_hours.is_rth", return_value=True):
         # First call
         price_arbiter.arbitrate("TEST", tiingo_price=100.0, alpaca_price=110.0)
         # Second call same throttle window
@@ -58,8 +58,8 @@ def test_inside_rth_telegram_fires_then_throttled():
 def test_sunday_no_alert_regardless():
     """Weekend: divergence never alerts, regardless of size."""
     sent = []
-    with patch("brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
-         patch("utils.market_hours.is_rth", return_value=False):
+    with patch("atlas.brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)), \
+         patch("atlas.kernel.market_hours.is_rth", return_value=False):
         price_arbiter.arbitrate("TEST", tiingo_price=100.0, alpaca_price=110.0)
     assert sent == []
     assert price_arbiter.is_ticker_halted("TEST")  # still flagged for safety
@@ -68,7 +68,7 @@ def test_sunday_no_alert_regardless():
 def test_warn_band_does_not_alert():
     """spread between warn_pct and halt_pct: no halt, no Telegram."""
     sent = []
-    with patch("brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)):
+    with patch("atlas.brokers.price_arbiter._send_telegram_bg", side_effect=lambda m: sent.append(m)):
         # 3% spread is above warn_pct (2%) but below halt_pct (5%)
         price = price_arbiter.arbitrate("TEST", tiingo_price=100.0, alpaca_price=103.0)
     assert price == 100.0  # Tiingo authority

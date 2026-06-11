@@ -1,0 +1,7 @@
+[Unit]
+Description=Atlas sediment cleanup (daily 14:00 AEST)
+[Timer]
+OnCalendar=*-*-* 14:00:00 Australia/Brisbane
+Persistent=true
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=Atlas weekly maintenance (log rotation, cache purge, DB ANALYZE)
+[Service]
+Type=oneshot
+WorkingDirectory=/root/atlas
+ExecStart=/usr/bin/bash /root/atlas/ops/weekly-maintenance.sh
+StandardOutput=append:/root/atlas/logs/weekly_maintenance.log
+StandardError=append:/root/atlas/logs/weekly_maintenance.log
+TimeoutStartSec=1800

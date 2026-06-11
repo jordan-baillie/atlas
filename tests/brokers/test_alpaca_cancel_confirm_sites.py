@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 
-from brokers.base import OrderResult, OrderStatus, OrderSide
+from atlas.brokers.base import OrderResult, OrderStatus, OrderSide
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -22,7 +22,7 @@ from brokers.base import OrderResult, OrderStatus, OrderSide
 
 def _make_broker():
     """Create a minimal AlpacaBroker stub with _connected=True."""
-    from brokers.alpaca.broker import AlpacaBroker
+    from atlas.brokers.alpaca.broker import AlpacaBroker
     broker = AlpacaBroker.__new__(AlpacaBroker)
     broker._connected = True
     broker._market_data = None
@@ -79,7 +79,7 @@ class TestWaitForCancelConfirmedMethod:
         call_count = [0]
         original_sleep = time.sleep
 
-        with patch("brokers.alpaca.broker.time") as mock_time:
+        with patch("atlas.brokers.alpaca.broker.time") as mock_time:
             _t = [0.0]
 
             def _mono():
@@ -101,7 +101,7 @@ class TestWaitForCancelConfirmedMethod:
             return_value=_status_result("oid-4", OrderStatus.PENDING)
         )
 
-        with patch("brokers.alpaca.broker.time") as mock_time:
+        with patch("atlas.brokers.alpaca.broker.time") as mock_time:
             _t = [0.0]
 
             def _mono():
@@ -129,7 +129,7 @@ class TestWaitForCancelConfirmedMethod:
             return_value=_status_result("oid-6", OrderStatus.PENDING)
         )
 
-        with patch("brokers.alpaca.broker.time") as mock_time:
+        with patch("atlas.brokers.alpaca.broker.time") as mock_time:
             _t = [0.0]
 
             def _mono():
@@ -156,7 +156,7 @@ class TestWaitForCancelConfirmedMethod:
 
         broker.get_order_status = _side
 
-        with patch("brokers.alpaca.broker.time") as mock_time:
+        with patch("atlas.brokers.alpaca.broker.time") as mock_time:
             _t = [0.0]
 
             def _mono():
@@ -180,8 +180,8 @@ class TestPhase2CSourceInspection:
 
     @pytest.fixture(autouse=True)
     def _load_source(self):
-        source_path = Path(__file__).parent.parent.parent / "brokers" / "alpaca" / "broker.py"
-        self.source = source_path.read_text()
+        source_path = Path(__file__).parent.parent.parent / "atlas" / "brokers" / "alpaca" / "broker.py"
+        self.source = source_path.read_text(encoding="utf-8")
         self.lines = self.source.split("\n")
 
     def test_site_1_confirm_before_tightened_oco(self):
@@ -339,8 +339,8 @@ def _drive_site5_path(broker):
 
     Requires a profitable position with existing static stop (no TP).
     """
-    from brokers.base import PositionInfo
-    from brokers.alpaca.broker import GetOrdersRequest, QueryOrderStatus
+    from atlas.brokers.base import PositionInfo
+    from atlas.brokers.alpaca.broker import GetOrdersRequest, QueryOrderStatus
 
     ticker = "AAPL"
     entry_price = 80.0

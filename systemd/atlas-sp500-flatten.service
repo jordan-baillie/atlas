@@ -1,0 +1,10 @@
+[Unit]
+Description=Flatten the retired SP500 Alpaca paper account (idempotent; self-disables when flat)
+After=network-online.target
+[Service]
+Type=oneshot
+WorkingDirectory=/root/atlas
+ExecStart=/usr/bin/python3 ops/flatten_sp500.py
+StandardOutput=append:/tmp/atlas-sp500-flatten.log
+StandardError=append:/tmp/atlas-sp500-flatten.log
+TimeoutStartSec=600

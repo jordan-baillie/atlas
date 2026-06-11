@@ -1,26 +1,13 @@
 # Atlas system crontab — canonical: /root/atlas/scripts/atlas.crontab
 # Restore: sudo crontab /root/atlas/scripts/atlas.crontab
 #
-# 2026-06-09 — STRIPPED TO THE NEW WORLD. "Old Atlas" (the long-only entry+stop swing
-# system) is retired; its entire daily ops flow (premarket plan-gen, execute_approved,
-# sync_protective_orders, intraday_monitor, reconcile_positions/ledger, paper-validation,
-# auto_promote_paper, paper_progress, pipeline_forward_tick, macro/risk, healthz) was deleted
-# with plan.py / live_executor.py. The NEW Atlas runs entirely on systemd timers:
-#   atlas-dashboard, atlas-reconcile-shadow, atlas-live-shadow, atlas-backup,
-#   atlas-risk-precompute, atlas-dashboard-refresh, atlas-sp500-flatten
-# + the forge in /root/hephaestus (hephaestus-forge/lint/bab timers).
-# Health visibility: dashboard (:8899) + systemctl + the portfolio-healthcheck skill.
-# This crontab now holds only general hygiene + the NRL-Predict project.
-# Other non-Atlas projects: /etc/cron.d/{nrl-predict,up-bank}.
+# 2026-06-11 — Atlas hygiene jobs moved to systemd timers
+# (atlas-sediment-cleanup.timer, atlas-weekly-maintenance.timer; see
+# systemd/install.sh). This crontab now holds ONLY the NRL-Predict project,
+# pending its move to /etc/cron.d/nrl-predict.
 MAILTO=""
 SHELL=/bin/bash
 TZ=Australia/Brisbane
-
-# ── General Atlas hygiene ────────────────────────────────────────────────────
-# sediment cleanup: 14:00 AEST — delete incident snapshots >14d old (outside top-3)
-0 14 * * * /usr/bin/flock -n /tmp/cleanup_sediment.lock bash -c 'cd /root/atlas && timeout 5m python3 scripts/cleanup_sediment.py --apply' >> /root/atlas/logs/cleanup_sediment.log 2>&1
-# weekly maintenance: Sunday 06:00 AEST
-0 6 * * 0 /usr/bin/flock -n /tmp/weekly_maintenance.lock bash -c 'cd /root/atlas && timeout 30m bash scripts/weekly_maintenance.sh' >> /root/atlas/logs/weekly_maintenance.log 2>&1
 
 # ── NRL-Predict (separate active project; auto-managed by plan_week.py) ───────
 20 18 * * 4 /root/NRL-Predict/scripts/nrl-cron.sh repredict  # Thursday 2026-06-11 (90min before 2026-06-11 19:50)

@@ -1,0 +1,7 @@
+[Unit]
+Description=Atlas weekly maintenance (Sunday 06:00 AEST)
+[Timer]
+OnCalendar=Sun *-*-* 06:00:00 Australia/Brisbane
+Persistent=true
+[Install]
+WantedBy=timers.target

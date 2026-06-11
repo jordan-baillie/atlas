@@ -1,0 +1,9 @@
+[Unit]
+Description=Atlas sediment cleanup (incident snapshots >14d old, keep top-3)
+[Service]
+Type=oneshot
+WorkingDirectory=/root/atlas
+ExecStart=/usr/bin/python3 ops/cleanup_sediment.py --apply
+StandardOutput=append:/root/atlas/logs/cleanup_sediment.log
+StandardError=append:/root/atlas/logs/cleanup_sediment.log
+TimeoutStartSec=300

@@ -1,0 +1,14 @@
+[Unit]
+Description=Atlas forward-paper daily cycle (record returns -> crucible refresh -> shadow rebalance)
+After=network-online.target
+# L8 defense-in-depth: a trading halt blocks the unit before Python starts.
+ConditionPathExists=!/root/atlas/data/HALT
+[Service]
+Type=oneshot
+WorkingDirectory=/root/atlas
+ExecStart=/usr/bin/bash /root/atlas/ops/forward-paper.sh
+StandardOutput=append:/tmp/atlas-live-shadow.log
+StandardError=append:/tmp/atlas-live-shadow.log
+TimeoutStartSec=1800
+[Install]
+WantedBy=multi-user.target

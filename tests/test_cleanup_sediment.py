@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "ops"))
 import cleanup_sediment as cs
 
 
@@ -41,25 +41,25 @@ def _make_file(path: Path, age_days: float, size: int = 512) -> Path:
 @pytest.fixture
 def sediment_tree(tmp_path: Path):
     """
-    brokers/state/:
+    data/:
       live_sp500.json.pre-r1   (1d)  ← top-1
       live_sp500.json.pre-r2   (2d)  ← top-2
       live_sp500.json.pre-r3   (3d)  ← top-3
       live_sp500.json.pre-old1 (20d) ← outside top-3, old  → DELETE
       live_sp500.json.pre-old2 (25d) ← outside top-3, old  → DELETE
-      live_sp500.json.bak      (5d)  ← top-1 (only one in bak group)
+      live_sp500.json.bak.1      (5d)  ← top-1 (only one in bak group)
 
     data/:
       atlas.db.bak.new1   (1d)  ← top-1
       atlas.db.bak.new2   (2d)  ← top-2  (only 2 in db.bak group → both preserved)
     """
-    bs = tmp_path / "brokers" / "state"
+    bs = tmp_path / "data"
     _make_file(bs / "live_sp500.json.pre-r1", age_days=1)
     _make_file(bs / "live_sp500.json.pre-r2", age_days=2)
     _make_file(bs / "live_sp500.json.pre-r3", age_days=3)
     _make_file(bs / "live_sp500.json.pre-old1", age_days=20)
     _make_file(bs / "live_sp500.json.pre-old2", age_days=25)
-    _make_file(bs / "live_sp500.json.bak", age_days=5)
+    _make_file(bs / "live_sp500.json.bak.1", age_days=5)
 
     data = tmp_path / "data"
     _make_file(data / "atlas.db.bak.new1", age_days=1, size=1024 * 1024)
@@ -80,7 +80,7 @@ class TestDryRun:
 
         cs.run(dry_run=True)
 
-        bs = sediment_tree / "brokers" / "state"
+        bs = sediment_tree / "data"
         assert (bs / "live_sp500.json.pre-old1").exists(), "dry-run: old1 must not be removed"
         assert (bs / "live_sp500.json.pre-old2").exists(), "dry-run: old2 must not be removed"
 
@@ -127,7 +127,7 @@ class TestApply:
 
         audit = cs.run(dry_run=False)
 
-        bs = sediment_tree / "brokers" / "state"
+        bs = sediment_tree / "data"
         assert not (bs / "live_sp500.json.pre-old1").exists(), "old1 must be deleted"
         assert not (bs / "live_sp500.json.pre-old2").exists(), "old2 must be deleted"
         assert len(audit["files_deleted"]) == 2
@@ -139,7 +139,7 @@ class TestApply:
         monkeypatch.setattr(cs, "AUDIT_DIR", sediment_tree / "data" / "audit")
         cs.run(dry_run=False)
 
-        bs = sediment_tree / "brokers" / "state"
+        bs = sediment_tree / "data"
         assert (bs / "live_sp500.json.pre-r1").exists()
         assert (bs / "live_sp500.json.pre-r2").exists()
         assert (bs / "live_sp500.json.pre-r3").exists()
@@ -148,7 +148,7 @@ class TestApply:
         self, sediment_tree: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """A 4th file that is recent (10d) is outside top-3 but within 14d window → kept."""
-        bs = sediment_tree / "brokers" / "state"
+        bs = sediment_tree / "data"
         _make_file(bs / "live_sp500.json.pre-mid", age_days=10)
         # pre group now: r1(1d)=T1, r2(2d)=T2, r3(3d)=T3, mid(10d)=recent-not-top3
         # old1(20d) + old2(25d) still deleted
@@ -190,7 +190,7 @@ class TestEdgeCases:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """Group with only 1 file (very old) must be preserved via top-3 rule."""
-        bs = tmp_path / "brokers" / "state"
+        bs = tmp_path / "data"
         _make_file(bs / "live_sp500.json.pre-only-one", age_days=60)
 
         monkeypatch.setattr(cs, "PROJECT_ROOT", tmp_path)
