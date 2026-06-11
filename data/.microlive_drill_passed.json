@@ -1,8 +1,0 @@
-{
-  "passed": true,
-  "tripped_at_step": 6,
-  "trip_reason": "tranche drawdown 22.8% >= 20% (peak=101.00, equity=78.00)",
-  "false_trip_on_benign": false,
-  "revert_plan_ok": true,
-  "ts": "2026-06-03T23:36:07.582887+00:00"
-}
