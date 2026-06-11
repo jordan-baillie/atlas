@@ -96,8 +96,11 @@ If `400 invalid_request_error: You're out of extra usage` appears:
 
 **Never** "fix" this by adding API credits — the fix is always on the auth path.
 
-### Verified April 2026
+### Verified June 2026 (post great-deletion)
 
-Atlas call sites confirmed routing to Max subscription: `services/job_server.py`, `services/pi_session.py`, `research/discovery/discovery.py`, `research/llm_loop_runner.py`, `overlay/engine.py` (via `SYSTEM_PROMPT` constant), `scripts/autoresearch.py`, `scripts/claude_auth_check.py`.
+Atlas pi/claude call sites (all carry `--system-prompt`, enforced by
+`tests/test_no_raw_pi_subprocess.py` + the `lint-pi-system-prompt` pre-commit hook):
+`atlas/kernel/pi_subprocess.py` (the canonical wrapper) and
+`atlas/dashboard/chat/pi_session.py` (async streaming, inline flag).
 
 See `/root/AGENTS.md` and `/root/.pi/teams/skills/claude-auth.md` for the full reference.

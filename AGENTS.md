@@ -26,7 +26,7 @@ Canonical instructions for GPT/Pi coding agents working in `/root/atlas`.
 - One tack per subagent for focused execution
 
 ### 3. Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- After ANY correction from the user: update `memory/SUMMARY.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
@@ -51,12 +51,12 @@ Canonical instructions for GPT/Pi coding agents working in `/root/atlas`.
 
 ## Task Management
 
-1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+1. **Plan First**: Write a plan with checkable items before building
 2. **Verify Plan**: Check in before starting implementation
 3. **Track Progress**: Mark items complete as you go
 4. **Explain Changes**: High-level summary at each step
-5. **Document Results**: Add review section to `tasks/todo.md`
-6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+5. **Document Results**: Summarize what changed and why in the final report
+6. **Capture Lessons**: Update `memory/SUMMARY.md` after corrections
 
 ## Infrastructure
 
@@ -155,4 +155,4 @@ client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 3. Python `Anthropic()` client instantiation somewhere → audit imports.
 4. OAuth token expired → `pi login`.
 
-Verified call sites in Atlas (April 2026): `services/job_server.py`, `services/pi_session.py`, `research/discovery/discovery.py`, `research/llm_loop_runner.py`, `overlay/engine.py` (via `SYSTEM_PROMPT` constant), `scripts/autoresearch.py`, `scripts/claude_auth_check.py`.
+Verified call sites in Atlas (June 2026): `atlas/kernel/pi_subprocess.py` (canonical wrapper) and `atlas/dashboard/chat/pi_session.py` (async streaming, inline flag). Enforced by `tests/test_no_raw_pi_subprocess.py` + the `lint-pi-system-prompt` pre-commit hook.
