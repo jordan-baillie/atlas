@@ -48,6 +48,7 @@ config/auto_excluded_tickers.json
 # ── Dashboard runtime artifacts ──────────────────────────────────
 atlas/dashboard/static/finance-data.json
 atlas/dashboard/static/sentiment-data.json
+dashboard/data/finance-data.json
 dashboard-ui/test-results/
 tests/screenshots/
 
