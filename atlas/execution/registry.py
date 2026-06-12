@@ -32,8 +32,12 @@ def register_provider(name: str):
 class DeployedStrategy:
     name: str
     provider: str                       # key into PROVIDERS
-    state: str = "shadow"               # shadow | canary | live
+    state: str = "shadow"               # shadow | canary | live  (EXECUTION mode: order placement)
     broker: str = "alpaca"             # registry broker name (alpaca | ib)
+    # RESEARCH-MATURITY lifecycle (pre-reg 2026-06-12: research-wiki/methodology/prereg-retirement-rule.md):
+    # shadow -> evidence -> real_capital_candidate | decaying -> retired. Owned by the crucible weekly
+    # evidence loop; 'retired' is human-only and stops the daily loop (no auto-liquidation).
+    lifecycle: str = "shadow"
     capital: float = 0.0               # deployable equity slice (USD); canary <= 250 per board
     approved: bool = False             # human-approved for real-money execution
     specs: dict = field(default_factory=dict)        # {symbol: {multiplier, lot, min_notional}}

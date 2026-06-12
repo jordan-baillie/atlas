@@ -176,6 +176,9 @@ def run_daily(mode: str = "shadow", asof: Optional[str] = None, strategies=None,
     import atlas.execution.providers  # noqa: F401  (register target-portfolio providers)
     asof = asof or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     strategies = strategies if strategies is not None else registry.deployed()
+    # lifecycle 'retired' (human-confirmed exit, pre-reg 2026-06-12) stops order placement;
+    # closing positions stays a manual broker action (no auto-liquidation, board policy).
+    strategies = [s for s in strategies if getattr(s, "lifecycle", "shadow") != "retired"]
     report = DailyReport(asof, mode, [run_strategy(s, asof, mode) for s in strategies])
     if not strategies:
         logger.info("daily(%s): no deployed strategies — nothing to do", mode)
