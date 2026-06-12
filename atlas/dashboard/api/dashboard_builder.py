@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import logging
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from atlas.kernel.paths import PROJECT_ROOT
 
@@ -405,6 +406,47 @@ def build_account_section(
 
 # ── Positions section ─────────────────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
+def _sector_map() -> dict:
+    """ticker -> sector from the owned Sharadar TICKERS dump (cached; ~31k rows, loads once)."""
+    try:
+        import glob as _glob
+        import pandas as _pd
+        paths = _glob.glob(str(_PROJECT_ROOT / "data" / "sharadar" / "SHARADAR_TICKERS_*.csv"))
+        if not paths:
+            return {}
+        tk = _pd.read_csv(paths[0], usecols=["ticker", "sector"]).dropna(subset=["ticker"])
+        tk = tk.drop_duplicates("ticker", keep="first")
+        return dict(zip(tk["ticker"], tk["sector"].fillna("")))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("sector map load failed: %s", e)
+        return {}
+
+
+def _book_strategy_map() -> dict:
+    """ticker -> deployed strategy name from the per-strategy virtual books
+    (data/live/<name>/book.json — the accounting truth for the shared paper account).
+    A ticker held by MULTIPLE books maps to 'shared'."""
+    out: dict = {}
+    try:
+        live_dir = _PROJECT_ROOT / "data" / "live"
+        if not live_dir.exists():
+            return out
+        for bf in live_dir.glob("*/book.json"):
+            try:
+                book = json.loads(bf.read_text())
+            except Exception:  # noqa: BLE001
+                continue
+            name = bf.parent.name
+            for tk, qty in (book.get("positions") or {}).items():
+                if not qty:
+                    continue
+                out[tk] = "shared" if (tk in out and out[tk] != name) else name
+    except Exception as e:  # noqa: BLE001
+        logger.warning("book strategy map failed: %s", e)
+    return out
+
+
 def build_positions_section(
     positions_info: list,
     raw_positions,
@@ -487,6 +529,21 @@ def build_positions_section(
                 )
     except Exception as e:  # noqa: BLE001
         logger.warning("Intraday enrichment failed: %s", e)
+
+    # Pass 2b: strategy attribution from virtual books (authoritative for the shared paper
+    # account — the trades table only covers the legacy swing model) + sector from Sharadar.
+    try:
+        smap = _book_strategy_map()
+        secmap = _sector_map()
+        for p in positions:
+            tk = p.get("ticker", "")
+            if (not p.get("strategy")) and tk in smap:
+                p["strategy"] = smap[tk]
+            sec = p.get("sector")
+            if (not sec or sec == "Unknown") and secmap.get(tk):
+                p["sector"] = secmap[tk]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("book/sector enrichment failed: %s", e)
 
     # Pass 3: Override stop_price with broker's authoritative open-order value
     try:

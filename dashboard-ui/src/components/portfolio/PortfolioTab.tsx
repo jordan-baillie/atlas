@@ -6,7 +6,7 @@ import { SectionBoundary } from '../layout/SectionBoundary'
 import { SummaryStrip } from './SummaryStrip'
 import { EquityChart } from './EquityChart'
 import { PerformanceSection } from './PerformanceSection'
-import { PositionsGrid } from './PositionsGrid'
+import { PositionsBook } from './PositionsBook'
 import { OrdersTable } from './OrdersTable'
 import { SystemHealth } from './SystemHealth'
 import { SectionLabel } from '../ui/kit'
@@ -130,7 +130,7 @@ export function PortfolioTab() {
       <div className="animate-in">
         <SectionBoundary title="Positions">
           {portfolio.data?.positions ? (
-            <PositionsGrid positions={portfolio.data.positions} />
+            <PositionsBook positions={portfolio.data.positions} />
           ) : (
             <Skeleton className="h-48" />
           )}
