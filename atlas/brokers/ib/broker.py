@@ -64,19 +64,61 @@ class IBBroker(BrokerAdapter):
         return float(self._spec(ticker)["multiplier"])
 
     def _contract(self, ticker: str):
-        """Build (and cache) a continuous-future contract for the front month."""
+        """Resolve (and cache per-session) the TRADABLE front-month contract.
+
+        IB rejects orders on continuous contracts (CONTFUT is data-only), so we use the
+        documented two-step: qualify a ContFuture to discover the front month's conId,
+        then qualify a concrete Contract(conId=...) — secType FUT — which IS orderable.
+        Cache is per-session (cleared on connect()) so a roll is picked up next session.
+        """
         if ticker in self._contracts:
             return self._contracts[ticker]
-        from ib_insync import ContFuture
+        from ib_insync import Contract, ContFuture
         s = self._spec(ticker)
         c = ContFuture(symbol=ticker.upper(), exchange=s["exchange"], currency=s["currency"])
         if self._ib:
             try:
                 (c,) = self._ib.qualifyContracts(c) or (c,)
+                conid = int(getattr(c, "conId", 0) or 0)
+                if conid:                      # step 2: CONTFUT conId -> concrete FUT
+                    fut = Contract(conId=conid, exchange=s["exchange"])
+                    (fut,) = self._ib.qualifyContracts(fut) or (fut,)
+                    if getattr(fut, "conId", 0):
+                        logger.info("resolved %s front month: %s (exp %s)", ticker,
+                                    getattr(fut, "localSymbol", "?"),
+                                    getattr(fut, "lastTradeDateOrContractMonth", "?"))
+                        c = fut
             except Exception as e:
                 logger.warning("qualifyContracts(%s) failed: %s", ticker, e)
         self._contracts[ticker] = c
         return c
+
+    def check_rolls(self) -> list[dict]:
+        """Positions held in a contract that is NO LONGER the front month (roll needed).
+
+        Returns [{ticker, held_local, held_conid, front_local, front_conid}]. A reducing
+        order placed via this adapter routes to the CURRENT front month — against a
+        stale holding that OPENS A CALENDAR SPREAD instead of closing. Callers (daily
+        loop / roll job) must flatten the held contract explicitly before re-targeting.
+        """
+        out: list[dict] = []
+        try:
+            for p in self._ib.positions():
+                sym = (getattr(p.contract, "symbol", "") or "").upper()
+                if sym not in MICRO_FUTURES or int(p.position) == 0:
+                    continue
+                front = self._contract(sym)
+                held_id = int(getattr(p.contract, "conId", 0) or 0)
+                front_id = int(getattr(front, "conId", 0) or 0)
+                if held_id and front_id and held_id != front_id:
+                    out.append({"ticker": sym,
+                                "held_local": getattr(p.contract, "localSymbol", ""),
+                                "held_conid": held_id,
+                                "front_local": getattr(front, "localSymbol", ""),
+                                "front_conid": front_id})
+        except Exception as e:
+            logger.warning("check_rolls failed: %s", e)
+        return out
 
     # ── lifecycle ──────────────────────────────────────────────
     def connect(self) -> bool:
@@ -91,6 +133,7 @@ class IBBroker(BrokerAdapter):
         try:
             self._ib.connect(self.host, self.port, clientId=self.client_id, timeout=15)
             self._connected = self._ib.isConnected()
+            self._contracts.clear()           # re-resolve front months each session (roll safety)
             logger.info("IB connected %s:%s (mode=%s)", self.host, self.port, self._mode)
             return self._connected
         except Exception as e:

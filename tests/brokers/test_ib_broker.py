@@ -88,3 +88,60 @@ def test_registry_returns_ib_broker():
     from atlas.brokers.registry import get_live_broker
     br = get_live_broker({"trading": {"broker": "ib", "mode": "paper"}, "market": "boreas"})
     assert br is not None and br.name == "ib"
+
+
+# ── front-month resolution + roll detection ──────────────────────
+
+
+class RollFakeIB(FakeIB):
+    """Fake that simulates IB's two-step resolution: ContFuture -> conId -> concrete FUT."""
+
+    def __init__(self, front=("MESU6", 620731015), **kw):
+        super().__init__(**kw)
+        self._front_local, self._front_conid = front
+
+    def qualifyContracts(self, c):
+        if type(c).__name__ == "ContFuture":
+            c.conId = self._front_conid          # CONTFUT resolves to front-month conId
+            return (c,)
+        if getattr(c, "conId", 0) == self._front_conid:
+            c.secType = "FUT"                    # concrete, orderable front month
+            c.symbol, c.localSymbol = "MES", self._front_local
+            c.lastTradeDateOrContractMonth = "20260918"
+            return (c,)
+        return (c,)
+
+
+def test_contract_resolves_concrete_front_month():
+    b = IBBroker({}, ib=RollFakeIB())
+    c = b._contract("MES")
+    assert getattr(c, "secType", "") == "FUT"          # orderable, not CONTFUT
+    assert getattr(c, "localSymbol", "") == "MESU6"
+    assert b._contract("MES") is c                      # cached within session
+
+
+def test_check_rolls_flags_stale_holding():
+    # held June contract (conId differs from current front month Sept)
+    held = NS(contract=NS(symbol="MES", conId=111, localSymbol="MESM6", currency="USD"),
+              position=2, avgCost=25000.0)
+    b = IBBroker({}, ib=RollFakeIB(positions=[held]))
+    rolls = b.check_rolls()
+    assert len(rolls) == 1
+    r = rolls[0]
+    assert r["ticker"] == "MES" and r["held_local"] == "MESM6" and r["front_local"] == "MESU6"
+
+
+def test_check_rolls_clean_when_holding_front_month():
+    held = NS(contract=NS(symbol="MES", conId=620731015, localSymbol="MESU6", currency="USD"),
+              position=2, avgCost=25000.0)
+    b = IBBroker({}, ib=RollFakeIB(positions=[held]))
+    assert b.check_rolls() == []
+
+
+def test_check_rolls_ignores_non_futures_and_flat():
+    held_flat = NS(contract=NS(symbol="MES", conId=111, localSymbol="MESM6", currency="USD"),
+                   position=0, avgCost=0.0)
+    equity = NS(contract=NS(symbol="AAPL", conId=999, localSymbol="AAPL", currency="USD"),
+                position=10, avgCost=150.0)
+    b = IBBroker({}, ib=RollFakeIB(positions=[held_flat, equity]))
+    assert b.check_rolls() == []

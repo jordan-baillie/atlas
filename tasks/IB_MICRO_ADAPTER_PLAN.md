@@ -69,6 +69,16 @@ and the BOREAS signal → `target.json` → executor path has never run with fut
    and avoids repeating the capital/tif deploy bugs of 2026-06-12 under deadline).
 9. Calendar roll policy: front-month rolls (MES quarterly, MCL monthly) — decide
    roll trigger (days-to-expiry) + who executes it (executor extension; pre-registered).
+   **Progress 2026-06-12 (built credential-free):** two latent roll bugs fixed in the
+   `ib` adapter — (a) orders were built on CONTFUT (continuous) contracts, which IB
+   REJECTS for orders (data-only); `_contract` now does the documented two-step
+   resolution (ContFuture → front-month conId → concrete orderable FUT); (b) the
+   contract cache lived for the broker's lifetime so a long-lived process would never
+   re-resolve after a roll — cache now cleared on connect(). Plus `check_rolls()`:
+   detects positions held in a no-longer-front-month contract (where a naive reducing
+   order would OPEN A CALENDAR SPREAD instead of closing) and returns the held/front
+   contract pair for an explicit flatten. 4 new tests (fake two-step client). Still
+   open: who calls check_rolls() daily + the pre-registered roll trigger.
 
 ### Timeline (working pace — no hard deadline after the Midas correction)
 - **by 06-20**: Phase A (account live, transport chosen, keepalive unit running)
