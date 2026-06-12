@@ -105,3 +105,73 @@ def test_registry_approve_and_state(tmp_path, monkeypatch):
 def test_boreas_provider_is_safe_noop():
     import atlas.execution.providers as p
     assert p.boreas_carry_trend("2026-06-09") == {}   # stub until 2026-08-28 + productionization
+
+
+# ── futures calendar rolls in the daily loop ─────────────────────
+
+
+class RollSimBroker(SimBroker):
+    """SimBroker with futures-style roll hooks (mimics IBBroker.check_rolls/roll_position)."""
+
+    def __init__(self, rolls=None, roll_result=None, **kw):
+        super().__init__(**kw)
+        self._rolls = rolls or []
+        self._roll_result = roll_result or {"closed": True, "reopened": True, "half_rolled": False}
+        self.rolled = []
+
+    def check_rolls(self):
+        return list(self._rolls)
+
+    def roll_position(self, roll):
+        self.rolled.append(roll)
+        return dict(self._roll_result, ticker=roll["ticker"], qty=roll["qty"])
+
+
+_ROLL = {"ticker": "MES", "qty": 1, "held_conid": 111, "held_local": "MESM6",
+         "front_conid": 222, "front_local": "MESU6"}
+
+
+def test_daily_rolls_before_rebalance(tmp_path, monkeypatch):
+    """A pending roll executes first; rebalance then proceeds normally."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path); _no_killswitch(monkeypatch)
+    register_provider("roll_a")(lambda asof: {"MES": 1.0})
+    s = DeployedStrategy(name="rolldemo", provider="roll_a", state="shadow", capital=10000)
+    b = RollSimBroker(rolls=[dict(_ROLL)], prices={"MES": 5000.0})
+    r = daily.run_strategy(s, "2026-06-12", mode="shadow", broker=b)
+    assert b.rolled == [dict(_ROLL)]                       # roll executed
+    assert r.error is None                                  # rebalance proceeded
+
+
+def test_daily_half_roll_aborts_rebalance(tmp_path, monkeypatch):
+    """closed-but-not-reopened = position mismatch -> abort, surface as error (criticals page)."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path); _no_killswitch(monkeypatch)
+    register_provider("roll_b")(lambda asof: {"MES": 1.0})
+    s = DeployedStrategy(name="halfroll", provider="roll_b", state="shadow", capital=10000)
+    b = RollSimBroker(rolls=[dict(_ROLL)],
+                      roll_result={"closed": True, "reopened": False, "half_rolled": True,
+                                   "error": "reopen failed after close: outage"},
+                      prices={"MES": 5000.0})
+    r = daily.run_strategy(s, "2026-06-12", mode="shadow", broker=b)
+    assert r.error and "HALF-ROLLED" in r.error
+    assert b.orders == []                                   # NO rebalance orders placed
+
+
+def test_daily_dry_mode_reports_rolls_without_trading(tmp_path, monkeypatch):
+    """canary/unapproved (dry) only reports the needed roll — no roll orders placed."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path); _no_killswitch(monkeypatch)
+    register_provider("roll_c")(lambda asof: {"MES": 1.0})
+    s = DeployedStrategy(name="dryroll", provider="roll_c", state="canary", capital=10000, approved=False)
+    b = RollSimBroker(rolls=[dict(_ROLL)], prices={"MES": 5000.0})
+    r = daily.run_strategy(s, "2026-06-12", mode="shadow", broker=b)
+    assert b.rolled == []                                   # reported, not executed
+    assert r.error is None and r.dry_run
+
+
+def test_daily_equity_broker_unaffected(tmp_path, monkeypatch):
+    """Brokers without check_rolls (equities/alpaca) skip the roll path entirely."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path); _no_killswitch(monkeypatch)
+    register_provider("roll_d")(lambda asof: {"AAA": 1.0})
+    s = DeployedStrategy(name="equitydemo", provider="roll_d", state="shadow", capital=10000)
+    b = SimBroker(prices={"AAA": 100.0})
+    r = daily.run_strategy(s, "2026-06-12", mode="shadow", broker=b)
+    assert r.error is None and r.n_orders == 1

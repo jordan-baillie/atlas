@@ -106,6 +106,38 @@ def _record_run(s: DeployedStrategy, asof: str, report, track) -> None:
         fh.write(json.dumps(rec) + "\n")
 
 
+def _handle_rolls(s: DeployedStrategy, broker, dry: bool) -> Optional[str]:
+    """Futures calendar rolls, BEFORE the rebalance (pre-registered policy 2026-06-12,
+    atlas tasks/IB_MICRO_ADAPTER_PLAN.md): trigger = IB's CONTFUT front-month switch
+    (check_rolls), execution = paired close+reopen market orders, half-roll = STOP and
+    page — never blind-retry. No-op for brokers without check_rolls (equities).
+
+    Returns an error string if the book is half-rolled (callers must abort the
+    rebalance: TargetExecutor diffs by symbol and would double-trade a half-rolled book).
+    """
+    if not hasattr(broker, "check_rolls"):
+        return None
+    try:
+        rolls = broker.check_rolls()
+    except Exception as e:
+        logger.warning("check_rolls failed for %s: %s", s.name, e)
+        return None
+    if not rolls:
+        return None
+    if dry:
+        logger.info("%s: %d roll(s) needed (dry run — reporting only): %s", s.name, len(rolls),
+                    [f"{r['held_local']}->{r['front_local']}" for r in rolls])
+        return None
+    for r in rolls:
+        res = broker.roll_position(r)
+        if res.get("half_rolled"):
+            return (f"HALF-ROLLED {res['ticker']} {res.get('qty', 0):+d} "
+                    f"({r.get('held_local', '?')} closed, reopen failed): {res.get('error', '')}")
+        if not res.get("reopened"):
+            logger.warning("%s: roll skipped for %s: %s", s.name, res.get("ticker"), res.get("error"))
+    return None
+
+
 def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=None) -> StrategyRunResult:
     try:
         broker = broker or _build_broker(s)
@@ -117,6 +149,10 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
         # shadow = Paper Book: place REAL paper orders on live data (the forward-paper gate).
         # canary/live = real capital: held (dry) unless human-approved AND invoked in live mode.
         dry = s.state in ("canary", "live") and (not s.approved or mode != "live")
+        # futures calendar rolls FIRST — a half-rolled book aborts the rebalance (critical)
+        roll_err = _handle_rolls(s, broker, dry)
+        if roll_err:
+            return StrategyRunResult(s.name, s.state, s.broker, error=roll_err)
         # VIRTUAL SUB-BOOK (shadow only): N strategies share one paper account, so each diffs against
         # its OWN book — never the account's blended positions (live/virtual_book.py). Canary/live
         # strategies run on dedicated real accounts and keep diffing against true account positions.

@@ -77,8 +77,24 @@ and the BOREAS signal → `target.json` → executor path has never run with fut
    re-resolve after a roll — cache now cleared on connect(). Plus `check_rolls()`:
    detects positions held in a no-longer-front-month contract (where a naive reducing
    order would OPEN A CALENDAR SPREAD instead of closing) and returns the held/front
-   contract pair for an explicit flatten. 4 new tests (fake two-step client). Still
-   open: who calls check_rolls() daily + the pre-registered roll trigger.
+   contract pair for an explicit flatten. 4 new tests (fake two-step client).
+
+   **ROLL POLICY (pre-registered 2026-06-12, before implementation):**
+   - *Trigger*: IB's own continuous-contract (CONTFUT) front-month switch — i.e. the
+     session where `check_rolls()` first reports a held contract ≠ current front month.
+     No bespoke days-to-expiry parameter (nothing to tune, nothing to overfit); IB
+     switches on the volume roll ~1 week before expiry, which is the industry-standard
+     roll window for index micros.
+   - *Execution*: paired MARKET orders, same session, before the strategy rebalance:
+     close the stale contract, reopen the SAME signed qty in the new front month.
+     Pairing (not flatten-only) keeps the shadow virtual sub-book — which tracks by
+     symbol, not contract month — consistent with the account.
+   - *Failure mode*: if the close fills but the reopen fails (or vice versa), do NOT
+     retry blindly — record, set the strategy run error, Telegram critical, human
+     resolves. A half-rolled book is a position mismatch, not a code path.
+   - *Scope*: runs in any non-dry mode (shadow paper included); dry runs only report.
+   - Market orders are acceptable here: micro index spreads are 1 tick, the roll is
+     small-qty, and roll cost is part of the strategy's modeled cost (tsmom cost_bps).
 
 ### Timeline (working pace — no hard deadline after the Midas correction)
 - **by 06-20**: Phase A (account live, transport chosen, keepalive unit running)

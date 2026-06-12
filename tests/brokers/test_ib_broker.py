@@ -145,3 +145,56 @@ def test_check_rolls_ignores_non_futures_and_flat():
                 position=10, avgCost=150.0)
     b = IBBroker({}, ib=RollFakeIB(positions=[held_flat, equity]))
     assert b.check_rolls() == []
+
+
+class RollExecFakeIB(RollFakeIB):
+    """Roll-execution fake: scriptable per-order statuses keyed by orderRef."""
+
+    def __init__(self, statuses=None, **kw):
+        super().__init__(**kw)
+        self.statuses = statuses or {}      # orderRef -> ib status string
+
+    def placeOrder(self, contract, order):
+        self.placed.append((contract, order))
+        st = self.statuses.get(getattr(order, "orderRef", ""), "Submitted")
+        if st == "RAISE":
+            raise RuntimeError("simulated outage")
+        return NS(order=NS(orderId=len(self.placed)), contract=contract,
+                  orderStatus=NS(status=st, filled=0, avgFillPrice=0.0))
+
+
+_ROLL = {"ticker": "MES", "qty": 2, "held_conid": 111, "held_local": "MESM6",
+         "front_conid": 620731015, "front_local": "MESU6"}
+
+
+def test_roll_position_paired_close_reopen():
+    fake = RollExecFakeIB()
+    res = IBBroker({}, ib=fake).roll_position(dict(_ROLL))
+    assert res["closed"] and res["reopened"] and not res["half_rolled"]
+    (c1, o1), (c2, o2) = fake.placed
+    assert o1.orderRef == "roll_close" and o1.action == "SELL" and o1.totalQuantity == 2
+    assert getattr(c1, "conId", 0) == 111                      # close routes to the HELD contract
+    assert o2.orderRef == "roll_reopen" and o2.action == "BUY" and o2.totalQuantity == 2
+    assert getattr(c2, "conId", 0) == 620731015                # reopen routes to the FRONT month
+
+
+def test_roll_position_short_reverses_sides():
+    fake = RollExecFakeIB()
+    res = IBBroker({}, ib=fake).roll_position(dict(_ROLL, qty=-3))
+    assert res["reopened"]
+    (_, o1), (_, o2) = fake.placed
+    assert o1.action == "BUY" and o2.action == "SELL" and o1.totalQuantity == 3
+
+
+def test_roll_position_close_rejected_stops():
+    fake = RollExecFakeIB(statuses={"roll_close": "Inactive"})
+    res = IBBroker({}, ib=fake).roll_position(dict(_ROLL))
+    assert not res["closed"] and not res["half_rolled"] and "rejected" in res["error"]
+    assert len(fake.placed) == 1                                # reopen never attempted
+
+
+def test_roll_position_half_roll_flagged():
+    fake = RollExecFakeIB(statuses={"roll_reopen": "RAISE"})
+    res = IBBroker({}, ib=fake).roll_position(dict(_ROLL))
+    assert res["closed"] and res["half_rolled"] and not res["reopened"]
+    assert "reopen failed" in res["error"]

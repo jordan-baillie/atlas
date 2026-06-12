@@ -111,13 +111,61 @@ class IBBroker(BrokerAdapter):
                 held_id = int(getattr(p.contract, "conId", 0) or 0)
                 front_id = int(getattr(front, "conId", 0) or 0)
                 if held_id and front_id and held_id != front_id:
-                    out.append({"ticker": sym,
+                    out.append({"ticker": sym, "qty": int(p.position),
                                 "held_local": getattr(p.contract, "localSymbol", ""),
                                 "held_conid": held_id,
                                 "front_local": getattr(front, "localSymbol", ""),
                                 "front_conid": front_id})
         except Exception as e:
             logger.warning("check_rolls failed: %s", e)
+        return out
+
+    def roll_position(self, roll: dict) -> dict:
+        """Execute ONE paired calendar roll (pre-registered policy, IB_MICRO_ADAPTER_PLAN):
+        flatten the stale held contract, then reopen the SAME signed qty in the front month.
+
+        Sequential, fail-stop: if the close fails the reopen is not attempted; if the close
+        fills but the reopen fails the result is flagged ``half_rolled`` — callers must
+        surface that as a critical error for HUMAN resolution (never blind-retry).
+        """
+        from ib_insync import Contract, MarketOrder
+        qty = int(roll.get("qty", 0))
+        out = {"ticker": roll.get("ticker", ""), "qty": qty, "closed": False,
+               "reopened": False, "half_rolled": False, "error": ""}
+        if qty == 0:
+            out["error"] = "qty=0"
+            return out
+        try:
+            spec = self._spec(out["ticker"])
+            held = Contract(conId=int(roll["held_conid"]), exchange=spec["exchange"])
+            (held,) = self._ib.qualifyContracts(held) or (held,)
+            close = MarketOrder("SELL" if qty > 0 else "BUY", abs(qty))
+            close.orderRef = "roll_close"
+            t1 = self._ib.placeOrder(held, close)
+            st1 = (getattr(getattr(t1, "orderStatus", None), "status", "") or "").lower()
+            if st1 in ("cancelled", "inactive", "apicancelled"):
+                out["error"] = f"close rejected: {st1}"
+                return out
+            out["closed"] = True
+        except Exception as e:
+            out["error"] = f"close failed: {e}"
+            return out
+        try:
+            front = self._contract(out["ticker"])
+            reopen = MarketOrder("BUY" if qty > 0 else "SELL", abs(qty))
+            reopen.orderRef = "roll_reopen"
+            t2 = self._ib.placeOrder(front, reopen)
+            st2 = (getattr(getattr(t2, "orderStatus", None), "status", "") or "").lower()
+            if st2 in ("cancelled", "inactive", "apicancelled"):
+                raise RuntimeError(f"reopen rejected: {st2}")
+            out["reopened"] = True
+            logger.info("rolled %s %+d: %s -> %s", out["ticker"], qty,
+                        roll.get("held_local", "?"), roll.get("front_local", "?"))
+        except Exception as e:
+            out["half_rolled"] = True          # closed but NOT reopened — human must resolve
+            out["error"] = f"reopen failed after close: {e}"
+            logger.error("HALF-ROLLED %s %+d (%s): %s", out["ticker"], qty,
+                         roll.get("held_local", "?"), out["error"])
         return out
 
     # ── lifecycle ──────────────────────────────────────────────
