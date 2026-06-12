@@ -5,6 +5,7 @@
  * time), the six-station forge line with per-stage stats, then a list of recent
  * runs that each expand to a full per-run summary (hypothesis + data + verdict).
  */
+import { lazy, Suspense, useState } from 'react'
 import { useForgeState } from '../../api/forge-queries'
 import { fmtRelativeTime } from '../../lib/format'
 import { Skeleton } from '../layout/Skeleton'
@@ -14,6 +15,9 @@ import { C, Card } from './shared'
 import { ForgeLine } from './ForgeLine'
 import { RunCard } from './RunCard'
 import type { ForgeStatus } from '../../api/forge-types'
+
+// The map is a separate heavy-ish view — lazy-load it so the Monitor stays instant.
+const ResearchMap = lazy(() => import('./ResearchMap').then((m) => ({ default: m.ResearchMap })))
 
 function Chip({ label, value, color }: { label: string; value: React.ReactNode; color?: string }) {
   return (
@@ -30,8 +34,24 @@ function scheduleText(status: ForgeStatus): string {
   return 'nightly 03:30'
 }
 
+function SubViewSwitch({ view, setView }: { view: 'monitor' | 'map'; setView: (v: 'monitor' | 'map') => void }) {
+  return (
+    <div className="inline-flex rounded-lg border border-[var(--color-border)] overflow-hidden text-[11px] font-bold tracking-wide">
+      {(['monitor', 'map'] as const).map((v) => (
+        <button key={v} onClick={() => setView(v)}
+          className={`px-3 py-1.5 transition-colors ${view === v
+            ? 'bg-[var(--color-surface-alt)] text-[var(--color-text)]'
+            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+          {v === 'monitor' ? '\u{1F525} Monitor' : '\u{1F5FA}\u{FE0F} Map'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function ForgeTab() {
   const q = useForgeState()
+  const [view, setView] = useState<'monitor' | 'map'>('monitor')
 
   // Celebrations — hooks must run unconditionally (before any early return)
   const latest0 = q.data?.cycles?.[0]
@@ -55,6 +75,17 @@ export function ForgeTab() {
   const { status, summary, pipeline, cycles } = q.data
   const running = status.running          // loop enabled (not halted)
   const cycleActive = status.cycle_active === true  // executing right now
+
+  if (view === 'map') {
+    return (
+      <div className="space-y-4" data-section="forge">
+        <div className="flex justify-end"><SubViewSwitch view={view} setView={setView} /></div>
+        <Suspense fallback={<Skeleton className="h-96" />}>
+          <ResearchMap />
+        </Suspense>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4" data-section="forge">
@@ -119,7 +150,10 @@ export function ForgeTab() {
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <div className="text-[11px] uppercase tracking-widest text-[var(--color-text-muted)]">Recent runs — click to expand</div>
-          <div className="text-[11px] text-[var(--color-text-muted)]">{cycles.length} shown</div>
+          <div className="flex items-center gap-3">
+            <div className="text-[11px] text-[var(--color-text-muted)]">{cycles.length} shown</div>
+            <SubViewSwitch view={view} setView={setView} />
+          </div>
         </div>
         {cycles.length === 0 ? (
           <Card className="p-6 text-center text-sm text-[var(--color-text-muted)]">No runs yet — the forge fires tonight.</Card>

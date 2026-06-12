@@ -10,5 +10,6 @@ export const qk = {
   forge: {
     all: () => [...qk.all, 'forge'] as const,
     state: () => [...qk.forge.all(), 'state'] as const,
+    map: () => [...qk.forge.all(), 'map'] as const,
   },
 } as const
