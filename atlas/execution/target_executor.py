@@ -21,6 +21,15 @@ from atlas.brokers.base import BrokerAdapter, OrderResult, OrderSide, OrderType
 
 logger = logging.getLogger("atlas.target_executor")
 
+# HTB fallback (task #19): Alpaca rejects non-DAY orders on hard-to-borrow names (code 42210000
+# "only day orders are allowed for hard-to-borrow asset"). OPG market is therefore unavailable for
+# HTB shorts; a plain DAY MARKET would reintroduce the spread-crossing slippage OPG exists to avoid
+# (the 2026-06-11 +145bps finding). Fallback: ONE retry as a DAY LIMIT banded off the reference price
+# — caps the give-up at the band; an unfilled limit just means the position waits for the next
+# rebalance (hysteresis retries). Band is a frozen constant, not a tunable.
+HTB_LIMIT_BAND_BPS = 30.0
+_HTB_MARKERS = ("42210000", "hard-to-borrow")
+
 
 @dataclass
 class ContractSpec:
@@ -132,6 +141,37 @@ class TargetExecutor:
                                       int(qty), float(px), float(target_weights.get(sym, 0.0)), int(delta)))
         return target_qty, orders
 
+    def _htb_fallback(self, o: "TargetOrder", res: "OrderResult") -> "OrderResult":
+        """On an HTB rejection (Alpaca 42210000), retry ONCE as a DAY LIMIT banded off ref_price.
+
+        SELL (short/exit-long): limit = ref * (1 - band) — accept at most `band` below reference.
+        BUY  (cover/enter):     limit = ref * (1 + band) — pay at most `band` above reference.
+        Unfilled limit = position waits for the next rebalance. Returns the retry result (marked
+        via raw['fallback']='htb_day_limit') or the original failure if the retry also fails.
+        """
+        if getattr(res, "success", False):
+            return res
+        msg = (getattr(res, "message", "") or "").lower()
+        if not any(m in msg for m in _HTB_MARKERS):
+            return res
+        band = HTB_LIMIT_BAND_BPS / 1e4
+        sign = -1.0 if o.side == OrderSide.SELL else 1.0
+        limit_px = round(o.ref_price * (1.0 + sign * band), 2)
+        logger.info("HTB fallback: %s %s qty=%d → DAY LIMIT @ %.2f (ref %.4f, band %.0fbps)",
+                    o.ticker, o.side.value, o.qty, limit_px, o.ref_price, HTB_LIMIT_BAND_BPS)
+        try:
+            retry = self.broker.place_order(ticker=o.ticker, side=o.side, qty=o.qty, price=limit_px,
+                                            order_type=OrderType.LIMIT, remark="htb_fallbk", tif="day")
+        except Exception as e:
+            retry = OrderResult(success=False, ticker=o.ticker, side=o.side, message=str(e))
+        if not getattr(retry, "message", ""):
+            retry.message = ""
+        retry.raw = dict(getattr(retry, "raw", None) or {})
+        retry.raw["fallback"] = "htb_day_limit"
+        if not retry.success and msg not in (retry.message or "").lower():
+            retry.message = f"htb_fallback also failed: {retry.message} (orig: {res.message})"[:300]
+        return retry
+
     def rebalance(self, target_weights: dict, *, prices: Optional[dict] = None,
                   deployable_equity: Optional[float] = None, dry_run: bool = True,
                   check_kill_switch: bool = True, current_qty: Optional[dict] = None) -> RebalanceReport:
@@ -178,6 +218,7 @@ class TargetExecutor:
                                               **tif_kw)
             except Exception as e:
                 res = OrderResult(success=False, ticker=o.ticker, side=o.side, message=str(e))
+            res = self._htb_fallback(o, res)
             report.results.append(res)
         logger.info("rebalance executed: %d/%d orders filled, turnover $%.0f",
                     len(report.executed), len(orders), turnover)

@@ -87,9 +87,17 @@ def _record_run(s: DeployedStrategy, asof: str, report, track) -> None:
     res = {(getattr(r, "ticker", None), getattr(r, "side", None)): r for r in report.results}
     def _o(o):
         r = res.get((o.ticker, o.side))
-        return {"ticker": o.ticker, "side": o.side.value, "qty": o.qty, "px": o.ref_price,
-                "order_id": (getattr(r, "order_id", "") or "") if r else "",
-                "ok": bool(getattr(r, "success", False)) if r else None}
+        row = {"ticker": o.ticker, "side": o.side.value, "qty": o.qty, "px": o.ref_price,
+               "order_id": (getattr(r, "order_id", "") or "") if r else "",
+               "ok": bool(getattr(r, "success", False)) if r else None}
+        # persist the broker rejection reason (task #19): without it G7 is a bare count that
+        # can't distinguish operator bugs from market frictions (HTB/halt/wash-trade/inactive)
+        if r is not None and not getattr(r, "success", False) and getattr(r, "message", None):
+            row["err"] = str(r.message)[:160]
+        fb = (getattr(r, "raw", None) or {}).get("fallback") if r is not None else None
+        if fb:
+            row["fallback"] = fb
+        return row
     rec = {"date": asof, "state": s.state, "dry_run": report.dry_run, "n_orders": report.n_orders,
            "turnover": round(report.turnover_notional, 2), "blocked": report.blocked,
            "track": (track.status if track else None),

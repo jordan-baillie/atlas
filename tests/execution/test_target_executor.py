@@ -110,3 +110,72 @@ def test_long_short_book_nets_correctly():
     b = SimBroker(equity=10000, prices={"AAA": 100.0, "BBB": 100.0})
     rep = TargetExecutor(b).rebalance({"AAA": 0.5, "BBB": -0.5}, dry_run=False, check_kill_switch=False)
     assert b._pos["AAA"] == 50 and b._pos["BBB"] == -50 and rep.turnover_notional == pytest.approx(10000.0)
+
+
+class HTBBroker(SimBroker):
+    """Rejects non-DAY orders on HTB names with the real Alpaca error; accepts DAY LIMIT retries."""
+
+    HTB = {"WEN"}
+
+    def place_order(self, ticker, side, qty, price, order_type=OrderType.MARKET,
+                    stop_price=None, remark="", **kwargs):
+        tif = kwargs.get("tif", "")
+        if ticker in self.HTB and (tif or "").lower() != "day":
+            return OrderResult(success=False, ticker=ticker, side=side, status=OrderStatus.FAILED,
+                               message='{"code":42210000,"message":"only day orders are allowed '
+                                       'for hard-to-borrow asset \\"%s\\""}' % ticker)
+        self.orders.append((ticker, side, qty, price, order_type, tif, remark))
+        self._pos[ticker] = self._pos.get(ticker, 0) + (qty if side == OrderSide.BUY else -qty)
+        return OrderResult(success=True, ticker=ticker, side=side, status=OrderStatus.FILLED,
+                           requested_qty=qty, filled_qty=qty, fill_price=price)
+
+
+def test_htb_fallback_retries_as_banded_day_limit():
+    """HTB rejection on an OPG short -> ONE retry as DAY LIMIT at ref*(1-30bps), marked in raw."""
+    b = HTBBroker(equity=10000, prices={"WEN": 10.0, "AAA": 100.0})
+    ex = TargetExecutor(b, tif="opg")
+    rep = ex.rebalance({"WEN": -0.5, "AAA": 0.5}, dry_run=False, check_kill_switch=False)
+    assert len(rep.executed) == 2                      # both succeeded (WEN via fallback)
+    wen = next(r for r in rep.results if r.ticker == "WEN")
+    assert wen.success and wen.raw.get("fallback") == "htb_day_limit"
+    t, side, qty, px, otype, tif, remark = next(o for o in b.orders if o[0] == "WEN")
+    assert otype == OrderType.LIMIT and tif == "day" and remark == "htb_fallbk"
+    assert px == pytest.approx(10.0 * (1 - 0.0030))    # SELL: band BELOW reference
+    aaa = next(r for r in rep.results if r.ticker == "AAA")
+    assert "fallback" not in (aaa.raw or {})           # non-HTB path untouched
+
+
+def test_htb_fallback_buy_bands_above_and_double_failure_keeps_context():
+    """BUY-to-cover bands ABOVE ref; if the DAY LIMIT retry ALSO fails, both errors survive."""
+    class DoubleFail(HTBBroker):
+        def place_order(self, ticker, side, qty, price, order_type=OrderType.MARKET,
+                        stop_price=None, remark="", **kwargs):
+            if ticker in self.HTB and (kwargs.get("tif") or "").lower() == "day":
+                self.orders.append((ticker, side, qty, price, order_type, kwargs.get("tif"), remark))
+                return OrderResult(success=False, ticker=ticker, side=side,
+                                   status=OrderStatus.FAILED, message="halted")
+            return super().place_order(ticker, side, qty, price, order_type, stop_price, remark, **kwargs)
+
+    b = DoubleFail(equity=10000, prices={"WEN": 10.0}, positions={"WEN": -100})
+    rep = TargetExecutor(b, tif="opg").rebalance({}, dry_run=False, check_kill_switch=False)
+    wen = next(r for r in rep.results if r.ticker == "WEN")   # cover BUY of the held short
+    assert not wen.success and wen.raw.get("fallback") == "htb_day_limit"
+    assert "halted" in wen.message and "42210000" in wen.message   # retry error keeps orig context
+    retry = next(o for o in b.orders if o[5] == "day")
+    assert retry[3] == pytest.approx(10.0 * (1 + 0.0030))     # BUY: band ABOVE reference
+
+
+def test_non_htb_failure_not_retried():
+    """A generic failure (e.g. buying power) must NOT trigger the HTB fallback."""
+    class BPFail(SimBroker):
+        def place_order(self, ticker, side, qty, price, order_type=OrderType.MARKET,
+                        stop_price=None, remark="", **kwargs):
+            self.orders.append((ticker, side, qty, price))
+            return OrderResult(success=False, ticker=ticker, side=side,
+                               status=OrderStatus.FAILED, message="insufficient buying power")
+
+    b = BPFail(equity=10000, prices={"AAA": 100.0})
+    rep = TargetExecutor(b).rebalance({"AAA": 0.5}, dry_run=False, check_kill_switch=False)
+    assert len(b.orders) == 1                                  # no retry
+    assert not rep.results[0].success
+    assert "fallback" not in (rep.results[0].raw or {})

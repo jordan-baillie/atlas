@@ -91,6 +91,29 @@ def slippage_gate(fills: list, *, bar_bps: float = SLIPPAGE_BAR_BPS,
     return out
 
 
+def _classify_broker_error(err: str) -> str:
+    """Coarse class for a broker rejection (err = lowercased order-row 'err' field).
+
+    Classes are evidence categories, not excuses — everything except wash-trade collisions
+    stays IN the G7 rate; the class breakdown just makes the rate diagnosable.
+    """
+    if not err:
+        return "unknown"
+    if "42210000" in err or "hard-to-borrow" in err:
+        return "htb"
+    if "halt" in err:
+        return "halt"
+    if "not active" in err or "not tradable" in err or "not found" in err:
+        return "inactive_asset"
+    if "buying power" in err or "insufficient" in err:
+        return "buying_power"
+    if "opg orders must be submitted" in err or "extended hours" in err:
+        return "order_window"
+    if "pdt" in err or "day trade" in err or "daytrade" in err:
+        return "pdt"
+    return "other"
+
+
 def broker_error_gate(runs: list, *, bar_pct: float = BROKER_ERROR_BAR_PCT,
                       lookback_days: int = LOOKBACK_DAYS, today: Optional[date] = None) -> dict:
     """G7 — broker rejection rate over real (non-dry, non-blocked) orders in the window.
@@ -98,8 +121,8 @@ def broker_error_gate(runs: list, *, bar_pct: float = BROKER_ERROR_BAR_PCT,
     An error is an order row with ok == False. ok == None means the broker-result
     join never happened (counted separately as n_unmatched, out of the denominator).
     """
-    out = {"n_orders": 0, "n_errors": 0, "n_unmatched": 0,
-           "error_rate_pct": None, "bar_pct": bar_pct, "pass": None}
+    out = {"n_orders": 0, "n_errors": 0, "n_unmatched": 0, "n_excluded_wash": 0,
+           "error_rate_pct": None, "bar_pct": bar_pct, "pass": None, "error_classes": {}}
     try:
         cut = _cutoff(lookback_days, today)
         for run in runs:
@@ -112,9 +135,19 @@ def broker_error_gate(runs: list, *, bar_pct: float = BROKER_ERROR_BAR_PCT,
                 if ok is None:
                     out["n_unmatched"] += 1
                     continue
+                err = (o.get("err") or "").lower()
+                # Wash-trade collisions are an artifact of N strategies sharing ONE paper
+                # execution account (opposite-side open order from a sibling strategy) —
+                # impossible on the dedicated accounts canary/live use, hence NOT
+                # deployability evidence. Excluded from numerator AND denominator.
+                if ok is False and "wash trade" in err:
+                    out["n_excluded_wash"] += 1
+                    continue
                 out["n_orders"] += 1
                 if ok is False:
                     out["n_errors"] += 1
+                    cls = _classify_broker_error(err)
+                    out["error_classes"][cls] = out["error_classes"].get(cls, 0) + 1
         if out["n_orders"] > 0:
             rate = out["n_errors"] / out["n_orders"] * 100.0
             out["error_rate_pct"] = round(rate, 3)

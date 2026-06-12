@@ -225,3 +225,41 @@ class TestRollup:
         assert r["pass"] is False
         assert r["failing"] == ["b"]
         assert r["n_pass"] == 1 and r["n_fail"] == 1
+
+
+class TestBrokerErrorClassification:
+    """Task #19: wash-trade exclusion + error-class breakdown from the persisted err field."""
+
+    def test_wash_trade_excluded_from_rate(self):
+        # 1 wash collision + 99 clean: rate must be 0%, collision counted separately
+        orders = [{"ok": True}] * 99 + [{"ok": False, "err": "potential wash trade detected"}]
+        g = gates.broker_error_gate([_run("2026-06-11", orders)], today=TODAY)
+        assert g["n_orders"] == 99
+        assert g["n_errors"] == 0
+        assert g["n_excluded_wash"] == 1
+        assert g["pass"] is True
+
+    def test_htb_and_halt_remain_in_rate_with_classes(self):
+        orders = [{"ok": True}] * 96 + [
+            {"ok": False, "err": 'only day orders are allowed for hard-to-borrow asset "WEN"'},
+            {"ok": False, "err": "market order rejected due to trading halt on symbol: KALV"},
+            {"ok": False, "err": "asset SLNO is not active"},
+            {"ok": False},  # no err recorded (legacy row)
+        ]
+        g = gates.broker_error_gate([_run("2026-06-11", orders)], today=TODAY)
+        assert g["n_orders"] == 100
+        assert g["n_errors"] == 4
+        assert g["pass"] is False  # 4% > 1% bar — real frictions stay in
+        assert g["error_classes"] == {"htb": 1, "halt": 1, "inactive_asset": 1, "unknown": 1}
+
+    def test_classifier_buckets(self):
+        cases = {
+            "42210000 whatever": "htb",
+            "insufficient buying power": "buying_power",
+            "opg orders must be submitted after 7:00pm": "order_window",
+            "pdt_preempt: daytrade limit": "pdt",
+            "something novel": "other",
+            "": "unknown",
+        }
+        for err, want in cases.items():
+            assert gates._classify_broker_error(err) == want, err
