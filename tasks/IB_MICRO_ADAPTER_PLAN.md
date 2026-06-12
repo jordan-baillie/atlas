@@ -34,11 +34,18 @@ and the BOREAS signal → `target.json` → executor path has never run with fut
 ### Phase A — account + transport decision (human-in-loop, START EARLY: lead times)
 1. **Open/verify IB paper account** (human: needs IBKR login; paper account is free).
    This is the long-pole item — IB account approval can take days; do first.
-2. **Transport decision**: prefer `ib_web` (headless REST — right for the VPS; no GUI
-   gateway babysitting). The CP-Gateway needs a session-keepalive tickle
-   (`/tickle` every ~60s) and re-auth roughly daily — needs a systemd unit + alert
-   on auth-expiry. Fallback: `ib` adapter + IB Gateway in headless docker (ib-gateway
-   images exist) if the Web API's session model proves too brittle for unattended ops.
+2. **Transport decision (RESOLVED 2026-06-12 via deep research)**: primary = `ib`
+   adapter (ib_insync) against **dockerized IB Gateway + IBC** (`gnzsnz/ib-gateway-docker`,
+   `TRADING_MODE=paper`) — the field-proven unattended stack. Paper credentials bypass
+   IB-Key 2FA entirely; IBC absorbs the daily auto-restart and ~weekly full re-login.
+   Hardening: PIN a known-good Gateway+IBC version pair (auto-restart regressions are
+   version-pair specific, e.g. IBC 3.21.0 + GW 10.34.1c); ensure the paper account holds
+   simulated funds (unfunded paper accounts break the restart token — IbcAlpha/IBC#345);
+   docker restart policy + health checks against silent Gateway exits.
+   Fallback = `ib_web` + CP-Gateway/IBeam (REST; flappier session model — tickle keepalive
+   + frequent re-auth). Check during signup: IBKR first-party retail OAuth Web API — if
+   paper accounts are supported it removes the gateway process entirely (paper parity
+   UNVERIFIED as of 2026-06; don't bet on it).
 3. Secrets: add `ib` block to `~/.atlas-secrets.json` (account id, bearer/credentials),
    following the existing alpaca pattern.
 
