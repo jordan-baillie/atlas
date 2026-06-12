@@ -4,7 +4,8 @@
     "provider": "val_mom_trend_smallcap",
     "state": "shadow",
     "broker": "alpaca",
-    "capital": 14500.0,
+    "lifecycle": "shadow",
+    "capital": 5000.0,
     "approved": false,
     "specs": {},
     "expectation": {
@@ -19,6 +20,7 @@
     "provider": "amihud_illiq_tranched_v3",
     "state": "shadow",
     "broker": "alpaca",
+    "lifecycle": "shadow",
     "capital": 12000.0,
     "approved": false,
     "specs": {},

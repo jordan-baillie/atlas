@@ -9,5 +9,7 @@ cd /root/atlas    && python3 -m atlas.db.refresh_benchmark           >> "$LOG" 2
 cd /root/atlas    && python3 -m atlas.execution.record_returns      >> "$LOG" 2>&1 || echo "record_returns FAILED" >> "$LOG"
 cd /root/atlas    && python3 -m atlas.execution.record_fills        >> "$LOG" 2>&1 || echo "record_fills FAILED" >> "$LOG"
 cd /root/crucible && python3 live/deploy.py refresh                 >> "$LOG" 2>&1 || echo "weight refresh FAILED" >> "$LOG"
+# #34 soak: shadow-compare crucible's file artifacts vs the registry (no writes; Telegram on divergence)
+cd /root/atlas    && python3 -m atlas.execution.intake              >> "$LOG" 2>&1 || echo "intake soak DIVERGED" >> "$LOG"
 cd /root/atlas    && python3 -m atlas.execution.daily --mode shadow >> "$LOG" 2>&1 || echo "daily shadow FAILED" >> "$LOG"
 echo "=== done $(date -Is) ===" >> "$LOG"
