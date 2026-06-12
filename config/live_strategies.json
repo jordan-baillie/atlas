@@ -13,5 +13,20 @@
       "sharpe": 0.622
     },
     "tif": "opg"
+  },
+  {
+    "name": "amihud_illiq_tranched_v3",
+    "provider": "amihud_illiq_tranched_v3",
+    "state": "shadow",
+    "broker": "alpaca",
+    "capital": 12000.0,
+    "approved": false,
+    "specs": {},
+    "expectation": {
+      "daily_mean": 0.00162193,
+      "daily_std": 0.01761093,
+      "sharpe": 1.462
+    },
+    "tif": "opg"
   }
 ]

@@ -81,3 +81,6 @@ Thumbs.db
 research/discovery/papers/*.pdf
 research/discovery/archived/**/papers/*.pdf
 ops/ib-gateway/.env
+
+# Databento purchased raw pulls (53MB parquets — archived locally, re-pullable via script)
+data/databento/*.parquet
