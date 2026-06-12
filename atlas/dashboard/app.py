@@ -152,6 +152,7 @@ from atlas.dashboard.api.dashboard import router as _dashboard_router  # noqa: E
 from atlas.dashboard.chat.sessions import router as _chat_sessions_router  # noqa: E402
 from atlas.dashboard.chat.ws import router as _ws_chat_router  # noqa: E402
 from atlas.dashboard.api.forge import router as _forge_router  # noqa: E402
+from atlas.dashboard.api.wiki_map import router as _wiki_map_router  # noqa: E402
 from atlas.dashboard.api.live import router as _live_router  # noqa: E402
 from atlas.dashboard.api.static_serve import router as _static_serve_router  # noqa: E402
 
@@ -172,6 +173,7 @@ app.include_router(_ws_chat_router)
 # Future routers MUST be mounted here via app.include_router() and live under
 # services/api/ (or services/ws/ for WebSocket routers).
 app.include_router(_forge_router)
+app.include_router(_wiki_map_router)
 app.include_router(_live_router)
 # IMPORTANT: static_serve router must be LAST — contains /{path:path} catch-all
 app.include_router(_static_serve_router)
