@@ -31,20 +31,24 @@ fi
 find "$PROJECT" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
 echo "  Purged __pycache__ dirs"
 
-# ── Remove any root-level cache parquets (should be in subdirs only) ──
-ROOT_DUPES=$(find "$CACHE_DIR" -maxdepth 1 -name "*.parquet" 2>/dev/null | wc -l)
-if [ "$ROOT_DUPES" -gt 0 ]; then
-    find "$CACHE_DIR" -maxdepth 1 -name "*.parquet" -delete
-    echo "  Removed $ROOT_DUPES stale root-level cache files"
-fi
+# ── Root-level cache parquets are CANONICAL, do NOT delete (fixed 2026-06-14, #36 cascade) ──
+# The crucible adapters (sdk/adapters.py, added Jun 10-12) deliberately write their base
+# caches to the cache ROOT: sep_long_v2.parquet, sf1_long.parquet, futcurve_*.parquet.
+# The old "root parquets are stale dupes" assumption is dead; deleting them forced an
+# expensive (~1-2min sep + sf1) cold rebuild every Monday and tripped sentinel S2.
+# These self-invalidate via _stale() (mtime vs source) — let the adapters manage them.
 
 # ── Clean /tmp atlas files ──
 find /tmp -name "atlas-*.log" -mtime +7 -delete 2>/dev/null || true
 find /tmp -name "*.lock" -mtime +1 -delete 2>/dev/null || true
 
 # ── Cleanup atlas.db backup files: keep 2 newest only ──
+# Empty-glob-safe (fixed 2026-06-14): a bare `ls glob*` exits 2 under set -euo pipefail
+# when nothing matches, which killed the whole script mid-run after the morning sweep
+# removed the last atlas.db.bak files. find handles the empty case cleanly.
 echo "Pruning atlas.db backup files (keeping 2 newest)..."
-ls -1t "$PROJECT"/data/atlas.db.bak* "$PROJECT"/data/atlas.db.backup* 2>/dev/null | tail -n +3 | while read -r old; do
+find "$PROJECT/data" -maxdepth 1 \( -name 'atlas.db.bak*' -o -name 'atlas.db.backup*' \) -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn | tail -n +3 | cut -d' ' -f2- | while read -r old; do
     rm -v "$old"
 done
 echo "  Backup pruning complete"
