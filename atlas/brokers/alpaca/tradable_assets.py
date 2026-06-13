@@ -37,14 +37,17 @@ _CACHE_TTL_HOURS = 20  # refresh at most once per ~day
 
 # In-memory cache
 _tradable_set: Optional[set[str]] = None
+_shortable_set: Optional[set[str]] = None   # subset of tradable that Alpaca will let you SHORT
 _cache_lock = threading.Lock()
 _last_fetch_ts: float = 0.0
 
 
-def _fetch_from_alpaca() -> set[str]:
-    """Fetch all active, tradable US equities from Alpaca API.
+def _fetch_from_alpaca() -> tuple[set[str], set[str]]:
+    """Fetch all active US equities from Alpaca API.
 
-    Returns set of Alpaca-format symbols (e.g. 'AAPL', 'BRK.B').
+    Returns (tradable, shortable) sets of Alpaca-format symbols (e.g. 'AAPL', 'BRK.B').
+    shortable is a subset of tradable: names Alpaca currently has borrow for (a.shortable).
+    Submitting a short on a non-shortable name returns 42210000 'cannot be sold short' (task #37).
     """
     try:
         from alpaca.trading.client import TradingClient
@@ -71,32 +74,39 @@ def _fetch_from_alpaca() -> set[str]:
         )
         assets = client.get_all_assets(req)
         tradable = {a.symbol for a in assets if a.tradable}
-        logger.info("Fetched %d tradable US equities from Alpaca", len(tradable))
-        return tradable
+        shortable = {a.symbol for a in assets if a.tradable and getattr(a, "shortable", False)}
+        logger.info("Fetched %d tradable (%d shortable) US equities from Alpaca", len(tradable), len(shortable))
+        return tradable, shortable
 
     except Exception as e:
         logger.error("Failed to fetch Alpaca asset list: %s", e)
-        return set()
+        return set(), set()
 
 
-def _save_cache(symbols: set[str]) -> None:
-    """Persist tradable set to disk."""
+def _save_cache(symbols: set[str], shortable: set[str]) -> None:
+    """Persist tradable + shortable sets to disk (atomic)."""
     try:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
         data = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "count": len(symbols),
             "symbols": sorted(symbols),
+            "shortable": sorted(shortable),
         }
-        with open(_CACHE_FILE, "w") as f:
+        import os as _os
+        tmp = str(_CACHE_FILE) + ".tmp"
+        with open(tmp, "w") as f:
             json.dump(data, f)
-        logger.debug("Saved %d tradable assets to cache", len(symbols))
+        _os.replace(tmp, _CACHE_FILE)
+        logger.debug("Saved %d tradable (%d shortable) assets to cache", len(symbols), len(shortable))
     except Exception as e:
         logger.warning("Failed to save tradable assets cache: %s", e)
 
 
-def _load_cache() -> Optional[set[str]]:
-    """Load tradable set from disk cache. Returns None if stale or missing."""
+def _load_cache() -> Optional[tuple[set[str], set[str]]]:
+    """Load (tradable, shortable) from disk cache. Returns None if stale or missing.
+    Back-compat: an old cache without a 'shortable' key yields an empty shortable set
+    (is_shortable then fails open until the next ~daily refresh repopulates it)."""
     try:
         if not _CACHE_FILE.exists():
             return None
@@ -108,8 +118,10 @@ def _load_cache() -> Optional[set[str]]:
             logger.debug("Tradable assets cache is %.1f hours old — stale", age_hours)
             return None
         symbols = set(data["symbols"])
-        logger.debug("Loaded %d tradable assets from cache (%.1fh old)", len(symbols), age_hours)
-        return symbols
+        shortable = set(data.get("shortable", []))
+        logger.debug("Loaded %d tradable (%d shortable) from cache (%.1fh old)",
+                     len(symbols), len(shortable), age_hours)
+        return symbols, shortable
     except Exception as e:
         logger.warning("Failed to load tradable assets cache: %s", e)
         return None
@@ -127,7 +139,7 @@ def get_tradable_set(force_refresh: bool = False) -> set[str]:
     Returns:
         Set of tradable symbols. Empty set on failure (never blocks).
     """
-    global _tradable_set, _last_fetch_ts
+    global _tradable_set, _shortable_set, _last_fetch_ts
 
     with _cache_lock:
         now = time.time()
@@ -142,16 +154,16 @@ def get_tradable_set(force_refresh: bool = False) -> set[str]:
         if not force_refresh:
             cached = _load_cache()
             if cached:
-                _tradable_set = cached
+                _tradable_set, _shortable_set = cached
                 _last_fetch_ts = now
                 return _tradable_set
 
         # Fetch from API
-        symbols = _fetch_from_alpaca()
+        symbols, shortable = _fetch_from_alpaca()
         if symbols:
-            _tradable_set = symbols
+            _tradable_set, _shortable_set = symbols, shortable
             _last_fetch_ts = now
-            _save_cache(symbols)
+            _save_cache(symbols, shortable)
             return _tradable_set
 
         # Fall back to stale disk cache (better than nothing)
@@ -165,6 +177,7 @@ def get_tradable_set(force_refresh: bool = False) -> set[str]:
                 with open(_CACHE_FILE) as f:
                     data = json.load(f)
                 _tradable_set = set(data["symbols"])
+                _shortable_set = set(data.get("shortable", []))
                 _last_fetch_ts = now
                 logger.warning("Using stale disk cache (%d symbols)", len(_tradable_set))
                 return _tradable_set
@@ -173,6 +186,23 @@ def get_tradable_set(force_refresh: bool = False) -> set[str]:
 
         logger.error("No tradable asset data available — returning empty set")
         return set()
+
+
+def get_shortable_set(force_refresh: bool = False) -> set[str]:
+    """Set of Alpaca symbols that are currently SHORTABLE (Alpaca has borrow).
+    Shares the same cache/refresh as get_tradable_set (one fetch populates both)."""
+    get_tradable_set(force_refresh=force_refresh)  # ensures both sets are loaded
+    return _shortable_set if _shortable_set is not None else set()
+
+
+def is_shortable(ticker: str) -> bool:
+    """True if `ticker` can be sold short on Alpaca. FAILS OPEN: if shortable data is
+    unavailable (empty set, e.g. an old cache), returns True so we degrade to the broker
+    rejecting the order rather than silently refusing a legitimately-shortable name."""
+    shortable = get_shortable_set()
+    if not shortable:
+        return True
+    return to_alpaca(ticker) in shortable
 
 
 def is_tradable(ticker: str) -> bool:

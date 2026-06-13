@@ -78,7 +78,37 @@ def _realized_returns(name: str) -> list:
     return out
 
 
-def _record_run(s: DeployedStrategy, asof: str, report, track) -> None:
+def _prefilter_tradable(s: DeployedStrategy, weights: dict) -> tuple[dict, dict]:
+    """Drop names the broker will reject BEFORE order placement, so G7 measures real broker
+    errors (transient/operational) not strategy-design impossibilities (task #37). Alpaca
+    equity books only — a futures root is not in Alpaca's set and must never be filtered here.
+      - non-tradable  (delisted/halted 'asset not active', 40010001) -> dropped, any side
+      - non-shortable (no borrow 'cannot be sold short', 42210000)   -> dropped for SHORT targets
+    The dropped weight is NOT redistributed: the gap is the REAL implementable book — the
+    deployability signal (does the premium survive on the borrowable subset?). Skips are
+    recorded to runs.jsonl, never hidden. Fail-open: if tradable/shortable data is unavailable
+    the helpers return True, so nothing is dropped and we degrade to the prior behaviour."""
+    if s.broker != "alpaca" or not weights:
+        return weights, {}
+    try:
+        from atlas.brokers.alpaca.tradable_assets import is_tradable, is_shortable
+    except Exception:
+        return weights, {}
+    kept, skipped = {}, {}
+    for sym, w in weights.items():
+        if not is_tradable(sym):
+            skipped[sym] = "not_tradable"
+        elif w < 0 and not is_shortable(sym):
+            skipped[sym] = "not_shortable"
+        else:
+            kept[sym] = w
+    if skipped:
+        logger.info("%s: pre-filtered %d/%d names off target (%s)", s.name, len(skipped), len(weights),
+                    ", ".join(f"{k}={v}" for k, v in list(skipped.items())[:10]))
+    return kept, skipped
+
+
+def _record_run(s: DeployedStrategy, asof: str, report, track, skipped: Optional[dict] = None) -> None:
     d = LIVE_DATA / s.name
     d.mkdir(parents=True, exist_ok=True)
     # join broker results back onto orders by (ticker, side): order_id enables next-day
@@ -101,6 +131,7 @@ def _record_run(s: DeployedStrategy, asof: str, report, track) -> None:
     rec = {"date": asof, "state": s.state, "dry_run": report.dry_run, "n_orders": report.n_orders,
            "turnover": round(report.turnover_notional, 2), "blocked": report.blocked,
            "track": (track.status if track else None),
+           "skipped": skipped or {},   # task #37: names pre-filtered off target (not_tradable/not_shortable)
            "orders": [_o(o) for o in report.orders]}
     with (d / "runs.jsonl").open("a") as fh:
         fh.write(json.dumps(rec) + "\n")
@@ -144,6 +175,7 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
         if broker is None or not getattr(broker, "is_connected", False):
             return StrategyRunResult(s.name, s.state, s.broker, error="broker unavailable")
         weights = s.target_portfolio(asof)
+        weights, skipped = _prefilter_tradable(s, weights)  # task #37: drop doomed orders pre-placement
         specs = {k: ContractSpec(**v) for k, v in (s.specs or {}).items()}
         ex = TargetExecutor(broker, specs=specs, tif=(s.tif or None))
         # shadow = Paper Book: place REAL paper orders on live data (the forward-paper gate).
@@ -176,7 +208,7 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
             from atlas.execution.track_expectation import Expectation, evaluate
             track = evaluate(_realized_returns(s.name), Expectation(**s.expectation))
 
-        _record_run(s, asof, rep, track)
+        _record_run(s, asof, rep, track, skipped)
         # a canary/live strategy with orders but no human approval is held (executed as dry_run) -> flag it
         awaiting = s.state in ("canary", "live") and not s.approved and rep.n_orders > 0
         return StrategyRunResult(s.name, s.state, s.broker, rep.n_orders, rep.turnover_notional,

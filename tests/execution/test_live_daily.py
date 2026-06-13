@@ -175,3 +175,30 @@ def test_daily_equity_broker_unaffected(tmp_path, monkeypatch):
     b = SimBroker(prices={"AAA": 100.0})
     r = daily.run_strategy(s, "2026-06-12", mode="shadow", broker=b)
     assert r.error is None and r.n_orders == 1
+
+
+def test_prefilter_tradable_drops_doomed_orders(monkeypatch):
+    """task #37: pre-filter drops non-tradable (any side) + non-shortable (shorts only) BEFORE
+    placement, records them as skipped, never redistributes the dropped weight, and is a no-op
+    for non-Alpaca books."""
+    import atlas.brokers.alpaca.tradable_assets as ta
+    from atlas.execution.registry import DeployedStrategy
+
+    monkeypatch.setattr(ta, "is_tradable", lambda t: t not in {"BRKL", "KALV"})
+    monkeypatch.setattr(ta, "is_shortable", lambda t: t not in {"CGBD", "NMFC"})
+
+    s = DeployedStrategy(name="x", provider="p", broker="alpaca")
+    weights = {"AAPL": 0.3, "BRKL": -0.1, "CGBD": -0.1, "NMFC": 0.1, "MSFT": -0.2}
+    kept, skipped = daily._prefilter_tradable(s, weights)
+
+    assert "BRKL" in skipped and skipped["BRKL"] == "not_tradable"     # non-tradable dropped (short)
+    assert "CGBD" in skipped and skipped["CGBD"] == "not_shortable"    # non-shortable SHORT dropped
+    assert "NMFC" not in skipped and kept["NMFC"] == 0.1               # non-shortable but LONG -> kept
+    assert "KALV" not in weights                                        # (sanity: not requested)
+    assert kept == {"AAPL": 0.3, "NMFC": 0.1, "MSFT": -0.2}            # gap NOT redistributed
+    assert all(kept[k] == weights[k] for k in kept)                    # each kept weight unchanged
+
+    # non-Alpaca (futures/IB) book: never filtered (a root is not in Alpaca's set)
+    fut = DeployedStrategy(name="f", provider="p", broker="ib")
+    kept2, skipped2 = daily._prefilter_tradable(fut, {"ES": -0.5, "CL": 0.5})
+    assert kept2 == {"ES": -0.5, "CL": 0.5} and skipped2 == {}
