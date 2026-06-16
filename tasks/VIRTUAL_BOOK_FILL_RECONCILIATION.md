@@ -1,9 +1,10 @@
 # Virtual-book fill reconciliation — root-cause fix for book↔broker drift
 
-**Status:** SCOPED, not yet implemented. Follow-on to the invariant guard (`reconcile_books.py`,
-atlas `e1ad3812`, 2026-06-16). **BLOCKS re-enabling `atlas-live-shadow.timer`** (paused 2026-06-16 —
-re-enable: `ln -sf /root/atlas/systemd/atlas-live-shadow.{timer,service} /etc/systemd/system/ &&
-systemctl enable --now atlas-live-shadow.timer`).
+**Status:** ✅ IMPLEMENTED 2026-06-16 (atlas `b495a6e3`). `daily.py` no longer touches the book;
+`record_fills.reconcile_book` applies the reconciled ACTUAL fill (book-from-fills), idempotent via the
+fills.jsonl done-set. 4 new tests + 110 execution tests green. Rebalancer (`atlas-live-shadow.timer`)
+RE-ENABLED after the clean reset (books zeroed + registry-correct, broker flattening at the open, guard
+`reconcile_books.py` wired into forward-paper.sh self-checking each cycle). Original scope below.
 
 ## The bug (root cause of the 119-phantom / 10-orphan / 45-mismatch drift)
 `atlas/execution/daily.py` (shadow path, ~L198–204) updates the virtual book the moment an order is
@@ -35,11 +36,11 @@ So the structural fix is to make the **virtual book a function of `fills.jsonl`,
    idempotency. Cancelled/expired/0-filled orders apply nothing.
 3. The book then reflects reality every cycle; `reconcile_books` (the guard) should read OK.
 
-## Acceptance
-- Unit: an accepted-but-unfilled OPG order writes NOTHING to the book; a partial fill writes `filled_qty`
-  at `fill_px`; re-running the step is idempotent (no double-apply).
-- Integration: after a shadow cycle + the next open's fills, `reconcile_books` reports `ok` (Σbooks == broker).
-- Re-run the guard for several cycles post-fix to confirm no new drift, THEN re-enable the timer.
+## Acceptance — MET
+- Unit (test_book_from_fills.py): accepted-but-unfilled OPG order writes NOTHING; partial fill writes
+  `filled_qty` at `fill_px`; idempotent (no double-apply); short books negative + adds cash. ✅
+- Integration: WATCH `reconcile_books` over the first post-reset cycles (Wed 10:30 AEST onward) to confirm
+  `ok` (Σbooks == broker). Futures multiplier in book-from-fills is a follow-on (equity-only today).
 
 ## Why it matters
 The virtual books are the per-strategy accounting that feeds the forward-paper slippage + track-vs-expectation
