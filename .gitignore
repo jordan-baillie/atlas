@@ -98,3 +98,4 @@ data/plan_notifications_buffer/
 data/contaminated_backtests/
 data/*_comparison_*.json
 backups-pre-batch-*.txt
+config/active_config_backup_*.json
