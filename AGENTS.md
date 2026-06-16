@@ -155,4 +155,4 @@ client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 3. Python `Anthropic()` client instantiation somewhere → audit imports.
 4. OAuth token expired → `pi login`.
 
-Verified call sites in Atlas (June 2026): `atlas/kernel/pi_subprocess.py` (canonical wrapper) and `atlas/dashboard/chat/pi_session.py` (async streaming, inline flag). Enforced by `tests/test_no_raw_pi_subprocess.py` + the `lint-pi-system-prompt` pre-commit hook.
+Verified call site in Atlas (June 2026): `atlas/dashboard/chat/pi_session.py` (async streaming, inline flag) — the sole surviving pi call site. (`atlas/kernel/pi_subprocess.py` was removed 2026-06-13 in the #36 fossil purge; the rule survives it.) Enforced by `tests/test_no_raw_pi_subprocess.py` + the `lint-pi-system-prompt` pre-commit hook.

@@ -480,10 +480,10 @@ class PiSessionManager:
     def _build_cmd(self) -> list[str]:
         """Build the pi CLI command list.
 
-        Uses asyncio.create_subprocess_exec (async streaming) — a different
-        execution model from atlas.kernel.pi_subprocess.call_pi (sync, captures
-        output).  The --system-prompt flag below ensures Claude Max OAuth
-        routing; this is the asyncio-equivalent of atlas.kernel.pi_subprocess.call_pi.
+        Uses asyncio.create_subprocess_exec (async streaming). The --system-prompt
+        flag below ensures Claude Max OAuth routing. This is the sole surviving pi
+        call site (the old sync atlas.kernel.pi_subprocess wrapper was removed in
+        the 2026-06-13 #36 fossil purge).
         """
         cmd = [
             PI_BIN,

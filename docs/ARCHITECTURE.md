@@ -97,8 +97,8 @@ computed but executed dry and flagged AWAITING APPROVAL.
   L2 `data/AUTO_REMEDIATION_HALT`, L3 `data/HALT` / `.live_halt`, L4 drawdown-from-peak.
   Checked **inside** `TargetExecutor` before any order (fail-closed) AND at the systemd layer
   (`ConditionPathExists`). Human surface: `python -m atlas.execution.kill_switch halt|resume|status`.
-  *Known gap:* L4 reads the stale `equity_history` table (no writer since the swing system);
-  follow-up is re-pointing it at `data/live/*/equity_state.json`.
+  L4 reads each deployed book's `data/live/<name>/returns.jsonl` (re-pointed 2026-06-11 from the
+  retired `equity_history` table); the first book in drawdown breach trips the layer for the executor.
 - **Auth**: every dashboard route basic-auths against `~/.atlas-secrets.json`; missing secrets
   = nothing served.
 - **Price arbiter**: Tiingo-vs-Alpaca divergence halts new entries per-ticker (alerts RTH-only).

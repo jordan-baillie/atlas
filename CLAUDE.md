@@ -100,7 +100,8 @@ If `400 invalid_request_error: You're out of extra usage` appears:
 
 Atlas pi/claude call sites (all carry `--system-prompt`, enforced by
 `tests/test_no_raw_pi_subprocess.py` + the `lint-pi-system-prompt` pre-commit hook):
-`atlas/kernel/pi_subprocess.py` (the canonical wrapper) and
-`atlas/dashboard/chat/pi_session.py` (async streaming, inline flag).
+`atlas/dashboard/chat/pi_session.py` (async streaming, inline flag) is the sole
+surviving call site. (`atlas/kernel/pi_subprocess.py` was removed 2026-06-13 in the
+#36 fossil purge — zero importers; the `--system-prompt` rule survives it.)
 
 See `/root/AGENTS.md` and `/root/.pi/teams/skills/claude-auth.md` for the full reference.

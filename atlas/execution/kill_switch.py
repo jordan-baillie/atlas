@@ -7,10 +7,9 @@ Layers are checked top-down; the cheapest checks come first.
 L1: env var ATLAS_AUTO_REMEDIATION_DISABLED=1
 L2: file data/AUTO_REMEDIATION_HALT
 L3: file data/HALT or .live_halt (trading kill switch)
-L4: drawdown breach — equity_history drawdown-from-peak over 30 days
-    (NOTE: equity_history lost its writer with the swing system; L4 is
-    currently fail-open no-data. Follow-up: re-point at the live books,
-    data/live/<name>/equity_state.json.)
+L4: drawdown breach — drawdown-from-peak per live book over 30 days, read from
+    each deployed strategy's data/live/<name>/returns.jsonl (re-pointed 2026-06-11
+    from the retired equity_history table). See check_l4_drawdown for details.
 The systemd timer additionally carries ConditionPathExists=!/root/atlas/data/HALT
 so a halt blocks the unit before Python even starts. Defense in depth.
 

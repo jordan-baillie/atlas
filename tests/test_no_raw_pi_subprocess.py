@@ -31,6 +31,6 @@ def test_no_raw_pi_subprocess():
         if PATTERN.search(text):
             offenders.append(str(py.relative_to(ATLAS_ROOT)))
     assert not offenders, (
-        f"Found raw pi/claude subprocess calls outside atlas.kernel.pi_subprocess in: "
+        f"Found raw pi/claude subprocess calls outside the allowlist (pi_session.py) in: "
         f"{offenders}. Any pi/claude subprocess MUST pass --system-prompt (Max OAuth routing — see /root/AGENTS.md)."
     )
