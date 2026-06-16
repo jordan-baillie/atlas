@@ -46,3 +46,16 @@ NEW component changes a shared-resource convention (where caches live), audit EV
 operates on that resource. And: `ls glob*` is never empty-safe under pipefail — use find. My own
 cleanup this morning TRIGGERED a latent crash in another script — cleanups have blast radius into
 other scripts' assumptions, not just their own files.
+
+## 2026-06-16 — Virtual books recorded fills on ACCEPTANCE, not execution (silent drift)
+The shadow virtual books (`virtual_book.py`) updated on `OrderResult.success` (= order ACCEPTED) using the
+requested qty at ref price. But the shadow loop runs in the Alpaca OPG window — actual fills land ~14h later
+at the open, and OPG no-fills (HTB shorts, halts) never happen. Result: 119 phantom + 45 qty-mismatched
+positions accumulated silently (books claimed 176 vs broker's 67), corrupting the per-strategy accounting that
+feeds the forward-paper evidence the real-capital gate depends on. Nothing caught it — `reconcile_shadow`
+only covers the legacy SP500 book. LESSONS: (1) a virtual book must be a function of RECONCILED ACTUAL FILLS,
+never order acceptance — `record_fills.py` already resolves order_id -> actual filled_qty/fill_px, so consume
+that. (2) Every shared-account invariant (Σ sub-books == broker) needs an explicit guard that ALERTS, or it
+drifts silently — built `reconcile_books.py` + wired into forward-paper.sh. (3) When resetting, the registry
+(`registry.deployed()`), not the (corrupted) book file, is the authoritative capital_base — val_mom's book had
+drifted to $14,500 vs the registry's $5,000.
