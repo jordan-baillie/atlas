@@ -1,3 +1,9 @@
+---
+name: atlas-elastic-planner
+description: "Plan parallel agent work before dispatching it — classify task risk, generate a DAG plan, evaluate safety gates, and optionally dispatch read-only burst agents or queue write dispatch. Use whenever you are considering spawning more than one agent: research sweeps, code reviews, multi-file refactors, incident triage, or any parallelizable task. Triggers: 'plan this with agents', 'how many agents should I use', 'can I parallelize this', 'elastic plan', 'spin up scouts', 'review with agents', 'QA this', 'security scan'."
+type: reference
+---
+
 # atlas-elastic-planner — Elastic Agent Planning Skill
 
 **When to use**: Before dispatching any parallel agent work — research sweeps, code reviews, multi-file refactors, incident triage, or any task where you're considering spawning more than 1 agent. Use this skill to classify the task, get a DAG plan, evaluate safety gates, and optionally dispatch read-only burst agents or queue write dispatch.
