@@ -26,7 +26,18 @@ from typing import AsyncGenerator, Optional
 logger = logging.getLogger("pi_session")
 
 PROJECT_ROOT = Path("/root/atlas")
-PI_BIN = "pi"  # Assumes pi is in PATH
+# Migrated pi -> summon (2026-06-22): fleet $0-Max OAuth now lives in summon
+# (anthropic-oauth extension). The legacy pi auth path expired and no longer refreshes
+# on this box. summon accepts the identical flag set used in _build_cmd() and emits the
+# SAME assistantMessageEvent stream this module's parser already reads.
+PI_BIN = "summon"  # assumes summon is in PATH
+# Under summon the Claude-Max OAuth provider is itself an EXTENSION (anthropic-oauth). Because
+# _build_cmd passes --no-extensions for fast startup (which disables extension *discovery*), the
+# OAuth provider must be re-loaded explicitly via -e or every call dies with
+# "No API key for provider: anthropic". This is that explicit path.
+OAUTH_EXT = Path("/root/.summon/extensions/anthropic-oauth/index.ts")
+# NOTE: the multi-team orchestrator is a *pi* extension (imports the pi SDK) and does NOT
+# load under summon. Until it is ported, use_teams degrades to plain chat (see _build_cmd).
 MULTI_TEAM_EXT = Path("/root/.pi/extensions/multi-team/index.ts")
 SESSIONS_DIR = PROJECT_ROOT / "data" / "chat" / "sessions"
 
@@ -500,12 +511,21 @@ class PiSessionManager:
         ]
 
         cmd.append("--no-extensions")
+        # ...but re-enable the OAuth provider extension explicitly (explicit -e survives
+        # --no-extensions), else summon has no anthropic credentials and returns empty output.
+        if OAUTH_EXT.exists():
+            cmd += ["-e", str(OAUTH_EXT)]
 
         # Only load multi-team orchestrator when explicitly requested.
         # Without it: plain Claude with tools (fast, ~16K token system prompt).
         # With it: full 10-agent orchestrator (~96K+ tokens, much slower).
+        # NOTE (2026-06-22 pi->summon migration): MULTI_TEAM_EXT is a pi extension and does
+        # not load under summon. Degrade loudly to plain chat rather than spawn a crashing
+        # subprocess; restore the -e load once the orchestrator is ported to summon.
         if self.use_teams and MULTI_TEAM_EXT.exists():
-            cmd += ["-e", str(MULTI_TEAM_EXT)]
+            logger.warning(
+                "use_teams requested but the multi-team orchestrator is a pi extension not yet "
+                "ported to summon — falling back to plain chat for session %s", self.session_id)
 
         # Resume existing session so the conversation history is preserved
         if self.pi_session_path.exists():

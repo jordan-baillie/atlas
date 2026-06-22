@@ -10,6 +10,10 @@ Restart=on-failure
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONPATH=/root/atlas
+# Fail-closed $0 routing for the summon chat subprocesses spawned by pi_session.py
+# (fleet migrated pi -> summon 2026-06-22): force the Claude-Max OAuth path, never a
+# pay-per-token ANTHROPIC_API_KEY.
+Environment=SUMMON_FORCE_OAUTH_ROUTING=1
 
 StandardOutput=journal
 StandardError=journal
