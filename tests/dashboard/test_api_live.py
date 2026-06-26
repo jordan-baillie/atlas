@@ -58,9 +58,13 @@ def _seed_strategy(tmp_path, name="strat_x"):
 AUTH = ("test", "test")
 
 
-def test_live_shape_with_gates(app_client):
+def test_live_shape_with_gates(app_client, monkeypatch):
     client, tmp_path = app_client
     _seed_strategy(tmp_path)
+    # a DEPLOYED book must have a registered modeled cost (canonical: unregistered → pass=None).
+    # Register the synthetic book so the dashboard surfaces a genuinely SCORED slippage gate.
+    import atlas.execution.gates as gates_mod
+    monkeypatch.setitem(gates_mod.MODELED_COST_BPS, "strat_x", 8.0)
 
     resp = client.get("/api/live", auth=AUTH)
     assert resp.status_code == 200

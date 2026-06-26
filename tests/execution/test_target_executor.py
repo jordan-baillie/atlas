@@ -179,3 +179,60 @@ def test_non_htb_failure_not_retried():
     assert len(b.orders) == 1                                  # no retry
     assert not rep.results[0].success
     assert "fallback" not in (rep.results[0].raw or {})
+
+
+# ── on_submit callback (Layer 2 WAL hook) ─────────────────────────────────────
+
+
+class _IDedBroker(SimBroker):
+    """SimBroker that returns a non-empty order_id so on_submit is triggered."""
+    def place_order(self, ticker, side, qty, price, order_type=OrderType.MARKET,
+                    stop_price=None, remark="", **kw):
+        res = super().place_order(ticker, side, qty, price, order_type, stop_price, remark)
+        res.order_id = f"oid-{ticker}"
+        return res
+
+
+def test_on_submit_called_for_successful_orders():
+    """on_submit is invoked with (order_id, order) once per successfully placed order."""
+    b = _IDedBroker(equity=10000, prices={"AAA": 100.0, "BBB": 50.0})
+    submitted = []
+    rep = TargetExecutor(b).rebalance(
+        {"AAA": 0.5, "BBB": 0.5}, dry_run=False, check_kill_switch=False,
+        on_submit=lambda oid, o: submitted.append((oid, o.ticker))
+    )
+    assert len(rep.executed) == 2
+    assert len(submitted) == 2
+    assert set(oid for oid, _ in submitted) == {"oid-AAA", "oid-BBB"}
+    assert set(tkr for _, tkr in submitted) == {"AAA", "BBB"}
+
+
+def test_on_submit_not_called_for_failed_orders():
+    """on_submit must not be called when broker rejects the order."""
+    class _FailBroker(_IDedBroker):
+        def place_order(self, ticker, side, qty, price, **kw):
+            return OrderResult(success=False, ticker=ticker, side=side, message="rejected")
+
+    b = _FailBroker(equity=10000, prices={"AAA": 100.0})
+    submitted = []
+    TargetExecutor(b).rebalance(
+        {"AAA": 0.5}, dry_run=False, check_kill_switch=False,
+        on_submit=lambda oid, o: submitted.append(oid)
+    )
+    assert submitted == []  # no call for a failed order
+
+
+def test_on_submit_raising_does_not_abort_rebalance():
+    """A raising on_submit must never abort placement of remaining orders."""
+    b = _IDedBroker(equity=10000, prices={"AAA": 100.0, "BBB": 50.0})
+
+    def _bad_cb(oid, o):
+        raise RuntimeError("disk full")
+
+    rep = TargetExecutor(b).rebalance(
+        {"AAA": 0.5, "BBB": 0.5}, dry_run=False, check_kill_switch=False,
+        on_submit=_bad_cb
+    )
+    assert len(rep.results) == 2        # both orders attempted
+    assert len(rep.executed) == 2       # both succeeded
+    assert len(b.orders) == 2           # placement not aborted by callback exception

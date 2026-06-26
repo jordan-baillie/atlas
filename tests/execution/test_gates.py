@@ -186,7 +186,9 @@ class TestEvaluateGates:
         self._write(d, "runs.jsonl", [_run("2026-06-10", [{"ok": True}] * 4)])
         self._write(d, "returns.jsonl",
                     [{"date": f"2026-05-{i:02d}", "ret": 0.001, "equity": 10000 + i} for i in range(1, 26)])
-        g = gates.evaluate_gates("strat_a", EXPECTATION, base=tmp_path)
+        # synthetic book is unregistered; strict=False exercises the legacy SCORING path
+        # (this test is about composition mechanics, not the unregistered-gap path)
+        g = gates.evaluate_gates("strat_a", EXPECTATION, base=tmp_path, strict_modeled_cost=False)
         assert g["slippage"]["pass"] is True
         assert g["broker_errors"]["pass"] is True
         assert g["track"]["status"] == "on_track"
@@ -204,14 +206,14 @@ class TestEvaluateGates:
         d.mkdir()
         (d / "fills.jsonl").write_text('{"date": "2026-06-01", "slippage_bps": 999.0}\n'
                                        '{"date": "2026-06-10", "slippage_bps": 4.0}\nNOT JSON\n')
-        g = gates.evaluate_gates("strat_b", None, base=tmp_path)
+        g = gates.evaluate_gates("strat_b", None, base=tmp_path, strict_modeled_cost=False)
         assert g["slippage"]["n_fills"] == 1
 
     def test_any_false_fails_overall(self, tmp_path):
         d = tmp_path / "strat_c"
         self._write(d, "fills.jsonl",
                     [_fill("2026-06-01", 1.0)] + [_fill("2026-06-10", 99.0)] * 3)  # median way over bar
-        g = gates.evaluate_gates("strat_c", None, base=tmp_path)
+        g = gates.evaluate_gates("strat_c", None, base=tmp_path, strict_modeled_cost=False)
         assert g["slippage"]["pass"] is False
         assert g["pass"] is False
 
@@ -320,6 +322,126 @@ class TestFuturesSlippageGate:
         (d / "runs.jsonl").write_text("")
         out = gates.evaluate_gates("eqbook", None, base=tmp_path)
         assert out["slippage"]["ruler"] == "bps"
+
+
+# ── G6 slip_ref (Leg B Phase 2 — open vs decision_px picker) ─────────────────
+
+class TestSlipRef:
+    """Mirror crucible._slip semantics: prefer slippage_open_bps, fall back to slippage_bps."""
+
+    def test_all_open_fields_gives_open_ref(self):
+        fills = [BUILD,
+                 _fill("2026-06-10", 5.0, slippage_open_bps=5.0),
+                 _fill("2026-06-11", 7.0, slippage_open_bps=7.0)]
+        g = gates.slippage_gate(fills, today=TODAY)
+        assert g["slip_ref"] == "open"
+
+    def test_no_open_field_falls_back_to_decision_px_stale(self):
+        fills = [BUILD,
+                 _fill("2026-06-10", 5.0),
+                 _fill("2026-06-11", 7.0)]
+        g = gates.slippage_gate(fills, today=TODAY)
+        assert g["slip_ref"] == "decision_px(stale)"
+
+    def test_mixed_when_some_open_some_decision_px(self):
+        fills = [BUILD,
+                 _fill("2026-06-10", 5.0, slippage_open_bps=5.0),  # open
+                 _fill("2026-06-11", 7.0)]                          # decision_px only
+        g = gates.slippage_gate(fills, today=TODAY)
+        assert g["slip_ref"] == "mixed"
+
+    def test_slip_ref_none_when_no_fills(self):
+        g = gates.slippage_gate([], today=TODAY)
+        assert g["slip_ref"] is None
+
+
+# ── Per-book modeled cost + unregistered gap (FIX 2) ─────────────────────────
+
+class TestEvaluateGatesModeled:
+    def _write(self, d, fname, rows):
+        d.mkdir(parents=True, exist_ok=True)
+        (d / fname).write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+
+    def test_unregistered_book_strict_returns_none_not_false(self, tmp_path):
+        """Deployed book absent from MODELED_COST_BPS → pass=None + reason='unregistered_modeled_cost'."""
+        name = "ghost_unregistered_book"  # fabricated; intentionally absent from MODELED_COST_BPS
+        assert name not in gates.MODELED_COST_BPS
+        d = tmp_path / name
+        self._write(d, "fills.jsonl",
+                    [_fill("2026-06-01", 999.0), _fill("2026-06-10", 5.0)])
+        self._write(d, "runs.jsonl", [])
+        self._write(d, "returns.jsonl", [])
+        g = gates.evaluate_gates(name, None, base=tmp_path, strict_modeled_cost=True)
+        assert g["slippage"]["pass"] is None           # NOT False — unscored gap
+        assert g["slippage"]["reason"] == "unregistered_modeled_cost"
+        assert g["pass"] is None                       # overall must also be None, not False
+
+    def test_unregistered_gap_is_the_DEFAULT(self, tmp_path):
+        """Canonical default: an unregistered deployed book is NOT scored on contaminated
+        data even without passing strict_modeled_cost — locks crucible-parity so the
+        old false-FAIL behavior cannot silently regress (the production dashboard calls
+        evaluate_gates with no strict flag)."""
+        name = "ghost_unregistered_book"  # genuinely absent from MODELED_COST_BPS
+        assert name not in gates.MODELED_COST_BPS
+        d = tmp_path / name
+        self._write(d, "fills.jsonl",
+                    [_fill("2026-06-01", 999.0), _fill("2026-06-10", 145.0)])  # contaminated decision_px
+        self._write(d, "runs.jsonl", [])
+        self._write(d, "returns.jsonl", [])
+        g = gates.evaluate_gates(name, None, base=tmp_path)   # NO strict flag — default path
+        assert g["slippage"]["reason"] == "unregistered_modeled_cost"
+        assert g["slippage"]["pass"] is None          # honest 'cannot evaluate', not a false FAIL
+        assert g["pass"] is None
+
+    def test_registered_book_uses_per_book_bar(self, tmp_path):
+        """val_mom_trend_smallcap: modeled=8.0 bps → bar=16.0 bps; median 10 bps must PASS."""
+        name = "val_mom_trend_smallcap"
+        d = tmp_path / name
+        self._write(d, "fills.jsonl",
+                    [_fill("2026-06-01", 999.0)] + [_fill("2026-06-10", 10.0)] * 3)
+        self._write(d, "runs.jsonl", [])
+        self._write(d, "returns.jsonl", [])
+        g = gates.evaluate_gates(name, None, base=tmp_path)
+        assert g["slippage"]["bar_bps"] == pytest.approx(gates.SLIPPAGE_MULT * 8.0)
+        assert g["slippage"]["pass"] is True  # median 10 bps <= 16 bps bar
+
+
+# ── FIX 3: fill_quality (advisory) ───────────────────────────────────────────
+
+class TestFillQuality:
+    def test_counts_filled_cancelled_unresolved(self):
+        fills = [
+            {"date": "2026-06-10", "status": "filled"},
+            {"date": "2026-06-10", "status": "FILLED"},     # uppercase — case-insensitive
+            {"date": "2026-06-10", "status": "cancelled"},
+            {"date": "2026-06-10", "status": "pending"},    # unresolved
+            {"date": "2026-06-10", "status": "submitted"},  # unresolved
+        ]
+        q = gates.fill_quality(fills, today=TODAY)
+        assert q["n_filled"] == 2
+        assert q["n_cancelled"] == 1
+        assert q["n_unresolved"] == 2
+        assert q["n_total"] == 5
+        assert q["fill_rate_pct"] == pytest.approx(40.0)
+        assert q["pass"] is None   # ADVISORY — never a hard gate
+
+    def test_fill_quality_does_not_flip_overall_pass(self, tmp_path):
+        """fill_quality advisory must NOT change the evaluate_gates overall pass tri-state."""
+        d = tmp_path / "fq_advisory_book"
+        d.mkdir()
+        fills = (
+            [_fill("2026-06-01", 999.0),     # build day — excluded from G6
+             _fill("2026-06-10", 5.0)]       # under bar
+            + [{"date": "2026-06-10", "status": "pending"}]  # unresolved (advisory only)
+        )
+        import json as _j
+        (d / "fills.jsonl").write_text("\n".join(_j.dumps(r) for r in fills) + "\n")
+        (d / "runs.jsonl").write_text("")
+        (d / "returns.jsonl").write_text("")
+        g = gates.evaluate_gates("fq_advisory_book", None, base=tmp_path)
+        assert g["fill_quality"]["pass"] is None   # advisory stays None
+        # overall pass: broker_errors=None, track=None → tri-state None (not flipped by advisory)
+        assert g["pass"] is None
 
 
 class TestFuturesFillRecording:

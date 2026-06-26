@@ -36,7 +36,18 @@ from atlas.execution.registry import deployed
 
 logger = logging.getLogger(__name__)
 
-LOOKBACK_DAYS = 5  # reconcile anything missed in the last week of runs
+LOOKBACK_DAYS = 5  # retained for reference; no longer used to slice runs
+
+# Statuses whose broker-reported outcome is final and must not be re-queried.
+TERMINAL_STATUSES: frozenset = frozenset({
+    "filled", "partially_filled", "canceled", "cancelled",
+    "expired", "rejected", "done",
+})
+
+
+def _is_terminal(status: str) -> bool:
+    """Return True iff *status* (any casing) represents a final broker state."""
+    return (status or "").lower() in TERMINAL_STATUSES
 
 
 def _jsonl(p: Path) -> list:
@@ -128,16 +139,43 @@ def _futures_slippage(ticker: str, side: str, decision_px: float, fill_px: float
 
 def reconcile_book(name: str, broker) -> int:
     d = LIVE_DATA / name
-    runs = _jsonl(d / "runs.jsonl")[-LOOKBACK_DAYS * 3:]
-    done = {f["order_id"] for f in _jsonl(d / "fills.jsonl") if f.get("order_id")}
+    fp = d / "fills.jsonl"
+
+    # ── Load existing rows into an ordered map (one row per order_id, first-seen order) ──
+    rows_order: list = []       # order_ids in first-seen order
+    rows_map: dict = {}         # order_id -> row dict
+    for row in _jsonl(fp):
+        oid = row.get("order_id")
+        if oid:
+            if oid not in rows_map:
+                rows_order.append(oid)
+            rows_map[oid] = row
+
+    # done = order_ids whose EXISTING row already has a terminal status (never re-query)
+    done = {oid for oid, row in rows_map.items() if _is_terminal(row.get("status", ""))}
+
+    # pending = all orders from ALL runs that are absent or non-terminal (no LOOKBACK slice)
+    runs = _jsonl(d / "runs.jsonl")
     pending = []
+    seen_pending: set = set()
     for run in runs:
         if run.get("dry_run") or run.get("blocked"):
             continue
         for o in run.get("orders", []):
             oid = o.get("order_id")
-            if oid and oid not in done:
+            if oid and oid not in done and oid not in seen_pending:
                 pending.append((run["date"], o))
+                seen_pending.add(oid)
+
+    # Also ingest submitted.jsonl (write-ahead log written during placement for crash-window durability).
+    # Each row has {date, ticker, side, qty, px, order_id} — same shape as runs.jsonl order entries.
+    # Union with runs.jsonl: done/seen_pending dedup ensures an order present in BOTH is queried once.
+    for o in _jsonl(d / "submitted.jsonl"):
+        oid = o.get("order_id")
+        if oid and oid not in done and oid not in seen_pending:
+            pending.append((o["date"], o))
+            seen_pending.add(oid)
+
     if not pending:
         return 0
 
@@ -146,34 +184,43 @@ def reconcile_book(name: str, broker) -> int:
 
     n = 0
     book_fills = []   # (ticker, side, filled_qty, fill_px) to apply to the virtual book AFTER the ledger write
-    with (d / "fills.jsonl").open("a") as fh:
-        for date, o in pending:
-            try:
-                res = broker.get_order_status(o["order_id"])
-            except Exception as e:
-                logger.warning("fill query failed %s %s: %s", name, o["order_id"], e)
-                continue
-            status = getattr(getattr(res, "status", None), "value", None) or str(getattr(res, "status", "?"))
-            fill_px = float(getattr(res, "fill_price", 0.0) or 0.0)
-            filled_qty = int(getattr(res, "filled_qty", 0) or 0)
-            rec = {"date": date, "ticker": o["ticker"], "side": o["side"], "qty": o["qty"],
-                   "decision_px": o.get("px"), "fill_px": fill_px or None,
-                   "filled_qty": filled_qty,
-                   "status": status,
-                   "slippage_bps": round(_slippage_bps(o["side"], o.get("px") or 0.0, fill_px), 2)
-                                   if fill_px else None,
-                   "order_id": o["order_id"]}
-            if fill_px:
-                rec.update(_clean_fields(o["side"], fill_px, open_map.get((o["ticker"], date))))
-                rec.update(_futures_slippage(o["ticker"], o["side"], o.get("px") or 0.0, fill_px, o.get("qty")))
-            fh.write(json.dumps(rec) + "\n")
-            n += 1
-            # book-from-fills: the virtual book is updated from the ACTUAL reconciled fill (qty + price),
-            # never on order acceptance. Each order_id is reconciled exactly once (skipped via `done`),
-            # so applying here is idempotent. Ledger written FIRST; a crash before book.save() undercounts
-            # by one cycle (caught by reconcile_books, recoverable) rather than double-counting.
-            if filled_qty > 0 and fill_px:
-                book_fills.append((o["ticker"], o["side"], filled_qty, fill_px))
+    for date, o in pending:
+        oid = o["order_id"]
+        try:
+            res = broker.get_order_status(oid)
+        except Exception as e:
+            logger.warning("fill query failed %s %s: %s", name, oid, e)
+            continue  # leave existing row (if any) untouched; retry next pass
+        status = (getattr(getattr(res, "status", None), "value", None) or str(getattr(res, "status", "?"))).lower()
+        fill_px = float(getattr(res, "fill_price", 0.0) or 0.0)
+        filled_qty = int(getattr(res, "filled_qty", 0) or 0)
+        rec = {"date": date, "ticker": o["ticker"], "side": o["side"], "qty": o["qty"],
+               "decision_px": o.get("px"), "fill_px": fill_px or None,
+               "filled_qty": filled_qty,
+               "status": status,
+               "slippage_bps": round(_slippage_bps(o["side"], o.get("px") or 0.0, fill_px), 2)
+                               if fill_px else None,
+               "order_id": oid}
+        if fill_px:
+            rec.update(_clean_fields(o["side"], fill_px, open_map.get((o["ticker"], date))))
+            rec.update(_futures_slippage(o["ticker"], o["side"], o.get("px") or 0.0, fill_px, o.get("qty")))
+        # UPSERT: replace prior non-terminal row; append only if order_id is brand-new
+        if oid not in rows_map:
+            rows_order.append(oid)
+        rows_map[oid] = rec
+        n += 1
+        # book-from-fills: apply ONLY when transitioning to a filled/partially_filled state this pass.
+        # Because `done` excludes non-terminal orders, any order reaching 'filled' here was never
+        # previously booked. Ledger written FIRST (crash before book.save() undercounts by one cycle,
+        # recoverable) rather than double-counting.
+        if filled_qty > 0 and fill_px and status in {"filled", "partially_filled"}:
+            book_fills.append((o["ticker"], o["side"], filled_qty, fill_px))
+
+    # Atomic rewrite: one row per order_id, preserving first-seen order
+    tmp = fp.with_suffix(".jsonl.tmp")
+    tmp.write_text("".join(json.dumps(rows_map[oid]) + "\n" for oid in rows_order))
+    tmp.replace(fp)
+
     if book_fills:
         from atlas.execution.virtual_book import VirtualBook
         book = VirtualBook(name)

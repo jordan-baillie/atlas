@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 from atlas.brokers.base import BrokerAdapter, OrderResult, OrderSide, OrderType
 
@@ -174,7 +174,8 @@ class TargetExecutor:
 
     def rebalance(self, target_weights: dict, *, prices: Optional[dict] = None,
                   deployable_equity: Optional[float] = None, dry_run: bool = True,
-                  check_kill_switch: bool = True, current_qty: Optional[dict] = None) -> RebalanceReport:
+                  check_kill_switch: bool = True, current_qty: Optional[dict] = None,
+                  on_submit: Optional[Callable[[str, object], None]] = None) -> RebalanceReport:
         """current_qty: positions to diff against. Default = the broker account's positions (single-
         strategy accounts). Multi-strategy shared accounts MUST pass their own virtual book's positions
         (live/virtual_book.py) or strategies will liquidate each other's holdings."""
@@ -220,6 +221,11 @@ class TargetExecutor:
                 res = OrderResult(success=False, ticker=o.ticker, side=o.side, message=str(e))
             res = self._htb_fallback(o, res)
             report.results.append(res)
+            if on_submit is not None and getattr(res, "success", False) and getattr(res, "order_id", ""):
+                try:
+                    on_submit(res.order_id, o)
+                except Exception as _cb_err:
+                    logger.warning("on_submit callback failed for %s: %s", res.order_id, _cb_err)
         logger.info("rebalance executed: %d/%d orders filled, turnover $%.0f",
                     len(report.executed), len(orders), turnover)
         return report

@@ -3,6 +3,31 @@
 
 ---
 
+## 2026-06-26 — Ratify G6 modeled cost for `amihud_illiq_tranched_v3` = 7.5 bps (pre-registration)
+
+**Decision:** Register the G6 slippage modeled cost for the deployed book `amihud_illiq_tranched_v3`
+at **7.5 bps per-side** → G6 bar = `SLIPPAGE_MULT (2.0) × 7.5 = 15 bps`. Operator-ratified.
+
+**Authoritative source (no fabrication):** the book's frozen design,
+`/root/crucible/strategies/auto_amihud_illiquidity_premium_deployable_sh_smith1_99153.py:166`
+(`cost_long_bps=30.0, cost_short_bps=7.5, cost_hedge_bps=2.0`; header line ~12: "60bps RT long leg
+(30/side), 15bps RT short leg (7.5/side) + 50bps/yr borrow"). 7.5 is a **verbatim** frozen value.
+
+**Rationale:** the design has *asymmetric per-leg* costs, but a fill-based G6 cannot map a `SELL`
+fill to a leg (a SELL is ambiguous — long-exit vs short-entry). Registering the **conservative
+tightest leg (7.5 → bar 15)** guarantees no cheap-leg *false-PASS* is possible; the choice can only
+make G6 stricter. Convention matches `val_mom_trend_smallcap = 8.0` (per-unit-turnover ≈ per-side).
+Verdict is robust: amihud's clean realized median (~101 bps) FAILs G6 under any defensible cost.
+
+**Registered in (kept in sync, drift-guarded):** `atlas/execution/gates.py:MODELED_COST_BPS` and the
+canonical `crucible/forward/evidence.py:MODELED_COST_BPS`; guard `tests/execution/test_modeled_cost_sync.py`.
+
+**Deferred (board task):** position-aware **per-leg G6** (charge BUY/SELL fills against their actual
+opened/closed leg cost) is the proper refinement; superseded by this conservative single-number
+registration until then.
+
+---
+
 ## 2026-02-18 — Config v9.1 → v9.2: Full SP500 Baseline Optimization
 
 **Decision:** Run coordinate descent reoptimization after data-refresh degradation (CAGR -0.35%, Sharpe -0.30).

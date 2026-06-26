@@ -192,20 +192,39 @@ def run_strategy(s: DeployedStrategy, asof: str, mode: str = "shadow", broker=No
         if s.state == "shadow":
             from atlas.execution.virtual_book import VirtualBook
             book = VirtualBook(s.name, capital_base=(s.capital or 0.0))
+        # track depends only on historical returns.jsonl (not today's orders) — compute BEFORE rebalance
+        # so that _record_run is the immediate next statement after placement (closes the orphan window).
+        track = None
+        if s.expectation:
+            from atlas.execution.track_expectation import Expectation, evaluate
+            track = evaluate(_realized_returns(s.name), Expectation(**s.expectation))
+
+        # Write-ahead log: one JSON line per placed order written DURING the placement loop so that a
+        # crash between rebalance() and _record_run() still leaves order_ids on disk (Layer 2 WAL).
+        # Never fatal — any I/O error in the callback is swallowed so it never aborts placement.
+        cb = None
+        if not dry:
+            _subm_dir = LIVE_DATA / s.name
+            def cb(order_id, o, _d=_subm_dir, _asof=asof):  # noqa: E731
+                try:
+                    _d.mkdir(parents=True, exist_ok=True)
+                    row = {"date": _asof, "ticker": o.ticker, "side": o.side.value,
+                           "qty": o.qty, "px": o.ref_price, "order_id": order_id}
+                    with (_d / "submitted.jsonl").open("a") as fh:
+                        fh.write(json.dumps(row) + "\n")
+                        fh.flush()
+                except Exception as _e:
+                    logger.warning("submitted.jsonl write failed: %s", _e)
+
         rep = ex.rebalance(weights, deployable_equity=(s.capital or None), dry_run=dry,
-                           current_qty=(book.current_qty() if book is not None else None))
+                           current_qty=(book.current_qty() if book is not None else None),
+                           on_submit=cb)
         # The book is deliberately NOT updated here. Recording fills on order ACCEPTANCE (result.success)
         # at the requested qty/ref price silently corrupted it: the shadow loop runs in the Alpaca OPG
         # window, so the real fill — or non-fill (HTB shorts, halts, no-open) — lands ~14h later at the
         # open. The book is instead updated from RECONCILED ACTUAL fills by record_fills (book-from-fills),
         # which runs BEFORE the next rebalance; _record_run persists each order_id to runs.jsonl for that
         # reconciliation. (2026-06-16 — tasks/VIRTUAL_BOOK_FILL_RECONCILIATION.md; guard: reconcile_books.py)
-
-        track = None
-        if s.expectation:
-            from atlas.execution.track_expectation import Expectation, evaluate
-            track = evaluate(_realized_returns(s.name), Expectation(**s.expectation))
-
         _record_run(s, asof, rep, track, skipped)
         # a canary/live strategy with orders but no human approval is held (executed as dry_run) -> flag it
         awaiting = s.state in ("canary", "live") and not s.approved and rep.n_orders > 0

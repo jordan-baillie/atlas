@@ -202,3 +202,77 @@ def test_prefilter_tradable_drops_doomed_orders(monkeypatch):
     fut = DeployedStrategy(name="f", provider="p", broker="ib")
     kept2, skipped2 = daily._prefilter_tradable(fut, {"ES": -0.5, "CL": 0.5})
     assert kept2 == {"ES": -0.5, "CL": 0.5} and skipped2 == {}
+
+
+# ── Layer 1: track-before-placement (orphan-window elimination) ────────────────
+
+
+def test_track_computed_before_placement_no_orphan(tmp_path, monkeypatch):
+    """Layer 1: if track evaluation throws, it must happen BEFORE rebalance so no orders are placed
+    (no orphan order_ids are left at the broker without a runs.jsonl record)."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path)
+    _no_killswitch(monkeypatch)
+
+    def _bad_returns(name):
+        raise RuntimeError("disk io error")
+    monkeypatch.setattr(daily, "_realized_returns", _bad_returns)
+
+    register_provider("demo_track_order")(lambda asof: {"AAA": 1.0})
+    s = DeployedStrategy(name="trackorder", provider="demo_track_order", state="shadow",
+                         capital=10000, expectation={"daily_mean": 0.0008, "daily_std": 0.01, "sharpe": 1.0})
+    b = SimBroker(prices={"AAA": 100.0})
+    r = daily.run_strategy(s, "2026-06-26", mode="shadow", broker=b)
+    assert r.error is not None   # throw propagated and caught by outer except
+    assert b.orders == []        # NO orders placed — throw happened BEFORE rebalance
+
+
+# ── Layer 2: submitted.jsonl write-ahead log ────────────────────────────────
+
+
+class _IDedSimBroker(SimBroker):
+    """SimBroker that stamps a non-empty order_id on each successful placement."""
+    def place_order(self, ticker, side, qty, price, order_type=OrderType.MARKET,
+                    stop_price=None, remark=""):
+        res = super().place_order(ticker, side, qty, price, order_type, stop_price, remark)
+        res.order_id = f"live-{ticker}"
+        return res
+
+
+def test_submitted_jsonl_written_with_correct_shape(tmp_path, monkeypatch):
+    """Layer 2: run_strategy writes submitted.jsonl with {date,ticker,side,qty,px,order_id} per order."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path)
+    _no_killswitch(monkeypatch)
+    register_provider("demo_subm")(lambda asof: {"AAA": 1.0})
+    s = DeployedStrategy(name="subm_test", provider="demo_subm", state="live",
+                         approved=True, capital=10000)
+    b = _IDedSimBroker(prices={"AAA": 100.0})
+    r = daily.run_strategy(s, "2026-06-26", mode="live", broker=b)
+    assert r.error is None and not r.dry_run
+
+    subm = tmp_path / "subm_test" / "submitted.jsonl"
+    assert subm.exists(), "submitted.jsonl must be written for live (non-dry) runs"
+    rows = [json.loads(line) for line in subm.read_text().splitlines() if line]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["date"] == "2026-06-26"
+    assert row["ticker"] == "AAA"
+    assert row["side"] == "BUY"
+    assert row["qty"] == 100
+    assert row["order_id"] == "live-AAA"
+    assert "px" in row
+
+
+def test_submitted_jsonl_not_written_for_dry_run(tmp_path, monkeypatch):
+    """Layer 2: submitted.jsonl must NOT be written for dry runs (nothing is placed at the broker)."""
+    monkeypatch.setattr(daily, "LIVE_DATA", tmp_path)
+    _no_killswitch(monkeypatch)
+    register_provider("demo_dry_subm")(lambda asof: {"AAA": 1.0})
+    s = DeployedStrategy(name="dry_subm", provider="demo_dry_subm", state="canary",
+                         approved=False, capital=10000)
+    b = _IDedSimBroker(prices={"AAA": 100.0})
+    daily.run_strategy(s, "2026-06-26", mode="shadow", broker=b)
+    subm = tmp_path / "dry_subm" / "submitted.jsonl"
+    # File may not exist, or if it does exist it must be empty (no rows written for dry run)
+    if subm.exists():
+        rows = [l for l in subm.read_text().splitlines() if l.strip()]
+        assert rows == [], "no submitted.jsonl rows for a dry run"
